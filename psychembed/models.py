@@ -103,84 +103,6 @@ class PsychologicalEmbedding(object):
         """
         pass
 
-    def cost_2c1(self, Z, triplets, attention_weights):
-        """Cost associated with an ordered 2 chooose 1 display
-        """
-        # Similarity
-        Sqa = self.similarity(tf.gather(Z, triplets[:,0]), 
-        tf.gather(Z, triplets[:,1]), attention_weights)
-        Sqb = self.similarity(tf.gather(Z, triplets[:,0]), 
-        tf.gather(Z, triplets[:,2]), attention_weights)
-        # Probility of behavior
-        P = Sqa / (Sqa + Sqb)
-        # Cost function
-        cap = tf.constant(2.2204e-16)
-        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
-        return J
-    
-    def cost_8cN(self, Z, nines, N, attention_weights):
-        """Cost associated with an ordered 8 chooose 2 display
-        """
-        # Similarity
-        Sqa = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,1]), attention_weights)
-        Sqb = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,2]), attention_weights)
-        Sqc = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,3]), attention_weights)
-        Sqd = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,4]), attention_weights)
-        Sqe = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,5]), attention_weights)
-        Sqf = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,6]), attention_weights)
-        Sqg = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,7]), attention_weights)
-        Sqh = self.similarity(tf.gather(Z, nines[:,0]), 
-        tf.gather(Z, nines[:,8]), attention_weights)
-
-        # Probility of behavior
-        def f2(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh))
-        def f3(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh))
-        def f4(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh))
-        def f5(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqe / (Sqe + Sqf + Sqg + Sqh))
-        def f6(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqe / (Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqf / (Sqf + Sqg + Sqh))
-        def f7(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqe / (Sqe + Sqf + Sqg + Sqh)) \
-            * (Sqf / (Sqf + Sqg + Sqh)) \
-            * (Sqg / (Sqg + Sqh))
-            
-        P = tf.case({tf.equal(N, tf.constant(2)): f2, 
-            tf.equal(N, tf.constant(3)): f3, 
-            tf.equal(N, tf.constant(4)): f4, 
-            tf.equal(N, tf.constant(5)): f5, 
-            tf.equal(N, tf.constant(6)): f6, 
-            tf.equal(N, tf.constant(7)): f7, 
-            tf.equal(N, tf.constant(8)): f7}, default=f2, exclusive=True)
-
-        # Cost function
-        cap = tf.constant(2.2204e-16)
-        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
-        return J
-
     def reuse(self, do_reuse, init_scale=0):
         '''State changing method that sets reuse of embedding.
         
@@ -317,16 +239,16 @@ class PsychologicalEmbedding(object):
         return J
 
     @abstractmethod
-    def _concrete_evaluate(self, obs):
+    def freeze(self):
         """
-        Returns:
-         J: loss
         """
         pass
 
     @abstractmethod
-    def freeze(self):
+    def _concrete_evaluate(self, obs):
         """
+        Returns:
+         J: loss
         """
         pass
 
@@ -382,6 +304,84 @@ class PsychologicalEmbedding(object):
         attention_weights_proj = tf.divide(attention_weights_0, attention_weights_1)
     
         return attention_weights_proj
+    
+    def _cost_2c1(self, Z, triplets, attention_weights):
+        """Cost associated with an ordered 2 chooose 1 display.
+        """
+        # Similarity
+        Sqa = self.similarity(tf.gather(Z, triplets[:,0]), 
+        tf.gather(Z, triplets[:,1]), attention_weights)
+        Sqb = self.similarity(tf.gather(Z, triplets[:,0]), 
+        tf.gather(Z, triplets[:,2]), attention_weights)
+        # Probility of behavior
+        P = Sqa / (Sqa + Sqb)
+        # Cost function
+        cap = tf.constant(2.2204e-16)
+        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        return J
+    
+    def _cost_8cN(self, Z, nines, N, attention_weights):
+        """Cost associated with an ordered 8 chooose N display.
+        """
+        # Similarity
+        Sqa = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,1]), attention_weights)
+        Sqb = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,2]), attention_weights)
+        Sqc = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,3]), attention_weights)
+        Sqd = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,4]), attention_weights)
+        Sqe = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,5]), attention_weights)
+        Sqf = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,6]), attention_weights)
+        Sqg = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,7]), attention_weights)
+        Sqh = self.similarity(tf.gather(Z, nines[:,0]), 
+        tf.gather(Z, nines[:,8]), attention_weights)
+
+        # Probility of behavior
+        def f2(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh))
+        def f3(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh))
+        def f4(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh))
+        def f5(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqe / (Sqe + Sqf + Sqg + Sqh))
+        def f6(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqe / (Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqf / (Sqf + Sqg + Sqh))
+        def f7(): return (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqd / (Sqd + Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqe / (Sqe + Sqf + Sqg + Sqh)) \
+            * (Sqf / (Sqf + Sqg + Sqh)) \
+            * (Sqg / (Sqg + Sqh))
+            
+        P = tf.case({tf.equal(N, tf.constant(2)): f2, 
+            tf.equal(N, tf.constant(3)): f3, 
+            tf.equal(N, tf.constant(4)): f4, 
+            tf.equal(N, tf.constant(5)): f5, 
+            tf.equal(N, tf.constant(6)): f6, 
+            tf.equal(N, tf.constant(7)): f7, 
+            tf.equal(N, tf.constant(8)): f7}, default=f2, exclusive=True)
+
+        # Cost function
+        cap = tf.constant(2.2204e-16)
+        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        return J
 
 class Exponential(PsychologicalEmbedding):
     """An exponential-based stochastic display embedding algorithm. 
@@ -554,7 +554,7 @@ class Exponential(PsychologicalEmbedding):
             weights_8c2 = tf.gather_nd(attention_weights, group_idx_8c2)            
 
             # Cost function
-            J = self.cost_2c1(Z, disp_2c1, weights_2c1) + self.cost_8cN(Z, disp_8c2, tf.constant(2), weights_8c2)
+            J = self._cost_2c1(Z, disp_2c1, weights_2c1) + self._cost_8cN(Z, disp_8c2, tf.constant(2), weights_8c2)
 
             # Enforce variable constraints
             # constraint_weights = attention_weights.assign(self._project_attention_weights(attention_weights))

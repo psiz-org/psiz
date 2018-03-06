@@ -18,6 +18,6 @@ setup(name='psychembed',
       author_email='brett.roads@gmail.com',
       license='GNU GPLv3',
       packages=['psychembed'],
-      install_requires=['numpy, tensorflow, pandas, sklearn'],
+      install_requires=['numpy', 'tensorflow', 'pandas', 'scikit-learn'],
       include_package_data=True,
       )

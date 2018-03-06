@@ -39,13 +39,16 @@ class PsychologicalEmbedding(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, n_stimuli, n_group=1):
+    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
         """
         Initialize
 
         Parameters:
           n_stimuli: An integer indicating the total number of unique stimuli
             that will be embedded.
+          dimensionality: An integer indicating the dimensionalty of the 
+            embedding. The dimensionality can be inferred using the function
+            "suggest_dimensionality".
           n_group: (default: 1) An integer indicating the number of different
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
@@ -53,8 +56,12 @@ class PsychologicalEmbedding(object):
         self.n_stimuli = n_stimuli
         self.n_group = n_group
 
-        # Default is two dimensions
-        dimensionality = 2
+        # Check if the dimensionality is valid.
+        if (dimensionality < 1):
+            # User supplied a bad dimensionality value.
+            raise ValueError('The provided dimensionality must be an integer greater than 0.')
+        
+        # Initialize dimension dependencies.
         self._initialize_dimensionality_dependencies(dimensionality)
         
         self.infer_Z = True
@@ -192,8 +199,8 @@ class PsychologicalEmbedding(object):
         self.do_reuse = do_reuse
         self.init_scale = init_scale
 
-    def fit(self, displays, dimensionality, n_selected=None, is_ranked=None, 
-        group_id=None, n_restart=40, verbose=0):
+    def fit(self, displays, n_selected=None, is_ranked=None, group_id=None, 
+        n_restart=40, verbose=0):
         '''Fits the free parameters of the embedding model.
 
         Parameters:
@@ -203,10 +210,6 @@ class PsychologicalEmbedding(object):
             is the query, then the selected references in order of selection,
             and then any remaining unselected references.
             shape = [n_display, max(n_reference) + 1]
-          dimensionality: An integer indicating the dimensionalty of the 
-            embedding. The dimensionality can be inferred using the class
-            method "suggest_dimensionality". The supplied dimensionality is
-            ignored if 'reuse' is True.
           n_selected: An integer array indicating the number of references 
             selected in each display.
             shape = [n_display, 1]
@@ -228,8 +231,6 @@ class PsychologicalEmbedding(object):
           A tuple of score metrics
         '''
 
-        self._initialize_dimensionality_dependencies(dimensionality)
-        
         n_display = displays.shape[0]
         # Handle default settings.
         if n_selected is None:
@@ -245,13 +246,7 @@ class PsychologicalEmbedding(object):
         # Package up the observation data.
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
 
-        # Check if the dimensionality is valid.
-        if (dimensionality < 1):
-            # User supplied a bad dimensionality value.
-            raise ValueError('The provided dimensionality must be an integer greater than 0.')
-        # Ignore supplied dimensionality if reusing embedding.
-        if self.do_reuse:
-            dimensionality = self.dimensionality
+        dimensionality = self.dimensionality
 
         #  Infer embedding.
         if (verbose > 0):
@@ -279,7 +274,6 @@ class PsychologicalEmbedding(object):
         (J_all, Z, attention_weights, params) = self._embed_restart(loaded_func, n_restart, verbose)
 
         self.Z = Z
-        self.dimensionality = Z.shape[1]
         self.attention_weights = attention_weights
         self._set_parameters(params)
 
@@ -386,7 +380,7 @@ class Exponential(PsychologicalEmbedding):
     vectors. The similarity function has four free parameters: rho, tau, gamma,
     and beta.
     """
-    def __init__(self, n_stimuli, n_group=1):
+    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
         """Initialize
         
@@ -397,7 +391,7 @@ class Exponential(PsychologicalEmbedding):
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
         """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_group)
+        PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
         self.rho = 2.
         self.tau = 1.
@@ -724,7 +718,7 @@ class HeavyTailed(PsychologicalEmbedding):
     n-dimensionalvectors. The similarity function has four free parameters: 
     rho, tau, kappa, and alpha.
     """
-    def __init__(self, n_stimuli, n_group):
+    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
         """Initialize
         
@@ -732,7 +726,7 @@ class HeavyTailed(PsychologicalEmbedding):
           n_stimuli: An integer indicating the total number of stimuli that will be
           embedded.
       """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_group)
+        PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
         self.dimensionality = None
         self.Z = None
@@ -839,7 +833,7 @@ class StudentT(PsychologicalEmbedding):
         international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720
     """
 
-    def __init__(self, n_stimuli, n_group):
+    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
         """Initialize
         
@@ -847,7 +841,7 @@ class StudentT(PsychologicalEmbedding):
           n_stimuli: An integer indicating the total number of stimuli that will be
           embedded.
       """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_group)
+        PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
         self.dimensionality = None
         self.Z = None

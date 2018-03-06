@@ -7,9 +7,12 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import psychembed.utils as ut
 
-def suggest_dimensionality(embedding, displays, n_selected=None, is_ranked=None, 
-    group_id=None, dim_list=None, n_restart=20, n_fold=3, verbose=0):
-    '''Sweep over the list of candidate dimensions, starting with the 
+def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selected=None, 
+    is_ranked=None, group_id=None, dim_list=None, n_restart=20, n_fold=3, 
+    verbose=0):
+    '''Suggest an embedding dimensionality given the provided observations.
+
+    Sweep over the list of candidate dimensions, starting with the 
     smallest, in order to find the best dimensionality for the data.
     Dimensions are examined in ascending order. The search stops when
     adding dimensions does not reduce loss or there are no more dimensions
@@ -17,7 +20,8 @@ def suggest_dimensionality(embedding, displays, n_selected=None, is_ranked=None,
     cross-validation partion.
 
     Parameters:
-      embedding: A PsychologicalEmbedding object.
+      embedding_constructor: A PsychologicalEmbedding constructor.
+      n_stimuli:  An integer indicating the number of unqiue stimuli.
       displays: An integer matrix representing the displays (rows) that 
         have been judged based on similarity. The shape implies the 
         number of references in shown in each display. The first column 
@@ -58,6 +62,9 @@ def suggest_dimensionality(embedding, displays, n_selected=None, is_ranked=None,
         is_ranked = np.full((n_display), True)
     if group_id is None:
         group_id = np.zeros((n_display))
+        n_group = 1
+    else:
+        n_group = np.unique(group_id)
 
     # Infer n_reference for each display
     n_reference = ut.infer_n_reference(displays)
@@ -84,6 +91,8 @@ def suggest_dimensionality(embedding, displays, n_selected=None, is_ranked=None,
     # Sweep over the list of candidate dimensions.
     J_test_avg_best = np.inf
     for i_dimension in dim_list:
+        # Instantiate embedding
+        embedding = embedding_constructor(n_stimuli, dimensionality=i_dimension, n_group=n_group)
         if verbose > 1:
             print('  Dimensionality: ', i_dimension)
         J_train = np.empty((n_fold))
@@ -97,7 +106,7 @@ def suggest_dimensionality(embedding, displays, n_selected=None, is_ranked=None,
             n_selected_train = n_selected[train_index]
             is_ranked_train = is_ranked[train_index]
             group_id_train = group_id[train_index]
-            J_train[i_fold] = embedding.fit(displays_train, i_dimension, 
+            J_train[i_fold] = embedding.fit(displays_train, 
             n_selected=n_selected_train, is_ranked=is_ranked_train, 
             group_id=group_id_train, n_restart=n_restart, verbose=0)
             # Test

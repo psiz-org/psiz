@@ -94,7 +94,8 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
     if filename is None:
         plt.show()
     else:
-        plt.savefig(filename, format='pdf', bbox_inches="tight")
+        # plt.draw()
+        plt.savefig(filename, format='pdf', bbox_inches="tight", dpi=100)
     
 
 # def visualize_embedding_movie(Z3, class_vec=None, classes=None, filename=None):

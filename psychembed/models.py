@@ -61,8 +61,14 @@ class PsychologicalEmbedding(object):
             # User supplied a bad dimensionality value.
             raise ValueError('The provided dimensionality must be an integer greater than 0.')
         
-        # Initialize dimension dependencies.
-        self._initialize_dimensionality_dependencies(dimensionality)
+        # Initialize dimension dependent attributes.
+        self.dimensionality = dimensionality
+        # Initialize random embedding points using multivariate Gaussian.
+        mean = np.ones((dimensionality))
+        cov = np.identity(dimensionality)
+        self.Z = np.random.multivariate_normal(mean, cov, (self.n_stimuli))
+        # Initialize attentional weights using uniform distribution.
+        self.attention_weights = np.ones((self.n_group, dimensionality), dtype=np.float64)
         
         self.infer_Z = True
         if n_group is 1:
@@ -70,23 +76,15 @@ class PsychologicalEmbedding(object):
         else:
             self.infer_attention_weights = True
 
-        # Initialize reuse attributes.
+        # Initialize default reuse attributes.
         self.do_reuse = False
         self.init_scale = 0
 
-        super().__init__()
+        # Initialize default TensorBoard log attributes.
+        self.do_log = False
+        self.log_dir = '/tmp/tensorflow_logs/embedding/'
 
-    def _initialize_dimensionality_dependencies(self, dimensionality):
-        '''Initialize dimensionality dependent variables to default, size-
-        appropriate values.
-        '''
-        # Random two-dimensional embedding (default)
-        self.dimensionality = dimensionality
-        mean = np.ones((dimensionality))
-        cov = np.identity(dimensionality)
-        self.Z = np.random.multivariate_normal(mean, cov, (self.n_stimuli))
-        # Uniform attentional weights (default)
-        self.attention_weights = np.ones((self.n_group, dimensionality), dtype=np.float64)
+        super().__init__()
 
     @abstractmethod
     def similarity(self, z_q, z_ref, attention_weights):
@@ -199,6 +197,25 @@ class PsychologicalEmbedding(object):
         self.do_reuse = do_reuse
         self.init_scale = init_scale
 
+    def set_log(self, do_log, log_dir=None, delete_prev=False):
+        '''State changing method that sets TensorBoard logging.
+
+        Parameters:
+          do_log: Boolean that indicates whether logs should be recorded.
+          log_dir: A string indicating the file path for the logs.
+          delete_prev: Boolean indicating whether the directory should
+            be cleared of previous files first.
+        '''
+        if do_log:
+            self.do_log = True
+            if log_dir is not None:
+                self.log_dir = log_dir
+        
+        if delete_prev:
+            if tf.gfile.Exists(log_dir):
+                tf.gfile.DeleteRecursively(log_dir)
+        tf.gfile.MakeDirs(log_dir)
+        
     def fit(self, displays, n_selected=None, is_ranked=None, group_id=None, 
         n_restart=40, verbose=0):
         '''Fits the free parameters of the embedding model.
@@ -263,14 +280,8 @@ class PsychologicalEmbedding(object):
         skf = StratifiedKFold(n_splits=10)
         (train_idx, test_idx) = list(skf.split(displays, display_type_id))[0]
         
-        # TODO dynamically set logs path
-        log_dir = '/tmp/tensorflow_logs/embedding/'
-        if tf.gfile.Exists(log_dir):
-            tf.gfile.DeleteRecursively(log_dir)
-        tf.gfile.MakeDirs(log_dir)
-
         # Run multiple restarts of embedding algorithm.
-        loaded_func = lambda i_restart: self.embed(obs, dimensionality, train_idx, test_idx, log_dir, i_restart)
+        loaded_func = lambda i_restart: self._embed(obs, train_idx, test_idx, i_restart)
         (J_all, Z, attention_weights, params) = self._embed_restart(loaded_func, n_restart, verbose)
 
         self.Z = Z
@@ -302,11 +313,11 @@ class PsychologicalEmbedding(object):
         # Package up
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
 
-        J = self.concrete_evaluate(obs)
+        J = self._concrete_evaluate(obs)
         return J
 
     @abstractmethod
-    def concrete_evaluate(self, obs):
+    def _concrete_evaluate(self, obs):
         """
         Returns:
          J: loss
@@ -320,7 +331,7 @@ class PsychologicalEmbedding(object):
         pass
 
     @abstractmethod
-    def embed(self, obs, dimensionality, train_idx, test_idx, FLAG):
+    def _embed(self, obs, train_idx, test_idx, FLAG):
         """
         returns: [loss, Z, A, params]
         """
@@ -373,13 +384,14 @@ class PsychologicalEmbedding(object):
         return attention_weights_proj
 
 class Exponential(PsychologicalEmbedding):
-    """
-    An exponential-based stochastic display embedding procedure. This embedding
-    technique uses the following similarity function: s(x,y) =
+    """An exponential-based stochastic display embedding algorithm. 
+    
+    This embedding technique uses the following similarity function: s(x,y) =
     exp(-beta .* norm(x - y, rho).^tau) + gamma, where x and y are n-dimensional
     vectors. The similarity function has four free parameters: rho, tau, gamma,
     and beta.
     """
+
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
         """Initialize
@@ -484,7 +496,7 @@ class Exponential(PsychologicalEmbedding):
         s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau) + gamma)
         return s_qref
 
-    def model(self, dimensionality):
+    def model(self):
         '''
         '''
         with tf.variable_scope("model") as scope:
@@ -493,14 +505,14 @@ class Exponential(PsychologicalEmbedding):
 
             # Attention variable
             if self.do_reuse:
-                attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=True)
+                attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=True)
             else:
                 if self.infer_attention_weights:
-                    alpha = 1. * np.ones((dimensionality))
-                    new_attention_weights = np.random.dirichlet(alpha) * dimensionality
-                    attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(new_attention_weights))
+                    alpha = 1. * np.ones((self.dimensionality))
+                    new_attention_weights = np.random.dirichlet(alpha) * self.dimensionality
+                    attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(new_attention_weights))
                 else:
-                    attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=False)
+                    attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=False)
 
             # Embedding variable
             # Iniitalize Z with different scales for different restarts
@@ -509,9 +521,9 @@ class Exponential(PsychologicalEmbedding):
             scale_value = init_scale_list[rand_scale_idx]
             tf_scale_value = tf.constant(scale_value, dtype=tf.float32)
             if self.infer_Z:
-                Z = tf.get_variable("Z", [self.n_stimuli, dimensionality], initializer=tf.random_normal_initializer(tf.zeros([dimensionality]), tf.ones([dimensionality]) * tf_scale_value))
+                Z = tf.get_variable("Z", [self.n_stimuli, self.dimensionality], initializer=tf.random_normal_initializer(tf.zeros([self.dimensionality]), tf.ones([self.dimensionality]) * tf_scale_value))
             else:
-                Z = tf.get_variable("Z", [self.n_stimuli, dimensionality], initializer=tf.constant_initializer(self.Z), trainable=False)
+                Z = tf.get_variable("Z", [self.n_stimuli, self.dimensionality], initializer=tf.constant_initializer(self.Z), trainable=False)
             
             scope.reuse_variables()
 
@@ -556,7 +568,7 @@ class Exponential(PsychologicalEmbedding):
 
         return (J, Z, attention_weights, rho, tau, gamma, beta, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id)
 
-    def embed(self, obs, dimensionality, train_idx, test_idx, log_dir, i_restart):
+    def _embed(self, obs, train_idx, test_idx, i_restart):
         verbose = 0 # TODO make parameter
 
         # Partition the observation data.
@@ -572,7 +584,7 @@ class Exponential(PsychologicalEmbedding):
         is_ranked_val = obs.is_ranked[test_idx]
         group_id_val = obs.group_id[test_idx]
 
-        (J, Z, attention_weights, rho, tau, gamma, beta, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self.model(dimensionality)
+        (J, Z, attention_weights, rho, tau, gamma, beta, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self.model()
         
         train_op = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(J)
 
@@ -609,8 +621,9 @@ class Exponential(PsychologicalEmbedding):
         sess = tf.Session()
         sess.run(init)
 
-        # op to write logs to Tensorboard
-        summary_writer = tf.summary.FileWriter('%s/%s' % (log_dir, i_restart), graph=tf.get_default_graph())
+        # op to write logs for TensorBoard
+        if self.do_log:
+            summary_writer = tf.summary.FileWriter('%s/%s' % (self.log_dir, i_restart), graph=tf.get_default_graph())
 
         J_all_best = np.inf
         J_test_best = np.inf
@@ -653,7 +666,8 @@ class Exponential(PsychologicalEmbedding):
             
             if not epoch%10:
                 # Write logs at every 10th iteration
-                summary_writer.add_summary(summary, epoch)
+                if self.do_log:
+                    summary_writer.add_summary(summary, epoch)
             if not epoch%100:
                 if verbose > 2:
                     print("epoch ", epoch, "| J_train: ", J_train, 
@@ -667,7 +681,7 @@ class Exponential(PsychologicalEmbedding):
         'beta':beta_best}
         return (J_all_best, Z_best, attention_weights_best, params_best)
     
-    def concrete_evaluate(self, obs):
+    def _concrete_evaluate(self, obs):
         '''Evaluate observations using the current state of the embedding object.
         '''
         old_infer_Z = self.infer_Z
@@ -684,9 +698,8 @@ class Exponential(PsychologicalEmbedding):
         self.infer_beta = False
         self.infer_gamma = False
         
-        dimensionality = self.dimensionality
         (J, _, _, _, _, _, _, _, tf_displays, tf_n_reference, tf_n_selected, 
-        tf_is_ranked, tf_group_id) = self.model(dimensionality)
+        tf_is_ranked, tf_group_id) = self.model()
 
         init = tf.global_variables_initializer()
         sess = tf.Session()
@@ -811,7 +824,7 @@ class HeavyTailed(PsychologicalEmbedding):
         s_qref = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
         return s_qref
     
-    def embed(self, obs, dimensionality, train_idx, test_idx, log_dir, i_restart):
+    def _embed(self, obs, train_idx, test_idx, i_restart):
         '''
         '''
         return None
@@ -916,7 +929,7 @@ class StudentT(PsychologicalEmbedding):
         s_qref = tf.pow(1 + (tf.pow(d_qref, tau) / alpha), tf.negative(alpha + 1)/2)
         return s_qref
 
-    def embed(self, obs, dimensionality, train_idx, test_idx, log_dir, i_restart):
+    def _embed(self, obs, train_idx, test_idx, i_restart):
         '''
         '''
         return None

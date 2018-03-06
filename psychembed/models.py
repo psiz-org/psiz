@@ -1,12 +1,21 @@
 '''Embedding models
 
-fit and freeze are the only methods that modify the state of the class
+n_group must be defined on instantiation. this determines how many separate
+sets of attention weights will be used and inferred.
+
+fit, freeze, reuse are the only methods that modify the state of the class
+
+suggest_dimensionality does not modify state
+
+Author: B D Roads
 '''
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import tensorflow as tf
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
+
+import psychembed.utils as ut
 
 class Observations(object):
     '''A wrapper object used by the class PsychologicalEmbedding for passing
@@ -30,24 +39,23 @@ class PsychologicalEmbedding(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, n_stimuli, n_group):
+    def __init__(self, n_stimuli, n_group=1):
         """
         Initialize
 
         Parameters:
-          n_stimuli: An integer indicating the total number of unique stimuli in 
-            the embedding.
-          n_group: An integer indicating the number of different population 
-            groups that will be used in the embedding. A separate set of 
-            attentional weights will be inferred for each group. Later 
-            arguments to class methods must agree with this number.
+          n_stimuli: An integer indicating the total number of unique stimuli
+            that will be embedded.
+          n_group: (default: 1) An integer indicating the number of different
+            population groups in the embedding. A separate set of attention 
+            weights will be inferred for each group.
         """
         self.n_stimuli = n_stimuli
         self.n_group = n_group
 
         # Default is two dimensions
         dimensionality = 2
-        self.initialize_dimensionality_dependencies(dimensionality)
+        self._initialize_dimensionality_dependencies(dimensionality)
         
         self.infer_Z = True
         if n_group is 1:
@@ -55,10 +63,15 @@ class PsychologicalEmbedding(object):
         else:
             self.infer_attention_weights = True
 
+        # Initialize reuse attributes.
+        self.do_reuse = False
+        self.init_scale = 0
+
         super().__init__()
 
-    def initialize_dimensionality_dependencies(self, dimensionality):
-        '''
+    def _initialize_dimensionality_dependencies(self, dimensionality):
+        '''Initialize dimensionality dependent variables to default, size-
+        appropriate values.
         '''
         # Random two-dimensional embedding (default)
         self.dimensionality = dimensionality
@@ -163,122 +176,21 @@ class PsychologicalEmbedding(object):
         J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
         return J
 
-    def select_dimensionality(self, displays, n_selected=None, is_ranked=None, 
-        group_id=None, dim_list=None, n_restart=20, n_fold=3, verbose=0):
-        '''Sweep over the list of candidate dimensions, starting with the 
-        smallest, in order to find the best dimensionality for the data.
-        Dimensions are examined in ascending order. The search stops when
-        adding dimensions does not reduce loss or there are no more dimensions
-        in the dimension list. Each dimension is evaluated using the same
-        cross-validation partion.
-
+    def reuse(self, do_reuse, init_scale=0):
+        '''State changing method that sets reuse of embedding.
+        
         Parameters:
-          displays: An integer matrix representing the displays (rows) that 
-            have been judged based on similarity. The shape implies the 
-            number of references in shown in each display. The first column 
-            is the query, then the selected references in order of selection,
-            and then any remaining unselected references.
-            shape = [n_display, max(n_reference) + 1]
-          n_selected: An integer array indicating the number of references 
-            selected in each display.
-            shape = [n_display, 1]
-          is_ranked:  Boolean array indicating which displays had selected
-            references that were ordered.
-            shape = [n_display, 1]
-          group_id: An integer array indicating the group membership of each 
-            display. It is assumed that group is composed of integers from 
-            [0,N] where N is the total number of groups. Separate attention 
-            weights are inferred for each group.
-            shape = [n_display, 1]
-          dim_list: A list of integers indicating the dimensions to search 
-            over.
-          n_restart: An integer specifying the number of restarts to use for 
-            the inference procedure. Since the embedding procedure sometimes
-            gets stuck in local optima, multiple restarts helps find the global
-            optimum.
-          n_fold: Integer specifying the number of folds to use for cross-
-            validation when selection the dimensionality.
-          verbose: An integer specifying the verbosity of printed output.
-          selection_threshold: 
-        Returns:
-          best_dimensionality: An integer indicating the dimensionality (from
-            the candiate list) that minimized the loss function.
+          do_reuse: Boolean that indicates whether the current embedding should
+          be used for initialization during inference.
+          init_scale: A scalar value indicating to went extent the previous
+            embedding points should be reused. For example, a value of 0.05
+            would add uniform noise to all the points in the embedding such
+            that each embedding point was randomly jittered up to 5% on each
+            dimension relative to the overall size of the embedding. The value
+            can be between [0,1].
         '''
-
-        n_display = displays.shape[0]
-        # Handle default settings
-        if n_selected is None:
-            n_selected = np.ones((n_display))
-        if is_ranked is None:
-            is_ranked = np.full((n_display), True)
-        if group_id is None:
-            group_id = np.zeros((n_display))
-
-        # Infer n_reference for each display
-        n_reference = self.infer_n_reference(displays)
-
-        if dim_list is None:
-            dim_list = range(2,10)
-        else:
-            # Make sure dimensions are in ascending order
-            dim_list = np.sort(dim_list)
-
-        if (verbose > 0):
-            print('Selecting dimensionality ...')
-            print('  Settings:')
-            print('    Candidate dimensionaltiy list: ', dim_list)
-            print('    Folds: ', n_fold)
-            print('    Restarts per fold: ', n_restart)
-
-        # Infer the display type IDs.
-        display_type_id = self.generate_display_type_id(n_reference, 
-        n_selected, is_ranked, group_id)
-        # Instantiate the balanced k-fold cross-validation object.
-        skf = StratifiedKFold(n_splits=n_fold)
-
-        # Sweep over the list of candidate dimensions.
-        J_test_avg_best = np.inf
-        for i_dimension in dim_list:
-            if verbose > 1:
-                print('  Dimensionality: ', i_dimension)
-            J_train = np.empty((n_fold))
-            J_test = np.empty((n_fold))
-            i_fold = 0
-            for train_index, test_index in skf.split(displays, display_type_id):
-                if verbose > 1:
-                    print('    Fold: ', i_fold)
-                # Train
-                displays_train = displays[train_index,:]
-                n_selected_train = n_selected[train_index]
-                is_ranked_train = is_ranked[train_index]
-                group_id_train = group_id[train_index]
-                J_train[i_fold] = self.fit(displays_train, i_dimension, 
-                n_selected=n_selected_train, is_ranked=is_ranked_train, 
-                group_id=group_id_train, n_restart=n_restart, verbose=0)
-                # Test
-                displays_test = displays[test_index,:]
-                n_selected_test = n_selected[test_index]
-                is_ranked_test = is_ranked[test_index]
-                group_id_test = group_id[test_index]
-                J_test[i_fold] = self.evaluate(displays_test, 
-                n_selected=n_selected_test, is_ranked=is_ranked_test, 
-                group_id=group_id_test)
-                i_fold = i_fold + 1
-            # Compute average cross-validation test loss.
-            J_test_avg = np.mean(J_test)
-            if J_test_avg < J_test_avg_best:
-                # Larger dimensionality yielded a better loss.
-                J_test_avg_best = J_test_avg
-                best_dimensionality = i_dimension
-            else:
-                # Larger dimensionality yielded a worse loss. Stop sweep.
-                break
-        
-        if verbose > 0:
-            print('Best dimensionality: ', best_dimensionality)
-
-        
-        return best_dimensionality
+        self.do_reuse = do_reuse
+        self.init_scale = init_scale
 
     def fit(self, displays, dimensionality, n_selected=None, is_ranked=None, 
         group_id=None, n_restart=40, verbose=0):
@@ -293,7 +205,8 @@ class PsychologicalEmbedding(object):
             shape = [n_display, max(n_reference) + 1]
           dimensionality: An integer indicating the dimensionalty of the 
             embedding. The dimensionality can be inferred using the class
-            method "select_dimensionality".
+            method "suggest_dimensionality". The supplied dimensionality is
+            ignored if 'reuse' is True.
           n_selected: An integer array indicating the number of references 
             selected in each display.
             shape = [n_display, 1]
@@ -315,10 +228,10 @@ class PsychologicalEmbedding(object):
           A tuple of score metrics
         '''
 
-        self.initialize_dimensionality_dependencies(dimensionality)
+        self._initialize_dimensionality_dependencies(dimensionality)
         
         n_display = displays.shape[0]
-        # Handle default settings
+        # Handle default settings.
         if n_selected is None:
             n_selected = np.ones((n_display))
         if is_ranked is None:
@@ -326,17 +239,21 @@ class PsychologicalEmbedding(object):
         if group_id is None:
             group_id = np.zeros((n_display))
 
-        # Infer n_reference for each display
-        n_reference = self.infer_n_reference(displays)
+        # Infer n_reference for each display.
+        n_reference = ut.infer_n_reference(displays)
 
-        # Package up
+        # Package up the observation data.
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
 
-        # Check dimensionality is valid
+        # Check if the dimensionality is valid.
         if (dimensionality < 1):
-            # Bad dimensionality value
+            # User supplied a bad dimensionality value.
             raise ValueError('The provided dimensionality must be an integer greater than 0.')
-        #  Infer embedding
+        # Ignore supplied dimensionality if reusing embedding.
+        if self.do_reuse:
+            dimensionality = self.dimensionality
+
+        #  Infer embedding.
         if (verbose > 0):
             print('Inferring embedding ...')
             print('\tSettings:')
@@ -346,8 +263,8 @@ class PsychologicalEmbedding(object):
             print('\tn_restart: ', n_restart)
         
         # Partition data into train and validation set for early stopping of 
-        # embedding algorithm
-        display_type_id = self.generate_display_type_id(n_reference, n_selected, is_ranked, group_id)
+        # embedding algorithm.
+        display_type_id = ut.generate_display_type_id(n_reference, n_selected, is_ranked, group_id)
         skf = StratifiedKFold(n_splits=10)
         (train_idx, test_idx) = list(skf.split(displays, display_type_id))[0]
         
@@ -357,14 +274,14 @@ class PsychologicalEmbedding(object):
             tf.gfile.DeleteRecursively(log_dir)
         tf.gfile.MakeDirs(log_dir)
 
-        # Run multiple restarts
+        # Run multiple restarts of embedding algorithm.
         loaded_func = lambda i_restart: self.embed(obs, dimensionality, train_idx, test_idx, log_dir, i_restart)
-        (J_all, Z, attention_weights, params) = self.embed_restart(loaded_func, n_restart, verbose)
+        (J_all, Z, attention_weights, params) = self._embed_restart(loaded_func, n_restart, verbose)
 
         self.Z = Z
         self.dimensionality = Z.shape[1]
         self.attention_weights = attention_weights
-        self.set_parameters(params)
+        self._set_parameters(params)
 
         return J_all
     
@@ -386,7 +303,7 @@ class PsychologicalEmbedding(object):
             group_id = np.zeros((n_display))
         
         # Infer n_reference for each display
-        n_reference = self.infer_n_reference(displays)
+        n_reference = ut.infer_n_reference(displays)
 
         # Package up
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
@@ -405,8 +322,6 @@ class PsychologicalEmbedding(object):
     @abstractmethod
     def freeze(self):
         """
-        OUTPUT
-        model
         """
         pass
 
@@ -418,51 +333,13 @@ class PsychologicalEmbedding(object):
         pass
 
     @abstractmethod
-    def set_parameters(self, params):
-        """
-        OUTPUT
-        model
-        """
+    def _set_parameters(self, params):
+        ''' A state changing method called by the abstract class that 
+        encapsulates the free paramter variability across concrete classes.
+        '''
         pass
     
-    def infer_n_reference(self, displays):
-        '''
-        Helper function that infers the number of available references for a 
-        given display. The function assumes that values less than zero, are
-        placeholder values and should be treated as non-existent.
-        '''
-        max_ref = displays.shape[1] - 1
-        n_reference = max_ref - np.sum(displays<0, axis=1)            
-        return np.array(n_reference)
-
-    def generate_display_type_id(self, n_reference, n_selected, is_ranked, 
-        group_id):
-        '''
-        Helper function that generates a unique id for each of the unique
-        display configurations in the provided data set.
-
-        Returns:
-          display_type_id: a unique id for each type of display configuration 
-            present in the data.
-        '''
-        d = {'col0': n_reference, 'col1': n_selected, 'col2': is_ranked, 
-        'col3': group_id}
-        df = pd.DataFrame(d)
-        df_unique = df.drop_duplicates()
-        n_display_type = len(df_unique)
-
-        display_type_id = np.empty(len(n_reference))
-        for i_type in range(n_display_type):
-            a = (n_reference == df_unique['col0'].iloc[i_type])
-            b = (n_selected == df_unique['col1'].iloc[i_type])
-            c = (is_ranked == df_unique['col2'].iloc[i_type])
-            d = (group_id == df_unique['col3'].iloc[i_type])
-            e = np.array((a,b,c,d))
-            display_type_locs = np.any(e, axis=0)
-            display_type_id[display_type_locs] = i_type
-        return display_type_id
-    
-    def embed_restart(self, loaded_func, n_restart, verbose):
+    def _embed_restart(self, loaded_func, n_restart, verbose):
         '''Multiple restart wrapper. The results of the best performing restart
         are returned.
 
@@ -492,7 +369,7 @@ class PsychologicalEmbedding(object):
 
         return (J_all_best, Z_best, attention_weights_best, params_best)
 
-    def project_attention_weights(self, attention_weights_0):
+    def _project_attention_weights(self, attention_weights_0):
         '''Projection attention weights for gradient descent.
         '''
         n_dim = tf.shape(attention_weights_0, out_type=tf.float64)[1]
@@ -509,13 +386,16 @@ class Exponential(PsychologicalEmbedding):
     vectors. The similarity function has four free parameters: rho, tau, gamma,
     and beta.
     """
-    def __init__(self, n_stimuli, n_group):
+    def __init__(self, n_stimuli, n_group=1):
 
         """Initialize
         
         Parameters:
-          n_stimuli: An integer indicating the total number of stimuli that will be
-          embedded.
+          n_stimuli: An integer indicating the total number of unique stimuli
+            that will be embedded.
+          n_group: (default: 1) An integer indicating the number of different
+            population groups in the embedding. A separate set of attention 
+            weights will be inferred for each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_group)
         
@@ -529,32 +409,42 @@ class Exponential(PsychologicalEmbedding):
         self.infer_gamma = True
         self.infer_beta = True
 
-        # Convergence settings
+        # Learning settings.
+        self.lr = 0.00001
         self.max_n_epoch = 2000
         self.patience = 10
     
     def _get_parameters(self):
+        '''
+        '''
         with tf.variable_scope("similarity_params"):
-            if self.infer_rho:
-                rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
+            if self.do_reuse:
+                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
+                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=True)
+                gamma = tf.get_variable("gamma", [1], initializer=tf.constant_initializer(self.gamma), trainable=True)
+                beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.beta), trainable=True)
             else:
-                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
-            if self.infer_tau:
-                tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
-            else:
-                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
-            if self.infer_gamma:
-                gamma = tf.get_variable("gamma", [1], initializer=tf.random_uniform_initializer(0.,.001))
-            else:
-                gamma = tf.get_variable("gamma", [1], initializer=tf.constant_initializer(self.gamma), trainable=False)
-            if self.infer_beta:
-                beta = tf.get_variable("beta", [1], initializer=tf.random_uniform_initializer(1.,30.))
-            else:
-                beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.beta), trainable=False)
+                if self.infer_rho:
+                    rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
+                else:
+                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
+                if self.infer_tau:
+                    tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
+                else:
+                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
+                if self.infer_gamma:
+                    gamma = tf.get_variable("gamma", [1], initializer=tf.random_uniform_initializer(0.,.001))
+                else:
+                    gamma = tf.get_variable("gamma", [1], initializer=tf.constant_initializer(self.gamma), trainable=False)
+                if self.infer_beta:
+                    beta = tf.get_variable("beta", [1], initializer=tf.random_uniform_initializer(1.,30.))
+                else:
+                    beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.beta), trainable=False)
         return (rho, tau, gamma, beta)
 
-    def set_parameters(self, params):
-        '''
+    def _set_parameters(self, params):
+        ''' A state changing method called by the abstract class that 
+        encapsulates the free paramter variability across concrete classes.
         '''
         self.rho = params['rho']
         self.tau = params['tau']
@@ -580,13 +470,13 @@ class Exponential(PsychologicalEmbedding):
             self.dimensionality = Z.shape[1]        
 
     def similarity(self, z_q, z_ref, attention_weights):
-        '''
-        Similarity function
-        INPUT
-        z_q           - size = [n_sample -by- dimensionality]
-        z_ref         - size = [n_sample -by- dimensionality]
-        OUTPUT
-        similarity    - size = [n_sample -by- n_reference]
+        ''' Exponential-family similarity function.
+        Parameters:
+          z_q: size = [n_sample -by- dimensionality]
+          z_ref: size = [n_sample -by- dimensionality]
+          attention_weights: size = [n_sample -by- dimensionality]
+        Returns:
+          similarity: size = [n_sample -by- n_reference]
         '''
 
         (rho, tau, gamma, beta) = self._get_parameters()
@@ -608,12 +498,15 @@ class Exponential(PsychologicalEmbedding):
             (rho, tau, gamma, beta) = self._get_parameters()
 
             # Attention variable
-            if self.infer_attention_weights:
-                alpha = 1. * np.ones((dimensionality))
-                new_attention_weights = np.random.dirichlet(alpha) * dimensionality
-                attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(new_attention_weights))
+            if self.do_reuse:
+                attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=True)
             else:
-                attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=False)
+                if self.infer_attention_weights:
+                    alpha = 1. * np.ones((dimensionality))
+                    new_attention_weights = np.random.dirichlet(alpha) * dimensionality
+                    attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(new_attention_weights))
+                else:
+                    attention_weights = tf.get_variable("attention_weights", [self.n_group, dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=False)
 
             # Embedding variable
             # Iniitalize Z with different scales for different restarts
@@ -658,7 +551,7 @@ class Exponential(PsychologicalEmbedding):
             J = self.cost_2c1(Z, disp_2c1, weights_2c1) + self.cost_8cN(Z, disp_8c2, tf.constant(2), weights_8c2)
 
             # Enforce variable constraints
-            # constraint_weights = attention_weights.assign(self.project_attention_weights(attention_weights))
+            # constraint_weights = attention_weights.assign(self._project_attention_weights(attention_weights))
             constraint_rho = rho.assign(tf.maximum(1., rho))
             constraint_tau = tau.assign(tf.maximum(1., tau))
             constraint_gamma = gamma.assign(tf.maximum(0., gamma))
@@ -672,7 +565,7 @@ class Exponential(PsychologicalEmbedding):
     def embed(self, obs, dimensionality, train_idx, test_idx, log_dir, i_restart):
         verbose = 0 # TODO make parameter
 
-        # Partition data
+        # Partition the observation data.
         displays_train = obs.displays[train_idx,:]
         n_reference_train = obs.n_reference[train_idx]
         n_selected_train = obs.n_selected[train_idx]
@@ -687,23 +580,23 @@ class Exponential(PsychologicalEmbedding):
 
         (J, Z, attention_weights, rho, tau, gamma, beta, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self.model(dimensionality)
         
-        train_op = tf.train.GradientDescentOptimizer(learning_rate=0.00001).minimize(J)
+        train_op = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(J)
 
         init = tf.global_variables_initializer()
 
         with tf.name_scope('summaries'):
-            # Create a summary to monitor cost tensor
+            # Create a summary to monitor cost tensor.
             tf.summary.scalar('cost', J)
 
-            # Create a summary of the embedding tensor
+            # Create a summary of the embedding tensor.
             tf.summary.tensor_summary('Z', Z)
 
-            # Create a summary of the attention weights
+            # Create a summary of the attention weights.
             tf.summary.tensor_summary('attention_weights', attention_weights)
             tf.summary.scalar('attention_00', attention_weights[0,0])
 
             with tf.name_scope('similarity'):
-                # Create a summary to monitor similarity variables
+                # Create a summary to monitor similarity variables.
                 rho_mean = tf.reduce_mean(rho)
                 tf.summary.scalar('rho_mean', rho_mean)
                 tf.summary.histogram('rho_hist', rho)
@@ -716,7 +609,7 @@ class Exponential(PsychologicalEmbedding):
                 
                 beta_mean = tf.reduce_mean(beta)
                 tf.summary.scalar('beta_mean', beta_mean)
-            # Merge all summaries into a single op
+            # Merge all summaries into a single op.
             merged_summary_op = tf.summary.merge_all()
 
         sess = tf.Session()
@@ -878,7 +771,7 @@ class HeavyTailed(PsychologicalEmbedding):
                 alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
         return (rho, tau, kappa, alpha)
 
-    def set_parameters(self, params):
+    def _set_parameters(self, params):
         '''
         '''
         self.rho = params['rho']
@@ -987,7 +880,7 @@ class StudentT(PsychologicalEmbedding):
                 alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
         return (rho, tau, alpha)
 
-    def set_parameters(self, params):
+    def _set_parameters(self, params):
         '''
         '''
         self.rho = params['rho']

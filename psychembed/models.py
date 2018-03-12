@@ -167,7 +167,7 @@ class PsychologicalEmbedding(object):
           verbose: An integer specifying the verbosity of printed output.
 
         Returns:
-          A tuple of score metrics
+          J: The average loss (-loglikelihood) per observation (i.e., display).
         '''
 
         n_display = displays.shape[0]
@@ -210,15 +210,33 @@ class PsychologicalEmbedding(object):
         self.attention_weights = attention_weights
         self._set_parameters(params)
 
-        return J_all
+        return J_all / n_display
     
     def evaluate(self, displays, n_selected=None, is_ranked=None, group_id=None):
         '''Evaluate observations using the current state of the embedding object.
 
         Parameters:
+          displays: An integer matrix representing the displays (rows) that 
+            have been judged based on similarity. The shape implies the 
+            number of references in shown in each display. The first column 
+            is the query, then the selected references in order of selection,
+            and then any remaining unselected references.
+            shape = [n_display, max(n_reference) + 1]
+          n_selected: An integer array indicating the number of references 
+            selected in each display.
+            shape = [n_display, 1]
+          is_ranked:  Boolean array indicating which displays had selected
+            references that were ordered.
+            shape = [n_display, 1]
+          group_id: An integer array indicating the group membership of each 
+            display. It is assumed that group is composed of integers from 
+            [0,N] where N is the total number of groups. Separate attention 
+            weights are inferred for each group.
+            shape = [n_display, 1]
 
         Returns:
-          J: The loss of the provided observations given current model.
+          J: The average loss (-loglikelihood) per observation (i.e., display) 
+            given the current model.
         '''
         n_display = displays.shape[0]
         # Handle default settings
@@ -236,7 +254,7 @@ class PsychologicalEmbedding(object):
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
 
         J = self._concrete_evaluate(obs)
-        return J
+        return J / n_display
 
     @abstractmethod
     def freeze(self):

@@ -64,7 +64,7 @@ def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selecte
         group_id = np.zeros((n_display))
         n_group = 1
     else:
-        n_group = np.unique(group_id)
+        n_group = len(np.unique(group_id))
 
     # Infer n_reference for each display
     n_reference = ut.infer_n_reference(displays)

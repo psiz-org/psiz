@@ -142,6 +142,21 @@ class PsychologicalEmbedding(object):
         '''
         pass
 
+    def _get_attention_weights(self):
+        '''
+        '''
+        # Attention variable
+        if self.do_reuse:
+            attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=True)
+        else:
+            if self.infer_attention_weights:
+                alpha = 1. * np.ones((self.dimensionality))
+                new_attention_weights = np.random.dirichlet(alpha) * self.dimensionality
+                attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(new_attention_weights))
+            else:
+                attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=False)
+        return attention_weights
+
     def reuse(self, do_reuse, init_scale=0):
         '''State changing method that sets reuse of embedding.
         
@@ -446,7 +461,7 @@ class Exponential(PsychologicalEmbedding):
       cognitive science society (pp. 405-410). 
     [3] Nosofsky, R. M. (1986). Attention, similarity, and the identication-
       categorization relationship. Journal of Experimental Psychology: General,
-      115 , 39-57.
+      115, 39-57.
     [4] Shepard, R. N. (1987). Toward a universal law of generalization for 
       psychological science. Science, 237, 1317-1323.
     '''
@@ -513,6 +528,7 @@ class Exponential(PsychologicalEmbedding):
                     beta = tf.get_variable("beta", [1], initializer=tf.random_uniform_initializer(1.,30.))
                 else:
                     beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.beta), trainable=False)
+        
         return (rho, tau, gamma, beta)
 
     def _set_parameters(self, params):
@@ -599,16 +615,7 @@ class Exponential(PsychologicalEmbedding):
             # Similarity function variables            
             (rho, tau, gamma, beta) = self._get_parameters()
 
-            # Attention variable
-            if self.do_reuse:
-                attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=True)
-            else:
-                if self.infer_attention_weights:
-                    alpha = 1. * np.ones((self.dimensionality))
-                    new_attention_weights = np.random.dirichlet(alpha) * self.dimensionality
-                    attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(new_attention_weights))
-                else:
-                    attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=False)
+            attention_weights = self._get_attention_weights()
 
             # Embedding variable
             # Iniitalize Z with different scales for different restarts

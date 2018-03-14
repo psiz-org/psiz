@@ -5,8 +5,6 @@ sets of attention weights will be used and inferred.
 
 fit, freeze, reuse are the only methods that modify the state of the class
 
-suggest_dimensionality does not modify state
-
 Author: B D Roads
 '''
 from abc import ABCMeta, abstractmethod

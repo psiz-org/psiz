@@ -36,7 +36,7 @@ class PsychologicalEmbedding(object):
     
     The embedding procedure jointly infers two components. First, the embedding
     algorithm infers a stimulus representation denoted Z. Second, the embedding
-    algoirthm infers the parameters of the selected similarity function.
+    algoirthm infers the similarity kernel parameters of the concrete class.
     '''
     __metaclass__ = ABCMeta
 
@@ -84,6 +84,11 @@ class PsychologicalEmbedding(object):
         # Initialize default TensorBoard log attributes.
         self.do_log = False
         self.log_dir = '/tmp/tensorflow_logs/embedding/'
+
+        # Default inference settings.
+        self.lr = 0.00001
+        self.max_n_epoch = 2000
+        self.patience = 10
 
         super().__init__()
 
@@ -338,25 +343,117 @@ class PsychologicalEmbedding(object):
         J = self._concrete_evaluate(obs)
         return J / n_display
 
-    # TODO
-    # @abstractmethod
-    # def _concrete_evaluate(self, obs):
-    #     '''
-    #     Returns:
-    #      J: loss
-    #     '''
-    #     pass
+    def _embed(self, obs, train_idx, test_idx, i_restart):
+        '''TODO
+        '''
+        verbose = 0 # TODO make parameter
 
-    @abstractmethod
-    def _embed(self, obs, train_idx, test_idx, FLAG):
-        '''
-        returns: [loss, Z, A, params]
-        '''
-        pass
+        # Partition the observation data.
+        displays_train = obs.displays[train_idx,:]
+        n_reference_train = obs.n_reference[train_idx]
+        n_selected_train = obs.n_selected[train_idx]
+        is_ranked_train = obs.is_ranked[train_idx]
+        group_id_train = obs.group_id[train_idx]
+
+        displays_val = obs.displays[test_idx,:]
+        n_reference_val = obs.n_reference[test_idx]
+        n_selected_val = obs.n_selected[test_idx]
+        is_ranked_val = obs.is_ranked[test_idx]
+        group_id_val = obs.group_id[test_idx]
+
+        (J, Z, attention_weights, sim_params, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self._core_model()
+        
+        train_op = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(J)
+
+        init = tf.global_variables_initializer()
+
+        with tf.name_scope('summaries'):
+            # Create a summary to monitor cost tensor.
+            tf.summary.scalar('cost', J)
+            # Create a summary of the embedding tensor.
+            tf.summary.tensor_summary('Z', Z)
+            # Create a summary of the attention weights.
+            # tf.summary.tensor_summary('attention_weights', attention_weights)
+            # tf.summary.scalar('attention_00', attention_weights[0,0])
+
+            # Create a summary to monitor parameteres of similarity kernel.
+            with tf.name_scope('similarity'):
+                
+                for param_name in sim_params:
+                    param_mean = tf.reduce_mean(sim_params[param_name])
+                    tf.summary.scalar(param_name + '_mean', param_mean)
+                    # tf.summary.histogram(param_name + '_hist', sim_params[param_name])
+            
+            # Merge all summaries into a single op.
+            merged_summary_op = tf.summary.merge_all()
+
+        sess = tf.Session()
+        sess.run(init)
+
+        # op to write logs for TensorBoard
+        if self.do_log:
+            summary_writer = tf.summary.FileWriter('%s/%s' % (self.log_dir, i_restart), graph=tf.get_default_graph())
+
+        J_all_best = np.inf
+        J_test_best = np.inf
+        
+        last_improvement = 0
+        for epoch in range(self.max_n_epoch):
+            _, J_train, summary = sess.run([train_op, J, merged_summary_op], 
+            feed_dict={tf_displays: displays_train, 
+            tf_n_reference: n_reference_train, 
+            tf_n_selected: n_selected_train, 
+            tf_is_ranked: is_ranked_train, 
+            tf_group_id: group_id_train})
+            
+            sess.run(constraint)
+            J_test = sess.run(J, feed_dict={
+                tf_displays: displays_val, 
+                tf_n_reference: n_reference_val,
+                tf_n_selected: n_selected_val, 
+                tf_is_ranked: is_ranked_val, 
+                tf_group_id: group_id_val})
+
+            J_all =  sess.run(J, feed_dict={
+                tf_displays: obs.displays, 
+                tf_n_reference: obs.n_reference,
+                tf_n_selected: obs.n_selected, 
+                tf_is_ranked: obs.is_ranked, 
+                tf_group_id: obs.group_id})
+
+            if J_test < J_test_best:
+                J_all_best = J_all
+                J_test_best = J_test
+                last_improvement = 0
+                (Z_best, attention_weights_best) = sess.run([Z, attention_weights])
+                params_best = {}
+                for param_name in sim_params:
+                    params_best[param_name] = sess.run(sim_params[param_name])
+            else:
+                last_improvement = last_improvement + 1
+
+            if last_improvement > self.patience:
+                break
+            
+            if not epoch%10:
+                # Write logs at every 10th iteration
+                if self.do_log:
+                    summary_writer.add_summary(summary, epoch)
+            if not epoch%100:
+                if verbose > 2:
+                    print("epoch ", epoch, "| J_train: ", J_train, 
+                    "| J_test: ", J_test, "| J_all: ", J_all)
+
+
+        sess.close()
+        tf.reset_default_graph()
+
+        return (J_all_best, Z_best, attention_weights_best, params_best)
 
     def _embed_restart(self, loaded_func, n_restart, verbose):
-        '''Multiple restart wrapper. The results of the best performing restart
-        are returned.
+        '''Multiple restart wrapper. 
+        
+        The results of the best performing restart are returned.
 
         Parameters:
           n_restart: The number of restarts to perform.
@@ -756,132 +853,6 @@ class Exponential(PsychologicalEmbedding):
         s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau) + gamma)
         return s_qref
 
-    def _embed(self, obs, train_idx, test_idx, i_restart):
-        '''TODO
-        '''
-        verbose = 0 # TODO make parameter
-
-        # Partition the observation data.
-        displays_train = obs.displays[train_idx,:]
-        n_reference_train = obs.n_reference[train_idx]
-        n_selected_train = obs.n_selected[train_idx]
-        is_ranked_train = obs.is_ranked[train_idx]
-        group_id_train = obs.group_id[train_idx]
-
-        displays_val = obs.displays[test_idx,:]
-        n_reference_val = obs.n_reference[test_idx]
-        n_selected_val = obs.n_selected[test_idx]
-        is_ranked_val = obs.is_ranked[test_idx]
-        group_id_val = obs.group_id[test_idx]
-
-        (J, Z, attention_weights, sim_params, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self._core_model()
-        
-        train_op = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(J)
-
-        init = tf.global_variables_initializer()
-
-        with tf.name_scope('summaries'):
-            # Create a summary to monitor cost tensor.
-            tf.summary.scalar('cost', J)
-            # Create a summary of the embedding tensor.
-            tf.summary.tensor_summary('Z', Z)
-            # Create a summary of the attention weights.
-            # tf.summary.tensor_summary('attention_weights', attention_weights)
-            # tf.summary.scalar('attention_00', attention_weights[0,0])
-
-            # Create a summary to monitor parameteres of similarity kernel.
-            with tf.name_scope('similarity'):
-                
-                for param_name in sim_params:
-                    param_mean = tf.reduce_mean(sim_params[param_name])
-                    tf.summary.scalar(param_name + '_mean', param_mean)
-                    # tf.summary.histogram(param_name + '_hist', sim_params[param_name])
-                
-                # rho_mean = tf.reduce_mean(rho)
-                # tf.summary.scalar('rho_mean', rho_mean)
-                # tf.summary.histogram('rho_hist', rho)
-
-                # tau_mean = tf.reduce_mean(tau)
-                # tf.summary.scalar('tau_mean', tau_mean)
-                
-                # gamma_mean = tf.reduce_mean(gamma)
-                # tf.summary.scalar('gamma_mean', gamma_mean)
-                
-                # beta_mean = tf.reduce_mean(beta)
-                # tf.summary.scalar('beta_mean', beta_mean)
-            
-            # Merge all summaries into a single op.
-            merged_summary_op = tf.summary.merge_all()
-
-        sess = tf.Session()
-        sess.run(init)
-
-        # This needs to be abstracted
-        rho = sim_params['rho']
-        tau = sim_params['tau']
-        gamma = sim_params['gamma']
-        beta = sim_params['beta']
-
-        # op to write logs for TensorBoard
-        if self.do_log:
-            summary_writer = tf.summary.FileWriter('%s/%s' % (self.log_dir, i_restart), graph=tf.get_default_graph())
-
-        J_all_best = np.inf
-        J_test_best = np.inf
-        
-        last_improvement = 0
-        for epoch in range(self.max_n_epoch):
-            _, J_train, summary = sess.run([train_op, J, merged_summary_op], 
-            feed_dict={tf_displays: displays_train, 
-            tf_n_reference: n_reference_train, 
-            tf_n_selected: n_selected_train, 
-            tf_is_ranked: is_ranked_train, 
-            tf_group_id: group_id_train})
-            
-            sess.run(constraint)
-            J_test = sess.run(J, feed_dict={
-                tf_displays: displays_val, 
-                tf_n_reference: n_reference_val,
-                tf_n_selected: n_selected_val, 
-                tf_is_ranked: is_ranked_val, 
-                tf_group_id: group_id_val})
-
-            J_all =  sess.run(J, feed_dict={
-                tf_displays: obs.displays, 
-                tf_n_reference: obs.n_reference,
-                tf_n_selected: obs.n_selected, 
-                tf_is_ranked: obs.is_ranked, 
-                tf_group_id: obs.group_id})
-
-            if J_test < J_test_best:
-                J_all_best = J_all
-                J_test_best = J_test
-                last_improvement = 0
-                (Z_best, attention_weights_best) = sess.run([Z, attention_weights])
-                (rho_best, tau_best, gamma_best, beta_best) = sess.run([rho, tau, gamma, beta])
-            else:
-                last_improvement = last_improvement + 1
-
-            if last_improvement > self.patience:
-                break
-            
-            if not epoch%10:
-                # Write logs at every 10th iteration
-                if self.do_log:
-                    summary_writer.add_summary(summary, epoch)
-            if not epoch%100:
-                if verbose > 2:
-                    print("epoch ", epoch, "| J_train: ", J_train, 
-                    "| J_test: ", J_test, "| J_all: ", J_all)
-
-
-        sess.close()
-        tf.reset_default_graph()
-
-        params_best = {'rho':rho_best, 'tau':tau_best, 'gamma':gamma_best, 
-        'beta':beta_best}
-        return (J_all_best, Z_best, attention_weights_best, params_best)
-
 class HeavyTailed(PsychologicalEmbedding):
     '''A heavy-tailed family stochastic display embedding algorithm. 
     
@@ -1053,11 +1024,6 @@ class HeavyTailed(PsychologicalEmbedding):
         # Heavy-tailed family similarity kernel.
         s_qref = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
         return s_qref
-    
-    def _embed(self, obs, train_idx, test_idx, i_restart):
-        '''
-        '''
-        return None
 
 class StudentT(PsychologicalEmbedding):
     '''A Student-t family stochastic display embedding algorithm.
@@ -1223,8 +1189,3 @@ class StudentT(PsychologicalEmbedding):
         # Student-t family similarity kernel.
         s_qref = tf.pow(1 + (tf.pow(d_qref, tau) / alpha), tf.negative(alpha + 1)/2)
         return s_qref
-
-    def _embed(self, obs, train_idx, test_idx, i_restart):
-        '''
-        '''
-        return None

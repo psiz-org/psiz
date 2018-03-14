@@ -32,15 +32,15 @@ class Observations(object):
         self.group_id = group_id
 
 class PsychologicalEmbedding(object):
-    """Abstract base class for psyhcological embedding algorithm. The embedding
+    '''Abstract base class for psyhcological embedding algorithm. The embedding
     procedure _jointly_ infers two components. First, the embedding algorithm 
     infers a stimulus representation denoted Z. Second, the embedding algoirthm
     infers the parameters of the selected similarity function.
-    """
+    '''
     __metaclass__ = ABCMeta
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
-        """
+        '''
         Initialize
 
         Parameters:
@@ -52,7 +52,7 @@ class PsychologicalEmbedding(object):
           n_group: (default: 1) An integer indicating the number of different
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
-        """
+        '''
         self.n_stimuli = n_stimuli
         self.n_group = n_group
 
@@ -87,20 +87,59 @@ class PsychologicalEmbedding(object):
         super().__init__()
 
     @abstractmethod
+    def _get_parameters(self):
+        '''Returns a tuple of algorithm-specific Tensorflow variables.
+        
+        This method encapsulates the creation of algorithm-specific free
+        parameters governing the similarity kernel.
+        '''
+        pass
+    
+    @abstractmethod
+    def _set_parameters(self, params):
+        '''A state changing method that sets algorithm-specific parameters.
+        
+        This method encapsulates the setting of algorithm-specific free 
+        parameters governing the similarity kernel.
+
+        Parameters:
+          params: An ordered list of algorithm-specific parameters.
+
+        TODO add "*args" to parameter list?
+        TODO use dictionary instead of ordered list?
+        '''
+        pass
+
+    @abstractmethod
+    def freeze(self):
+        '''A state changing method specifing which parameters are fixed.
+
+        During inference, you may want to freeze some parameters at specific
+        values. To freeze a particular parameter, pass in a value for it. If you
+        would like to freeze multiple parameters, they must be passed in at the 
+        same time. If no value is provided for a parameter, it will not be fixed.
+        
+        TODO add "*args" to parameter list?
+        '''
+        pass
+    
+    @abstractmethod
     def similarity(self, z_q, z_ref, attention_weights):
-        """
+        '''Similarity kernel.
+
         Parameters:
           z_q: A set of embedding points.
-            shape = [n_sample -by- dimensionality]
+            shape = (n_sample, dimensionality)
           z_ref: A set of embedding points.
-            shape = [n_sample -by- dimensionality -by- n_reference]
+            shape = (n_sample, dimensionality)
           attention_weights: The weights allocated to each dimension in a 
             weighted minkowski metric.
+            shape = (n_sample, dimensionality)
         Returns:
           similarity: The corresponding similairty between rows of embedding
             points.
-            shape = [n_sample -by- n_reference]
-        """
+            shape = (n_sample,)
+        '''
         pass
 
     def reuse(self, do_reuse, init_scale=0):
@@ -257,33 +296,20 @@ class PsychologicalEmbedding(object):
         return J / n_display
 
     @abstractmethod
-    def freeze(self):
-        """
-        """
-        pass
-
-    @abstractmethod
     def _concrete_evaluate(self, obs):
-        """
+        '''
         Returns:
          J: loss
-        """
+        '''
         pass
 
     @abstractmethod
     def _embed(self, obs, train_idx, test_idx, FLAG):
-        """
+        '''
         returns: [loss, Z, A, params]
-        """
-        pass
-
-    @abstractmethod
-    def _set_parameters(self, params):
-        ''' A state changing method called by the abstract class that 
-        encapsulates the free paramter variability across concrete classes.
         '''
         pass
-    
+
     def _embed_restart(self, loaded_func, n_restart, verbose):
         '''Multiple restart wrapper. The results of the best performing restart
         are returned.
@@ -324,8 +350,8 @@ class PsychologicalEmbedding(object):
         return attention_weights_proj
     
     def _cost_2c1(self, Z, triplets, attention_weights):
-        """Cost associated with an ordered 2 chooose 1 display.
-        """
+        '''Cost associated with an ordered 2 chooose 1 display.
+        '''
         # Similarity
         Sqa = self.similarity(tf.gather(Z, triplets[:,0]), 
         tf.gather(Z, triplets[:,1]), attention_weights)
@@ -339,8 +365,8 @@ class PsychologicalEmbedding(object):
         return J
     
     def _cost_8cN(self, Z, nines, N, attention_weights):
-        """Cost associated with an ordered 8 chooose N display.
-        """
+        '''Cost associated with an ordered 8 chooose N display.
+        '''
         # Similarity
         Sqa = self.similarity(tf.gather(Z, nines[:,0]), 
         tf.gather(Z, nines[:,1]), attention_weights)
@@ -402,44 +428,67 @@ class PsychologicalEmbedding(object):
         return J
 
 class Exponential(PsychologicalEmbedding):
-    """An exponential-based stochastic display embedding algorithm. 
+    '''An exponential family stochastic display embedding algorithm. 
     
-    This embedding technique uses the following similarity function: s(x,y) =
-    exp(-beta .* norm(x - y, rho).^tau) + gamma, where x and y are n-dimensional
-    vectors. The similarity function has four free parameters: rho, tau, gamma,
-    and beta.
-    """
+    This embedding technique uses the following similarity kernel: 
+      s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma, 
+    where x and y are n-dimensional vectors. The similarity function has four 
+    free parameters: rho, tau, gamma, and beta. The exponential family is 
+    obtained by integrating across various psychological theores [1,2,3,4].
+
+    References:
+    [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency effects as a 
+      window to generalization: Separating decisional and perceptual sequential
+      effects in category learning. Journal of Experimental Psychology: 
+      Learning, Memory, & Cognition, 32 , 316-332.
+    [2] Jones, M., Maddox, W. T., & Love, B. C. (2006). The role of similarity 
+      in generalization. In Proceedings of the 28th annual meeting of the 
+      cognitive science society (pp. 405-410). 
+    [3] Nosofsky, R. M. (1986). Attention, similarity, and the identication-
+      categorization relationship. Journal of Experimental Psychology: General,
+      115 , 39-57.
+    [4] Shepard, R. N. (1987). Toward a universal law of generalization for 
+      psychological science. Science, 237, 1317-1323.
+    '''
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
-        """Initialize
-        
+        '''
+        Initialize
+
         Parameters:
           n_stimuli: An integer indicating the total number of unique stimuli
             that will be embedded.
+          dimensionality: An integer indicating the dimensionalty of the 
+            embedding. The dimensionality can be inferred using the function
+            "suggest_dimensionality".
           n_group: (default: 1) An integer indicating the number of different
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
-        """
+        '''
+
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
+        # Default parameter settings.
         self.rho = 2.
         self.tau = 1.
         self.gamma = 0.
         self.beta = 10.
         
+        # Default inference settings.
         self.infer_rho = True
         self.infer_tau = True
         self.infer_gamma = True
         self.infer_beta = True
-
-        # Learning settings.
         self.lr = 0.00001
         self.max_n_epoch = 2000
         self.patience = 10
     
     def _get_parameters(self):
-        '''
+        '''Returns a tuple of algorithm-specific Tensorflow variables.
+        
+        This method encapsulates the creation of algorithm-specific free
+        parameters governing the similarity kernel.
         '''
         with tf.variable_scope("similarity_params"):
             if self.do_reuse:
@@ -467,8 +516,10 @@ class Exponential(PsychologicalEmbedding):
         return (rho, tau, gamma, beta)
 
     def _set_parameters(self, params):
-        ''' A state changing method called by the abstract class that 
-        encapsulates the free paramter variability across concrete classes.
+        '''A state changing method that sets algorithm-specific parameters.
+        
+        This method encapsulates the setting of algorithm-specific free 
+        parameters governing the similarity kernel.
         '''
         self.rho = params['rho']
         self.tau = params['tau']
@@ -476,6 +527,27 @@ class Exponential(PsychologicalEmbedding):
         self.gamma = params['gamma']
 
     def freeze(self, rho=None, tau=None, gamma=None, beta=None, Z=None):
+        '''A state changing method specifing which parameters are fixed.
+
+        During inference, you may want to freeze some parameters at specific
+        values. To freeze a particular parameter, pass in a value for it. If you
+        would like to freeze multiple parameters, they must be passed in at the 
+        same time. If no value is provided for a parameter, it will not be fixed.
+        
+        Parameters:
+          rho
+          tau
+          gamma
+          beta
+          Z
+        '''
+        
+        self.infer_rho = True
+        self.infer_tau = True
+        self.infer_gamma = True
+        self.infer_beta = True
+        self.infer_Z = True
+
         if rho is not None:
             self.rho = rho
             self.infer_rho = False
@@ -491,26 +563,32 @@ class Exponential(PsychologicalEmbedding):
         if Z is not None:
             self.Z = Z
             self.infer_Z = False
-            self.dimensionality = Z.shape[1]        
 
     def similarity(self, z_q, z_ref, attention_weights):
-        ''' Exponential-family similarity function.
+        '''Exponential family similarity kernel.
+
         Parameters:
-          z_q: size = [n_sample -by- dimensionality]
-          z_ref: size = [n_sample -by- dimensionality]
-          attention_weights: size = [n_sample -by- dimensionality]
+          z_q: A set of embedding points.
+            shape = (n_sample, dimensionality)
+          z_ref: A set of embedding points.
+            shape = (n_sample, dimensionality)
+          attention_weights: The weights allocated to each dimension in a 
+            weighted minkowski metric.
+            shape = (n_sample, dimensionality)
         Returns:
-          similarity: size = [n_sample -by- n_reference]
+          similarity: The corresponding similairty between rows of embedding
+            points.
+            shape = (n_sample,)
         '''
 
         (rho, tau, gamma, beta) = self._get_parameters()
 
-        # Weighted Minkowski Distance
+        # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
         d_qref = tf.multiply(d_qref, attention_weights)
         d_qref = tf.pow(tf.reduce_sum(d_qref,axis=1), 1. / rho)
 
-        # Exponential-family similarity
+        # Exponential family similarity kernel.
         s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau) + gamma)
         return s_qref
 
@@ -742,62 +820,84 @@ class Exponential(PsychologicalEmbedding):
         return J_all
 
 class HeavyTailed(PsychologicalEmbedding):
-    """
-    An heavy-tail-based stochastic display embedding procedure. This embedding
-    technique uses the following similarity function: s(x,y) =
-    (kappa + (norm(x-y, rho).^tau)).^(-alpha), where x and y are 
-    n-dimensionalvectors. The similarity function has four free parameters: 
-    rho, tau, kappa, and alpha.
-    """
+    '''A heavy-tailed family stochastic display embedding algorithm. 
+    
+    This embedding technique uses the following similarity kernel: 
+      s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha), 
+    where x and y are n-dimensional vectors. The similarity function has four 
+    free parameters: rho, tau, kappa, and alpha. The heavy-tailed family is a 
+    further generalization of the Student-t family.
+    '''
+
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
-        """Initialize
-        
+        '''
+        Initialize
+
         Parameters:
-          n_stimuli: An integer indicating the total number of stimuli that will be
-          embedded.
-      """
+          n_stimuli: An integer indicating the total number of unique stimuli
+            that will be embedded.
+          dimensionality: An integer indicating the dimensionalty of the 
+            embedding. The dimensionality can be inferred using the function
+            "suggest_dimensionality".
+          n_group: (default: 1) An integer indicating the number of different
+            population groups in the embedding. A separate set of attention 
+            weights will be inferred for each group.
+        '''
+
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
-        self.dimensionality = None
-        self.Z = None
+        # Default parameter settings.
         self.rho = 2.
         self.tau = 1.
         self.kappa = 2.
         self.alpha = 30.
-        self.attention_weights = None
         
-        self.infer_Z = True
+        # Default inference settings.
         self.infer_rho = True
         self.infer_tau = True
         self.infer_kappa = True
         self.infer_alpha = True
-        self.infer_attention_weights = False
-
+        self.lr = 0.00001
         self.max_n_epoch = 2000
+        self.patience = 10
     
     def _get_parameters(self):
+        '''Returns a tuple of algorithm-specific Tensorflow variables.
+        
+        This method encapsulates the creation of algorithm-specific free
+        parameters governing the similarity kernel.
+        '''
         with tf.variable_scope("similarity_params"):
-            if self.infer_rho:
-                rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
+            if self.do_reuse:
+                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
+                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=True)
+                kappa = tf.get_variable("kappa", [1], initializer=tf.constant_initializer(self.kappa), trainable=True)
+                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=True)
             else:
-                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
-            if self.infer_tau:
-                tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
-            else:
-                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
-            if self.infer_kappa:
-                kappa = tf.get_variable("kappa", [1], initializer=tf.random_uniform_initializer(1.,11.))
-            else:
-                kappa = tf.get_variable("kappa", [1], initializer=tf.constant_initializer(self.kappa), trainable=False)
-            if self.infer_alpha:
-                alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(10.,60.))
-            else:
-                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
+                if self.infer_rho:
+                    rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
+                else:
+                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
+                if self.infer_tau:
+                    tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
+                else:
+                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
+                if self.infer_kappa:
+                    kappa = tf.get_variable("kappa", [1], initializer=tf.random_uniform_initializer(1.,11.))
+                else:
+                    kappa = tf.get_variable("kappa", [1], initializer=tf.constant_initializer(self.kappa), trainable=False)
+                if self.infer_alpha:
+                    alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(10.,60.))
+                else:
+                    alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
         return (rho, tau, kappa, alpha)
 
     def _set_parameters(self, params):
-        '''
+        '''A state changing method that sets algorithm-specific parameters.
+        
+        This method encapsulates the setting of algorithm-specific free 
+        parameters governing the similarity kernel.
         '''
         self.rho = params['rho']
         self.tau = params['tau']
@@ -805,40 +905,68 @@ class HeavyTailed(PsychologicalEmbedding):
         self.alpha = params['alpha']
 
     def freeze(self, rho=None, tau=None, kappa=None, alpha=None, Z=None):
+        '''A state changing method specifing which parameters are fixed.
+
+        During inference, you may want to freeze some parameters at specific
+        values. To freeze a particular parameter, pass in a value for it. If you
+        would like to freeze multiple parameters, they must be passed in at the 
+        same time. If no value is provided for a parameter, it will not be fixed.
+        
+        Parameters:
+          rho
+          tau
+          kappa
+          alpha
+          Z
+        '''
+
+        self.infer_rho = True
+        self.infer_tau = True
+        self.infer_kappa = True
+        self.infer_alpha = True
+        self.infer_Z = True
+
         if rho is not None:
             self.rho = rho
-            self.infer_rho = False
+            self.infer_rho = False            
         if tau is not None:
             self.tau = tau
-            self.infer_tau = False
+            self.infer_tau = False            
         if kappa is not None:
             self.kappa = kappa
-            self.infer_kappa = False
+            self.infer_kappa = False            
         if alpha is not None:
             self.alpha = alpha
-            self.infer_alpha = False
+            self.infer_alpha = False            
         if Z is not None:
             self.Z = Z
             self.infer_Z = False        
 
     def similarity(self, z_q, z_ref, attention_weights):
-        '''
-        Similarity function
-        INPUT
-        z_q           - size = [n_sample -by- dimensionality]
-        z_ref         - size = [n_sample -by- dimensionality]
-        OUTPUT
-        similarity    - size = [n_sample -by- n_reference]
+        '''Heavy-tailed family similarity kernel.
+
+        Parameters:
+          z_q: A set of embedding points.
+            shape = (n_sample, dimensionality)
+          z_ref: A set of embedding points.
+            shape = (n_sample, dimensionality)
+          attention_weights: The weights allocated to each dimension in a 
+            weighted minkowski metric.
+            shape = (n_sample, dimensionality)
+        Returns:
+          similarity: The corresponding similairty between rows of embedding
+            points.
+            shape = (n_sample,)
         '''
 
         (rho, tau, kappa, alpha) = self._get_parameters()
 
-        # Weighted Minkowski Distance
+        # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
         d_qref = tf.multiply(d_qref, attention_weights)
         d_qref = tf.pow(tf.reduce_sum(d_qref,axis=1), 1. / rho)
 
-        # Heavy-tailed family similarity
+        # Heavy-tailed family similarity kernel.
         s_qref = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
         return s_qref
     
@@ -848,71 +976,109 @@ class HeavyTailed(PsychologicalEmbedding):
         return None
 
 class StudentT(PsychologicalEmbedding):
-    """
-    An embedding proecdure using a slight generalization of the Student-t 
-    kernel. The simialrity kernel is characterized by the following 
-    similarity function: 
-    s(x,y) = (1 + (((norm(x-y, rho)^tau) / alpha))^(-(alpha + 1)/2), 
-    where x and y are n-dimensional vectors. The similarity function has four
-    free parameters: rho, tau, kappa, and alpha. The original Student-t kernel
-    was originally proposed by van der Maaten (2012) to handle similarity
-    "triplets".
+    '''A Student-t family stochastic display embedding algorithm.
+
+    The embedding technique uses the following simialrity kernel:
+      s(x,y) = (1 + (((norm(x-y, rho)^tau) / alpha))^(-(alpha + 1)/2),
+    where x and y are n-dimensional vectors. The similarity kernel has three 
+    free parameters: rho, tau, and alpha. The original Student-t kernel was
+    was proposed by van der Maaten [1] to handle "triplet" similarity 
+    judgments. The similarity kernel used here is a slight generalization of
+    the orignal case where rho=2, tau=2, and alpha=dimensionality-1.
 
     References:
-      van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet 
+      [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet 
         embedding. In Machine learning for signal processing (mlsp), 2012 IEEE
         international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720
-    """
+    '''
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
-        """Initialize
-        
+        '''
+        Initialize
+
         Parameters:
-          n_stimuli: An integer indicating the total number of stimuli that will be
-          embedded.
-      """
+          n_stimuli: An integer indicating the total number of unique stimuli
+            that will be embedded.
+          dimensionality: An integer indicating the dimensionalty of the 
+            embedding. The dimensionality can be inferred using the function
+            "suggest_dimensionality".
+          n_group: (default: 1) An integer indicating the number of different
+            population groups in the embedding. A separate set of attention 
+            weights will be inferred for each group.
+        '''
+
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
-        self.dimensionality = None
-        self.Z = None
+        # Default parameter settings.
         self.rho = 2.
         self.tau = 2.
         self.alpha = 5.
-        self.attention_weights = None
         
-        self.infer_Z = True
+        # Default inference settings.
         self.infer_rho = True
         self.infer_tau = True
         self.infer_alpha = True
-        self.infer_attention_weights = False
-
+        self.lr = 0.00001
         self.max_n_epoch = 2000
+        self.patience = 10
 
     def _get_parameters(self):
+        '''Returns a tuple of algorithm-specific Tensorflow variables.
+        
+        This method encapsulates the creation of algorithm-specific free
+        parameters governing the similarity kernel.
+        '''
         with tf.variable_scope("similarity_params"):
-            if self.infer_rho:
-                rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
+            if self.do_reuse:
+                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
+                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=True)
+                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=True)
             else:
-                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
-            if self.infer_tau:
-                tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
-            else:
-                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
-            if self.infer_alpha:
-                alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(1.,30.))
-            else:
-                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
+                if self.infer_rho:
+                    rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
+                else:
+                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
+                if self.infer_tau:
+                    tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
+                else:
+                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
+                if self.infer_alpha:
+                    alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(1.,30.))
+                else:
+                    alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
         return (rho, tau, alpha)
 
     def _set_parameters(self, params):
-        '''
+        '''A state changing method that sets algorithm-specific parameters.
+        
+        This method encapsulates the setting of algorithm-specific free 
+        parameters governing the similarity kernel.
         '''
         self.rho = params['rho']
         self.tau = params['tau']
         self.alpha = params['alpha']
 
     def freeze(self, rho=None, tau=None, alpha=None, Z=None):
+        '''A state changing method specifing which parameters are fixed.
+
+        During inference, you may want to freeze some parameters at specific
+        values. To freeze a particular parameter, pass in a value for it. If you
+        would like to freeze multiple parameters, they must be passed in at the 
+        same time. If no value is provided for a parameter, it will not be fixed.
+        
+        Parameters:
+          rho
+          tau
+          alpha
+          Z
+        '''
+
+        self.infer_rho = True
+        self.infer_tau = True
+        self.infer_alpha = True
+        self.infer_Z = True
+
         if rho is not None:
             self.rho = rho
             self.infer_rho = False
@@ -927,23 +1093,30 @@ class StudentT(PsychologicalEmbedding):
             self.infer_Z = False
 
     def similarity(self, z_q, z_ref, attention_weights):
-        '''
-        Similarity function
-        INPUT
-        z_q           - size = [n_sample -by- dimensionality]
-        z_ref         - size = [n_sample -by- dimensionality]
-        OUTPUT
-        similarity    - size = [n_sample -by- n_reference]
+        '''Student-t family similarity kernel.
+
+        Parameters:
+          z_q: A set of embedding points.
+            shape = (n_sample, dimensionality)
+          z_ref: A set of embedding points.
+            shape = (n_sample, dimensionality)
+          attention_weights: The weights allocated to each dimension in a 
+            weighted minkowski metric.
+            shape = (n_sample, dimensionality)
+        Returns:
+          similarity: The corresponding similairty between rows of embedding
+            points.
+            shape = (n_sample,)
         '''
 
         (rho, tau, alpha) = self._get_parameters()
 
-        # Weighted Minkowski Distance
+        # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
         d_qref = tf.multiply(d_qref, attention_weights)
         d_qref = tf.pow(tf.reduce_sum(d_qref,axis=1), 1. / rho)
 
-        # Student-t distribution similarity
+        # Student-t family similarity kernel.
         s_qref = tf.pow(1 + (tf.pow(d_qref, tau) / alpha), tf.negative(alpha + 1)/2)
         return s_qref
 

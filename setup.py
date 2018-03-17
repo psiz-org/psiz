@@ -7,7 +7,7 @@ def readme():
     with open('README.rst') as f:
         return f.read()
 
-setup(name='psychembed',
+setup(name='psiz',
       version='0.1.0',
       description='Toolbox for inferring psychological embeddings.',
       long_description=readme(),
@@ -17,7 +17,7 @@ setup(name='psychembed',
       author='Brett D. Roads',
       author_email='brett.roads@gmail.com',
       license='GNU GPLv3',
-      packages=['psychembed'],
+      packages=['psiz'],
       install_requires=['numpy', 'tensorflow', 'pandas', 'scikit-learn'],
       include_package_data=True,
       )

@@ -13,7 +13,7 @@ import tensorflow as tf
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
-import psychembed.utils as ut
+import psiz.utils as ut
 
 class Observations(object):
     '''A wrapper object used by the class PsychologicalEmbedding for passing

@@ -5,7 +5,7 @@ Author: B D Roads
 
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
-import psychembed.utils as ut
+import psiz.utils as ut
 
 def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selected=None, 
     is_ranked=None, group_id=None, dim_list=None, n_restart=20, n_fold=3, 

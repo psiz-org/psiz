@@ -664,7 +664,6 @@ class PsychologicalEmbedding(object):
 
         return J_all
 
-
 class Exponential(PsychologicalEmbedding):
     '''An exponential family stochastic display embedding algorithm. 
     

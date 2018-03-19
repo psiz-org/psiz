@@ -75,6 +75,9 @@ class PsychologicalEmbedding(object):
         else:
             self.infer_attention_weights = True
 
+        # Embedding scaling factors to draw from.
+        self.init_scale_list = [.001, .01, .1]
+
         # Initialize default reuse attributes.
         self.do_reuse = False
         self.init_scale = 0
@@ -84,8 +87,9 @@ class PsychologicalEmbedding(object):
         self.log_dir = '/tmp/tensorflow_logs/embedding/'
 
         # Default inference settings.
-        self.lr = 0.00001
-        self.max_n_epoch = 2000
+        # self.lr = 0.00001
+        self.lr = 0.001
+        self.max_n_epoch = 5000
         self.patience = 10
 
         super().__init__()
@@ -174,9 +178,8 @@ class PsychologicalEmbedding(object):
         '''
         # Embedding variable
         # Iniitalize Z with different scales for different restarts
-        init_scale_list = [.001, .01, .1]
-        rand_scale_idx = np.random.randint(0,3)
-        scale_value = init_scale_list[rand_scale_idx]
+        rand_scale_idx = np.random.randint(0,len(self.init_scale_list))
+        scale_value = self.init_scale_list[rand_scale_idx]
         tf_scale_value = tf.constant(scale_value, dtype=tf.float32)
         
         if self.do_reuse:
@@ -295,7 +298,8 @@ class PsychologicalEmbedding(object):
         self.attention_weights = attention_weights
         self._set_parameters(params)
 
-        return J_all / n_display
+        # return J_all / n_display TODO delete
+        return J_all
     
     def evaluate(self, displays, n_selected=None, is_ranked=None, group_id=None):
         '''Evaluate observations using the current state of the embedding object.
@@ -339,7 +343,8 @@ class PsychologicalEmbedding(object):
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
 
         J = self._concrete_evaluate(obs)
-        return J / n_display
+        # return J / n_display TODO delete
+        return J
 
     def _embed(self, obs, train_idx, test_idx, i_restart):
         '''TODO
@@ -361,7 +366,8 @@ class PsychologicalEmbedding(object):
 
         (J, Z, attention_weights, sim_params, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self._core_model()
         
-        train_op = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(J)
+        # train_op = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(J)
+        train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(J)
 
         init = tf.global_variables_initializer()
 
@@ -403,7 +409,7 @@ class PsychologicalEmbedding(object):
             tf_n_selected: n_selected_train, 
             tf_is_ranked: is_ranked_train, 
             tf_group_id: group_id_train})
-            
+
             sess.run(constraint)
             J_test = sess.run(J, feed_dict={
                 tf_displays: displays_val, 
@@ -423,6 +429,7 @@ class PsychologicalEmbedding(object):
                 J_all_best = J_all
                 J_test_best = J_test
                 last_improvement = 0
+                # TODO handle worst case where there is no improvement from initialization 
                 (Z_best, attention_weights_best) = sess.run([Z, attention_weights])
                 params_best = {}
                 for param_name in sim_params:
@@ -491,6 +498,9 @@ class PsychologicalEmbedding(object):
     def _cost_2c1(self, Z, triplets, sim_params, attention_weights):
         '''Cost associated with an ordered 2 chooose 1 display.
         '''
+        n_disp = tf.shape(triplets)[0]
+        n_disp = tf.cast(n_disp, dtype=tf.float32)
+
         # Similarity
         Sqa = self.similarity(tf.gather(Z, triplets[:,0]), 
         tf.gather(Z, triplets[:,1]), sim_params, attention_weights)
@@ -501,11 +511,17 @@ class PsychologicalEmbedding(object):
         # Cost function
         cap = tf.constant(2.2204e-16)
         J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        J = tf.divide(J, n_disp)
+
+        J = tf.cond(n_disp > tf.constant(0.),lambda: J, lambda: tf.constant(0.))
         return J
     
     def _cost_8cN(self, Z, nines, N, sim_params, attention_weights):
         '''Cost associated with an ordered 8 chooose N display.
         '''
+        n_disp = tf.shape(nines)[0]
+        n_disp = tf.cast(n_disp, dtype=tf.float32)
+    
         # Similarity
         Sqa = self.similarity(tf.gather(Z, nines[:,0]), 
         tf.gather(Z, nines[:,1]), sim_params, attention_weights)
@@ -564,6 +580,9 @@ class PsychologicalEmbedding(object):
         # Cost function
         cap = tf.constant(2.2204e-16)
         J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        J = tf.divide(J, n_disp)
+
+        J = tf.cond(n_disp > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
     def _core_model(self):
@@ -591,7 +610,7 @@ class PsychologicalEmbedding(object):
 
             # Get displays
             disp_8c2 = tf.gather(tf_displays, idx_8c2)
-            
+
             disp_2c1 = tf.gather(tf_displays, idx_2c1)
             disp_2c1 = disp_2c1[:, 0:3]
 
@@ -717,9 +736,10 @@ class Exponential(PsychologicalEmbedding):
         self.infer_tau = True
         self.infer_gamma = True
         self.infer_beta = True
-        self.lr = 0.00001
-        self.max_n_epoch = 2000
-        self.patience = 10
+        # self.lr = 0.003
+        self.lr = 0.01
+        # self.max_n_epoch = 2000
+        # self.patience = 10
     
     def _get_similarity_parameters(self):
         '''Returns a dictionary and TensorFlow operation.
@@ -889,9 +909,9 @@ class HeavyTailed(PsychologicalEmbedding):
         self.infer_tau = True
         self.infer_kappa = True
         self.infer_alpha = True
-        self.lr = 0.00001
-        self.max_n_epoch = 2000
-        self.patience = 10
+        self.lr = 0.003
+        # self.max_n_epoch = 2000
+        # self.patience = 10
     
     def _get_similarity_parameters(self):
         '''Returns a dictionary and TensorFlow operation.
@@ -1022,8 +1042,8 @@ class HeavyTailed(PsychologicalEmbedding):
         s_qref = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
         return s_qref
 
-class StudentT(PsychologicalEmbedding):
-    '''A Student-t family stochastic display embedding algorithm.
+class StudentsT(PsychologicalEmbedding):
+    '''A Student's t family stochastic display embedding algorithm.
 
     The embedding technique uses the following simialrity kernel:
       s(x,y) = (1 + (((norm(x-y, rho)^tau) / alpha))^(-(alpha + 1)/2),
@@ -1060,15 +1080,17 @@ class StudentT(PsychologicalEmbedding):
         # Default parameter settings.
         self.rho = 2.
         self.tau = 2.
-        self.alpha = 5.
+        self.alpha = dimensionality - 1.
         
         # Default inference settings.
-        self.infer_rho = True
-        self.infer_tau = True
-        self.infer_alpha = True
-        self.lr = 0.00001
-        self.max_n_epoch = 2000
-        self.patience = 10
+        self.infer_rho = False
+        self.infer_tau = False
+        self.infer_alpha = False
+        # self.lr = 0.003
+        self.lr = 0.01
+        # self.max_n_epoch = 2000
+        # self.patience = 10
+        # self.init_scale_list = [.001, .01, .1]
 
     def _get_similarity_parameters(self):
         '''Returns a dictionary and TensorFlow operation.
@@ -1097,7 +1119,9 @@ class StudentT(PsychologicalEmbedding):
                 else:
                     tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
                 if self.infer_alpha:
-                    alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(1.,30.))
+                    min_alpha = np.max((1, self.dimensionality - 5.))
+                    max_alpha = self.dimensionality + 5.
+                    alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(min_alpha, max_alpha))
                 else:
                     alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
         sim_params = {'rho':rho, 'tau':tau, 'alpha':alpha}

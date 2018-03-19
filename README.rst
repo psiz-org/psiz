@@ -45,7 +45,7 @@ Installation
 There are two ways to install PsiZ:
 
    1. Install from PyPI using pip: ``pip install psiz``
-   2. Clone from Git Hub: https://github.com/roads/psiz.git TODO
+   2. Clone from Git Hub: https://github.com/roads/psiz.git
 
 Support
 -------

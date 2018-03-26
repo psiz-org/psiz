@@ -298,7 +298,6 @@ class PsychologicalEmbedding(object):
         self.attention_weights = attention_weights
         self._set_parameters(params)
 
-        # return J_all / n_display TODO delete
         return J_all
     
     def evaluate(self, displays, n_selected=None, is_ranked=None, group_id=None):
@@ -343,7 +342,6 @@ class PsychologicalEmbedding(object):
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
 
         J = self._concrete_evaluate(obs)
-        # return J / n_display TODO delete
         return J
 
     def _embed(self, obs, train_idx, test_idx, i_restart):
@@ -736,8 +734,7 @@ class Exponential(PsychologicalEmbedding):
         self.infer_tau = True
         self.infer_gamma = True
         self.infer_beta = True
-        # self.lr = 0.003
-        self.lr = 0.01
+        self.lr = 0.003
         # self.max_n_epoch = 2000
         # self.patience = 10
     
@@ -1048,10 +1045,11 @@ class StudentsT(PsychologicalEmbedding):
     The embedding technique uses the following simialrity kernel:
       s(x,y) = (1 + (((norm(x-y, rho)^tau) / alpha))^(-(alpha + 1)/2),
     where x and y are n-dimensional vectors. The similarity kernel has three 
-    free parameters: rho, tau, and alpha. The original Student-t kernel was
-    was proposed by van der Maaten [1] to handle "triplet" similarity 
-    judgments. The similarity kernel used here is a slight generalization of
-    the orignal case where rho=2, tau=2, and alpha=dimensionality-1.
+    free parameters: rho, tau, and alpha. The original Student-t kernel 
+    proposed by van der Maaten [1] uses the parameter settings rho=2, tau=2,
+    and alpha=dimensionality-1. By default, this embedding algorithm will
+    only infer the embedding and not the free parameters. This behavior can be
+    changed by setting the inference flags (e.g., infer_alpha = True).
 
     References:
       [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet 

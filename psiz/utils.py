@@ -91,6 +91,6 @@ def generate_display_type_id(n_reference, n_selected, is_ranked,
         d = (group_id == df_unique['col3'].iloc[i_type])
         e = (assignment_id == df_unique['col4'].iloc[i_type])
         f = np.array((a,b,c,d,e))
-        display_type_locs = np.any(f, axis=0)
+        display_type_locs = np.all(f, axis=0)
         display_type_id[display_type_locs] = i_type
     return display_type_id

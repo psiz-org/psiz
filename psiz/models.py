@@ -1,17 +1,16 @@
-'''Embedding models
+'''Module of psychological embedding models.
 
 n_group must be defined on instantiation. this determines how many separate
 sets of attention weights will be used and inferred.
 
 fit, freeze, reuse are the only methods that modify the state of the class
 
-TODO: attention weights, parallelization, warm restarts, reuse, 
+TODO: attention weights, parallelization, warm restarts, reuse
+- redo saving of files (saved files should already take into account zero indexing and is_ranked error)
 
 promote Observations
-- defaults for data are all contained in observations
-- fit takes Observation object as argument
-- evaluate takes Observation object as argument
-- suggest dimensionality takes Observation object as argument
+- docs should be clear that loss is average loss
+- docs should be clear regarding verbosity levels
 
 Author: B D Roads
 '''
@@ -27,16 +26,150 @@ class Observations(object):
     '''Object that encapsulates similarity judgment observations.
     
     Used by the class PsychologicalEmbedding.
+
+    Attributes: TODO
+      configuration_id
+      configurations
+
+    Parameters:
+      displays: An integer matrix representing the displays (rows) that 
+        have been judged based on similarity. The shape implies the 
+        number of references used on each trial. The first column 
+        is the query, then the selected references in order of selection,
+        and then any remaining unselected references.
+        shape = [n_obs, max(n_reference) + 1]
+      n_selected: An integer array indicating the number of references 
+        selected in each display.
+        shape = [n_obs, 1]
+      is_ranked:  Boolean array indicating which displays had selected
+        references that were ordered.
+        shape = [n_obs, 1]
+      group_id: An integer array indicating the group membership of each 
+        display. It is assumed that group is composed of integers from 
+        [0,N] where N is the total number of groups. Separate attention 
+        weights are inferred for each group.
+        shape = [n_obs, 1]
     '''
-    def __init__(self, displays, n_reference, n_selected, is_ranked, group_id):
+    def __init__(self, displays, n_selected=None, is_ranked=None, group_id=None):
         '''
         Initialize
         '''
+
+        n_obs = displays.shape[0]
+        # Handle default settings.
+        if n_selected is None:
+            n_selected = np.ones((n_obs))
+        if is_ranked is None:
+            is_ranked = np.full((n_obs), True)
+        if group_id is None:
+            group_id = np.zeros((n_obs))
+
+        # Infer n_reference for each display.
+        n_reference = self._infer_n_reference(displays)
+
+        # Determine unique display configurations.
+        (configurations, configuration_id) = self._generate_configuration_id(n_reference, n_selected, is_ranked, group_id)
+
         self.displays = displays
+        self.n_obs = n_obs
         self.n_reference = n_reference
         self.n_selected = n_selected
         self.is_ranked = is_ranked
         self.group_id = group_id
+        self.configuration_id = configuration_id
+        self.configurations = configurations
+    
+    def subset(self, index):
+        '''Return subset of observations as Observations object.
+
+        Parameters:
+          index: The indices corresponding to the subset.
+
+        Returns:
+          subset: A new Observations object.
+        '''
+
+        return Observations(self.displays[index,:], self.n_selected[index], self.is_ranked[index], self.group_id[index])
+
+    def _infer_n_reference(self, displays):
+        ''' Infer the number of references in each display.
+
+        Helper function that infers the number of available references for a 
+        given display. The function assumes that values less than zero, are
+        placeholder values and should be treated as non-existent.
+
+        Parameters:
+        displays: 
+            shape = [n_obs, 1]
+        
+        Returns:
+        n_reference: An integer array indicating the number of references in each
+            display.
+            shape = [n_obs, 1]
+        '''
+        max_ref = displays.shape[1] - 1
+        n_reference = max_ref - np.sum(displays<0, axis=1)            
+        return np.array(n_reference)
+        
+    def _generate_configuration_id(self, n_reference, n_selected, is_ranked, 
+        group_id, assignment_id=None):
+        '''Generate a unique ID for each display configuration.
+
+        Helper function that generates a unique ID for each of the unique
+        display configurations in the provided data set.
+
+        Parameters:
+          n_reference: An integer array indicating the number of references in each
+            display.
+            shape = [n_obs, 1]
+          n_selected: An integer array indicating the number of references 
+            selected in each display.
+            shape = [n_obs, 1]
+          is_ranked:  Boolean array indicating which displays had selected
+            references that were ordered.
+            shape = [n_obs, 1]
+          group_id: An integer array indicating the group membership of each 
+            display. It is assumed that group is composed of integers from 
+            [0,N] where N is the total number of groups. Separate attention 
+            weights are inferred for each group.
+            shape = [n_obs, 1]
+          assignment_id: An integer array indicating the assignment ID of the
+            display. It is assumed that displays with a given assignment ID were
+            judged by a single person although a single person may have completed
+            multiple assignments (e.g., Amazon Mechanical Turk).
+            shape = [n_obs, 1]
+        Returns:
+          df_config: A DataFrame containing all the unique configurations 
+            present in the data.
+          configuration_id: A unique ID for each type of display configuration 
+            present in the data.
+        '''
+        n_obs = len(n_reference)
+
+        if assignment_id is None:
+            assignment_id = np.ones((n_obs))
+        
+        # Determine unique display configurations.
+        d = {'n_reference': n_reference, 'n_selected': n_selected, 
+        'is_ranked': is_ranked, 'group_id': group_id, 
+        'assignment_id': assignment_id}
+        df_config = pd.DataFrame(d)
+        df_config = df_config.drop_duplicates()
+        n_config = len(df_config)
+
+        # Assign display configuration ID for every observation.
+        configuration_id = np.empty(n_obs)
+        for i_type in range(n_config):
+            a = (n_reference == df_config['n_reference'].iloc[i_type])
+            b = (n_selected == df_config['n_selected'].iloc[i_type])
+            c = (is_ranked == df_config['is_ranked'].iloc[i_type])
+            d = (group_id == df_config['group_id'].iloc[i_type])
+            e = (assignment_id == df_config['assignment_id'].iloc[i_type])
+            f = np.array((a,b,c,d,e))
+            display_type_locs = np.all(f, axis=0)
+            configuration_id[display_type_locs] = i_type
+        
+        return (df_config, configuration_id)
 
 class PsychologicalEmbedding(object):
     '''Abstract base class for psychological embedding algorithm. 
@@ -235,28 +368,11 @@ class PsychologicalEmbedding(object):
                 tf.gfile.DeleteRecursively(self.log_dir)
         tf.gfile.MakeDirs(self.log_dir)
         
-    def fit(self, displays, n_selected=None, is_ranked=None, group_id=None, 
-        n_restart=40, verbose=0):
+    def fit(self, obs, n_restart=40, verbose=0):
         '''Fits the free parameters of the embedding model.
 
         Parameters:
-          displays: An integer matrix representing the displays (rows) that 
-            have been judged based on similarity. The shape implies the 
-            number of references in shown in each display. The first column 
-            is the query, then the selected references in order of selection,
-            and then any remaining unselected references.
-            shape = [n_display, max(n_reference) + 1]
-          n_selected: An integer array indicating the number of references 
-            selected in each display.
-            shape = [n_display, 1]
-          is_ranked:  Boolean array indicating which displays had selected
-            references that were ordered.
-            shape = [n_display, 1]
-          group_id: An integer array indicating the group membership of each 
-            display. It is assumed that group is composed of integers from 
-            [0,N] where N is the total number of groups. Separate attention 
-            weights are inferred for each group.
-            shape = [n_display, 1]
+          obs: An Observations object representing the observed data.
           n_restart: An integer specifying the number of restarts to use for 
             the inference procedure. Since the embedding procedure sometimes
             gets stuck in local optima, multiple restarts helps find the global
@@ -267,37 +383,21 @@ class PsychologicalEmbedding(object):
           J: The average loss (-loglikelihood) per observation (i.e., display).
         '''
 
-        n_display = displays.shape[0]
-        # Handle default settings.
-        if n_selected is None:
-            n_selected = np.ones((n_display))
-        if is_ranked is None:
-            is_ranked = np.full((n_display), True)
-        if group_id is None:
-            group_id = np.zeros((n_display))
-
-        # Infer n_reference for each display.
-        n_reference = ut.infer_n_reference(displays)
-
-        # Package up the observation data.
-        obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
-
         dimensionality = self.dimensionality
 
         #  Infer embedding.
         if (verbose > 0):
             print('Inferring embedding ...')
             print('\tSettings:')
-            print('\tn_observations: ', displays.shape[0])
-            print('\tn_group: ', len(np.unique(group_id)))
+            print('\tn_observations: ', obs.n_obs)
+            print('\tn_group: ', len(np.unique(obs.group_id)))
             print('\tdimensionality: ', dimensionality)
             print('\tn_restart: ', n_restart)
         
         # Partition data into train and validation set for early stopping of 
         # embedding algorithm.
-        display_type_id = ut.generate_display_type_id(n_reference, n_selected, is_ranked, group_id)
         skf = StratifiedKFold(n_splits=10)
-        (train_idx, test_idx) = list(skf.split(displays, display_type_id))[0]
+        (train_idx, test_idx) = list(skf.split(obs.displays, obs.configuration_id))[0]
         
         # Run multiple restarts of embedding algorithm.
         loaded_func = lambda i_restart: self._embed(obs, train_idx, test_idx, i_restart)
@@ -309,47 +409,17 @@ class PsychologicalEmbedding(object):
 
         return J_all
     
-    def evaluate(self, displays, n_selected=None, is_ranked=None, group_id=None):
+    def evaluate(self, obs):
         '''Evaluate observations using the current state of the embedding object.
 
         Parameters:
-          displays: An integer matrix representing the displays (rows) that 
-            have been judged based on similarity. The shape implies the 
-            number of references in shown in each display. The first column 
-            is the query, then the selected references in order of selection,
-            and then any remaining unselected references.
-            shape = [n_display, max(n_reference) + 1]
-          n_selected: An integer array indicating the number of references 
-            selected in each display.
-            shape = [n_display, 1]
-          is_ranked:  Boolean array indicating which displays had selected
-            references that were ordered.
-            shape = [n_display, 1]
-          group_id: An integer array indicating the group membership of each 
-            display. It is assumed that group is composed of integers from 
-            [0,N] where N is the total number of groups. Separate attention 
-            weights are inferred for each group.
-            shape = [n_display, 1]
+          obs: An Observations object representing the observed data.
 
         Returns:
           J: The average loss (-loglikelihood) per observation (i.e., display) 
             given the current model.
         '''
-        n_display = displays.shape[0]
-        # Handle default settings
-        if n_selected is None:
-            n_selected = np.ones((n_display))
-        if is_ranked is None:
-            is_ranked = np.full((n_display), True)
-        if group_id is None:
-            group_id = np.zeros((n_display))
         
-        # Infer n_reference for each display
-        n_reference = ut.infer_n_reference(displays)
-
-        # Package up
-        obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
-
         # Is this really necessary?
         old_do_reuse = self.do_reuse
         old_init_scale = self.init_scale
@@ -384,17 +454,8 @@ class PsychologicalEmbedding(object):
         verbose = 0 # TODO make parameter
 
         # Partition the observation data.
-        displays_train = obs.displays[train_idx,:]
-        n_reference_train = obs.n_reference[train_idx]
-        n_selected_train = obs.n_selected[train_idx]
-        is_ranked_train = obs.is_ranked[train_idx]
-        group_id_train = obs.group_id[train_idx]
-
-        displays_val = obs.displays[test_idx,:]
-        n_reference_val = obs.n_reference[test_idx]
-        n_selected_val = obs.n_selected[test_idx]
-        is_ranked_val = obs.is_ranked[test_idx]
-        group_id_val = obs.group_id[test_idx]
+        obs_train = obs.subset(train_idx)
+        obs_val = obs.subset(test_idx)
 
         (J, Z, attention_weights, sim_params, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self._core_model()
         
@@ -436,19 +497,19 @@ class PsychologicalEmbedding(object):
         last_improvement = 0
         for epoch in range(self.max_n_epoch):
             _, J_train, summary = sess.run([train_op, J, merged_summary_op], 
-            feed_dict={tf_displays: displays_train, 
-            tf_n_reference: n_reference_train, 
-            tf_n_selected: n_selected_train, 
-            tf_is_ranked: is_ranked_train, 
-            tf_group_id: group_id_train})
+            feed_dict={tf_displays: obs_train.displays, 
+            tf_n_reference: obs_train.n_reference, 
+            tf_n_selected: obs_train.n_selected, 
+            tf_is_ranked: obs_train.is_ranked, 
+            tf_group_id: obs_train.group_id})
 
             sess.run(constraint)
             J_test = sess.run(J, feed_dict={
-                tf_displays: displays_val, 
-                tf_n_reference: n_reference_val,
-                tf_n_selected: n_selected_val, 
-                tf_is_ranked: is_ranked_val, 
-                tf_group_id: group_id_val})
+                tf_displays: obs_val.displays, 
+                tf_n_reference: obs_val.n_reference,
+                tf_n_selected: obs_val.n_selected, 
+                tf_is_ranked: obs_val.is_ranked, 
+                tf_group_id: obs_val.group_id})
 
             J_all =  sess.run(J, feed_dict={
                 tf_displays: obs.displays, 
@@ -662,7 +723,6 @@ class PsychologicalEmbedding(object):
             # constraint_weights = attention_weights.assign(self._project_attention_weights(attention_weights))
 
         return (J, Z, attention_weights, sim_params, sim_constraints, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id)
-
 
 class Exponential(PsychologicalEmbedding):
     '''An exponential family stochastic display embedding algorithm. 

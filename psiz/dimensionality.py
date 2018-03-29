@@ -5,10 +5,12 @@ Author: B D Roads
 
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
+
+from psiz.models import Observations
 import psiz.utils as ut
 
-def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selected=None, 
-    is_ranked=None, group_id=None, dim_list=None, n_restart=20, n_fold=3, 
+
+def suggest_dimensionality(obs, embedding_constructor, n_stimuli, dim_list=None, n_restart=20, n_fold=3, 
     verbose=0):
     '''Suggest an embedding dimensionality given the provided observations.
 
@@ -20,25 +22,9 @@ def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selecte
     cross-validation partion.
 
     Parameters:
+      obs: An Observations object representing the observed data.
       embedding_constructor: A PsychologicalEmbedding constructor.
       n_stimuli:  An integer indicating the number of unqiue stimuli.
-      displays: An integer matrix representing the displays (rows) that 
-        have been judged based on similarity. The shape implies the 
-        number of references in shown in each display. The first column 
-        is the query, then the selected references in order of selection,
-        and then any remaining unselected references.
-        shape = [n_display, max(n_reference) + 1]
-      n_selected: An integer array indicating the number of references 
-        selected in each display.
-        shape = [n_display, 1]
-      is_ranked:  Boolean array indicating which displays had selected
-        references that were ordered.
-        shape = [n_display, 1]
-      group_id: An integer array indicating the group membership of each 
-        display. It is assumed that group is composed of integers from 
-        [0,N] where N is the total number of groups. Separate attention 
-        weights are inferred for each group.
-        shape = [n_display, 1]
       dim_list: A list of integers indicating the dimensions to search 
         over.
       n_restart: An integer specifying the number of restarts to use for 
@@ -54,20 +40,7 @@ def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selecte
         the candiate list) that minimized the loss function.
     '''
 
-    n_display = displays.shape[0]
-    # Handle default settings
-    if n_selected is None:
-        n_selected = np.ones((n_display))
-    if is_ranked is None:
-        is_ranked = np.full((n_display), True)
-    if group_id is None:
-        group_id = np.zeros((n_display))
-        n_group = 1
-    else:
-        n_group = len(np.unique(group_id))
-
-    # Infer n_reference for each display
-    n_reference = ut.infer_n_reference(displays)
+    n_group = len(np.unique(obs.group_id))
 
     if dim_list is None:
         dim_list = range(2,10)
@@ -82,9 +55,6 @@ def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selecte
         print('    Folds: ', n_fold)
         print('    Restarts per fold: ', n_restart)
 
-    # Infer the display type IDs.
-    display_type_id = ut.generate_display_type_id(n_reference, 
-    n_selected, is_ranked, group_id)
     # Instantiate the balanced k-fold cross-validation object.
     skf = StratifiedKFold(n_splits=n_fold)
 
@@ -98,25 +68,15 @@ def suggest_dimensionality(embedding_constructor, n_stimuli, displays, n_selecte
         J_train = np.empty((n_fold))
         J_test = np.empty((n_fold))
         i_fold = 0
-        for train_index, test_index in skf.split(displays, display_type_id):
+        for train_index, test_index in skf.split(obs.displays, obs.configuration_id):
             if verbose > 1:
                 print('    Fold: ', i_fold)
             # Train
-            displays_train = displays[train_index,:]
-            n_selected_train = n_selected[train_index]
-            is_ranked_train = is_ranked[train_index]
-            group_id_train = group_id[train_index]
-            J_train[i_fold] = embedding.fit(displays_train, 
-            n_selected=n_selected_train, is_ranked=is_ranked_train, 
-            group_id=group_id_train, n_restart=n_restart, verbose=0)
+            obs_train = obs.subset(train_index)
+            J_train[i_fold] = embedding.fit(obs_train, n_restart=n_restart, verbose=0)
             # Test
-            displays_test = displays[test_index,:]
-            n_selected_test = n_selected[test_index]
-            is_ranked_test = is_ranked[test_index]
-            group_id_test = group_id[test_index]
-            J_test[i_fold] = embedding.evaluate(displays_test, 
-            n_selected=n_selected_test, is_ranked=is_ranked_test, 
-            group_id=group_id_test)
+            obs_test = obs.subset(test_index)
+            J_test[i_fold] = embedding.evaluate(obs_test)
             i_fold = i_fold + 1
         # Compute average cross-validation test loss.
         J_test_avg = np.mean(J_test)

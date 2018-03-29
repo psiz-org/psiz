@@ -68,7 +68,7 @@ def suggest_dimensionality(obs, embedding_constructor, n_stimuli, dim_list=None,
         J_train = np.empty((n_fold))
         J_test = np.empty((n_fold))
         i_fold = 0
-        for train_index, test_index in skf.split(obs.displays, obs.configuration_id):
+        for train_index, test_index in skf.split(obs.stimulus_set, obs.configuration_id):
             if verbose > 1:
                 print('    Fold: ', i_fold)
             # Train

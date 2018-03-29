@@ -1,5 +1,8 @@
 '''Module of psychological embedding models.
 
+Vocab
+  observation: akin to a trial 
+
 n_group must be defined on instantiation. this determines how many separate
 sets of attention weights will be used and inferred.
 
@@ -7,10 +10,9 @@ fit, freeze, reuse are the only methods that modify the state of the class
 
 TODO: attention weights, parallelization, warm restarts, reuse
 - redo saving of files (saved files should already take into account zero indexing and is_ranked error)
-
-promote Observations
 - docs should be clear that loss is average loss
 - docs should be clear regarding verbosity levels
+- docs should make clear what a trial means
 
 Author: B D Roads
 '''
@@ -32,16 +34,17 @@ class Observations(object):
       configurations
 
     Parameters:
-      displays: An integer matrix representing the displays (rows) that 
-        have been judged based on similarity. The shape implies the 
-        number of references used on each trial. The first column 
-        is the query, then the selected references in order of selection,
-        and then any remaining unselected references.
+      stimulus_set: An integer matrix representing the set of stimuli that have
+        been judged based on similarity. Each row constutes one set of stimuli 
+        (i.e., one observation). The shape of the matrix implies the number of 
+        references used on each trial. The first column is the query stimulus, 
+        then the selected references (in order of selection), and then any 
+        remaining unselected references.
         shape = [n_obs, max(n_reference) + 1]
       n_selected: An integer array indicating the number of references 
         selected in each display.
         shape = [n_obs, 1]
-      is_ranked:  Boolean array indicating which displays had selected
+      is_ranked:  Boolean array indicating which trials had selected
         references that were ordered.
         shape = [n_obs, 1]
       group_id: An integer array indicating the group membership of each 
@@ -50,12 +53,12 @@ class Observations(object):
         weights are inferred for each group.
         shape = [n_obs, 1]
     '''
-    def __init__(self, displays, n_selected=None, is_ranked=None, group_id=None):
+    def __init__(self, stimulus_set, n_selected=None, is_ranked=None, group_id=None):
         '''
         Initialize
         '''
 
-        n_obs = displays.shape[0]
+        n_obs = stimulus_set.shape[0]
         # Handle default settings.
         if n_selected is None:
             n_selected = np.ones((n_obs))
@@ -65,12 +68,12 @@ class Observations(object):
             group_id = np.zeros((n_obs))
 
         # Infer n_reference for each display.
-        n_reference = self._infer_n_reference(displays)
+        n_reference = self._infer_n_reference(stimulus_set)
 
         # Determine unique display configurations.
         (configurations, configuration_id) = self._generate_configuration_id(n_reference, n_selected, is_ranked, group_id)
 
-        self.displays = displays
+        self.stimulus_set = stimulus_set
         self.n_obs = n_obs
         self.n_reference = n_reference
         self.n_selected = n_selected
@@ -89,9 +92,9 @@ class Observations(object):
           subset: A new Observations object.
         '''
 
-        return Observations(self.displays[index,:], self.n_selected[index], self.is_ranked[index], self.group_id[index])
+        return Observations(self.stimulus_set[index,:], self.n_selected[index], self.is_ranked[index], self.group_id[index])
 
-    def _infer_n_reference(self, displays):
+    def _infer_n_reference(self, stimulus_set):
         ''' Infer the number of references in each display.
 
         Helper function that infers the number of available references for a 
@@ -99,7 +102,7 @@ class Observations(object):
         placeholder values and should be treated as non-existent.
 
         Parameters:
-        displays: 
+        stimulus_set: 
             shape = [n_obs, 1]
         
         Returns:
@@ -107,8 +110,8 @@ class Observations(object):
             display.
             shape = [n_obs, 1]
         '''
-        max_ref = displays.shape[1] - 1
-        n_reference = max_ref - np.sum(displays<0, axis=1)            
+        max_ref = stimulus_set.shape[1] - 1
+        n_reference = max_ref - np.sum(stimulus_set<0, axis=1)            
         return np.array(n_reference)
         
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked, 
@@ -125,7 +128,7 @@ class Observations(object):
           n_selected: An integer array indicating the number of references 
             selected in each display.
             shape = [n_obs, 1]
-          is_ranked:  Boolean array indicating which displays had selected
+          is_ranked:  Boolean array indicating which observations had selected
             references that were ordered.
             shape = [n_obs, 1]
           group_id: An integer array indicating the group membership of each 
@@ -134,7 +137,7 @@ class Observations(object):
             weights are inferred for each group.
             shape = [n_obs, 1]
           assignment_id: An integer array indicating the assignment ID of the
-            display. It is assumed that displays with a given assignment ID were
+            display. It is assumed that observations with a given assignment ID were
             judged by a single person although a single person may have completed
             multiple assignments (e.g., Amazon Mechanical Turk).
             shape = [n_obs, 1]
@@ -397,7 +400,7 @@ class PsychologicalEmbedding(object):
         # Partition data into train and validation set for early stopping of 
         # embedding algorithm.
         skf = StratifiedKFold(n_splits=10)
-        (train_idx, test_idx) = list(skf.split(obs.displays, obs.configuration_id))[0]
+        (train_idx, test_idx) = list(skf.split(obs.stimulus_set, obs.configuration_id))[0]
         
         # Run multiple restarts of embedding algorithm.
         loaded_func = lambda i_restart: self._embed(obs, train_idx, test_idx, i_restart)
@@ -427,14 +430,14 @@ class PsychologicalEmbedding(object):
         self.do_reuse = True
         self.init_scale = 0.
         
-        (J, _, _, _, _, tf_displays, tf_n_reference, tf_n_selected, 
+        (J, _, _, _, _, tf_stimulus_set, tf_n_reference, tf_n_selected, 
         tf_is_ranked, tf_group_id) = self._core_model()
 
         init = tf.global_variables_initializer()
         sess = tf.Session()
         sess.run(init)
         J_all =  sess.run(J, feed_dict={
-                tf_displays: obs.displays, 
+                tf_stimulus_set: obs.stimulus_set, 
                 tf_n_reference: obs.n_reference,
                 tf_n_selected: obs.n_selected, 
                 tf_is_ranked: obs.is_ranked, 
@@ -457,7 +460,7 @@ class PsychologicalEmbedding(object):
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(test_idx)
 
-        (J, Z, attention_weights, sim_params, constraint, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self._core_model()
+        (J, Z, attention_weights, sim_params, constraint, tf_stimulus_set, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id) = self._core_model()
         
         # train_op = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(J)
         train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(J)
@@ -497,7 +500,7 @@ class PsychologicalEmbedding(object):
         last_improvement = 0
         for epoch in range(self.max_n_epoch):
             _, J_train, summary = sess.run([train_op, J, merged_summary_op], 
-            feed_dict={tf_displays: obs_train.displays, 
+            feed_dict={tf_stimulus_set: obs_train.stimulus_set, 
             tf_n_reference: obs_train.n_reference, 
             tf_n_selected: obs_train.n_selected, 
             tf_is_ranked: obs_train.is_ranked, 
@@ -505,14 +508,14 @@ class PsychologicalEmbedding(object):
 
             sess.run(constraint)
             J_test = sess.run(J, feed_dict={
-                tf_displays: obs_val.displays, 
+                tf_stimulus_set: obs_val.stimulus_set, 
                 tf_n_reference: obs_val.n_reference,
                 tf_n_selected: obs_val.n_selected, 
                 tf_is_ranked: obs_val.is_ranked, 
                 tf_group_id: obs_val.group_id})
 
             J_all =  sess.run(J, feed_dict={
-                tf_displays: obs.displays, 
+                tf_stimulus_set: obs.stimulus_set, 
                 tf_n_reference: obs.n_reference,
                 tf_n_selected: obs.n_selected, 
                 tf_is_ranked: obs.is_ranked, 
@@ -689,7 +692,7 @@ class PsychologicalEmbedding(object):
 
             # scope.reuse_variables() TODO
 
-            tf_displays = tf.placeholder(tf.int32, [None, 9], name='displays')
+            tf_stimulus_set = tf.placeholder(tf.int32, [None, 9], name='stimulus_set')
             tf_n_reference = tf.placeholder(tf.int32, name='n_reference')
             tf_n_selected = tf.placeholder(tf.int32, name='n_selected')
             tf_is_ranked = tf.placeholder(tf.int32, name='is_ranked')
@@ -701,10 +704,10 @@ class PsychologicalEmbedding(object):
                 tf.equal(tf_n_selected, tf.constant(2)))))
             idx_2c1 = tf.squeeze(tf.where(tf.equal(tf_n_reference, tf.constant(2))))
 
-            # Get displays
-            disp_8c2 = tf.gather(tf_displays, idx_8c2)
+            # Get appropriate observations.
+            disp_8c2 = tf.gather(tf_stimulus_set, idx_8c2)
 
-            disp_2c1 = tf.gather(tf_displays, idx_2c1)
+            disp_2c1 = tf.gather(tf_stimulus_set, idx_2c1)
             disp_2c1 = disp_2c1[:, 0:3]
 
             # Expand attention weights
@@ -722,7 +725,7 @@ class PsychologicalEmbedding(object):
             # TODO constraint_weights
             # constraint_weights = attention_weights.assign(self._project_attention_weights(attention_weights))
 
-        return (J, Z, attention_weights, sim_params, sim_constraints, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id)
+        return (J, Z, attention_weights, sim_params, sim_constraints, tf_stimulus_set, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id)
 
 class Exponential(PsychologicalEmbedding):
     '''An exponential family stochastic display embedding algorithm. 

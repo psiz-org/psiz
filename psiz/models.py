@@ -5,6 +5,8 @@ sets of attention weights will be used and inferred.
 
 fit, freeze, reuse are the only methods that modify the state of the class
 
+TODO: attention weights, parallelization, warm restarts, reuse, promote Observations
+
 Author: B D Roads
 '''
 from abc import ABCMeta, abstractmethod
@@ -16,8 +18,9 @@ from sklearn.model_selection import StratifiedKFold
 import psiz.utils as ut
 
 class Observations(object):
-    '''A wrapper object used by the class PsychologicalEmbedding for passing
-    around observation data.
+    '''A wrapper object that encapsulates the similarity judgment observations.
+    
+    Used by the class PsychologicalEmbedding.
     '''
     def __init__(self, displays, n_reference, n_selected, is_ranked, group_id):
         '''

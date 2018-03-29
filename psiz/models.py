@@ -5,7 +5,13 @@ sets of attention weights will be used and inferred.
 
 fit, freeze, reuse are the only methods that modify the state of the class
 
-TODO: attention weights, parallelization, warm restarts, reuse, promote Observations
+TODO: attention weights, parallelization, warm restarts, reuse, 
+
+promote Observations
+- defaults for data are all contained in observations
+- fit takes Observation object as argument
+- evaluate takes Observation object as argument
+- suggest dimensionality takes Observation object as argument
 
 Author: B D Roads
 '''
@@ -18,7 +24,7 @@ from sklearn.model_selection import StratifiedKFold
 import psiz.utils as ut
 
 class Observations(object):
-    '''A wrapper object that encapsulates the similarity judgment observations.
+    '''Object that encapsulates similarity judgment observations.
     
     Used by the class PsychologicalEmbedding.
     '''
@@ -344,8 +350,33 @@ class PsychologicalEmbedding(object):
         # Package up
         obs = Observations(displays, n_reference, n_selected, is_ranked, group_id)
 
-        J = self._concrete_evaluate(obs)
-        return J
+        # Is this really necessary?
+        old_do_reuse = self.do_reuse
+        old_init_scale = self.init_scale
+
+        self.do_reuse = True
+        self.init_scale = 0.
+        
+        (J, _, _, _, _, tf_displays, tf_n_reference, tf_n_selected, 
+        tf_is_ranked, tf_group_id) = self._core_model()
+
+        init = tf.global_variables_initializer()
+        sess = tf.Session()
+        sess.run(init)
+        J_all =  sess.run(J, feed_dict={
+                tf_displays: obs.displays, 
+                tf_n_reference: obs.n_reference,
+                tf_n_selected: obs.n_selected, 
+                tf_is_ranked: obs.is_ranked, 
+                tf_group_id: obs.group_id})
+
+        sess.close()
+        tf.reset_default_graph()
+        
+        self.do_reuse = old_do_reuse
+        self.init_scale = old_init_scale
+
+        return J_all
 
     def _embed(self, obs, train_idx, test_idx, i_restart):
         '''TODO
@@ -631,58 +662,7 @@ class PsychologicalEmbedding(object):
             # constraint_weights = attention_weights.assign(self._project_attention_weights(attention_weights))
 
         return (J, Z, attention_weights, sim_params, sim_constraints, tf_displays, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id)
-    
-    def _concrete_evaluate(self, obs):
-        '''Evaluate observations using the current state of the embedding object.
-        TODO merge with evaluate method?
-        '''
 
-        # Is this really necessary?
-        old_do_reuse = self.do_reuse
-        old_init_scale = self.init_scale
-
-        self.do_reuse = True
-        self.init_scale = 0.
-        # old_infer_Z = self.infer_Z
-        # old_infer_attention_weighst = self.infer_attention_weights
-        # old_infer_rho = self.infer_rho
-        # old_infer_tau = self.infer_tau
-        # old_infer_beta = self.infer_beta
-        # old_infer_gamma = self.infer_gamma
-
-        # self.infer_Z = False
-        # self.infer_attention_weights = False
-        # self.infer_rho = False
-        # self.infer_tau = False
-        # self.infer_beta = False
-        # self.infer_gamma = False
-        
-        (J, _, _, _, _, tf_displays, tf_n_reference, tf_n_selected, 
-        tf_is_ranked, tf_group_id) = self._core_model()
-
-        init = tf.global_variables_initializer()
-        sess = tf.Session()
-        sess.run(init)
-        J_all =  sess.run(J, feed_dict={
-                tf_displays: obs.displays, 
-                tf_n_reference: obs.n_reference,
-                tf_n_selected: obs.n_selected, 
-                tf_is_ranked: obs.is_ranked, 
-                tf_group_id: obs.group_id})
-
-        sess.close()
-        tf.reset_default_graph()
-        
-        self.do_reuse = old_do_reuse
-        self.init_scale = old_init_scale
-        # self.infer_Z = old_infer_Z
-        # self.infer_attention_weights = old_infer_attention_weighst
-        # self.infer_rho = old_infer_rho
-        # self.infer_tau = old_infer_tau
-        # self.infer_beta = old_infer_beta
-        # self.infer_gamma = old_infer_gamma
-
-        return J_all
 
 class Exponential(PsychologicalEmbedding):
     '''An exponential family stochastic display embedding algorithm. 

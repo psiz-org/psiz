@@ -1,6 +1,6 @@
 '''Module of psychological embedding models.
 
-Vocab
+Vocabulary:
   observation: akin to a trial 
 
 n_group must be defined on instantiation. this determines how many separate
@@ -12,7 +12,8 @@ TODO: attention weights, parallelization, warm restarts, reuse
 - redo saving of files (saved files should already take into account zero indexing and is_ranked error)
 - docs should be clear that loss is average loss
 - docs should be clear regarding verbosity levels
-- docs should make clear what a trial means
+
+- add assignment_id to obs
 
 Author: B D Roads
 '''

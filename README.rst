@@ -2,6 +2,11 @@
 PsiZ: A Psychological Embedding Package
 =======================================
 
+Purpose
+-------
+PsiZ provides the computational tools to infer an continuous, multivariate
+representation for a set of stimuli using ordinal similarity relations.
+
 What's in a name?
 -----------------
 The name PsiZ (pronounced like the word *size*) is meant to serve as shorthard
@@ -9,23 +14,61 @@ for the term *psychological embedding*. The greek letter Psi is often used to
 represent the field of psychology and the matrix variable **Z** is often used in
 computer vision to denote an embedding.
 
-Purpose
--------
-TODO
+Getting Started
+---------------
+In order to infer an embedding, you must provide two pieces of information.
 
-PsiZ provides the computational tools to infer an continuous, multivariate
-representation for a set of stimuli using ordinal similarity relations.
+   1. The number of unique stimuli.
+   2. The similarity judgment observations.
 
-The simplest similarity relation is a triplet of the form:
+```
+n_stimuli = 100
+embedding = psiz.models.Exponential(n_stimuli=n_stimuli)
+embedding.fit(obs)
+```
+Optionally, you can also provide additional information.
 
-transform ordinal similarity relations
-into a continuous, multivariate representation.
+   1. The dimensionality of the embedding (default=2).
+   2. The number of unique population groups (default=1).
+
+```
+n_stimuli = 100
+n_dim = 4
+n_group = 2
+embedding = psiz.models.Exponential(n_stimuli=n_stimuli, n_dim=n_dim, n_group=n_group)
+embedding.fit(obs)
+```
+
+Common Use Cases:
+know free parameters (set)
+don’t know free parameters (fit)
+
+Similarity Judgment Observations
+--------------------------------
+To infer an embedding, multiple observations are necessary. A single 
+observation is comprised of a multiple stimuli that have been judged by an 
+agent (human or machine) based on their similarity. 
+
+In the simplest case, an observation is made for three stimuli: a query
+stimulus (Q) and two reference stimuli (A and B). The agent is tasked with selecting the 
+reference stimulus that they believe is more similar to the query stimulus.
+If the agent selected reference A, then the observation would be recorded as;
+
+D_i = [Q A B]
+
+If the agent had selected reference B, the observation would be recorded as:
+
+D_i = [Q B A]
+
+The simplest observation is a triplet of the form:
+Query: Reference A > Reference B
+
+This package is designed to handle a number of different observations.
 
 [vanderMaaten]_, [Wah2011]_, [RoadsA]_,
 
-Valid Observations
-------------------
-
+Embedding Models
+----------------
 
 Modules
 -------
@@ -37,9 +80,6 @@ Modules
 Guiding principles
 ------------------
 
-Getting started
----------------
-
 Installation
 ------------
 There are two ways to install PsiZ:
@@ -49,10 +89,6 @@ There are two ways to install PsiZ:
 
 Support
 -------
-
-Use Case:
-know free parameters (set)
-don’t know free parameters (fit)
 
 Authors
 -------

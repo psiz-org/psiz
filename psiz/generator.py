@@ -1,4 +1,4 @@
-'''Module for generating similarity judgment displays.
+"""Module for generating similarity judgment displays.
 
 Author: B D Roads
-'''
+"""

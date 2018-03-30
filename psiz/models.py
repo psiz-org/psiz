@@ -1,4 +1,4 @@
-'''Module of psychological embedding models.
+"""Module of psychological embedding models.
 
 Vocabulary:
   observation: akin to a trial 
@@ -16,7 +16,7 @@ TODO: attention weights, parallelization, warm restarts, reuse
 - add assignment_id to obs
 
 Author: B D Roads
-'''
+"""
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import tensorflow as tf
@@ -26,7 +26,7 @@ from sklearn.model_selection import StratifiedKFold
 import psiz.utils as ut
 
 class Observations(object):
-    '''Object that encapsulates similarity judgment observations.
+    """Object that encapsulates similarity judgment observations.
     
     Used by the class PsychologicalEmbedding.
 
@@ -53,11 +53,11 @@ class Observations(object):
         [0,N] where N is the total number of groups. Separate attention 
         weights are inferred for each group.
         shape = [n_obs, 1]
-    '''
+    """
     def __init__(self, stimulus_set, n_selected=None, is_ranked=None, group_id=None):
-        '''
+        """
         Initialize
-        '''
+        """
 
         n_obs = stimulus_set.shape[0]
         # Handle default settings.
@@ -84,19 +84,19 @@ class Observations(object):
         self.configurations = configurations
     
     def subset(self, index):
-        '''Return subset of observations as Observations object.
+        """Return subset of observations as Observations object.
 
         Parameters:
           index: The indices corresponding to the subset.
 
         Returns:
           subset: A new Observations object.
-        '''
+        """
 
         return Observations(self.stimulus_set[index,:], self.n_selected[index], self.is_ranked[index], self.group_id[index])
 
     def _infer_n_reference(self, stimulus_set):
-        ''' Infer the number of references in each display.
+        """ Infer the number of references in each display.
 
         Helper function that infers the number of available references for a 
         given display. The function assumes that values less than zero, are
@@ -110,14 +110,14 @@ class Observations(object):
         n_reference: An integer array indicating the number of references in each
             display.
             shape = [n_obs, 1]
-        '''
+        """
         max_ref = stimulus_set.shape[1] - 1
         n_reference = max_ref - np.sum(stimulus_set<0, axis=1)            
         return np.array(n_reference)
         
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked, 
         group_id, assignment_id=None):
-        '''Generate a unique ID for each display configuration.
+        """Generate a unique ID for each display configuration.
 
         Helper function that generates a unique ID for each of the unique
         display configurations in the provided data set.
@@ -147,7 +147,7 @@ class Observations(object):
             present in the data.
           configuration_id: A unique ID for each type of display configuration 
             present in the data.
-        '''
+        """
         n_obs = len(n_reference)
 
         if assignment_id is None:
@@ -176,16 +176,16 @@ class Observations(object):
         return (df_config, configuration_id)
 
 class PsychologicalEmbedding(object):
-    '''Abstract base class for psychological embedding algorithm. 
+    """Abstract base class for psychological embedding algorithm. 
     
     The embedding procedure jointly infers two components. First, the embedding
     algorithm infers a stimulus representation denoted Z. Second, the embedding
     algoirthm infers the similarity kernel parameters of the concrete class.
-    '''
+    """
     __metaclass__ = ABCMeta
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
-        '''
+        """
         Initialize
 
         Parameters:
@@ -197,7 +197,7 @@ class PsychologicalEmbedding(object):
           n_group: (default: 1) An integer indicating the number of different
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
-        '''
+        """
         self.n_stimuli = n_stimuli
         self.n_group = n_group
 
@@ -242,7 +242,7 @@ class PsychologicalEmbedding(object):
 
     @abstractmethod
     def _get_similarity_parameters(self):
-        '''Returns a dictionary and TensorFlow operation.
+        """Returns a dictionary and TensorFlow operation.
         
         This method encapsulates the creation of algorithm-specific free
         parameters governing the similarity kernel.
@@ -252,12 +252,12 @@ class PsychologicalEmbedding(object):
           sim_constraints: A TensorFlow operation that imposes boundary 
             constraints on the algorithm-specific free parameters during
             inference.
-        '''
+        """
         pass
     
     @abstractmethod
     def _set_parameters(self, params):
-        '''A state changing method that sets algorithm-specific parameters.
+        """A state changing method that sets algorithm-specific parameters.
         
         This method encapsulates the setting of algorithm-specific free 
         parameters governing the similarity kernel.
@@ -267,12 +267,12 @@ class PsychologicalEmbedding(object):
 
         TODO add "*args" to parameter list?
         TODO use dictionary instead of ordered list?
-        '''
+        """
         pass
 
     @abstractmethod
     def freeze(self):
-        '''A state changing method specifing which parameters are fixed.
+        """A state changing method specifing which parameters are fixed.
 
         During inference, you may want to freeze some parameters at specific
         values. To freeze a particular parameter, pass in a value for it. If you
@@ -280,12 +280,12 @@ class PsychologicalEmbedding(object):
         same time. If no value is provided for a parameter, it will not be fixed.
         
         TODO add "*args" to parameter list?
-        '''
+        """
         pass
     
     @abstractmethod
     def similarity(self, z_q, z_ref, sim_params, attention_weights):
-        '''Similarity kernel.
+        """Similarity kernel.
 
         Parameters:
           z_q: A set of embedding points.
@@ -301,12 +301,12 @@ class PsychologicalEmbedding(object):
           similarity: The corresponding similairty between rows of embedding
             points.
             shape = (n_sample,)
-        '''
+        """
         pass
 
     def _get_attention_weights(self):
-        '''TODO
-        '''
+        """TODO
+        """
         # Attention variable
         if self.do_reuse:
             attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=True)
@@ -320,8 +320,8 @@ class PsychologicalEmbedding(object):
         return attention_weights
 
     def _get_embedding(self):
-        '''TODO
-        '''
+        """TODO
+        """
         # Embedding variable
         # Iniitalize Z with different scales for different restarts
         rand_scale_idx = np.random.randint(0,len(self.init_scale_list))
@@ -338,7 +338,7 @@ class PsychologicalEmbedding(object):
         return Z
     
     def reuse(self, do_reuse, init_scale=0):
-        '''State changing method that sets reuse of embedding.
+        """State changing method that sets reuse of embedding.
         
         Parameters:
           do_reuse: Boolean that indicates whether the current embedding should
@@ -349,19 +349,19 @@ class PsychologicalEmbedding(object):
             that each embedding point was randomly jittered up to 5% on each
             dimension relative to the overall size of the embedding. The value
             can be between [0,1].
-        '''
+        """
         self.do_reuse = do_reuse
         self.init_scale = init_scale
 
     def set_log(self, do_log, log_dir=None, delete_prev=False):
-        '''State changing method that sets TensorBoard logging.
+        """State changing method that sets TensorBoard logging.
 
         Parameters:
           do_log: Boolean that indicates whether logs should be recorded.
           log_dir: A string indicating the file path for the logs.
           delete_prev: Boolean indicating whether the directory should
             be cleared of previous files first.
-        '''
+        """
         if do_log:
             self.do_log = True
             if log_dir is not None:
@@ -373,7 +373,7 @@ class PsychologicalEmbedding(object):
         tf.gfile.MakeDirs(self.log_dir)
         
     def fit(self, obs, n_restart=40, verbose=0):
-        '''Fits the free parameters of the embedding model.
+        """Fits the free parameters of the embedding model.
 
         Parameters:
           obs: An Observations object representing the observed data.
@@ -385,7 +385,7 @@ class PsychologicalEmbedding(object):
 
         Returns:
           J: The average loss (-loglikelihood) per observation (i.e., display).
-        '''
+        """
 
         dimensionality = self.dimensionality
 
@@ -414,7 +414,7 @@ class PsychologicalEmbedding(object):
         return J_all
     
     def evaluate(self, obs):
-        '''Evaluate observations using the current state of the embedding object.
+        """Evaluate observations using the current state of the embedding object.
 
         Parameters:
           obs: An Observations object representing the observed data.
@@ -422,7 +422,7 @@ class PsychologicalEmbedding(object):
         Returns:
           J: The average loss (-loglikelihood) per observation (i.e., display) 
             given the current model.
-        '''
+        """
         
         # Is this really necessary?
         old_do_reuse = self.do_reuse
@@ -453,8 +453,8 @@ class PsychologicalEmbedding(object):
         return J_all
 
     def _embed(self, obs, train_idx, test_idx, i_restart):
-        '''TODO
-        '''
+        """TODO
+        """
         verbose = 0 # TODO make parameter
 
         # Partition the observation data.
@@ -553,7 +553,7 @@ class PsychologicalEmbedding(object):
         return (J_all_best, Z_best, attention_weights_best, params_best)
 
     def _embed_restart(self, loaded_func, n_restart, verbose):
-        '''Multiple restart wrapper. 
+        """Multiple restart wrapper. 
         
         The results of the best performing restart are returned.
 
@@ -564,7 +564,7 @@ class PsychologicalEmbedding(object):
           Z:
           attention_weights:
           params:
-        '''
+        """
         J_all_best = np.inf
         Z_best = None
         attention_weights_best = None
@@ -584,8 +584,8 @@ class PsychologicalEmbedding(object):
         return (J_all_best, Z_best, attention_weights_best, params_best)
 
     def _project_attention_weights(self, attention_weights_0):
-        '''Projection attention weights for gradient descent.
-        '''
+        """Projection attention weights for gradient descent.
+        """
         n_dim = tf.shape(attention_weights_0, out_type=tf.float64)[1]
         attention_weights_1 = tf.divide(tf.reduce_sum(attention_weights_0, axis=1, keepdims=True), n_dim)
         attention_weights_proj = tf.divide(attention_weights_0, attention_weights_1)
@@ -593,8 +593,8 @@ class PsychologicalEmbedding(object):
         return attention_weights_proj
     
     def _cost_2c1(self, Z, triplets, sim_params, attention_weights):
-        '''Cost associated with an ordered 2 chooose 1 display.
-        '''
+        """Cost associated with an ordered 2 chooose 1 display.
+        """
         n_disp = tf.shape(triplets)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
 
@@ -614,8 +614,8 @@ class PsychologicalEmbedding(object):
         return J
     
     def _cost_8cN(self, Z, nines, N, sim_params, attention_weights):
-        '''Cost associated with an ordered 8 chooose N display.
-        '''
+        """Cost associated with an ordered 8 chooose N display.
+        """
         n_disp = tf.shape(nines)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
     
@@ -683,8 +683,8 @@ class PsychologicalEmbedding(object):
         return J
 
     def _core_model(self):
-        '''TODO
-        '''
+        """TODO
+        """
         with tf.variable_scope("model") as scope:
             # Similarity function variables            
             (sim_params, sim_constraints) = self._get_similarity_parameters()
@@ -729,7 +729,7 @@ class PsychologicalEmbedding(object):
         return (J, Z, attention_weights, sim_params, sim_constraints, tf_stimulus_set, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id)
 
 class Exponential(PsychologicalEmbedding):
-    '''An exponential family stochastic display embedding algorithm. 
+    """An exponential family stochastic display embedding algorithm. 
     
     This embedding technique uses the following similarity kernel: 
       s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma, 
@@ -750,11 +750,11 @@ class Exponential(PsychologicalEmbedding):
       115, 39-57.
     [4] Shepard, R. N. (1987). Toward a universal law of generalization for 
       psychological science. Science, 237, 1317-1323.
-    '''
+    """
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
-        '''
+        """
         Initialize
 
         Parameters:
@@ -766,7 +766,7 @@ class Exponential(PsychologicalEmbedding):
           n_group: (default: 1) An integer indicating the number of different
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
-        '''
+        """
 
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
@@ -786,7 +786,7 @@ class Exponential(PsychologicalEmbedding):
         # self.patience = 10
     
     def _get_similarity_parameters(self):
-        '''Returns a dictionary and TensorFlow operation.
+        """Returns a dictionary and TensorFlow operation.
         
         This method encapsulates the creation of algorithm-specific free
         parameters governing the similarity kernel.
@@ -796,7 +796,7 @@ class Exponential(PsychologicalEmbedding):
           sim_constraints: A TensorFlow operation that imposes boundary 
             constraints on the algorithm-specific free parameters during
             inference.
-        '''
+        """
         with tf.variable_scope("similarity_params"):
             if self.do_reuse:
                 rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
@@ -832,18 +832,18 @@ class Exponential(PsychologicalEmbedding):
         return (sim_params, sim_constraints)
 
     def _set_parameters(self, params):
-        '''A state changing method that sets algorithm-specific parameters.
+        """A state changing method that sets algorithm-specific parameters.
         
         This method encapsulates the setting of algorithm-specific free 
         parameters governing the similarity kernel.
-        '''
+        """
         self.rho = params['rho']
         self.tau = params['tau']
         self.beta = params['beta']
         self.gamma = params['gamma']
 
     def freeze(self, rho=None, tau=None, gamma=None, beta=None, Z=None):
-        '''A state changing method specifing which parameters are fixed.
+        """A state changing method specifing which parameters are fixed.
 
         During inference, you may want to freeze some parameters at specific
         values. To freeze a particular parameter, pass in a value for it. If you
@@ -856,7 +856,7 @@ class Exponential(PsychologicalEmbedding):
           gamma
           beta
           Z
-        '''
+        """
         
         self.infer_rho = True
         self.infer_tau = True
@@ -881,7 +881,7 @@ class Exponential(PsychologicalEmbedding):
             self.infer_Z = False
 
     def similarity(self, z_q, z_ref, sim_params, attention_weights):
-        '''Exponential family similarity kernel.
+        """Exponential family similarity kernel.
 
         Parameters:
           z_q: A set of embedding points.
@@ -897,7 +897,7 @@ class Exponential(PsychologicalEmbedding):
           similarity: The corresponding similairty between rows of embedding
             points.
             shape = (n_sample,)
-        '''
+        """
 
         # Algorithm-specific parameters governing the similarity kernel.
         rho = sim_params['rho']
@@ -915,18 +915,18 @@ class Exponential(PsychologicalEmbedding):
         return s_qref
 
 class HeavyTailed(PsychologicalEmbedding):
-    '''A heavy-tailed family stochastic display embedding algorithm. 
+    """A heavy-tailed family stochastic display embedding algorithm. 
     
     This embedding technique uses the following similarity kernel: 
       s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha), 
     where x and y are n-dimensional vectors. The similarity function has four 
     free parameters: rho, tau, kappa, and alpha. The heavy-tailed family is a 
     further generalization of the Student-t family.
-    '''
+    """
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
-        '''
+        """
         Initialize
 
         Parameters:
@@ -938,7 +938,7 @@ class HeavyTailed(PsychologicalEmbedding):
           n_group: (default: 1) An integer indicating the number of different
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
-        '''
+        """
 
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
@@ -958,7 +958,7 @@ class HeavyTailed(PsychologicalEmbedding):
         # self.patience = 10
     
     def _get_similarity_parameters(self):
-        '''Returns a dictionary and TensorFlow operation.
+        """Returns a dictionary and TensorFlow operation.
         
         This method encapsulates the creation of algorithm-specific free
         parameters governing the similarity kernel.
@@ -968,7 +968,7 @@ class HeavyTailed(PsychologicalEmbedding):
           sim_constraints: A TensorFlow operation that imposes boundary 
             constraints on the algorithm-specific free parameters during
             inference.
-        '''
+        """
         with tf.variable_scope("similarity_params"):
             if self.do_reuse:
                 rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
@@ -1004,18 +1004,18 @@ class HeavyTailed(PsychologicalEmbedding):
         return (sim_params, sim_constraints)
 
     def _set_parameters(self, params):
-        '''A state changing method that sets algorithm-specific parameters.
+        """A state changing method that sets algorithm-specific parameters.
         
         This method encapsulates the setting of algorithm-specific free 
         parameters governing the similarity kernel.
-        '''
+        """
         self.rho = params['rho']
         self.tau = params['tau']
         self.kappa = params['kappa']
         self.alpha = params['alpha']
 
     def freeze(self, rho=None, tau=None, kappa=None, alpha=None, Z=None):
-        '''A state changing method specifing which parameters are fixed.
+        """A state changing method specifing which parameters are fixed.
 
         During inference, you may want to freeze some parameters at specific
         values. To freeze a particular parameter, pass in a value for it. If you
@@ -1028,7 +1028,7 @@ class HeavyTailed(PsychologicalEmbedding):
           kappa
           alpha
           Z
-        '''
+        """
 
         self.infer_rho = True
         self.infer_tau = True
@@ -1053,7 +1053,7 @@ class HeavyTailed(PsychologicalEmbedding):
             self.infer_Z = False        
 
     def similarity(self, z_q, z_ref, sim_params, attention_weights):
-        '''Heavy-tailed family similarity kernel.
+        """Heavy-tailed family similarity kernel.
 
         Parameters:
           z_q: A set of embedding points.
@@ -1069,7 +1069,7 @@ class HeavyTailed(PsychologicalEmbedding):
           similarity: The corresponding similairty between rows of embedding
             points.
             shape = (n_sample,)
-        '''
+        """
 
         # Algorithm-specific parameters governing the similarity kernel.
         rho = sim_params['rho']
@@ -1087,7 +1087,7 @@ class HeavyTailed(PsychologicalEmbedding):
         return s_qref
 
 class StudentsT(PsychologicalEmbedding):
-    '''A Student's t family stochastic display embedding algorithm.
+    """A Student's t family stochastic display embedding algorithm.
 
     The embedding technique uses the following simialrity kernel:
       s(x,y) = (1 + (((norm(x-y, rho)^tau) / alpha))^(-(alpha + 1)/2),
@@ -1102,11 +1102,11 @@ class StudentsT(PsychologicalEmbedding):
       [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet 
         embedding. In Machine learning for signal processing (mlsp), 2012 IEEE
         international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720
-    '''
+    """
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
 
-        '''
+        """
         Initialize
 
         Parameters:
@@ -1118,7 +1118,7 @@ class StudentsT(PsychologicalEmbedding):
           n_group: (default: 1) An integer indicating the number of different
             population groups in the embedding. A separate set of attention 
             weights will be inferred for each group.
-        '''
+        """
 
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
@@ -1138,7 +1138,7 @@ class StudentsT(PsychologicalEmbedding):
         # self.init_scale_list = [.001, .01, .1]
 
     def _get_similarity_parameters(self):
-        '''Returns a dictionary and TensorFlow operation.
+        """Returns a dictionary and TensorFlow operation.
         
         This method encapsulates the creation of algorithm-specific free
         parameters governing the similarity kernel.
@@ -1148,7 +1148,7 @@ class StudentsT(PsychologicalEmbedding):
           sim_constraints: A TensorFlow operation that imposes boundary 
             constraints on the algorithm-specific free parameters during
             inference.
-        '''
+        """
         with tf.variable_scope("similarity_params"):
             if self.do_reuse:
                 rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
@@ -1181,17 +1181,17 @@ class StudentsT(PsychologicalEmbedding):
         return (sim_params, sim_constraints)
 
     def _set_parameters(self, params):
-        '''A state changing method that sets algorithm-specific parameters.
+        """A state changing method that sets algorithm-specific parameters.
         
         This method encapsulates the setting of algorithm-specific free 
         parameters governing the similarity kernel.
-        '''
+        """
         self.rho = params['rho']
         self.tau = params['tau']
         self.alpha = params['alpha']
 
     def freeze(self, rho=None, tau=None, alpha=None, Z=None):
-        '''A state changing method specifing which parameters are fixed.
+        """A state changing method specifing which parameters are fixed.
 
         During inference, you may want to freeze some parameters at specific
         values. To freeze a particular parameter, pass in a value for it. If you
@@ -1203,7 +1203,7 @@ class StudentsT(PsychologicalEmbedding):
           tau
           alpha
           Z
-        '''
+        """
 
         self.infer_rho = True
         self.infer_tau = True
@@ -1224,7 +1224,7 @@ class StudentsT(PsychologicalEmbedding):
             self.infer_Z = False
 
     def similarity(self, z_q, z_ref, sim_params, attention_weights):
-        '''Student-t family similarity kernel.
+        """Student-t family similarity kernel.
 
         Parameters:
           z_q: A set of embedding points.
@@ -1240,7 +1240,7 @@ class StudentsT(PsychologicalEmbedding):
           similarity: The corresponding similairty between rows of embedding
             points.
             shape = (n_sample,)
-        '''
+        """
 
         # Algorithm-specific parameters governing the similarity kernel.
         rho = sim_params['rho']

@@ -1,7 +1,7 @@
-'''Visualization functions
+"""Visualization functions
 
 Author: B D Roads
-'''
+"""
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=None, filename=None):
-    '''
+    """
     Generate a static scatter plot of the supplied embedding points.
 
     Parameters:
@@ -22,7 +22,7 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
       special_locs: (optional) A boolean array indicating special points to
         emphasize with a diamond. TODO
         shape = [n_stimuli, 1]
-    '''
+    """
 
     # Settings
     dot_size = 20
@@ -102,8 +102,8 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
     
 
 # def visualize_embedding_movie(Z3, class_vec=None, classes=None, filename=None):
-#     '''
-#     '''
+#     """
+#     """
 # TODO
 
 def infer_legend(unique_class_list, classes):

@@ -1,4 +1,4 @@
-'''Module for simulating human behavior.
+"""Module for simulating human behavior.
 
 Author: B D Roads
-'''
+"""

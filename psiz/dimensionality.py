@@ -1,7 +1,7 @@
-'''Module for selecting the dimensionality of an embedding.
+"""Module for selecting the dimensionality of an embedding.
 
 Author: B D Roads
-'''
+"""
 
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
@@ -12,7 +12,7 @@ import psiz.utils as ut
 
 def suggest_dimensionality(obs, embedding_constructor, n_stimuli, dim_list=None, n_restart=20, n_fold=3, 
     verbose=0):
-    '''Suggest an embedding dimensionality given the provided observations.
+    """Suggest an embedding dimensionality given the provided observations.
 
     Sweep over the list of candidate dimensions, starting with the 
     smallest, in order to find the best dimensionality for the data.
@@ -38,7 +38,7 @@ def suggest_dimensionality(obs, embedding_constructor, n_stimuli, dim_list=None,
     Returns:
       best_dimensionality: An integer indicating the dimensionality (from
         the candiate list) that minimized the loss function.
-    '''
+    """
 
     n_group = len(np.unique(obs.group_id))
 

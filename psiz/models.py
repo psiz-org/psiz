@@ -224,6 +224,7 @@ class PsychologicalEmbedding(object):
         set_log:
 
     Abstract Attributes
+        sim_params:
         sim_infer:
     Abstract Methods:
         _get_similarity_parameters:
@@ -261,6 +262,7 @@ class PsychologicalEmbedding(object):
         # Initialize attentional weights using uniform distribution.
         self.attention_weights = np.ones((self.n_group, dimensionality), dtype=np.float64)
         
+        self.sim_params = {} # TODO (docstring, make clear must be implemented)
         self.sim_infer = {} # TODO (docstring, make clear must be implemented)
         self.infer_Z = True
         if n_group is 1:
@@ -313,7 +315,7 @@ class PsychologicalEmbedding(object):
                 corresponding values.
         """
         for param_name in params:
-            setattr(self, param_name, params[param_name])
+            self.sim_params[param_name] = params[param_name]
 
     def freeze(self, freeze_options=None):
         """A state changing method specifing which parameters are fixed.
@@ -342,7 +344,7 @@ class PsychologicalEmbedding(object):
                     self.Z = freeze_options['Z']
                     self.infer_Z = False
                 else:
-                    setattr(self, param_name, freeze_options[param_name])
+                    self.sim_params[param_name] = freeze_options[param_name]
                     self.sim_infer[param_name] = False
     
     @abstractmethod
@@ -828,10 +830,7 @@ class Exponential(PsychologicalEmbedding):
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
         # Default parameter settings.
-        self.rho = 2.
-        self.tau = 1.
-        self.gamma = 0.
-        self.beta = 10.
+        self.sim_params = dict(rho=2., tau=1., gamma=0., beta=10.)
         
         # Default inference settings.
         self.sim_infer = dict(rho=True, tau=True, gamma=True, beta=True)
@@ -853,27 +852,27 @@ class Exponential(PsychologicalEmbedding):
         """
         with tf.variable_scope("similarity_params"):
             if self.do_reuse:
-                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
-                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=True)
-                gamma = tf.get_variable("gamma", [1], initializer=tf.constant_initializer(self.gamma), trainable=True)
-                beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.beta), trainable=True)
+                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.sim_params['rho']), trainable=True)
+                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.sim_params['tau']), trainable=True)
+                gamma = tf.get_variable("gamma", [1], initializer=tf.constant_initializer(self.sim_params['gamma']), trainable=True)
+                beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.sim_params['beta']), trainable=True)
             else:
                 if self.sim_infer['rho']:
                     rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
                 else:
-                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
+                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.sim_params['rho']), trainable=False)
                 if self.sim_infer['tau']:
                     tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
                 else:
-                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
+                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.sim_params['tau']), trainable=False)
                 if self.sim_infer['gamma']:
                     gamma = tf.get_variable("gamma", [1], initializer=tf.random_uniform_initializer(0.,.001))
                 else:
-                    gamma = tf.get_variable("gamma", [1], initializer=tf.constant_initializer(self.gamma), trainable=False)
+                    gamma = tf.get_variable("gamma", [1], initializer=tf.constant_initializer(self.sim_params['gamma']), trainable=False)
                 if self.sim_infer['beta']:
                     beta = tf.get_variable("beta", [1], initializer=tf.random_uniform_initializer(1.,30.))
                 else:
-                    beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.beta), trainable=False)
+                    beta = tf.get_variable("beta", [1], initializer=tf.constant_initializer(self.sim_params['beta']), trainable=False)
         sim_params = {'rho':rho, 'tau':tau, 'gamma':gamma, 'beta':beta}
 
         # TensorFlow operation to enforce free parameter constraints.
@@ -946,10 +945,7 @@ class HeavyTailed(PsychologicalEmbedding):
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
         # Default parameter settings.
-        self.rho = 2.
-        self.tau = 1.
-        self.kappa = 2.
-        self.alpha = 30.
+        self.sim_params = dict(rho=2., tau=1., kappa=2., alpha=30.)
         
         # Default inference settings.
         self.sim_infer = dict(rho=True, tau=True, kappa=True, alpha=True)
@@ -971,27 +967,27 @@ class HeavyTailed(PsychologicalEmbedding):
         """
         with tf.variable_scope("similarity_params"):
             if self.do_reuse:
-                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
-                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=True)
-                kappa = tf.get_variable("kappa", [1], initializer=tf.constant_initializer(self.kappa), trainable=True)
-                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=True)
+                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.sim_params['rho']), trainable=True)
+                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.sim_params['tau']), trainable=True)
+                kappa = tf.get_variable("kappa", [1], initializer=tf.constant_initializer(self.sim_params['kappa']), trainable=True)
+                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.sim_params['alpha']), trainable=True)
             else:
                 if self.sim_infer['rho']:
                     rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
                 else:
-                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
+                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.sim_params['rho']), trainable=False)
                 if self.sim_infer['tau']:
                     tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
                 else:
-                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
+                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.sim_params['tau']), trainable=False)
                 if self.sim_infer['kappa']:
                     kappa = tf.get_variable("kappa", [1], initializer=tf.random_uniform_initializer(1.,11.))
                 else:
-                    kappa = tf.get_variable("kappa", [1], initializer=tf.constant_initializer(self.kappa), trainable=False)
+                    kappa = tf.get_variable("kappa", [1], initializer=tf.constant_initializer(self.sim_params['kappa']), trainable=False)
                 if self.sim_infer['alpha']:
                     alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(10.,60.))
                 else:
-                    alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
+                    alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.sim_params['alpha']), trainable=False)
         sim_params = {'rho':rho, 'tau':tau, 'kappa':kappa, 'alpha':alpha}
 
         # TensorFlow operation to enforce free parameter constraints.
@@ -1072,9 +1068,7 @@ class StudentsT(PsychologicalEmbedding):
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
         
         # Default parameter settings.
-        self.rho = 2.
-        self.tau = 2.
-        self.alpha = dimensionality - 1.
+        self.sim_params = dict(rho=2., tau=2., alpha=dimensionality - 1.)
         
         # Default inference settings.
         self.sim_infer = dict(rho=False, tau=False, alpha=False)
@@ -1098,24 +1092,24 @@ class StudentsT(PsychologicalEmbedding):
         """
         with tf.variable_scope("similarity_params"):
             if self.do_reuse:
-                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=True)
-                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=True)
-                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=True)
+                rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.sim_params['rho']), trainable=True)
+                tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.sim_params['tau']), trainable=True)
+                alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.sim_params['alpha']), trainable=True)
             else:
                 if self.sim_infer['rho']:
                     rho = tf.get_variable("rho", [1], initializer=tf.random_uniform_initializer(1.,3.))
                 else:
-                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.rho), trainable=False)
+                    rho = tf.get_variable("rho", [1], initializer=tf.constant_initializer(self.sim_params['rho']), trainable=False)
                 if self.sim_infer['tau']:
                     tau = tf.get_variable("tau", [1], initializer=tf.random_uniform_initializer(1.,2.))
                 else:
-                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.tau), trainable=False)
+                    tau = tf.get_variable("tau", [1], initializer=tf.constant_initializer(self.sim_params['tau']), trainable=False)
                 if self.sim_infer['alpha']:
                     min_alpha = np.max((1, self.dimensionality - 5.))
                     max_alpha = self.dimensionality + 5.
                     alpha = tf.get_variable("alpha", [1], initializer=tf.random_uniform_initializer(min_alpha, max_alpha))
                 else:
-                    alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.alpha), trainable=False)
+                    alpha = tf.get_variable("alpha", [1], initializer=tf.constant_initializer(self.sim_params['alpha']), trainable=False)
         sim_params = {'rho':rho, 'tau':tau, 'alpha':alpha}
 
         # TensorFlow operation to enforce free parameter constraints.

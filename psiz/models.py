@@ -67,7 +67,8 @@ class Observations(object):
             query stimulus, then the selected references (in order of 
             selection), and then any remaining unselected references.
             shape = [n_obs, max(n_reference) + 1]
-        n_reference:
+        n_reference: An integer array indicating the number of references in 
+            each display.
         n_selected: An integer array indicating the number of references 
             selected in each display.
             shape = [n_obs, 1]
@@ -226,6 +227,7 @@ class PsychologicalEmbedding(object):
     Abstract Attributes
         sim_params:
         sim_infer:
+        
     Abstract Methods:
         _get_similarity_parameters:
         similarity:
@@ -248,10 +250,11 @@ class PsychologicalEmbedding(object):
         self.n_stimuli = n_stimuli
         self.n_group = n_group
 
-        # Check if the dimensionality is valid.
+        # Check arguments are valid.
         if (dimensionality < 1):
-            # User supplied a bad dimensionality value.
             raise ValueError('The provided dimensionality must be an integer greater than 0.')
+        if (n_group < 1):
+            raise ValueError('The provided n_group must be an integer greater than 0.')
         
         # Initialize dimension dependent attributes.
         self.dimensionality = dimensionality
@@ -262,14 +265,16 @@ class PsychologicalEmbedding(object):
         # Initialize attentional weights using uniform distribution.
         self.attention_weights = np.ones((self.n_group, dimensionality), dtype=np.float64)
         
-        self.sim_params = {} # TODO (docstring, make clear must be implemented)
-        self.sim_infer = {} # TODO (docstring, make clear must be implemented)
         self.infer_Z = True
         if n_group is 1:
             self.infer_attention_weights = False
         else:
             self.infer_attention_weights = True
-
+        
+        # Abstract attributes.
+        self.sim_params = {}
+        self.sim_infer = {}
+        
         # Embedding scaling factors to draw from.
         self.init_scale_list = [.001, .01, .1]
 
@@ -327,7 +332,7 @@ class PsychologicalEmbedding(object):
         fixed. To unfreeze all model parameters, call freeze with no arguments.
         
         Args:
-            freeze_options (optional): Dictionary of paremter names and 
+            freeze_options (optional): Dictionary of parameter names and 
                 corresponding values to be frozen (i.e., fixed) during 
                 inference.
         """

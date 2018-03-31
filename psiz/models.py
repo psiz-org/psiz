@@ -81,8 +81,12 @@ class Observations(object):
             shape = [n_obs, 1]
         configuration_id: An integer array indicating the display configuration
             of each observation.
+            shape = [n_obs, 1]
         configurations: A DataFrame object describing the unique display
             configurations.
+    
+    Methods:
+        subset: Return a subset of observations given an index.
     """
 
     def __init__(self, stimulus_set, n_selected=None, is_ranked=None, group_id=None):
@@ -120,13 +124,13 @@ class Observations(object):
         self.configurations = configurations
     
     def subset(self, index):
-        """Return subset of observations as Observations object.
+        """Return subset of observations as new Observations object.
 
         Args:
             index: The indices corresponding to the subset.
 
         Returns:
-            subset: A new Observations object.
+            A new Observations object.
         """
 
         return Observations(self.stimulus_set[index,:], self.n_selected[index], self.is_ranked[index], self.group_id[index])
@@ -374,8 +378,7 @@ class PsychologicalEmbedding(object):
         pass
 
     def _get_attention_weights(self):
-        """TODO
-        """
+        """Return attention weights of model as TensorFlow variable."""
         # Attention variable
         if self.do_reuse:
             attention_weights = tf.get_variable("attention_weights", [self.n_group, self.dimensionality], initializer=tf.constant_initializer(self.attention_weights), trainable=True)
@@ -389,8 +392,7 @@ class PsychologicalEmbedding(object):
         return attention_weights
 
     def _get_embedding(self):
-        """TODO
-        """
+        """Return embedding of model as TensorFlow variable."""
         # Embedding variable
         # Iniitalize Z with different scales for different restarts
         rand_scale_idx = np.random.randint(0,len(self.init_scale_list))
@@ -410,14 +412,14 @@ class PsychologicalEmbedding(object):
         """State changing method that sets reuse of embedding.
         
         Args:
-          do_reuse: Boolean that indicates whether the current embedding should
-          be used for initialization during inference.
-          init_scale: A scalar value indicating to went extent the previous
-            embedding points should be reused. For example, a value of 0.05
-            would add uniform noise to all the points in the embedding such
-            that each embedding point was randomly jittered up to 5% on each
-            dimension relative to the overall size of the embedding. The value
-            can be between [0,1].
+            do_reuse: Boolean that indicates whether the current embedding should
+                be used for initialization during inference.
+            init_scale: A scalar value indicating to went extent the previous
+                embedding points should be reused. For example, a value of 0.05
+                would add uniform noise to all the points in the embedding such
+                that each embedding point was randomly jittered up to 5% on each
+                dimension relative to the overall size of the embedding. The 
+                value can be between [0,1].
         """
         self.do_reuse = do_reuse
         self.init_scale = init_scale
@@ -426,10 +428,10 @@ class PsychologicalEmbedding(object):
         """State changing method that sets TensorBoard logging.
 
         Args:
-          do_log: Boolean that indicates whether logs should be recorded.
-          log_dir: A string indicating the file path for the logs.
-          delete_prev: Boolean indicating whether the directory should
-            be cleared of previous files first.
+            do_log: Boolean that indicates whether logs should be recorded.
+            log_dir (optional): A string indicating the file path for the logs.
+            delete_prev (optional): Boolean indicating whether the directory 
+                should be cleared of previous files first.
         """
         if do_log:
             self.do_log = True
@@ -445,15 +447,16 @@ class PsychologicalEmbedding(object):
         """Fit the free parameters of the embedding model.
 
         Args:
-          obs: An Observations object representing the observed data.
-          n_restart: An integer specifying the number of restarts to use for 
-            the inference procedure. Since the embedding procedure sometimes
-            gets stuck in local optima, multiple restarts helps find the global
-            optimum.
-          verbose: An integer specifying the verbosity of printed output.
+            obs: An Observations object representing the observed data.
+            n_restart: An integer specifying the number of restarts to use for 
+                the inference procedure. Since the embedding procedure sometimes
+                gets stuck in local optima, multiple restarts helps find the 
+                global optimum.
+            verbose: An integer specifying the verbosity of printed output.
 
         Returns:
-          J: The average loss (-loglikelihood) per observation (i.e., display).
+            J: The average loss per observation. Loss is defined as the negative
+                loglikelihood.
         """
 
         dimensionality = self.dimensionality
@@ -473,24 +476,37 @@ class PsychologicalEmbedding(object):
         (train_idx, test_idx) = list(skf.split(obs.stimulus_set, obs.configuration_id))[0]
         
         # Run multiple restarts of embedding algorithm.
-        loaded_func = lambda i_restart: self._embed(obs, train_idx, test_idx, i_restart)
-        (J_all, Z, attention_weights, params) = self._embed_restart(loaded_func, n_restart, verbose)
+        J_all_best = np.inf
+        Z_best = None
+        attention_weights_best = None
+        params_best = None
 
-        self.Z = Z
-        self.attention_weights = attention_weights
-        self._set_parameters(params)
+        for i_restart in range(n_restart):
+            (J_all, Z, attention_weights, params) = self._embed(obs, train_idx, test_idx, i_restart)
+            if J_all < J_all_best:
+                J_all_best = J_all
+                Z_best = Z
+                attention_weights_best = attention_weights
+                params_best = params
 
-        return J_all
+            if verbose > 1:
+                print('Restart ', i_restart)
+
+        self.Z = Z_best
+        self.attention_weights = attention_weights_best
+        self._set_parameters(params_best)
+
+        return J_all_best
     
     def evaluate(self, obs):
-        """Evaluate observations using the current state of the embedding object.
+        """Evaluate observations using the current state of the model.
 
         Args:
-          obs: An Observations object representing the observed data.
+            obs: An Observations object representing the observed data.
 
         Returns:
-          J: The average loss (-loglikelihood) per observation (i.e., display) 
-            given the current model.
+            J: The average loss per observation. Loss is defined as the negative
+                loglikelihood.
         """
         
         # Is this really necessary?
@@ -522,8 +538,7 @@ class PsychologicalEmbedding(object):
         return J_all
 
     def _embed(self, obs, train_idx, test_idx, i_restart):
-        """TODO
-        """
+        """TensorFlow implementation of embedding algorithm."""
         verbose = 0 # TODO make parameter
 
         # Partition the observation data.
@@ -621,39 +636,8 @@ class PsychologicalEmbedding(object):
 
         return (J_all_best, Z_best, attention_weights_best, params_best)
 
-    def _embed_restart(self, loaded_func, n_restart, verbose):
-        """Multiple restart wrapper. 
-        
-        The results of the best performing restart are returned.
-
-        Args:
-          n_restart: The number of restarts to perform.
-        Returns:
-          loss:
-          Z:
-          attention_weights:
-          params:
-        """
-        J_all_best = np.inf
-        Z_best = None
-        attention_weights_best = None
-        params_best = None
-
-        for i_restart in range(n_restart):
-            (J_all, Z, attention_weights, params) = loaded_func(i_restart)
-            if J_all < J_all_best:
-                J_all_best = J_all
-                Z_best = Z
-                attention_weights_best = attention_weights
-                params_best = params
-
-            if verbose > 1:
-                print('Restart ', i_restart)
-
-        return (J_all_best, Z_best, attention_weights_best, params_best)
-
     def _project_attention_weights(self, attention_weights_0):
-        """Projection attention weights for gradient descent."""
+        """Return projection of attention weights for gradient descent."""
         n_dim = tf.shape(attention_weights_0, out_type=tf.float64)[1]
         attention_weights_1 = tf.divide(tf.reduce_sum(attention_weights_0, axis=1, keepdims=True), n_dim)
         attention_weights_proj = tf.divide(attention_weights_0, attention_weights_1)
@@ -661,7 +645,7 @@ class PsychologicalEmbedding(object):
         return attention_weights_proj
     
     def _cost_2c1(self, Z, triplets, sim_params, attention_weights):
-        """Cost associated with an ordered 2 chooose 1 display."""
+        """Return cost associated with an ordered 2 chooose 1 display."""
         n_disp = tf.shape(triplets)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
 
@@ -681,7 +665,7 @@ class PsychologicalEmbedding(object):
         return J
     
     def _cost_8cN(self, Z, nines, N, sim_params, attention_weights):
-        """Cost associated with an ordered 8 chooose N display."""
+        """Return cost associated with an ordered 8 chooose N display."""
         n_disp = tf.shape(nines)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
     
@@ -749,8 +733,7 @@ class PsychologicalEmbedding(object):
         return J
 
     def _core_model(self):
-        """TODO
-        """
+        """Embedding model implemented using TensorFlow."""
         with tf.variable_scope("model") as scope:
             # Similarity function variables            
             (sim_params, sim_constraints) = self._get_similarity_parameters()
@@ -798,38 +781,37 @@ class Exponential(PsychologicalEmbedding):
     """An exponential family stochastic display embedding algorithm. 
     
     This embedding technique uses the following similarity kernel: 
-      s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma, 
+        s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma, 
     where x and y are n-dimensional vectors. The similarity function has four 
     free parameters: rho, tau, gamma, and beta. The exponential family is 
     obtained by integrating across various psychological theores [1,2,3,4].
 
     References:
     [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency effects as a 
-      window to generalization: Separating decisional and perceptual sequential
-      effects in category learning. Journal of Experimental Psychology: 
-      Learning, Memory, & Cognition, 32 , 316-332.
+        window to generalization: Separating decisional and perceptual 
+        sequential effects in category learning. Journal of Experimental 
+        Psychology: Learning, Memory, & Cognition, 32 , 316-332.
     [2] Jones, M., Maddox, W. T., & Love, B. C. (2006). The role of similarity 
-      in generalization. In Proceedings of the 28th annual meeting of the 
-      cognitive science society (pp. 405-410). 
+        in generalization. In Proceedings of the 28th annual meeting of the 
+        cognitive science society (pp. 405-410). 
     [3] Nosofsky, R. M. (1986). Attention, similarity, and the identication-
-      categorization relationship. Journal of Experimental Psychology: General,
-      115, 39-57.
+        categorization relationship. Journal of Experimental Psychology: 
+        General, 115, 39-57.
     [4] Shepard, R. N. (1987). Toward a universal law of generalization for 
-      psychological science. Science, 237, 1317-1323.
+        psychological science. Science, 237, 1317-1323.
     """
 
     def __init__(self, n_stimuli, dimensionality=2, n_group=1):
         """Initialize.
 
         Args:
-          n_stimuli: An integer indicating the total number of unique stimuli
-            that will be embedded.
-          dimensionality: An integer indicating the dimensionalty of the 
-            embedding. The dimensionality can be inferred using the function
-            "suggest_dimensionality".
-          n_group: (default: 1) An integer indicating the number of different
-            population groups in the embedding. A separate set of attention 
-            weights will be inferred for each group.
+            n_stimuli: An integer indicating the total number of unique stimuli
+                that will be embedded.
+            dimensionality (optional): An integer indicating the dimensionalty 
+                of the embedding.
+            n_group (optional): An integer indicating the number of different
+                population groups in the embedding. A separate set of attention 
+                weights will be inferred for each group.
         """
 
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
@@ -902,9 +884,9 @@ class Exponential(PsychologicalEmbedding):
             attention_weights: The weights allocated to each dimension in a 
                 weighted minkowski metric.
                 shape = (n_sample, dimensionality)
+        
         Returns:
-            similarity: The corresponding similairty between rows of embedding
-                points.
+            The corresponding similairty between rows of embedding points.
                 shape = (n_sample,)
         """
 
@@ -927,7 +909,7 @@ class HeavyTailed(PsychologicalEmbedding):
     """A heavy-tailed family stochastic display embedding algorithm. 
     
     This embedding technique uses the following similarity kernel: 
-      s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha), 
+        s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha), 
     where x and y are n-dimensional vectors. The similarity function has four 
     free parameters: rho, tau, kappa, and alpha. The heavy-tailed family is a 
     further generalization of the Student-t family.
@@ -937,14 +919,13 @@ class HeavyTailed(PsychologicalEmbedding):
         """Initialize.
 
         Args:
-          n_stimuli: An integer indicating the total number of unique stimuli
-            that will be embedded.
-          dimensionality: An integer indicating the dimensionalty of the 
-            embedding. The dimensionality can be inferred using the function
-            "suggest_dimensionality".
-          n_group: (default: 1) An integer indicating the number of different
-            population groups in the embedding. A separate set of attention 
-            weights will be inferred for each group.
+            n_stimuli: An integer indicating the total number of unique stimuli
+                that will be embedded.
+            dimensionality (optional): An integer indicating the dimensionalty 
+                of the embedding.
+            n_group (optional): An integer indicating the number of different
+                population groups in the embedding. A separate set of attention 
+                weights will be inferred for each group.
         """
 
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
@@ -1017,9 +998,9 @@ class HeavyTailed(PsychologicalEmbedding):
             attention_weights: The weights allocated to each dimension in a 
                 weighted minkowski metric.
                 shape = (n_sample, dimensionality)
+        
         Returns:
-            similarity: The corresponding similairty between rows of embedding
-                points.
+            The corresponding similairty between rows of embedding points.
                 shape = (n_sample,)
         """
 
@@ -1042,7 +1023,7 @@ class StudentsT(PsychologicalEmbedding):
     """A Student's t family stochastic display embedding algorithm.
 
     The embedding technique uses the following simialrity kernel:
-      s(x,y) = (1 + (((norm(x-y, rho)^tau) / alpha))^(-(alpha + 1)/2),
+        s(x,y) = (1 + (((norm(x-y, rho)^tau) / alpha))^(-(alpha + 1)/2),
     where x and y are n-dimensional vectors. The similarity kernel has three 
     free parameters: rho, tau, and alpha. The original Student-t kernel 
     proposed by van der Maaten [1] uses the parameter settings rho=2, tau=2,
@@ -1051,7 +1032,7 @@ class StudentsT(PsychologicalEmbedding):
     changed by setting the inference flags (e.g., infer_alpha = True).
 
     References:
-      [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet 
+    [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet 
         embedding. In Machine learning for signal processing (mlsp), 2012 IEEE
         international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720
     """
@@ -1060,14 +1041,13 @@ class StudentsT(PsychologicalEmbedding):
         """Initialize.
 
         Args:
-          n_stimuli: An integer indicating the total number of unique stimuli
-            that will be embedded.
-          dimensionality: An integer indicating the dimensionalty of the 
-            embedding. The dimensionality can be inferred using the function
-            "suggest_dimensionality".
-          n_group: (default: 1) An integer indicating the number of different
-            population groups in the embedding. A separate set of attention 
-            weights will be inferred for each group.
+            n_stimuli: An integer indicating the total number of unique stimuli
+                that will be embedded.
+            dimensionality (optional): An integer indicating the dimensionalty 
+                of the embedding.
+            n_group (optional): An integer indicating the number of different
+                population groups in the embedding. A separate set of attention 
+                weights will be inferred for each group.
         """
 
         PsychologicalEmbedding.__init__(self, n_stimuli, dimensionality, n_group)
@@ -1139,9 +1119,9 @@ class StudentsT(PsychologicalEmbedding):
             attention_weights: The weights allocated to each dimension in a 
                 weighted minkowski metric.
                 shape = (n_sample, dimensionality)
+        
         Returns:
-            similarity: The corresponding similairty between rows of embedding
-                points.
+            The corresponding similairty between rows of embedding points.
                 shape = (n_sample,)
         """
 

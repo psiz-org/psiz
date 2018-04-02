@@ -5,10 +5,11 @@ Classes:
     PsychologicalEmbedding: Abstract base class for embedding model.
     Exponential: Embedding model using an exponential family similarity 
         kernel.
-    HeavyTailed: Embedding model using a heavy-tailed similarity kernel.
+    HeavyTailed: Embedding model using a heavy-tailed similarity 
+        kernel.
     StudentsT: Embedding model using a Student's t similarity kernel.
 
-Terms:
+Notes:
     observation: akin to a trial 
     query stimulus:
     reference stimulus:
@@ -20,21 +21,13 @@ Separate attention weights are inferred for each group.
 
 TODO
 - attention weights
-- parallelization and/or warm restarts
 - reuse functionality
-- docs should be clear that loss is average loss
+- parallelization and/or warm restarts
 - docs should be clear regarding verbosity levels
-- docstring "return" not "returns"
-    - It prescribes the function or method's effect as a command 
-    - Do X and return a list
 - add assignment_id to obs
 - The dimensionality can be inferred using the 
-                function "suggest_dimensionality".
+  function "suggest_dimensionality".
 - resave judged_displays without NaNs
-
-- move freeze to abstract class
-    - make infer_x a dictionary where x is a model specific parameter, keep
-    infer_z separate
 
 License Boilerplate TODO
 
@@ -42,10 +35,12 @@ Author: B D Roads
 """
 
 from abc import ABCMeta, abstractmethod
+
 import numpy as np
 import tensorflow as tf
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
+
 
 class Observations(object):
     """Object that encapsulates similarity judgment observations.
@@ -207,6 +202,7 @@ class Observations(object):
             configuration_id[display_type_locs] = i_type
         
         return (df_config, configuration_id)
+
 
 class PsychologicalEmbedding(object):
     """Abstract base class for psychological embedding algorithm. 
@@ -795,6 +791,7 @@ class PsychologicalEmbedding(object):
 
         return (J, Z, attention_weights, sim_params, sim_constraints, tf_stimulus_set, tf_n_reference, tf_n_selected, tf_is_ranked, tf_group_id)
 
+
 class Exponential(PsychologicalEmbedding):
     """An exponential family stochastic display embedding algorithm. 
     
@@ -929,6 +926,7 @@ class Exponential(PsychologicalEmbedding):
         s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau) + gamma)
         return s_qref
 
+
 class HeavyTailed(PsychologicalEmbedding):
     """A heavy-tailed family stochastic display embedding algorithm. 
     
@@ -1043,6 +1041,7 @@ class HeavyTailed(PsychologicalEmbedding):
         # Heavy-tailed family similarity kernel.
         s_qref = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
         return s_qref
+
 
 class StudentsT(PsychologicalEmbedding):
     """A Student's t family stochastic display embedding algorithm.

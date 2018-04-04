@@ -13,13 +13,11 @@ Notes:
     observation: akin to a trial 
     query stimulus:
     reference stimulus:
-    group: 
+    group: A distinct population of agents. For example, observations
+        could be collected from two groups: novices and experts. A 
+        separate set of attention weights is inferred for each group.
 
-n_group must be defined on instantiation. This determines how many 
-separate sets of attention weights will be used and inferred.
-Separate attention weights are inferred for each group.
-
-TODO
+Todo: TODO
 - attention weights
 - reuse functionality
 - parallelization and/or warm restarts
@@ -58,6 +56,7 @@ class Observations(object):
             shape = [n_obs, max(n_reference) + 1]
         n_reference: An integer array indicating the number of references in 
             each display.
+            shape = [n_obs, 1]
         n_selected: An integer array indicating the number of references 
             selected in each display.
             shape = [n_obs, 1]

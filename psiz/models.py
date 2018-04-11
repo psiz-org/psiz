@@ -26,6 +26,9 @@ Todo: TODO
 - The dimensionality can be inferred using the 
   function "suggest_dimensionality".
 - resave judged_displays without NaNs
+- distinction between displays (unjudged) and observations (judged displays).
+    - reuse object for both (one has sorted stimulus set)
+    - rename as SimilarityTasks
 
 License Boilerplate TODO
 
@@ -54,21 +57,21 @@ class Observations(object):
             query stimulus, then the selected references (in order of 
             selection), and then any remaining unselected references.
             shape = [n_obs, max(n_reference) + 1]
-        n_reference: An integer array indicating the number of references in 
-            each display.
+        n_reference: An integer array indicating the number of 
+            references in each display.
             shape = [n_obs, 1]
-        n_selected: An integer array indicating the number of references 
-            selected in each display.
+        n_selected: An integer array indicating the number of 
+            references selected in each display.
             shape = [n_obs, 1]
         is_ranked:  Boolean array indicating which trials had selected
             references that were ordered.
             shape = [n_obs, 1]
-        group_id: An integer array indicating the group membership of each 
-            display. It is assumed that group is composed of integers from 
-            [0,N] where N is the total number of groups.
+        group_id: An integer array indicating the group membership of 
+            each display. It is assumed that group is composed of 
+            integers from [0,N] where N is the total number of groups.
             shape = [n_obs, 1]
-        configuration_id: An integer array indicating the display configuration
-            of each observation.
+        configuration_id: An integer array indicating the display 
+            configuration of each observation.
             shape = [n_obs, 1]
         configurations: A DataFrame object describing the unique display
             configurations.

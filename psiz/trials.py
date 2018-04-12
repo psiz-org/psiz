@@ -7,6 +7,7 @@ Classes:
         will serve as observed data during inference.
 
 Notes: TODO
+    plural
     judged versus unjudged
         sorted stimulus set, group_id, (assignment_id)
     query stimulus:
@@ -15,9 +16,13 @@ Notes: TODO
         could be collected from two groups: novices and experts. A 
         separate set of attention weights is inferred for each group.
 
+Todo:
+    - add assignment_id to JudgedTrials?
+    - test module
+
 License Boilerplate TODO
 
-Author: B D Roads
+Author: B. D. Roads
 """
 
 from abc import ABCMeta, abstractmethod

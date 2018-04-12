@@ -13,14 +13,12 @@ Todo: TODO
 - reuse functionality
 - parallelization and/or warm restarts
 - docs should be clear regarding verbosity levels
-- add assignment_id to obs
 - The dimensionality can be inferred using the 
   function "suggest_dimensionality".
-- resave judged_displays without NaNs    
 
 License Boilerplate TODO
 
-Author: B D Roads
+Author: B. D. Roads
 """
 
 from abc import ABCMeta, abstractmethod

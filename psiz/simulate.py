@@ -3,6 +3,8 @@
 Author: B D Roads
 """
 
+from psiz.trials import JudgedTrials
+
 class Agent(object):
     """Agent that simulates similarity judgments.
     """
@@ -22,13 +24,13 @@ class Agent(object):
         """Simulate similarity judgments for provided displays.
 
         Args:
-            displays: Observations object representing the
+            displays: UnjudgedTrials object representing the
                 to-be-judged displays. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
         
         Returns:
-            Observations object representing the judged displays. The
-                order of the stimuli is now informative.
+            JudgedTrials object representing the judged displays. 
+                The order of the stimuli is now informative.
         """
 
     def _probability(self, displays):

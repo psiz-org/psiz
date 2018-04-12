@@ -31,16 +31,16 @@ in order to infer an embedding.
 .. code-block:: python
 
   # Load some example observations.
-  (obs, n_stimuli) = datasets.load_obs('birds-16')
+  (obs, n_stimuli) = datasets.load_obs('birds-16') TODO
   # Initialize an embedding model.
   embedding = psiz.models.Exponential(n_stimuli)
   # Fit the embedding model using observations.
   embedding.fit(obs)
 
-Similarity Judgment Observations
---------------------------------
+Similarity Judgment Trial TODO
+-------------------------
 To infer an embedding, multiple observations are necessary. A single 
-observation is comprised of a multiple stimuli that have been judged by an 
+observation is comprised of multiple stimuli that have been judged by an 
 agent (human or machine) based on their similarity. 
 
 In the simplest case, an observation is obtained from three stimuli: a query

@@ -6,7 +6,6 @@ Author: B D Roads
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 
-from psiz.models import Observations
 import psiz.utils as ut
 
 
@@ -22,7 +21,7 @@ def suggest_dimensionality(obs, embedding_constructor, n_stimuli, dim_list=None,
     cross-validation partion.
 
     Parameters:
-      obs: An Observations object representing the observed data.
+      obs: An JudgedTrials object representing the observed data.
       embedding_constructor: A PsychologicalEmbedding constructor.
       n_stimuli:  An integer indicating the number of unqiue stimuli.
       dim_list: A list of integers indicating the dimensions to search 

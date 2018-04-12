@@ -1,7 +1,6 @@
 """Module of psychological embedding models.
 
 Classes:
-    Observations: Encapsulates all data related to observations.
     PsychologicalEmbedding: Abstract base class for embedding model.
     Exponential: Embedding model using an exponential family similarity 
         kernel.
@@ -9,26 +8,15 @@ Classes:
         kernel.
     StudentsT: Embedding model using a Student's t similarity kernel.
 
-Notes:
-    observation: akin to a trial 
-    query stimulus:
-    reference stimulus:
-    group: A distinct population of agents. For example, observations
-        could be collected from two groups: novices and experts. A 
-        separate set of attention weights is inferred for each group.
-
 Todo: TODO
-- attention weights
+- attention weights functionality
 - reuse functionality
 - parallelization and/or warm restarts
 - docs should be clear regarding verbosity levels
 - add assignment_id to obs
 - The dimensionality can be inferred using the 
   function "suggest_dimensionality".
-- resave judged_displays without NaNs
-- distinction between displays (unjudged) and observations (judged displays).
-    - reuse object for both (one has sorted stimulus set)
-    - rename as SimilarityTasks
+- resave judged_displays without NaNs    
 
 License Boilerplate TODO
 
@@ -41,170 +29,6 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
-
-
-class Observations(object):
-    """Object that encapsulates similarity judgment observations.
-    
-    Used by the class PsychologicalEmbedding.
-
-    Attributes:
-        n_obs: An integer indicating the number of observations.
-        stimulus_set: An integer matrix representing the set of stimuli that 
-            have been judged based on similarity. Each row constutes one 
-            observation. The shape of the matrix implies the number of 
-            references used on each trial. The first column is the 
-            query stimulus, then the selected references (in order of 
-            selection), and then any remaining unselected references.
-            shape = [n_obs, max(n_reference) + 1]
-        n_reference: An integer array indicating the number of 
-            references in each display.
-            shape = [n_obs, 1]
-        n_selected: An integer array indicating the number of 
-            references selected in each display.
-            shape = [n_obs, 1]
-        is_ranked:  Boolean array indicating which trials had selected
-            references that were ordered.
-            shape = [n_obs, 1]
-        group_id: An integer array indicating the group membership of 
-            each display. It is assumed that group is composed of 
-            integers from [0,N] where N is the total number of groups.
-            shape = [n_obs, 1]
-        configuration_id: An integer array indicating the display 
-            configuration of each observation.
-            shape = [n_obs, 1]
-        configurations: A DataFrame object describing the unique display
-            configurations.
-    
-    Methods:
-        subset: Return a subset of observations given an index.
-    """
-
-    def __init__(self, stimulus_set, n_selected=None, is_ranked=None, group_id=None):
-        """Initialize.
-
-        Args:
-            stimulus_set:
-            n_selected (optional):
-            is_ranked (optional):
-            group_id (optional):
-        """
-
-        n_obs = stimulus_set.shape[0]
-        # Handle default settings.
-        if n_selected is None:
-            n_selected = np.ones((n_obs))
-        if is_ranked is None:
-            is_ranked = np.full((n_obs), True)
-        if group_id is None:
-            group_id = np.zeros((n_obs))
-
-        # Infer n_reference for each display.
-        n_reference = self._infer_n_reference(stimulus_set)
-
-        # Determine unique display configurations.
-        (configurations, configuration_id) = self._generate_configuration_id(n_reference, n_selected, is_ranked, group_id)
-
-        self.stimulus_set = stimulus_set
-        self.n_obs = n_obs
-        self.n_reference = n_reference
-        self.n_selected = n_selected
-        self.is_ranked = is_ranked
-        self.group_id = group_id
-        self.configuration_id = configuration_id
-        self.configurations = configurations
-    
-    def subset(self, index):
-        """Return subset of observations as new Observations object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new Observations object.
-        """
-
-        return Observations(self.stimulus_set[index,:], self.n_selected[index], self.is_ranked[index], self.group_id[index])
-
-    def _infer_n_reference(self, stimulus_set):
-        """Return the number of references in each observation.
-
-        Helper function that infers the number of available references for a 
-        given display. The function assumes that values less than zero, are
-        placeholder values and should be treated as non-existent.
-
-        Args:
-            stimulus_set: shape = [n_obs, 1]
-        
-        Returns:
-            n_reference: An integer array indicating the number of references in each
-                display. shape = [n_obs, 1]
-        """
-        max_ref = stimulus_set.shape[1] - 1
-        n_reference = max_ref - np.sum(stimulus_set<0, axis=1)            
-        return np.array(n_reference)
-        
-    def _generate_configuration_id(self, n_reference, n_selected, is_ranked, 
-        group_id, assignment_id=None):
-        """Generate a unique ID for each display configuration.
-
-        Helper function that generates a unique ID for each of the unique
-        display configurations in the provided data set.
-
-        Args:
-            n_reference: An integer array indicating the number of references in each
-                display.
-                shape = [n_obs, 1]
-            n_selected: An integer array indicating the number of references 
-                selected in each display.
-                shape = [n_obs, 1]
-            is_ranked:  Boolean array indicating which observations had selected
-                references that were ordered.
-                shape = [n_obs, 1]
-            group_id: An integer array indicating the group membership of each 
-                display. It is assumed that group is composed of integers from 
-                [0,N] where N is the total number of groups. Separate attention 
-                weights are inferred for each group.
-                shape = [n_obs, 1]
-            assignment_id: An integer array indicating the assignment ID of the
-                display. It is assumed that observations with a given assignment ID were
-                judged by a single person although a single person may have completed
-                multiple assignments (e.g., Amazon Mechanical Turk).
-                shape = [n_obs, 1]
-        
-        Returns:
-            df_config: A DataFrame containing all the unique configurations 
-                present in the data.
-            configuration_id: A unique ID for each type of display configuration 
-                present in the data.
-        """
-        n_obs = len(n_reference)
-
-        if assignment_id is None:
-            assignment_id = np.ones((n_obs))
-        
-        # Determine unique display configurations.
-        d = {'n_reference': n_reference, 'n_selected': n_selected, 
-        'is_ranked': is_ranked, 'group_id': group_id, 
-        'assignment_id': assignment_id}
-        df_config = pd.DataFrame(d)
-        df_config = df_config.drop_duplicates()
-        n_config = len(df_config)
-
-        # Assign display configuration ID for every observation.
-        configuration_id = np.empty(n_obs)
-        for i_type in range(n_config):
-            a = (n_reference == df_config['n_reference'].iloc[i_type])
-            b = (n_selected == df_config['n_selected'].iloc[i_type])
-            c = (is_ranked == df_config['is_ranked'].iloc[i_type])
-            d = (group_id == df_config['group_id'].iloc[i_type])
-            e = (assignment_id == df_config['assignment_id'].iloc[i_type])
-            f = np.array((a,b,c,d,e))
-            display_type_locs = np.all(f, axis=0)
-            configuration_id[display_type_locs] = i_type
-        
-        return (df_config, configuration_id)
-
 
 class PsychologicalEmbedding(object):
     """Abstract base class for psychological embedding algorithm. 
@@ -462,7 +286,7 @@ class PsychologicalEmbedding(object):
         """Fit the free parameters of the embedding model.
 
         Args:
-            obs: An Observations object representing the observed data.
+            obs: A JudgedTrials object representing the observed data.
             n_restart: An integer specifying the number of restarts to 
                 use for the inference procedure. Since the embedding 
                 procedure finds local optima, multiple restarts helps 
@@ -481,7 +305,7 @@ class PsychologicalEmbedding(object):
         if (verbose > 0):
             print('Inferring embedding ...')
             print('    Settings:')
-            print('    n_observations: ', obs.n_obs)
+            print('    n_observations: ', obs.n_trial)
             print('    n_group: ', len(np.unique(obs.group_id)))
             print('    dimensionality: ', dimensionality)
             print('    n_restart: ', n_restart)
@@ -518,7 +342,7 @@ class PsychologicalEmbedding(object):
         """Evaluate observations using the current state of the model.
 
         Args:
-            obs: An Observations object representing the observed data.
+            obs: A JudgedTrials object representing the observed data.
 
         Returns:
             J: The average loss per observation. Loss is defined as the

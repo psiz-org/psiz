@@ -1,9 +1,8 @@
 from setuptools import setup
 
+
 def readme():
-    '''
-    Read in README file.
-    '''
+    """Read in README file."""
     with open('README.rst') as f:
         return f.read()
 
@@ -16,7 +15,7 @@ setup(name='psiz',
       ],
       author='Brett D. Roads',
       author_email='brett.roads@gmail.com',
-      license='GNU GPLv3',
+      license='Apache Licence 2.0',
       packages=['psiz'],
       install_requires=['numpy', 'tensorflow', 'pandas', 'scikit-learn'],
       include_package_data=True,

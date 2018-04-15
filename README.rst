@@ -112,7 +112,7 @@ Authors
 
 Licence
 -------
-This project is licensed under the GNU GPLv3 License - see the LICENSE.txt file for details.
+This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file for details.
 
 .. [vanderMaaten] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet
    embedding. In Machine learning for signal processing (mlsp), 2012 IEEE

@@ -1,11 +1,24 @@
-"""Module for testing trials.py
+# -*- coding: utf-8 -*-
+# Copyright 2018 The PsiZ Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""Module for testing trials.py.
 
 Todo:
     - refactor pytest code to something more DRY
-    - cast args to appropriate int and float types?
-    - initialize with smaller int size
 
-Author: B. D. Roads
 """
 
 import pytest
@@ -98,7 +111,7 @@ def setup_obs_0():
             'n_selected': [1, 1, 2],
             'is_ranked': [True, True, True],
             'group_id': [0, 0, 0],
-            'assignment_id': [0, 0, 0]
+            'session_id': [0, 0, 0]
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -133,7 +146,7 @@ def setup_obs_1():
             'n_selected': [1, 1, 2],
             'is_ranked': [True, True, True],
             'group_id': [0, 1, 1],
-            'assignment_id': [0, 0, 0]
+            'session_id': [0, 0, 0]
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))

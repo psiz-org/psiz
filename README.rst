@@ -81,6 +81,9 @@ Optionally, you can also provide additional information.
 know free parameters (set)
 don’t know free parameters (fit)
 
+- The dimensionality can be inferred using the function "suggest_dimensionality".
+
+
 Embedding Models
 ----------------
 

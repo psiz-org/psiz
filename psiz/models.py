@@ -26,12 +26,11 @@ Classes:
 
 Todo: TODO
     - attention weights functionality
-    - reuse functionality
+    - add similarity method for public API
+    - add thaw method
+    - implement reuse functionality
     - parallelization and/or warm restarts
     - docs should be clear regarding verbosity levels
-    - The dimensionality can be inferred using the function
-        "suggest_dimensionality".
-
 """
 
 from abc import ABCMeta, abstractmethod
@@ -421,7 +420,7 @@ class PsychologicalEmbedding(object):
         return J_all
 
     def _embed(self, obs, train_idx, test_idx, i_restart):
-        """A TensorFlow implementation of embedding algorithm."""
+        """Ebed using a TensorFlow implementation."""
         verbose = 0  # TODO make parameter
 
         # Partition the observation data.

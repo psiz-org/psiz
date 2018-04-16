@@ -14,12 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for testing trials.py.
-
-Todo:
-    - refactor pytest code to something more DRY
-
-"""
+"""Module for testing trials.py."""
 
 import pytest
 import numpy as np

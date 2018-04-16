@@ -14,9 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module of helpful utility functions.
-
-"""
+"""Module of helpful utility functions."""
 
 import numpy as np
 import pandas as pd
@@ -43,20 +41,19 @@ def matrix_correlation(mat_A, mat_B):
     return r2_score(mat_A[iu1], mat_B[iu1])
 
 
-def possible_outcomes(display_configuration):
-    """Return the possible outcomes of a display configuration.
+def possible_outcomes(trial_configuration):
+    """Return the possible outcomes of a trial configuration.
 
     Args:
-        display_configuration: A display configuration Pandas Series.
+        trial_configuration: A trial configuration Pandas Series.
 
     Returns:
         An array indicating all possible outcomes where the values
             indicate indices of the reference stimuli.
 
     """
-
-    n_reference = display_configuration['n_reference']
-    n_selected = int(display_configuration['n_selected'])
+    n_reference = trial_configuration['n_reference']
+    n_selected = int(trial_configuration['n_selected'])
 
     reference_list = range(n_reference)
 

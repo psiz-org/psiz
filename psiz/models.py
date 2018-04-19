@@ -24,13 +24,23 @@ Classes:
         kernel.
     StudentsT: Embedding model using a Student's t similarity kernel.
 
-Todo: TODO
+Todo:
     - attention weights functionality
     - add similarity method for public API
-    - add thaw method
-    - implement reuse functionality
+    - rework resuse
+    - change default behavior of fit to warm restart and add reinit method
+    - add cold and warm option?
     - parallelization and/or warm restarts
     - docs should be clear regarding verbosity levels
+
+    - use exact values (frozen, evaluate)
+    - warm values (warm fit)
+    - cold start (new inits for each restart)
+
+    - document correct implementation of bounds. i.e., 
+        [lowerbound, upperbound] use None if doesn't exist
+    - do cold and warm need trainable, or is always trure?
+
 """
 
 from abc import ABCMeta, abstractmethod
@@ -54,6 +64,7 @@ class PsychologicalEmbedding(object):
         evaluate: Evaluate the embedding model using the provided
             observations.
         freeze: Freeze the free parameters of an embedding model.
+        thaw: Make free parameters trainable.
         reuse: Reuse the free parameters of an embedding model when
             fitting.
         set_log: Adjust the TensorBoard logging behavior.
@@ -64,19 +75,20 @@ class PsychologicalEmbedding(object):
             inferred.
         sim_params: Dictionary containing the parameter values
             governing the similarity kernel.
-        sim_infer: Dictionary of flags controlling which parameters of
-            the similarity kernel are inferred.
+        sim_trainable: Dictionary of flags controlling which parameters
+            of the similarity kernel are trainable.
         attention_weights: The attention weights associated with the
             embedding model.
         infer_attention_weights: Flag the determines whether attention
             weights are inferred.
 
     Notes:
-        The methods fit, freeze, and reuse modify the state of the
-            object.
-        The attributes sim_params and sim_infer must be initialized by
-            each concrete class.
-        The abstract methods _get_similarity_parameters and _similarity
+        The methods fit, freeze, thaw, and reuse modify the state of 
+            the object.
+        The attributes sim_params, sim_trainable, and sim_bounds must 
+            be initialized by each concrete class.
+        The abstract methods _get_similarity_parameters_cold, 
+            _get_similarity_parameters_warm, and _similarity
             must be implemented by each concrete class.
 
     """
@@ -125,7 +137,8 @@ class PsychologicalEmbedding(object):
 
         # Abstract attributes.
         self.sim_params = {}
-        self.sim_infer = {}
+        self.sim_trainable = {}
+        self.sim_bounds = {}
 
         # Embedding scaling factors to draw from.
         self.init_scale_list = [.001, .01, .1]
@@ -146,23 +159,6 @@ class PsychologicalEmbedding(object):
 
         super().__init__()
 
-    @abstractmethod
-    def _get_similarity_parameters(self):
-        """Return a dictionary and TensorFlow operation.
-
-        This method encapsulates the creation of algorithm-specific
-        free parameters governing the similarity kernel.
-
-        Returns:
-            sim_params: A dictionary of algorithm-specific TensorFlow
-                variables.
-            sim_constraints: A TensorFlow operation that imposes
-                boundary constraints on the algorithm-specific free
-                parameters during inference.
-
-        """
-        pass
-
     def _set_parameters(self, params):
         """State changing method sets algorithm-specific parameters.
 
@@ -175,6 +171,184 @@ class PsychologicalEmbedding(object):
         """
         for param_name in params:
             self.sim_params[param_name] = params[param_name]
+   
+    def _get_similarity_parameters(self, init='cold'):
+        """Return a dictionary and TensorFlow operation.
+
+        This method encapsulates the creation of algorithm-specific
+        free parameters governing the similarity kernel.
+
+        Args:
+            init: A string indicating the initialization mode. The
+                options are 'cold', 'warm', and 'exact'. The default
+                mode is 'cold'.
+
+        Returns:
+            sim_params: A dictionary of algorithm-specific TensorFlow
+                variables.
+            sim_constraints: A TensorFlow operation that imposes
+                boundary constraints on the algorithm-specific free
+                parameters during inference.
+
+        """
+        with tf.variable_scope("similarity_params"):
+            tf_sim_params = {}
+            if init is 'exact':
+                tf_sim_params = self._get_similarity_parameters_exact()
+            elif init is 'warm':
+                tf_sim_params = self._get_similarity_parameters_warm()
+            else:
+                tf_sim_params = self._get_similarity_parameters_cold()
+
+            # Override previous initialization if a parameter is untrainable.
+            # Sets the parameter value to the current class attribute.
+            for param_name in self.sim_params:
+                if not self.sim_trainable[param_name]:
+                    tf_sim_params[param_name] = tf.get_variable(
+                        param_name, [1], initializer=tf.constant_initializer(
+                            self.sim_params[param_name]),
+                        trainable=False)
+
+        # TensorFlow operation to enforce free parameter constraints.
+        sim_constraints = self._get_similarity_constraints(tf_sim_params)
+
+        # TODO remove
+        #     # ===== OLD =====
+        #     if self.do_reuse:
+        #         rho = tf.get_variable(
+        #             "rho", [1], initializer=tf.constant_initializer(
+        #                 self.sim_params['rho']),
+        #             trainable=True)
+        #         tau = tf.get_variable(
+        #             "tau", [1], initializer=tf.constant_initializer(
+        #                 self.sim_params['tau']),
+        #             trainable=True)
+        #         gamma = tf.get_variable(
+        #             "gamma", [1], initializer=tf.constant_initializer(
+        #                 self.sim_params['gamma']),
+        #             trainable=True)
+        #         beta = tf.get_variable(
+        #             "beta", [1], initializer=tf.constant_initializer(
+        #                 self.sim_params['beta']),
+        #             trainable=True)
+        #     else:
+        #         if self.sim_trainable['rho']:
+        #             rho = tf.get_variable(
+        #                 "rho", [1],
+        #                 initializer=tf.random_uniform_initializer(1., 3.)
+        #                 )
+        #         else:
+        #             rho = tf.get_variable(
+        #                 "rho", [1], initializer=tf.constant_initializer(
+        #                     self.sim_params['rho']),
+        #                 trainable=False)
+        #         if self.sim_trainable['tau']:
+        #             tau = tf.get_variable(
+        #                 "tau", [1],
+        #                 initializer=tf.random_uniform_initializer(1., 2.)
+        #                 )
+        #         else:
+        #             tau = tf.get_variable(
+        #                 "tau", [1], initializer=tf.constant_initializer(
+        #                     self.sim_params['tau']),
+        #                 trainable=False)
+        #         if self.sim_trainable['gamma']:
+        #             gamma = tf.get_variable(
+        #                 "gamma", [1],
+        #                 initializer=tf.random_uniform_initializer(0., .001))
+        #         else:
+        #             gamma = tf.get_variable(
+        #                 "gamma", [1], initializer=tf.constant_initializer(
+        #                     self.sim_params['gamma']),
+        #                 trainable=False)
+        #         if self.sim_trainable['beta']:
+        #             beta = tf.get_variable(
+        #                 "beta", [1],
+        #                 initializer=tf.random_uniform_initializer(1., 30.))
+        #         else:
+        #             beta = tf.get_variable(
+        #                 "beta", [1], initializer=tf.constant_initializer(
+        #                     self.sim_params['beta']),
+        #                 trainable=False)
+        # sim_params = {'rho': rho, 'tau': tau, 'gamma': gamma, 'beta': beta}
+        return (tf_sim_params, sim_constraints)
+
+    def _get_similarity_parameters_exact(self):
+        """Return a dictionary.
+
+        Returns:
+            sim_params: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        tf_sim_params = {}
+        for param_name in self.sim_params:
+            tf_sim_params[param_name] = tf.get_variable(
+                param_name, [1], initializer=tf.constant_initializer(
+                    self.sim_params[param_name]),
+                trainable=True)
+        return tf_sim_params
+
+    # TODO
+    @abstractmethod
+    def _get_similarity_parameters_warm(self):
+        """Return a dictionary and TensorFlow operation.
+
+        This method encapsulates the creation of algorithm-specific
+        free parameters governing the similarity kernel.
+
+        Returns:
+            sim_params: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        pass
+
+    # TODO
+    @abstractmethod
+    def _get_similarity_parameters_cold(self):
+        """Return a dictionary and TensorFlow operation.
+
+        This method encapsulates the creation of algorithm-specific
+        free parameters governing the similarity kernel.
+
+        Returns:
+            sim_params: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        pass
+
+    def _get_similarity_constraints(self, tf_sim_params):
+        """Return a TensorFlow group of parameter constraints.
+
+        Returns:
+            sim_constraints: A TensorFlow operation that imposes
+                boundary constraints on the algorithm-specific free
+                parameters during inference.
+
+        """
+        constraint_list = []
+        for param_name in self.sim_bounds:
+            bounds = self.sim_bounds[param_name]
+            if bounds[0] is not None:
+                # Add lower bound.
+                constraint_list.append(
+                    tf_sim_params[param_name].assign(tf.maximum(
+                        bounds[0],
+                        tf_sim_params[param_name])
+                    )
+                )
+            if bounds[1] is not None:
+                # Add upper bound.
+                constraint_list.append(
+                    tf_sim_params[param_name].assign(tf.minimum(
+                        bounds[1],
+                        tf_sim_params[param_name])
+                    )
+                )
+        sim_constraints = tf.group(*constraint_list)
+        return sim_constraints
 
     def freeze(self, freeze_options=None):
         """State changing method specifing which parameters are fixed.
@@ -182,21 +356,14 @@ class PsychologicalEmbedding(object):
         During inference, you may want to freeze some parameters at
         specific values. To freeze a particular parameter, pass in a
         value for it. If you would like to freeze multiple parameters,
-        they must be passed in at the same time. If no value is
-        provided for a parameter, it will not be fixed. To unfreeze all
-        model parameters, call freeze with no arguments.
+        you can pass in a dictionary containing multiple entries or
+        call the freeze method multiple times.
 
         Args:
             freeze_options (optional): Dictionary of parameter names
                 and corresponding values to be frozen (i.e., fixed)
                 during inference.
         """
-        # Set inference of embedding and all similarity parameters to True.
-        self.infer_Z = True
-        for param_name in self.sim_infer:
-            self.sim_infer[param_name] = True
-
-        # Freeze all model parameters provided by incoming dictionary.
         if freeze_options is not None:
             for param_name in freeze_options:
                 if param_name is 'Z':
@@ -204,7 +371,29 @@ class PsychologicalEmbedding(object):
                     self.infer_Z = False
                 else:
                     self.sim_params[param_name] = freeze_options[param_name]
-                    self.sim_infer[param_name] = False
+                    self.sim_trainable[param_name] = False
+
+    def thaw(self, thaw_options=None):
+        """State changing method specifying trainable parameters.
+
+        Complement of freeze method. If thaw_options is None, all free
+        parameters are set as trainable.
+
+        Args:
+            thaw_options (optional): List of parameter names to set as
+                trainable during inference.
+        """
+        # Unfreeze model parameters based on incoming list.
+        if thaw_options is None:
+            self.infer_Z = True
+            for param_name in self.sim_trainable:
+                self.sim_trainable[param_name] = True
+        else:
+            for param_name in thaw_options:
+                if param_name is 'Z':
+                    self.infer_Z = True
+                else:
+                    self.sim_trainable[param_name] = True
 
     @abstractmethod
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):
@@ -397,6 +586,8 @@ class PsychologicalEmbedding(object):
 
         self.do_reuse = True
         self.init_scale = 0.
+        # TODO does calling core model in this context grab the appropriate
+        # model parameters or does it re-initialize them?
 
         (J, _, _, _, _, tf_stimulus_set, tf_n_reference, tf_n_selected,
             tf_is_ranked, tf_group_id) = self._core_model()
@@ -662,11 +853,12 @@ class PsychologicalEmbedding(object):
             n_disp > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _core_model(self):
+    def _core_model(self, init='cold'):
         """Embedding model implemented using TensorFlow."""
-        with tf.variable_scope("model") as scope:
+        with tf.variable_scope("model"):
             # Similarity function variables
-            (sim_params, sim_constraints) = self._get_similarity_parameters()
+            (sim_params, sim_constraints) = \
+                self._get_similarity_parameters(init)
             attention_weights = self._get_attention_weights()
             Z = self._get_embedding()
 
@@ -770,93 +962,68 @@ class Exponential(PsychologicalEmbedding):
         self.sim_params = dict(rho=2., tau=1., gamma=0., beta=10.)
 
         # Default inference settings.
-        self.sim_infer = dict(rho=True, tau=True, gamma=True, beta=True)
+        self.sim_trainable = dict(rho=True, tau=True, gamma=True, beta=True)
+        self.sim_bounds = dict(
+            rho=[1., None], tau=[1., None], gamma=[0., None], beta=[1., None])
         self.lr = 0.003
         # self.max_n_epoch = 2000
         # self.patience = 10
 
-    def _get_similarity_parameters(self):
-        """Return a dictionary and TensorFlow operation.
+    def _get_similarity_parameters_cold(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        This method encapsulates the creation of algorithm-specific
-        free parameters governing the similarity kernel.
+        Parameters are initialized by sampling from a relatively large
+        set.
 
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
                 variables.
-            sim_constraints: A TensorFlow operation that imposes
-                boundary constraints on the algorithm-specific free
-                parameters during inference.
 
         """
-        with tf.variable_scope("similarity_params"):
-            if self.do_reuse:
-                rho = tf.get_variable(
-                    "rho", [1], initializer=tf.constant_initializer(
-                        self.sim_params['rho']),
-                    trainable=True)
-                tau = tf.get_variable(
-                    "tau", [1], initializer=tf.constant_initializer(
-                        self.sim_params['tau']),
-                    trainable=True)
-                gamma = tf.get_variable(
-                    "gamma", [1], initializer=tf.constant_initializer(
-                        self.sim_params['gamma']),
-                    trainable=True)
-                beta = tf.get_variable(
-                    "beta", [1], initializer=tf.constant_initializer(
-                        self.sim_params['beta']),
-                    trainable=True)
-            else:
-                if self.sim_infer['rho']:
-                    rho = tf.get_variable(
-                        "rho", [1],
-                        initializer=tf.random_uniform_initializer(1., 3.)
-                        )
-                else:
-                    rho = tf.get_variable(
-                        "rho", [1], initializer=tf.constant_initializer(
-                            self.sim_params['rho']),
-                        trainable=False)
-                if self.sim_infer['tau']:
-                    tau = tf.get_variable(
-                        "tau", [1],
-                        initializer=tf.random_uniform_initializer(1., 2.)
-                        )
-                else:
-                    tau = tf.get_variable(
-                        "tau", [1], initializer=tf.constant_initializer(
-                            self.sim_params['tau']),
-                        trainable=False)
-                if self.sim_infer['gamma']:
-                    gamma = tf.get_variable(
-                        "gamma", [1],
-                        initializer=tf.random_uniform_initializer(0., .001))
-                else:
-                    gamma = tf.get_variable(
-                        "gamma", [1], initializer=tf.constant_initializer(
-                            self.sim_params['gamma']),
-                        trainable=False)
-                if self.sim_infer['beta']:
-                    beta = tf.get_variable(
-                        "beta", [1],
-                        initializer=tf.random_uniform_initializer(1., 30.))
-                else:
-                    beta = tf.get_variable(
-                        "beta", [1], initializer=tf.constant_initializer(
-                            self.sim_params['beta']),
-                        trainable=False)
-        sim_params = {'rho': rho, 'tau': tau, 'gamma': gamma, 'beta': beta}
+        tf_sim_params = {}
+        tf_sim_params['rho'] = tf.get_variable(
+            "rho", [1],
+            initializer=tf.random_uniform_initializer(1., 3.))
+        tf_sim_params['tau'] = tf.get_variable(
+            "tau", [1],
+            initializer=tf.random_uniform_initializer(1., 2.))
+        tf_sim_params['gamma'] = tf.get_variable(
+            "gamma", [1],
+            initializer=tf.random_uniform_initializer(0., .001))
+        tf_sim_params['beta'] = tf.get_variable(
+            "beta", [1],
+            initializer=tf.random_uniform_initializer(1., 30.))
+        return tf_sim_params
 
-        # TensorFlow operation to enforce free parameter constraints.
-        constraint_rho = rho.assign(tf.maximum(1., rho))
-        constraint_tau = tau.assign(tf.maximum(1., tau))
-        constraint_gamma = gamma.assign(tf.maximum(0., gamma))
-        constraint_beta = beta.assign(tf.maximum(1., beta))
-        sim_constraints = tf.group(
-            constraint_rho, constraint_tau, constraint_gamma, constraint_beta)
+    def _get_similarity_parameters_warm(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        return (sim_params, sim_constraints)
+        Parameters are initialized by adding a small amount of noise to
+        existing parameter values.
+        
+        Returns:
+            sim_params: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        tf_sim_params = {}
+        tf_sim_params["rho"] = tf.get_variable(
+            "rho", [1], initializer=tf.constant_initializer(
+                self.sim_params['rho']),
+            trainable=self.sim_trainable['rho'])
+        tf_sim_params["tau"] = tf.get_variable(
+            "tau", [1], initializer=tf.constant_initializer(
+                self.sim_params['tau']),
+            trainable=self.sim_trainable['tau'])
+        tf_sim_params["gamma"] = tf.get_variable(
+            "gamma", [1], initializer=tf.constant_initializer(
+                self.sim_params['gamma']),
+            trainable=self.sim_trainable['gamma'])
+        tf_sim_params["beta"] = tf.get_variable(
+            "beta", [1], initializer=tf.constant_initializer(
+                self.sim_params['beta']),
+            trainable=self.sim_trainable['beta'])
+        return tf_sim_params
 
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):
         """Exponential family similarity kernel.
@@ -924,92 +1091,68 @@ class HeavyTailed(PsychologicalEmbedding):
         self.sim_params = dict(rho=2., tau=1., kappa=2., alpha=30.)
 
         # Default inference settings.
-        self.sim_infer = dict(rho=True, tau=True, kappa=True, alpha=True)
+        self.sim_trainable = dict(rho=True, tau=True, kappa=True, alpha=True)
+        self.sim_bounds = dict(
+            rho=[1., None], tau=[1., None], kappa=[0., None], alpha=[0., None])
         self.lr = 0.003
         # self.max_n_epoch = 2000
         # self.patience = 10
 
-    def _get_similarity_parameters(self):
-        """Return a dictionary and TensorFlow operation.
+    def _get_similarity_parameters_cold(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        This method encapsulates the creation of algorithm-specific
-        free parameters governing the similarity kernel.
+        Parameters are initialized by sampling from a relatively large
+        set.
 
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
                 variables.
-            sim_constraints: A TensorFlow operation that imposes
-                boundary constraints on the algorithm-specific free
-                parameters during inference.
 
         """
-        with tf.variable_scope("similarity_params"):
-            if self.do_reuse:
-                rho = tf.get_variable(
-                    "rho", [1], initializer=tf.constant_initializer(
-                        self.sim_params['rho']),
-                    trainable=True)
-                tau = tf.get_variable(
-                    "tau", [1], initializer=tf.constant_initializer(
-                        self.sim_params['tau']),
-                    trainable=True)
-                kappa = tf.get_variable(
-                    "kappa", [1], initializer=tf.constant_initializer(
-                        self.sim_params['kappa']),
-                    trainable=True)
-                alpha = tf.get_variable(
-                    "alpha", [1], initializer=tf.constant_initializer(
-                        self.sim_params['alpha']),
-                    trainable=True)
-            else:
-                if self.sim_infer['rho']:
-                    rho = tf.get_variable(
-                        "rho", [1],
-                        initializer=tf.random_uniform_initializer(1., 3.))
-                else:
-                    rho = tf.get_variable(
-                        "rho", [1], initializer=tf.constant_initializer(
-                            self.sim_params['rho']),
-                        trainable=False)
-                if self.sim_infer['tau']:
-                    tau = tf.get_variable(
-                        "tau", [1],
-                        initializer=tf.random_uniform_initializer(1., 2.))
-                else:
-                    tau = tf.get_variable(
-                        "tau", [1], initializer=tf.constant_initializer(
-                            self.sim_params['tau']),
-                        trainable=False)
-                if self.sim_infer['kappa']:
-                    kappa = tf.get_variable(
-                        "kappa", [1],
-                        initializer=tf.random_uniform_initializer(1., 11.))
-                else:
-                    kappa = tf.get_variable(
-                        "kappa", [1], initializer=tf.constant_initializer(
-                            self.sim_params['kappa']),
-                        trainable=False)
-                if self.sim_infer['alpha']:
-                    alpha = tf.get_variable(
-                        "alpha", [1],
-                        initializer=tf.random_uniform_initializer(10., 60.))
-                else:
-                    alpha = tf.get_variable(
-                        "alpha", [1], initializer=tf.constant_initializer(
-                            self.sim_params['alpha']),
-                        trainable=False)
-        sim_params = {'rho': rho, 'tau': tau, 'kappa': kappa, 'alpha': alpha}
+        tf_sim_params = {}
+        tf_sim_params['rho'] = tf.get_variable(
+            "rho", [1],
+            initializer=tf.random_uniform_initializer(1., 3.))
+        tf_sim_params['tau'] = tf.get_variable(
+            "tau", [1],
+            initializer=tf.random_uniform_initializer(1., 2.))
+        tf_sim_params['kappa'] = tf.get_variable(
+            "kappa", [1],
+            initializer=tf.random_uniform_initializer(1., 11.))
+        tf_sim_params['alpha'] = tf.get_variable(
+            "alpha", [1],
+            initializer=tf.random_uniform_initializer(10., 60.))
+        return tf_sim_params
 
-        # TensorFlow operation to enforce free parameter constraints.
-        constraint_rho = rho.assign(tf.maximum(1., rho))
-        constraint_tau = tau.assign(tf.maximum(1., tau))
-        constraint_kappa = kappa.assign(tf.maximum(0., kappa))
-        constraint_alpha = alpha.assign(tf.maximum(0., alpha))
-        sim_constraints = tf.group(
-            constraint_rho, constraint_tau, constraint_kappa,
-            constraint_alpha)
+    def _get_similarity_parameters_warm(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        return (sim_params, sim_constraints)
+        Parameters are initialized by adding a small amount of noise to
+        existing parameter values.
+        
+        Returns:
+            sim_params: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        tf_sim_params = {}
+        tf_sim_params["rho"] = tf.get_variable(
+            "rho", [1], initializer=tf.constant_initializer(
+                self.sim_params['rho']),
+            trainable=self.sim_trainable['rho'])
+        tf_sim_params["tau"] = tf.get_variable(
+            "tau", [1], initializer=tf.constant_initializer(
+                self.sim_params['tau']),
+            trainable=self.sim_trainable['tau'])
+        tf_sim_params["kappa"] = tf.get_variable(
+            "kappa", [1], initializer=tf.constant_initializer(
+                self.sim_params['kappa']),
+            trainable=self.sim_trainable['kappa'])
+        tf_sim_params["alpha"] = tf.get_variable(
+            "alpha", [1], initializer=tf.constant_initializer(
+                self.sim_params['alpha']),
+            trainable=self.sim_trainable['alpha'])
+        return tf_sim_params
 
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):
         """Heavy-tailed family similarity kernel.
@@ -1089,84 +1232,66 @@ class StudentsT(PsychologicalEmbedding):
         self.sim_params = dict(rho=2., tau=2., alpha=dimensionality - 1.)
 
         # Default inference settings.
-        self.sim_infer = dict(rho=False, tau=False, alpha=False)
+        self.sim_trainable = dict(rho=False, tau=False, alpha=False)
+        self.sim_bounds = dict(
+            rho=[1., None], tau=[1., None], alpha=[0.000001, None])
         # self.lr = 0.003
         self.lr = 0.01
         # self.max_n_epoch = 2000
         # self.patience = 10
         # self.init_scale_list = [.001, .01, .1]
 
-    def _get_similarity_parameters(self):
-        """Return a dictionary and TensorFlow operation.
+    def _get_similarity_parameters_cold(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        This method encapsulates the creation of algorithm-specific
-        free parameters governing the similarity kernel.
+        Parameters are initialized by sampling from a relatively large
+        set.
 
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
                 variables.
-            sim_constraints: A TensorFlow operation that imposes
-                boundary constraints on the algorithm-specific free
-                parameters during inference.
 
         """
-        with tf.variable_scope("similarity_params"):
-            if self.do_reuse:
-                rho = tf.get_variable(
-                    "rho", [1], initializer=tf.constant_initializer(
-                        self.sim_params['rho']),
-                    trainable=True)
-                tau = tf.get_variable(
-                    "tau", [1], initializer=tf.constant_initializer(
-                        self.sim_params['tau']),
-                    trainable=True)
-                alpha = tf.get_variable(
-                    "alpha", [1], initializer=tf.constant_initializer(
-                        self.sim_params['alpha']),
-                    trainable=True)
-            else:
-                if self.sim_infer['rho']:
-                    rho = tf.get_variable(
-                        "rho", [1],
-                        initializer=tf.random_uniform_initializer(1., 3.))
-                else:
-                    rho = tf.get_variable(
-                        "rho", [1], initializer=tf.constant_initializer(
-                            self.sim_params['rho']),
-                        trainable=False)
-                if self.sim_infer['tau']:
-                    tau = tf.get_variable(
-                        "tau", [1],
-                        initializer=tf.random_uniform_initializer(1., 2.))
-                else:
-                    tau = tf.get_variable(
-                        "tau", [1], initializer=tf.constant_initializer(
-                            self.sim_params['tau']),
-                        trainable=False)
-                if self.sim_infer['alpha']:
-                    min_alpha = np.max((1, self.dimensionality - 5.))
-                    max_alpha = self.dimensionality + 5.
-                    alpha = tf.get_variable(
-                        "alpha", [1],
-                        initializer=tf.random_uniform_initializer(
-                            min_alpha, max_alpha)
-                        )
-                else:
-                    alpha = tf.get_variable(
-                        "alpha", [1], initializer=tf.constant_initializer(
-                            self.sim_params['alpha']),
-                        trainable=False)
-        sim_params = {'rho': rho, 'tau': tau, 'alpha': alpha}
+        tf_sim_params = {}
+        tf_sim_params['rho'] = tf.get_variable(
+            "rho", [1],
+            initializer=tf.random_uniform_initializer(1., 3.))
+        tf_sim_params['tau'] = tf.get_variable(
+            "tau", [1],
+            initializer=tf.random_uniform_initializer(1., 2.))
+        min_alpha = np.max((1, self.dimensionality - 5.))
+        max_alpha = self.dimensionality + 5.
+        tf_sim_params['alpha'] = tf.get_variable(
+            "alpha", [1],
+            initializer=tf.random_uniform_initializer(min_alpha, max_alpha)
+        )
+        return tf_sim_params
 
-        # TensorFlow operation to enforce free parameter constraints.
-        eps = tf.constant(.000001)
-        constraint_rho = rho.assign(tf.maximum(1., rho))
-        constraint_tau = tau.assign(tf.maximum(1., tau))
-        constraint_alpha = alpha.assign(tf.maximum(eps, alpha))
-        sim_constraints = tf.group(
-            constraint_rho, constraint_tau, constraint_alpha)
+    def _get_similarity_parameters_warm(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        return (sim_params, sim_constraints)
+        Parameters are initialized by adding a small amount of noise to
+        existing parameter values.
+        
+        Returns:
+            sim_params: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        tf_sim_params = {}
+        tf_sim_params["rho"] = tf.get_variable(
+            "rho", [1], initializer=tf.constant_initializer(
+                self.sim_params['rho']),
+            trainable=self.sim_trainable['rho'])
+        tf_sim_params["tau"] = tf.get_variable(
+            "tau", [1], initializer=tf.constant_initializer(
+                self.sim_params['tau']),
+            trainable=self.sim_trainable['tau'])
+        tf_sim_params["alpha"] = tf.get_variable(
+            "alpha", [1], initializer=tf.constant_initializer(
+                self.sim_params['alpha']),
+            trainable=self.sim_trainable['alpha'])
+        return tf_sim_params
 
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):
         """Student-t family similarity kernel.

@@ -26,21 +26,16 @@ Classes:
 
 Todo:
     - attention weights functionality
-    - add similarity method for public API
-    - rework resuse
-    - change default behavior of fit to warm restart and add reinit method
-    - add cold and warm option?
-    - parallelization and/or warm restarts
-    - docs should be clear regarding verbosity levels
-
-    - use exact values (frozen, evaluate)
-    - warm values (warm fit)
-    - cold start (new inits for each restart)
-
-    - document correct implementation of bounds. i.e., 
+    - parallelization
+    - implement warm (currently the same as exact)
+    - document how to do warm restarts (warm restarts are sequential
+      and can be created by the user using a for loop and fit with
+      init_mode='warm')
+    - dcoument verbosity levels
+    - document meaning of cold, warm, and exact
+    - document correct implementation of bounds. i.e.,
         [lowerbound, upperbound] use None if doesn't exist
-    - do cold and warm need trainable, or is always trure?
-
+    - One dictionary for z, theta, and attention weights
 """
 
 from abc import ABCMeta, abstractmethod
@@ -55,9 +50,10 @@ class PsychologicalEmbedding(object):
     """Abstract base class for psychological embedding algorithm.
 
     The embedding procedure jointly infers two components. First, the
-    embedding algorithm infers a stimulus representation denoted Z.
+    embedding algorithm infers a stimulus representation denoted z.
     Second, the embedding algoirthm infers the similarity kernel
-    parameters of the concrete class.
+    parameters of the concrete class. The set of similarity kernel
+    variables is denoted theta.
 
     Methods:
         fit: Fit the embedding model using the provided observations.
@@ -65,29 +61,32 @@ class PsychologicalEmbedding(object):
             observations.
         freeze: Freeze the free parameters of an embedding model.
         thaw: Make free parameters trainable.
-        reuse: Reuse the free parameters of an embedding model when
-            fitting.
         set_log: Adjust the TensorBoard logging behavior.
 
     Attributes:
-        Z: The embedding points.
-        infer_Z: Flag that determines whether the embedding points are
+        z: The embedding points.
+        infer_z: Flag that determines whether the embedding points are
             inferred.
         sim_params: Dictionary containing the parameter values
             governing the similarity kernel.
         sim_trainable: Dictionary of flags controlling which parameters
             of the similarity kernel are trainable.
+        sim_bounds: Dictionary containing a list of the lower and upper
+            bounds, in that order, for each parameter in the similarity
+            kernel.
         attention_weights: The attention weights associated with the
             embedding model.
         infer_attention_weights: Flag the determines whether attention
             weights are inferred.
 
     Notes:
-        The methods fit, freeze, thaw, and reuse modify the state of 
-            the object.
-        The attributes sim_params, sim_trainable, and sim_bounds must 
+        The dictionaries sim_parms, sim_trainable, and sim_bounds
+            should use the same set of keys.
+        The methods fit, freeze, thaw, and set_log modify the state of
+            the PsychologicalEmbedding object.
+        The attributes sim_params, sim_trainable, and sim_bounds must
             be initialized by each concrete class.
-        The abstract methods _get_similarity_parameters_cold, 
+        The abstract methods _get_similarity_parameters_cold,
             _get_similarity_parameters_warm, and _similarity
             must be implemented by each concrete class.
 
@@ -124,12 +123,12 @@ class PsychologicalEmbedding(object):
         # Initialize random embedding points using multivariate Gaussian.
         mean = np.ones((dimensionality))
         cov = np.identity(dimensionality)
-        self.Z = np.random.multivariate_normal(mean, cov, (self.n_stimuli))
+        self.z = np.random.multivariate_normal(mean, cov, (self.n_stimuli))
         # Initialize attentional weights using uniform distribution.
         self.attention_weights = np.ones(
             (self.n_group, dimensionality), dtype=np.float64)
 
-        self.infer_Z = True
+        self.infer_z = True
         if n_group is 1:
             self.infer_attention_weights = False
         else:
@@ -142,10 +141,6 @@ class PsychologicalEmbedding(object):
 
         # Embedding scaling factors to draw from.
         self.init_scale_list = [.001, .01, .1]
-
-        # Initialize default reuse attributes.
-        self.do_reuse = False
-        self.init_scale = 0
 
         # Initialize default TensorBoard log attributes.
         self.do_log = False
@@ -171,17 +166,16 @@ class PsychologicalEmbedding(object):
         """
         for param_name in params:
             self.sim_params[param_name] = params[param_name]
-   
-    def _get_similarity_parameters(self, init='cold'):
+
+    def _get_similarity_parameters(self, init_mode):
         """Return a dictionary and TensorFlow operation.
 
         This method encapsulates the creation of algorithm-specific
         free parameters governing the similarity kernel.
 
         Args:
-            init: A string indicating the initialization mode. The
-                options are 'cold', 'warm', and 'exact'. The default
-                mode is 'cold'.
+            init_mode: A string indicating the initialization mode.
+                Valid options are 'cold', 'warm', and 'exact'.
 
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
@@ -193,85 +187,25 @@ class PsychologicalEmbedding(object):
         """
         with tf.variable_scope("similarity_params"):
             tf_sim_params = {}
-            if init is 'exact':
+            if init_mode is 'exact':
                 tf_sim_params = self._get_similarity_parameters_exact()
-            elif init is 'warm':
+            elif init_mode is 'warm':
                 tf_sim_params = self._get_similarity_parameters_warm()
             else:
                 tf_sim_params = self._get_similarity_parameters_cold()
 
-            # Override previous initialization if a parameter is untrainable.
-            # Sets the parameter value to the current class attribute.
+            # If a parameter is untrainable, set the parameter value to the 
+            # value in the class attribute sim_params.
             for param_name in self.sim_params:
                 if not self.sim_trainable[param_name]:
                     tf_sim_params[param_name] = tf.get_variable(
                         param_name, [1], initializer=tf.constant_initializer(
-                            self.sim_params[param_name]),
-                        trainable=False)
-
-        # TensorFlow operation to enforce free parameter constraints.
-        sim_constraints = self._get_similarity_constraints(tf_sim_params)
-
-        # TODO remove
-        #     # ===== OLD =====
-        #     if self.do_reuse:
-        #         rho = tf.get_variable(
-        #             "rho", [1], initializer=tf.constant_initializer(
-        #                 self.sim_params['rho']),
-        #             trainable=True)
-        #         tau = tf.get_variable(
-        #             "tau", [1], initializer=tf.constant_initializer(
-        #                 self.sim_params['tau']),
-        #             trainable=True)
-        #         gamma = tf.get_variable(
-        #             "gamma", [1], initializer=tf.constant_initializer(
-        #                 self.sim_params['gamma']),
-        #             trainable=True)
-        #         beta = tf.get_variable(
-        #             "beta", [1], initializer=tf.constant_initializer(
-        #                 self.sim_params['beta']),
-        #             trainable=True)
-        #     else:
-        #         if self.sim_trainable['rho']:
-        #             rho = tf.get_variable(
-        #                 "rho", [1],
-        #                 initializer=tf.random_uniform_initializer(1., 3.)
-        #                 )
-        #         else:
-        #             rho = tf.get_variable(
-        #                 "rho", [1], initializer=tf.constant_initializer(
-        #                     self.sim_params['rho']),
-        #                 trainable=False)
-        #         if self.sim_trainable['tau']:
-        #             tau = tf.get_variable(
-        #                 "tau", [1],
-        #                 initializer=tf.random_uniform_initializer(1., 2.)
-        #                 )
-        #         else:
-        #             tau = tf.get_variable(
-        #                 "tau", [1], initializer=tf.constant_initializer(
-        #                     self.sim_params['tau']),
-        #                 trainable=False)
-        #         if self.sim_trainable['gamma']:
-        #             gamma = tf.get_variable(
-        #                 "gamma", [1],
-        #                 initializer=tf.random_uniform_initializer(0., .001))
-        #         else:
-        #             gamma = tf.get_variable(
-        #                 "gamma", [1], initializer=tf.constant_initializer(
-        #                     self.sim_params['gamma']),
-        #                 trainable=False)
-        #         if self.sim_trainable['beta']:
-        #             beta = tf.get_variable(
-        #                 "beta", [1],
-        #                 initializer=tf.random_uniform_initializer(1., 30.))
-        #         else:
-        #             beta = tf.get_variable(
-        #                 "beta", [1], initializer=tf.constant_initializer(
-        #                     self.sim_params['beta']),
-        #                 trainable=False)
-        # sim_params = {'rho': rho, 'tau': tau, 'gamma': gamma, 'beta': beta}
-        return (tf_sim_params, sim_constraints)
+                            self.sim_params[param_name]
+                        ),
+                        trainable=False
+                    )
+        # sim_scope.reuse_variables()
+        return tf_sim_params
 
     def _get_similarity_parameters_exact(self):
         """Return a dictionary.
@@ -283,19 +217,21 @@ class PsychologicalEmbedding(object):
         """
         tf_sim_params = {}
         for param_name in self.sim_params:
-            tf_sim_params[param_name] = tf.get_variable(
-                param_name, [1], initializer=tf.constant_initializer(
-                    self.sim_params[param_name]),
-                trainable=True)
+            if self.sim_trainable[param_name]:
+                tf_sim_params[param_name] = tf.get_variable(
+                    param_name, [1], initializer=tf.constant_initializer(
+                        self.sim_params[param_name]
+                    ),
+                    trainable=True
+                )
         return tf_sim_params
 
-    # TODO
     @abstractmethod
-    def _get_similarity_parameters_warm(self):
-        """Return a dictionary and TensorFlow operation.
+    def _get_similarity_parameters_cold(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        This method encapsulates the creation of algorithm-specific
-        free parameters governing the similarity kernel.
+        Parameters are initialized by sampling from a relatively large
+        set.
 
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
@@ -306,11 +242,11 @@ class PsychologicalEmbedding(object):
 
     # TODO
     @abstractmethod
-    def _get_similarity_parameters_cold(self):
-        """Return a dictionary and TensorFlow operation.
+    def _get_similarity_parameters_warm(self):
+        """Return a dictionary of TensorFlow parameters.
 
-        This method encapsulates the creation of algorithm-specific
-        free parameters governing the similarity kernel.
+        Parameters are initialized by adding a small amount of noise to
+        existing parameter values.
 
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
@@ -366,9 +302,9 @@ class PsychologicalEmbedding(object):
         """
         if freeze_options is not None:
             for param_name in freeze_options:
-                if param_name is 'Z':
-                    self.Z = freeze_options['Z']
-                    self.infer_Z = False
+                if param_name is 'z':
+                    self.z = freeze_options['z']
+                    self.infer_z = False
                 else:
                     self.sim_params[param_name] = freeze_options[param_name]
                     self.sim_trainable[param_name] = False
@@ -385,15 +321,51 @@ class PsychologicalEmbedding(object):
         """
         # Unfreeze model parameters based on incoming list.
         if thaw_options is None:
-            self.infer_Z = True
+            self.infer_z = True
             for param_name in self.sim_trainable:
                 self.sim_trainable[param_name] = True
         else:
             for param_name in thaw_options:
-                if param_name is 'Z':
-                    self.infer_Z = True
+                if param_name is 'z':
+                    self.infer_z = True
                 else:
                     self.sim_trainable[param_name] = True
+
+    def similarity(self, z_q, z_ref, attention_weights=None, group_id=None):
+        """Return similarity between two lists of points.
+
+        Similarity is determined using the similarity kernel and the
+        current similarity parameters.
+
+        Args:
+            z_q: A set of embedding points.
+                shape = (n_sample, dimensionality)
+            z_ref: A set of embedding points.
+                shape = (n_sample, dimensionality)
+            attention_weights: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_sample, dimensionality)
+        """
+        # TODO handle group_id is not None, attention_weights is not None
+        tf_z_q = tf.constant(z_q, dtype=tf.float32)
+        tf_z_ref = tf.constant(z_ref, dtype=tf.float32)
+        tf_attention_weights = tf.convert_to_tensor(
+            attention_weights, dtype=tf.float32
+        )
+
+        tf_sim_params = {}
+        for param_name in self.sim_params:
+            tf_sim_params[param_name] = \
+                tf.constant(self.sim_params[param_name], dtype=tf.float32)
+
+        sim_op = self._similarity(
+            tf_z_q, tf_z_ref, tf_sim_params, tf_attention_weights
+        )
+        sess = tf.Session()
+        sim = sess.run(sim_op)
+        sess.close()
+        tf.reset_default_graph()
+        return sim
 
     @abstractmethod
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):
@@ -417,77 +389,78 @@ class PsychologicalEmbedding(object):
         """
         pass
 
-    def _get_attention_weights(self):
+    def _get_attention_weights(self, init_mode):
         """Return attention weights of model as TensorFlow variable."""
-        # Attention variable
-        if self.do_reuse:
-            attention_weights = tf.get_variable(
-                "attention_weights", [self.n_group, self.dimensionality],
-                initializer=tf.constant_initializer(self.attention_weights),
-                trainable=True
+        if self.infer_attention_weights:
+            if init_mode is 'exact':
+                attention_weights = tf.get_variable(
+                    "attention_weights", [self.n_group, self.dimensionality],
+                    initializer=tf.constant_initializer(self.attention_weights)
                 )
-        else:
-            if self.infer_attention_weights:
+            elif init_mode is 'warm':
+                attention_weights = tf.get_variable(
+                    "attention_weights", [self.n_group, self.dimensionality],
+                    initializer=tf.constant_initializer(self.attention_weights)
+                )
+            else:
                 alpha = 1. * np.ones((self.dimensionality))
-                new_attention_weights = (np.random.dirichlet(alpha) *
-                                         self.dimensionality)
+                new_attention_weights = (
+                    np.random.dirichlet(alpha) * self.dimensionality
+                )
                 attention_weights = tf.get_variable(
                     "attention_weights", [self.n_group, self.dimensionality],
                     initializer=tf.constant_initializer(new_attention_weights)
-                    )
-            else:
-                attention_weights = tf.get_variable(
-                    "attention_weights", [self.n_group, self.dimensionality],
-                    initializer=tf.constant_initializer(
-                        self.attention_weights),
-                    trainable=False)
+                )
+        else:
+            attention_weights = tf.get_variable(
+                "attention_weights", [self.n_group, self.dimensionality],
+                initializer=tf.constant_initializer(self.attention_weights),
+                trainable=False
+            )
         return attention_weights
 
-    def _get_embedding(self):
-        """Return embedding of model as TensorFlow variable."""
-        # Embedding variable
-        # Iniitalize Z with different scales for different restarts
+    def _get_embedding(self, init_mode):
+        """Return embedding of model as TensorFlow variable.
+
+        Args:
+            init_mode: A string indicating the initialization mode.
+                valid options are 'cold', 'warm', and 'exact'.
+
+        Returns:
+            TensorFlow variable representing the embedding points.
+
+        """
+        # Initialize z with different scales for different restarts
         rand_scale_idx = np.random.randint(0, len(self.init_scale_list))
         scale_value = self.init_scale_list[rand_scale_idx]
         tf_scale_value = tf.constant(scale_value, dtype=tf.float32)
 
-        if self.do_reuse:
-            Z = tf.get_variable(
-                "Z", [self.n_stimuli, self.dimensionality],
-                initializer=tf.constant_initializer(self.Z), trainable=True
+        if self.infer_z:
+            if init_mode is 'exact':
+                z = tf.get_variable(
+                    "z", [self.n_stimuli, self.dimensionality],
+                    initializer=tf.constant_initializer(self.z)
                 )
-        else:
-            if self.infer_Z:
-                Z = tf.get_variable(
-                    "Z", [self.n_stimuli, self.dimensionality],
+            elif init_mode is 'warm':
+                z = tf.get_variable(
+                    "z", [self.n_stimuli, self.dimensionality],
+                    initializer=tf.constant_initializer(self.z)
+                )
+            else:
+                z = tf.get_variable(
+                    "z", [self.n_stimuli, self.dimensionality],
                     initializer=tf.random_normal_initializer(
                         tf.zeros([self.dimensionality]),
-                        tf.ones([self.dimensionality]) * tf_scale_value)
+                        tf.ones([self.dimensionality]) * tf_scale_value
                     )
-            else:
-                Z = tf.get_variable(
-                    "Z", [self.n_stimuli, self.dimensionality],
-                    initializer=tf.constant_initializer(self.Z),
-                    trainable=False)
-        return Z
-
-    def reuse(self, do_reuse, init_scale=0):
-        """State changing method that sets reuse of embedding.
-
-        Args:
-            do_reuse: Boolean that indicates whether the current
-                embedding should be used for initialization during
-                inference.
-            init_scale: A scalar value indicating to went extent the
-                previous embedding points should be reused. For
-                example, a value of 0.05 would add uniform noise to all
-                the points in the embedding such that each embedding
-                point was randomly jittered up to 5% on each dimension
-                relative to the overall size of the embedding. The
-                value can be between [0,1].
-        """
-        self.do_reuse = do_reuse
-        self.init_scale = init_scale
+                )
+        else:
+            z = tf.get_variable(
+                "z", [self.n_stimuli, self.dimensionality],
+                initializer=tf.constant_initializer(self.z),
+                trainable=False
+            )
+        return z
 
     def set_log(self, do_log, log_dir=None, delete_prev=False):
         """State changing method that sets TensorBoard logging.
@@ -510,7 +483,7 @@ class PsychologicalEmbedding(object):
                 tf.gfile.DeleteRecursively(self.log_dir)
         tf.gfile.MakeDirs(self.log_dir)
 
-    def fit(self, obs, n_restart=40, verbose=0):
+    def fit(self, obs, n_restart=40, init_mode='cold', verbose=0):
         """Fit the free parameters of the embedding model.
 
         Args:
@@ -519,6 +492,8 @@ class PsychologicalEmbedding(object):
                 use for the inference procedure. Since the embedding
                 procedure finds local optima, multiple restarts helps
                 find the global optimum.
+            init_mode: A string indicating the initialization mode.
+                Valid options are 'cold', 'warm', and 'exact'.
             verbose: An integer specifying the verbosity of printed
                 output.
 
@@ -546,24 +521,24 @@ class PsychologicalEmbedding(object):
 
         # Run multiple restarts of embedding algorithm.
         J_all_best = np.inf
-        Z_best = None
+        z_best = None
         attention_weights_best = None
         params_best = None
 
         for i_restart in range(n_restart):
-            (J_all, Z, attention_weights, params) = self._embed(
-                obs, train_idx, test_idx, i_restart
-                )
+            (J_all, z, attention_weights, params) = self._embed(
+                obs, train_idx, test_idx, i_restart, init_mode
+            )
             if J_all < J_all_best:
                 J_all_best = J_all
-                Z_best = Z
+                z_best = z
                 attention_weights_best = attention_weights
                 params_best = params
 
             if verbose > 1:
                 print('Restart ', i_restart)
 
-        self.Z = Z_best
+        self.z = z_best
         self.attention_weights = attention_weights_best
         self._set_parameters(params_best)
 
@@ -580,17 +555,8 @@ class PsychologicalEmbedding(object):
                 negative loglikelihood.
 
         """
-        # Is this really necessary?
-        old_do_reuse = self.do_reuse
-        old_init_scale = self.init_scale
-
-        self.do_reuse = True
-        self.init_scale = 0.
-        # TODO does calling core model in this context grab the appropriate
-        # model parameters or does it re-initialize them?
-
         (J, _, _, _, _, tf_stimulus_set, tf_n_reference, tf_n_selected,
-            tf_is_ranked, tf_group_id) = self._core_model()
+            tf_is_ranked, tf_group_id) = self._core_model('exact')
 
         init = tf.global_variables_initializer()
         sess = tf.Session()
@@ -604,13 +570,9 @@ class PsychologicalEmbedding(object):
 
         sess.close()
         tf.reset_default_graph()
-
-        self.do_reuse = old_do_reuse
-        self.init_scale = old_init_scale
-
         return J_all
 
-    def _embed(self, obs, train_idx, test_idx, i_restart):
+    def _embed(self, obs, train_idx, test_idx, i_restart, init_mode):
         """Ebed using a TensorFlow implementation."""
         verbose = 0  # TODO make parameter
 
@@ -618,9 +580,9 @@ class PsychologicalEmbedding(object):
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(test_idx)
 
-        (J, Z, attention_weights, sim_params, constraint, tf_stimulus_set,
+        (J, z, attention_weights, sim_params, constraint, tf_stimulus_set,
             tf_n_reference, tf_n_selected, tf_is_ranked,
-            tf_group_id) = self._core_model()
+            tf_group_id) = self._core_model(init_mode)
 
         # train_op = tf.train.GradientDescentOptimizer(
         #   learning_rate=self.lr
@@ -633,7 +595,7 @@ class PsychologicalEmbedding(object):
             # Create a summary to monitor cost tensor.
             tf.summary.scalar('cost', J)
             # Create a summary of the embedding tensor.
-            tf.summary.tensor_summary('Z', Z)
+            tf.summary.tensor_summary('z', z)
             # Create a summary of the attention weights.
             # tf.summary.tensor_summary('attention_weights', attention_weights)
             # tf.summary.scalar('attention_00', attention_weights[0,0])
@@ -696,8 +658,8 @@ class PsychologicalEmbedding(object):
                 last_improvement = 0
                 # TODO handle worst case where there is no improvement from
                 # initialization.
-                (Z_best, attention_weights_best) = sess.run(
-                    [Z, attention_weights])
+                (z_best, attention_weights_best) = sess.run(
+                    [z, attention_weights])
                 params_best = {}
                 for param_name in sim_params:
                     params_best[param_name] = sess.run(sim_params[param_name])
@@ -719,7 +681,7 @@ class PsychologicalEmbedding(object):
         sess.close()
         tf.reset_default_graph()
 
-        return (J_all_best, Z_best, attention_weights_best, params_best)
+        return (J_all_best, z_best, attention_weights_best, params_best)
 
     def _project_attention_weights(self, attention_weights_0):
         """Return projection of attention weights."""
@@ -733,17 +695,17 @@ class PsychologicalEmbedding(object):
 
         return attention_weights_proj
 
-    def _cost_2c1(self, Z, triplets, sim_params, attention_weights):
+    def _cost_2c1(self, z, triplets, sim_params, attention_weights):
         """Return cost for ordered 2 chooose 1 observations."""
         n_disp = tf.shape(triplets)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
 
         # Similarity
         Sqa = self._similarity(
-            tf.gather(Z, triplets[:, 0]), tf.gather(Z, triplets[:, 1]),
+            tf.gather(z, triplets[:, 0]), tf.gather(z, triplets[:, 1]),
             sim_params, attention_weights)
         Sqb = self._similarity(
-            tf.gather(Z, triplets[:, 0]), tf.gather(Z, triplets[:, 2]),
+            tf.gather(z, triplets[:, 0]), tf.gather(z, triplets[:, 2]),
             sim_params, attention_weights)
         # Probility of behavior
         P = Sqa / (Sqa + Sqb)
@@ -757,35 +719,35 @@ class PsychologicalEmbedding(object):
             )
         return J
 
-    def _cost_8cN(self, Z, nines, N, sim_params, attention_weights):
+    def _cost_8cN(self, z, nines, N, sim_params, attention_weights):
         """Return cost for ordered 8 chooose N observations."""
         n_disp = tf.shape(nines)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
 
         # Similarity
         Sqa = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 1]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 1]), sim_params,
             attention_weights)
         Sqb = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 2]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 2]), sim_params,
             attention_weights)
         Sqc = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 3]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 3]), sim_params,
             attention_weights)
         Sqd = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 4]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 4]), sim_params,
             attention_weights)
         Sqe = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 5]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 5]), sim_params,
             attention_weights)
         Sqf = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 6]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 6]), sim_params,
             attention_weights)
         Sqg = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 7]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 7]), sim_params,
             attention_weights)
         Sqh = self._similarity(
-            tf.gather(Z, nines[:, 0]), tf.gather(Z, nines[:, 8]), sim_params,
+            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 8]), sim_params,
             attention_weights)
 
         # Probility of behavior
@@ -853,19 +815,20 @@ class PsychologicalEmbedding(object):
             n_disp > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _core_model(self, init='cold'):
+    def _core_model(self, init_mode):
         """Embedding model implemented using TensorFlow."""
         with tf.variable_scope("model"):
             # Similarity function variables
-            (sim_params, sim_constraints) = \
-                self._get_similarity_parameters(init)
-            attention_weights = self._get_attention_weights()
-            Z = self._get_embedding()
+            sim_params = self._get_similarity_parameters(init_mode)
+            sim_constraints = self._get_similarity_constraints(sim_params)
+            attention_weights = self._get_attention_weights(init_mode)
+            z = self._get_embedding(init_mode)
 
-            # scope.reuse_variables() TODO
+            # scope.reuse_variables()
 
             tf_stimulus_set = tf.placeholder(
-                tf.int32, [None, 9], name='stimulus_set')
+                tf.int32, [None, 9], name='stimulus_set'
+            )
             tf_n_reference = tf.placeholder(tf.int32, name='n_reference')
             tf_n_selected = tf.placeholder(tf.int32, name='n_selected')
             tf_is_ranked = tf.placeholder(tf.int32, name='is_ranked')
@@ -874,9 +837,11 @@ class PsychologicalEmbedding(object):
             # Get indices of different display configurations
             idx_8c2 = tf.squeeze(tf.where(tf.logical_and(
                 tf.equal(tf_n_reference, tf.constant(8)),
-                tf.equal(tf_n_selected, tf.constant(2)))))
+                tf.equal(tf_n_selected, tf.constant(2))))
+            )
             idx_2c1 = tf.squeeze(
-                tf.where(tf.equal(tf_n_reference, tf.constant(2))))
+                tf.where(tf.equal(tf_n_reference, tf.constant(2)))
+            )
 
             # Get appropriate observations.
             disp_8c2 = tf.gather(tf_stimulus_set, idx_8c2)
@@ -887,27 +852,29 @@ class PsychologicalEmbedding(object):
             # Expand attention weights
             group_idx_2c1 = tf.gather(tf_group_id, idx_2c1)
             group_idx_2c1 = tf.reshape(
-                group_idx_2c1, [tf.shape(group_idx_2c1)[0], 1])
+                group_idx_2c1, [tf.shape(group_idx_2c1)[0], 1]
+            )
             weights_2c1 = tf.gather_nd(attention_weights, group_idx_2c1)
             group_idx_8c2 = tf.gather(tf_group_id, idx_8c2)
             group_idx_8c2 = tf.reshape(
-                group_idx_8c2, [tf.shape(group_idx_8c2)[0], 1])
+                group_idx_8c2, [tf.shape(group_idx_8c2)[0], 1]
+            )
             weights_8c2 = tf.gather_nd(attention_weights, group_idx_8c2)
 
             # Cost function
             J = (
-                self._cost_2c1(Z, disp_2c1, sim_params, weights_2c1) +
+                self._cost_2c1(z, disp_2c1, sim_params, weights_2c1) +
                 self._cost_8cN(
-                    Z, disp_8c2, tf.constant(2), sim_params, weights_8c2
-                    )
+                    z, disp_8c2, tf.constant(2), sim_params, weights_8c2
                 )
+            )
 
             # TODO constraint_weights
             # constraint_weights = attention_weights.assign(
             #   self._project_attention_weights(attention_weights))
 
         return (
-            J, Z, attention_weights, sim_params, sim_constraints,
+            J, z, attention_weights, sim_params, sim_constraints,
             tf_stimulus_set, tf_n_reference, tf_n_selected, tf_is_ranked,
             tf_group_id)
 
@@ -960,11 +927,18 @@ class Exponential(PsychologicalEmbedding):
 
         # Default parameter settings.
         self.sim_params = dict(rho=2., tau=1., gamma=0., beta=10.)
-
-        # Default inference settings.
         self.sim_trainable = dict(rho=True, tau=True, gamma=True, beta=True)
         self.sim_bounds = dict(
             rho=[1., None], tau=[1., None], gamma=[0., None], beta=[1., None])
+
+        # self.sim_params = dict(
+        #     rho=dict(value=2., trainable=True, bounds=[1., None]),
+        #     tau=dict(value=1., trainable=True, bounds=[1., None]),
+        #     gamma=dict(value=0., trainable=True, bounds=[0., None]),
+        #     beta=dict(value=10., trainable=True, bounds=[1., None]),
+        # )
+
+        # Default inference settings.
         self.lr = 0.003
         # self.max_n_epoch = 2000
         # self.patience = 10
@@ -981,18 +955,26 @@ class Exponential(PsychologicalEmbedding):
 
         """
         tf_sim_params = {}
-        tf_sim_params['rho'] = tf.get_variable(
-            "rho", [1],
-            initializer=tf.random_uniform_initializer(1., 3.))
-        tf_sim_params['tau'] = tf.get_variable(
-            "tau", [1],
-            initializer=tf.random_uniform_initializer(1., 2.))
-        tf_sim_params['gamma'] = tf.get_variable(
-            "gamma", [1],
-            initializer=tf.random_uniform_initializer(0., .001))
-        tf_sim_params['beta'] = tf.get_variable(
-            "beta", [1],
-            initializer=tf.random_uniform_initializer(1., 30.))
+        if self.sim_trainable['rho']:
+            tf_sim_params['rho'] = tf.get_variable(
+                "rho", [1],
+                initializer=tf.random_uniform_initializer(1., 3.)
+            )
+        if self.sim_trainable['tau']:
+            tf_sim_params['tau'] = tf.get_variable(
+                "tau", [1],
+                initializer=tf.random_uniform_initializer(1., 2.)
+            )
+        if self.sim_trainable['gamma']:    
+            tf_sim_params['gamma'] = tf.get_variable(
+                "gamma", [1],
+                initializer=tf.random_uniform_initializer(0., .001)
+            )
+        if self.sim_trainable['beta']:
+            tf_sim_params['beta'] = tf.get_variable(
+                "beta", [1],
+                initializer=tf.random_uniform_initializer(1., 30.)
+            )
         return tf_sim_params
 
     def _get_similarity_parameters_warm(self):
@@ -1000,29 +982,33 @@ class Exponential(PsychologicalEmbedding):
 
         Parameters are initialized by adding a small amount of noise to
         existing parameter values.
-        
+
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
                 variables.
 
         """
         tf_sim_params = {}
-        tf_sim_params["rho"] = tf.get_variable(
-            "rho", [1], initializer=tf.constant_initializer(
-                self.sim_params['rho']),
-            trainable=self.sim_trainable['rho'])
-        tf_sim_params["tau"] = tf.get_variable(
-            "tau", [1], initializer=tf.constant_initializer(
-                self.sim_params['tau']),
-            trainable=self.sim_trainable['tau'])
-        tf_sim_params["gamma"] = tf.get_variable(
-            "gamma", [1], initializer=tf.constant_initializer(
-                self.sim_params['gamma']),
-            trainable=self.sim_trainable['gamma'])
-        tf_sim_params["beta"] = tf.get_variable(
-            "beta", [1], initializer=tf.constant_initializer(
-                self.sim_params['beta']),
-            trainable=self.sim_trainable['beta'])
+        if self.sim_trainable['rho']:
+            tf_sim_params["rho"] = tf.get_variable(
+                "rho", [1], initializer=tf.constant_initializer(
+                    self.sim_params['rho'])
+            )
+        if self.sim_trainable['tau']:
+            tf_sim_params["tau"] = tf.get_variable(
+                "tau", [1], initializer=tf.constant_initializer(
+                    self.sim_params['tau'])
+            )
+        if self.sim_trainable['gamma']:
+            tf_sim_params["gamma"] = tf.get_variable(
+                "gamma", [1], initializer=tf.constant_initializer(
+                    self.sim_params['gamma'])
+            )
+        if self.sim_trainable['beta']:
+            tf_sim_params["beta"] = tf.get_variable(
+                "beta", [1], initializer=tf.constant_initializer(
+                    self.sim_params['beta'])
+            )
         return tf_sim_params
 
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):
@@ -1057,7 +1043,7 @@ class Exponential(PsychologicalEmbedding):
         d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
 
         # Exponential family similarity kernel.
-        s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau) + gamma)
+        s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau)) + gamma
         return s_qref
 
 
@@ -1089,11 +1075,17 @@ class HeavyTailed(PsychologicalEmbedding):
 
         # Default parameter settings.
         self.sim_params = dict(rho=2., tau=1., kappa=2., alpha=30.)
-
-        # Default inference settings.
         self.sim_trainable = dict(rho=True, tau=True, kappa=True, alpha=True)
         self.sim_bounds = dict(
             rho=[1., None], tau=[1., None], kappa=[0., None], alpha=[0., None])
+        # self.sim_params = dict(
+        #     rho=dict(value=2., trainable=True, bounds=[1., None]),
+        #     tau=dict(value=1., trainable=True, bounds=[1., None]),
+        #     kappa=dict(value=2., trainable=True, bounds=[0., None]),
+        #     alpha=dict(value=30., trainable=True, bounds=[0., None]),
+        # )
+
+        # Default inference settings.
         self.lr = 0.003
         # self.max_n_epoch = 2000
         # self.patience = 10
@@ -1110,18 +1102,26 @@ class HeavyTailed(PsychologicalEmbedding):
 
         """
         tf_sim_params = {}
-        tf_sim_params['rho'] = tf.get_variable(
-            "rho", [1],
-            initializer=tf.random_uniform_initializer(1., 3.))
-        tf_sim_params['tau'] = tf.get_variable(
-            "tau", [1],
-            initializer=tf.random_uniform_initializer(1., 2.))
-        tf_sim_params['kappa'] = tf.get_variable(
-            "kappa", [1],
-            initializer=tf.random_uniform_initializer(1., 11.))
-        tf_sim_params['alpha'] = tf.get_variable(
-            "alpha", [1],
-            initializer=tf.random_uniform_initializer(10., 60.))
+        if self.sim_trainable['rho']:
+            tf_sim_params['rho'] = tf.get_variable(
+                "rho", [1],
+                initializer=tf.random_uniform_initializer(1., 3.)
+            )
+        if self.sim_trainable['tau']:
+            tf_sim_params['tau'] = tf.get_variable(
+                "tau", [1],
+                initializer=tf.random_uniform_initializer(1., 2.)
+            )
+        if self.sim_trainable['kappa']:
+            tf_sim_params['kappa'] = tf.get_variable(
+                "kappa", [1],
+                initializer=tf.random_uniform_initializer(1., 11.)
+            )
+        if self.sim_trainable['alpha']:
+            tf_sim_params['alpha'] = tf.get_variable(
+                "alpha", [1],
+                initializer=tf.random_uniform_initializer(10., 60.)
+            )
         return tf_sim_params
 
     def _get_similarity_parameters_warm(self):
@@ -1129,29 +1129,33 @@ class HeavyTailed(PsychologicalEmbedding):
 
         Parameters are initialized by adding a small amount of noise to
         existing parameter values.
-        
+
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
                 variables.
 
         """
         tf_sim_params = {}
-        tf_sim_params["rho"] = tf.get_variable(
-            "rho", [1], initializer=tf.constant_initializer(
-                self.sim_params['rho']),
-            trainable=self.sim_trainable['rho'])
-        tf_sim_params["tau"] = tf.get_variable(
-            "tau", [1], initializer=tf.constant_initializer(
-                self.sim_params['tau']),
-            trainable=self.sim_trainable['tau'])
-        tf_sim_params["kappa"] = tf.get_variable(
-            "kappa", [1], initializer=tf.constant_initializer(
-                self.sim_params['kappa']),
-            trainable=self.sim_trainable['kappa'])
-        tf_sim_params["alpha"] = tf.get_variable(
-            "alpha", [1], initializer=tf.constant_initializer(
-                self.sim_params['alpha']),
-            trainable=self.sim_trainable['alpha'])
+        if self.sim_trainable['rho']:
+            tf_sim_params["rho"] = tf.get_variable(
+                "rho", [1],
+                initializer=tf.constant_initializer(self.sim_params['rho'])
+            )
+        if self.sim_trainable['tau']:
+            tf_sim_params["tau"] = tf.get_variable(
+                "tau", [1],
+                initializer=tf.constant_initializer(self.sim_params['tau'])
+            )
+        if self.sim_trainable['kappa']:
+            tf_sim_params["kappa"] = tf.get_variable(
+                "kappa", [1],
+                initializer=tf.constant_initializer(self.sim_params['kappa'])
+            )
+        if self.sim_trainable['alpha']:
+            tf_sim_params["alpha"] = tf.get_variable(
+                "alpha", [1],
+                initializer=tf.constant_initializer(self.sim_params['alpha'])
+            )
         return tf_sim_params
 
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):
@@ -1230,11 +1234,20 @@ class StudentsT(PsychologicalEmbedding):
 
         # Default parameter settings.
         self.sim_params = dict(rho=2., tau=2., alpha=dimensionality - 1.)
-
-        # Default inference settings.
         self.sim_trainable = dict(rho=False, tau=False, alpha=False)
         self.sim_bounds = dict(
             rho=[1., None], tau=[1., None], alpha=[0.000001, None])
+        # self.sim_params = dict(
+        #     rho=dict(value=2., trainable=False, bounds=[1., None]),
+        #     tau=dict(value=1., trainable=False, bounds=[1., None]),
+        #     alpha=dict(
+        #         value=(dimensionality - 1.),
+        #         trainable=False,
+        #         bounds=[0.000001, None]
+        #     ),
+        # )
+
+        # Default inference settings.
         # self.lr = 0.003
         self.lr = 0.01
         # self.max_n_epoch = 2000
@@ -1253,18 +1266,23 @@ class StudentsT(PsychologicalEmbedding):
 
         """
         tf_sim_params = {}
-        tf_sim_params['rho'] = tf.get_variable(
-            "rho", [1],
-            initializer=tf.random_uniform_initializer(1., 3.))
-        tf_sim_params['tau'] = tf.get_variable(
-            "tau", [1],
-            initializer=tf.random_uniform_initializer(1., 2.))
-        min_alpha = np.max((1, self.dimensionality - 5.))
-        max_alpha = self.dimensionality + 5.
-        tf_sim_params['alpha'] = tf.get_variable(
-            "alpha", [1],
-            initializer=tf.random_uniform_initializer(min_alpha, max_alpha)
-        )
+        if self.sim_trainable['rho']:
+            tf_sim_params['rho'] = tf.get_variable(
+                "rho", [1],
+                initializer=tf.random_uniform_initializer(1., 3.)
+            )
+        if self.sim_trainable['tau']:
+            tf_sim_params['tau'] = tf.get_variable(
+                "tau", [1],
+                initializer=tf.random_uniform_initializer(1., 2.)
+            )
+        if self.sim_trainable['alpha']:
+            min_alpha = np.max((1, self.dimensionality - 5.))
+            max_alpha = self.dimensionality + 5.
+            tf_sim_params['alpha'] = tf.get_variable(
+                "alpha", [1],
+                initializer=tf.random_uniform_initializer(min_alpha, max_alpha)
+            )
         return tf_sim_params
 
     def _get_similarity_parameters_warm(self):
@@ -1272,7 +1290,7 @@ class StudentsT(PsychologicalEmbedding):
 
         Parameters are initialized by adding a small amount of noise to
         existing parameter values.
-        
+
         Returns:
             sim_params: A dictionary of algorithm-specific TensorFlow
                 variables.
@@ -1280,17 +1298,17 @@ class StudentsT(PsychologicalEmbedding):
         """
         tf_sim_params = {}
         tf_sim_params["rho"] = tf.get_variable(
-            "rho", [1], initializer=tf.constant_initializer(
-                self.sim_params['rho']),
-            trainable=self.sim_trainable['rho'])
+            "rho", [1],
+            initializer=tf.constant_initializer(self.sim_params['rho'])
+        )
         tf_sim_params["tau"] = tf.get_variable(
-            "tau", [1], initializer=tf.constant_initializer(
-                self.sim_params['tau']),
-            trainable=self.sim_trainable['tau'])
+            "tau", [1],
+            initializer=tf.constant_initializer(self.sim_params['tau'])
+        )
         tf_sim_params["alpha"] = tf.get_variable(
-            "alpha", [1], initializer=tf.constant_initializer(
-                self.sim_params['alpha']),
-            trainable=self.sim_trainable['alpha'])
+            "alpha", [1],
+            initializer=tf.constant_initializer(self.sim_params['alpha'])
+        )
         return tf_sim_params
 
     def _similarity(self, z_q, z_ref, sim_params, attention_weights):

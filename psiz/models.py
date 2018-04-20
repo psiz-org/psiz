@@ -365,7 +365,7 @@ class PsychologicalEmbedding(object):
         return sim
 
     @abstractmethod
-    def _similarity(self, z_q, z_ref, theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
         """Similarity kernel.
 
         Args:
@@ -373,7 +373,7 @@ class PsychologicalEmbedding(object):
                 shape = (n_sample, dimensionality)
             z_ref: A set of embedding points.
                 shape = (n_sample, dimensionality)
-            theta: A dictionary of algorithm-specific parameters
+            tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             attention_weights: The weights allocated to each dimension
                 in a weighted minkowski metric.
@@ -577,7 +577,7 @@ class PsychologicalEmbedding(object):
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(test_idx)
 
-        (J, z, attention_weights, theta, constraint, tf_stimulus_set,
+        (J, z, attention_weights, tf_theta, constraint, tf_stimulus_set,
             tf_n_reference, tf_n_selected, tf_is_ranked,
             tf_group_id) = self._core_model(init_mode)
 
@@ -600,11 +600,11 @@ class PsychologicalEmbedding(object):
             # Create a summary to monitor parameteres of similarity kernel.
             with tf.name_scope('similarity'):
 
-                for param_name in theta:
-                    param_mean = tf.reduce_mean(theta[param_name])
+                for param_name in tf_theta:
+                    param_mean = tf.reduce_mean(tf_theta[param_name])
                     tf.summary.scalar(param_name + '_mean', param_mean)
                     # tf.summary.histogram(param_name + '_hist',
-                    #   theta[param_name])
+                    #   tf_theta[param_name])
 
             # Merge all summaries into a single op.
             merged_summary_op = tf.summary.merge_all()
@@ -658,8 +658,8 @@ class PsychologicalEmbedding(object):
                 (z_best, attention_weights_best) = sess.run(
                     [z, attention_weights])
                 params_best = {}
-                for param_name in theta:
-                    params_best[param_name] = sess.run(theta[param_name])
+                for param_name in tf_theta:
+                    params_best[param_name] = sess.run(tf_theta[param_name])
             else:
                 last_improvement = last_improvement + 1
 
@@ -816,8 +816,8 @@ class PsychologicalEmbedding(object):
         """Embedding model implemented using TensorFlow."""
         with tf.variable_scope("model"):
             # Similarity function variables
-            theta = self._get_similarity_parameters(init_mode)
-            sim_constraints = self._get_similarity_constraints(theta)
+            tf_theta = self._get_similarity_parameters(init_mode)
+            sim_constraints = self._get_similarity_constraints(tf_theta)
             attention_weights = self._get_attention_weights(init_mode)
             z = self._get_embedding(init_mode)
 
@@ -860,9 +860,9 @@ class PsychologicalEmbedding(object):
 
             # Cost function
             J = (
-                self._cost_2c1(z, disp_2c1, theta, weights_2c1) +
+                self._cost_2c1(z, disp_2c1, tf_theta, weights_2c1) +
                 self._cost_8cN(
-                    z, disp_8c2, tf.constant(2), theta, weights_8c2
+                    z, disp_8c2, tf.constant(2), tf_theta, weights_8c2
                 )
             )
 
@@ -871,7 +871,7 @@ class PsychologicalEmbedding(object):
             #   self._project_attention_weights(attention_weights))
 
         return (
-            J, z, attention_weights, theta, sim_constraints,
+            J, z, attention_weights, tf_theta, sim_constraints,
             tf_stimulus_set, tf_n_reference, tf_n_selected, tf_is_ranked,
             tf_group_id)
 
@@ -1008,7 +1008,7 @@ class Exponential(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
         """Exponential family similarity kernel.
 
         Args:
@@ -1016,7 +1016,7 @@ class Exponential(PsychologicalEmbedding):
                 shape = (n_sample, dimensionality)
             z_ref: A set of embedding points.
                 shape = (n_sample, dimensionality)
-            theta: A dictionary of algorithm-specific parameters
+            tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             attention_weights: The weights allocated to each dimension
                 in a weighted minkowski metric.
@@ -1029,10 +1029,10 @@ class Exponential(PsychologicalEmbedding):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']
-        tau = theta['tau']
-        gamma = theta['gamma']
-        beta = theta['beta']
+        rho = tf_theta['rho']
+        tau = tf_theta['tau']
+        gamma = tf_theta['gamma']
+        beta = tf_theta['beta']
 
         # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
@@ -1155,7 +1155,7 @@ class HeavyTailed(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
         """Heavy-tailed family similarity kernel.
 
         Args:
@@ -1163,7 +1163,7 @@ class HeavyTailed(PsychologicalEmbedding):
                 shape = (n_sample, dimensionality)
             z_ref: A set of embedding points.
                 shape = (n_sample, dimensionality)
-            theta: A dictionary of algorithm-specific parameters
+            tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             attention_weights: The weights allocated to each dimension
                 in a weighted minkowski metric.
@@ -1176,10 +1176,10 @@ class HeavyTailed(PsychologicalEmbedding):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']
-        tau = theta['tau']
-        kappa = theta['kappa']
-        alpha = theta['alpha']
+        rho = tf_theta['rho']
+        tau = tf_theta['tau']
+        kappa = tf_theta['kappa']
+        alpha = tf_theta['alpha']
 
         # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
@@ -1308,7 +1308,7 @@ class StudentsT(PsychologicalEmbedding):
         )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
         """Student-t family similarity kernel.
 
         Args:
@@ -1316,7 +1316,7 @@ class StudentsT(PsychologicalEmbedding):
                 shape = (n_sample, dimensionality)
             z_ref: A set of embedding points.
                 shape = (n_sample, dimensionality)
-            theta: A dictionary of algorithm-specific parameters
+            tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             attention_weights: The weights allocated to each dimension
                 in a weighted minkowski metric.
@@ -1329,9 +1329,9 @@ class StudentsT(PsychologicalEmbedding):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']
-        tau = theta['tau']
-        alpha = theta['alpha']
+        rho = tf_theta['rho']
+        tau = tf_theta['tau']
+        alpha = tf_theta['alpha']
 
         # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)

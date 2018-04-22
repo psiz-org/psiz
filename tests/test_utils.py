@@ -29,7 +29,7 @@ def test_possible_outcomes_2c1():
     n_selected = 1 * np.ones((2))
     tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
 
-    po = possible_outcomes(tasks.configurations.iloc[0])
+    po = possible_outcomes(tasks.config_list.iloc[0])
 
     correct = np.array(((0, 1), (1, 0)))
     np.testing.assert_array_equal(po, correct)
@@ -41,7 +41,7 @@ def test_possible_outcomes_3c2():
     n_selected = 2 * np.ones((2))
     tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
 
-    po = possible_outcomes(tasks.configurations.iloc[0])
+    po = possible_outcomes(tasks.config_list.iloc[0])
 
     correct = np.array((
         (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
@@ -55,7 +55,7 @@ def test_possible_outcomes_4c2():
     n_selected = 2 * np.ones((2))
     tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
 
-    po = possible_outcomes(tasks.configurations.iloc[0])
+    po = possible_outcomes(tasks.config_list.iloc[0])
 
     correct = np.array((
         (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
@@ -73,7 +73,7 @@ def test_possible_outcomes_8c1():
     n_selected = 1 * np.ones((2))
     tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
 
-    po = possible_outcomes(tasks.configurations.iloc[0])
+    po = possible_outcomes(tasks.config_list.iloc[0])
 
     correct = np.array((
         (0, 1, 2, 3, 4, 5, 6, 7),

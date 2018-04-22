@@ -37,6 +37,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import pandas as pd
+import warnings
 
 
 class SimilarityTrials(object):
@@ -66,10 +67,10 @@ class SimilarityTrials(object):
         is_ranked: A Boolean array indicating which trials require
             reference selections to be ranked.
             shape = [n_trial, 1]
-        configuration_id: An integer array indicating the
+        config_id: An integer array indicating the
             configuration of each trial.
             shape = [n_trial, 1]
-        configurations: A DataFrame object describing the unique trial
+        config_list: A DataFrame object describing the unique trial
             configurations.
 
     Methods:
@@ -109,7 +110,12 @@ class SimilarityTrials(object):
         if n_selected is None:
             n_selected = np.ones((n_trial), dtype=np.int64)
         else:
-            assert np.sum(n_selected < 1) == 0
+            bad_locs = n_selected < 1
+            n_bad = np.sum(bad_locs)
+            if n_bad != 0:
+                warnings.warn("The parameter 'n_selected' containes integers \
+                    less than 1. Setting these values to 1.")
+                n_selected[bad_locs] = np.ones((n_bad), dtype=np.int64)
         if is_ranked is None:
             is_ranked = np.full((n_trial), True)
 
@@ -123,8 +129,8 @@ class SimilarityTrials(object):
         self.is_ranked = is_ranked
 
         # Attributes determined by concrete class.
-        self.configuration_id = None
-        self.configurations = None
+        self.config_id = None
+        self.config_list = None
 
     def _infer_n_reference(self, stimulus_set):
         """Return the number of references in each trial.
@@ -157,7 +163,7 @@ class SimilarityTrials(object):
         Returns:
             df_config: A DataFrame containing all the unique
                 trial configurations.
-            configuration_id: A unique ID for each type of trial
+            config_id: A unique ID for each type of trial
                 configuration.
 
         """
@@ -212,10 +218,10 @@ class UnjudgedTrials(SimilarityTrials):
         SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
 
         # Determine unique display configurations.
-        (configurations, configuration_id) = self._generate_configuration_id(
+        (config_list, config_id) = self._generate_configuration_id(
             self.n_reference, self.n_selected, self.is_ranked)
-        self.configuration_id = configuration_id
-        self.configurations = configurations
+        self.config_id = config_id
+        self.config_list = config_list
 
     def subset(self, index):
         """Return subset of trials as new UnjudgedTrials object.
@@ -250,7 +256,7 @@ class UnjudgedTrials(SimilarityTrials):
         Returns:
             df_config: A DataFrame containing all the unique
                 trial configurations.
-            configuration_id: A unique ID for each type of trial
+            config_id: A unique ID for each type of trial
                 configuration.
 
         """
@@ -266,16 +272,16 @@ class UnjudgedTrials(SimilarityTrials):
         n_config = len(df_config)
 
         # Assign display configuration ID for every observation.
-        configuration_id = np.empty(n_trial)
+        config_id = np.empty(n_trial)
         for i_type in range(n_config):
             a = (n_reference == df_config['n_reference'].iloc[i_type])
             b = (n_selected == df_config['n_selected'].iloc[i_type])
             c = (is_ranked == df_config['is_ranked'].iloc[i_type])
             f = np.array((a, b, c))
             display_type_locs = np.all(f, axis=0)
-            configuration_id[display_type_locs] = i_type
+            config_id[display_type_locs] = i_type
 
-        return (df_config, configuration_id)
+        return (df_config, config_id)
 
 
 class JudgedTrials(SimilarityTrials):
@@ -339,15 +345,20 @@ class JudgedTrials(SimilarityTrials):
         if group_id is None:
             group_id = np.zeros((self.n_trial), dtype=np.int64)
         else:
-            assert np.sum(group_id < 0) == 0
+            bad_locs = group_id < 0
+            n_bad = np.sum(bad_locs)
+            if n_bad != 0:
+                warnings.warn("The parameter 'group_id' containes integers \
+                    less than 0. Setting these values to 0.")
+                group_id[bad_locs] = np.zeros((n_bad), dtype=np.int64)
 
         self.group_id = group_id
 
         # Determine unique display configurations.
-        (configurations, configuration_id) = self._generate_configuration_id(
+        (config_list, config_id) = self._generate_configuration_id(
             self.n_reference, self.n_selected, self.is_ranked, group_id)
-        self.configuration_id = configuration_id
-        self.configurations = configurations
+        self.config_id = config_id
+        self.config_list = config_list
 
     def subset(self, index):
         """Return subset of trials as new JudgedTrials object.
@@ -395,7 +406,7 @@ class JudgedTrials(SimilarityTrials):
         Returns:
             df_config: A DataFrame containing all the unique
                 trial configurations.
-            configuration_id: A unique ID for each type of trial
+            config_id: A unique ID for each type of trial
                 configuration.
 
         """
@@ -415,7 +426,7 @@ class JudgedTrials(SimilarityTrials):
         n_config = len(df_config)
 
         # Assign display configuration ID for every observation.
-        configuration_id = np.empty(n_trial)
+        config_id = np.empty(n_trial)
         for i_type in range(n_config):
             a = (n_reference == df_config['n_reference'].iloc[i_type])
             b = (n_selected == df_config['n_selected'].iloc[i_type])
@@ -424,6 +435,6 @@ class JudgedTrials(SimilarityTrials):
             e = (session_id == df_config['session_id'].iloc[i_type])
             f = np.array((a, b, c, d, e))
             display_type_locs = np.all(f, axis=0)
-            configuration_id[display_type_locs] = i_type
+            config_id[display_type_locs] = i_type
 
-        return (df_config, configuration_id)
+        return (df_config, config_id)

@@ -182,12 +182,12 @@ class TestUnjudgedTrials1:
     def test_configurations(self, setup_tasks_0):
         pd.testing.assert_frame_equal(
             setup_tasks_0['configurations'],
-            setup_tasks_0['tasks'].configurations)
+            setup_tasks_0['tasks'].config_list)
 
     def test_configuration_id(self, setup_tasks_0):
         np.testing.assert_array_equal(
             setup_tasks_0['configuration_id'],
-            setup_tasks_0['tasks'].configuration_id)
+            setup_tasks_0['tasks'].config_id)
 
 
 class TestUnjudgedTrials2:
@@ -214,12 +214,12 @@ class TestUnjudgedTrials2:
     def test_configurations(self, setup_tasks_1):
         pd.testing.assert_frame_equal(
             setup_tasks_1['configurations'],
-            setup_tasks_1['tasks'].configurations)
+            setup_tasks_1['tasks'].config_list)
 
     def test_configuration_id(self, setup_tasks_1):
         np.testing.assert_array_equal(
             setup_tasks_1['configuration_id'],
-            setup_tasks_1['tasks'].configuration_id)
+            setup_tasks_1['tasks'].config_id)
 
 
 class TestJudgedTrials1:
@@ -246,12 +246,12 @@ class TestJudgedTrials1:
     def test_configurations(self, setup_obs_0):
         pd.testing.assert_frame_equal(
             setup_obs_0['configurations'],
-            setup_obs_0['tasks'].configurations)
+            setup_obs_0['tasks'].config_list)
 
     def test_configuration_id(self, setup_obs_0):
         np.testing.assert_array_equal(
             setup_obs_0['configuration_id'],
-            setup_obs_0['tasks'].configuration_id)
+            setup_obs_0['tasks'].config_id)
 
 
 class TestJudgedTrials2:
@@ -278,9 +278,9 @@ class TestJudgedTrials2:
     def test_configurations(self, setup_obs_1):
         pd.testing.assert_frame_equal(
             setup_obs_1['configurations'],
-            setup_obs_1['tasks'].configurations)
+            setup_obs_1['tasks'].config_list)
 
     def test_configuration_id(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['configuration_id'],
-            setup_obs_1['tasks'].configuration_id)
+            setup_obs_1['tasks'].config_id)

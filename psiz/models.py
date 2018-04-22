@@ -25,7 +25,6 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
-    - attention weights functionality
     - parallelization
     - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
@@ -33,9 +32,6 @@ Todo:
       init_mode='warm')
     - dcoument verbosity levels
     - document meaning of cold, warm, and exact
-    - document correct implementation of bounds. i.e.,
-        [lowerbound, upperbound] use None if doesn't exist
-    - One dictionary for z, theta, and attention weights
 """
 
 from abc import ABCMeta, abstractmethod
@@ -44,6 +40,7 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
+import warnings
 
 
 class PsychologicalEmbedding(object):
@@ -64,28 +61,33 @@ class PsychologicalEmbedding(object):
         set_log: Adjust the TensorBoard logging behavior.
 
     Attributes:
-        z: The embedding points.
-        infer_z: Flag that determines whether the embedding points are
-            inferred.
-        theta: Dictionary containing the parameter values
-            governing the similarity kernel.
-        sim_trainable: Dictionary of flags controlling which parameters
-            of the similarity kernel are trainable.
-        sim_bounds: Dictionary containing a list of the lower and upper
-            bounds, in that order, for each parameter in the similarity
-            kernel.
-        attention_weights: The attention weights associated with the
-            embedding model.
-        infer_attention_weights: Flag the determines whether attention
-            weights are inferred.
+        z: A dictionary containing with the keys 'value', 'trainable'.
+            The key 'value' contains the actual embedding points. The
+            key 'trainable' is a boolean flag that determines whether
+            the embedding points are inferred.
+        theta: Dictionary containing data about the parameter values
+            governing the similarity kernel. The dictionary contains
+            the variable names as keys at the first level. For each
+            variable, there is an additional dictionary containing with
+            the keys 'value', 'trainable', and 'bounds'. The key
+            'value' indicates the actual value of the parameter. The
+            key 'trainable' is a boolean flag indicating whether the
+            variable is trainable during inferene. The key 'bounds'
+            indicates the bounds of the paramter during inference. The
+            bounds are specified using a list of two items where the
+            first item indicates the lower bound and the second item
+            indicates the upper bound. Use None to indicate no bound.
+        attention: The attention weights associated with the embedding
+            model. Attention is a dictionary containing the keys
+            'value' and 'trainable'. The key 'value' contains the
+            actual weights and 'trainable' indicates if the weights are
+            trained during inference.
 
     Notes:
-        The dictionaries sim_parms, sim_trainable, and sim_bounds
-            should use the same set of keys.
         The methods fit, freeze, thaw, and set_log modify the state of
             the PsychologicalEmbedding object.
-        The attributes theta, sim_trainable, and sim_bounds must
-            be initialized by each concrete class.
+        The attribute theta and respective dictionary keys must be
+            initialized by each concrete class.
         The abstract methods _get_similarity_parameters_cold,
             _get_similarity_parameters_warm, and _similarity
             must be implemented by each concrete class.
@@ -112,32 +114,37 @@ class PsychologicalEmbedding(object):
 
         # Check arguments are valid.
         if (dimensionality < 1):
-            raise ValueError('The provided dimensionality must be an integer \
-                greater than 0.')
+            warnings.warn("The provided dimensionality must be an integer \
+                greater than 0. Assuming user requested 2 dimensions.")
+            dimensionality = 2
         if (n_group < 1):
-            raise ValueError('The provided n_group must be an integer \
-            greater than 0.')
+            warnings.warn("The provided n_group must be an integer greater \
+                than 0. Assuming user requested 1 group.")
+            n_group = 1
 
         # Initialize dimension dependent attributes.
         self.dimensionality = dimensionality
         # Initialize random embedding points using multivariate Gaussian.
         mean = np.ones((dimensionality))
         cov = np.identity(dimensionality)
-        self.z = np.random.multivariate_normal(mean, cov, (self.n_stimuli))
-        # Initialize attentional weights using uniform distribution.
-        self.attention_weights = np.ones(
-            (self.n_group, dimensionality), dtype=np.float64)
+        self.z = {}
+        self.z['value'] = np.random.multivariate_normal(
+            mean, cov, (self.n_stimuli)
+        )
+        self.z['trainable'] = True
 
-        self.infer_z = True
+        # Initialize attentional weights using uniform distribution.
+        self.attention = {}
+        self.attention['value'] = np.ones(
+            (self.n_group, dimensionality), dtype=np.float32)
+        # TODO check to make sure 2 dimensional even when only one group
         if n_group is 1:
-            self.infer_attention_weights = False
+            self.attention['trainable'] = False
         else:
-            self.infer_attention_weights = True
+            self.attention['trainable'] = True
 
         # Abstract attributes.
         self.theta = {}
-        self.sim_trainable = {}
-        self.sim_bounds = {}
 
         # Embedding scaling factors to draw from.
         self.init_scale_list = [.001, .01, .1]
@@ -165,7 +172,7 @@ class PsychologicalEmbedding(object):
                 and corresponding values.
         """
         for param_name in params:
-            self.theta[param_name] = params[param_name]
+            self.theta[param_name]['value'] = params[param_name]
 
     def _get_similarity_parameters(self, init_mode):
         """Return a dictionary and TensorFlow operation.
@@ -194,10 +201,10 @@ class PsychologicalEmbedding(object):
             # If a parameter is untrainable, set the parameter value to the
             # value in the class attribute theta.
             for param_name in self.theta:
-                if not self.sim_trainable[param_name]:
+                if not self.theta[param_name]['trainable']:
                     tf_theta[param_name] = tf.get_variable(
                         param_name, [1], initializer=tf.constant_initializer(
-                            self.theta[param_name]
+                            self.theta[param_name]['value']
                         ),
                         trainable=False
                     )
@@ -214,10 +221,10 @@ class PsychologicalEmbedding(object):
         """
         tf_theta = {}
         for param_name in self.theta:
-            if self.sim_trainable[param_name]:
+            if self.theta[param_name]['trainable']:
                 tf_theta[param_name] = tf.get_variable(
                     param_name, [1], initializer=tf.constant_initializer(
-                        self.theta[param_name]
+                        self.theta[param_name]['value']
                     ),
                     trainable=True
                 )
@@ -237,7 +244,6 @@ class PsychologicalEmbedding(object):
         """
         pass
 
-    # TODO
     @abstractmethod
     def _get_similarity_parameters_warm(self):
         """Return a dictionary of TensorFlow parameters.
@@ -256,14 +262,14 @@ class PsychologicalEmbedding(object):
         """Return a TensorFlow group of parameter constraints.
 
         Returns:
-            sim_constraints: A TensorFlow operation that imposes
+            tf_theta_bounds: A TensorFlow operation that imposes
                 boundary constraints on the algorithm-specific free
                 parameters during inference.
 
         """
         constraint_list = []
-        for param_name in self.sim_bounds:
-            bounds = self.sim_bounds[param_name]
+        for param_name in self.theta:
+            bounds = self.theta[param_name]['bounds']
             if bounds[0] is not None:
                 # Add lower bound.
                 constraint_list.append(
@@ -280,8 +286,8 @@ class PsychologicalEmbedding(object):
                         tf_theta[param_name])
                     )
                 )
-        sim_constraints = tf.group(*constraint_list)
-        return sim_constraints
+        tf_theta_bounds = tf.group(*constraint_list)
+        return tf_theta_bounds
 
     def freeze(self, freeze_options=None):
         """State changing method specifing which parameters are fixed.
@@ -300,11 +306,12 @@ class PsychologicalEmbedding(object):
         if freeze_options is not None:
             for param_name in freeze_options:
                 if param_name is 'z':
-                    self.z = freeze_options['z']
-                    self.infer_z = False
+                    self.z['value'] = freeze_options['z']
+                    self.z['trainable'] = False
                 else:
-                    self.theta[param_name] = freeze_options[param_name]
-                    self.sim_trainable[param_name] = False
+                    self.theta[param_name]['value'] = \
+                        freeze_options[param_name]
+                    self.theta[param_name]['trainable'] = False
 
     def thaw(self, thaw_options=None):
         """State changing method specifying trainable parameters.
@@ -318,17 +325,17 @@ class PsychologicalEmbedding(object):
         """
         # Unfreeze model parameters based on incoming list.
         if thaw_options is None:
-            self.infer_z = True
-            for param_name in self.sim_trainable:
-                self.sim_trainable[param_name] = True
+            self.z['trainable'] = True
+            for param_name in self.theta:
+                self.theta[param_name]['trainable'] = True
         else:
             for param_name in thaw_options:
                 if param_name is 'z':
-                    self.infer_z = True
+                    self.z['trainable'] = True
                 else:
-                    self.sim_trainable[param_name] = True
+                    self.theta[param_name]['trainable'] = True
 
-    def similarity(self, z_q, z_ref, attention_weights=None, group_id=None):
+    def similarity(self, z_q, z_ref, attention=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -339,25 +346,37 @@ class PsychologicalEmbedding(object):
                 shape = (n_sample, dimensionality)
             z_ref: A set of embedding points.
                 shape = (n_sample, dimensionality)
-            attention_weights: The weights allocated to each dimension
-                in a weighted minkowski metric.
+            attention (optional): The weights allocated to each
+                dimension in a weighted minkowski metric. The weights
+                should be positive and sum to the dimensionality of the
+                weight vector, although this is not enforced.
                 shape = (n_sample, dimensionality)
         """
-        # TODO handle group_id is not None, attention_weights is not None
+        if attention is None:
+            attention = self.attention['value'][0, :]
+            attention = np.expand_dims(attention, axis=0)
+
+        # Make sure z_q and attention have an appropriate singleton 
+        # third dimension if z_ref has an array rank of 3.
+        if len(z_ref.shape) > 2:
+            if len(z_q.shape) == 2:
+                z_q = np.expand_dims(z_q, axis=2)
+            if len(attention.shape) == 2:
+                attention = np.expand_dims(attention, axis=2)
+
         tf_z_q = tf.constant(z_q, dtype=tf.float32)
         tf_z_ref = tf.constant(z_ref, dtype=tf.float32)
-        tf_attention_weights = tf.convert_to_tensor(
-            attention_weights, dtype=tf.float32
+
+        tf_attention = tf.convert_to_tensor(
+            attention, dtype=tf.float32
         )
 
         tf_theta = {}
         for param_name in self.theta:
             tf_theta[param_name] = \
-                tf.constant(self.theta[param_name], dtype=tf.float32)
+                tf.constant(self.theta[param_name]['value'], dtype=tf.float32)
 
-        sim_op = self._similarity(
-            tf_z_q, tf_z_ref, tf_theta, tf_attention_weights
-        )
+        sim_op = self._similarity(tf_z_q, tf_z_ref, tf_theta, tf_attention)
         sess = tf.Session()
         sim = sess.run(sim_op)
         sess.close()
@@ -365,7 +384,7 @@ class PsychologicalEmbedding(object):
         return sim
 
     @abstractmethod
-    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Similarity kernel.
 
         Args:
@@ -375,8 +394,8 @@ class PsychologicalEmbedding(object):
                 shape = (n_sample, dimensionality)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
-            attention_weights: The weights allocated to each dimension
-                in a weighted minkowski metric.
+            tf_attention: The weights allocated to each dimension in a
+                weighted minkowski metric.
                 shape = (n_sample, dimensionality)
         Returns:
             The corresponding similarity between rows of embedding
@@ -386,35 +405,39 @@ class PsychologicalEmbedding(object):
         """
         pass
 
-    def _get_attention_weights(self, init_mode):
+    def _get_attention(self, init_mode):
         """Return attention weights of model as TensorFlow variable."""
-        if self.infer_attention_weights:
+        if self.attention['trainable']:
             if init_mode is 'exact':
-                attention_weights = tf.get_variable(
-                    "attention_weights", [self.n_group, self.dimensionality],
-                    initializer=tf.constant_initializer(self.attention_weights)
+                tf_attention = tf.get_variable(
+                    "attention", [self.n_group, self.dimensionality],
+                    initializer=tf.constant_initializer(
+                        self.attention['value']
+                    )
                 )
             elif init_mode is 'warm':
-                attention_weights = tf.get_variable(
-                    "attention_weights", [self.n_group, self.dimensionality],
-                    initializer=tf.constant_initializer(self.attention_weights)
+                tf_attention = tf.get_variable(
+                    "attention", [self.n_group, self.dimensionality],
+                    initializer=tf.constant_initializer(
+                        self.attention['value']
+                    )
                 )
             else:
                 alpha = 1. * np.ones((self.dimensionality))
-                new_attention_weights = (
+                new_attention = (
                     np.random.dirichlet(alpha) * self.dimensionality
                 )
-                attention_weights = tf.get_variable(
-                    "attention_weights", [self.n_group, self.dimensionality],
-                    initializer=tf.constant_initializer(new_attention_weights)
+                tf_attention = tf.get_variable(
+                    "attention", [self.n_group, self.dimensionality],
+                    initializer=tf.constant_initializer(new_attention)
                 )
         else:
-            attention_weights = tf.get_variable(
-                "attention_weights", [self.n_group, self.dimensionality],
-                initializer=tf.constant_initializer(self.attention_weights),
+            tf_attention = tf.get_variable(
+                "attention", [self.n_group, self.dimensionality],
+                initializer=tf.constant_initializer(self.attention['value']),
                 trainable=False
             )
-        return attention_weights
+        return tf_attention
 
     def _get_embedding(self, init_mode):
         """Return embedding of model as TensorFlow variable.
@@ -432,19 +455,19 @@ class PsychologicalEmbedding(object):
         scale_value = self.init_scale_list[rand_scale_idx]
         tf_scale_value = tf.constant(scale_value, dtype=tf.float32)
 
-        if self.infer_z:
+        if self.z['trainable']:
             if init_mode is 'exact':
-                z = tf.get_variable(
+                tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.dimensionality],
-                    initializer=tf.constant_initializer(self.z)
+                    initializer=tf.constant_initializer(self.z['value'])
                 )
             elif init_mode is 'warm':
-                z = tf.get_variable(
+                tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.dimensionality],
-                    initializer=tf.constant_initializer(self.z)
+                    initializer=tf.constant_initializer(self.z['value'])
                 )
             else:
-                z = tf.get_variable(
+                tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.dimensionality],
                     initializer=tf.random_normal_initializer(
                         tf.zeros([self.dimensionality]),
@@ -452,12 +475,12 @@ class PsychologicalEmbedding(object):
                     )
                 )
         else:
-            z = tf.get_variable(
+            tf_z = tf.get_variable(
                 "z", [self.n_stimuli, self.dimensionality],
-                initializer=tf.constant_initializer(self.z),
+                initializer=tf.constant_initializer(self.z['value']),
                 trainable=False
             )
-        return z
+        return tf_z
 
     def set_log(self, do_log, log_dir=None, delete_prev=False):
         """State changing method that sets TensorBoard logging.
@@ -514,29 +537,29 @@ class PsychologicalEmbedding(object):
         # embedding algorithm.
         skf = StratifiedKFold(n_splits=10)
         (train_idx, test_idx) = list(
-            skf.split(obs.stimulus_set, obs.configuration_id))[0]
+            skf.split(obs.stimulus_set, obs.config_id))[0]
 
         # Run multiple restarts of embedding algorithm.
         J_all_best = np.inf
         z_best = None
-        attention_weights_best = None
+        attention_best = None
         params_best = None
 
         for i_restart in range(n_restart):
-            (J_all, z, attention_weights, params) = self._embed(
+            (J_all, z, attention, params) = self._embed(
                 obs, train_idx, test_idx, i_restart, init_mode
             )
             if J_all < J_all_best:
                 J_all_best = J_all
                 z_best = z
-                attention_weights_best = attention_weights
+                attention_best = attention
                 params_best = params
 
             if verbose > 1:
                 print('Restart ', i_restart)
 
-        self.z = z_best
-        self.attention_weights = attention_weights_best
+        self.z['value'] = z_best
+        self.attention['value'] = attention_best
         self._set_parameters(params_best)
 
         return J_all_best
@@ -552,7 +575,7 @@ class PsychologicalEmbedding(object):
                 negative loglikelihood.
 
         """
-        (J, _, _, _, _, tf_stimulus_set, tf_n_reference, tf_n_selected,
+        (J, _, _, _, _, _, tf_stimulus_set, tf_n_reference, tf_n_selected,
             tf_is_ranked, tf_group_id) = self._core_model('exact')
 
         init = tf.global_variables_initializer()
@@ -577,9 +600,9 @@ class PsychologicalEmbedding(object):
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(test_idx)
 
-        (J, z, attention_weights, tf_theta, constraint, tf_stimulus_set,
-            tf_n_reference, tf_n_selected, tf_is_ranked,
-            tf_group_id) = self._core_model(init_mode)
+        (J, tf_z, tf_attention, tf_attention_constraint, tf_theta,
+            tf_theta_bounds, tf_stimulus_set, tf_n_reference, tf_n_selected,
+            tf_is_ranked, tf_group_id) = self._core_model(init_mode)
 
         # train_op = tf.train.GradientDescentOptimizer(
         #   learning_rate=self.lr
@@ -592,10 +615,10 @@ class PsychologicalEmbedding(object):
             # Create a summary to monitor cost tensor.
             tf.summary.scalar('cost', J)
             # Create a summary of the embedding tensor.
-            tf.summary.tensor_summary('z', z)
+            tf.summary.tensor_summary('z', tf_z)
             # Create a summary of the attention weights.
-            # tf.summary.tensor_summary('attention_weights', attention_weights)
-            # tf.summary.scalar('attention_00', attention_weights[0,0])
+            # tf.summary.tensor_summary('attention', tf_attention)
+            # tf.summary.scalar('attention_00', tf_attention[0,0])
 
             # Create a summary to monitor parameteres of similarity kernel.
             with tf.name_scope('similarity'):
@@ -634,7 +657,8 @@ class PsychologicalEmbedding(object):
                     }
                 )
 
-            sess.run(constraint)
+            sess.run(tf_theta_bounds)
+            sess.run(tf_attention_constraint)
             J_test = sess.run(J, feed_dict={
                 tf_stimulus_set: obs_val.stimulus_set,
                 tf_n_reference: obs_val.n_reference,
@@ -655,8 +679,8 @@ class PsychologicalEmbedding(object):
                 last_improvement = 0
                 # TODO handle worst case where there is no improvement from
                 # initialization.
-                (z_best, attention_weights_best) = sess.run(
-                    [z, attention_weights])
+                (z_best, attention_best) = sess.run(
+                    [tf_z, tf_attention])
                 params_best = {}
                 for param_name in tf_theta:
                     params_best[param_name] = sess.run(tf_theta[param_name])
@@ -678,32 +702,32 @@ class PsychologicalEmbedding(object):
         sess.close()
         tf.reset_default_graph()
 
-        return (J_all_best, z_best, attention_weights_best, params_best)
+        return (J_all_best, z_best, attention_best, params_best)
 
-    def _project_attention_weights(self, attention_weights_0):
+    def _project_attention(self, tf_attention_0):
         """Return projection of attention weights."""
-        n_dim = tf.shape(attention_weights_0, out_type=tf.float64)[1]
-        attention_weights_1 = tf.divide(
-            tf.reduce_sum(attention_weights_0, axis=1, keepdims=True), n_dim
-            )
-        attention_weights_proj = tf.divide(
-            attention_weights_0, attention_weights_1
-            )
+        n_dim = tf.shape(tf_attention_0, out_type=tf.float32)[1]
+        tf_attention_1 = tf.divide(
+            tf.reduce_sum(tf_attention_0, axis=1, keepdims=True), n_dim
+        )
+        tf_attention_proj = tf.divide(
+            tf_attention_0, tf_attention_1
+        )
 
-        return attention_weights_proj
+        return tf_attention_proj
 
-    def _cost_2c1(self, z, triplets, theta, attention_weights):
+    def _cost_2c1(self, tf_z, triplets, tf_theta, tf_attention):
         """Return cost for ordered 2 chooose 1 observations."""
         n_disp = tf.shape(triplets)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
 
         # Similarity
         Sqa = self._similarity(
-            tf.gather(z, triplets[:, 0]), tf.gather(z, triplets[:, 1]),
-            theta, attention_weights)
+            tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 1]),
+            tf_theta, tf_attention)
         Sqb = self._similarity(
-            tf.gather(z, triplets[:, 0]), tf.gather(z, triplets[:, 2]),
-            theta, attention_weights)
+            tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 2]),
+            tf_theta, tf_attention)
         # Probility of behavior
         P = Sqa / (Sqa + Sqb)
         # Cost function
@@ -716,36 +740,36 @@ class PsychologicalEmbedding(object):
             )
         return J
 
-    def _cost_8cN(self, z, nines, N, theta, attention_weights):
+    def _cost_8cN(self, tf_z, nines, N, tf_theta, tf_attention):
         """Return cost for ordered 8 chooose N observations."""
         n_disp = tf.shape(nines)[0]
         n_disp = tf.cast(n_disp, dtype=tf.float32)
 
         # Similarity
         Sqa = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 1]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf_theta, tf_attention)
         Sqb = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 2]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf_theta, tf_attention)
         Sqc = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 3]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf_theta, tf_attention)
         Sqd = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 4]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf_theta, tf_attention)
         Sqe = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 5]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf_theta, tf_attention)
         Sqf = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 6]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+            tf_theta, tf_attention)
         Sqg = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 7]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
+            tf_theta, tf_attention)
         Sqh = self._similarity(
-            tf.gather(z, nines[:, 0]), tf.gather(z, nines[:, 8]), theta,
-            attention_weights)
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 8]),
+            tf_theta, tf_attention)
 
         # Probility of behavior
         def f2(): return (
@@ -817,9 +841,9 @@ class PsychologicalEmbedding(object):
         with tf.variable_scope("model"):
             # Similarity function variables
             tf_theta = self._get_similarity_parameters(init_mode)
-            sim_constraints = self._get_similarity_constraints(tf_theta)
-            attention_weights = self._get_attention_weights(init_mode)
-            z = self._get_embedding(init_mode)
+            tf_theta_bounds = self._get_similarity_constraints(tf_theta)
+            tf_attention = self._get_attention(init_mode)
+            tf_z = self._get_embedding(init_mode)
 
             # scope.reuse_variables()
 
@@ -851,29 +875,30 @@ class PsychologicalEmbedding(object):
             group_idx_2c1 = tf.reshape(
                 group_idx_2c1, [tf.shape(group_idx_2c1)[0], 1]
             )
-            weights_2c1 = tf.gather_nd(attention_weights, group_idx_2c1)
+            weights_2c1 = tf.gather_nd(tf_attention, group_idx_2c1)
             group_idx_8c2 = tf.gather(tf_group_id, idx_8c2)
             group_idx_8c2 = tf.reshape(
                 group_idx_8c2, [tf.shape(group_idx_8c2)[0], 1]
             )
-            weights_8c2 = tf.gather_nd(attention_weights, group_idx_8c2)
+            weights_8c2 = tf.gather_nd(tf_attention, group_idx_8c2)
 
             # Cost function
             J = (
-                self._cost_2c1(z, disp_2c1, tf_theta, weights_2c1) +
+                self._cost_2c1(tf_z, disp_2c1, tf_theta, weights_2c1) +
                 self._cost_8cN(
-                    z, disp_8c2, tf.constant(2), tf_theta, weights_8c2
+                    tf_z, disp_8c2, tf.constant(2), tf_theta, weights_8c2
                 )
             )
 
-            # TODO constraint_weights
-            # constraint_weights = attention_weights.assign(
-            #   self._project_attention_weights(attention_weights))
+            # TODO move constraints outside core model?
+            tf_attention_constraint = tf_attention.assign(
+              self._project_attention(tf_attention))
 
         return (
-            J, z, attention_weights, tf_theta, sim_constraints,
-            tf_stimulus_set, tf_n_reference, tf_n_selected, tf_is_ranked,
-            tf_group_id)
+            J, tf_z, tf_attention, tf_attention_constraint, tf_theta,
+            tf_theta_bounds, tf_stimulus_set, tf_n_reference, tf_n_selected,
+            tf_is_ranked, tf_group_id
+            )
 
 
 class Exponential(PsychologicalEmbedding):
@@ -923,17 +948,12 @@ class Exponential(PsychologicalEmbedding):
             )
 
         # Default parameter settings.
-        self.theta = dict(rho=2., tau=1., gamma=0., beta=10.)
-        self.sim_trainable = dict(rho=True, tau=True, gamma=True, beta=True)
-        self.sim_bounds = dict(
-            rho=[1., None], tau=[1., None], gamma=[0., None], beta=[1., None])
-
-        # self.theta = dict(
-        #     rho=dict(value=2., trainable=True, bounds=[1., None]),
-        #     tau=dict(value=1., trainable=True, bounds=[1., None]),
-        #     gamma=dict(value=0., trainable=True, bounds=[0., None]),
-        #     beta=dict(value=10., trainable=True, bounds=[1., None]),
-        # )
+        self.theta = dict(
+            rho=dict(value=2., trainable=True, bounds=[1., None]),
+            tau=dict(value=1., trainable=True, bounds=[1., None]),
+            gamma=dict(value=0., trainable=True, bounds=[0., None]),
+            beta=dict(value=10., trainable=True, bounds=[1., None]),
+        )
 
         # Default inference settings.
         self.lr = 0.003
@@ -952,22 +972,22 @@ class Exponential(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.sim_trainable['rho']:
+        if self.theta['rho']['trainable']:
             tf_theta['rho'] = tf.get_variable(
                 "rho", [1],
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
-        if self.sim_trainable['tau']:
+        if self.theta['tau']['trainable']:
             tf_theta['tau'] = tf.get_variable(
                 "tau", [1],
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
-        if self.sim_trainable['gamma']:    
+        if self.theta['gamma']['trainable']:
             tf_theta['gamma'] = tf.get_variable(
                 "gamma", [1],
                 initializer=tf.random_uniform_initializer(0., .001)
             )
-        if self.sim_trainable['beta']:
+        if self.theta['beta']['trainable']:
             tf_theta['beta'] = tf.get_variable(
                 "beta", [1],
                 initializer=tf.random_uniform_initializer(1., 30.)
@@ -986,29 +1006,29 @@ class Exponential(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.sim_trainable['rho']:
+        if self.theta['rho']['trainable']:
             tf_theta["rho"] = tf.get_variable(
                 "rho", [1], initializer=tf.constant_initializer(
-                    self.theta['rho'])
+                    self.theta['rho']['value'])
             )
-        if self.sim_trainable['tau']:
+        if self.theta['tau']['trainable']:
             tf_theta["tau"] = tf.get_variable(
                 "tau", [1], initializer=tf.constant_initializer(
-                    self.theta['tau'])
+                    self.theta['tau']['value'])
             )
-        if self.sim_trainable['gamma']:
+        if self.theta['gamma']['trainable']:
             tf_theta["gamma"] = tf.get_variable(
                 "gamma", [1], initializer=tf.constant_initializer(
-                    self.theta['gamma'])
+                    self.theta['gamma']['value'])
             )
-        if self.sim_trainable['beta']:
+        if self.theta['beta']['trainable']:
             tf_theta["beta"] = tf.get_variable(
                 "beta", [1], initializer=tf.constant_initializer(
-                    self.theta['beta'])
+                    self.theta['beta']['value'])
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Exponential family similarity kernel.
 
         Args:
@@ -1018,7 +1038,7 @@ class Exponential(PsychologicalEmbedding):
                 shape = (n_sample, dimensionality)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
-            attention_weights: The weights allocated to each dimension
+            tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
                 shape = (n_sample, dimensionality)
 
@@ -1036,7 +1056,7 @@ class Exponential(PsychologicalEmbedding):
 
         # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
-        d_qref = tf.multiply(d_qref, attention_weights)
+        d_qref = tf.multiply(d_qref, tf_attention)
         d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
 
         # Exponential family similarity kernel.
@@ -1071,16 +1091,12 @@ class HeavyTailed(PsychologicalEmbedding):
             self, n_stimuli, dimensionality, n_group)
 
         # Default parameter settings.
-        self.theta = dict(rho=2., tau=1., kappa=2., alpha=30.)
-        self.sim_trainable = dict(rho=True, tau=True, kappa=True, alpha=True)
-        self.sim_bounds = dict(
-            rho=[1., None], tau=[1., None], kappa=[0., None], alpha=[0., None])
-        # self.theta = dict(
-        #     rho=dict(value=2., trainable=True, bounds=[1., None]),
-        #     tau=dict(value=1., trainable=True, bounds=[1., None]),
-        #     kappa=dict(value=2., trainable=True, bounds=[0., None]),
-        #     alpha=dict(value=30., trainable=True, bounds=[0., None]),
-        # )
+        self.theta = dict(
+            rho=dict(value=2., trainable=True, bounds=[1., None]),
+            tau=dict(value=1., trainable=True, bounds=[1., None]),
+            kappa=dict(value=2., trainable=True, bounds=[0., None]),
+            alpha=dict(value=30., trainable=True, bounds=[0., None]),
+        )
 
         # Default inference settings.
         self.lr = 0.003
@@ -1099,22 +1115,22 @@ class HeavyTailed(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.sim_trainable['rho']:
+        if self.theta['rho']['trainable']:
             tf_theta['rho'] = tf.get_variable(
                 "rho", [1],
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
-        if self.sim_trainable['tau']:
+        if self.theta['tau']['trainable']:
             tf_theta['tau'] = tf.get_variable(
                 "tau", [1],
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
-        if self.sim_trainable['kappa']:
+        if self.theta['kappa']['trainable']:
             tf_theta['kappa'] = tf.get_variable(
                 "kappa", [1],
                 initializer=tf.random_uniform_initializer(1., 11.)
             )
-        if self.sim_trainable['alpha']:
+        if self.theta['alpha']['trainable']:
             tf_theta['alpha'] = tf.get_variable(
                 "alpha", [1],
                 initializer=tf.random_uniform_initializer(10., 60.)
@@ -1133,29 +1149,37 @@ class HeavyTailed(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.sim_trainable['rho']:
+        if self.theta['rho']['trainable']:
             tf_theta["rho"] = tf.get_variable(
                 "rho", [1],
-                initializer=tf.constant_initializer(self.theta['rho'])
+                initializer=tf.constant_initializer(
+                    self.theta['rho']['value']
+                )
             )
-        if self.sim_trainable['tau']:
+        if self.theta['tau']['trainable']:
             tf_theta["tau"] = tf.get_variable(
                 "tau", [1],
-                initializer=tf.constant_initializer(self.theta['tau'])
+                initializer=tf.constant_initializer(
+                    self.theta['tau']['value']
+                )
             )
-        if self.sim_trainable['kappa']:
+        if self.theta['kappa']['trainable']:
             tf_theta["kappa"] = tf.get_variable(
                 "kappa", [1],
-                initializer=tf.constant_initializer(self.theta['kappa'])
+                initializer=tf.constant_initializer(
+                    self.theta['kappa']['value']
+                )
             )
-        if self.sim_trainable['alpha']:
+        if self.theta['alpha']['trainable']:
             tf_theta["alpha"] = tf.get_variable(
                 "alpha", [1],
-                initializer=tf.constant_initializer(self.theta['alpha'])
+                initializer=tf.constant_initializer(
+                    self.theta['alpha']['value']
+                )
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Heavy-tailed family similarity kernel.
 
         Args:
@@ -1165,7 +1189,7 @@ class HeavyTailed(PsychologicalEmbedding):
                 shape = (n_sample, dimensionality)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
-            attention_weights: The weights allocated to each dimension
+            tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
                 shape = (n_sample, dimensionality)
 
@@ -1183,7 +1207,7 @@ class HeavyTailed(PsychologicalEmbedding):
 
         # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
-        d_qref = tf.multiply(d_qref, attention_weights)
+        d_qref = tf.multiply(d_qref, tf_attention)
         d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
 
         # Heavy-tailed family similarity kernel.
@@ -1230,19 +1254,15 @@ class StudentsT(PsychologicalEmbedding):
             self, n_stimuli, dimensionality, n_group)
 
         # Default parameter settings.
-        self.theta = dict(rho=2., tau=2., alpha=dimensionality - 1.)
-        self.sim_trainable = dict(rho=False, tau=False, alpha=False)
-        self.sim_bounds = dict(
-            rho=[1., None], tau=[1., None], alpha=[0.000001, None])
-        # self.theta = dict(
-        #     rho=dict(value=2., trainable=False, bounds=[1., None]),
-        #     tau=dict(value=1., trainable=False, bounds=[1., None]),
-        #     alpha=dict(
-        #         value=(dimensionality - 1.),
-        #         trainable=False,
-        #         bounds=[0.000001, None]
-        #     ),
-        # )
+        self.theta = dict(
+            rho=dict(value=2., trainable=False, bounds=[1., None]),
+            tau=dict(value=2., trainable=False, bounds=[1., None]),
+            alpha=dict(
+                value=(dimensionality - 1.),
+                trainable=False,
+                bounds=[0.000001, None]
+            ),
+        )
 
         # Default inference settings.
         # self.lr = 0.003
@@ -1258,27 +1278,29 @@ class StudentsT(PsychologicalEmbedding):
         set.
 
         Returns:
-            theta: A dictionary of algorithm-specific TensorFlow
+            tf_theta: A dictionary of algorithm-specific TensorFlow
                 variables.
 
         """
         tf_theta = {}
-        if self.sim_trainable['rho']:
+        if self.theta['rho']['trainable']:
             tf_theta['rho'] = tf.get_variable(
                 "rho", [1],
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
-        if self.sim_trainable['tau']:
+        if self.theta['tau']['trainable']:
             tf_theta['tau'] = tf.get_variable(
                 "tau", [1],
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
-        if self.sim_trainable['alpha']:
+        if self.theta['alpha']['trainable']:
             min_alpha = np.max((1, self.dimensionality - 5.))
             max_alpha = self.dimensionality + 5.
             tf_theta['alpha'] = tf.get_variable(
                 "alpha", [1],
-                initializer=tf.random_uniform_initializer(min_alpha, max_alpha)
+                initializer=tf.random_uniform_initializer(
+                    min_alpha, max_alpha
+                )
             )
         return tf_theta
 
@@ -1294,21 +1316,30 @@ class StudentsT(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        tf_theta["rho"] = tf.get_variable(
-            "rho", [1],
-            initializer=tf.constant_initializer(self.theta['rho'])
-        )
-        tf_theta["tau"] = tf.get_variable(
-            "tau", [1],
-            initializer=tf.constant_initializer(self.theta['tau'])
-        )
-        tf_theta["alpha"] = tf.get_variable(
-            "alpha", [1],
-            initializer=tf.constant_initializer(self.theta['alpha'])
-        )
+        if self.theta['rho']['trainable']:
+            tf_theta["rho"] = tf.get_variable(
+                "rho", [1],
+                initializer=tf.constant_initializer(
+                    self.theta['rho']['value']
+                )
+            )
+        if self.theta['tau']['trainable']:
+            tf_theta["tau"] = tf.get_variable(
+                "tau", [1],
+                initializer=tf.constant_initializer(
+                    self.theta['tau']['value']
+                )
+            )
+        if self.theta['alpha']['trainable']:
+            tf_theta["alpha"] = tf.get_variable(
+                "alpha", [1],
+                initializer=tf.constant_initializer(
+                    self.theta['alpha']['value']
+                )
+            )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, attention_weights):
+    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Student-t family similarity kernel.
 
         Args:
@@ -1318,7 +1349,7 @@ class StudentsT(PsychologicalEmbedding):
                 shape = (n_sample, dimensionality)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
-            attention_weights: The weights allocated to each dimension
+            tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
                 shape = (n_sample, dimensionality)
 
@@ -1335,7 +1366,7 @@ class StudentsT(PsychologicalEmbedding):
 
         # Weighted Minkowski distance.
         d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
-        d_qref = tf.multiply(d_qref, attention_weights)
+        d_qref = tf.multiply(d_qref, tf_attention)
         d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
 
         # Student-t family similarity kernel.

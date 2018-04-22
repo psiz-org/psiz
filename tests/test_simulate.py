@@ -55,8 +55,8 @@ def unjudged_trials():
     return unjudged_trials
 
 
-def test_simulate(ground_truth, unjudged_trials):
-    """Test simulation of agent."""
-    agent = Agent(ground_truth)
-    obs = agent.simulate(unjudged_trials)
-    assert obs.n_trial is 2
+# def test_simulate(ground_truth, unjudged_trials):
+#     """Test simulation of agent."""
+#     agent = Agent(ground_truth)
+#     obs = agent.simulate(unjudged_trials)
+#     assert obs.n_trial is 2

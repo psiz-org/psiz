@@ -25,6 +25,7 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
+    - add choose 1 code?
     - parallelization
     - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
@@ -718,8 +719,8 @@ class PsychologicalEmbedding(object):
 
     def _cost_2c1(self, tf_z, triplets, tf_theta, tf_attention):
         """Return cost for ordered 2 chooose 1 observations."""
-        n_disp = tf.shape(triplets)[0]
-        n_disp = tf.cast(n_disp, dtype=tf.float32)
+        n_trial = tf.shape(triplets)[0]
+        n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._similarity(
@@ -733,17 +734,332 @@ class PsychologicalEmbedding(object):
         # Cost function
         cap = tf.constant(2.2204e-16)
         J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
-        J = tf.divide(J, n_disp)
+        J = tf.divide(J, n_trial)
 
         J = tf.cond(
-            n_disp > tf.constant(0.), lambda: J, lambda: tf.constant(0.)
+            n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.)
             )
+        return J
+
+    def _cost_3cN(self, tf_z, nines, N, tf_theta, tf_attention):
+        """Return cost for ordered 6 chooose N observations."""
+        n_trial = tf.shape(nines)[0]
+        n_trial = tf.cast(n_trial, dtype=tf.float32)
+
+        # Similarity
+        Sqa = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf_theta, tf_attention)
+        Sqb = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf_theta, tf_attention)
+        Sqc = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf_theta, tf_attention)
+
+        # Probility of behavior
+        def f1(): return (
+            (Sqa / (Sqa + Sqb + Sqc))
+        )
+
+        def f2(): return (
+            (Sqa / (Sqa + Sqb + Sqc)) *
+            (Sqb / (Sqb + Sqc))
+        )
+
+        P = tf.case({
+            tf.equal(N, tf.constant(1)): f1,
+            tf.equal(N, tf.constant(2)): f2,
+            tf.equal(N, tf.constant(3)): f2,
+            }, default=f2, exclusive=True)
+
+        # Cost function
+        cap = tf.constant(2.2204e-16)
+        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        J = tf.divide(J, n_trial)
+
+        J = tf.cond(
+            n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
+        return J
+
+    def _cost_4cN(self, tf_z, nines, N, tf_theta, tf_attention):
+        """Return cost for ordered 6 chooose N observations."""
+        n_trial = tf.shape(nines)[0]
+        n_trial = tf.cast(n_trial, dtype=tf.float32)
+
+        # Similarity
+        Sqa = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf_theta, tf_attention)
+        Sqb = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf_theta, tf_attention)
+        Sqc = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf_theta, tf_attention)
+        Sqd = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf_theta, tf_attention)
+
+        # Probility of behavior
+        def f1(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd))
+        )
+
+        def f2(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd)) *
+            (Sqb / (Sqb + Sqc + Sqd))
+        )
+
+        def f3(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd)) *
+            (Sqb / (Sqb + Sqc + Sqd)) *
+            (Sqc / (Sqc + Sqd))
+        )
+
+        P = tf.case({
+            tf.equal(N, tf.constant(1)): f1,
+            tf.equal(N, tf.constant(2)): f2,
+            tf.equal(N, tf.constant(3)): f3,
+            tf.equal(N, tf.constant(4)): f3,
+            }, default=f2, exclusive=True)
+
+        # Cost function
+        cap = tf.constant(2.2204e-16)
+        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        J = tf.divide(J, n_trial)
+
+        J = tf.cond(
+            n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
+        return J
+
+    def _cost_5cN(self, tf_z, nines, N, tf_theta, tf_attention):
+        """Return cost for ordered 6 chooose N observations."""
+        n_trial = tf.shape(nines)[0]
+        n_trial = tf.cast(n_trial, dtype=tf.float32)
+
+        # Similarity
+        Sqa = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf_theta, tf_attention)
+        Sqb = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf_theta, tf_attention)
+        Sqc = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf_theta, tf_attention)
+        Sqd = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf_theta, tf_attention)
+        Sqe = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf_theta, tf_attention)
+
+        # Probility of behavior
+        def f1(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe))
+        )
+
+        def f2(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe))
+        )
+
+        def f3(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe)) *
+            (Sqc / (Sqc + Sqd + Sqe))
+        )
+
+        def f4(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe)) *
+            (Sqc / (Sqc + Sqd + Sqe)) *
+            (Sqd / (Sqd + Sqe))
+        )
+
+        P = tf.case({
+            tf.equal(N, tf.constant(1)): f1,
+            tf.equal(N, tf.constant(2)): f2,
+            tf.equal(N, tf.constant(3)): f3,
+            tf.equal(N, tf.constant(4)): f4,
+            tf.equal(N, tf.constant(5)): f4,
+            }, default=f2, exclusive=True)
+
+        # Cost function
+        cap = tf.constant(2.2204e-16)
+        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        J = tf.divide(J, n_trial)
+
+        J = tf.cond(
+            n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
+        return J
+
+    def _cost_6cN(self, tf_z, nines, N, tf_theta, tf_attention):
+        """Return cost for ordered 6 chooose N observations."""
+        n_trial = tf.shape(nines)[0]
+        n_trial = tf.cast(n_trial, dtype=tf.float32)
+
+        # Similarity
+        Sqa = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf_theta, tf_attention)
+        Sqb = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf_theta, tf_attention)
+        Sqc = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf_theta, tf_attention)
+        Sqd = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf_theta, tf_attention)
+        Sqe = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf_theta, tf_attention)
+        Sqf = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+            tf_theta, tf_attention)
+
+        # Probility of behavior
+        def f1(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf))
+        )
+
+        def f2(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf))
+        )
+
+        def f3(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf)) *
+            (Sqc / (Sqc + Sqd + Sqe + Sqf))
+        )
+
+        def f4(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf)) *
+            (Sqc / (Sqc + Sqd + Sqe + Sqf)) *
+            (Sqd / (Sqd + Sqe + Sqf))
+        )
+
+        def f5(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf)) *
+            (Sqc / (Sqc + Sqd + Sqe + Sqf)) *
+            (Sqd / (Sqd + Sqe + Sqf)) *
+            (Sqe / (Sqe + Sqf))
+        )
+
+        P = tf.case({
+            tf.equal(N, tf.constant(1)): f1,
+            tf.equal(N, tf.constant(2)): f2,
+            tf.equal(N, tf.constant(3)): f3,
+            tf.equal(N, tf.constant(4)): f4,
+            tf.equal(N, tf.constant(5)): f5,
+            tf.equal(N, tf.constant(6)): f5
+            }, default=f2, exclusive=True)
+
+        # Cost function
+        cap = tf.constant(2.2204e-16)
+        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        J = tf.divide(J, n_trial)
+
+        J = tf.cond(
+            n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
+        return J
+
+    def _cost_7cN(self, tf_z, nines, N, tf_theta, tf_attention):
+        """Return cost for ordered 7 chooose N observations."""
+        n_trial = tf.shape(nines)[0]
+        n_trial = tf.cast(n_trial, dtype=tf.float32)
+
+        # Similarity
+        Sqa = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf_theta, tf_attention)
+        Sqb = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf_theta, tf_attention)
+        Sqc = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf_theta, tf_attention)
+        Sqd = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf_theta, tf_attention)
+        Sqe = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf_theta, tf_attention)
+        Sqf = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+            tf_theta, tf_attention)
+        Sqg = self._similarity(
+            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
+            tf_theta, tf_attention)
+        
+        # Probility of behavior
+        def f1(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg))
+        )
+
+        def f2(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg))
+        )
+
+        def f3(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg))
+        )
+
+        def f4(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqd / (Sqd + Sqe + Sqf + Sqg))
+        )
+
+        def f5(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqd / (Sqd + Sqe + Sqf + Sqg)) *
+            (Sqe / (Sqe + Sqf + Sqg))
+        )
+
+        def f6(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqc / (Sqc + Sqd + Sqe + Sqf + Sqg)) *
+            (Sqd / (Sqd + Sqe + Sqf + Sqg)) *
+            (Sqe / (Sqe + Sqf + Sqg)) *
+            (Sqf / (Sqf + Sqg))
+        )
+
+        P = tf.case({
+            tf.equal(N, tf.constant(1)): f1,
+            tf.equal(N, tf.constant(2)): f2,
+            tf.equal(N, tf.constant(3)): f3,
+            tf.equal(N, tf.constant(4)): f4,
+            tf.equal(N, tf.constant(5)): f5,
+            tf.equal(N, tf.constant(6)): f6,
+            tf.equal(N, tf.constant(7)): f6
+            }, default=f2, exclusive=True)
+
+        # Cost function
+        cap = tf.constant(2.2204e-16)
+        J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
+        J = tf.divide(J, n_trial)
+
+        J = tf.cond(
+            n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
     def _cost_8cN(self, tf_z, nines, N, tf_theta, tf_attention):
         """Return cost for ordered 8 chooose N observations."""
-        n_disp = tf.shape(nines)[0]
-        n_disp = tf.cast(n_disp, dtype=tf.float32)
+        n_trial = tf.shape(nines)[0]
+        n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._similarity(
@@ -772,6 +1088,10 @@ class PsychologicalEmbedding(object):
             tf_theta, tf_attention)
 
         # Probility of behavior
+        def f1(): return (
+            (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh))
+        )
+
         def f2(): return (
             (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh)) *
             (Sqb / (Sqb + Sqc + Sqd + Sqe + Sqf + Sqg + Sqh))
@@ -818,6 +1138,7 @@ class PsychologicalEmbedding(object):
         )
 
         P = tf.case({
+            tf.equal(N, tf.constant(1)): f1,
             tf.equal(N, tf.constant(2)): f2,
             tf.equal(N, tf.constant(3)): f3,
             tf.equal(N, tf.constant(4)): f4,
@@ -830,10 +1151,10 @@ class PsychologicalEmbedding(object):
         # Cost function
         cap = tf.constant(2.2204e-16)
         J = tf.negative(tf.reduce_sum(tf.log(tf.maximum(P, cap))))
-        J = tf.divide(J, n_disp)
+        J = tf.divide(J, n_trial)
 
         J = tf.cond(
-            n_disp > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
+            n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
     def _core_model(self, init_mode):
@@ -882,7 +1203,7 @@ class PsychologicalEmbedding(object):
             )
             weights_8c2 = tf.gather_nd(tf_attention, group_idx_8c2)
 
-            # Cost function
+            # Cost function TODO generalize
             J = (
                 self._cost_2c1(tf_z, disp_2c1, tf_theta, weights_2c1) +
                 self._cost_8cN(

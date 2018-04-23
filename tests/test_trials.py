@@ -14,7 +14,14 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for testing trials.py."""
+"""Module for testing trials.py.
+
+Todo:
+    - write test for subset and test config_id, it is important that
+    the config_id and configuration is recomputed on initialization
+    because down-stream code assumes that config_id is from [0,N[ and
+    corresponds to indices of config_list
+"""
 
 import pytest
 import numpy as np

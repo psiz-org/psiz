@@ -88,7 +88,6 @@ class Agent(object):
 
         """
         n_trial = trials.n_trial
-        max_n_ref = trials.stimulus_set.shape[1] - 1
         n_config = trials.config_list.shape[0]
         n_dim = self.embedding.z['value'].shape[1]
 
@@ -106,46 +105,48 @@ class Agent(object):
             if n_outcome > max_n_outcome:
                 max_n_outcome = n_outcome
 
-        prob = np.zeros((n_trial, max_n_outcome))
+        prob_all = np.zeros((n_trial, max_n_outcome))
+        for i_config in range(n_config):
+            config = trials.config_list.iloc[i_config]
+            outcome_idx = outcome_idx_list[i_config]
+            trial_locs = trials.config_id == i_config
+            n_trial = np.sum(trial_locs)
+            n_outcome = n_outcome_list[i_config]
+            n_reference = config['n_reference']
+            n_selected_idx = config['n_selected'] - 1
+            z_q = self.embedding.z['value'][trials.stimulus_set[trial_locs, 0], :]
+            z_q = np.expand_dims(z_q, axis=2)
+            z_ref = np.empty((n_trial, n_dim, n_reference))
+            for i_ref in range(n_reference):
+                z_ref[:, :, i_ref] = \
+                    self.embedding.z['value'][trials.stimulus_set[trial_locs, 1+i_ref], :]
 
-        # Loop over different display configurations. TODO
-        i_config = 0
-        config = trials.config_list.iloc[i_config]
-        outcome_idx = outcome_idx_list[i_config]
-        n_outcome = max_n_outcome
-        n_selected = int(config['n_selected'])  # TODO force int
-        n_selected_idx = n_selected - 1
+            # Precompute similarity between query and references.
+            s_qref = self.embedding.similarity(z_q, z_ref)
 
-        z_q = self.embedding.z['value'][trials.stimulus_set[:, 0], :]
-        z_q = np.expand_dims(z_q, axis=2)
-        z_ref = np.empty((n_trial, n_dim, max_n_ref))
-        for i_ref in range(max_n_ref):
-            z_ref[:, :, i_ref] = \
-                self.embedding.z['value'][trials.stimulus_set[:, 1+i_ref], :]
+            # Compute probability of each possible outcome.
+            prob = np.ones((n_trial, n_outcome), dtype=np.float64)
+            for i_outcome in range(n_outcome):
+                s_qref_perm = s_qref[:, outcome_idx[i_outcome, :]]
+                # Start with last choice
+                total = np.sum(s_qref_perm[:, n_selected_idx:], axis=1)
+                # Compute sampling without replacement probability in reverse
+                # order for numerical stabiltiy
+                for i_selected in range(n_selected_idx, -1, -1):
+                    # Grab similarity of selected reference and divide by total
+                    # similarity of all available references.
+                    prob[:, i_outcome] = np.multiply(
+                        prob[:, i_outcome],
+                        np.divide(s_qref_perm[:, i_selected], total)
+                    )
+                    # Add similarity for "previous" selection
+                    if i_selected > 0:
+                        total = total + s_qref_perm[:, i_selected-1]
+            prob_all[trial_locs, 0:n_outcome] = prob
 
-        # Precompute similarity between query and references.
-        s_qref = self.embedding.similarity(z_q, z_ref)
-
-        # Compute probability of each possible outcome.
-        prob = np.ones((n_trial, n_outcome))
-        for i_outcome in range(n_outcome):
-            s_qref_perm = s_qref[:, outcome_idx[i_outcome, :]]
-            # Start with last choice
-            total = np.sum(s_qref_perm[:, n_selected_idx:], axis=1)
-            # Compute sampling without replacement probability in reverse
-            # order for numerical stabiltiy
-            for i_selected in range(n_selected_idx, -1, -1):  # TODO verify
-                # Grab similarity of selected reference and divide by total
-                # similarity of all available references.
-                prob[:, i_outcome] = np.multiply(
-                    prob[:, i_outcome],
-                    np.divide(s_qref_perm[:, n_selected_idx], total)
-                )
-                # Add similarity for "previous" selection
-                if i_selected-1 > -1:
-                    total = total + s_qref_perm[:, i_selected-1]  # TODO verify
-
-        return (outcome_idx_list, prob)
+        # Correct for numerical inaccuracy.
+        prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
+        return (outcome_idx_list, prob_all)
 
     def _select(self, outcome_idx_list, prob, unjudged_trials):
         """Stochastically select from possible outcomes.
@@ -172,7 +173,8 @@ class Agent(object):
         stimuli_set[:, 0] = unjudged_trials.stimulus_set[:, 0]
         for i_trial in range(n_trial):
             outcome = multinomial(1, prob[i_trial, :]).astype(bool)
-            stimuli_set[i_trial, 1:] = stimuli_set_ref[i_trial, outcome_idx[outcome,:]]  # TODO assign to 1:n_outcome NOT 1:
+            # TODO May need to grab idx of nonzero entry in outcome because len(outcome) may not match
+            stimuli_set[i_trial, 1:] = stimuli_set_ref[i_trial, outcome_idx[outcome, :]]  # TODO assign to 1:n_outcome NOT 1:
 
         # TODO redistribute back to global set
 

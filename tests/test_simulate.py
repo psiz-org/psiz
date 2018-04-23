@@ -60,3 +60,7 @@ def unjudged_trials():
 #     agent = Agent(ground_truth)
 #     obs = agent.simulate(unjudged_trials)
 #     assert obs.n_trial is 2
+
+# def test_probability():
+#     (outcome_idx_list, prob) = self._probability(unjudged_trials)
+#     np.sum(prob_all, axis=1) should all be 1

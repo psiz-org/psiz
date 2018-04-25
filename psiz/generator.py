@@ -14,6 +14,124 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for generating similarity judgment displays.
+"""Module for generating similarity judgment trials.
+
+Classes:
+    TrialGenerator:
+    RandomGenerator:
+    ActiveGenerator:
+
+Todo:
+    - MAYBE document stimulus index formatting [0,N[
 
 """
+
+from abc import ABCMeta, abstractmethod
+
+import numpy as np
+
+from psiz.trials import UnjudgedTrials
+
+
+class TrialGenerator(object):
+    """Abstract base class for generating similarity judgment trials.
+
+    Methods:
+        generate: TODO
+
+    Attributes:
+        n_stimuli: An integer indicating the total number of unique
+            stimuli.
+
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, n_stimuli):
+        """Initialize.
+
+        Args:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli.
+        """
+        self.n_stimuli = n_stimuli
+
+    @abstractmethod
+    def generate(self, args):
+        """Return generated trials based on provided arguments.
+
+        Args:
+            n_stimuli
+
+        Returns:
+            An UnjudgedTrials object.
+
+        """
+        pass
+
+
+class RandomGenerator(TrialGenerator):
+    """A random similarity trial generator."""
+
+    def __init__(self, n_stimuli):
+        """Initialize.
+
+        Args:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli.
+        """
+        TrialGenerator.__init__(self, n_stimuli)
+
+    def generate(self, n_trial, n_reference=2, n_selected=1, is_ranked=True):
+        """Return generated trials based on provided arguments.
+
+        Args:
+            n_trial: TODO
+            n_reference (optional): TODO
+            n_selected (optional): TODO
+            is_ranked (optional): TODO
+
+        Returns:
+            An UnjudgedTrials object.
+
+        """
+        n_reference = int(n_reference)
+        n_selected = np.repeat(int(n_selected), n_trial)
+        is_ranked = np.repeat(bool(is_ranked), n_trial)
+        stimulus_set = np.empty((n_trial, n_reference + 1), dtype=np.int64)
+        for i_trial in range(n_trial):
+            stimulus_set[i_trial, :] = np.random.choice(
+                self.n_stimuli, (1, n_reference + 1), False
+            )
+        # Sort indices corresponding to references.
+        stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
+        return UnjudgedTrials(
+            stimulus_set, n_selected=n_selected, is_ranked=is_ranked
+        )
+
+
+class ActiveGenerator(TrialGenerator):
+    """A trial generator that leverages expected information gain."""
+
+    def __init__(self, n_stimuli):
+        """Initialize.
+
+        Args:
+            n_stimuli:
+        """
+        TrialGenerator.__init__(self, n_stimuli)
+
+    def generate(self, n_trial, n_reference=2, n_selected=1, is_ranked=True):
+        """Return generated trials based on provided arguments.
+
+        Args:
+            n_trial:
+            n_reference (optional):
+            n_selected (optional):
+            is_ranked (optional):
+
+        Returns:
+            An UnjudgedTrials object.
+
+        """
+        return None  # TODO

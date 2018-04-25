@@ -48,8 +48,11 @@ def possible_outcomes(trial_configuration):
         trial_configuration: A trial configuration Pandas Series.
 
     Returns:
-        An array indicating all possible outcomes where the values
-            indicate indices of the reference stimuli.
+        An 2D array indicating all possible outcomes where the values
+            indicate indices of the reference stimuli. Each row
+            corresponds to one outcome. Note the indices refer to
+            references only and does not include an index for the
+            query.
 
     """
     n_reference = trial_configuration['n_reference']

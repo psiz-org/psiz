@@ -14,21 +14,21 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for testing simulate.py.
-
-Todo:
-    - test outcome_idx_list
-"""
+"""Module for testing models.py."""
 
 import numpy as np
-import pytest
+import tensorflow as tf
 
 from psiz.trials import UnjudgedTrials
-from psiz.models import Exponential
+from psiz.models import Exponential, HeavyTailed, StudentsT
 from psiz.simulate import Agent
+from psiz.generator import RandomGenerator, ActiveGenerator
+
+def main():
+    """Docstring."""
+    test_simulate()
 
 
-@pytest.fixture(scope="module")
 def ground_truth():
     """Return a ground truth embedding."""
     n_stimuli = 10
@@ -49,8 +49,7 @@ def ground_truth():
     return model
 
 
-@pytest.fixture(scope="module")
-def unjudged_trials():
+def get_unjudged_trials():
     """Return a set of unjudged trials."""
     stimulus_set = np.array((
         (0, 1, 2, 7, 3),
@@ -68,19 +67,14 @@ def unjudged_trials():
     return unjudged_trials
 
 
-def test_probability(ground_truth, unjudged_trials):
-    """Test probability method."""
-    agent = Agent(ground_truth)
-    (outcome_idx_list, prob) = agent.probability(unjudged_trials)
-    prob_actual = np.sum(prob, axis=1)
-    prob_desired = np.ones((unjudged_trials.n_trial))
-    np.testing.assert_allclose(prob_actual, prob_desired)
-
-
-def test_simulate(ground_truth, unjudged_trials):
+def test_simulate():
     """Test simulation of agent."""
-    agent = Agent(ground_truth)
-    obs = agent.simulate(unjudged_trials)
-    np.testing.assert_array_equal(
-        obs.stimulus_set[:, 0], unjudged_trials.stimulus_set[:, 0]
-    )
+    # agent = Agent(ground_truth())
+    # trials = get_unjudged_trials()
+    # obs = agent.simulate(trials)
+    # np.testing.assert_array_equal(obs.stimulus_set[:, 0], trials.stimulus_set[:, 0])
+    # assert obs.n_trial is 2
+    
+
+if __name__ == "__main__":
+    main()

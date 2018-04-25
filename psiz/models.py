@@ -357,7 +357,7 @@ class PsychologicalEmbedding(object):
             attention = self.attention['value'][0, :]
             attention = np.expand_dims(attention, axis=0)
 
-        # Make sure z_q and attention have an appropriate singleton 
+        # Make sure z_q and attention have an appropriate singleton
         # third dimension if z_ref has an array rank of 3.
         if len(z_ref.shape) > 2:
             if len(z_q.shape) == 2:
@@ -996,7 +996,7 @@ class PsychologicalEmbedding(object):
         Sqg = self._similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
             tf_theta, tf_attention)
-        
+
         # Probility of behavior
         def f1(): return (
             (Sqa / (Sqa + Sqb + Sqc + Sqd + Sqe + Sqf + Sqg))

@@ -20,9 +20,6 @@ Classes:
     Agent: An object that can be initialized using a psychological
         embedding and used to simulate similarity judgments.
 
-Todo:
-    - wrapper similarity method
-
 """
 import numpy as np
 from numpy.random import multinomial
@@ -35,10 +32,14 @@ class Agent(object):
     """Agent that simulates similarity judgments.
 
     Attributes:
-        embedding:
-        group_idx:
+        embedding: A PsychologicalEmbedding object that supplies a
+            similarity function and embedding points.
+        group_idx: An integer idicating which set of attention weights
+            to use when simulating judgments.
     Methods:
-        simulate:
+        simulate: Stochastically simulate similarity judgments.
+        probability: Return the probability of the possible outcomes
+            for each trial.
 
     """
 
@@ -55,11 +56,11 @@ class Agent(object):
         self.embedding = embedding
         self.group_idx = group_idx
 
-    def simulate(self, unjudged_trials):
+    def simulate(self, trials):
         """Stochastically simulate similarity judgments.
 
         Args:
-            unjudged_trials: UnjudgedTrials object representing the
+            trials: UnjudgedTrials object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
 
@@ -68,26 +69,30 @@ class Agent(object):
                 order of the stimuli is now informative.
 
         """
-        (outcome_idx_list, prob) = self._probability(unjudged_trials)
-        judged_trials = self._select(outcome_idx_list, prob, unjudged_trials)
+        (outcome_idx_list, prob_all) = self.probability(trials)
+        judged_trials = self._select(trials, outcome_idx_list, prob_all)
         return judged_trials
 
-    def _probability(self, trials):
+    def probability(self, trials):
         """Return probability of outcomes for each trial.
 
         Args:
             trials: A set of unjudged similarity trials.
 
         Returns:
-            The probabilities associated with the different outcomes
-                for each unjudged trial. In general, different trial
-                configurations will have a different number of possible
-                outcomes. Trials will a smaller number of possible
-                outcomes are element padded with zeros to match the
-                trial with the maximum number of outcomes.
+            outcome_idx_list: A list with one entry for each display
+                configuration. Each entry contains a 2D array where
+                each row contains the indices describing one outcome.
+            prob_all: The probabilities associated with the different
+                outcomes for each unjudged trial. In general, different
+                trial configurations will have a different number of
+                possible outcomes. Trials will a smaller number of
+                possible outcomes are element padded with zeros to
+                match the trial with the maximum number of possible
+                outcomes.
 
         """
-        n_trial = trials.n_trial
+        n_trial_all = trials.n_trial
         n_config = trials.config_list.shape[0]
         n_dim = self.embedding.z['value'].shape[1]
 
@@ -105,7 +110,7 @@ class Agent(object):
             if n_outcome > max_n_outcome:
                 max_n_outcome = n_outcome
 
-        prob_all = np.zeros((n_trial, max_n_outcome))
+        prob_all = np.zeros((n_trial_all, max_n_outcome))
         for i_config in range(n_config):
             config = trials.config_list.iloc[i_config]
             outcome_idx = outcome_idx_list[i_config]
@@ -114,12 +119,16 @@ class Agent(object):
             n_outcome = n_outcome_list[i_config]
             n_reference = config['n_reference']
             n_selected_idx = config['n_selected'] - 1
-            z_q = self.embedding.z['value'][trials.stimulus_set[trial_locs, 0], :]
+            z_q = self.embedding.z['value'][
+                trials.stimulus_set[trial_locs, 0], :
+            ]
             z_q = np.expand_dims(z_q, axis=2)
             z_ref = np.empty((n_trial, n_dim, n_reference))
             for i_ref in range(n_reference):
                 z_ref[:, :, i_ref] = \
-                    self.embedding.z['value'][trials.stimulus_set[trial_locs, 1+i_ref], :]
+                    self.embedding.z['value'][
+                        trials.stimulus_set[trial_locs, 1+i_ref], :
+                    ]
 
             # Precompute similarity between query and references.
             s_qref = self.embedding.similarity(z_q, z_ref)
@@ -148,38 +157,46 @@ class Agent(object):
         prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
         return (outcome_idx_list, prob_all)
 
-    def _select(self, outcome_idx_list, prob, unjudged_trials):
+    def _select(self, trials, outcome_idx_list, prob_all):
         """Stochastically select from possible outcomes.
 
         Args:
-            probs:
+            trials:
+            outcome_idx_list:
+            prob_all:
+
 
         Returns
             A JudgedTrials object.
 
         """
-        n_trial = unjudged_trials.n_trial
-        max_n_ref = unjudged_trials.stimulus_set.shape[1] - 1
-        n_config = unjudged_trials.config_list.shape[0]
-        n_dim = self.embedding.z['value'].shape[1]
+        n_trial_all = trials.n_trial
+        trial_idx_all = np.arange(n_trial_all)
+        max_n_ref = trials.stimulus_set.shape[1] - 1
+        n_config = trials.config_list.shape[0]
 
-        #  TODO loop over configurations
-        i_config = 0
-        config = unjudged_trials.config_list.iloc[i_config]
-        outcome_idx = outcome_idx_list[i_config]
-        stimuli_set_ref = unjudged_trials.stimulus_set[:, 1:]
+        # Pre-allocate.
+        stimulus_set = -1 * np.ones(
+            (n_trial_all, 1 + max_n_ref), dtype=np.int64
+        )
+        stimulus_set[:, 0] = trials.stimulus_set[:, 0]
+        for i_config in range(n_config):
+            n_reference = trials.config_list.iloc[i_config]['n_reference']
+            outcome_idx = outcome_idx_list[i_config]
+            n_outcome = outcome_idx.shape[0]
+            trial_locs = trials.config_id == i_config
+            n_trial = np.sum(trial_locs)
+            trial_idx = trial_idx_all[trial_locs]
+            prob = prob_all[trial_locs, 0:n_outcome]
+            stimuli_set_ref = trials.stimulus_set[trial_locs, 1:]
 
-        stimuli_set = -1 * np.ones((n_trial, 1 + max_n_ref), dtype=np.int64)
-        stimuli_set[:, 0] = unjudged_trials.stimulus_set[:, 0]
-        for i_trial in range(n_trial):
-            outcome = multinomial(1, prob[i_trial, :]).astype(bool)
-            # TODO May need to grab idx of nonzero entry in outcome because len(outcome) may not match
-            stimuli_set[i_trial, 1:] = stimuli_set_ref[i_trial, outcome_idx[outcome, :]]  # TODO assign to 1:n_outcome NOT 1:
-
-        # TODO redistribute back to global set
+            for i_trial in range(n_trial):
+                outcome_loc = multinomial(1, prob[i_trial, :]).astype(bool)
+                stimulus_set[trial_idx[i_trial], 1:n_reference+1] = \
+                    stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
         return JudgedTrials(
-            stimuli_set,
-            n_selected=unjudged_trials.n_selected,
-            is_ranked=unjudged_trials.is_ranked
+            stimulus_set,
+            n_selected=trials.n_selected,
+            is_ranked=trials.is_ranked
         )

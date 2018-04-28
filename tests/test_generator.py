@@ -17,7 +17,7 @@
 """Module for testing generator.py.
 
 Todo:
-    - test random generator
+    - test ActiveGenerator
 """
 
 import numpy as np

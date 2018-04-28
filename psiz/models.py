@@ -25,12 +25,14 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
-    - add choose 1 code?
-    - parallelization
+    - implement general cost function that includes all scenarios
+    - implement posterior samples
+    - parallelization during fitting (MAYBE)
     - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
       and can be created by the user using a for loop and fit with
       init_mode='warm')
+    - documeent broadcasting in similarity function
     - dcoument verbosity levels
     - document meaning of cold, warm, and exact
 """
@@ -57,6 +59,9 @@ class PsychologicalEmbedding(object):
         fit: Fit the embedding model using the provided observations.
         evaluate: Evaluate the embedding model using the provided
             observations.
+        similarity: Return the similarity between provided points.
+        similarity_matrix: Return the similarity matrix characterizing
+            the embedding.
         freeze: Freeze the free parameters of an embedding model.
         thaw: Make free parameters trainable.
         set_log: Adjust the TensorBoard logging behavior.
@@ -352,6 +357,11 @@ class PsychologicalEmbedding(object):
                 should be positive and sum to the dimensionality of the
                 weight vector, although this is not enforced.
                 shape = (n_sample, dimensionality)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+
         """
         if attention is None:
             attention = self.attention['value'][0, :]
@@ -405,6 +415,29 @@ class PsychologicalEmbedding(object):
 
         """
         pass
+
+    def similarity_matrix(self, group_id=None):
+        """Return similarity matrix characterizing embedding.
+
+        Returns:
+            A 2D array where element s_{i,j} indicates the similarity
+                between the ith and jth stimulus.
+
+        """
+        if group_id is None:
+            group_id = 0
+        attention = self.attention['value'][group_id, :]
+
+        xg = np.arange(self.n_stimuli)
+        a, b = np.meshgrid(xg, xg)
+        a = a.flatten()
+        b = b.flatten()
+
+        z_a = self.z['value'][a, :]
+        z_b = self.z['value'][b, :]
+        s = self.similarity(z_a, z_b, attention)
+        s = s.reshape(self.n_stimuli, self.n_stimuli)
+        return s
 
     def _get_attention(self, init_mode):
         """Return attention weights of model as TensorFlow variable."""

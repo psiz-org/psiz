@@ -23,9 +23,11 @@ from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential, HeavyTailed, StudentsT
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
+from psiz.utils import matrix_correlation
+
 
 def main():
-    """Docstring."""
+    """Main docstring."""
     test_simulate()
 
 
@@ -68,13 +70,27 @@ def get_unjudged_trials():
 
 
 def test_simulate():
-    """Test simulation of agent."""
-    # agent = Agent(ground_truth())
-    # trials = get_unjudged_trials()
-    # obs = agent.simulate(trials)
-    # np.testing.assert_array_equal(obs.stimulus_set[:, 0], trials.stimulus_set[:, 0])
-    # assert obs.n_trial is 2
-    
+    """Testing."""
+    model_truth = ground_truth()
+    s_truth = model_truth.similarity_matrix()
+
+    agent = Agent(model_truth)
+    generator = RandomGenerator(model_truth.n_stimuli)
+    n_trial = 1000
+    n_reference = 8
+    n_selected = 2
+    trials = generator.generate(n_trial, n_reference, n_selected)
+    obs = agent.simulate(trials)
+
+    model_inferred = Exponential(model_truth.n_stimuli)
+    model_inferred.fit(obs, 5, verbose=1)
+    s_inferred = model_inferred.similarity_matrix()
+
+    # Compare inferred model with ground truth.
+    r_squared = matrix_correlation(s_inferred, s_truth)
+    print('R^2: {0:.2f}'.format(r_squared))
+    # Where should similarity matrix creation go?
+
 
 if __name__ == "__main__":
     main()

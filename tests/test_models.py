@@ -18,7 +18,7 @@
 
 Todo
     - test init
-    - freeze and thaw
+    - freeze and thaw        
     - general run
     - attention
     - heavy-tailed similarity
@@ -236,3 +236,23 @@ def test_weight_projections():
     sess.close()
 
     np.testing.assert_allclose(attention_actual, attention_desired)
+
+
+def test_freeze():
+    """Test freeze method."""
+    n_stimuli = 10
+    n_dim = 2
+    n_group = 2
+    model = Exponential(n_stimuli, n_dim, n_group)
+
+    model.freeze({'z': np.ones((n_stimuli, n_dim))})
+    with pytest.raises(Exception):
+        model.freeze({'z': np.ones((n_stimuli-1, n_dim))})
+    with pytest.raises(Exception):
+        model.freeze({'z': np.ones((n_stimuli, n_dim-1))})
+    
+    model.freeze({'attention': np.ones((n_group, n_dim))})
+    with pytest.raises(Exception):
+        model.freeze({'attention': np.ones((n_group+1, n_dim))})
+    with pytest.raises(Exception):
+        model.freeze({'attention': np.ones((n_group, n_dim-1))})

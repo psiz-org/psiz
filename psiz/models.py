@@ -25,6 +25,7 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
+    - use n_dim instead of dimensionality
     - implement general cost function that includes all scenarios
     - implement posterior samples
     - parallelization during fitting (MAYBE)
@@ -312,8 +313,21 @@ class PsychologicalEmbedding(object):
         if freeze_options is not None:
             for param_name in freeze_options:
                 if param_name is 'z':
-                    self.z['value'] = freeze_options['z']
+                    z = freeze_options['z'].astype(np.float32)
+                    if z.shape[0] != self.n_stimuli:
+                        raise ValueError("Input 'z' does not have the appropriate shape.")
+                    if z.shape[1] != self.dimensionality:
+                        raise ValueError("Input 'z' does not have the appropriate shape.")
+                    self.z['value'] = z
                     self.z['trainable'] = False
+                elif param_name is 'attention':
+                    attention = freeze_options['attention']
+                    if attention.shape[0] != self.n_group:
+                        raise ValueError("Input 'attention' does not have the appropriate shape.")
+                    if attention.shape[1] != self.dimensionality:
+                        raise ValueError("Input 'attention' does not have the appropriate shape.")
+                    self.attention['value'] = attention
+                    self.attention['trainable'] = False
                 else:
                     self.theta[param_name]['value'] = \
                         freeze_options[param_name]
@@ -327,9 +341,10 @@ class PsychologicalEmbedding(object):
 
         Args:
             thaw_options (optional): List of parameter names to set as
-                trainable during inference.
+                trainable during inference. Valid parameter names
+                include 'z', 'attention', and the parameters associated
+                with the similarity kernel.
         """
-        # Unfreeze model parameters based on incoming list.
         if thaw_options is None:
             self.z['trainable'] = True
             for param_name in self.theta:
@@ -338,6 +353,11 @@ class PsychologicalEmbedding(object):
             for param_name in thaw_options:
                 if param_name is 'z':
                     self.z['trainable'] = True
+                elif param_name is 'attention':
+                    if self.n_group is 1:
+                        self.attention['trainable'] = False
+                    else:
+                        self.attention['trainable'] = True
                 else:
                     self.theta[param_name]['trainable'] = True
 
@@ -1260,10 +1280,10 @@ class Exponential(PsychologicalEmbedding):
 
     This embedding technique uses the following similarity kernel:
         s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma,
-    where x and y are n-dimensional vectors. The similarity function
-    has four free parameters: rho, tau, gamma, and beta. The
-    exponential family is obtained by integrating across various
-    psychological theores [1,2,3,4].
+    where x and y are n-dimensional vectors. The similarity kernel has
+    four free parameters: rho, tau, gamma, and beta. The exponential
+    family is obtained by integrating across various psychological
+    theories [1,2,3,4].
 
     References:
         [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency
@@ -1423,8 +1443,8 @@ class HeavyTailed(PsychologicalEmbedding):
 
     This embedding technique uses the following similarity kernel:
         s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha),
-    where x and y are n-dimensional vectors. The similarity function
-    has four free parameters: rho, tau, kappa, and alpha. The
+    where x and y are n-dimensional vectors. The similarity kernel has
+    four free parameters: rho, tau, kappa, and alpha. The
     heavy-tailed family is a generalization of the Student-t family.
     """
 

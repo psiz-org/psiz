@@ -17,11 +17,16 @@
 """Module for generating similarity judgment trials.
 
 Classes:
-    TrialGenerator:
-    RandomGenerator:
-    ActiveGenerator:
+    TrialGenerator: Base class for generating unjudged similarity
+        trials.
+    RandomGenerator: Concrete class for generating random similarity
+        trials.
+    ActiveGenerator: Concrete class for generating similarity trials
+        using an active selection procedure that leverages expected
+        informatin gain.
 
 Todo:
+    - implement ActiveGenerator
     - MAYBE document stimulus index formatting [0,N[
 
 """

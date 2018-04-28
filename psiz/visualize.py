@@ -18,6 +18,7 @@
 
 Todo:
     - Adjust embedding based on attention weights.
+    - Add procrustean solution functionality
 """
 
 from mpl_toolkits.mplot3d import Axes3D

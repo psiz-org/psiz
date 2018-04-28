@@ -31,6 +31,9 @@ Notes:
         information can be used to infer a separate set of attention
         weights for each group while sharing all other parameters.
 
+Todo:
+    - join method
+
 """
 
 from abc import ABCMeta, abstractmethod

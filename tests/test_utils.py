@@ -19,7 +19,7 @@
 
 import numpy as np
 
-from psiz.utils import possible_outcomes
+from psiz.utils import possible_outcomes, matrix_correlation
 from psiz.trials import UnjudgedTrials
 
 
@@ -85,3 +85,23 @@ def test_possible_outcomes_8c1():
         (6, 0, 1, 2, 3, 4, 5, 7),
         (7, 0, 1, 2, 3, 4, 5, 6)))
     np.testing.assert_array_equal(po, correct)
+
+
+def test_matrix_correlation():
+    """Test matrix correlation."""
+    a = np.array((
+        (1.0, .50, .90, .13),
+        (.50, 1.0, .10, .80),
+        (.90, .10, 1.0, .12),
+        (.13, .80, .12, 1.0)
+    ))
+
+    b = np.array((
+        (1.0, .45, .90, .11),
+        (.45, 1.0, .20, .82),
+        (.90, .20, 1.0, .02),
+        (.11, .82, .02, 1.0)
+    ))
+
+    r2_score_1 = matrix_correlation(a, b)
+    np.testing.assert_almost_equal(r2_score_1, 0.96456543)

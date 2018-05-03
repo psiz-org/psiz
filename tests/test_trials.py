@@ -28,6 +28,9 @@ import numpy as np
 import pandas as pd
 
 from psiz.trials import UnjudgedTrials, JudgedTrials
+from psiz.generator import RandomGenerator
+from psiz.simulate import Agent
+from psiz.models import Exponential
 
 
 @pytest.fixture(scope="module")
@@ -164,6 +167,32 @@ def setup_obs_1():
         }
 
 
+# @pytest.fixture(scope="module")
+def ground_truth(n_stimuli):
+    """Return a ground truth model."""
+    dimensionality = 3
+    n_group = 2
+
+    model = Exponential(n_stimuli, dimensionality, n_group)
+    mean = np.ones((dimensionality))
+    cov = np.identity(dimensionality)
+    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    attention = np.array((
+        (1.9, 1., .1),
+        (.1, 1., 1.9)
+    ))
+    freeze_options = {
+        'rho': 2,
+        'tau': 1,
+        'beta': 1,
+        'gamma': 0,
+        'z': z,
+        'attention': attention
+    }
+    model.freeze(freeze_options)
+    return model
+
+
 class TestUnjudgedTrials1:
 
     def test_n_trial(self, setup_tasks_0):
@@ -291,3 +320,61 @@ class TestJudgedTrials2:
         np.testing.assert_array_equal(
             setup_obs_1['configuration_id'],
             setup_obs_1['tasks'].config_id)
+
+class TestStack:
+
+    def test_stack(self):
+        """Test stack static method"""
+        n_stimuli = 10
+        model_truth = ground_truth(n_stimuli)
+
+        n_trial = 50
+        n_reference = 8
+        n_selected = 2
+        generator = RandomGenerator(n_stimuli)
+        trials = generator.generate(n_trial, n_reference, n_selected)
+
+        double_trials = UnjudgedTrials.stack((trials, trials))
+
+        assert double_trials.n_trial == 2 * n_trial
+        np.testing.assert_array_equal(
+            double_trials.n_reference[0:n_trial], trials.n_reference)
+        np.testing.assert_array_equal(
+            double_trials.n_reference[n_trial:], trials.n_reference)
+
+        np.testing.assert_array_equal(
+            double_trials.n_selected[0:n_trial], trials.n_selected)
+        np.testing.assert_array_equal(
+            double_trials.n_selected[n_trial:], trials.n_selected)
+
+        np.testing.assert_array_equal(
+            double_trials.is_ranked[0:n_trial], trials.is_ranked)
+        np.testing.assert_array_equal(
+            double_trials.is_ranked[n_trial:], trials.is_ranked)
+
+        agent_novice = Agent(model_truth, group_id=0)
+        agent_expert = Agent(model_truth, group_id=1)
+        obs_novice = agent_novice.simulate(trials)
+        obs_expert = agent_expert.simulate(trials)
+        obs_all = JudgedTrials.stack((obs_novice, obs_expert))
+
+        assert obs_all.n_trial == 2 * n_trial
+        np.testing.assert_array_equal(
+            obs_all.n_reference[0:n_trial], obs_novice.n_reference)
+        np.testing.assert_array_equal(
+            obs_all.n_reference[n_trial:], obs_expert.n_reference)
+
+        np.testing.assert_array_equal(
+            obs_all.n_selected[0:n_trial], obs_novice.n_selected)
+        np.testing.assert_array_equal(
+            obs_all.n_selected[n_trial:], obs_expert.n_selected)
+
+        np.testing.assert_array_equal(
+            obs_all.is_ranked[0:n_trial], obs_novice.is_ranked)
+        np.testing.assert_array_equal(
+            obs_all.is_ranked[n_trial:], obs_expert.is_ranked)
+
+        np.testing.assert_array_equal(
+            obs_all.group_id[0:n_trial], obs_novice.group_id)
+        np.testing.assert_array_equal(
+            obs_all.group_id[n_trial:], obs_expert.group_id)

@@ -18,6 +18,7 @@
 
 Todo:
     - test outcome_idx_list
+    - test resultant group_id of judged trials
 """
 
 import numpy as np

@@ -20,6 +20,9 @@ Classes:
     Agent: An object that can be initialized using a psychological
         embedding and used to simulate similarity judgments.
 
+Todo:
+    - is returned outcome_idx the best format?
+
 """
 import numpy as np
 from numpy.random import multinomial
@@ -34,7 +37,7 @@ class Agent(object):
     Attributes:
         embedding: A PsychologicalEmbedding object that supplies a
             similarity function and embedding points.
-        group_idx: An integer idicating which set of attention weights
+        group_id: An integer idicating which set of attention weights
             to use when simulating judgments.
     Methods:
         simulate: Stochastically simulate similarity judgments.
@@ -43,7 +46,7 @@ class Agent(object):
 
     """
 
-    def __init__(self, embedding, group_idx=0):
+    def __init__(self, embedding, group_id=0):
         """Initialize.
 
         Args:
@@ -54,7 +57,7 @@ class Agent(object):
                 indicate which set of attention weights should be used.
         """
         self.embedding = embedding
-        self.group_idx = group_idx
+        self.group_id = group_id
 
     def simulate(self, trials):
         """Stochastically simulate similarity judgments.
@@ -70,7 +73,8 @@ class Agent(object):
 
         """
         (outcome_idx_list, prob_all) = self.probability(trials)
-        judged_trials = self._select(trials, outcome_idx_list, prob_all)
+        (judged_trials, chosen_outcome_idx) = \
+            self._select(trials, outcome_idx_list, prob_all)
         return judged_trials
 
     def probability(self, trials):
@@ -131,7 +135,11 @@ class Agent(object):
                     ]
 
             # Precompute similarity between query and references.
-            s_qref = self.embedding.similarity(z_q, z_ref)
+            s_qref = self.embedding.similarity(
+                z_q, z_ref,
+                self.embedding.attention['value'][self.group_id, :]
+            )
+            # s_qref = self.embedding.similarity(z_q, z_ref)
 
             # Compute probability of each possible outcome.
             prob = np.ones((n_trial, n_outcome), dtype=np.float64)
@@ -166,8 +174,9 @@ class Agent(object):
             prob_all:
 
 
-        Returns
+        Returns:
             A JudgedTrials object.
+            The outcome index.
 
         """
         n_trial_all = trials.n_trial
@@ -176,6 +185,7 @@ class Agent(object):
         n_config = trials.config_list.shape[0]
 
         # Pre-allocate.
+        chosen_outcome_idx = np.empty((n_trial_all), dtype=np.int64)
         stimulus_set = -1 * np.ones(
             (n_trial_all, 1 + max_n_ref), dtype=np.int64
         )
@@ -184,6 +194,7 @@ class Agent(object):
             n_reference = trials.config_list.iloc[i_config]['n_reference']
             outcome_idx = outcome_idx_list[i_config]
             n_outcome = outcome_idx.shape[0]
+            dummy_idx = np.arange(0, n_outcome)
             trial_locs = trials.config_id == i_config
             n_trial = np.sum(trial_locs)
             trial_idx = trial_idx_all[trial_locs]
@@ -192,11 +203,14 @@ class Agent(object):
 
             for i_trial in range(n_trial):
                 outcome_loc = multinomial(1, prob[i_trial, :]).astype(bool)
+                chosen_outcome_idx[trial_idx[i_trial]] = dummy_idx[outcome_loc]
                 stimulus_set[trial_idx[i_trial], 1:n_reference+1] = \
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
-        return JudgedTrials(
-            stimulus_set,
-            n_selected=trials.n_selected,
-            is_ranked=trials.is_ranked
-        )
+        group_id = np.full((trials.n_trial), self.group_id, dtype=np.int64)
+        return (
+            JudgedTrials(
+                stimulus_set,
+                n_selected=trials.n_selected,
+                is_ranked=trials.is_ranked, group_id=group_id
+            ), chosen_outcome_idx)

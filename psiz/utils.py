@@ -22,23 +22,36 @@ from sklearn.metrics import r2_score
 from itertools import permutations
 
 
-def matrix_correlation(mat_A, mat_B):
+def matrix_correlation(mat_a, mat_b):
     """Return the R^2 score between two square matrices.
 
     Args:
-        mat_A: A square matrix.
-        mat_B: A square matrix the same size as mat_A
-        is_sym: Boolean indicating if the matrices are symmetric.
+        mat_a: A square matrix.
+        mat_b: A square matrix the same size as mat_a
 
     Returns:
         The R^2 score between the two matrices.
 
-    """
-    n_row = mat_A.shape[0]
-    iu1 = np.triu_indices(n_row, 1)
+    Notes:
+        When computing R^2 values of two similarity matrices, it is
+        assumed, by definition, that the corresponding diagonal
+        elements are the same between the two matrices being compared.
+        Therefore, the diagonal elements are not included in the R^2
+        computation to prevent inflating the R^2 value. On a similar
+        note, including both the upper and lower triangular portion
+        does not artificially inflate R^2 values for symmetric
+        matrices.
 
+    """
+    n_row = mat_a.shape[0]
+    idx_upper = np.triu_indices(n_row, 1)
+    idx_lower = np.triu_indices(n_row, 1)
+    idx = (
+        np.hstack((idx_upper[0], idx_lower[0])),
+        np.hstack((idx_upper[1], idx_lower[1])),
+    )
     # Explained variance score.
-    return r2_score(mat_A[iu1], mat_B[iu1])
+    return r2_score(mat_a[idx], mat_b[idx])
 
 
 def possible_outcomes(trial_configuration):

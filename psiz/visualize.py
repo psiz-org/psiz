@@ -26,11 +26,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=None, filename=None):
-    """
-    Generate a static scatter plot of the supplied embedding points.
 
-    Parameters:
+def visualize_embedding_static(
+        Z, class_vec=None, classes=None, special_locs=None, filename=None):
+    """Generate a static scatter plot of the supplied embedding points.
+
+    Args:
       Z: A real-valued two-dimensional array representing the embedding.
         shape = [n_stimuli, n_dim]
       class_vec: (optional) An integer array contianing class IDs that indicate
@@ -41,7 +42,6 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
         emphasize with a diamond. TODO
         shape = [n_stimuli, 1]
     """
-
     # Settings
     dot_size = 20
     cmap = matplotlib.cm.get_cmap('jet')
@@ -55,16 +55,16 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
         class_vec = np.ones((n_stimuli))
         unique_class_list = np.unique(class_vec)
         n_class = 1
-        color_array = cmap((0,1))
+        color_array = cmap((0, 1))
         color_array = color_array[np.newaxis, 0, :]
-        
+
         class_legend = ['all']
     else:
         use_legend = True
         unique_class_list = np.unique(class_vec)
         n_class = len(unique_class_list)
         norm = matplotlib.colors.Normalize(vmin=0., vmax=n_class)
-        color_array = cmap(norm(range(12)))
+        color_array = cmap(norm(range(12))) # TODO should 12 be n_class?
 
         if classes is not None:
             class_legend = infer_legend(unique_class_list, classes)
@@ -76,7 +76,9 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
         # Plot each class separately in order to use legend.
         for i_class in range(n_class):
             locs = class_vec == unique_class_list[i_class]
-            ax.scatter(Z[locs,0], Z[locs,1], c=color_array[np.newaxis, i_class, :], s=dot_size, label=class_legend[i_class], edgecolors='none')
+            ax.scatter(
+                Z[locs, 0], Z[locs, 1], c=color_array[np.newaxis, i_class, :],
+                s=dot_size, label=class_legend[i_class], edgecolors='none')
 
         if use_legend:
             ax.legend(bbox_to_anchor=(-.05, 1), loc=1, borderaxespad=0.)
@@ -88,13 +90,13 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
             top='off',
             labelbottom='off')
         plt.tick_params(
-            axis='y',          
+            axis='y',
             which='both',
             left='off',
             right='off',
             labelleft='off')
         ax.xaxis.get_offset_text().set_visible(False)
-    
+
     if n_dim >= 3:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -102,32 +104,37 @@ def visualize_embedding_static(Z, class_vec=None, classes=None, special_locs=Non
         # Plot each class separately in order to use legend.
         for i_class in range(n_class):
             locs = class_vec == unique_class_list[i_class]
-            ax.scatter(Z[locs,0], Z[locs,1], Z[locs,2], c=color_array[np.newaxis, i_class, :], s=dot_size, label=class_legend[i_class], edgecolors='none')
+            ax.scatter(
+                Z[locs, 0], Z[locs, 1], Z[locs, 2],
+                c=color_array[np.newaxis, i_class, :], s=dot_size,
+                label=class_legend[i_class], edgecolors='none')
 
         if use_legend:
             ax.legend(bbox_to_anchor=(-.05, 1), loc=1, borderaxespad=0.)
 
-        ax.set_xticks([],[])
-        ax.set_yticks([],[])
-        ax.set_zticks([],[])
+        ax.set_xticks([], [])
+        ax.set_yticks([], [])
+        ax.set_zticks([], [])
 
     if filename is None:
         plt.show()
     else:
-        # Note: The dpi must be supplied otherwise the aspect ratio will be 
+        # Note: The dpi must be supplied otherwise the aspect ratio will be
         # changed when savefig is called.
         plt.savefig(filename, format='pdf', bbox_inches="tight", dpi=100)
-    
 
-# def visualize_embedding_movie(Z3, class_vec=None, classes=None, filename=None):
+
+# def visualize_embedding_movie(
+#       Z3, class_vec=None, classes=None, filename=None):
 #     """
 #     """
 # TODO
 
 def infer_legend(unique_class_list, classes):
+    """Infer text for legend entries."""
     n_class = len(unique_class_list)
     legend_entries = []
     for i_class in range(n_class):
         class_label = classes[unique_class_list[i_class]]
-        legend_entries.append(class_label)    
+        legend_entries.append(class_label)
     return legend_entries

@@ -35,7 +35,12 @@ Todo:
       init_mode='warm')
     - documeent broadcasting in similarity function
     - dcoument verbosity levels
+        - modify verbosity so that some basic messages occur every time
     - document meaning of cold, warm, and exact
+    - custom exception
+        class MyException(Exception):
+            pass
+    - remove defualts for model initialization?
 """
 
 from abc import ABCMeta, abstractmethod
@@ -315,17 +320,23 @@ class PsychologicalEmbedding(object):
                 if param_name is 'z':
                     z = freeze_options['z'].astype(np.float32)
                     if z.shape[0] != self.n_stimuli:
-                        raise ValueError("Input 'z' does not have the appropriate shape.")
+                        raise ValueError(
+                            "Input 'z' does not have the appropriate shape.")
                     if z.shape[1] != self.dimensionality:
-                        raise ValueError("Input 'z' does not have the appropriate shape.")
+                        raise ValueError(
+                            "Input 'z' does not have the appropriate shape.")
                     self.z['value'] = z
                     self.z['trainable'] = False
                 elif param_name is 'attention':
                     attention = freeze_options['attention']
                     if attention.shape[0] != self.n_group:
-                        raise ValueError("Input 'attention' does not have the appropriate shape.")
+                        raise ValueError(
+                            "Input 'attention' does not have the \
+                            appropriate shape.")
                     if attention.shape[1] != self.dimensionality:
-                        raise ValueError("Input 'attention' does not have the appropriate shape.")
+                        raise ValueError(
+                            "Input 'attention' does not have the \
+                            appropriate shape.")
                     self.attention['value'] = attention
                     self.attention['trainable'] = False
                 else:
@@ -386,6 +397,9 @@ class PsychologicalEmbedding(object):
         if attention is None:
             attention = self.attention['value'][0, :]
             attention = np.expand_dims(attention, axis=0)
+        else:
+            if len(attention.shape) == 1:
+                attention = np.expand_dims(attention, axis=0)
 
         # Make sure z_q and attention have an appropriate singleton
         # third dimension if z_ref has an array rank of 3.
@@ -1238,23 +1252,29 @@ class PsychologicalEmbedding(object):
                 tf.where(tf.equal(tf_n_reference, tf.constant(2)))
             )
 
+            # Expand attention weights
+            tf_atten_expanded = tf.gather(tf_attention, tf_group_id)
+            weights_2c1 = tf.gather(tf_atten_expanded, idx_2c1)
+            weights_8c2 = tf.gather(tf_atten_expanded, idx_8c2)
+
             # Get appropriate observations.
             disp_8c2 = tf.gather(tf_stimulus_set, idx_8c2)
 
             disp_2c1 = tf.gather(tf_stimulus_set, idx_2c1)
             disp_2c1 = disp_2c1[:, 0:3]
 
-            # Expand attention weights
-            group_idx_2c1 = tf.gather(tf_group_id, idx_2c1)
-            group_idx_2c1 = tf.reshape(
-                group_idx_2c1, [tf.shape(group_idx_2c1)[0], 1]
-            )
-            weights_2c1 = tf.gather_nd(tf_attention, group_idx_2c1)
-            group_idx_8c2 = tf.gather(tf_group_id, idx_8c2)
-            group_idx_8c2 = tf.reshape(
-                group_idx_8c2, [tf.shape(group_idx_8c2)[0], 1]
-            )
-            weights_8c2 = tf.gather_nd(tf_attention, group_idx_8c2)
+            # Expand attention weights TODO
+            # group_id_2c1 = tf.gather(tf_group_id, idx_2c1)
+            # group_id_2c1 = tf.reshape(
+            #     group_id_2c1, [tf.shape(group_id_2c1)[0], 1]
+            # )
+            # weights_2c1 = tf.gather_nd(tf_attention, group_id_2c1)
+
+            # group_id_8c2 = tf.gather(tf_group_id, idx_8c2)
+            # group_id_8c2 = tf.reshape(
+            #     group_id_8c2, [tf.shape(group_id_8c2)[0], 1]
+            # )
+            # weights_8c2 = tf.gather_nd(tf_attention, group_id_8c2)
 
             # Cost function TODO generalize
             J = (

@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for generating similarity judgment trials.
+"""Module for generating unjudged similarity judgment trials.
 
 Classes:
     TrialGenerator: Base class for generating unjudged similarity
@@ -28,6 +28,7 @@ Classes:
 Todo:
     - implement ActiveGenerator
     - MAYBE document stimulus index formatting [0,N[
+    - MAYBE take a list of trial specifications
 
 """
 

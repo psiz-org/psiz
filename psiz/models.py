@@ -1257,24 +1257,11 @@ class PsychologicalEmbedding(object):
             weights_2c1 = tf.gather(tf_atten_expanded, idx_2c1)
             weights_8c2 = tf.gather(tf_atten_expanded, idx_8c2)
 
-            # Get appropriate observations.
+            # Get appropriate observations. TODO change to trial_NcM
             disp_8c2 = tf.gather(tf_stimulus_set, idx_8c2)
 
             disp_2c1 = tf.gather(tf_stimulus_set, idx_2c1)
             disp_2c1 = disp_2c1[:, 0:3]
-
-            # Expand attention weights TODO
-            # group_id_2c1 = tf.gather(tf_group_id, idx_2c1)
-            # group_id_2c1 = tf.reshape(
-            #     group_id_2c1, [tf.shape(group_id_2c1)[0], 1]
-            # )
-            # weights_2c1 = tf.gather_nd(tf_attention, group_id_2c1)
-
-            # group_id_8c2 = tf.gather(tf_group_id, idx_8c2)
-            # group_id_8c2 = tf.reshape(
-            #     group_id_8c2, [tf.shape(group_id_8c2)[0], 1]
-            # )
-            # weights_8c2 = tf.gather_nd(tf_attention, group_id_8c2)
 
             # Cost function TODO generalize
             J = (

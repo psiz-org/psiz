@@ -22,10 +22,12 @@ Classes:
 
 Todo:
     - is returned outcome_idx the best format?
+    - return only 1 variable for _select method
 
 """
 import numpy as np
 from numpy.random import multinomial
+import tensorflow as tf
 
 from psiz.trials import JudgedTrials
 from psiz.utils import possible_outcomes
@@ -73,8 +75,8 @@ class Agent(object):
 
         """
         (outcome_idx_list, prob_all) = self.probability(trials)
-        (judged_trials, chosen_outcome_idx) = \
-            self._select(trials, outcome_idx_list, prob_all)
+        # judged_trials = self._select(trials, outcome_idx_list, prob_all)
+        (judged_trials, _) = self._select(trials, outcome_idx_list, prob_all)
         return judged_trials
 
     def probability(self, trials):
@@ -90,7 +92,7 @@ class Agent(object):
             prob_all: The probabilities associated with the different
                 outcomes for each unjudged trial. In general, different
                 trial configurations will have a different number of
-                possible outcomes. Trials will a smaller number of
+                possible outcomes. Trials with a smaller number of
                 possible outcomes are element padded with zeros to
                 match the trial with the maximum number of possible
                 outcomes.
@@ -139,7 +141,6 @@ class Agent(object):
                 z_q, z_ref,
                 self.embedding.attention['value'][self.group_id, :]
             )
-            # s_qref = self.embedding.similarity(z_q, z_ref)
 
             # Compute probability of each possible outcome.
             prob = np.ones((n_trial, n_outcome), dtype=np.float64)
@@ -208,9 +209,118 @@ class Agent(object):
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
         group_id = np.full((trials.n_trial), self.group_id, dtype=np.int64)
-        return (
-            JudgedTrials(
+        return (JudgedTrials(
                 stimulus_set,
                 n_selected=trials.n_selected,
                 is_ranked=trials.is_ranked, group_id=group_id
             ), chosen_outcome_idx)
+
+    def probability_tf(self, trials, z_tf):
+        """Return probability of outcomes for each trial.
+
+        Args:
+            trials: A set of unjudged similarity trials.
+
+        Returns:
+            outcome_idx_list: A list with one entry for each display
+                configuration. Each entry contains a 2D array where
+                each row contains the indices describing one outcome.
+            prob_all: The probabilities associated with the different
+                outcomes for each unjudged trial. In general, different
+                trial configurations will have a different number of
+                possible outcomes. Trials with a smaller number of
+                possible outcomes are element padded with zeros to
+                match the trial with the maximum number of possible
+                outcomes.
+
+        """
+        n_trial_all = trials.n_trial
+        dmy_idx = np.arange(n_trial_all)
+        n_config = trials.config_list.shape[0]
+
+        # TODO can this be replaced with get exact?
+        tf_theta = {}
+        for param_name in self.embedding.theta:
+            tf_theta[param_name] = tf.constant(
+                self.embedding.theta[param_name]['value'], dtype=tf.float32)
+        attention = self.embedding.attention['value'][0, :]
+        attention = np.expand_dims(attention, axis=0)
+        attention = np.expand_dims(attention, axis=2)
+        tf_attention = tf.convert_to_tensor(
+            attention, dtype=tf.float32
+        )
+
+        outcome_idx_list = []
+        n_outcome_list = []
+        max_n_outcome = 0
+        for i_config in range(n_config):
+            outcome_idx_list.append(
+                possible_outcomes(
+                    trials.config_list.iloc[i_config]
+                )
+            )
+            n_outcome = outcome_idx_list[i_config].shape[0]
+            n_outcome_list.append(n_outcome)
+            if n_outcome > max_n_outcome:
+                max_n_outcome = n_outcome
+
+        # prob_all = tf.Variable(tf.zeros((n_trial_all, max_n_outcome)), name='prob_all')
+        prob_all = tf.zeros((0, max_n_outcome), dtype=tf.float32)
+        indices_all = tf.zeros((0), dtype=tf.int32)
+        for i_config in range(n_config):
+            config = trials.config_list.iloc[i_config]
+            outcome_idx = outcome_idx_list[i_config]
+            trial_locs = trials.config_id == i_config
+            n_trial = np.sum(trial_locs)
+            n_outcome = n_outcome_list[i_config]
+            n_reference = config['n_reference']
+            n_selected_idx = config['n_selected'] - 1
+            z_q = tf.gather(z_tf, trials.stimulus_set[trial_locs, 0])
+            z_q = tf.expand_dims(z_q, axis=2)
+            z_ref_list = []
+            for i_ref in range(n_reference):
+                z_ref_list.append(
+                    tf.gather(z_tf, trials.stimulus_set[trial_locs, 1+i_ref])
+                )
+            z_ref = tf.stack(z_ref_list, axis=2)
+            # Precompute similarity between query and references.
+            s_qref = self.embedding._similarity(
+                z_q, z_ref, tf_theta, tf_attention)
+
+            # Compute probability of each possible outcome.
+            # prob = tf.Variable(tf.ones((n_outcome, n_trial), dtype=np.float32), name='prob')
+            prob = tf.ones((n_outcome, n_trial), dtype=np.float32)
+            for i_outcome in range(n_outcome):
+                s_qref_perm = tf.gather(
+                    s_qref, outcome_idx[i_outcome, :], axis=1)
+                # Start with last choice
+                sub_sqref_perm = s_qref_perm[:, n_selected_idx:]
+                total = tf.reduce_sum(sub_sqref_perm, axis=1)
+                # Compute sampling without replacement probability in reverse
+                # order for numerical stabiltiy
+                for i_selected in range(n_selected_idx, -1, -1):
+                    # Grab similarity of selected reference and divide by total
+                    # similarity of all available references.
+                    updates = tf.divide(s_qref_perm[:, i_selected], total)
+                    split1, split2, split3 = tf.split(
+                        prob, [i_outcome, 1, n_outcome-i_outcome-1], 0)
+                    split2 = tf.multiply(split2, updates) # TODO maybe problem with update shape
+                    prob = tf.concat((split1, split2, split3), axis=0)
+                    # prob = tf.scatter_mul(prob, i_outcome, updates, name='update_prob')
+                    # Add similarity for "previous" selection
+                    if i_selected > 0:
+                        total = total + s_qref_perm[:, i_selected-1]
+            # Pad absent outcomes before putting in master prob_all.
+            prob_zero = tf.zeros((max_n_outcome - n_outcome, n_trial))
+            prob = tf.concat((prob, prob_zero), axis=0)
+            prob = tf.transpose(prob)
+            indices = dmy_idx[trial_locs]
+            indices_all = tf.concat((indices_all, indices), axis=0)
+            prob_all = tf.concat((prob_all, prob), axis=0)
+            # prob_all = tf.scatter_add(prob_all, indices, prob)
+        prob_all = tf.gather(prob_all, indices_all)
+
+        # Correct for numerical inaccuracy.
+        prob_all = tf.divide(
+            prob_all, tf.reduce_sum(prob_all, axis=1, keepdims=True))
+        return (outcome_idx_list, prob_all)

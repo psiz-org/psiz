@@ -22,6 +22,7 @@ Todo:
 """
 
 import numpy as np
+import tensorflow as tf
 import pytest
 
 from psiz.trials import UnjudgedTrials
@@ -85,3 +86,27 @@ def test_simulate(ground_truth, unjudged_trials):
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], unjudged_trials.stimulus_set[:, 0]
     )
+
+
+def test_probability_tf(ground_truth, unjudged_trials):
+    """Test probability_tf method."""
+    prob_desired = np.ones((unjudged_trials.n_trial))
+
+    agent = Agent(ground_truth)
+    (outcome_idx_list, prob_1) = agent.probability(unjudged_trials)
+    prob_actual_1 = np.sum(prob_1, axis=1)
+
+    z_tf = ground_truth.z['value']
+    z_tf = tf.convert_to_tensor(
+        z_tf, dtype=tf.float32
+    )
+    (outcome_idx_list, prob_2_tf) = agent.probability_tf(unjudged_trials, z_tf)
+
+    sess = tf.Session()
+    with sess.as_default():
+        sess.run(tf.global_variables_initializer())
+        prob_2 = prob_2_tf.eval()
+
+    # print(prob_2)
+    np.testing.assert_allclose(prob_actual_1, prob_desired)
+    np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)

@@ -22,7 +22,6 @@ Classes:
 
 Todo:
     - is returned outcome_idx the best format?
-    - return only 1 variable for _select method
 
 """
 import numpy as np
@@ -76,7 +75,7 @@ class Agent(object):
         """
         (outcome_idx_list, prob_all) = self.probability(trials)
         # judged_trials = self._select(trials, outcome_idx_list, prob_all)
-        (judged_trials, _) = self._select(trials, outcome_idx_list, prob_all)
+        judged_trials = self._select(trials, outcome_idx_list, prob_all)
         return judged_trials
 
     def probability(self, trials):
@@ -209,11 +208,11 @@ class Agent(object):
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
         group_id = np.full((trials.n_trial), self.group_id, dtype=np.int64)
-        return (JudgedTrials(
+        return JudgedTrials(
                 stimulus_set,
                 n_selected=trials.n_selected,
                 is_ranked=trials.is_ranked, group_id=group_id
-            ), chosen_outcome_idx)
+            )
 
     def probability_tf(self, trials, z_tf):
         """Return probability of outcomes for each trial.

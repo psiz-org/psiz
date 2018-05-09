@@ -9,10 +9,10 @@ representation for a set of stimuli using ordinal similarity relations.
 
 What's in a name?
 -----------------
-The name PsiZ (pronounced like the word *size*) is meant to serve as shorthard
+The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthard
 for the term *psychological embedding*. The greek letter Psi is often used to
 represent the field of psychology and the matrix variable **Z** is often used in
-computer vision to denote an embedding.
+computer vision to denote a latent feature space.
 
 Quick Start
 -----------

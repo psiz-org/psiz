@@ -44,12 +44,18 @@ Todo:
 """
 
 from abc import ABCMeta, abstractmethod
+import warnings
 
 import numpy as np
-import tensorflow as tf
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
-import warnings
+from sklearn import mixture
+import tensorflow as tf
+import edward as ed
+from edward.models import MultivariateNormalFullCovariance, Empirical
+from edward.models import Categorical
+
+from psiz.simulate import Agent
 
 
 class PsychologicalEmbedding(object):
@@ -1280,6 +1286,69 @@ class PsychologicalEmbedding(object):
             tf_theta_bounds, tf_stimulus_set, tf_n_reference, tf_n_selected,
             tf_is_ranked, tf_group_id
             )
+
+    def posterior_samples(self, obs, n_sample=1000, n_burn=1000, thin_step=3):
+        """Sample from the posterior of the embedding.
+
+        Samples are drawn from the posterior holding theta constant.
+
+        Args:
+            obs: A JudgedTrials object representing the observed data.
+            n_sample (optional): The number of samples desired after
+                removing the "burn in" samples and applying thinning.
+            n_burn (optional): The number of samples to remove from the
+                beginning of the sampling sequence.
+            thin_step (optional): The interval to use in order to thin
+                (i.e., de-correlate) the samples.
+
+        Returns:
+            A NumPy array containing the posterior samples. The array
+                has shape [n_sample, n_stimuli, dimensionality].
+
+        Notes:
+            The step_size of the Hamiltonian Monte Carlo procedure is
+                determined by the scale of the current embedding.
+
+        """
+        n_total_sample = n_burn + (n_sample * thin_step)
+
+        # Model
+        n_stimuli = self.n_stimuli
+        n_dim = self.dimensionality
+        cv_type = 'spherical'
+        gmm = mixture.GaussianMixture(n_components=1, covariance_type=cv_type)
+        gmm.fit(self.z['value'])
+        sigma = gmm.covariances_
+
+        loc = self.z['value']
+        cov = np.array((
+            (sigma, 0.0),
+            (0.0, sigma)
+            ), dtype=np.float32)
+        z = MultivariateNormalFullCovariance(
+            loc=loc, covariance_matrix=cov, sample_shape=[])
+
+        agent = Agent(self)
+        (_, probs) = agent.probability_tf(obs, z)
+        # The chosen outcome should always be the first one since the trials
+        # have been judged.
+        chosen_outcome_idx = np.zeros((obs.n_trial))
+
+        # Probability of outcomes
+        x = Categorical(logits=probs)
+        # INFERENCE
+        with tf.variable_scope('set' + str(0)):
+            q_z = Empirical(
+                params=tf.get_variable(
+                    "q_z/params", [n_total_sample, n_stimuli, n_dim],
+                    initializer=tf.constant_initializer(self.z['value'])
+                )
+            )
+        inference = ed.HMC({z: q_z}, data={x: chosen_outcome_idx})
+        inference.run(step_size=0.05 * sigma)
+        z_samp_all = q_z.params.eval().astype(np.float64)[n_burn::thin_step]
+
+        return z_samp_all
 
 
 class Exponential(PsychologicalEmbedding):

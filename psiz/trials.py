@@ -126,6 +126,12 @@ class SimilarityTrials(object):
         # Infer n_reference for each display.
         n_reference = self._infer_n_reference(stimulus_set)
 
+        # Pad stimulus_set
+        self.max_n_reference = 9
+        n_pad = self.max_n_reference - stimulus_set.shape[1]
+        pad_mat = np.zeros((n_trial, n_pad), dtype=np.int64)
+        stimulus_set = np.hstack((stimulus_set, pad_mat))
+
         self.stimulus_set = stimulus_set
         self.n_trial = n_trial
         self.n_reference = n_reference

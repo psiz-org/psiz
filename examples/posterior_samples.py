@@ -29,9 +29,11 @@ Notes:
 
 """
 
+import copy
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential, HeavyTailed, StudentsT
@@ -71,12 +73,43 @@ def main():
     # Infer an embedding model.
     model_inferred = Exponential(
         model_truth.n_stimuli, model_truth.dimensionality)
-    model_inferred.fit(obs, 10, verbose=1)
+    model_inferred.fit(obs, 10, verbose=1)  # TODO
+    # print('rho_0:', model_inferred.theta['rho']['value'])  # TODO
+    # print('tau_0:', model_inferred.theta['tau']['value'])  # TODO
+    # print('gamma_0:', model_inferred.theta['gamma']['value'])  # TODO
+    # print('beta_0:', model_inferred.theta['beta']['value'])  # TODO
+    # tf.reset_default_graph()
+    # print('rho_0:', model_inferred.theta['rho']['value'])  # TODO
+    # print('tau_0:', model_inferred.theta['tau']['value'])  # TODO
+    # print('gamma_0:', model_inferred.theta['gamma']['value'])  # TODO
+    # print('beta_0:', model_inferred.theta['beta']['value'])  # TODO
+    z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
     simmat_infer = model_inferred.similarity_matrix()
+    r_squared = matrix_correlation(simmat_infer, simmat_truth)
+    print('R^2 | {0: >6.2f}'.format(r_squared))
+    # ==== TODO
+    # model_inferred.z['value'] = 2 * model_inferred.z['value']
+    # simmat_infer = model_inferred.similarity_matrix()
     # r_squared = matrix_correlation(simmat_infer, simmat_truth)
+    # print('R^2 | {0: >6.2f}'.format(r_squared))
+    # ====
+    # Is it necessary to freeze the parameters?
+    # freeze_options = {
+    #     'rho': model_inferred.theta['rho']['value'],
+    #     'tau': model_inferred.theta['tau']['value'],
+    #     'beta': model_inferred.theta['beta']['value'],
+    #     'gamma': model_inferred.theta['gamma']['value'],
+    #     # 'z': model_inferred.z['value']
+    # }
+    # model_inferred.freeze(freeze_options)
 
     z_samp = model_inferred.posterior_samples(obs)
-    z_mean = np.mean(z_samp, axis=0)
+    z_central = np.median(z_samp, axis=0)
+
+    model_inferred.z['value'] = z_central
+    simmat_infer = model_inferred.similarity_matrix()
+    r_squared = matrix_correlation(simmat_infer, simmat_truth)
+    print('R^2 | {0: >6.2f}'.format(r_squared))
 
     cmap = matplotlib.cm.get_cmap('jet')
     norm = matplotlib.colors.Normalize(vmin=0., vmax=model_truth.n_stimuli)
@@ -92,6 +125,14 @@ def main():
     plt.axis('equal')
     plt.title('Ground Truth Locations')
 
+    plt.subplot(2, 2, 2)
+    for i_stimulus in range(model_truth.n_stimuli):
+        plt.scatter(
+            z_inferred[i_stimulus, 0], z_inferred[i_stimulus, 1],
+            c=color_array[i_stimulus, :])
+    plt.axis('equal')
+    plt.title('Inferred Locations')
+
     plt.subplot(2, 2, 3)
     for i_stimulus in range(model_truth.n_stimuli):
         plt.scatter(
@@ -103,7 +144,7 @@ def main():
     plt.subplot(2, 2, 4)
     for i_stimulus in range(model_truth.n_stimuli):
         plt.scatter(
-            z_mean[i_stimulus, 0], z_mean[i_stimulus, 1],
+            z_central[i_stimulus, 0], z_central[i_stimulus, 1],
             c=color_array[i_stimulus, :])
     plt.axis('equal')
     plt.title('Mean of the Posterior Samples')

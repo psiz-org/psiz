@@ -11,8 +11,8 @@ What's in a name?
 -----------------
 The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthard
 for the term *psychological embedding*. The greek letter Psi is often used to
-represent the field of psychology and the matrix variable **Z** is often used in
-computer vision to denote a latent feature space.
+represent the field of psychology and the matrix variable **Z** is often used
+in machine learning to denote a latent feature space.
 
 Quick Start
 -----------
@@ -22,8 +22,8 @@ There are three built-in embedding models to choose from:
    2. HeavyTailed
    3. StudentsT
 
-Once you have selected an embedding model, you must provide two pieces of information
-in order to infer an embedding.
+Once you have selected an embedding model, you must provide two pieces of
+information in order to infer an embedding.
 
    1. The similarity judgment observations.
    2. The number of unique stimuli.
@@ -89,10 +89,13 @@ Embedding Models
 
 Modules
 -------
-``models``
 ``dimensionality``
-``visualize``
+``generator``
+``models``
+``simulate``
+``trials``
 ``utils``
+``visualize``
 
 Guiding principles
 ------------------

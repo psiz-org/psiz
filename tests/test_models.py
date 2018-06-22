@@ -38,11 +38,11 @@ from psiz.models import Exponential, HeavyTailed, StudentsT
 def ground_truth():
     """Return a ground truth embedding."""
     n_stimuli = 10
-    dimensionality = 2
+    n_dim = 2
 
     model = Exponential(n_stimuli)
-    mean = np.ones((dimensionality))
-    cov = np.identity(dimensionality)
+    mean = np.ones((n_dim))
+    cov = np.identity(n_dim)
     Z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     freeze_options = {
         'rho': 2,
@@ -59,7 +59,7 @@ def test_private_exponential_similarity():
     """Test exponential similarity function."""
     n_stimuli = 10
     n_dim = 3
-    model = Exponential(n_stimuli, dimensionality=n_dim)
+    model = Exponential(n_stimuli, n_dim=n_dim)
 
     z_q_in = np.array((
         (.11, -.13, .28),
@@ -98,7 +98,7 @@ def test_private_exponential_similarity_broadcast():
     """Test exponential similarity function with multiple references."""
     n_stimuli = 10
     n_dim = 3
-    model = Exponential(n_stimuli, dimensionality=n_dim)
+    model = Exponential(n_stimuli, n_dim=n_dim)
 
     z_q_in = np.array((
         (.11, -.13, .28),
@@ -149,7 +149,7 @@ def test_public_exponential_similarity():
     # Create Exponential model.
     n_stimuli = 10
     n_dim = 3
-    model = Exponential(n_stimuli, dimensionality=n_dim)
+    model = Exponential(n_stimuli, n_dim=n_dim)
     freeze_options = {
         'rho': 1.9, 'tau': 2.1, 'beta': 1.11, 'gamma': .001
     }
@@ -176,7 +176,7 @@ def test_public_exponential_similarity_broadcast():
     # Create Exponential model.
     n_stimuli = 10
     n_dim = 3
-    model = Exponential(n_stimuli, dimensionality=n_dim)
+    model = Exponential(n_stimuli, n_dim=n_dim)
     freeze_options = {
         'rho': 1.9, 'tau': 2.1, 'beta': 1.11, 'gamma': .001
     }
@@ -214,7 +214,7 @@ def test_weight_projections():
     # Create Exponential model.
     n_stimuli = 10
     n_dim = 3
-    model = Exponential(n_stimuli, dimensionality=n_dim)
+    model = Exponential(n_stimuli, n_dim=n_dim)
     attention = np.array(
         (
             (1., 1., 1.),

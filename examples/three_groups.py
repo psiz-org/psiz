@@ -37,9 +37,9 @@ from psiz.utils import matrix_correlation
 def main():
     """Run the simulation that infers an embedding for three groups."""
     n_stimuli = 10
-    dimensionality = 3
+    n_dim = 3
     n_group = 3
-    model_truth = ground_truth(n_stimuli, dimensionality, n_group)
+    model_truth = ground_truth(n_stimuli, n_dim, n_group)
 
     # Create a random set of trials to show to every group.
     n_trial = 1000
@@ -58,7 +58,7 @@ def main():
     obs_all = JudgedTrials.stack((obs_novice, obs_interm, obs_expert))
 
     model_inferred = Exponential(
-        model_truth.n_stimuli, dimensionality, n_group)
+        model_truth.n_stimuli, n_dim, n_group)
     model_inferred.fit(obs_all, 20, verbose=1)
 
     # Compare the inferred model with ground truth by comparing the
@@ -97,12 +97,12 @@ def main():
     print('\n')
 
 
-def ground_truth(n_stimuli, dimensionality, n_group):
+def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     model = Exponential(
-        n_stimuli, dimensionality=dimensionality, n_group=n_group)
-    mean = np.ones((dimensionality))
-    cov = np.identity(dimensionality)
+        n_stimuli, n_dim=n_dim, n_group=n_group)
+    mean = np.ones((n_dim))
+    cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     attention = np.array((
         (1.9, 1., .1),

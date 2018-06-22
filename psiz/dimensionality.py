@@ -82,7 +82,7 @@ def suggest_dimensionality(
     for i_dimension in dim_list:
         # Instantiate embedding
         embedding = embedding_constructor(
-            n_stimuli, dimensionality=i_dimension, n_group=n_group)
+            n_stimuli, n_dim=i_dimension, n_group=n_group)
         if verbose > 1:
             print('  Dimensionality: ', i_dimension)
         J_train = np.empty((n_fold))

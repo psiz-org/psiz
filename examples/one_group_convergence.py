@@ -36,9 +36,9 @@ from psiz.utils import matrix_correlation
 def main():
     """Run the simulation that infers an embedding for two groups."""
     n_stimuli = 10
-    dimensionality = 3
+    n_dim = 3
     n_group = 1
-    model_truth = ground_truth(n_stimuli, dimensionality, n_group)
+    model_truth = ground_truth(n_stimuli, n_dim, n_group)
     simmat_truth = model_truth.similarity_matrix()
 
     # Create a random set of trials.
@@ -57,7 +57,7 @@ def main():
     n_obs = np.floor(np.linspace(20, n_trial, n_step)).astype(np.int64)
     r_squared = np.empty((n_step))
     for i_step in range(n_step):
-        model_inferred = Exponential(n_stimuli, dimensionality, n_group)
+        model_inferred = Exponential(n_stimuli, n_dim, n_group)
         include_idx = np.arange(0, n_obs[i_step])
         model_inferred.fit(obs.subset(include_idx), 10, verbose=1)
         # Compare the inferred model with ground truth by comparing the
@@ -73,12 +73,12 @@ def main():
     plt.show()
 
 
-def ground_truth(n_stimuli, dimensionality, n_group):
+def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     model = Exponential(
-        n_stimuli, dimensionality=dimensionality, n_group=n_group)
-    mean = np.ones((dimensionality))
-    cov = np.identity(dimensionality)
+        n_stimuli, n_dim=n_dim, n_group=n_group)
+    mean = np.ones((n_dim))
+    cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     freeze_options = {
         'rho': 2,

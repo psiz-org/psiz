@@ -72,7 +72,7 @@ def main():
 
     # Infer an embedding model.
     model_inferred = Exponential(
-        model_truth.n_stimuli, model_truth.dimensionality)
+        model_truth.n_stimuli, model_truth.n_dim)
     model_inferred.fit(obs, 10, verbose=1)  # TODO
     # print('rho_0:', model_inferred.theta['rho']['value'])  # TODO
     # print('tau_0:', model_inferred.theta['tau']['value'])  # TODO
@@ -167,7 +167,7 @@ def ground_truth():
     z = z + z_noise
     # Create embedding model.
     n_group = 1
-    model = Exponential(n_stimuli, dimensionality=n_dim, n_group=n_group)
+    model = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
     freeze_options = {
         'rho': 2,
         'tau': 1,

@@ -34,11 +34,11 @@ from psiz.simulate import Agent
 def ground_truth():
     """Return a ground truth embedding."""
     n_stimuli = 10
-    dimensionality = 2
+    n_dim = 2
 
     model = Exponential(n_stimuli)
-    mean = np.ones((dimensionality))
-    cov = np.identity(dimensionality)
+    mean = np.ones((n_dim))
+    cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     freeze_options = {
         'rho': 2,

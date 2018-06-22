@@ -170,12 +170,12 @@ def setup_obs_1():
 # @pytest.fixture(scope="module")
 def ground_truth(n_stimuli):
     """Return a ground truth model."""
-    dimensionality = 3
+    n_dim = 3
     n_group = 2
 
-    model = Exponential(n_stimuli, dimensionality, n_group)
-    mean = np.ones((dimensionality))
-    cov = np.identity(dimensionality)
+    model = Exponential(n_stimuli, n_dim, n_group)
+    mean = np.ones((n_dim))
+    cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     attention = np.array((
         (1.9, 1., .1),

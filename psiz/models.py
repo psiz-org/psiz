@@ -117,14 +117,14 @@ class PsychologicalEmbedding(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
         Args:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            dimensionality (optional): An integer indicating the
-                dimensionalty of the embedding.
+            n_dim (optional): An integer indicating the dimensionalty
+                of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
@@ -134,20 +134,20 @@ class PsychologicalEmbedding(object):
         self.n_group = n_group
 
         # Check arguments are valid.
-        if (dimensionality < 1):
+        if (n_dim < 1):
             warnings.warn("The provided dimensionality must be an integer \
                 greater than 0. Assuming user requested 2 dimensions.")
-            dimensionality = 2
+            n_dim = 2
         if (n_group < 1):
             warnings.warn("The provided n_group must be an integer greater \
                 than 0. Assuming user requested 1 group.")
             n_group = 1
 
         # Initialize dimension dependent attributes.
-        self.dimensionality = dimensionality
+        self.n_dim = n_dim
         # Initialize random embedding points using multivariate Gaussian.
-        mean = np.ones((dimensionality))
-        cov = np.identity(dimensionality)
+        mean = np.ones((n_dim))
+        cov = np.identity(n_dim)
         self.z = {}
         self.z['value'] = np.random.multivariate_normal(
             mean, cov, (self.n_stimuli)
@@ -157,7 +157,7 @@ class PsychologicalEmbedding(object):
         # Initialize attentional weights using uniform distribution.
         self.attention = {}
         self.attention['value'] = np.ones(
-            (self.n_group, dimensionality), dtype=np.float32)
+            (self.n_group, n_dim), dtype=np.float32)
         # TODO check to make sure 2 dimensional even when only one group
         if n_group is 1:
             self.attention['trainable'] = False
@@ -331,7 +331,7 @@ class PsychologicalEmbedding(object):
                     if z.shape[0] != self.n_stimuli:
                         raise ValueError(
                             "Input 'z' does not have the appropriate shape.")
-                    if z.shape[1] != self.dimensionality:
+                    if z.shape[1] != self.n_dim:
                         raise ValueError(
                             "Input 'z' does not have the appropriate shape.")
                     self.z['value'] = z
@@ -342,7 +342,7 @@ class PsychologicalEmbedding(object):
                         raise ValueError(
                             "Input 'attention' does not have the \
                             appropriate shape.")
-                    if attention.shape[1] != self.dimensionality:
+                    if attention.shape[1] != self.n_dim:
                         raise ValueError(
                             "Input 'attention' does not have the \
                             appropriate shape.")
@@ -389,14 +389,14 @@ class PsychologicalEmbedding(object):
 
         Args:
             z_q: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             z_ref: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             attention (optional): The weights allocated to each
                 dimension in a weighted minkowski metric. The weights
                 should be positive and sum to the dimensionality of the
                 weight vector, although this is not enforced.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
@@ -443,14 +443,14 @@ class PsychologicalEmbedding(object):
 
         Args:
             z_q: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             z_ref: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension in a
                 weighted minkowski metric.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
         Returns:
             The corresponding similarity between rows of embedding
                 points.
@@ -487,30 +487,30 @@ class PsychologicalEmbedding(object):
         if self.attention['trainable']:
             if init_mode is 'exact':
                 tf_attention = tf.get_variable(
-                    "attention", [self.n_group, self.dimensionality],
+                    "attention", [self.n_group, self.n_dim],
                     initializer=tf.constant_initializer(
                         self.attention['value']
                     )
                 )
             elif init_mode is 'warm':
                 tf_attention = tf.get_variable(
-                    "attention", [self.n_group, self.dimensionality],
+                    "attention", [self.n_group, self.n_dim],
                     initializer=tf.constant_initializer(
                         self.attention['value']
                     )
                 )
             else:
-                alpha = 1. * np.ones((self.dimensionality))
+                alpha = 1. * np.ones((self.n_dim))
                 new_attention = (
-                    np.random.dirichlet(alpha) * self.dimensionality
+                    np.random.dirichlet(alpha) * self.n_dim
                 )
                 tf_attention = tf.get_variable(
-                    "attention", [self.n_group, self.dimensionality],
+                    "attention", [self.n_group, self.n_dim],
                     initializer=tf.constant_initializer(new_attention)
                 )
         else:
             tf_attention = tf.get_variable(
-                "attention", [self.n_group, self.dimensionality],
+                "attention", [self.n_group, self.n_dim],
                 initializer=tf.constant_initializer(self.attention['value']),
                 trainable=False
             )
@@ -535,25 +535,25 @@ class PsychologicalEmbedding(object):
         if self.z['trainable']:
             if init_mode is 'exact':
                 tf_z = tf.get_variable(
-                    "z", [self.n_stimuli, self.dimensionality],
+                    "z", [self.n_stimuli, self.n_dim],
                     initializer=tf.constant_initializer(self.z['value'])
                 )
             elif init_mode is 'warm':
                 tf_z = tf.get_variable(
-                    "z", [self.n_stimuli, self.dimensionality],
+                    "z", [self.n_stimuli, self.n_dim],
                     initializer=tf.constant_initializer(self.z['value'])
                 )
             else:
                 tf_z = tf.get_variable(
-                    "z", [self.n_stimuli, self.dimensionality],
+                    "z", [self.n_stimuli, self.n_dim],
                     initializer=tf.random_normal_initializer(
-                        tf.zeros([self.dimensionality]),
-                        tf.ones([self.dimensionality]) * tf_scale_value
+                        tf.zeros([self.n_dim]),
+                        tf.ones([self.n_dim]) * tf_scale_value
                     )
                 )
         else:
             tf_z = tf.get_variable(
-                "z", [self.n_stimuli, self.dimensionality],
+                "z", [self.n_stimuli, self.n_dim],
                 initializer=tf.constant_initializer(self.z['value']),
                 trainable=False
             )
@@ -599,7 +599,7 @@ class PsychologicalEmbedding(object):
                 negative loglikelihood.
 
         """
-        dimensionality = self.dimensionality
+        n_dim = self.n_dim
 
         #  Infer embedding.
         if (verbose > 0):
@@ -607,7 +607,7 @@ class PsychologicalEmbedding(object):
             print('    Settings:')
             print('    n_observations: ', obs.n_trial)
             print('    n_group: ', len(np.unique(obs.group_id)))
-            print('    dimensionality: ', dimensionality)
+            print('    n_dim: ', n_dim)
             print('    n_restart: ', n_restart)
 
         # Partition data into train and validation set for early stopping of
@@ -1306,7 +1306,7 @@ class PsychologicalEmbedding(object):
 
         Returns:
             A NumPy array containing the posterior samples. The array
-                has shape [n_sample, n_stimuli, dimensionality].
+                has shape [n_sample, n_stimuli, n_dim].
 
         Notes:
             The step_size of the Hamiltonian Monte Carlo procedure is
@@ -1317,7 +1317,7 @@ class PsychologicalEmbedding(object):
 
         # Model
         n_stimuli = self.n_stimuli
-        n_dim = self.dimensionality
+        n_dim = self.n_dim
         cv_type = 'spherical'
         gmm = mixture.GaussianMixture(n_components=1, covariance_type=cv_type)
         gmm.fit(self.z['value'])
@@ -1392,21 +1392,21 @@ class Exponential(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
         Args:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            dimensionality (optional): An integer indicating the
-                dimensionalty of the embedding.
+            n_dim (optional): An integer indicating the dimensionalty
+                of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
                 each group.
         """
         PsychologicalEmbedding.__init__(
-            self, n_stimuli, dimensionality, n_group
+            self, n_stimuli, n_dim, n_group
             )
 
         # Default parameter settings.
@@ -1495,14 +1495,14 @@ class Exponential(PsychologicalEmbedding):
 
         Args:
             z_q: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             z_ref: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
@@ -1536,21 +1536,21 @@ class HeavyTailed(PsychologicalEmbedding):
     heavy-tailed family is a generalization of the Student-t family.
     """
 
-    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
         Args:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            dimensionality (optional): An integer indicating the
-                dimensionalty of the embedding.
+            n_dim (optional): An integer indicating the dimensionalty
+                of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
                 each group.
         """
         PsychologicalEmbedding.__init__(
-            self, n_stimuli, dimensionality, n_group)
+            self, n_stimuli, n_dim, n_group)
 
         # Default parameter settings.
         self.theta = dict(
@@ -1646,14 +1646,14 @@ class HeavyTailed(PsychologicalEmbedding):
 
         Args:
             z_q: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             z_ref: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
@@ -1685,11 +1685,10 @@ class StudentsT(PsychologicalEmbedding):
     where x and y are n-dimensional vectors. The similarity kernel has
     three free parameters: rho, tau, and alpha. The original Student-t
     kernel proposed by van der Maaten [1] uses the parameter settings
-    rho=2, tau=2, and alpha=dimensionality-1. By default, this
-    embedding algorithm will only infer the embedding and not the
-    free parameters associated with the similarity kernel. This
-    behavior can bechanged by setting the inference flags (e.g.,
-    infer_alpha = True).
+    rho=2, tau=2, and alpha=n_dim-1. By default, this embedding
+    algorithm will only infer the embedding and not the free parameters
+    associated with the similarity kernel. This behavior can be changed
+    by setting the inference flags (e.g.,infer_alpha = True).
 
     References:
     [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
@@ -1699,28 +1698,28 @@ class StudentsT(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, dimensionality=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
         Args:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            dimensionality (optional): An integer indicating the
-                dimensionalty of the embedding.
+            n_dim (optional): An integer indicating the dimensionalty
+                of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
                 each group.
         """
         PsychologicalEmbedding.__init__(
-            self, n_stimuli, dimensionality, n_group)
+            self, n_stimuli, n_dim, n_group)
 
         # Default parameter settings.
         self.theta = dict(
             rho=dict(value=2., trainable=False, bounds=[1., None]),
             tau=dict(value=2., trainable=False, bounds=[1., None]),
             alpha=dict(
-                value=(dimensionality - 1.),
+                value=(n_dim - 1.),
                 trainable=False,
                 bounds=[0.000001, None]
             ),
@@ -1756,8 +1755,8 @@ class StudentsT(PsychologicalEmbedding):
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
         if self.theta['alpha']['trainable']:
-            min_alpha = np.max((1, self.dimensionality - 5.))
-            max_alpha = self.dimensionality + 5.
+            min_alpha = np.max((1, self.n_dim - 5.))
+            max_alpha = self.n_dim + 5.
             tf_theta['alpha'] = tf.get_variable(
                 "alpha", [1],
                 initializer=tf.random_uniform_initializer(
@@ -1806,14 +1805,14 @@ class StudentsT(PsychologicalEmbedding):
 
         Args:
             z_q: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             z_ref: A set of embedding points.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, dimensionality)
+                shape = (n_sample, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding

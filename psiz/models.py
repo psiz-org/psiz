@@ -25,6 +25,9 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
+    - the method posterior_samples is brittle, would ideally use NUTS
+        version of Hamiltonian Monte Carlo to adaptively determine step
+        size. Will change once available in Edward.
     - use n_dim instead of dimensionality
     - implement general cost function that includes all scenarios
     - implement posterior samples
@@ -52,7 +55,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
 import edward as ed
-from edward.models import MultivariateNormalFullCovariance, Empirical
+from edward.models import MultivariateNormalFullCovariance, Empirical, Uniform
 from edward.models import Categorical
 
 from psiz.simulate import Agent
@@ -1321,15 +1324,23 @@ class PsychologicalEmbedding(object):
         sigma = gmm.covariances_
 
         loc = self.z['value']
+        # Is sigma too narrow? try multiply by a factor .01, 1, 10?
+        # TODO generalize for arbitrary number of dimensions 
         cov = np.array((
-            (sigma, 0.0),
-            (0.0, sigma)
+            (1 * sigma, 0.0),
+            (0.0, 1 * sigma)
             ), dtype=np.float32)
         z = MultivariateNormalFullCovariance(
             loc=loc, covariance_matrix=cov, sample_shape=[])
 
         agent = Agent(self)
-        (_, probs) = agent.probability_tf(obs, z)
+        # TODO
+        tf_theta = {}
+        for param_name in self.theta:
+            tf_theta[param_name] = tf.constant(
+                self.theta[param_name]['value'], dtype=tf.float32)
+
+        (_, probs) = agent.probability_tf(obs, z, tf_theta)
         # The chosen outcome should always be the first one since the trials
         # have been judged.
         chosen_outcome_idx = np.zeros((obs.n_trial))
@@ -1345,9 +1356,10 @@ class PsychologicalEmbedding(object):
                 )
             )
         inference = ed.HMC({z: q_z}, data={x: chosen_outcome_idx})
-        inference.run(step_size=0.05 * sigma)
+        # inference = ed.HMC({z: q_z, tf_theta['beta']: q_beta}, data={x: chosen_outcome_idx})
+        # inference.run(step_size=0.2 * sigma)
+        inference.run(step_size=0.6 * sigma)
         z_samp_all = q_z.params.eval().astype(np.float64)[n_burn::thin_step]
-
         return z_samp_all
 
 

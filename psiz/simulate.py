@@ -214,11 +214,14 @@ class Agent(object):
                 is_ranked=trials.is_ranked, group_id=group_id
             )
 
-    def probability_tf(self, trials, z_tf):
+    def probability_tf(self, trials, z_tf, tf_theta):
         """Return probability of outcomes for each trial.
 
         Args:
             trials: A set of unjudged similarity trials.
+            z_tf: TensorFlow tensor representing embedding points.
+            tf_theta: Dictionary of Tensorflow tensors representing
+                free parameters of similarity kernel.
 
         Returns:
             outcome_idx_list: A list with one entry for each display
@@ -237,12 +240,13 @@ class Agent(object):
         dmy_idx = np.arange(n_trial_all)
         n_config = trials.config_list.shape[0]
 
-        # TODO can this be replaced with get exact?
-        tf_theta = {}
-        for param_name in self.embedding.theta:
-            tf_theta[param_name] = tf.constant(
-                self.embedding.theta[param_name]['value'], dtype=tf.float32)
-        attention = self.embedding.attention['value'][0, :]
+        # tf_theta argument
+        # # TODO can this be replaced with get exact?
+        # tf_theta = {}
+        # for param_name in self.embedding.theta:
+        #     tf_theta[param_name] = tf.constant(
+        #         self.embedding.theta[param_name]['value'], dtype=tf.float32)
+        attention = self.embedding.attention['value'][0, :]  # TODO
         attention = np.expand_dims(attention, axis=0)
         attention = np.expand_dims(attention, axis=2)
         tf_attention = tf.convert_to_tensor(

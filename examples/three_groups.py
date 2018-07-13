@@ -18,7 +18,7 @@
 
 Fake data is generated from a ground truth model for three different
 groups. In this example, these groups represent groups of agents with
-varying level of skill: novices, intermediates, and experts. Each group
+varying levels of skill: novices, intermediates, and experts. Each group
 has a different set of attention weights. An embedding model is
 inferred from the simulated data and compared to the ground truth
 model.

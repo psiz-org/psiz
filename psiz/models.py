@@ -28,7 +28,6 @@ Todo:
     - the method posterior_samples is brittle, would ideally use NUTS
         version of Hamiltonian Monte Carlo to adaptively determine step
         size. Will change once available in Edward.
-    - use n_dim instead of dimensionality
     - implement general cost function that includes all scenarios
     - implement posterior samples
     - parallelization during fitting (MAYBE)
@@ -196,7 +195,7 @@ class PsychologicalEmbedding(object):
             self.theta[param_name]['value'] = params[param_name]
 
     def _get_similarity_parameters(self, init_mode):
-        """Return a dictionary and TensorFlow operation.
+        """Return a dictionary of TensorFlow variables.
 
         This method encapsulates the creation of algorithm-specific
         free parameters governing the similarity kernel.
@@ -1325,7 +1324,7 @@ class PsychologicalEmbedding(object):
 
         loc = self.z['value']
         # Is sigma too narrow? try multiply by a factor .01, 1, 10?
-        # TODO generalize for arbitrary number of dimensions 
+        # TODO generalize for arbitrary number of dimensions
         cov = np.array((
             (1 * sigma, 0.0),
             (0.0, 1 * sigma)
@@ -1334,7 +1333,7 @@ class PsychologicalEmbedding(object):
             loc=loc, covariance_matrix=cov, sample_shape=[])
 
         agent = Agent(self)
-        # TODO
+        # TODO clean this up
         tf_theta = {}
         for param_name in self.theta:
             tf_theta[param_name] = tf.constant(

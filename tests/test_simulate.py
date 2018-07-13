@@ -100,13 +100,18 @@ def test_probability_tf(ground_truth, unjudged_trials):
     z_tf = tf.convert_to_tensor(
         z_tf, dtype=tf.float32
     )
-    (outcome_idx_list, prob_2_tf) = agent.probability_tf(unjudged_trials, z_tf)
+    # TODO clean this up
+    tf_theta = {}
+    for param_name in ground_truth.theta:
+        tf_theta[param_name] = tf.constant(
+            ground_truth.theta[param_name]['value'], dtype=tf.float32)
+    (outcome_idx_list, prob_2_tf) = agent.probability_tf(
+        unjudged_trials, z_tf, tf_theta)
 
     sess = tf.Session()
     with sess.as_default():
         sess.run(tf.global_variables_initializer())
         prob_2 = prob_2_tf.eval()
 
-    # print(prob_2)
     np.testing.assert_allclose(prob_actual_1, prob_desired)
     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)

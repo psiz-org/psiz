@@ -24,7 +24,7 @@ example, using the ground truth allows us to see how well the algorithm
 works in the best case scenario.
 
 Notes:
-    - Handling invarianc to affine transformations (translation, scale,
+    - Handling invariance to affine transformations (translation, scale,
       and rotation).
 
 """
@@ -49,6 +49,9 @@ def main():
     model_truth = ground_truth()
     z_true = model_truth.z['value'].astype(np.float64)
     simmat_truth = model_truth.similarity_matrix()
+    sim_values = simmat_truth.flatten()
+    # n, bins, patches = plt.hist(sim_values, 10, density=True, facecolor='g', alpha=0.75)
+    # plt.show()
 
     # Create some random trials.
     generator = RandomGenerator(model_truth.n_stimuli)
@@ -58,13 +61,13 @@ def main():
     trials = generator.generate(n_trial, n_reference, n_selected)
 
     # Remove data for stimulus 8
-    # locs = np.equal(trials.stimulus_set, 8)
-    # locs = np.sum(locs, axis=1)
-    # n_loc = np.sum(locs)
-    # locs[0:int(np.floor(n_trial/20))] = False
-    # print('dropped: {0}'.format(np.sum(locs) / n_loc))
-    # locs = np.logical_not(locs)
-    # trials = trials.subset(locs)
+    locs = np.equal(trials.stimulus_set, 8)
+    locs = np.sum(locs, axis=1)
+    n_loc = np.sum(locs)
+    locs[0:int(np.floor(n_trial/2))] = False
+    print('dropped: {0}'.format(np.sum(locs) / n_loc))
+    locs = np.logical_not(locs)
+    trials = trials.subset(locs)
 
     # Simulate similarity judgements using ground truth model.
     agent = Agent(model_truth)
@@ -73,6 +76,7 @@ def main():
     # Infer an embedding model.
     model_inferred = Exponential(
         model_truth.n_stimuli, model_truth.n_dim)
+    model_inferred.freeze({'beta': 10, 'rho': 2, 'tau': 1})
     model_inferred.fit(obs, 10, verbose=1)  # TODO
     # print('rho_0:', model_inferred.theta['rho']['value'])  # TODO
     # print('tau_0:', model_inferred.theta['tau']['value'])  # TODO
@@ -103,10 +107,21 @@ def main():
     # }
     # model_inferred.freeze(freeze_options)
 
+    print('rho_0:', model_inferred.theta['rho']['value'])  # TODO
+    print('tau_0:', model_inferred.theta['tau']['value'])  # TODO
+    print('gamma_0:', model_inferred.theta['gamma']['value'])  # TODO
+    print('beta_0:', model_inferred.theta['beta']['value'])  # TODO
+    print(z_inferred)
+
     z_samp = model_inferred.posterior_samples(obs)
     z_central = np.median(z_samp, axis=0)
-
     model_inferred.z['value'] = z_central
+
+    print('rho_1:', model_inferred.theta['rho']['value'])  # TODO
+    print('tau_1:', model_inferred.theta['tau']['value'])  # TODO
+    print('gamma_1:', model_inferred.theta['gamma']['value'])  # TODO
+    print('beta_1:', model_inferred.theta['beta']['value'])  # TODO
+
     simmat_infer = model_inferred.similarity_matrix()
     r_squared = matrix_correlation(simmat_infer, simmat_truth)
     print('R^2 | {0: >6.2f}'.format(r_squared))
@@ -156,7 +171,7 @@ def ground_truth():
     n_stimuli = 16
     n_dim = 2
     # Create embeddingp points arranged on a grid.
-    x, y = np.meshgrid([1, 2, 3, 4], [-2, -1, 0, 1])
+    x, y = np.meshgrid([.1, .2, .3, .4], [-.2, -.1, 0., .1])
     x = np.expand_dims(x.flatten(), axis=1)
     y = np.expand_dims(y.flatten(), axis=1)
     z = np.hstack((x, y))
@@ -171,7 +186,7 @@ def ground_truth():
     freeze_options = {
         'rho': 2,
         'tau': 1,
-        'beta': 1,
+        'beta': 10,
         'gamma': 0,
         'z': z
     }

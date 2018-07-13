@@ -26,7 +26,7 @@ Once you have selected an embedding model, you must provide two pieces of
 information in order to infer an embedding.
 
    1. The similarity judgment observations.
-   2. The number of unique stimuli.
+   2. The number of unique stimuli that will be in your embedding.
 
 .. code-block:: python
 
@@ -34,7 +34,7 @@ information in order to infer an embedding.
   (obs, n_stimuli) = datasets.load_obs('birds-16') TODO
   # Initialize an embedding model.
   embedding = psiz.models.Exponential(n_stimuli)
-  # Fit the embedding model using observations.
+  # Fit the embedding model using similarity judgment observations.
   embedding.fit(obs)
 
 Similarity Judgment Trial TODO

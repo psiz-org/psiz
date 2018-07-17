@@ -804,17 +804,19 @@ class PsychologicalEmbedding(object):
 
         return tf_attention_proj
 
-    def _cost_2c1(self, tf_z, triplets, tf_theta, tf_attention):
+    def _cost_2c1(self, tf_z, tf_stimulus_set, tf_theta, tf_attention):
         """Return cost for ordered 2 chooose 1 observations."""
-        n_trial = tf.shape(triplets)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._tf_similarity(
-            tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 1]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
         Sqb = self._tf_similarity(
-            tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 2]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         # Probility of behavior
         P = Sqa / (Sqa + Sqb)
@@ -828,20 +830,23 @@ class PsychologicalEmbedding(object):
             )
         return J
 
-    def _cost_3cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_3cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
         Sqb = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         Sqc = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -869,23 +874,27 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_4cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_4cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
         Sqb = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         Sqc = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
         Sqd = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -920,26 +929,31 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_5cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_5cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
         Sqb = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         Sqc = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
         Sqd = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
         Sqe = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -982,29 +996,35 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_6cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_6cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
         Sqb = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         Sqc = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
         Sqd = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
         Sqe = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
         Sqf = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 6]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -1056,32 +1076,39 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_7cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_7cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 7 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
         Sqb = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         Sqc = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
         Sqd = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
         Sqe = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
         Sqf = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 6]),
             tf_theta, tf_attention)
         Sqg = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 7]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -1143,35 +1170,43 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_8cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_8cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 8 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
         Sqa = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
         Sqb = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         Sqc = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
         Sqd = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
         Sqe = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
         Sqf = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 6]),
             tf_theta, tf_attention)
         Sqg = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 7]),
             tf_theta, tf_attention)
         Sqh = self._tf_similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 8]),
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 8]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -1319,25 +1354,20 @@ class PsychologicalEmbedding(object):
         Returns:
             The total log-likelihood of the observations.
 
-        Notes:
-            It is assumed that the first probability corresponds to the
-                observed outcome. TODO remove this note if
-                appropriately documented with test case. Documentation
-                should make clear that downstream applications depend
-                on order.
-
         """
         if z is None:
             z = self.z['value']
         # TODO else check z size
 
-        (_, prob_all) = self.outcome_probability(obs, z, group_id=0, first_only=True)
+        (_, prob_all) = self.outcome_probability(
+            obs, z, group_id=0, unaltered_only=True)
         prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
         ll = np.sum(np.log(prob))
         return ll
 
     def outcome_probability(
-            self, trials, z=None, theta=None, group_id=0, first_only=False):
+            self, trials, z=None, theta=None, group_id=0,
+            unaltered_only=False):
         """Return probability of each outcome for each trial.
 
         Args:
@@ -1351,8 +1381,8 @@ class PsychologicalEmbedding(object):
                 associated with the object are used. TODO
             group_id (optional): The group ID for which to compute the
                 probabilities.
-            first_only (optional): Flag the determines whether only the
-                first outcome is evaluated.
+            unaltered_only (optional): Flag the determines whether only
+                the unaltered ordering is evaluated.
 
         Returns:
             outcome_idx_list: A list with one entry for each display
@@ -1394,7 +1424,7 @@ class PsychologicalEmbedding(object):
             if n_outcome > max_n_outcome:
                 max_n_outcome = n_outcome
 
-        if first_only:
+        if unaltered_only:
             max_n_outcome = 1
 
         prob_all = np.zeros((n_trial_all, max_n_outcome))
@@ -1421,7 +1451,7 @@ class PsychologicalEmbedding(object):
                 z_q, z_ref, self.attention['value'][group_id, :]
             )
 
-            if first_only:
+            if unaltered_only:
                 n_outcome = 1
 
             # Compute probability of each possible outcome.
@@ -1445,11 +1475,11 @@ class PsychologicalEmbedding(object):
             prob_all[trial_locs, 0:n_outcome] = prob
 
         # Correct for numerical inaccuracy.
-        if not first_only:
+        if not unaltered_only:
             prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
         return (outcome_idx_list, prob_all)
 
-    def tf_probability(self, trials, z_tf, tf_theta):
+    def tf_outcome_probability(self, trials, z_tf, tf_theta):
         """Return probability of outcomes for each trial.
 
         Args:
@@ -1481,7 +1511,7 @@ class PsychologicalEmbedding(object):
         # for param_name in self.theta:
         #     tf_theta[param_name] = tf.constant(
         #         self.theta[param_name]['value'], dtype=tf.float32)
-        attention = self.attention['value'][0, :]  # TODO
+        attention = self.attention['value'][0, :]  # TODO HACK
         attention = np.expand_dims(attention, axis=0)
         attention = np.expand_dims(attention, axis=2)
         tf_attention = tf.convert_to_tensor(

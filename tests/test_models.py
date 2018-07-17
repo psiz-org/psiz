@@ -289,7 +289,7 @@ def test_probability(ground_truth, unjudged_trials):
 
 
 def test_tf_probability(ground_truth, unjudged_trials):
-    """Test tf_probability method."""
+    """Test tf_outcome_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
     (outcome_idx_list, prob_1) = ground_truth.outcome_probability(
@@ -305,7 +305,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
     for param_name in ground_truth.theta:
         tf_theta[param_name] = tf.constant(
             ground_truth.theta[param_name]['value'], dtype=tf.float32)
-    (outcome_idx_list, prob_2_tf) = ground_truth.tf_probability(
+    (outcome_idx_list, prob_2_tf) = ground_truth.tf_outcome_probability(
         unjudged_trials, z_tf, tf_theta)
 
     sess = tf.Session()

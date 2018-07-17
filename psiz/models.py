@@ -663,18 +663,12 @@ class PsychologicalEmbedding(object):
                 negative loglikelihood.
 
         """
-        (J, _, _, _, _, _, tf_stimulus_set, tf_n_reference, tf_n_selected,
-            tf_is_ranked, tf_group_id) = self._core_model('exact')
+        (J, _, _, _, _, _, tf_obs) = self._core_model('exact')
 
         init = tf.global_variables_initializer()
         sess = tf.Session()
         sess.run(init)
-        J_all = sess.run(J, feed_dict={
-                tf_stimulus_set: obs.stimulus_set,
-                tf_n_reference: obs.n_reference,
-                tf_n_selected: obs.n_selected,
-                tf_is_ranked: obs.is_ranked,
-                tf_group_id: obs.group_id})
+        J_all = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs))
 
         sess.close()
         tf.reset_default_graph()
@@ -689,12 +683,8 @@ class PsychologicalEmbedding(object):
         obs_val = obs.subset(test_idx)
 
         (J, tf_z, tf_attention, tf_attention_constraint, tf_theta,
-            tf_theta_bounds, tf_stimulus_set, tf_n_reference, tf_n_selected,
-            tf_is_ranked, tf_group_id) = self._core_model(init_mode)
+            tf_theta_bounds, tf_obs) = self._core_model(init_mode)
 
-        # train_op = tf.train.GradientDescentOptimizer(
-        #   learning_rate=self.lr
-        # ).minimize(J)
         train_op = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(J)
 
         init = tf.global_variables_initializer()
@@ -704,9 +694,6 @@ class PsychologicalEmbedding(object):
             tf.summary.scalar('cost', J)
             # Create a summary of the embedding tensor.
             tf.summary.tensor_summary('z', tf_z)
-            # Create a summary of the attention weights.
-            # tf.summary.tensor_summary('attention', tf_attention)
-            # tf.summary.scalar('attention_00', tf_attention[0,0])
 
             # Create a summary to monitor parameteres of similarity kernel.
             with tf.name_scope('similarity'):
@@ -714,8 +701,6 @@ class PsychologicalEmbedding(object):
                 for param_name in tf_theta:
                     param_mean = tf.reduce_mean(tf_theta[param_name])
                     tf.summary.scalar(param_name + '_mean', param_mean)
-                    # tf.summary.histogram(param_name + '_hist',
-                    #   tf_theta[param_name])
 
             # Merge all summaries into a single op.
             merged_summary_op = tf.summary.merge_all()
@@ -728,7 +713,7 @@ class PsychologicalEmbedding(object):
             summary_writer = tf.summary.FileWriter(
                 '%s/%s' % (self.log_dir, i_restart),
                 graph=tf.get_default_graph()
-                )
+            )
 
         J_all_best = np.inf
         J_test_best = np.inf
@@ -736,30 +721,14 @@ class PsychologicalEmbedding(object):
         last_improvement = 0
         for epoch in range(self.max_n_epoch):
             _, J_train, summary = sess.run(
-                [train_op, J, merged_summary_op], feed_dict={
-                    tf_stimulus_set: obs_train.stimulus_set,
-                    tf_n_reference: obs_train.n_reference,
-                    tf_n_selected: obs_train.n_selected,
-                    tf_is_ranked: obs_train.is_ranked,
-                    tf_group_id: obs_train.group_id
-                    }
-                )
+                [train_op, J, merged_summary_op],
+                feed_dict=self._bind_obs(tf_obs, obs_train)
+            )
 
             sess.run(tf_theta_bounds)
             sess.run(tf_attention_constraint)
-            J_test = sess.run(J, feed_dict={
-                tf_stimulus_set: obs_val.stimulus_set,
-                tf_n_reference: obs_val.n_reference,
-                tf_n_selected: obs_val.n_selected,
-                tf_is_ranked: obs_val.is_ranked,
-                tf_group_id: obs_val.group_id})
-
-            J_all = sess.run(J, feed_dict={
-                tf_stimulus_set: obs.stimulus_set,
-                tf_n_reference: obs.n_reference,
-                tf_n_selected: obs.n_selected,
-                tf_is_ranked: obs.is_ranked,
-                tf_group_id: obs.group_id})
+            J_test = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs_val))
+            J_all = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs))
 
             if J_test < J_test_best:
                 J_all_best = J_all
@@ -791,6 +760,16 @@ class PsychologicalEmbedding(object):
         tf.reset_default_graph()
 
         return (J_all_best, z_best, attention_best, params_best)
+
+    def _bind_obs(self, tf_obs, obs):
+        feed_dict = {
+            tf_obs['stimulus_set']: obs.stimulus_set,
+            tf_obs['n_reference']: obs.n_reference,
+            tf_obs['n_selected']: obs.n_selected,
+            tf_obs['is_ranked']: obs.is_ranked,
+            tf_obs['group_id']: obs.group_id
+        }
+        return feed_dict
 
     def _project_attention(self, tf_attention_0):
         """Return projection of attention weights."""
@@ -1326,17 +1305,23 @@ class PsychologicalEmbedding(object):
                 )
             )
 
+            tf_obs = {
+                'stimulus_set': tf_stimulus_set,
+                'n_reference': tf_n_reference,
+                'n_selected': tf_n_selected,
+                'is_ranked': tf_is_ranked,
+                'group_id': tf_group_id
+            }
             # TODO move constraints outside core model?
             tf_attention_constraint = tf_attention.assign(
-              self._project_attention(tf_attention))
+                self._project_attention(tf_attention))
 
         return (
             J, tf_z, tf_attention, tf_attention_constraint, tf_theta,
-            tf_theta_bounds, tf_stimulus_set, tf_n_reference, tf_n_selected,
-            tf_is_ranked, tf_group_id
-            )
+            tf_theta_bounds, tf_obs
+        )
 
-    def log_likelihood(self, obs, z=None, theta=None, group_id=0):
+    def log_likelihood(self, obs, z=None, theta=None):
         """Return the log likelihood of a set of observations.
 
         Args:
@@ -1348,8 +1333,6 @@ class PsychologicalEmbedding(object):
             theta (optional): The similarity kernel parameters. If no
                 theta parameters are provided, the parameters
                 associated with the object are used. TODO
-            group_id (optional): The group ID for which to compute the
-                probabilities.
 
         Returns:
             The total log-likelihood of the observations.
@@ -1357,16 +1340,17 @@ class PsychologicalEmbedding(object):
         """
         if z is None:
             z = self.z['value']
-        # TODO else check z size
+        # else:
+        # TODO check z size
 
         (_, prob_all) = self.outcome_probability(
-            obs, z, group_id=0, unaltered_only=True)
+            obs, z, group_id=obs.group_id, unaltered_only=True)
         prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
         ll = np.sum(np.log(prob))
         return ll
 
     def outcome_probability(
-            self, trials, z=None, theta=None, group_id=0,
+            self, trials, z=None, theta=None, group_id=None,
             unaltered_only=False):
         """Return probability of each outcome for each trial.
 
@@ -1410,6 +1394,9 @@ class PsychologicalEmbedding(object):
         n_config = trials.config_list.shape[0]
         n_dim = z.shape[1]
 
+        if group_id is None:
+            group_id = np.zeros((trials.n_trial), dtype=np.int)
+
         outcome_idx_list = []
         n_outcome_list = []
         max_n_outcome = 0
@@ -1445,11 +1432,9 @@ class PsychologicalEmbedding(object):
                 z_ref[:, :, i_ref] = z[
                     trials.stimulus_set[trial_locs, 1+i_ref], :
                 ]
-
+            attention = self.attention['value'][group_id[trial_locs], :]
             # Precompute similarity between query and references.
-            s_qref = self.similarity(
-                z_q, z_ref, self.attention['value'][group_id, :]
-            )
+            s_qref = self.similarity(z_q, z_ref, attention)
 
             if unaltered_only:
                 n_outcome = 1

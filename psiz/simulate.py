@@ -73,8 +73,9 @@ class Agent(object):
                 order of the stimuli is now informative.
 
         """
+        group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int)
         (outcome_idx_list, prob_all) = self.embedding.outcome_probability(
-            trials, group_id=self.group_id)
+            trials, group_id=group_id)
         judged_trials = self._select(trials, outcome_idx_list, prob_all)
         return judged_trials
 

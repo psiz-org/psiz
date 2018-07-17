@@ -166,9 +166,7 @@ def main():
         scat3.set_offsets(
             z_samp_list[frame_number])
     ani = animation.FuncAnimation(fig, update, frames=n_frame)
-    # ani.save('test_sub.mp4')
     ani.save('posterior.mp4', writer=writer)
-    # plt.show()
 
 
 def ground_truth():

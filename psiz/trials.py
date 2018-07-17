@@ -333,7 +333,7 @@ class UnjudgedTrials(SimilarityTrials):
 class JudgedTrials(SimilarityTrials):
     """Object that encapsulates judged similarity trials.
 
-    The attributes and behavior of JudgedTrials is largely inherited
+    The attributes and behavior of JudgedTrials are largely inherited
     from SimilarityTrials.
 
     Attributes:

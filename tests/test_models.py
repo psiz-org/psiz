@@ -23,6 +23,7 @@ Todo
     - attention
     - heavy-tailed similarity
     - Student's t similarity
+    - simple hard-coded example for similarity_matrix
 """
 
 
@@ -102,7 +103,7 @@ def test_private_exponential_similarity():
     z_q = tf.placeholder(tf.float32, [None, n_dim], name='z_q')
     z_ref = tf.placeholder(tf.float32, [None, n_dim], name='z_ref')
 
-    s = model._similarity(z_q, z_ref, sim_params, attention_weights)
+    s = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
 
     sess = tf.Session()
     s_actual = sess.run(
@@ -147,7 +148,7 @@ def test_private_exponential_similarity_broadcast():
     z_q = tf.placeholder(tf.float32, name='z_q')
     z_ref = tf.placeholder(tf.float32, name='z_ref')
 
-    s = model._similarity(z_q, z_ref, sim_params, attention_weights)
+    s = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
 
     sess = tf.Session()
     s_actual = sess.run(
@@ -286,8 +287,8 @@ def test_probability(ground_truth, unjudged_trials):
     np.testing.assert_allclose(prob_actual, prob_desired)
 
 
-def test_probability_tf(ground_truth, unjudged_trials):
-    """Test probability_tf method."""
+def test_tf_probability(ground_truth, unjudged_trials):
+    """Test tf_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
     (outcome_idx_list, prob_1) = ground_truth.probability(unjudged_trials)
@@ -302,7 +303,7 @@ def test_probability_tf(ground_truth, unjudged_trials):
     for param_name in ground_truth.theta:
         tf_theta[param_name] = tf.constant(
             ground_truth.theta[param_name]['value'], dtype=tf.float32)
-    (outcome_idx_list, prob_2_tf) = ground_truth.probability_tf(
+    (outcome_idx_list, prob_2_tf) = ground_truth.tf_probability(
         unjudged_trials, z_tf, tf_theta)
 
     sess = tf.Session()

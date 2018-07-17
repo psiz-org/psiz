@@ -115,7 +115,7 @@ class PsychologicalEmbedding(object):
         The attribute theta and respective dictionary keys must be
             initialized by each concrete class.
         The abstract methods _get_similarity_parameters_cold,
-            _get_similarity_parameters_warm, and _similarity
+            _get_similarity_parameters_warm, and _tf_similarity
             must be implemented by each concrete class.
 
     """
@@ -423,67 +423,11 @@ class PsychologicalEmbedding(object):
             if len(attention.shape) == 2:
                 attention = np.expand_dims(attention, axis=2)
 
-        tf_z_q = tf.constant(z_q, dtype=tf.float32)
-        tf_z_ref = tf.constant(z_ref, dtype=tf.float32)
-
-        tf_attention = tf.convert_to_tensor(
-            attention, dtype=tf.float32
-        )
-
-        tf_theta = {}
-        for param_name in self.theta:
-            tf_theta[param_name] = \
-                tf.constant(self.theta[param_name]['value'], dtype=tf.float32)
-
-        sim_op = self._similarity(tf_z_q, tf_z_ref, tf_theta, tf_attention)
-        sess = tf.Session()
-        sim = sess.run(sim_op)
-        sess.close()
-        tf.reset_default_graph()
-        return sim
-
-    def similarity2(self, z_q, z_ref, attention=None):
-        """Return similarity between two lists of points.
-
-        Similarity is determined using the similarity kernel and the
-        current similarity parameters.
-
-        Args:
-            z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
-                shape = (n_sample, n_dim)
-            attention (optional): The weights allocated to each
-                dimension in a weighted minkowski metric. The weights
-                should be positive and sum to the dimensionality of the
-                weight vector, although this is not enforced.
-                shape = (n_sample, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-
-        """
-        if attention is None:
-            attention = self.attention['value'][0, :]
-            attention = np.expand_dims(attention, axis=0)
-        else:
-            if len(attention.shape) == 1:
-                attention = np.expand_dims(attention, axis=0)
-
-        # Make sure z_q and attention have an appropriate singleton
-        # third dimension if z_ref has an array rank of 3.
-        if len(z_ref.shape) > 2:
-            if len(z_q.shape) == 2:
-                z_q = np.expand_dims(z_q, axis=2)
-            if len(attention.shape) == 2:
-                attention = np.expand_dims(attention, axis=2)
-
-        sim = self._similarity2(z_q, z_ref, self.theta, attention)
+        sim = self._similarity(z_q, z_ref, self.theta, attention)
         return sim
 
     @abstractmethod
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Similarity kernel.
 
         Args:
@@ -505,7 +449,7 @@ class PsychologicalEmbedding(object):
         pass
 
     @abstractmethod
-    def _similarity2(self, z_q, z_ref, tf_theta, tf_attention):
+    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Similarity kernel.
 
         Args:
@@ -866,10 +810,10 @@ class PsychologicalEmbedding(object):
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
+        Sqa = self._tf_similarity(
             tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
+        Sqb = self._tf_similarity(
             tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 2]),
             tf_theta, tf_attention)
         # Probility of behavior
@@ -890,13 +834,13 @@ class PsychologicalEmbedding(object):
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
+        Sqa = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
+        Sqb = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
+        Sqc = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
             tf_theta, tf_attention)
 
@@ -931,16 +875,16 @@ class PsychologicalEmbedding(object):
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
+        Sqa = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
+        Sqb = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
+        Sqc = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
+        Sqd = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
             tf_theta, tf_attention)
 
@@ -982,19 +926,19 @@ class PsychologicalEmbedding(object):
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
+        Sqa = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
+        Sqb = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
+        Sqc = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
+        Sqd = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
+        Sqe = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
             tf_theta, tf_attention)
 
@@ -1044,22 +988,22 @@ class PsychologicalEmbedding(object):
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
+        Sqa = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
+        Sqb = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
+        Sqc = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
+        Sqd = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
+        Sqe = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
             tf_theta, tf_attention)
-        Sqf = self._similarity(
+        Sqf = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
             tf_theta, tf_attention)
 
@@ -1118,25 +1062,25 @@ class PsychologicalEmbedding(object):
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
+        Sqa = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
+        Sqb = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
+        Sqc = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
+        Sqd = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
+        Sqe = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
             tf_theta, tf_attention)
-        Sqf = self._similarity(
+        Sqf = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
             tf_theta, tf_attention)
-        Sqg = self._similarity(
+        Sqg = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
             tf_theta, tf_attention)
 
@@ -1205,28 +1149,28 @@ class PsychologicalEmbedding(object):
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
+        Sqa = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
+        Sqb = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
+        Sqc = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
+        Sqd = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
+        Sqe = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
             tf_theta, tf_attention)
-        Sqf = self._similarity(
+        Sqf = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
             tf_theta, tf_attention)
-        Sqg = self._similarity(
+        Sqg = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
             tf_theta, tf_attention)
-        Sqh = self._similarity(
+        Sqh = self._tf_similarity(
             tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 8]),
             tf_theta, tf_attention)
 
@@ -1463,7 +1407,7 @@ class PsychologicalEmbedding(object):
                 ]
 
             # Precompute similarity between query and references. TODO
-            s_qref = self.similarity2(
+            s_qref = self.similarity(
                 z_q, z_ref, self.attention['value'][group_id, :]
             )
 
@@ -1491,7 +1435,7 @@ class PsychologicalEmbedding(object):
         prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
         return (outcome_idx_list, prob_all)
 
-    def probability_tf(self, trials, z_tf, tf_theta):
+    def tf_probability(self, trials, z_tf, tf_theta):
         """Return probability of outcomes for each trial.
 
         Args:
@@ -1564,7 +1508,7 @@ class PsychologicalEmbedding(object):
                 )
             z_ref = tf.stack(z_ref_list, axis=2)
             # Precompute similarity between query and references.
-            s_qref = self._similarity(
+            s_qref = self._tf_similarity(
                 z_q, z_ref, tf_theta, tf_attention)
 
             # Compute probability of each possible outcome.
@@ -1837,7 +1781,6 @@ class PsychologicalEmbedding(object):
             sigma_inflated[start_idx:end_idx, start_idx:end_idx] = sigma
         return sigma_inflated
 
-    # def _sample_with_anchors(self):
 
 class Exponential(PsychologicalEmbedding):
     """An exponential family stochastic display embedding algorithm.
@@ -1966,7 +1909,7 @@ class Exponential(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Exponential family similarity kernel.
 
         Args:
@@ -2001,7 +1944,7 @@ class Exponential(PsychologicalEmbedding):
         s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau)) + gamma
         return s_qref
 
-    def _similarity2(self, z_q, z_ref, theta, attention):
+    def _similarity(self, z_q, z_ref, theta, attention):
         """Exponential family similarity kernel.
 
         Args:
@@ -2152,7 +2095,7 @@ class HeavyTailed(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Heavy-tailed family similarity kernel.
 
         Args:
@@ -2311,7 +2254,7 @@ class StudentsT(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Student-t family similarity kernel.
 
         Args:

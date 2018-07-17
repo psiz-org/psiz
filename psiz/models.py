@@ -43,13 +43,18 @@ Todo:
         class MyException(Exception):
             pass
     - remove defualts for model initialization?
+    - add probability, log_likelihood to documentation method list?
 """
 
+import sys
 from abc import ABCMeta, abstractmethod
 import warnings
+import copy
+from random import randint
 
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
@@ -58,6 +63,7 @@ from edward.models import MultivariateNormalFullCovariance, Empirical, Uniform
 from edward.models import Categorical
 
 from psiz.simulate import Agent
+from psiz.utils import possible_outcomes, elliptical_slice
 
 
 class PsychologicalEmbedding(object):
@@ -109,7 +115,7 @@ class PsychologicalEmbedding(object):
         The attribute theta and respective dictionary keys must be
             initialized by each concrete class.
         The abstract methods _get_similarity_parameters_cold,
-            _get_similarity_parameters_warm, and _similarity
+            _get_similarity_parameters_warm, and _tf_similarity
             must be implemented by each concrete class.
 
     """
@@ -417,27 +423,33 @@ class PsychologicalEmbedding(object):
             if len(attention.shape) == 2:
                 attention = np.expand_dims(attention, axis=2)
 
-        tf_z_q = tf.constant(z_q, dtype=tf.float32)
-        tf_z_ref = tf.constant(z_ref, dtype=tf.float32)
-
-        tf_attention = tf.convert_to_tensor(
-            attention, dtype=tf.float32
-        )
-
-        tf_theta = {}
-        for param_name in self.theta:
-            tf_theta[param_name] = \
-                tf.constant(self.theta[param_name]['value'], dtype=tf.float32)
-
-        sim_op = self._similarity(tf_z_q, tf_z_ref, tf_theta, tf_attention)
-        sess = tf.Session()
-        sim = sess.run(sim_op)
-        sess.close()
-        tf.reset_default_graph()
+        sim = self._similarity(z_q, z_ref, self.theta, attention)
         return sim
 
     @abstractmethod
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
+        """Similarity kernel.
+
+        Args:
+            z_q: A set of embedding points.
+                shape = (n_sample, n_dim)
+            z_ref: A set of embedding points.
+                shape = (n_sample, n_dim)
+            tf_theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            tf_attention: The weights allocated to each dimension in a
+                weighted minkowski metric.
+                shape = (n_sample, n_dim)
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_sample,)
+
+        """
+        pass
+
+    @abstractmethod
+    def _similarity(self, z_q, z_ref, theta, attention):
         """Similarity kernel.
 
         Args:
@@ -792,17 +804,19 @@ class PsychologicalEmbedding(object):
 
         return tf_attention_proj
 
-    def _cost_2c1(self, tf_z, triplets, tf_theta, tf_attention):
+    def _cost_2c1(self, tf_z, tf_stimulus_set, tf_theta, tf_attention):
         """Return cost for ordered 2 chooose 1 observations."""
-        n_trial = tf.shape(triplets)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
-            tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 1]),
+        Sqa = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
-            tf.gather(tf_z, triplets[:, 0]), tf.gather(tf_z, triplets[:, 2]),
+        Sqb = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
         # Probility of behavior
         P = Sqa / (Sqa + Sqb)
@@ -816,20 +830,23 @@ class PsychologicalEmbedding(object):
             )
         return J
 
-    def _cost_3cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_3cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+        Sqa = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+        Sqb = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+        Sqc = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -857,23 +874,27 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_4cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_4cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+        Sqa = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+        Sqb = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+        Sqc = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+        Sqd = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -908,26 +929,31 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_5cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_5cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+        Sqa = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+        Sqb = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+        Sqc = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+        Sqd = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+        Sqe = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -970,29 +996,35 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_6cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_6cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 6 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+        Sqa = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+        Sqb = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+        Sqc = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+        Sqd = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+        Sqe = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
-        Sqf = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+        Sqf = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 6]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -1044,32 +1076,39 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_7cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_7cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 7 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+        Sqa = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+        Sqb = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+        Sqc = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+        Sqd = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+        Sqe = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
-        Sqf = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+        Sqf = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 6]),
             tf_theta, tf_attention)
-        Sqg = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
+        Sqg = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 7]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -1131,35 +1170,43 @@ class PsychologicalEmbedding(object):
             n_trial > tf.constant(0.), lambda: J, lambda: tf.constant(0.))
         return J
 
-    def _cost_8cN(self, tf_z, nines, N, tf_theta, tf_attention):
+    def _cost_8cN(self, tf_z, tf_stimulus_set, N, tf_theta, tf_attention):
         """Return cost for ordered 8 chooose N observations."""
-        n_trial = tf.shape(nines)[0]
+        n_trial = tf.shape(tf_stimulus_set)[0]
         n_trial = tf.cast(n_trial, dtype=tf.float32)
 
         # Similarity
-        Sqa = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 1]),
+        Sqa = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 1]),
             tf_theta, tf_attention)
-        Sqb = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 2]),
+        Sqb = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 2]),
             tf_theta, tf_attention)
-        Sqc = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 3]),
+        Sqc = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 3]),
             tf_theta, tf_attention)
-        Sqd = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 4]),
+        Sqd = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 4]),
             tf_theta, tf_attention)
-        Sqe = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 5]),
+        Sqe = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 5]),
             tf_theta, tf_attention)
-        Sqf = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 6]),
+        Sqf = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 6]),
             tf_theta, tf_attention)
-        Sqg = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 7]),
+        Sqg = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 7]),
             tf_theta, tf_attention)
-        Sqh = self._similarity(
-            tf.gather(tf_z, nines[:, 0]), tf.gather(tf_z, nines[:, 8]),
+        Sqh = self._tf_similarity(
+            tf.gather(tf_z, tf_stimulus_set[:, 0]),
+            tf.gather(tf_z, tf_stimulus_set[:, 8]),
             tf_theta, tf_attention)
 
         # Probility of behavior
@@ -1289,10 +1336,277 @@ class PsychologicalEmbedding(object):
             tf_is_ranked, tf_group_id
             )
 
+    def log_likelihood(self, obs, z=None, theta=None, group_id=0):
+        """Return the log likelihood of a set of observations.
+
+        Args:
+            obs: A set of judged similarity trials. The indices
+                used must correspond to the rows of z.
+            z (optional): A set of embedding points. If no embedding
+                points are provided, the points associated with the
+                object are used.
+            theta (optional): The similarity kernel parameters. If no
+                theta parameters are provided, the parameters
+                associated with the object are used. TODO
+            group_id (optional): The group ID for which to compute the
+                probabilities.
+
+        Returns:
+            The total log-likelihood of the observations.
+
+        """
+        if z is None:
+            z = self.z['value']
+        # TODO else check z size
+
+        (_, prob_all) = self.outcome_probability(
+            obs, z, group_id=0, unaltered_only=True)
+        prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
+        ll = np.sum(np.log(prob))
+        return ll
+
+    def outcome_probability(
+            self, trials, z=None, theta=None, group_id=0,
+            unaltered_only=False):
+        """Return probability of each outcome for each trial.
+
+        Args:
+            trials: A set of unjudged similarity trials. The indices
+                used must correspond to the rows of z.
+            z (optional): A set of embedding points. If no embedding
+                points are provided, the points associated with the
+                object are used.
+            theta (optional): The similarity kernel parameters. If no
+                theta parameters are provided, the parameters
+                associated with the object are used. TODO
+            group_id (optional): The group ID for which to compute the
+                probabilities.
+            unaltered_only (optional): Flag the determines whether only
+                the unaltered ordering is evaluated.
+
+        Returns:
+            outcome_idx_list: A list with one entry for each display
+                configuration. Each entry contains a 2D array where
+                each row contains the indices describing one outcome.
+            prob_all: The probabilities associated with the different
+                outcomes for each unjudged trial. In general, different
+                trial configurations will have a different number of
+                possible outcomes. Trials with a smaller number of
+                possible outcomes are element padded with zeros to
+                match the trial with the maximum number of possible
+                outcomes.
+
+        Notes:
+            The first outcome corresponds to the original order of the
+                trial data.
+
+        """
+        if z is None:
+            z = self.z['value']
+        # TODO else check z size
+        # TODO theta
+
+        n_trial_all = trials.n_trial
+        n_config = trials.config_list.shape[0]
+        n_dim = z.shape[1]
+
+        outcome_idx_list = []
+        n_outcome_list = []
+        max_n_outcome = 0
+        for i_config in range(n_config):
+            outcome_idx_list.append(
+                possible_outcomes(
+                    trials.config_list.iloc[i_config]
+                )
+            )
+            n_outcome = outcome_idx_list[i_config].shape[0]
+            n_outcome_list.append(n_outcome)
+            if n_outcome > max_n_outcome:
+                max_n_outcome = n_outcome
+
+        if unaltered_only:
+            max_n_outcome = 1
+
+        prob_all = np.zeros((n_trial_all, max_n_outcome))
+        for i_config in range(n_config):
+            config = trials.config_list.iloc[i_config]
+            outcome_idx = outcome_idx_list[i_config]
+            trial_locs = trials.config_id == i_config
+            n_trial = np.sum(trial_locs)
+            n_outcome = n_outcome_list[i_config]
+            n_reference = config['n_reference']
+            n_selected_idx = config['n_selected'] - 1
+            z_q = z[
+                trials.stimulus_set[trial_locs, 0], :
+            ]
+            z_q = np.expand_dims(z_q, axis=2)
+            z_ref = np.empty((n_trial, n_dim, n_reference))
+            for i_ref in range(n_reference):
+                z_ref[:, :, i_ref] = z[
+                    trials.stimulus_set[trial_locs, 1+i_ref], :
+                ]
+
+            # Precompute similarity between query and references.
+            s_qref = self.similarity(
+                z_q, z_ref, self.attention['value'][group_id, :]
+            )
+
+            if unaltered_only:
+                n_outcome = 1
+
+            # Compute probability of each possible outcome.
+            prob = np.ones((n_trial, n_outcome), dtype=np.float64)
+            for i_outcome in range(n_outcome):
+                s_qref_perm = s_qref[:, outcome_idx[i_outcome, :]]
+                # Start with last choice
+                total = np.sum(s_qref_perm[:, n_selected_idx:], axis=1)
+                # Compute sampling without replacement probability in reverse
+                # order for numerical stabiltiy
+                for i_selected in range(n_selected_idx, -1, -1):
+                    # Grab similarity of selected reference and divide by total
+                    # similarity of all available references.
+                    prob[:, i_outcome] = np.multiply(
+                        prob[:, i_outcome],
+                        np.divide(s_qref_perm[:, i_selected], total)
+                    )
+                    # Add similarity for "previous" selection
+                    if i_selected > 0:
+                        total = total + s_qref_perm[:, i_selected-1]
+            prob_all[trial_locs, 0:n_outcome] = prob
+
+        # Correct for numerical inaccuracy.
+        if not unaltered_only:
+            prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
+        return (outcome_idx_list, prob_all)
+
+    def tf_outcome_probability(self, trials, z_tf, tf_theta):
+        """Return probability of outcomes for each trial.
+
+        Args:
+            trials: A set of unjudged similarity trials.
+            z_tf: TensorFlow tensor representing embedding points.
+            tf_theta: Dictionary of Tensorflow tensors representing
+                free parameters of similarity kernel.
+
+        Returns:
+            outcome_idx_list: A list with one entry for each display
+                configuration. Each entry contains a 2D array where
+                each row contains the indices describing one outcome.
+            prob_all: The probabilities associated with the different
+                outcomes for each unjudged trial. In general, different
+                trial configurations will have a different number of
+                possible outcomes. Trials with a smaller number of
+                possible outcomes are element padded with zeros to
+                match the trial with the maximum number of possible
+                outcomes.
+
+        """
+        n_trial_all = trials.n_trial
+        dmy_idx = np.arange(n_trial_all)
+        n_config = trials.config_list.shape[0]
+
+        # tf_theta argument
+        # # TODO can this be replaced with get exact?
+        # tf_theta = {}
+        # for param_name in self.theta:
+        #     tf_theta[param_name] = tf.constant(
+        #         self.theta[param_name]['value'], dtype=tf.float32)
+        attention = self.attention['value'][0, :]  # TODO HACK
+        attention = np.expand_dims(attention, axis=0)
+        attention = np.expand_dims(attention, axis=2)
+        tf_attention = tf.convert_to_tensor(
+            attention, dtype=tf.float32
+        )
+
+        outcome_idx_list = []
+        n_outcome_list = []
+        max_n_outcome = 0
+        for i_config in range(n_config):
+            outcome_idx_list.append(
+                possible_outcomes(
+                    trials.config_list.iloc[i_config]
+                )
+            )
+            n_outcome = outcome_idx_list[i_config].shape[0]
+            n_outcome_list.append(n_outcome)
+            if n_outcome > max_n_outcome:
+                max_n_outcome = n_outcome
+
+        # prob_all = tf.Variable(tf.zeros((n_trial_all, max_n_outcome)), name='prob_all')
+        prob_all = tf.zeros((0, max_n_outcome), dtype=tf.float32)
+        indices_all = tf.zeros((0), dtype=tf.int32)
+        for i_config in range(n_config):
+            config = trials.config_list.iloc[i_config]
+            outcome_idx = outcome_idx_list[i_config]
+            trial_locs = trials.config_id == i_config
+            n_trial = np.sum(trial_locs)
+            n_outcome = n_outcome_list[i_config]
+            n_reference = config['n_reference']
+            n_selected_idx = config['n_selected'] - 1
+            z_q = tf.gather(z_tf, trials.stimulus_set[trial_locs, 0])
+            z_q = tf.expand_dims(z_q, axis=2)
+            z_ref_list = []
+            for i_ref in range(n_reference):
+                z_ref_list.append(
+                    tf.gather(z_tf, trials.stimulus_set[trial_locs, 1+i_ref])
+                )
+            z_ref = tf.stack(z_ref_list, axis=2)
+            # Precompute similarity between query and references.
+            s_qref = self._tf_similarity(
+                z_q, z_ref, tf_theta, tf_attention)
+
+            # Compute probability of each possible outcome.
+            # prob = tf.Variable(tf.ones((n_outcome, n_trial), dtype=np.float32), name='prob')
+            prob = tf.ones((n_outcome, n_trial), dtype=np.float32)
+            for i_outcome in range(n_outcome):
+                s_qref_perm = tf.gather(
+                    s_qref, outcome_idx[i_outcome, :], axis=1)
+                # Start with last choice
+                sub_sqref_perm = s_qref_perm[:, n_selected_idx:]
+                total = tf.reduce_sum(sub_sqref_perm, axis=1)
+                # Compute sampling without replacement probability in reverse
+                # order for numerical stabiltiy
+                for i_selected in range(n_selected_idx, -1, -1):
+                    # Grab similarity of selected reference and divide by total
+                    # similarity of all available references.
+                    updates = tf.divide(s_qref_perm[:, i_selected], total)
+                    split1, split2, split3 = tf.split(
+                        prob, [i_outcome, 1, n_outcome-i_outcome-1], 0)
+                    split2 = tf.multiply(split2, updates) # TODO maybe problem with update shape
+                    prob = tf.concat((split1, split2, split3), axis=0)
+                    # prob = tf.scatter_mul(prob, i_outcome, updates, name='update_prob')
+                    # Add similarity for "previous" selection
+                    if i_selected > 0:
+                        total = total + s_qref_perm[:, i_selected-1]
+            # Pad absent outcomes before putting in master prob_all.
+            prob_zero = tf.zeros((max_n_outcome - n_outcome, n_trial))
+            prob = tf.concat((prob, prob_zero), axis=0)
+            prob = tf.transpose(prob)
+            indices = dmy_idx[trial_locs]
+            indices_all = tf.concat((indices_all, indices), axis=0)
+            prob_all = tf.concat((prob_all, prob), axis=0)
+            # prob_all = tf.scatter_add(prob_all, indices, prob)
+        prob_all = tf.gather(prob_all, indices_all)
+
+        # Correct for numerical inaccuracy.
+        prob_all = tf.divide(
+            prob_all, tf.reduce_sum(prob_all, axis=1, keepdims=True))
+        return (outcome_idx_list, prob_all)
+
     def posterior_samples(self, obs, n_sample=1000, n_burn=1000, thin_step=3):
         """Sample from the posterior of the embedding.
 
-        Samples are drawn from the posterior holding theta constant.
+        Samples are drawn from the posterior holding theta constant. A
+        variant of Eliptical Slice Sampling (Murray & Adams 2010) is
+        used to estimate the posterior for the embedding points. Since
+        the latent embedding variables are translation and rotation
+        invariant, generic sampling will artificailly inflate the
+        entropy of the samples. To compensate for this issue, N
+        embedding points are selected to serve as anchor points, where
+        N is two times the dimensionality of the embedding. Two chains
+        are run each using half of the anchor points. The samples from
+        the two chains are merged in order to get a posterior estimate
+        for all points.
 
         Args:
             obs: A JudgedTrials object representing the observed data.
@@ -1311,55 +1625,204 @@ class PsychologicalEmbedding(object):
             The step_size of the Hamiltonian Monte Carlo procedure is
                 determined by the scale of the current embedding.
 
-        """
-        n_total_sample = n_burn + (n_sample * thin_step)
+        References:
+            Murray, I., & Adams, R. P. (2010). Slice sampling
+            covariance hyperparameters of latent Gaussian models. In
+            Advances in Neural Information Processing Systems (pp.
+            1732-1740).
 
-        # Model
+        """
+        n_sample_set = int(np.ceil(n_sample/2))
         n_stimuli = self.n_stimuli
         n_dim = self.n_dim
-        cv_type = 'spherical'
-        gmm = mixture.GaussianMixture(n_components=1, covariance_type=cv_type)
-        gmm.fit(self.z['value'])
-        sigma = gmm.covariances_
+        z = copy.copy(self.z['value'])
+        n_anchor_point = n_dim
 
-        loc = self.z['value']
-        # Is sigma too narrow? try multiply by a factor .01, 1, 10?
-        # TODO generalize for arbitrary number of dimensions
-        cov = np.array((
-            (1 * sigma, 0.0),
-            (0.0, 1 * sigma)
-            ), dtype=np.float32)
-        z = MultivariateNormalFullCovariance(
-            loc=loc, covariance_matrix=cov, sample_shape=[])
+        # Prior
+        # p(z_k | Z_negk, theta) ~ N(mu, sigma)
+        # Approximate prior of z_k using all embedding points to reduce
+        # computational burden.
+        gmm = mixture.GaussianMixture(
+            n_components=1, covariance_type='spherical')
+        gmm.fit(z)
+        mu = gmm.means_
+        # If spherical and one component, only one element.
+        sigma = gmm.covariances_[0] * np.identity(n_dim)
 
-        agent = Agent(self)
-        # TODO clean this up
-        tf_theta = {}
-        for param_name in self.theta:
-            tf_theta[param_name] = tf.constant(
-                self.theta[param_name]['value'], dtype=tf.float32)
+        # Center embedding to satisfy assumptions of elliptical slice sampling.
+        z = z - mu
 
-        (_, probs) = agent.probability_tf(obs, z, tf_theta)
-        # The chosen outcome should always be the first one since the trials
-        # have been judged.
-        chosen_outcome_idx = np.zeros((obs.n_trial))
+        # Create a diagonally tiled covariance matrix in order to slice
+        # multiple points simultaneously.
+        prior = np.linalg.cholesky(
+            self._inflate_sigma(sigma, n_stimuli - n_anchor_point, n_dim))
 
-        # Probability of outcomes
-        x = Categorical(logits=probs)
-        # INFERENCE
-        with tf.variable_scope('set' + str(0)):
-            q_z = Empirical(
-                params=tf.get_variable(
-                    "q_z/params", [n_total_sample, n_stimuli, n_dim],
-                    initializer=tf.constant_initializer(self.z['value'])
-                )
-            )
-        inference = ed.HMC({z: q_z}, data={x: chosen_outcome_idx})
-        # inference = ed.HMC({z: q_z, tf_theta['beta']: q_beta}, data={x: chosen_outcome_idx})
-        # inference.run(step_size=0.2 * sigma)
-        inference.run(step_size=0.6 * sigma)
-        z_samp_all = q_z.params.eval().astype(np.float64)[n_burn::thin_step]
-        return z_samp_all
+        # Select anchor points.
+        anchor_idx = self._select_anchor_points(z, n_anchor_point)
+        sample_idx = self._create_sample_idx(n_stimuli, anchor_idx)
+
+        # Define log-likelihood for elliptical slice sampler.
+        def flat_log_likelihood(z_samp, sample_idx, z_full, obs):
+            # Assemble full z.
+            n_samp_stimuli = len(sample_idx)
+            z_full[sample_idx, :] = np.reshape(
+                z_samp, (n_samp_stimuli, n_dim), order='C')
+            return self.log_likelihood(obs, z_full)  # TODO theta, group_id?
+
+        combined_samples = [None, None]
+        for i_set in range(2):
+
+            # Initalize sampler.
+            n_total_sample = n_burn + (n_sample_set * thin_step)
+            z_samp = z[sample_idx[:, i_set], :]
+            z_samp = z_samp.flatten('C')
+            samples = np.empty((n_total_sample, n_stimuli, n_dim))
+
+            # Sample from prior if there are no observations. TODO
+            # if obs.n_trial is 0:
+            #     z = np.random.multivariate_normal(
+            #         np.zeros((n_dim)), sigma, n_stimuli)
+
+            for i_round in range(n_total_sample):
+                # print('\r{0}'.format(i_round)) # TODO
+                # TODO should pdf params allow for keyword arguments?
+                (z_samp, _) = elliptical_slice(
+                    z_samp, prior, flat_log_likelihood,
+                    pdf_params=[sample_idx[:, i_set], copy.copy(z), obs])
+                # Merge z_samp_r and z_anchor
+                z_full = copy.copy(z)
+                z_samp_r = np.reshape(
+                    z_samp, (n_stimuli - n_anchor_point, n_dim), order='C')
+                z_full[sample_idx[:, i_set], :] = z_samp_r
+                samples[i_round, :, :] = z_full
+
+            # Add back in mean.
+            samples = samples + mu
+            combined_samples[i_set] = samples[n_burn::thin_step]
+
+        # Replace anchors with samples from other set.
+        for i_point in range(n_anchor_point):
+            combined_samples[0][:, anchor_idx[i_point, 0], :] = combined_samples[1][:, anchor_idx[i_point, 0], :]
+        for i_point in range(n_anchor_point):
+            combined_samples[1][:, anchor_idx[i_point, 1], :] = combined_samples[0][:, anchor_idx[i_point, 1], :]
+
+        samples_all = np.vstack((combined_samples[0], combined_samples[1]))
+        samples_all = samples_all[0:n_sample]
+        return samples_all
+
+    def _select_anchor_points(self, z, n_point):
+        """Select anchor points for posterior inference.
+
+        Anchor points are selected so that the sets are
+        non-overlapping, all points are far from the center of the
+        distribution, all points are far from each other, all points
+        within a set are far from one another.
+
+        This code assumes that the incoming points have already been
+        centered.
+
+        Args:
+            z: The embedding points.
+            n_point: The number of points in each set.
+
+        Returns:
+            anchor_idx
+
+        """
+        n_set = 2
+        n_stimuli = z.shape[0]
+        n_point_total = n_point * n_set
+
+        # if n_point_total > n_stimuli:
+        # TODO issue warning or handle special case
+
+        # First select all points regardless of set assignment.
+        # Initialize greedy search.
+        candidate_idx = np.random.permutation(n_stimuli)
+        best_val = 0
+
+        def obj_func_1(z_candidate):
+            # Select those far from mean and far from one another.
+            rho = 2.
+            n_stim = z_candidate.shape[0]
+            loss1 = np.sum(np.abs(z_candidate)**(rho))**(1/rho) / n_stim
+            loss2 = np.mean(pdist(z_candidate))
+            return (.5 * loss1) + loss2
+
+        n_step = 100
+        for _ in range(n_step):
+            # Swap a selected point out with a non-selected point.
+            selected_idx = randint(0, n_point_total-1)
+            nonselected_idx = randint(n_point_total, n_stimuli-1)
+            copied_idx = copy.copy(candidate_idx[selected_idx])
+            candidate_idx[selected_idx] = candidate_idx[nonselected_idx]
+            candidate_idx[nonselected_idx] = copied_idx
+
+            # Evaluate candidate
+            z_candidate = z[candidate_idx[0:n_point_total], :]
+            candidate_val = obj_func_1(z_candidate)
+            if candidate_val > best_val:
+                best_val = copy.copy(candidate_val)
+                best_idx = copy.copy(candidate_idx)
+        best_idx = best_idx[0:n_point_total]
+
+        # Now that points are selected, assign points such that points
+        # within a set are far from each other.
+        # Initialize greedy search.
+        def obj_func_2(z_candidate, n_point):
+            # Create two sets such that members within a set are far from
+            # one another.
+            loss1 = np.mean(pdist(z_candidate[0:n_point]))
+            loss2 = np.mean(pdist(z_candidate[n_point:]))
+            return loss1 + loss2
+
+        candidate_idx = best_idx
+        best_val = 0
+
+        n_step = 2 * n_point**2
+        for _ in range(n_step):
+            # Swap a selected point out with a non-selected point.
+            selected_idx = randint(0, n_point-1)
+            nonselected_idx = randint(n_point, (2 * n_point) - 1)
+            copied_idx = copy.copy(candidate_idx[selected_idx])
+            candidate_idx[selected_idx] = candidate_idx[nonselected_idx]
+            candidate_idx[nonselected_idx] = copied_idx
+
+            # Evaluate candidate
+            z_candidate = z[candidate_idx, :]
+            candidate_val = obj_func_2(z_candidate, n_point)
+            if candidate_val > best_val:
+                best_val = copy.copy(candidate_val)
+                best_idx = copy.copy(candidate_idx)
+
+        anchor_idx = np.zeros((n_point, n_set), dtype=np.int)
+        anchor_idx[:, 0] = best_idx[0:n_point]
+        anchor_idx[:, 1] = best_idx[n_point:]
+        return anchor_idx
+
+    def _create_sample_idx(self, n_stimuli, anchor_idx):
+        """Create sampling index from anchor index."""
+        n_set = 2
+        n_anchor_point = anchor_idx.shape[0]
+        dmy_idx = np.arange(0, n_stimuli)
+
+        sample_idx = np.empty(
+            (n_stimuli - n_anchor_point, n_set), dtype=np.int)
+        good_locs = np.ones((n_stimuli, n_set), dtype=bool)
+        for i_set in range(n_set):
+            for i_point in range(n_anchor_point):
+                good_locs[anchor_idx[i_point, i_set], i_set] = False
+            sample_idx[:, i_set] = dmy_idx[good_locs[:, i_set]]
+        return sample_idx
+
+    def _inflate_sigma(self, sigma, n_stimuli, n_dim):
+        """Exploit covariance matrix trick."""
+        sigma_inflated = np.zeros((n_stimuli * n_dim, n_stimuli * n_dim))
+        for i_stimuli in range(n_stimuli):
+            start_idx = i_stimuli * n_dim
+            end_idx = ((i_stimuli + 1) * n_dim)
+            sigma_inflated[start_idx:end_idx, start_idx:end_idx] = sigma
+        return sigma_inflated
 
 
 class Exponential(PsychologicalEmbedding):
@@ -1489,7 +1952,7 @@ class Exponential(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Exponential family similarity kernel.
 
         Args:
@@ -1522,6 +1985,41 @@ class Exponential(PsychologicalEmbedding):
 
         # Exponential family similarity kernel.
         s_qref = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau)) + gamma
+        return s_qref
+
+    def _similarity(self, z_q, z_ref, theta, attention):
+        """Exponential family similarity kernel.
+
+        Args:
+            z_q: A set of embedding points.
+                shape = (n_sample, n_dim)
+            z_ref: A set of embedding points.
+                shape = (n_sample, n_dim)
+            theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_sample, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_sample,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+        tau = theta['tau']['value']
+        gamma = theta['gamma']['value']
+        beta = theta['beta']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = np.multiply(d_qref, attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+
+        # Exponential family similarity kernel.
+        s_qref = np.exp(np.negative(beta) * d_qref**tau) + gamma
         return s_qref
 
 
@@ -1640,7 +2138,7 @@ class HeavyTailed(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Heavy-tailed family similarity kernel.
 
         Args:
@@ -1673,6 +2171,41 @@ class HeavyTailed(PsychologicalEmbedding):
 
         # Heavy-tailed family similarity kernel.
         s_qref = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
+        return s_qref
+
+    def _similarity(self, z_q, z_ref, theta, attention):
+        """Heavy-tailed family similarity kernel.
+
+        Args:
+            z_q: A set of embedding points.
+                shape = (n_sample, n_dim)
+            z_ref: A set of embedding points.
+                shape = (n_sample, n_dim)
+            theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_sample, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_sample,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+        tau = theta['tau']['value']
+        kappa = theta['kappa']['value']
+        alpha = theta['alpha']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = np.multiply(d_qref, tf_attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+
+        # Heavy-tailed family similarity kernel.
+        s_qref = (kappa + d_qref**tau)**(np.negative(alpha))
         return s_qref
 
 
@@ -1799,7 +2332,7 @@ class StudentsT(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
         """Student-t family similarity kernel.
 
         Args:
@@ -1832,4 +2365,38 @@ class StudentsT(PsychologicalEmbedding):
         # Student-t family similarity kernel.
         s_qref = tf.pow(
             1 + (tf.pow(d_qref, tau) / alpha), tf.negative(alpha + 1)/2)
+        return s_qref
+
+    def _similarity(self, z_q, z_ref, theta, attention):
+        """Student-t family similarity kernel.
+
+        Args:
+            z_q: A set of embedding points.
+                shape = (n_sample, n_dim)
+            z_ref: A set of embedding points.
+                shape = (n_sample, n_dim)
+            tf_theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            tf_attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_sample, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_sample,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+        tau = theta['tau']['value']
+        alpha = theta['alpha']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = np.multiply(d_qref, attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+
+        # Student-t family similarity kernel.
+        s_qref = (1 + (d_qref**tau / alpha))**(np.negative(alpha + 1)/2)
         return s_qref

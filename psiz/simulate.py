@@ -22,6 +22,7 @@ Classes:
 
 Todo:
     - is returned outcome_idx the best format?
+    - move probability method to model module
 
 """
 import numpy as np
@@ -29,7 +30,7 @@ from numpy.random import multinomial
 import tensorflow as tf
 
 from psiz.trials import JudgedTrials
-from psiz.utils import possible_outcomes
+from psiz.utils import possible_outcomes  # TODO remove?
 
 
 class Agent(object):

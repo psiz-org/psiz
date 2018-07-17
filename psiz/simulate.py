@@ -22,7 +22,6 @@ Classes:
 
 Todo:
     - is returned outcome_idx the best format?
-    - move probability method to model module
 
 """
 import numpy as np
@@ -74,7 +73,7 @@ class Agent(object):
                 order of the stimuli is now informative.
 
         """
-        (outcome_idx_list, prob_all) = self.embedding.probability(
+        (outcome_idx_list, prob_all) = self.embedding.outcome_probability(
             trials, group_id=self.group_id)
         judged_trials = self._select(trials, outcome_idx_list, prob_all)
         return judged_trials

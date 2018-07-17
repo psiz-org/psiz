@@ -449,7 +449,7 @@ class PsychologicalEmbedding(object):
         pass
 
     @abstractmethod
-    def _similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _similarity(self, z_q, z_ref, theta, attention):
         """Similarity kernel.
 
         Args:
@@ -1331,12 +1331,13 @@ class PsychologicalEmbedding(object):
             z = self.z['value']
         # TODO else check z size
 
-        (_, prob_all) = self.probability(obs, z, group_id=0)
+        (_, prob_all) = self.outcome_probability(obs, z, group_id=0, first_only=True)
         prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
         ll = np.sum(np.log(prob))
         return ll
 
-    def probability(self, trials, z=None, theta=None, group_id=0):
+    def outcome_probability(
+            self, trials, z=None, theta=None, group_id=0, first_only=False):
         """Return probability of each outcome for each trial.
 
         Args:
@@ -1350,6 +1351,8 @@ class PsychologicalEmbedding(object):
                 associated with the object are used. TODO
             group_id (optional): The group ID for which to compute the
                 probabilities.
+            first_only (optional): Flag the determines whether only the
+                first outcome is evaluated.
 
         Returns:
             outcome_idx_list: A list with one entry for each display
@@ -1362,6 +1365,10 @@ class PsychologicalEmbedding(object):
                 possible outcomes are element padded with zeros to
                 match the trial with the maximum number of possible
                 outcomes.
+
+        Notes:
+            The first outcome corresponds to the original order of the
+                trial data.
 
         """
         if z is None:
@@ -1387,6 +1394,9 @@ class PsychologicalEmbedding(object):
             if n_outcome > max_n_outcome:
                 max_n_outcome = n_outcome
 
+        if first_only:
+            max_n_outcome = 1
+
         prob_all = np.zeros((n_trial_all, max_n_outcome))
         for i_config in range(n_config):
             config = trials.config_list.iloc[i_config]
@@ -1406,10 +1416,13 @@ class PsychologicalEmbedding(object):
                     trials.stimulus_set[trial_locs, 1+i_ref], :
                 ]
 
-            # Precompute similarity between query and references. TODO
+            # Precompute similarity between query and references.
             s_qref = self.similarity(
                 z_q, z_ref, self.attention['value'][group_id, :]
             )
+
+            if first_only:
+                n_outcome = 1
 
             # Compute probability of each possible outcome.
             prob = np.ones((n_trial, n_outcome), dtype=np.float64)
@@ -1432,7 +1445,8 @@ class PsychologicalEmbedding(object):
             prob_all[trial_locs, 0:n_outcome] = prob
 
         # Correct for numerical inaccuracy.
-        prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
+        if not first_only:
+            prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
         return (outcome_idx_list, prob_all)
 
     def tf_probability(self, trials, z_tf, tf_theta):
@@ -1593,7 +1607,6 @@ class PsychologicalEmbedding(object):
         n_dim = self.n_dim
         z = copy.copy(self.z['value'])
         n_anchor_point = n_dim
-        n_set = 2
 
         # Prior
         # p(z_k | Z_negk, theta) ~ N(mu, sigma)

@@ -281,7 +281,8 @@ def test_freeze():
 
 def test_probability(ground_truth, unjudged_trials):
     """Test probability method."""
-    (outcome_idx_list, prob) = ground_truth.probability(unjudged_trials)
+    (outcome_idx_list, prob) = ground_truth.outcome_probability(
+        unjudged_trials)
     prob_actual = np.sum(prob, axis=1)
     prob_desired = np.ones((unjudged_trials.n_trial))
     np.testing.assert_allclose(prob_actual, prob_desired)
@@ -291,7 +292,8 @@ def test_tf_probability(ground_truth, unjudged_trials):
     """Test tf_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
-    (outcome_idx_list, prob_1) = ground_truth.probability(unjudged_trials)
+    (outcome_idx_list, prob_1) = ground_truth.outcome_probability(
+        unjudged_trials)
     prob_actual_1 = np.sum(prob_1, axis=1)
 
     z_tf = ground_truth.z['value']

@@ -2130,6 +2130,41 @@ class HeavyTailed(PsychologicalEmbedding):
         s_qref = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
         return s_qref
 
+    def _similarity(self, z_q, z_ref, theta, attention):
+        """Heavy-tailed family similarity kernel.
+
+        Args:
+            z_q: A set of embedding points.
+                shape = (n_sample, n_dim)
+            z_ref: A set of embedding points.
+                shape = (n_sample, n_dim)
+            theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_sample, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_sample,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+        tau = theta['tau']['value']
+        kappa = theta['kappa']['value']
+        alpha = theta['alpha']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = np.multiply(d_qref, tf_attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+
+        # Heavy-tailed family similarity kernel.
+        s_qref = (kappa + d_qref**tau)**(np.negative(alpha))
+        return s_qref
+
 
 class StudentsT(PsychologicalEmbedding):
     """A Student's t family stochastic display embedding algorithm.
@@ -2287,4 +2322,38 @@ class StudentsT(PsychologicalEmbedding):
         # Student-t family similarity kernel.
         s_qref = tf.pow(
             1 + (tf.pow(d_qref, tau) / alpha), tf.negative(alpha + 1)/2)
+        return s_qref
+
+    def _similarity(self, z_q, z_ref, theta, attention):
+        """Student-t family similarity kernel.
+
+        Args:
+            z_q: A set of embedding points.
+                shape = (n_sample, n_dim)
+            z_ref: A set of embedding points.
+                shape = (n_sample, n_dim)
+            tf_theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            tf_attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_sample, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_sample,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+        tau = theta['tau']['value']
+        alpha = theta['alpha']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = np.multiply(d_qref, attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+
+        # Student-t family similarity kernel.
+        s_qref = (1 + (d_qref**tau / alpha))**(np.negative(alpha + 1)/2)
         return s_qref

@@ -20,8 +20,8 @@ Synthetic data is generated from a ground truth embedding model. For
 simplicity, the ground truth model is also used as the inferred
 model in this example. In practice the judged trials would be used to
 infer an embedding model since the ground truth is not known. In this
-example, using the ground truth allows us to see how well the algorithm
-works in the best case scenario.
+example, using the ground truth allows us to see how the posterior
+sampling algorithm works under ideal conditions.
 
 Notes:
     - Handling invariance to affine transformations (translation, scale,
@@ -32,7 +32,9 @@ Notes:
 import copy
 import numpy as np
 import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import tensorflow as tf
 
 from psiz.trials import UnjudgedTrials
@@ -44,15 +46,22 @@ from psiz.utils import matrix_correlation
 
 def main():
     """Sample from posterior of pre-defined embedding model."""
+    # Settings
+    n_trial = 10000  # 5000 10000
+    n_frame = 30
+    n_sample = 1000
+    n_burn = 100  # 1000
+    thin_step = 1  # 3
 
     # Ground truth model.
     model_truth = ground_truth()
+    n_stimuli = model_truth.z['value'].shape[0]
+    n_dim = model_truth.z['value'].shape[1]
     z_true = model_truth.z['value'].astype(np.float64)
     simmat_truth = model_truth.similarity_matrix()
 
     # Create some random trials.
     generator = RandomGenerator(model_truth.n_stimuli)
-    n_trial = 10000
     n_reference = 2
     n_selected = 1
     trials = generator.generate(n_trial, n_reference, n_selected)
@@ -82,64 +91,84 @@ def main():
     simmat_infer = model_inferred.similarity_matrix()
     r_squared = matrix_correlation(simmat_infer, simmat_truth)
     print('R^2 | {0: >6.2f}'.format(r_squared))
-    # print('rho_0:', model_inferred.theta['rho']['value'])  # TODO
-    # print('tau_0:', model_inferred.theta['tau']['value'])  # TODO
-    # print('gamma_0:', model_inferred.theta['gamma']['value'])  # TODO
-    # print('beta_0:', model_inferred.theta['beta']['value'])  # TODO
-    # print(z_inferred)
 
-    n_step = 10
-    z_samp_list = n_step * [None]
-    z_central_list = n_step * [None]
-    r_squared_list = n_step * [None]
-    n_obs = np.floor(np.linspace(20, n_trial, n_step)).astype(np.int64)
-    for i_step in range(n_step):
-        include_idx = np.arange(0, n_obs[i_step])
+    z_samp_list = n_frame * [None]
+    z_central_list = n_frame * [None]
+    r_squared_list = n_frame * [None]
+    n_obs = np.floor(np.linspace(20, n_trial, n_frame)).astype(np.int64)
+    for i_frame in range(n_frame):
+        include_idx = np.arange(0, n_obs[i_frame])
         z_samp = model_inferred.posterior_samples(
-            obs.subset(include_idx), 1000, 1000, 3)
+            obs.subset(include_idx), n_sample, n_burn, thin_step)
         z_central = np.median(z_samp, axis=0)
 
-        z_samp_list[i_step] = z_samp
-        z_central_list[i_step] = z_central
+        z_samp_list[i_frame] = np.reshape(z_samp, (n_sample * n_stimuli, n_dim))
+        z_central_list[i_frame] = z_central
 
         model_inferred.z['value'] = z_central
         simmat_infer = model_inferred.similarity_matrix()
         r_squared = matrix_correlation(simmat_infer, simmat_truth)
-        r_squared_list[i_step] = r_squared
+        r_squared_list[i_frame] = r_squared
         print('R^2 | {0: >6.2f}'.format(r_squared))
         model_inferred.z['value'] = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
     norm = matplotlib.colors.Normalize(vmin=0., vmax=model_truth.n_stimuli)
     color_array = cmap(norm(range(model_truth.n_stimuli)))
+    color_array_samp = np.matlib.repmat(color_array, n_sample, 1)
 
-    fig, ax = plt.subplots()
+    # Set up formatting for the movie files
+    Writer = animation.writers['ffmpeg']
+    metadata = dict(
+            title='Embedding Inference Evolution', artist='Matplotlib')
+    writer = Writer(fps=3, metadata=metadata)
 
-    plt.subplot(1, 3, 1)
-    for i_stimulus in range(model_truth.n_stimuli):
-        plt.scatter(
-            z_true[i_stimulus, 0], z_true[i_stimulus, 1],
-            c=color_array[i_stimulus, :], marker='o')
-    plt.axis('equal')
-    plt.title('Ground Truth')
+    # Initialize first frame.
+    i_frame = 0
 
-    plt.subplot(1, 3, 2)
-    for i_stimulus in range(model_truth.n_stimuli):
-        plt.scatter(
-            z_central[i_stimulus, 0], z_central[i_stimulus, 1],
-            c=color_array[i_stimulus, :], marker='X')
-    plt.axis('equal')
-    plt.title('Point Estimate')
+    fig = plt.figure(figsize=(5.5, 2), dpi=200)
 
-    plt.subplot(1, 3, 3)
-    for i_stimulus in range(model_truth.n_stimuli):
-        plt.scatter(
-            z_samp[:, i_stimulus, 0], z_samp[:, i_stimulus, 1],
-            c=color_array[i_stimulus, :], alpha=.01, edgecolors='none')
-    plt.axis('equal')
-    plt.title('Posterior Samples')
+    ax1 = fig.add_subplot(1, 3, 1)
+    scat1 = ax1.scatter(
+        z_true[:, 0], z_true[:, 1], s=15, c=color_array, marker='o')
+    ax1.set_title('Ground Truth')
+    ax1.set_aspect('equal')
+    ax1.set_xlim(-.05, .55)
+    ax1.set_xticks([])
+    ax1.set_ylim(-.05, .55)
+    ax1.set_yticks([])
 
-    plt.show()
+    ax2 = fig.add_subplot(1, 3, 2)
+    scat2 = ax2.scatter(
+        z_central_list[i_frame][:, 0], z_central_list[i_frame][:, 1],
+        s=15, c=color_array, marker='X')
+    ax2.set_title('Point Estimate')
+    ax2.set_aspect('equal')
+    ax2.set_xlim(-.05, .55)
+    ax2.set_xticks([])
+    ax2.set_ylim(-.05, .55)
+    ax2.set_yticks([])
+
+    ax3 = fig.add_subplot(1, 3, 3)
+    scat3 = ax3.scatter(
+        z_samp_list[i_frame][:, 0], z_samp_list[i_frame][:, 1],
+        s=5, c=color_array_samp, alpha=.01, edgecolors='none')
+    ax3.set_title('Posterior Estimate')
+    ax3.set_aspect('equal')
+    ax3.set_xlim(-.05, .55)
+    ax3.set_xticks([])
+    ax3.set_ylim(-.05, .55)
+    ax3.set_yticks([])
+
+    def update(frame_number):
+        scat2.set_offsets(
+            z_central_list[frame_number])
+        scat3.set_offsets(
+            z_samp_list[frame_number])
+    ani = animation.FuncAnimation(fig, update, frames=n_frame)
+    # ani.save('test_sub.mp4')
+    ani.save('posterior.mp4', writer=writer)
+    # plt.show()
 
 
 def ground_truth():
@@ -147,12 +176,12 @@ def ground_truth():
     n_stimuli = 16
     n_dim = 2
     # Create embeddingp points arranged on a grid.
-    x, y = np.meshgrid([.1, .2, .3, .4], [-.2, -.1, 0., .1])
+    x, y = np.meshgrid([.1, .2, .3, .4], [.1, .2, .3, .4])
     x = np.expand_dims(x.flatten(), axis=1)
     y = np.expand_dims(y.flatten(), axis=1)
     z = np.hstack((x, y))
     # Add some Gaussian noise to the embedding points.
-    mean = np.ones((n_dim))
+    mean = np.zeros((n_dim))
     cov = .01 * np.identity(n_dim)
     z_noise = .1 * np.random.multivariate_normal(mean, cov, (n_stimuli))
     z = z + z_noise

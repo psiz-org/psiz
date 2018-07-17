@@ -1588,7 +1588,9 @@ class PsychologicalEmbedding(object):
         for i_point in range(n_anchor_point):
             combined_samples[1][:, anchor_idx[i_point, 1], :] = combined_samples[0][:, anchor_idx[i_point, 1], :]
 
-        return np.vstack((combined_samples[0], combined_samples[1]))
+        samples_all = np.vstack((combined_samples[0], combined_samples[1]))
+        samples_all = samples_all[0:n_sample]
+        return samples_all
 
     def _select_anchor_points(self, z, n_point):
         """Select anchor points for posterior inference.

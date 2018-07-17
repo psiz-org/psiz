@@ -70,15 +70,6 @@ def unjudged_trials():
     return unjudged_trials
 
 
-def test_probability(ground_truth, unjudged_trials):
-    """Test probability method."""
-    agent = Agent(ground_truth)
-    (outcome_idx_list, prob) = agent.probability(unjudged_trials)
-    prob_actual = np.sum(prob, axis=1)
-    prob_desired = np.ones((unjudged_trials.n_trial))
-    np.testing.assert_allclose(prob_actual, prob_desired)
-
-
 def test_simulate(ground_truth, unjudged_trials):
     """Test simulation of agent."""
     agent = Agent(ground_truth)
@@ -86,32 +77,3 @@ def test_simulate(ground_truth, unjudged_trials):
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], unjudged_trials.stimulus_set[:, 0]
     )
-
-
-def test_probability_tf(ground_truth, unjudged_trials):
-    """Test probability_tf method."""
-    prob_desired = np.ones((unjudged_trials.n_trial))
-
-    agent = Agent(ground_truth)
-    (outcome_idx_list, prob_1) = agent.probability(unjudged_trials)
-    prob_actual_1 = np.sum(prob_1, axis=1)
-
-    z_tf = ground_truth.z['value']
-    z_tf = tf.convert_to_tensor(
-        z_tf, dtype=tf.float32
-    )
-    # TODO clean this up
-    tf_theta = {}
-    for param_name in ground_truth.theta:
-        tf_theta[param_name] = tf.constant(
-            ground_truth.theta[param_name]['value'], dtype=tf.float32)
-    (outcome_idx_list, prob_2_tf) = agent.probability_tf(
-        unjudged_trials, z_tf, tf_theta)
-
-    sess = tf.Session()
-    with sess.as_default():
-        sess.run(tf.global_variables_initializer())
-        prob_2 = prob_2_tf.eval()
-
-    np.testing.assert_allclose(prob_actual_1, prob_desired)
-    np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)

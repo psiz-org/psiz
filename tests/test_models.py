@@ -32,6 +32,7 @@ import tensorflow as tf
 
 from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential, HeavyTailed, StudentsT
+from psiz.simulate import Agent
 
 
 @pytest.fixture(scope="module")
@@ -43,16 +44,35 @@ def ground_truth():
     model = Exponential(n_stimuli)
     mean = np.ones((n_dim))
     cov = np.identity(n_dim)
-    Z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     freeze_options = {
         'rho': 2,
         'tau': 1,
         'beta': 1,
         'gamma': 0,
-        'Z': Z
+        'z': z
     }
     model.freeze(freeze_options)
     return model
+
+
+@pytest.fixture(scope="module")
+def unjudged_trials():
+    """Return a set of unjudged trials."""
+    stimulus_set = np.array((
+        (0, 1, 2, 7, 3),
+        (3, 4, 5, 9, 1),
+        (1, 8, 9, 2, -1),
+        (7, 3, 2, 7, -1),
+        (6, 7, 5, 0, -1),
+        (2, 1, 0, 6, -1),
+        (3, 0, 2, 6, -1),
+    ))
+    n_selected = np.array((
+        2, 2, 2, 2, 1, 1, 1
+        ), dtype=np.int64)
+    unjudged_trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+    return unjudged_trials
 
 
 def test_private_exponential_similarity():
@@ -256,3 +276,39 @@ def test_freeze():
         model.freeze({'attention': np.ones((n_group+1, n_dim))})
     with pytest.raises(Exception):
         model.freeze({'attention': np.ones((n_group, n_dim-1))})
+
+
+def test_probability(ground_truth, unjudged_trials):
+    """Test probability method."""
+    (outcome_idx_list, prob) = ground_truth.probability(unjudged_trials)
+    prob_actual = np.sum(prob, axis=1)
+    prob_desired = np.ones((unjudged_trials.n_trial))
+    np.testing.assert_allclose(prob_actual, prob_desired)
+
+
+def test_probability_tf(ground_truth, unjudged_trials):
+    """Test probability_tf method."""
+    prob_desired = np.ones((unjudged_trials.n_trial))
+
+    (outcome_idx_list, prob_1) = ground_truth.probability(unjudged_trials)
+    prob_actual_1 = np.sum(prob_1, axis=1)
+
+    z_tf = ground_truth.z['value']
+    z_tf = tf.convert_to_tensor(
+        z_tf, dtype=tf.float32
+    )
+    # TODO clean this up
+    tf_theta = {}
+    for param_name in ground_truth.theta:
+        tf_theta[param_name] = tf.constant(
+            ground_truth.theta[param_name]['value'], dtype=tf.float32)
+    (outcome_idx_list, prob_2_tf) = ground_truth.probability_tf(
+        unjudged_trials, z_tf, tf_theta)
+
+    sess = tf.Session()
+    with sess.as_default():
+        sess.run(tf.global_variables_initializer())
+        prob_2 = prob_2_tf.eval()
+
+    np.testing.assert_allclose(prob_actual_1, prob_desired)
+    np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)

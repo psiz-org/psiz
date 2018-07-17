@@ -41,14 +41,17 @@ def test_random_generator():
     assert trials.n_trial == n_trial_desired
     assert sum(trials.n_reference == n_reference_desired) == n_trial_desired
     assert trials.stimulus_set.shape[0] == n_trial_desired
-    assert trials.stimulus_set.shape[1] == n_reference_desired + 1
+    assert trials.stimulus_set.shape[1] == 9  # TODO n_reference_desired + 1
     min_actual = np.min(trials.stimulus_set)
     max_actual = np.max(trials.stimulus_set)
     assert min_actual >= 0
     assert max_actual < n_stimuli_desired
     n_unique_desired = n_reference_desired + 1
     for i_trial in range(n_trial_desired):
-        assert len(np.unique(trials.stimulus_set[i_trial, :])) == \
-            n_unique_desired
+        assert (
+            len(np.unique(
+                trials.stimulus_set[i_trial, 0:n_reference_desired+1])  # TODO the padding zeros are counted as unique, thus the indexing
+            ) == n_unique_desired
+        )
     assert sum(trials.n_selected == n_selected_desired) == n_trial_desired
     assert sum(trials.is_ranked == is_ranked_desired) == n_trial_desired

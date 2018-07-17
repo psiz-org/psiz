@@ -1357,14 +1357,18 @@ class PsychologicalEmbedding(object):
             tf_is_ranked, tf_group_id
             )
 
-    def log_likelihood(self, z, obs, group_id=0):
+    def log_likelihood(self, obs, z=None, theta=None, group_id=0):
         """Return the log likelihood of a set of observations.
 
         Args:
-            z: A set of embedding points.
-            theta: The similarity kernel parameters. TODO?
             obs: A set of judged similarity trials. The indices
                 used must correspond to the rows of z.
+            z (optional): A set of embedding points. If no embedding
+                points are provided, the points associated with the
+                object are used.
+            theta (optional): The similarity kernel parameters. If no
+                theta parameters are provided, the parameters
+                associated with the object are used. TODO
             group_id (optional): The group ID for which to compute the
                 probabilities.
 
@@ -1379,19 +1383,27 @@ class PsychologicalEmbedding(object):
                 on order.
 
         """
-        (_, prob_all) = self.probability(z, obs, group_id=0)
+        if z is None:
+            z = self.z['value']
+        # TODO else check z size
+
+        (_, prob_all) = self.probability(obs, z, group_id=0)
         prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
         ll = np.sum(np.log(prob))
         return ll
 
-    def probability(self, z, trials, group_id=0):
-        """Return probability of each outcomes for each trial.
+    def probability(self, trials, z=None, theta=None, group_id=0):
+        """Return probability of each outcome for each trial.
 
         Args:
-            z: A set of embedding points.
-            theta: The similarity kernel parameters. TODO?
             trials: A set of unjudged similarity trials. The indices
                 used must correspond to the rows of z.
+            z (optional): A set of embedding points. If no embedding
+                points are provided, the points associated with the
+                object are used.
+            theta (optional): The similarity kernel parameters. If no
+                theta parameters are provided, the parameters
+                associated with the object are used. TODO
             group_id (optional): The group ID for which to compute the
                 probabilities.
 
@@ -1408,6 +1420,11 @@ class PsychologicalEmbedding(object):
                 outcomes.
 
         """
+        if z is None:
+            z = self.z['value']
+        # TODO else check z size
+        # TODO theta
+
         n_trial_all = trials.n_trial
         n_config = trials.config_list.shape[0]
         n_dim = z.shape[1]
@@ -1445,7 +1462,7 @@ class PsychologicalEmbedding(object):
                     trials.stimulus_set[trial_locs, 1+i_ref], :
                 ]
 
-            # Precompute similarity between query and references.
+            # Precompute similarity between query and references. TODO
             s_qref = self.similarity2(
                 z_q, z_ref, self.attention['value'][group_id, :]
             )
@@ -1472,6 +1489,120 @@ class PsychologicalEmbedding(object):
 
         # Correct for numerical inaccuracy.
         prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
+        return (outcome_idx_list, prob_all)
+
+    def probability_tf(self, trials, z_tf, tf_theta):
+        """Return probability of outcomes for each trial.
+
+        Args:
+            trials: A set of unjudged similarity trials.
+            z_tf: TensorFlow tensor representing embedding points.
+            tf_theta: Dictionary of Tensorflow tensors representing
+                free parameters of similarity kernel.
+
+        Returns:
+            outcome_idx_list: A list with one entry for each display
+                configuration. Each entry contains a 2D array where
+                each row contains the indices describing one outcome.
+            prob_all: The probabilities associated with the different
+                outcomes for each unjudged trial. In general, different
+                trial configurations will have a different number of
+                possible outcomes. Trials with a smaller number of
+                possible outcomes are element padded with zeros to
+                match the trial with the maximum number of possible
+                outcomes.
+
+        """
+        n_trial_all = trials.n_trial
+        dmy_idx = np.arange(n_trial_all)
+        n_config = trials.config_list.shape[0]
+
+        # tf_theta argument
+        # # TODO can this be replaced with get exact?
+        # tf_theta = {}
+        # for param_name in self.theta:
+        #     tf_theta[param_name] = tf.constant(
+        #         self.theta[param_name]['value'], dtype=tf.float32)
+        attention = self.attention['value'][0, :]  # TODO
+        attention = np.expand_dims(attention, axis=0)
+        attention = np.expand_dims(attention, axis=2)
+        tf_attention = tf.convert_to_tensor(
+            attention, dtype=tf.float32
+        )
+
+        outcome_idx_list = []
+        n_outcome_list = []
+        max_n_outcome = 0
+        for i_config in range(n_config):
+            outcome_idx_list.append(
+                possible_outcomes(
+                    trials.config_list.iloc[i_config]
+                )
+            )
+            n_outcome = outcome_idx_list[i_config].shape[0]
+            n_outcome_list.append(n_outcome)
+            if n_outcome > max_n_outcome:
+                max_n_outcome = n_outcome
+
+        # prob_all = tf.Variable(tf.zeros((n_trial_all, max_n_outcome)), name='prob_all')
+        prob_all = tf.zeros((0, max_n_outcome), dtype=tf.float32)
+        indices_all = tf.zeros((0), dtype=tf.int32)
+        for i_config in range(n_config):
+            config = trials.config_list.iloc[i_config]
+            outcome_idx = outcome_idx_list[i_config]
+            trial_locs = trials.config_id == i_config
+            n_trial = np.sum(trial_locs)
+            n_outcome = n_outcome_list[i_config]
+            n_reference = config['n_reference']
+            n_selected_idx = config['n_selected'] - 1
+            z_q = tf.gather(z_tf, trials.stimulus_set[trial_locs, 0])
+            z_q = tf.expand_dims(z_q, axis=2)
+            z_ref_list = []
+            for i_ref in range(n_reference):
+                z_ref_list.append(
+                    tf.gather(z_tf, trials.stimulus_set[trial_locs, 1+i_ref])
+                )
+            z_ref = tf.stack(z_ref_list, axis=2)
+            # Precompute similarity between query and references.
+            s_qref = self._similarity(
+                z_q, z_ref, tf_theta, tf_attention)
+
+            # Compute probability of each possible outcome.
+            # prob = tf.Variable(tf.ones((n_outcome, n_trial), dtype=np.float32), name='prob')
+            prob = tf.ones((n_outcome, n_trial), dtype=np.float32)
+            for i_outcome in range(n_outcome):
+                s_qref_perm = tf.gather(
+                    s_qref, outcome_idx[i_outcome, :], axis=1)
+                # Start with last choice
+                sub_sqref_perm = s_qref_perm[:, n_selected_idx:]
+                total = tf.reduce_sum(sub_sqref_perm, axis=1)
+                # Compute sampling without replacement probability in reverse
+                # order for numerical stabiltiy
+                for i_selected in range(n_selected_idx, -1, -1):
+                    # Grab similarity of selected reference and divide by total
+                    # similarity of all available references.
+                    updates = tf.divide(s_qref_perm[:, i_selected], total)
+                    split1, split2, split3 = tf.split(
+                        prob, [i_outcome, 1, n_outcome-i_outcome-1], 0)
+                    split2 = tf.multiply(split2, updates) # TODO maybe problem with update shape
+                    prob = tf.concat((split1, split2, split3), axis=0)
+                    # prob = tf.scatter_mul(prob, i_outcome, updates, name='update_prob')
+                    # Add similarity for "previous" selection
+                    if i_selected > 0:
+                        total = total + s_qref_perm[:, i_selected-1]
+            # Pad absent outcomes before putting in master prob_all.
+            prob_zero = tf.zeros((max_n_outcome - n_outcome, n_trial))
+            prob = tf.concat((prob, prob_zero), axis=0)
+            prob = tf.transpose(prob)
+            indices = dmy_idx[trial_locs]
+            indices_all = tf.concat((indices_all, indices), axis=0)
+            prob_all = tf.concat((prob_all, prob), axis=0)
+            # prob_all = tf.scatter_add(prob_all, indices, prob)
+        prob_all = tf.gather(prob_all, indices_all)
+
+        # Correct for numerical inaccuracy.
+        prob_all = tf.divide(
+            prob_all, tf.reduce_sum(prob_all, axis=1, keepdims=True))
         return (outcome_idx_list, prob_all)
 
     def posterior_samples(self, obs, n_sample=1000, n_burn=1000, thin_step=3):
@@ -1549,7 +1680,7 @@ class PsychologicalEmbedding(object):
             n_samp_stimuli = len(sample_idx)
             z_full[sample_idx, :] = np.reshape(
                 z_samp, (n_samp_stimuli, n_dim), order='C')
-            return self.log_likelihood(z_full, obs)  # TODO theta, group_id?
+            return self.log_likelihood(obs, z_full)  # TODO theta, group_id?
 
         combined_samples = [None, None]
         for i_set in range(2):

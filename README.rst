@@ -5,7 +5,9 @@ PsiZ: A Psychological Embedding Package
 Purpose
 -------
 PsiZ provides the computational tools to infer a continuous, multivariate
-representation for a set of stimuli using ordinal similarity relations.
+representation for a set of stimuli from ordinal similarity relations.
+Inference is performed using a combination of gradient decent and Markov
+chain Monte Carlo methods.
 
 What's in a name?
 -----------------
@@ -16,7 +18,7 @@ in machine learning to denote a latent feature space.
 
 Quick Start
 -----------
-There are three built-in embedding models to choose from:
+There are three pre-defined embedding models to choose from:
 
    1. Exponential
    2. HeavyTailed
@@ -30,24 +32,28 @@ information in order to infer an embedding.
 
 .. code-block:: python
 
+  from psiz import datasets
+  from psiz import models
+
   # Load some example observations.
-  (obs, n_stimuli) = datasets.load_obs('birds-16') TODO
+  (obs, n_stimuli) = datasets.load_obs('birds-16')
   # Initialize an embedding model.
-  embedding = psiz.models.Exponential(n_stimuli)
+  embedding = models.Exponential(n_stimuli)
   # Fit the embedding model using similarity judgment observations.
   embedding.fit(obs)
 
-Similarity Judgment Trial TODO
--------------------------
+Trials and Observations
+-----------------------
 To infer an embedding, multiple observations are necessary. A single 
 observation is comprised of multiple stimuli that have been judged by an 
 agent (human or machine) based on their similarity. 
 
-In the simplest case, an observation is obtained from three stimuli: a query
-stimulus (Q) and two reference stimuli (A and B). An agent selects the 
-reference stimulus that they believe is more similar to the query stimulus.
-If the agent selected reference A, then the observation would be recorded as
-the vector: 
+In the simplest case, an observation is obtained from a trial consisting of
+three stimuli: a query stimulus (Q) and two reference stimuli (A and B). An
+agent selects the reference stimulus that they believe is more similar to the
+query stimulus. For this trial, there are two possible outcomes. If the agent
+selected reference A, then the observation for the ith trial would be recorded
+as the vector: 
 
 D_i = [Q A B]
 
@@ -55,10 +61,9 @@ If the agent had selected reference B, the observation would be recorded as:
 
 D_i = [Q B A]
 
-The simplest observation is a triplet of the form:
-Query: Reference A > Reference B
-
-This package is designed to handle a number of different observations.
+In addition to the simple \emph{triplet} trial, this package is designed to
+handle a number of different trial configurations. A trial may have 2-9
+reference stimuli and an agent can be required to select 
 
 [vanderMaaten]_, [Wah2011]_, [RoadsA]_,
 
@@ -72,33 +77,29 @@ Optionally, you can also provide additional information.
 .. code-block:: python
   
   n_stimuli = 100
-  n_dim = 4
-  n_group = 2
-  embedding = psiz.models.Exponential(n_stimuli=n_stimuli, n_dim=n_dim, n_group=n_group)
+  embedding = psiz.models.Exponential(n_stimuli, n_dim=4, n_group=2)
   embedding.fit(obs)
 
 
 know free parameters (set)
+
 don’t know free parameters (fit)
 
 - The dimensionality can be inferred using the function "suggest_dimensionality".
 
+- New embedding models can be created by sub-classing PsychologicalEmbedding.
 
-Embedding Models
-----------------
+- sampling from the posterior
 
 Modules
 -------
-``dimensionality``
-``generator``
-``models``
-``simulate``
-``trials``
-``utils``
-``visualize``
-
-Guiding principles
-------------------
+* ``dimensionality`` - Function for selecting the dimensionality of the embedding.
+* ``generator`` - Generate new trials randomly or using active selection.
+* ``models`` - A set of pre-defined pscyhological embedding models.
+* ``simulate`` - Simulate an agent making similarity judgements.
+* ``trials`` - Data structure used for trials and observations.
+* ``utils`` - Utility functions.
+* ``visualize`` - Functions for visualizing embeddings.
 
 Installation
 ------------

@@ -26,7 +26,6 @@ from numpy.random import multinomial
 import tensorflow as tf
 
 from psiz.trials import JudgedTrials
-from psiz.utils import possible_outcomes  # TODO remove?
 
 
 class Agent(object):

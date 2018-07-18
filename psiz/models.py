@@ -210,6 +210,26 @@ class PsychologicalEmbedding(object):
             attention['trainable'] = True
         return attention
 
+    def _check_z(self, z):
+        if z.shape[0] != self.n_stimuli:
+            raise ValueError(
+                "Input 'z' does not have the appropriate shape (number of \
+                stimuli).")
+        if z.shape[1] != self.n_dim:
+            raise ValueError(
+                "Input 'z' does not have the appropriate shape \
+                (dimensionality).")
+
+    def _check_attention(self, attention):
+        if attention.shape[0] != self.n_group:
+            raise ValueError(
+                "Input 'attention' does not have the appropriate shape \
+                (number of groups).")
+        if attention.shape[1] != self.n_dim:
+            raise ValueError(
+                "Input 'attention' does not have the appropriate shape \
+                (dimensionality).")
+    
     def _set_parameters(self, params):
         """State changing method sets algorithm-specific parameters.
 
@@ -356,24 +376,12 @@ class PsychologicalEmbedding(object):
             for param_name in freeze_options:
                 if param_name is 'z':
                     z = freeze_options['z'].astype(np.float32)
-                    if z.shape[0] != self.n_stimuli:
-                        raise ValueError(
-                            "Input 'z' does not have the appropriate shape.")
-                    if z.shape[1] != self.n_dim:
-                        raise ValueError(
-                            "Input 'z' does not have the appropriate shape.")
+                    self._check_z(z)
                     self.z['value'] = z
                     self.z['trainable'] = False
                 elif param_name is 'attention':
                     attention = freeze_options['attention']
-                    if attention.shape[0] != self.n_group:
-                        raise ValueError(
-                            "Input 'attention' does not have the \
-                            appropriate shape.")
-                    if attention.shape[1] != self.n_dim:
-                        raise ValueError(
-                            "Input 'attention' does not have the \
-                            appropriate shape.")
+                    self._check_attention(attention)
                     self.attention['value'] = attention
                     self.attention['trainable'] = False
                 else:
@@ -1407,8 +1415,28 @@ class PsychologicalEmbedding(object):
                 trial data.
 
         """
+        # TODO Here's an idea. I have two immediate problems. The first
+        # problem is that I need to write this function in a TensorFlow
+        # friendly manner, which means everything needs to be a tensor. I
+        # believe this boils down to figuring out how handle the variable
+        # length "possible_outcomes". The best idea I have is to create a 
+        # 3D tensor based on maximum requirements and then only fill it
+        # up partially based on need. The second issues is that there are
+        # some computations here that are being called unnecessarily often.
+        # It would be nice if I could factor some of it out and use a flag
+        # i.e., precomputed_data=None in order to accelerate the code. This
+        # means I need to factor the precomputation into it's own method
+        # and probably place it in utils.py or add it as a method of
+        # trials. The method could be something like, as_tensor.
+        # 
+        # possible_outcomes may be better off as a method of trials, 
+        # especially since it always takes a dataframe row from
+        # trials config_list property.
+
         if z is None:
             z = self.z['value']
+        else:
+            self._check_z(z)
         # TODO theta
 
         n_trial_all = trials.n_trial

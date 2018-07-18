@@ -186,7 +186,7 @@ def test_public_exponential_similarity():
     ))
     # TODO test both cases where attention_weights are and are not provided.
     # attention_weights = np.ones((2, 3))
-    # s_actual = model.similarity(z_q, z_ref, attention_weights)
+    # s_actual = model.similarity(z_q, z_ref, attention=attention_weights)
     s_actual = model.similarity(z_q, z_ref)
     s_desired = np.array([0.60972816, 0.10853130])
     np.testing.assert_allclose(s_actual, s_desired)
@@ -221,7 +221,7 @@ def test_public_exponential_similarity_broadcast():
 
     # TODO test both cases where attention_weights are and are not provided.
     # attention_weights = np.ones((2, 3))
-    # s_actual = model.similarity(z_q, z_ref, attention_weights)
+    # s_actual = model.similarity(z_q, z_ref, attention=attention_weights)
     s_actual = model.similarity(z_q, z_ref)
     s_desired = np.array((
         [0.60972816, 0.48281544],
@@ -281,7 +281,7 @@ def test_freeze():
 
 def test_probability(ground_truth, unjudged_trials):
     """Test probability method."""
-    (outcome_idx_list, prob) = ground_truth.outcome_probability(
+    (prob, outcome_idx_list) = ground_truth.outcome_probability(
         unjudged_trials)
     prob_actual = np.sum(prob, axis=1)
     prob_desired = np.ones((unjudged_trials.n_trial))
@@ -292,7 +292,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
     """Test tf_outcome_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
-    (outcome_idx_list, prob_1) = ground_truth.outcome_probability(
+    (prob_1, _) = ground_truth.outcome_probability(
         unjudged_trials)
     prob_actual_1 = np.sum(prob_1, axis=1)
 

@@ -20,9 +20,6 @@ Classes:
     Agent: An object that can be initialized using a psychological
         embedding and used to simulate similarity judgments.
 
-Todo:
-    - is returned outcome_idx the best format?
-
 """
 import numpy as np
 from numpy.random import multinomial
@@ -42,8 +39,6 @@ class Agent(object):
             to use when simulating judgments.
     Methods:
         simulate: Stochastically simulate similarity judgments.
-        probability: Return the probability of the possible outcomes
-            for each trial.
 
     """
 
@@ -74,7 +69,7 @@ class Agent(object):
 
         """
         group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int)
-        (outcome_idx_list, prob_all) = self.embedding.outcome_probability(
+        (prob_all, outcome_idx_list) = self.embedding.outcome_probability(
             trials, group_id=group_id)
         judged_trials = self._select(trials, outcome_idx_list, prob_all)
         return judged_trials

@@ -25,11 +25,7 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
-    - the method posterior_samples is brittle, would ideally use NUTS
-        version of Hamiltonian Monte Carlo to adaptively determine step
-        size. Will change once available in Edward.
     - implement general cost function that includes all scenarios
-    - implement posterior samples
     - parallelization during fitting (MAYBE)
     - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
@@ -43,7 +39,11 @@ Todo:
         class MyException(Exception):
             pass
     - remove defualts for model initialization?
-    - add probability, log_likelihood to documentation method list?
+    - may want to change similarity_matrix to accept attention weight
+        vector rather that group_id in order to allow matrices to be
+        computed for arbitrary weights.
+    - Change to tuning perspective.
+        * Encapsulate attention weights in new "tunings" object.
 """
 
 import sys
@@ -84,6 +84,10 @@ class PsychologicalEmbedding(object):
             the embedding.
         freeze: Freeze the free parameters of an embedding model.
         thaw: Make free parameters trainable.
+        probability: Return the probability of the possible outcomes
+            for each trial.
+        log_likelihood: Return the log-likelihood of a set of
+            observations.
         set_log: Adjust the TensorBoard logging behavior.
 
     Attributes:
@@ -112,11 +116,10 @@ class PsychologicalEmbedding(object):
     Notes:
         The methods fit, freeze, thaw, and set_log modify the state of
             the PsychologicalEmbedding object.
-        The attribute theta and respective dictionary keys must be
-            initialized by each concrete class.
-        The abstract methods _get_similarity_parameters_cold,
-            _get_similarity_parameters_warm, and _tf_similarity
-            must be implemented by each concrete class.
+        The abstract methods _default_theta,
+            _get_similarity_parameters_cold,
+            _get_similarity_parameters_warm, and _tf_similarity must be
+            implemented by each concrete class.
 
     """
 
@@ -127,37 +130,40 @@ class PsychologicalEmbedding(object):
 
         Args:
             n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded.
+                stimuli that will be embedded. This must be equal to or
+                greater than three.
             n_dim (optional): An integer indicating the dimensionalty
-                of the embedding.
+                of the embedding. Must be equal to or greater than one.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
-                each group.
+                each group. Must be equal to or greater than one.
         """
+        if (n_stimuli < 3):
+            raise ValueError("There must be at least three stimuli.")
         self.n_stimuli = n_stimuli
-        self.n_group = n_group
-
-        # Check arguments are valid.
         if (n_dim < 1):
             warnings.warn("The provided dimensionality must be an integer \
                 greater than 0. Assuming user requested 2 dimensions.")
             n_dim = 2
+        self.n_dim = n_dim
         if (n_group < 1):
             warnings.warn("The provided n_group must be an integer greater \
                 than 0. Assuming user requested 1 group.")
             n_group = 1
+        self.n_group = n_group
 
-        # Initialize dimension dependent attributes.
-        self.n_dim = n_dim
-        # Initialize random embedding points using multivariate Gaussian.
+        # Initialize random embedding points using a multivariate Gaussian.
         mean = np.ones((n_dim))
-        cov = np.identity(n_dim)
+        cov = .1 * np.identity(n_dim)
         self.z = {}
         self.z['value'] = np.random.multivariate_normal(
             mean, cov, (self.n_stimuli)
         )
         self.z['trainable'] = True
+
+        # Initialize theta with default values.
+        self.theta = self._default_theta()
 
         # Initialize attentional weights using uniform distribution.
         self.attention = {}
@@ -169,9 +175,6 @@ class PsychologicalEmbedding(object):
         else:
             self.attention['trainable'] = True
 
-        # Abstract attributes.
-        self.theta = {}
-
         # Embedding scaling factors to draw from.
         self.init_scale_list = [.001, .01, .1]
 
@@ -180,7 +183,6 @@ class PsychologicalEmbedding(object):
         self.log_dir = '/tmp/tensorflow_logs/embedding/'
 
         # Default inference settings.
-        # self.lr = 0.00001
         self.lr = 0.001
         self.max_n_epoch = 5000
         self.patience = 10
@@ -386,7 +388,7 @@ class PsychologicalEmbedding(object):
                 else:
                     self.theta[param_name]['trainable'] = True
 
-    def similarity(self, z_q, z_ref, attention=None):
+    def similarity(self, z_q, z_ref, theta=None, attention=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -397,6 +399,9 @@ class PsychologicalEmbedding(object):
                 shape = (n_sample, n_dim)
             z_ref: A set of embedding points.
                 shape = (n_sample, n_dim)
+            theta (optional): The parameters governing the similarity
+                kernel. If not provided, the theta associated with the
+                current object is used.
             attention (optional): The weights allocated to each
                 dimension in a weighted minkowski metric. The weights
                 should be positive and sum to the dimensionality of the
@@ -408,6 +413,9 @@ class PsychologicalEmbedding(object):
                 points.
 
         """
+        if theta is None:
+            theta = self.theta
+
         if attention is None:
             attention = self.attention['value'][0, :]
             attention = np.expand_dims(attention, axis=0)
@@ -423,8 +431,18 @@ class PsychologicalEmbedding(object):
             if len(attention.shape) == 2:
                 attention = np.expand_dims(attention, axis=2)
 
-        sim = self._similarity(z_q, z_ref, self.theta, attention)
+        sim = self._similarity(z_q, z_ref, theta, attention)
         return sim
+
+    @abstractmethod
+    def _default_theta(self):
+        """Return dictionary of default theta parameters.
+
+        Returns:
+            Dictionary of theta parameters.
+
+        """
+        pass
 
     @abstractmethod
     def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
@@ -489,7 +507,7 @@ class PsychologicalEmbedding(object):
 
         z_a = self.z['value'][a, :]
         z_b = self.z['value'][b, :]
-        s = self.similarity(z_a, z_b, attention)
+        s = self.similarity(z_a, z_b, attention=attention)
         s = s.reshape(self.n_stimuli, self.n_stimuli)
         return s
 
@@ -1343,7 +1361,7 @@ class PsychologicalEmbedding(object):
         # else:
         # TODO check z size
 
-        (_, prob_all) = self.outcome_probability(
+        (prob_all, _) = self.outcome_probability(
             obs, z, group_id=obs.group_id, unaltered_only=True)
         prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
         ll = np.sum(np.log(prob))
@@ -1434,7 +1452,7 @@ class PsychologicalEmbedding(object):
                 ]
             attention = self.attention['value'][group_id[trial_locs], :]
             # Precompute similarity between query and references.
-            s_qref = self.similarity(z_q, z_ref, attention)
+            s_qref = self.similarity(z_q, z_ref, attention=attention)
 
             if unaltered_only:
                 n_outcome = 1
@@ -1462,7 +1480,7 @@ class PsychologicalEmbedding(object):
         # Correct for numerical inaccuracy.
         if not unaltered_only:
             prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
-        return (outcome_idx_list, prob_all)
+        return (prob_all, outcome_idx_list)
 
     def tf_outcome_probability(self, trials, z_tf, tf_theta):
         """Return probability of outcomes for each trial.
@@ -1852,22 +1870,25 @@ class Exponential(PsychologicalEmbedding):
                 separate set of attention weights will be inferred for
                 each group.
         """
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group
-            )
-
-        # Default parameter settings.
-        self.theta = dict(
-            rho=dict(value=2., trainable=True, bounds=[1., None]),
-            tau=dict(value=1., trainable=True, bounds=[1., None]),
-            gamma=dict(value=0., trainable=True, bounds=[0., None]),
-            beta=dict(value=10., trainable=True, bounds=[1., None]),
-        )
+        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
 
         # Default inference settings.
         self.lr = 0.003
-        # self.max_n_epoch = 2000
-        # self.patience = 10
+
+    def _default_theta(self):
+        """Return dictionary of default theta parameters.
+
+        Returns:
+            Dictionary of theta parameters.
+
+        """
+        theta = dict(
+            rho=dict(value=2., trainable=True, bounds=[1., None]),
+            tau=dict(value=1., trainable=True, bounds=[1., None]),
+            gamma=dict(value=0., trainable=True, bounds=[0., None]),
+            beta=dict(value=10., trainable=True, bounds=[1., None])
+        )
+        return theta
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
@@ -2031,21 +2052,25 @@ class HeavyTailed(PsychologicalEmbedding):
                 separate set of attention weights will be inferred for
                 each group.
         """
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group)
-
-        # Default parameter settings.
-        self.theta = dict(
-            rho=dict(value=2., trainable=True, bounds=[1., None]),
-            tau=dict(value=1., trainable=True, bounds=[1., None]),
-            kappa=dict(value=2., trainable=True, bounds=[0., None]),
-            alpha=dict(value=30., trainable=True, bounds=[0., None]),
-        )
+        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
 
         # Default inference settings.
         self.lr = 0.003
-        # self.max_n_epoch = 2000
-        # self.patience = 10
+
+    def _default_theta(self):
+        """Return dictionary of default theta parameters.
+
+        Returns:
+            Dictionary of theta parameters.
+
+        """
+        theta = dict(
+            rho=dict(value=2., trainable=True, bounds=[1., None]),
+            tau=dict(value=1., trainable=True, bounds=[1., None]),
+            kappa=dict(value=2., trainable=True, bounds=[0., None]),
+            alpha=dict(value=30., trainable=True, bounds=[0., None])
+        )
+        return theta
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
@@ -2228,26 +2253,28 @@ class StudentsT(PsychologicalEmbedding):
                 separate set of attention weights will be inferred for
                 each group.
         """
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group)
+        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
 
-        # Default parameter settings.
-        self.theta = dict(
+        # Default inference settings.
+        self.lr = 0.01
+
+    def _default_theta(self):
+        """Return dictionary of default theta parameters.
+
+        Returns:
+            Dictionary of theta parameters.
+
+        """
+        theta = dict(
             rho=dict(value=2., trainable=False, bounds=[1., None]),
             tau=dict(value=2., trainable=False, bounds=[1., None]),
             alpha=dict(
-                value=(n_dim - 1.),
+                value=(self.n_dim - 1.),
                 trainable=False,
                 bounds=[0.000001, None]
             ),
         )
-
-        # Default inference settings.
-        # self.lr = 0.003
-        self.lr = 0.01
-        # self.max_n_epoch = 2000
-        # self.patience = 10
-        # self.init_scale_list = [.001, .01, .1]
+        return theta
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.

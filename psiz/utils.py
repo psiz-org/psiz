@@ -23,6 +23,28 @@ from itertools import permutations
 import math
 
 
+def similarity_matrix(similarity_func, z):
+        """Return a pairwise similarity matrix.
+
+        Returns:
+            A 2D array where element s_{i,j} indicates the similarity
+                between the ith and jth stimulus.
+
+        """
+        n_stimuli = z.shape[0]
+
+        xg = np.arange(n_stimuli)
+        a, b = np.meshgrid(xg, xg)
+        a = a.flatten()
+        b = b.flatten()
+
+        z_a = z[a, :]
+        z_b = z[b, :]
+        simmat = similarity_func(z_a, z_b)
+        simmat = simmat.reshape(n_stimuli, n_stimuli)
+        return simmat
+
+
 def matrix_correlation(mat_a, mat_b):
     """Return the R^2 score between two square matrices.
 

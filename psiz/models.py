@@ -24,7 +24,7 @@ Classes:
         kernel.
     StudentsT: Embedding model using a Student's t similarity kernel.
 
-Todo:
+Todo:te
     - implement general cost function that includes all scenarios
     - parallelization during fitting (MAYBE)
     - implement warm (currently the same as exact)
@@ -42,8 +42,12 @@ Todo:
     - may want to change similarity_matrix to accept attention weight
         vector rather that group_id in order to allow matrices to be
         computed for arbitrary weights.
-    - Change to tuning perspective.
+    - Change from "attention" to more general "tunings" perspective.
         * Encapsulate attention weights in new "tunings" object.
+        * Refactor computation of similarity to use tuning object.
+        * MAYBE Introduce additional tuning free parameters for each
+            stimulus. Control flexibility using rule or L2
+            regularization.
 """
 
 import sys
@@ -58,11 +62,7 @@ from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
-import edward as ed
-from edward.models import MultivariateNormalFullCovariance, Empirical, Uniform
-from edward.models import Categorical
 
-from psiz.simulate import Agent
 from psiz.utils import possible_outcomes, elliptical_slice
 
 
@@ -92,10 +92,10 @@ class PsychologicalEmbedding(object):
         set_log: Adjust the TensorBoard logging behavior.
 
     Attributes:
-        z: A dictionary containing with the keys 'value', 'trainable'.
-            The key 'value' contains the actual embedding points. The
-            key 'trainable' is a boolean flag that determines whether
-            the embedding points are inferred.
+        z: A dictionary with the keys 'value', 'trainable'. The key
+            'value' contains the actual embedding points. The key
+            'trainable' is a boolean flag that determines whether
+            the embedding points are inferred during inference.
         theta: Dictionary containing data about the parameter values
             governing the similarity kernel. The dictionary contains
             the variable names as keys at the first level. For each
@@ -159,17 +159,15 @@ class PsychologicalEmbedding(object):
         self.theta = self._init_theta()
         self.attention = self._init_attention()
 
-        # Embedding scaling factors to draw from.
-        self.init_scale_list = [.001, .01, .1]
-
-        # Initialize default TensorBoard log attributes.
-        self.do_log = False
-        self.log_dir = '/tmp/tensorflow_logs/embedding/'
-
         # Default inference settings.
+        self.init_scale_list = [.001, .01, .1]
         self.lr = 0.001
         self.max_n_epoch = 5000
         self.patience = 10
+
+        # Default TensorBoard log attributes.
+        self.do_log = False
+        self.log_dir = '/tmp/tensorflow_logs/embedding/'
 
         super().__init__()
 
@@ -200,7 +198,7 @@ class PsychologicalEmbedding(object):
 
     def _init_attention(self):
         """Return initialize attention.
-        
+
         Initialize attention weights using uniform distribution.
         """
         attention = {}
@@ -500,29 +498,6 @@ class PsychologicalEmbedding(object):
 
         """
         pass
-
-    def similarity_matrix(self, group_id=None):
-        """Return similarity matrix characterizing embedding.
-
-        Returns:
-            A 2D array where element s_{i,j} indicates the similarity
-                between the ith and jth stimulus.
-
-        """
-        if group_id is None:
-            group_id = 0
-        attention = self.attention['value'][group_id, :]
-
-        xg = np.arange(self.n_stimuli)
-        a, b = np.meshgrid(xg, xg)
-        a = a.flatten()
-        b = b.flatten()
-
-        z_a = self.z['value'][a, :]
-        z_b = self.z['value'][b, :]
-        s = self.similarity(z_a, z_b, attention=attention)
-        s = s.reshape(self.n_stimuli, self.n_stimuli)
-        return s
 
     def _get_attention(self, init_mode):
         """Return attention weights of model as TensorFlow variable."""

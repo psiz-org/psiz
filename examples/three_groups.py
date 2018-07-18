@@ -31,7 +31,7 @@ from psiz.trials import JudgedTrials
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import matrix_correlation
+from psiz.utils import similarity_matrix, matrix_correlation
 
 
 def main():
@@ -63,15 +63,40 @@ def main():
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
+    def truth_sim_func0(z_q, z_ref):
+        return model_truth.similarity(
+            z_q, z_ref, attention=model_truth.attention['value'][0])
+
+    def truth_sim_func1(z_q, z_ref):
+        return model_truth.similarity(
+            z_q, z_ref, attention=model_truth.attention['value'][1])
+
+    def truth_sim_func2(z_q, z_ref):
+        return model_truth.similarity(
+            z_q, z_ref, attention=model_truth.attention['value'][2])
+
     simmat_truth = (
-        model_truth.similarity_matrix(group_id=0),
-        model_truth.similarity_matrix(group_id=1),
-        model_truth.similarity_matrix(group_id=2)
+        similarity_matrix(truth_sim_func0, model_truth.z['value']),
+        similarity_matrix(truth_sim_func1, model_truth.z['value']),
+        similarity_matrix(truth_sim_func2, model_truth.z['value'])
     )
+
+    def infer_sim_func0(z_q, z_ref):
+        return model_inferred.similarity(
+            z_q, z_ref, attention=model_inferred.attention['value'][0])
+
+    def infer_sim_func1(z_q, z_ref):
+        return model_inferred.similarity(
+            z_q, z_ref, attention=model_inferred.attention['value'][1])
+
+    def infer_sim_func2(z_q, z_ref):
+        return model_inferred.similarity(
+            z_q, z_ref, attention=model_inferred.attention['value'][2])
+
     simmat_infer = (
-        model_inferred.similarity_matrix(group_id=0),
-        model_inferred.similarity_matrix(group_id=1),
-        model_inferred.similarity_matrix(group_id=2)
+        similarity_matrix(infer_sim_func0, model_inferred.z['value']),
+        similarity_matrix(infer_sim_func1, model_inferred.z['value']),
+        similarity_matrix(infer_sim_func2, model_inferred.z['value'])
     )
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):

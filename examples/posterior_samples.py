@@ -41,7 +41,7 @@ from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential, HeavyTailed, StudentsT
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
-from psiz.utils import matrix_correlation
+from psiz.utils import similarity_matrix, matrix_correlation
 
 
 def main():
@@ -58,7 +58,8 @@ def main():
     n_stimuli = model_truth.z['value'].shape[0]
     n_dim = model_truth.z['value'].shape[1]
     z_true = model_truth.z['value'].astype(np.float64)
-    simmat_truth = model_truth.similarity_matrix()
+    simmat_truth = similarity_matrix(
+        model_truth.similarity, model_truth.z['value'])
 
     # Create some random trials.
     generator = RandomGenerator(model_truth.n_stimuli)
@@ -88,7 +89,8 @@ def main():
     z_original = copy.copy(model_inferred.z['value'])
 
     z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
-    simmat_infer = model_inferred.similarity_matrix()
+    simmat_infer = similarity_matrix(
+        model_inferred.similarity, model_inferred.z['value'])
     r_squared = matrix_correlation(simmat_infer, simmat_truth)
     print('R^2 | {0: >6.2f}'.format(r_squared))
 
@@ -102,11 +104,13 @@ def main():
             obs.subset(include_idx), n_sample, n_burn, thin_step)
         z_central = np.median(z_samp, axis=0)
 
-        z_samp_list[i_frame] = np.reshape(z_samp, (n_sample * n_stimuli, n_dim))
+        z_samp_list[i_frame] = np.reshape(
+            z_samp, (n_sample * n_stimuli, n_dim))
         z_central_list[i_frame] = z_central
 
         model_inferred.z['value'] = z_central
-        simmat_infer = model_inferred.similarity_matrix()
+        simmat_infer = similarity_matrix(
+            model_inferred.similarity, model_inferred.z['value'])
         r_squared = matrix_correlation(simmat_infer, simmat_truth)
         r_squared_list[i_frame] = r_squared
         print('R^2 | {0: >6.2f}'.format(r_squared))

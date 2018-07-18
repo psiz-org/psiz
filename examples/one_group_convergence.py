@@ -30,7 +30,7 @@ from psiz.trials import JudgedTrials
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import matrix_correlation
+from psiz.utils import similarity_matrix, matrix_correlation
 
 
 def main():
@@ -39,7 +39,8 @@ def main():
     n_dim = 3
     n_group = 1
     model_truth = ground_truth(n_stimuli, n_dim, n_group)
-    simmat_truth = model_truth.similarity_matrix()
+    simmat_truth = similarity_matrix(
+        model_truth.similarity, model_truth.z['value'])
 
     # Create a random set of trials.
     n_trial = 1000
@@ -62,7 +63,8 @@ def main():
         model_inferred.fit(obs.subset(include_idx), 10, verbose=1)
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = model_inferred.similarity_matrix()
+        simmat_infer = similarity_matrix(
+            model_inferred.similarity, model_inferred.z['value'])
         r_squared[i_step] = matrix_correlation(simmat_infer, simmat_truth)
 
     # Plot comparison results.

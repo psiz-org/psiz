@@ -23,7 +23,6 @@ Todo
     - attention
     - heavy-tailed similarity
     - Student's t similarity
-    - simple hard-coded example for similarity_matrix
 """
 
 

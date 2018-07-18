@@ -21,6 +21,7 @@ Todo:
     the config_id and configuration is recomputed on initialization
     because down-stream code assumes that config_id is from [0,N[ and
     corresponds to indices of config_list
+    - test stack different config for JudgedTrials
 """
 
 import pytest
@@ -323,8 +324,8 @@ class TestJudgedTrials2:
 
 class TestStack:
 
-    def test_stack(self):
-        """Test stack static method"""
+    def test_stack_same_config(self):
+        """Test stack static method."""
         n_stimuli = 10
         model_truth = ground_truth(n_stimuli)
 
@@ -378,3 +379,33 @@ class TestStack:
             obs_all.group_id[0:n_trial], obs_novice.group_id)
         np.testing.assert_array_equal(
             obs_all.group_id[n_trial:], obs_expert.group_id)
+
+    def test_stack_different_config(self):
+        """Test stack static method with different configurations."""
+        n_stimuli = 20
+        generator = RandomGenerator(n_stimuli)
+
+        n_reference1 = 2
+        n_selected1 = 1
+        trials1 = generator.generate(5, n_reference1, n_selected1)
+
+        n_reference2 = 4
+        n_selected2 = 2
+        trials2 = generator.generate(5, n_reference2, n_selected2)
+
+        n_reference3 = 6
+        n_selected3 = 2
+        trials3 = generator.generate(5, n_reference3, n_selected3)
+        
+        trials_all = UnjudgedTrials.stack((trials1, trials2, trials3))
+
+        desired_n_reference = np.hstack((
+            n_reference1 * np.ones((5), dtype=np.int),
+            n_reference2 * np.ones((5), dtype=np.int),
+            n_reference3 * np.ones((5), dtype=np.int),
+        ))
+
+        np.testing.assert_array_equal(
+            trials_all.n_reference, desired_n_reference
+        )
+    

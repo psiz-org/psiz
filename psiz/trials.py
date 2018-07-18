@@ -34,6 +34,16 @@ Notes:
 Todo:
     - make sure inputs are appropriate shape
     - update documentation to use conventional notation for shape
+    - n_reference was tacked on as an init argument so as not to break
+        order, ideally it would occur in its natural order.
+    - pad with -1 not zero
+    - configuration id should ALWAYS correspond to the appropriate
+        index in the configuration list.
+            * rename to config_idx to reflect this
+            * make sure config_idx and config_list is re-computed after
+                a stack or subset operation.
+            * add tests
+            * document
 
 """
 
@@ -84,7 +94,9 @@ class SimilarityTrials(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, stimulus_set, n_selected=None, is_ranked=None):
+    def __init__(
+            self, stimulus_set, n_selected=None, is_ranked=None,
+            n_reference=None):
         """Initialize.
 
         Args:
@@ -107,6 +119,10 @@ class SimilarityTrials(object):
             is_ranked (optional): A Boolean array indicating which
                 trials require reference selections to be ranked.
                 shape = [n_trial, 1]
+            n_reference (optional): An integer array indicating the
+                number of references in each trial. Values are assumed
+                to be greater than zero.
+                shape = [n_trial, 1]
         """
         n_trial = stimulus_set.shape[0]
 
@@ -124,7 +140,9 @@ class SimilarityTrials(object):
             is_ranked = np.full((n_trial), True)
 
         # Infer n_reference for each display.
-        n_reference = self._infer_n_reference(stimulus_set)
+        if n_reference is None:
+            n_reference = self._infer_n_reference(stimulus_set)
+        # else check is good input TODO
 
         # Pad stimulus_set
         self.max_n_reference = 9  # TODO np.amax(n_reference)
@@ -228,7 +246,9 @@ class UnjudgedTrials(SimilarityTrials):
 
     """
 
-    def __init__(self, stimulus_set, n_selected=None, is_ranked=None):
+    def __init__(
+            self, stimulus_set, n_selected=None, is_ranked=None,
+            n_reference=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -239,8 +259,10 @@ class UnjudgedTrials(SimilarityTrials):
                 shape = [n_trial, max(n_reference) + 1]
             n_selected (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
+            n_reference (optional): See SimilarityTrials.
         """
-        SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
+        SimilarityTrials.__init__(
+            self, stimulus_set, n_selected, is_ranked, n_reference)
 
         # Determine unique display configurations.
         (config_list, config_id) = self._generate_configuration_id(
@@ -274,13 +296,16 @@ class UnjudgedTrials(SimilarityTrials):
 
         """
         stimulus_set = trials_list[0].stimulus_set
+        n_reference = trials_list[0].n_reference
         n_selected = trials_list[0].n_selected
         is_ranked = trials_list[0].is_ranked
         for trials in trials_list[1:]:
             stimulus_set = np.vstack((stimulus_set, trials.stimulus_set))
+            n_reference = np.hstack((n_reference, trials.n_reference))
             n_selected = np.hstack((n_selected, trials.n_selected))
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
-        return UnjudgedTrials(stimulus_set, n_selected, is_ranked)
+        return UnjudgedTrials(
+            stimulus_set, n_selected, is_ranked, n_reference)
 
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked):
         """Generate a unique ID for each trial configuration.
@@ -366,7 +391,7 @@ class JudgedTrials(SimilarityTrials):
     """
 
     def __init__(self, stimulus_set, n_selected=None, is_ranked=None,
-                 group_id=None):
+                 group_id=None, n_reference=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -379,13 +404,15 @@ class JudgedTrials(SimilarityTrials):
                 order. See SimilarityTrials.
             n_selected (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
+            n_reference (optional): See SimilarityTrials.
             group_id (optional): An integer array indicating the group
                 membership of each trial. It is assumed that group_id
                 is composed of integers from [0, M-1] where M is the
                 total number of groups.
                 shape = [n_trial, 1]
         """
-        SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
+        SimilarityTrials.__init__(
+            self, stimulus_set, n_selected, is_ranked, n_reference)
 
         # Handle default settings.
         if group_id is None:
@@ -433,15 +460,18 @@ class JudgedTrials(SimilarityTrials):
 
         """
         stimulus_set = trials_list[0].stimulus_set
+        n_reference = trials_list[0].n_reference
         n_selected = trials_list[0].n_selected
         is_ranked = trials_list[0].is_ranked
         group_id = trials_list[0].group_id
         for trials in trials_list[1:]:
             stimulus_set = np.vstack((stimulus_set, trials.stimulus_set))
+            n_reference = np.hstack((n_reference, trials.n_reference))
             n_selected = np.hstack((n_selected, trials.n_selected))
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
             group_id = np.hstack((group_id, trials.group_id))
-        return JudgedTrials(stimulus_set, n_selected, is_ranked, group_id)
+        return JudgedTrials(
+            stimulus_set, n_selected, is_ranked, group_id, n_reference)
 
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked,
                                    group_id, session_id=None):

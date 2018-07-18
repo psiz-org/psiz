@@ -69,11 +69,12 @@ from psiz.utils import possible_outcomes, elliptical_slice
 class PsychologicalEmbedding(object):
     """Abstract base class for psychological embedding algorithm.
 
-    The embedding procedure jointly infers two components. First, the
+    The embedding procedure jointly infers three components. First, the
     embedding algorithm infers a stimulus representation denoted z.
     Second, the embedding algorithm infers the similarity kernel
     parameters of the concrete class. The set of similarity kernel
-    parameters is denoted theta.
+    parameters is denoted theta. Third, the embedding algorithm infers
+    a set of attention weights if there is more than one group.
 
     Methods:
         fit: Fit the embedding model using the provided observations.
@@ -116,7 +117,7 @@ class PsychologicalEmbedding(object):
     Notes:
         The methods fit, freeze, thaw, and set_log modify the state of
             the PsychologicalEmbedding object.
-        The abstract methods _default_theta,
+        The abstract methods _init_theta,
             _get_similarity_parameters_cold,
             _get_similarity_parameters_warm, and _tf_similarity must be
             implemented by each concrete class.
@@ -153,27 +154,10 @@ class PsychologicalEmbedding(object):
             n_group = 1
         self.n_group = n_group
 
-        # Initialize random embedding points using a multivariate Gaussian.
-        mean = np.ones((n_dim))
-        cov = .1 * np.identity(n_dim)
-        self.z = {}
-        self.z['value'] = np.random.multivariate_normal(
-            mean, cov, (self.n_stimuli)
-        )
-        self.z['trainable'] = True
-
-        # Initialize theta with default values.
-        self.theta = self._default_theta()
-
-        # Initialize attentional weights using uniform distribution.
-        self.attention = {}
-        self.attention['value'] = np.ones(
-            (self.n_group, n_dim), dtype=np.float32)
-        # TODO check to make sure 2 dimensional even when only one group
-        if n_group is 1:
-            self.attention['trainable'] = False
-        else:
-            self.attention['trainable'] = True
+        # Initialize model components.
+        self.z = self._init_z()
+        self.theta = self._init_theta()
+        self.attention = self._init_attention()
 
         # Embedding scaling factors to draw from.
         self.init_scale_list = [.001, .01, .1]
@@ -188,6 +172,45 @@ class PsychologicalEmbedding(object):
         self.patience = 10
 
         super().__init__()
+
+    def _init_z(self):
+        """Return initialized embedding points.
+        
+        Initialize random embedding points using a multivariate
+            Gaussian.
+        """
+        mean = np.ones((self.n_dim))
+        cov = .1 * np.identity(self.n_dim)
+        z = {}
+        z['value'] = np.random.multivariate_normal(
+            mean, cov, (self.n_stimuli)
+        )
+        z['trainable'] = True
+        return z
+
+    @abstractmethod
+    def _init_theta(self):
+        """Return dictionary of default theta parameters.
+
+        Returns:
+            Dictionary of theta parameters.
+
+        """
+        pass
+
+    def _init_attention(self):
+        """Return initialize attention.
+        
+        Initialize attention weights using uniform distribution.
+        """
+        attention = {}
+        attention['value'] = np.ones(
+            (self.n_group, self.n_dim), dtype=np.float32)
+        if self.n_group is 1:
+            attention['trainable'] = False
+        else:
+            attention['trainable'] = True
+        return attention
 
     def _set_parameters(self, params):
         """State changing method sets algorithm-specific parameters.
@@ -433,16 +456,6 @@ class PsychologicalEmbedding(object):
 
         sim = self._similarity(z_q, z_ref, theta, attention)
         return sim
-
-    @abstractmethod
-    def _default_theta(self):
-        """Return dictionary of default theta parameters.
-
-        Returns:
-            Dictionary of theta parameters.
-
-        """
-        pass
 
     @abstractmethod
     def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
@@ -1875,7 +1888,7 @@ class Exponential(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.003
 
-    def _default_theta(self):
+    def _init_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2057,7 +2070,7 @@ class HeavyTailed(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.003
 
-    def _default_theta(self):
+    def _init_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2258,7 +2271,7 @@ class StudentsT(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.01
 
-    def _default_theta(self):
+    def _init_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:

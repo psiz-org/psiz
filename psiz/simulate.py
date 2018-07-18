@@ -23,6 +23,7 @@ Classes:
 """
 import numpy as np
 from numpy.random import multinomial
+from itertools import permutations
 import tensorflow as tf
 
 from psiz.trials import JudgedTrials
@@ -121,3 +122,43 @@ class Agent(object):
                 n_selected=trials.n_selected,
                 is_ranked=trials.is_ranked, group_id=group_id
             )
+
+
+def possible_outcomes(trial_configuration):
+    """Return the possible outcomes of a trial configuration.
+
+    Args:
+        trial_configuration: A trial configuration Pandas Series.
+
+    Returns:
+        An 2D array indicating all possible outcomes where the values
+            indicate indices of the reference stimuli. Each row
+            corresponds to one outcome. Note the indices refer to
+            references only and does not include an index for the
+            query.
+
+    """
+    n_reference = trial_configuration['n_reference']
+    n_selected = int(trial_configuration['n_selected'])
+
+    reference_list = range(n_reference)
+
+    # Get all permutations of length n_selected.
+    perm = permutations(reference_list, n_selected)
+
+    selection = list(perm)
+    n_outcome = len(selection)
+
+    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
+    for i_outcome in range(n_outcome):
+        # Fill in selections.
+        outcomes[i_outcome, 0:n_selected] = selection[i_outcome]
+        # Fill in unselected.
+        dummy_idx = np.arange(n_reference)
+        for i_selected in range(n_selected):
+            loc = dummy_idx != outcomes[i_outcome, i_selected]
+            dummy_idx = dummy_idx[loc]
+
+        outcomes[i_outcome, n_selected:] = dummy_idx
+
+    return outcomes

@@ -173,7 +173,7 @@ class PsychologicalEmbedding(object):
 
     def _init_z(self):
         """Return initialized embedding points.
-        
+
         Initialize random embedding points using a multivariate
             Gaussian.
         """
@@ -773,7 +773,11 @@ class PsychologicalEmbedding(object):
             tf_obs['n_reference']: obs.n_reference,
             tf_obs['n_selected']: obs.n_selected,
             tf_obs['is_ranked']: obs.is_ranked,
-            tf_obs['group_id']: obs.group_id
+            tf_obs['group_id']: obs.group_id,
+            tf_obs['config_id']: obs.config_id,
+            tf_obs['config_n_reference']: obs.config_list.n_reference.values,
+            tf_obs['config_n_selected']: obs.config_list.n_selected.values,
+            tf_obs['config_is_ranked']: obs.config_list.is_ranked.values.astype('int'),
         }
         return feed_dict
 
@@ -1282,6 +1286,25 @@ class PsychologicalEmbedding(object):
             tf_n_selected = tf.placeholder(tf.int32, name='n_selected')
             tf_is_ranked = tf.placeholder(tf.int32, name='is_ranked')
             tf_group_id = tf.placeholder(tf.int32, name='group_id')
+            tf_config_id = tf.placeholder(tf.int32, name='config_id')
+            # Configuration data.
+            tf_config_n_reference = tf.placeholder(
+                tf.int32, name='config_n_reference')
+            tf_config_n_selected = tf.placeholder(
+                tf.int32, name='config_n_selected')
+            tf_config_is_ranked = tf.placeholder(
+                tf.int32, name='config_is_ranked')
+            tf_obs = {
+                'stimulus_set': tf_stimulus_set,
+                'n_reference': tf_n_reference,
+                'n_selected': tf_n_selected,
+                'is_ranked': tf_is_ranked,
+                'group_id': tf_group_id,
+                'config_id': tf_config_id,
+                'config_n_reference': tf_config_n_reference,
+                'config_n_selected': tf_config_n_selected,
+                'config_is_ranked': tf_config_is_ranked
+            }
 
             # Get indices of different display configurations
             idx_8c2 = tf.squeeze(tf.where(tf.logical_and(
@@ -1311,13 +1334,6 @@ class PsychologicalEmbedding(object):
                 )
             )
 
-            tf_obs = {
-                'stimulus_set': tf_stimulus_set,
-                'n_reference': tf_n_reference,
-                'n_selected': tf_n_selected,
-                'is_ranked': tf_is_ranked,
-                'group_id': tf_group_id
-            }
             # TODO move constraints outside core model?
             tf_attention_constraint = tf_attention.assign(
                 self._project_attention(tf_attention))
@@ -1368,7 +1384,7 @@ class PsychologicalEmbedding(object):
                 object are used.
             theta (optional): The similarity kernel parameters. If no
                 theta parameters are provided, the parameters
-                associated with the object are used. TODO
+                associated with the object are used.
             group_id (optional): The group ID for which to compute the
                 probabilities.
             unaltered_only (optional): Flag the determines whether only
@@ -1393,7 +1409,6 @@ class PsychologicalEmbedding(object):
         """
         if z is None:
             z = self.z['value']
-        # TODO else check z size
         # TODO theta
 
         n_trial_all = trials.n_trial

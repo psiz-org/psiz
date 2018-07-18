@@ -44,10 +44,13 @@ Todo:
                 a stack or subset operation.
             * add tests
             * document
+    - when assembling configuration list, determine outcome_idx_list
+    - include n_outcome in config_list
 
 """
 
 from abc import ABCMeta, abstractmethod
+from itertools import permutations
 
 import numpy as np
 import pandas as pd
@@ -537,3 +540,43 @@ class JudgedTrials(SimilarityTrials):
             config_id[display_type_locs] = i_type
 
         return (df_config, config_id)
+
+
+def possible_outcomes(trial_configuration):
+    """Return the possible outcomes of a trial configuration.
+
+    Args:
+        trial_configuration: A trial configuration Pandas Series.
+
+    Returns:
+        An 2D array indicating all possible outcomes where the values
+            indicate indices of the reference stimuli. Each row
+            corresponds to one outcome. Note the indices refer to
+            references only and does not include an index for the
+            query.
+
+    """
+    n_reference = trial_configuration['n_reference']
+    n_selected = int(trial_configuration['n_selected'])
+
+    reference_list = range(n_reference)
+
+    # Get all permutations of length n_selected.
+    perm = permutations(reference_list, n_selected)
+
+    selection = list(perm)
+    n_outcome = len(selection)
+
+    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
+    for i_outcome in range(n_outcome):
+        # Fill in selections.
+        outcomes[i_outcome, 0:n_selected] = selection[i_outcome]
+        # Fill in unselected.
+        dummy_idx = np.arange(n_reference)
+        for i_selected in range(n_selected):
+            loc = dummy_idx != outcomes[i_outcome, i_selected]
+            dummy_idx = dummy_idx[loc]
+
+        outcomes[i_outcome, n_selected:] = dummy_idx
+
+    return outcomes

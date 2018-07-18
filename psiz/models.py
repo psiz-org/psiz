@@ -63,7 +63,8 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
 
-from psiz.utils import possible_outcomes, elliptical_slice
+from psiz.trials import possible_outcomes
+from psiz.utils import elliptical_slice
 
 
 class PsychologicalEmbedding(object):
@@ -1370,8 +1371,6 @@ class PsychologicalEmbedding(object):
         """
         if z is None:
             z = self.z['value']
-        # else:
-        # TODO check z size
 
         (prob_all, _) = self.outcome_probability(
             obs, z, group_id=obs.group_id, unaltered_only=True)
@@ -1446,6 +1445,41 @@ class PsychologicalEmbedding(object):
         if group_id is None:
             group_id = np.zeros((trials.n_trial), dtype=np.int)
 
+        # what if trials object holds the various possible outcomes; a trial
+        # represents the content as well as what could happen. It's not
+        # perfect but it doesn't really make sense to split the info up and
+        # it would be nice to pass that info in on an existing object. I 
+        # guess this makes sense from the perspective that the possible
+        # outcomes only operates on trial data.
+        # ====== DOESN'T CHANGE with z only with obs =======
+        outcome_idx_list = []
+        n_outcome_list = []
+        n_reference_list = []
+        max_n_outcome = 0
+        max_n_reference = np.max(trials.config_list.n_reference.values)
+        for i_config in range(n_config):
+            outcome_idx_list.append(
+                possible_outcomes(
+                    trials.config_list.iloc[i_config]
+                )
+            )
+            n_outcome = outcome_idx_list[i_config].shape[0]
+            n_reference = outcome_idx_list[i_config].shape[1]
+            n_outcome_list.append(n_outcome)
+            n_reference_list.append(n_reference)
+            if n_outcome > max_n_outcome:
+                max_n_outcome = n_outcome
+        # Create an analogous tensor.
+        # shape = (n_config, max_n_outcome, max_n_ref)
+        outcome_idx_tensor = -1 * np.ones(
+            (n_config, max_n_outcome, max_n_reference), dtype=np.int32)
+        for i_config in range(n_config):
+            outcome_idx_tensor[
+                i_config,
+                0:n_outcome_list[i_config],
+                0:n_reference_list[i_config]] = outcome_idx_list[i_config]
+        # ====== DOESN'T CHANGE with z only with obs =======
+        # ====== DOESN'T CHANGE with z only with obs =======
         outcome_idx_list = []
         n_outcome_list = []
         max_n_outcome = 0
@@ -1459,6 +1493,7 @@ class PsychologicalEmbedding(object):
             n_outcome_list.append(n_outcome)
             if n_outcome > max_n_outcome:
                 max_n_outcome = n_outcome
+        # ====== DOESN'T CHANGE with z only with obs =======
 
         if unaltered_only:
             max_n_outcome = 1
@@ -1466,7 +1501,12 @@ class PsychologicalEmbedding(object):
         prob_all = np.zeros((n_trial_all, max_n_outcome))
         for i_config in range(n_config):
             config = trials.config_list.iloc[i_config]
-            outcome_idx = outcome_idx_list[i_config]
+            # outcome_idx = outcome_idx_list[i_config]
+            outcome_idx = outcome_idx_tensor[
+                i_config,
+                0:n_outcome_list[i_config],
+                0:n_reference_list[i_config]
+            ]
             trial_locs = trials.config_id == i_config
             n_trial = np.sum(trial_locs)
             n_outcome = n_outcome_list[i_config]
@@ -1510,7 +1550,8 @@ class PsychologicalEmbedding(object):
 
         # Correct for numerical inaccuracy.
         if not unaltered_only:
-            prob_all = np.divide(prob_all, np.sum(prob_all, axis=1, keepdims=True))
+            prob_all = np.divide(
+                prob_all, np.sum(prob_all, axis=1, keepdims=True))
         return (prob_all, outcome_idx_list)
 
     def tf_outcome_probability(self, trials, z_tf, tf_theta):

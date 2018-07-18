@@ -16,6 +16,11 @@
 
 """Module for testing simulate.py.
 
+Notes:
+    It is critical that the function possible_outcomes returns the
+        unaltered index first (as the test cases are written). Many
+        downstream applications make this assumption.
+
 Todo:
     - test outcome_idx_list
     - test resultant group_id of judged trials

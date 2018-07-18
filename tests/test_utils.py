@@ -15,11 +15,6 @@
 # ==============================================================================
 
 """Module for testing utils.py.
-
-    Notes:
-        It is critical that the function possible_outcomes returns the
-            unaltered index first (as the test cases are written). Many
-            downstream applications make this assumption.
     
     Todo:
         - simple hard-coded example for similarity_matrix

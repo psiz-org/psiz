@@ -6,15 +6,6 @@ Purpose
 -------
 PsiZ provides the computational tools to infer a continuous, multivariate
 representation for a set of stimuli from ordinal similarity relations.
-Inference is performed using a combination of gradient decent and Markov
-chain Monte Carlo methods.
-
-What's in a name?
------------------
-The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthard
-for the term *psychological embedding*. The greek letter Psi is often used to
-represent the field of psychology and the matrix variable **Z** is often used
-in machine learning to denote a latent feature space.
 
 Quick Start
 -----------
@@ -44,26 +35,28 @@ information in order to infer an embedding.
 
 Trials and Observations
 -----------------------
-To infer an embedding, multiple observations are necessary. A single 
-observation is comprised of multiple stimuli that have been judged by an 
-agent (human or machine) based on their similarity. 
+Inference is performed by fitting a model to a set of observations. In this
+package, a single observation is comprised of multiple stimuli that have been
+judged by an agent (human or machine) based on their similarity. 
 
 In the simplest case, an observation is obtained from a trial consisting of
 three stimuli: a query stimulus (Q) and two reference stimuli (A and B). An
 agent selects the reference stimulus that they believe is more similar to the
-query stimulus. For this trial, there are two possible outcomes. If the agent
-selected reference A, then the observation for the ith trial would be recorded
-as the vector: 
+query stimulus. For this simple trial, there are two possible outcomes. If the
+agent selected reference A, then the observation for the ith trial would be
+recorded as the vector: 
 
 D_i = [Q A B]
 
-If the agent had selected reference B, the observation would be recorded as:
+Alternatively, if the agent had selected reference B, the observation would be
+recorded as:
 
 D_i = [Q B A]
 
-In addition to the simple \emph{triplet} trial, this package is designed to
+In addition to a simple \emph{triplet} trial, this package is designed to
 handle a number of different trial configurations. A trial may have 2-9
-reference stimuli and an agent can be required to select 
+reference stimuli and an agent may be required to select and rank more than
+one reference stimulus. 
 
 [vanderMaaten]_, [Wah2011]_, [RoadsA]_,
 
@@ -91,6 +84,9 @@ don’t know free parameters (fit)
 
 - sampling from the posterior
 
+- Inference is performed using a combination of gradient decent and Markov
+chain Monte Carlo methods.
+
 Modules
 -------
 * ``dimensionality`` - Function for selecting the dimensionality of the embedding.
@@ -116,6 +112,13 @@ Authors
 - Brett D. Roads
 - Michael C. Mozer
 - See also the list of contributors who participated in this project.
+
+What's in a name?
+-----------------
+The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthard
+for the term *psychological embedding*. The greek letter Psi is often used to
+represent the field of psychology and the matrix variable **Z** is often used
+in machine learning to denote a latent feature space.
 
 Licence
 -------

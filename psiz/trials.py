@@ -32,6 +32,7 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
+    - Make stack a stand-alone function.
 
 """
 
@@ -116,12 +117,14 @@ class SimilarityTrials(object):
         """
         self.n_trial = stimulus_set.shape[0]
 
-        # Format stimulus set.
-        max_n_reference = 9  # TODO np.amax(n_reference)
-        self.stimulus_set = self._pad_stimulus_set(
-            stimulus_set, max_n_reference)
+        self.n_reference = self._infer_n_reference(stimulus_set)
 
-        self.n_reference = self._infer_n_reference(self.stimulus_set)
+        # Format stimulus set.
+        # max_n_reference = 9
+        self.max_n_reference = np.amax(self.n_reference)
+        self.stimulus_set = stimulus_set[:, 0:self.max_n_reference+1]
+        # self.stimulus_set = pad_stimulus_set(
+        #     stimulus_set, max_n_reference)
 
         if n_selected is None:
             n_selected = np.ones((self.n_trial), dtype=np.int64)
@@ -139,12 +142,6 @@ class SimilarityTrials(object):
         self.config_idx = None
         self.config_list = None
         self.outcome_idx_list = None
-
-    def _pad_stimulus_set(self, stimulus_set, max_n_reference):
-        n_pad = max_n_reference - stimulus_set.shape[1]
-        pad_mat = -1 * np.ones((self.n_trial, n_pad), dtype=np.int64)
-        stimulus_set = np.hstack((stimulus_set, pad_mat))
-        return stimulus_set
 
     def _infer_n_reference(self, stimulus_set):
         """Return the number of references in each trial.
@@ -164,10 +161,11 @@ class SimilarityTrials(object):
         """
         max_ref = stimulus_set.shape[1] - 1
         n_reference = max_ref - np.sum(stimulus_set < 0, axis=1)
-        return np.array(n_reference, dtype=np.int64)
+        return n_reference.astype(dtype=np.int64)
 
     def _check_n_selected(self, n_selected):
         """Check the argument n_selected."""
+        n_selected = n_selected.astype(np.int64)
         # Check shape argreement.
         if not (n_selected.shape[0] == self.n_trial):
             raise ValueError((
@@ -313,6 +311,10 @@ class UnjudgedTrials(SimilarityTrials):
     def stack(trials_list):
         """Return a SimilarityTrials object containing all trials.
 
+        The stimulus_set of each SimilarityTrials object is padded
+        first to match the maximum number of references of all the
+        objects.
+
         Args:
             trials_list: A list of SimilarityTrials objects to be
                 stacked.
@@ -321,13 +323,23 @@ class UnjudgedTrials(SimilarityTrials):
             A new UnjudgedTrials object.
 
         """
-        stimulus_set = trials_list[0].stimulus_set
+        # Determine the maximum number of references.
+        max_n_reference = 0
+        for trials in trials_list:
+            if trials.max_n_reference > max_n_reference:
+                max_n_reference = trials.max_n_reference
+
+        stimulus_set = pad_stimulus_set(
+            trials_list[0].stimulus_set,
+            max_n_reference
+        )
         n_selected = trials_list[0].n_selected
         is_ranked = trials_list[0].is_ranked
         for trials in trials_list[1:]:
-            # TODO when allowing more than 9, vstack of stimulus set
-            # will require a padding operation first.
-            stimulus_set = np.vstack((stimulus_set, trials.stimulus_set))
+            stimulus_set = np.vstack((
+                stimulus_set,
+                pad_stimulus_set(trials.stimulus_set, max_n_reference)
+            ))
             n_selected = np.hstack((n_selected, trials.n_selected))
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
         return UnjudgedTrials(
@@ -360,7 +372,7 @@ class UnjudgedTrials(SimilarityTrials):
         n_trial = len(n_reference)
 
         # Determine unique display configurations.
-        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int)
+        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int64)
         d = {
             'n_reference': n_reference, 'n_selected': n_selected,
             'is_ranked': is_ranked, 'n_outcome': n_outcome_placeholder
@@ -368,15 +380,17 @@ class UnjudgedTrials(SimilarityTrials):
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
+        n_out_idx = df_config.columns.get_loc("n_outcome")
 
         # Assign display configuration ID for every observation.
-        config_idx = np.empty(n_trial, dtype=np.int)
+        config_idx = np.empty(n_trial, dtype=np.int64)
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
             outcome_idx = possible_outcomes(df_config.iloc[i_config])
             outcome_idx_list.append(outcome_idx)
-            df_config['n_outcome'].iloc[i_config] = outcome_idx.shape[0]
+            n_outcome = outcome_idx.shape[0]
+            df_config.iloc[i_config, n_out_idx] = n_outcome
             # Find trials matching configuration.
             a = (n_reference == df_config['n_reference'].iloc[i_config])
             b = (n_selected == df_config['n_selected'].iloc[i_config])
@@ -461,6 +475,7 @@ class JudgedTrials(SimilarityTrials):
 
     def _check_group_id(self, group_id):
         """Check the argument n_selected."""
+        group_id = group_id.astype(np.int64)
         # Check shape argreement.
         if not (group_id.shape[0] == self.n_trial):
             raise ValueError((
@@ -501,14 +516,24 @@ class JudgedTrials(SimilarityTrials):
             A new JudgedTrials object.
 
         """
-        stimulus_set = trials_list[0].stimulus_set
+        # Determine the maximum number of references.
+        max_n_reference = 0
+        for trials in trials_list:
+            if trials.max_n_reference > max_n_reference:
+                max_n_reference = trials.max_n_reference
+
+        stimulus_set = pad_stimulus_set(
+            trials_list[0].stimulus_set,
+            max_n_reference
+        )
         n_selected = trials_list[0].n_selected
         is_ranked = trials_list[0].is_ranked
         group_id = trials_list[0].group_id
         for trials in trials_list[1:]:
-            # TODO when allowing more than 9, vstack of stimulus set
-            # will require a padding operation first.
-            stimulus_set = np.vstack((stimulus_set, trials.stimulus_set))
+            stimulus_set = np.vstack((
+                stimulus_set,
+                pad_stimulus_set(trials.stimulus_set, max_n_reference)
+            ))
             n_selected = np.hstack((n_selected, trials.n_selected))
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
             group_id = np.hstack((group_id, trials.group_id))
@@ -557,7 +582,7 @@ class JudgedTrials(SimilarityTrials):
             session_id = np.zeros((n_trial), dtype=np.int64)
 
         # Determine unique display configurations.
-        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int)
+        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int64)
         d = {
             'n_reference': n_reference, 'n_selected': n_selected,
             'is_ranked': is_ranked, 'group_id': group_id,
@@ -566,15 +591,17 @@ class JudgedTrials(SimilarityTrials):
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
+        n_out_idx = df_config.columns.get_loc("n_outcome")
 
-        # Assign display configuration ID for every observation.
-        config_idx = np.empty(n_trial, dtype=np.int)
+        # Assign display configuration index for every observation.
+        config_idx = np.empty(n_trial, dtype=np.int64)
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
             outcome_idx = possible_outcomes(df_config.iloc[i_config])
             outcome_idx_list.append(outcome_idx)
-            df_config['n_outcome'].iloc[i_config] = outcome_idx.shape[0]
+            n_outcome = outcome_idx.shape[0]
+            df_config.iloc[i_config, n_out_idx] = n_outcome
             # Find trials matching configuration.
             a = (n_reference == df_config['n_reference'].iloc[i_config])
             b = (n_selected == df_config['n_selected'].iloc[i_config])
@@ -588,6 +615,16 @@ class JudgedTrials(SimilarityTrials):
         return (config_idx, df_config, outcome_idx_list)
 
 
+def pad_stimulus_set(stimulus_set, max_n_reference):
+    """Pad 2D array with columns composed of -1."""
+    n_trial = stimulus_set.shape[0]
+    n_pad = max_n_reference - (stimulus_set.shape[1] - 1)
+    if n_pad > 0:
+        pad_mat = -1 * np.ones((n_trial, n_pad), dtype=np.int64)
+        stimulus_set = np.hstack((stimulus_set, pad_mat))
+    return stimulus_set
+
+
 def possible_outcomes(trial_configuration):
     """Return the possible outcomes of a trial configuration.
 
@@ -599,10 +636,11 @@ def possible_outcomes(trial_configuration):
             indicate indices of the reference stimuli. Each row
             corresponds to one outcome. Note the indices refer to
             references only and does not include an index for the
-            query.
+            query. Also note that the unpermuted index is returned
+            first.
 
     """
-    n_reference = trial_configuration['n_reference']
+    n_reference = int(trial_configuration['n_reference'])
     n_selected = int(trial_configuration['n_selected'])
 
     reference_list = range(n_reference)
@@ -613,7 +651,7 @@ def possible_outcomes(trial_configuration):
     selection = list(perm)
     n_outcome = len(selection)
 
-    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
+    outcomes = np.empty((n_outcome, n_reference), dtype=np.int64)
     for i_outcome in range(n_outcome):
         # Fill in selections.
         outcomes[i_outcome, 0:n_selected] = selection[i_outcome]

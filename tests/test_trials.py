@@ -52,7 +52,8 @@ def setup_tasks_0():
         {
             'n_reference': [2, 4, 8],
             'n_selected': [1, 1, 1],
-            'is_ranked': [True, True, True]
+            'is_ranked': [True, True, True],
+            'n_outcome': [2, 4, 8]
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -84,7 +85,8 @@ def setup_tasks_1():
         {
             'n_reference': [2, 4, 8],
             'n_selected': [1, 1, 2],
-            'is_ranked': [True, True, True]
+            'is_ranked': [True, True, True],
+            'n_outcome': [2, 4, 56]
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -118,7 +120,8 @@ def setup_obs_0():
             'n_selected': [1, 1, 2],
             'is_ranked': [True, True, True],
             'group_id': [0, 0, 0],
-            'session_id': [0, 0, 0]
+            'session_id': [0, 0, 0],
+            'n_outcome': [2, 4, 56]
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -153,7 +156,8 @@ def setup_obs_1():
             'n_selected': [1, 1, 2],
             'is_ranked': [True, True, True],
             'group_id': [0, 1, 1],
-            'session_id': [0, 0, 0]
+            'session_id': [0, 0, 0],
+            'n_outcome': [2, 4, 56]
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -552,7 +556,7 @@ class TestStack:
         n_reference3 = 6
         n_selected3 = 2
         trials3 = generator.generate(5, n_reference3, n_selected3)
-        
+
         trials_all = UnjudgedTrials.stack((trials1, trials2, trials3))
 
         desired_n_reference = np.hstack((

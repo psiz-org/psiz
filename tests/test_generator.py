@@ -41,7 +41,7 @@ def test_random_generator():
     assert trials.n_trial == n_trial_desired
     assert sum(trials.n_reference == n_reference_desired) == n_trial_desired
     assert trials.stimulus_set.shape[0] == n_trial_desired
-    assert trials.stimulus_set.shape[1] == 9  # TODO n_reference_desired + 1
+    assert trials.stimulus_set.shape[1] == n_reference_desired + 1
     min_actual = np.min(trials.stimulus_set)
     max_actual = np.max(trials.stimulus_set)
     assert min_actual >= -1  # Need -1 for padding.

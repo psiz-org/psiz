@@ -27,7 +27,7 @@ model.
 import numpy as np
 import tensorflow as tf
 
-from psiz.trials import JudgedTrials
+from psiz.trials import JudgedTrials, stack
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
@@ -55,7 +55,7 @@ def main():
     obs_novice = agent_novice.simulate(trials)
     obs_interm = agent_interm.simulate(trials)
     obs_expert = agent_expert.simulate(trials)
-    obs_all = JudgedTrials.stack((obs_novice, obs_interm, obs_expert))
+    obs_all = stack((obs_novice, obs_interm, obs_expert))
 
     model_inferred = Exponential(
         model_truth.n_stimuli, n_dim, n_group)

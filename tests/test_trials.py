@@ -29,7 +29,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from psiz.trials import UnjudgedTrials, JudgedTrials, possible_outcomes
+from psiz.trials import UnjudgedTrials, JudgedTrials, possible_outcomes, stack
 from psiz.generator import RandomGenerator
 from psiz.simulate import Agent
 from psiz.models import Exponential
@@ -289,7 +289,7 @@ class TestUnjudgedTrials:
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
         # Stack trials
-        trials_stack = UnjudgedTrials.stack((trials_0, trials_1))
+        trials_stack = stack((trials_0, trials_1))
         desired_config_idx = np.array((0, 0, 1, 1, 2, 3, 3, 4, 4, 5))
         np.testing.assert_array_equal(
             trials_stack.config_idx, desired_config_idx)
@@ -418,7 +418,7 @@ class TestJudgedTrials:
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
         # Stack trials
-        trials_stack = JudgedTrials.stack((trials_0, trials_1))
+        trials_stack = stack((trials_0, trials_1))
         desired_config_idx = np.array((0, 0, 1, 1, 2, 3, 3, 4, 4, 5))
         np.testing.assert_array_equal(
             trials_stack.config_idx, desired_config_idx)
@@ -495,7 +495,7 @@ class TestStack:
         generator = RandomGenerator(n_stimuli)
         trials = generator.generate(n_trial, n_reference, n_selected)
 
-        double_trials = UnjudgedTrials.stack((trials, trials))
+        double_trials = stack((trials, trials))
 
         assert double_trials.n_trial == 2 * n_trial
         np.testing.assert_array_equal(
@@ -517,7 +517,7 @@ class TestStack:
         agent_expert = Agent(model_truth, group_id=1)
         obs_novice = agent_novice.simulate(trials)
         obs_expert = agent_expert.simulate(trials)
-        obs_all = JudgedTrials.stack((obs_novice, obs_expert))
+        obs_all = stack((obs_novice, obs_expert))
 
         assert obs_all.n_trial == 2 * n_trial
         np.testing.assert_array_equal(
@@ -557,7 +557,7 @@ class TestStack:
         n_selected3 = 2
         trials3 = generator.generate(5, n_reference3, n_selected3)
 
-        trials_all = UnjudgedTrials.stack((trials1, trials2, trials3))
+        trials_all = stack((trials1, trials2, trials3))
 
         desired_n_reference = np.hstack((
             n_reference1 * np.ones((5), dtype=np.int),
@@ -570,7 +570,7 @@ class TestStack:
         )
 
     def test_padding(self):
-        """Test padding values when using stack method."""
+        """Test padding values when using stack and subset method."""
         n_stimuli = 20
         generator = RandomGenerator(n_stimuli)
 
@@ -586,20 +586,39 @@ class TestStack:
         n_selected3 = 2
         trials3 = generator.generate(5, n_reference3, n_selected3)
 
-        trials_all = UnjudgedTrials.stack((trials1, trials2, trials3))
+        trials_all = stack((trials1, trials2, trials3))
 
-        # Check padding values of first set (non-padded and then padded values).
+        # Check padding values of first set (non-padded and then padded
+        # values).
         assert np.sum(np.equal(trials_all.stimulus_set[1:5, 0:3], -1)) == 0
         np.testing.assert_array_equal(
-            trials_all.stimulus_set[0:5, 3:], -1 * np.ones((5, 6), dtype=np.int)
+            trials_all.stimulus_set[0:5, 3:],
+            -1 * np.ones((5, 6), dtype=np.int)
         )
-        # Check padding values of second set (non-padded and then padded values).
+        # Check padding values of second set (non-padded and then padded
+        # values).
         assert np.sum(np.equal(trials_all.stimulus_set[5:10, 0:5], -1)) == 0
         np.testing.assert_array_equal(
-            trials_all.stimulus_set[5:10, 5:], -1 * np.ones((5, 4), dtype=np.int)
+            trials_all.stimulus_set[5:10, 5:],
+            -1 * np.ones((5, 4), dtype=np.int)
         )
-        # Check padding values of third set (non-padded and then padded values).
+        # Check padding values of third set (non-padded and then padded
+        # values).
         assert np.sum(np.equal(trials_all.stimulus_set[10:15, :], -1)) == 0
+
+        # Check padding when taking subset.
+        trials_subset = trials_all.subset(np.arange(10))
+        assert trials_subset.stimulus_set.shape[1] == 5
+        # Check padding values of first set (non-padded and then padded
+        # values).
+        assert np.sum(np.equal(trials_subset.stimulus_set[1:5, 0:3], -1)) == 0
+        np.testing.assert_array_equal(
+            trials_subset.stimulus_set[0:5, 3:],
+            -1 * np.ones((5, 2), dtype=np.int)
+        )
+        # Check padding values of second set (non-padded and then padded
+        # values).
+        assert np.sum(np.equal(trials_subset.stimulus_set[5:10, 0:5], -1)) == 0
 
 
 class TestPossibleOutcomes:

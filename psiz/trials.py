@@ -32,7 +32,6 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
-    - Make stack a stand-alone function.
 
 """
 
@@ -233,21 +232,6 @@ class SimilarityTrials(object):
         """
         pass
 
-    @staticmethod
-    @abstractmethod
-    def stack(trials_list):
-        """Return a SimilarityTrials object containing all trials.
-
-        Args:
-            trials_list: A list of SimilarityTrials objects to be
-                stacked.
-
-        Returns:
-            A new SimilarityTrials object.
-
-        """
-        pass
-
 
 class UnjudgedTrials(SimilarityTrials):
     """Object that encapsulates unjudged similarity trials.
@@ -306,44 +290,6 @@ class UnjudgedTrials(SimilarityTrials):
         """
         return UnjudgedTrials(self.stimulus_set[index, :],
                               self.n_selected[index], self.is_ranked[index])
-
-    @staticmethod
-    def stack(trials_list):
-        """Return a SimilarityTrials object containing all trials.
-
-        The stimulus_set of each SimilarityTrials object is padded
-        first to match the maximum number of references of all the
-        objects.
-
-        Args:
-            trials_list: A list of SimilarityTrials objects to be
-                stacked.
-
-        Returns:
-            A new UnjudgedTrials object.
-
-        """
-        # Determine the maximum number of references.
-        max_n_reference = 0
-        for trials in trials_list:
-            if trials.max_n_reference > max_n_reference:
-                max_n_reference = trials.max_n_reference
-
-        stimulus_set = pad_stimulus_set(
-            trials_list[0].stimulus_set,
-            max_n_reference
-        )
-        n_selected = trials_list[0].n_selected
-        is_ranked = trials_list[0].is_ranked
-        for trials in trials_list[1:]:
-            stimulus_set = np.vstack((
-                stimulus_set,
-                pad_stimulus_set(trials.stimulus_set, max_n_reference)
-            ))
-            n_selected = np.hstack((n_selected, trials.n_selected))
-            is_ranked = np.hstack((is_ranked, trials.is_ranked))
-        return UnjudgedTrials(
-            stimulus_set, n_selected, is_ranked)
 
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked):
         """Generate a unique ID for each trial configuration.
@@ -504,42 +450,6 @@ class JudgedTrials(SimilarityTrials):
                             self.n_selected[index], self.is_ranked[index],
                             self.group_id[index])
 
-    @staticmethod
-    def stack(trials_list):
-        """Return a SimilarityTrials object containing all trials.
-
-        Args:
-            trials_list: A list of SimilarityTrials objects to be
-                stacked.
-
-        Returns:
-            A new JudgedTrials object.
-
-        """
-        # Determine the maximum number of references.
-        max_n_reference = 0
-        for trials in trials_list:
-            if trials.max_n_reference > max_n_reference:
-                max_n_reference = trials.max_n_reference
-
-        stimulus_set = pad_stimulus_set(
-            trials_list[0].stimulus_set,
-            max_n_reference
-        )
-        n_selected = trials_list[0].n_selected
-        is_ranked = trials_list[0].is_ranked
-        group_id = trials_list[0].group_id
-        for trials in trials_list[1:]:
-            stimulus_set = np.vstack((
-                stimulus_set,
-                pad_stimulus_set(trials.stimulus_set, max_n_reference)
-            ))
-            n_selected = np.hstack((n_selected, trials.n_selected))
-            is_ranked = np.hstack((is_ranked, trials.is_ranked))
-            group_id = np.hstack((group_id, trials.group_id))
-        return JudgedTrials(
-            stimulus_set, n_selected, is_ranked, group_id)
-
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked,
                                    group_id, session_id=None):
         """Generate a unique ID for each trial configuration.
@@ -664,3 +574,56 @@ def possible_outcomes(trial_configuration):
         outcomes[i_outcome, n_selected:] = dummy_idx
 
     return outcomes
+
+
+def stack(trials_list):
+        """Return a SimilarityTrials object containing all trials.
+
+        The stimulus_set of each SimilarityTrials object is padded
+        first to match the maximum number of references of all the
+        objects.
+
+        Args:
+            trials_list: A list of SimilarityTrials objects to be
+                stacked.
+
+        Returns:
+            A new SimilarityTrials object.
+
+        """
+        # Determine the maximum number of references.
+        max_n_reference = 0
+        for trials in trials_list:
+            if trials.max_n_reference > max_n_reference:
+                max_n_reference = trials.max_n_reference
+
+        # Grab relevant information from first entry in list.
+        stimulus_set = pad_stimulus_set(
+            trials_list[0].stimulus_set,
+            max_n_reference
+        )
+        n_selected = trials_list[0].n_selected
+        is_ranked = trials_list[0].is_ranked
+        is_judged = True
+        try:
+            group_id = trials_list[0].group_id
+        except AttributeError:
+            is_judged = False
+
+        for trials in trials_list[1:]:
+            stimulus_set = np.vstack((
+                stimulus_set,
+                pad_stimulus_set(trials.stimulus_set, max_n_reference)
+            ))
+            n_selected = np.hstack((n_selected, trials.n_selected))
+            is_ranked = np.hstack((is_ranked, trials.is_ranked))
+            if is_judged:
+                group_id = np.hstack((group_id, trials.group_id))
+        
+        if is_judged:
+            trials_stacked = JudgedTrials(
+                stimulus_set, n_selected, is_ranked, group_id)
+        else:
+            trials_stacked = UnjudgedTrials(
+                stimulus_set, n_selected, is_ranked)
+        return trials_stacked

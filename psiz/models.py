@@ -1501,12 +1501,12 @@ class PsychologicalEmbedding(object):
         prob_all = np.zeros((n_trial_all, max_n_outcome))
         for i_config in range(n_config):
             config = trials.config_list.iloc[i_config]
-            # outcome_idx = outcome_idx_list[i_config]
-            outcome_idx = outcome_idx_tensor[
-                i_config,
-                0:n_outcome_list[i_config],
-                0:n_reference_list[i_config]
-            ]
+            outcome_idx = outcome_idx_list[i_config]
+            # outcome_idx = outcome_idx_tensor[
+            #     i_config,
+            #     0:n_outcome_list[i_config],
+            #     0:n_reference_list[i_config]
+            # ]
             trial_locs = trials.config_idx == i_config
             n_trial = np.sum(trial_locs)
             n_outcome = n_outcome_list[i_config]

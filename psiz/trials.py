@@ -214,10 +214,12 @@ class SimilarityTrials(object):
         unique trial configurations in the provided data set.
 
         Returns:
-            df_config: A DataFrame containing all the unique
-                trial configurations.
             config_idx: A unique index for each type of trial
                 configuration.
+            df_config: A DataFrame containing all the unique
+                trial configurations.
+            outcome_idx_list: A list of the possible outcomes for each
+                trial configuration.
 
         """
         pass
@@ -290,11 +292,11 @@ class UnjudgedTrials(SimilarityTrials):
         SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
 
         # Determine unique display configurations.
-        (config_list, config_idx) = self._generate_configuration_id(
+        (config_idx, config_list, outcome_idx_list) = self._generate_configuration_id(
             self.n_reference, self.n_selected, self.is_ranked)
         self.config_idx = config_idx
         self.config_list = config_list
-        self.outcome_idx_list = None  # TODO
+        self.outcome_idx_list = outcome_idx_list
 
     def subset(self, index):
         """Return subset of trials as new UnjudgedTrials object.
@@ -360,9 +362,10 @@ class UnjudgedTrials(SimilarityTrials):
         n_trial = len(n_reference)
 
         # Determine unique display configurations.
+        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int)
         d = {
             'n_reference': n_reference, 'n_selected': n_selected,
-            'is_ranked': is_ranked
+            'is_ranked': is_ranked, 'n_outcome': n_outcome_placeholder
             }
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
@@ -370,15 +373,21 @@ class UnjudgedTrials(SimilarityTrials):
 
         # Assign display configuration ID for every observation.
         config_idx = np.empty(n_trial, dtype=np.int)
-        for i_type in range(n_config):
-            a = (n_reference == df_config['n_reference'].iloc[i_type])
-            b = (n_selected == df_config['n_selected'].iloc[i_type])
-            c = (is_ranked == df_config['is_ranked'].iloc[i_type])
+        outcome_idx_list = []
+        for i_config in range(n_config):
+            # Determine number of possible outcomes for configuration.
+            outcome_idx = possible_outcomes(df_config.iloc[i_config])
+            outcome_idx_list.append(outcome_idx)
+            df_config['n_outcome'].iloc[i_config] = outcome_idx.shape[0]
+            # Find trials matching configuration.
+            a = (n_reference == df_config['n_reference'].iloc[i_config])
+            b = (n_selected == df_config['n_selected'].iloc[i_config])
+            c = (is_ranked == df_config['is_ranked'].iloc[i_config])
             f = np.array((a, b, c))
             display_type_locs = np.all(f, axis=0)
-            config_idx[display_type_locs] = i_type
+            config_idx[display_type_locs] = i_config
 
-        return (df_config, config_idx)
+        return (config_idx, df_config, outcome_idx_list)
 
 
 class JudgedTrials(SimilarityTrials):
@@ -446,11 +455,11 @@ class JudgedTrials(SimilarityTrials):
         self.group_id = group_id
 
         # Determine unique display configurations.
-        (config_list, config_idx) = self._generate_configuration_id(
+        (config_idx, config_list, outcome_idx_list) = self._generate_configuration_id(
             self.n_reference, self.n_selected, self.is_ranked, group_id)
         self.config_idx = config_idx
         self.config_list = config_list
-        self.outcome_idx_list = None  # TODO
+        self.outcome_idx_list = outcome_idx_list
 
     def _check_group_id(self, group_id):
         """Check the argument n_selected."""
@@ -550,10 +559,11 @@ class JudgedTrials(SimilarityTrials):
             session_id = np.zeros((n_trial), dtype=np.int64)
 
         # Determine unique display configurations.
+        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int)
         d = {
             'n_reference': n_reference, 'n_selected': n_selected,
             'is_ranked': is_ranked, 'group_id': group_id,
-            'session_id': session_id
+            'session_id': session_id, 'n_outcome': n_outcome_placeholder
             }
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
@@ -561,17 +571,23 @@ class JudgedTrials(SimilarityTrials):
 
         # Assign display configuration ID for every observation.
         config_idx = np.empty(n_trial, dtype=np.int)
-        for i_type in range(n_config):
-            a = (n_reference == df_config['n_reference'].iloc[i_type])
-            b = (n_selected == df_config['n_selected'].iloc[i_type])
-            c = (is_ranked == df_config['is_ranked'].iloc[i_type])
-            d = (group_id == df_config['group_id'].iloc[i_type])
-            e = (session_id == df_config['session_id'].iloc[i_type])
+        outcome_idx_list = []
+        for i_config in range(n_config):
+            # Determine number of possible outcomes for configuration.
+            outcome_idx = possible_outcomes(df_config.iloc[i_config])
+            outcome_idx_list.append(outcome_idx)
+            df_config['n_outcome'].iloc[i_config] = outcome_idx.shape[0]
+            # Find trials matching configuration.
+            a = (n_reference == df_config['n_reference'].iloc[i_config])
+            b = (n_selected == df_config['n_selected'].iloc[i_config])
+            c = (is_ranked == df_config['is_ranked'].iloc[i_config])
+            d = (group_id == df_config['group_id'].iloc[i_config])
+            e = (session_id == df_config['session_id'].iloc[i_config])
             f = np.array((a, b, c, d, e))
             display_type_locs = np.all(f, axis=0)
-            config_idx[display_type_locs] = i_type
+            config_idx[display_type_locs] = i_config
 
-        return (df_config, config_idx)
+        return (config_idx, df_config, outcome_idx_list)
 
 
 def possible_outcomes(trial_configuration):

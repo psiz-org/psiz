@@ -786,7 +786,7 @@ class PsychologicalEmbedding(object):
             tf_obs['config_idx']: obs.config_idx,
             tf_obs['config_n_reference']: obs.config_list.n_reference.values,
             tf_obs['config_n_selected']: obs.config_list.n_selected.values,
-            tf_obs['config_is_ranked']: obs.config_list.is_ranked.values.astype('int'),
+            tf_obs['config_is_ranked']: obs.config_list.is_ranked.values,
         }
         return feed_dict
 
@@ -1372,7 +1372,7 @@ class PsychologicalEmbedding(object):
         if z is None:
             z = self.z['value']
 
-        (prob_all, _) = self.outcome_probability(
+        prob_all = self.outcome_probability(
             obs, z, group_id=obs.group_id, unaltered_only=True)
         prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
         ll = np.sum(np.log(prob))
@@ -1500,7 +1500,7 @@ class PsychologicalEmbedding(object):
         if not unaltered_only:
             prob_all = np.divide(
                 prob_all, np.sum(prob_all, axis=1, keepdims=True))
-        return (prob_all, outcome_idx_list)
+        return prob_all
 
     def tf_outcome_probability(self, trials, z_tf, tf_theta):
         """Return probability of outcomes for each trial.

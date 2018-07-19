@@ -68,25 +68,25 @@ class Agent(object):
 
         """
         group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int)
-        (prob_all, outcome_idx_list) = self.embedding.outcome_probability(
+        prob_all = self.embedding.outcome_probability(
             trials, group_id=group_id)
-        judged_trials = self._select(trials, outcome_idx_list, prob_all)
+        judged_trials = self._select(trials, prob_all)
         return judged_trials
 
-    def _select(self, trials, outcome_idx_list, prob_all):
+    def _select(self, trials, prob_all):
         """Stochastically select from possible outcomes.
 
         Args:
             trials:
-            outcome_idx_list:
             prob_all:
 
 
         Returns:
             A JudgedTrials object.
-            The outcome index.
 
         """
+        outcome_idx_list = trials.outcome_idx_list
+
         n_trial_all = trials.n_trial
         trial_idx_all = np.arange(n_trial_all)
         max_n_ref = trials.stimulus_set.shape[1] - 1

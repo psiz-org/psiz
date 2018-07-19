@@ -280,7 +280,7 @@ def test_freeze():
 
 def test_probability(ground_truth, unjudged_trials):
     """Test probability method."""
-    (prob, outcome_idx_list) = ground_truth.outcome_probability(
+    prob = ground_truth.outcome_probability(
         unjudged_trials)
     prob_actual = np.sum(prob, axis=1)
     prob_desired = np.ones((unjudged_trials.n_trial))
@@ -291,7 +291,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
     """Test tf_outcome_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
-    (prob_1, _) = ground_truth.outcome_probability(
+    prob_1 = ground_truth.outcome_probability(
         unjudged_trials)
     prob_actual_1 = np.sum(prob_1, axis=1)
 

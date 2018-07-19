@@ -71,21 +71,27 @@ class SimilarityTrials(object):
             is the query stimulus. The remaining, columns indicate
             reference stimuli. Negative integers are used as
             placeholders to indicate non-existent references.
-            shape = [n_trial, max(n_reference) + 1]
+            shape = (n_trial, max(n_reference) + 1)
         n_reference: An integer array indicating the number of
             references in each trial.
-            shape = [n_trial, 1]
+            shape = (n_trial,)
         n_selected: An integer array indicating the number of
             references selected in each trial.
-            shape = [n_trial, 1]
+            shape = (n_trial,)
         is_ranked: A Boolean array indicating which trials require
             reference selections to be ranked.
-            shape = [n_trial, 1]
+            shape = (n_trial,)
         config_id: An integer array indicating the
             configuration of each trial.
-            shape = [n_trial, 1]
+            shape = (n_trial,)
         config_list: A DataFrame object describing the unique trial
             configurations.
+        outcome_idx_list: A list of 2D arrays indicating all possible
+            outcomes for a trial configuration. Each element in the
+            list corresponds to a trial configuration in config_list.
+            Each row of the 2D array indicates one potential outcome.
+            The values in the rows are the indices of the the reference
+            stimuli (as specified in the attribute 'stimulus_set'.
 
     Methods:
         subset: Return a subset of similarity trials given an index.
@@ -107,24 +113,22 @@ class SimilarityTrials(object):
                 is the number of unique stimuli. Negative integers are
                 used as placeholders to indicate non-existent
                 references.
-                shape = [n_trial, max(n_reference) + 1]
+                shape = (n_trial, max(n_reference) + 1)
             n_selected (optional): An integer array indicating the
-                number of references selected in each trial. Values are
-                assumed to be greater than zero but less than or equal
-                to the number of references for the corresponding
-                trial.
-                shape = [n_trial, 1]
+                number of references selected in each trial. Values
+                must be greater than zero but less than the number of
+                references for the corresponding trial.
+                shape = n_trial,)
             is_ranked (optional): A Boolean array indicating which
                 trials require reference selections to be ranked.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
         """
         self.n_trial = stimulus_set.shape[0]
 
         # Format stimulus set.
-        self.max_n_reference = 9  # TODO np.amax(n_reference)
-        n_pad = self.max_n_reference - stimulus_set.shape[1]
-        pad_mat = -1 * np.ones((self.n_trial, n_pad), dtype=np.int64)
-        self.stimulus_set = np.hstack((stimulus_set, pad_mat))
+        max_n_reference = 9  # TODO np.amax(n_reference)
+        self.stimulus_set = self._pad_stimulus_set(
+            stimulus_set, max_n_reference)
 
         self.n_reference = self._infer_n_reference(self.stimulus_set)
 
@@ -143,6 +147,13 @@ class SimilarityTrials(object):
         # Attributes determined by concrete class.
         self.config_id = None
         self.config_list = None
+        self.outcome_idx_list = None
+
+    def _pad_stimulus_set(self, stimulus_set, max_n_reference):
+        n_pad = max_n_reference - stimulus_set.shape[1]
+        pad_mat = -1 * np.ones((self.n_trial, n_pad), dtype=np.int64)
+        stimulus_set = np.hstack((stimulus_set, pad_mat))
+        return stimulus_set
 
     def _infer_n_reference(self, stimulus_set):
         """Return the number of references in each trial.
@@ -253,6 +264,11 @@ class UnjudgedTrials(SimilarityTrials):
     The attributes and behavior of UnjudgedTrials is largely inherited
     from SimilarityTrials.
 
+    Attributes:
+        config_list: A DataFrame object describing the unique trial
+            configurations. The columns are 'n_reference',
+            'n_selected', 'is_ranked'. and 'n_outcome'.
+
     Notes:
         stimulus_set: The order of the reference stimuli is
             unimportant. As usual, the the first column contains
@@ -275,7 +291,6 @@ class UnjudgedTrials(SimilarityTrials):
         Args:
             stimulus_set: The order of the reference indices is not
                 important. See SimilarityTrials.
-                shape = [n_trial, max(n_reference) + 1]
             n_selected (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
         """
@@ -286,6 +301,7 @@ class UnjudgedTrials(SimilarityTrials):
             self.n_reference, self.n_selected, self.is_ranked)
         self.config_id = config_id
         self.config_list = config_list
+        self.outcome_idx_list = None  # TODO
 
     def subset(self, index):
         """Return subset of trials as new UnjudgedTrials object.
@@ -313,12 +329,12 @@ class UnjudgedTrials(SimilarityTrials):
 
         """
         stimulus_set = trials_list[0].stimulus_set
-        n_reference = trials_list[0].n_reference
         n_selected = trials_list[0].n_selected
         is_ranked = trials_list[0].is_ranked
         for trials in trials_list[1:]:
+            # TODO when allowing more than 9, vstack of stimulus set
+            # will require a padding operation first.
             stimulus_set = np.vstack((stimulus_set, trials.stimulus_set))
-            n_reference = np.hstack((n_reference, trials.n_reference))
             n_selected = np.hstack((n_selected, trials.n_selected))
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
         return UnjudgedTrials(
@@ -383,12 +399,12 @@ class JudgedTrials(SimilarityTrials):
             each trial. It is assumed that group_id is composed of
             integers from [0, M-1] where M is the total number of
             groups.
-            shape = [n_trial, 1]
+            shape = (n_trial,)
         session_id: An integer array indicating the session ID of
             a trial. It is assumed that observations with the same
             session ID were judged by a single agent. A single agent
             may have completed multiple sessions.
-            shape = [n_trial, 1]
+            shape = (n_trial,)
 
     Notes:
         stimulus_set: The order of the reference stimuli is important.
@@ -425,7 +441,7 @@ class JudgedTrials(SimilarityTrials):
                 membership of each trial. It is assumed that group_id
                 is composed of integers from [0, M-1] where M is the
                 total number of groups.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
         """
         SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
 
@@ -433,13 +449,7 @@ class JudgedTrials(SimilarityTrials):
         if group_id is None:
             group_id = np.zeros((self.n_trial), dtype=np.int64)
         else:
-            bad_locs = group_id < 0
-            n_bad = np.sum(bad_locs)
-            if n_bad != 0:
-                warnings.warn("The parameter 'group_id' containes integers \
-                    less than 0. Setting these values to 0.")
-                group_id[bad_locs] = np.zeros((n_bad), dtype=np.int64)
-
+            group_id = self._check_group_id(group_id)
         self.group_id = group_id
 
         # Determine unique display configurations.
@@ -447,6 +457,23 @@ class JudgedTrials(SimilarityTrials):
             self.n_reference, self.n_selected, self.is_ranked, group_id)
         self.config_id = config_id
         self.config_list = config_list
+        self.outcome_idx_list = None  # TODO
+
+    def _check_group_id(self, group_id):
+        """Check the argument n_selected."""
+        # Check shape argreement.
+        if not (group_id.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'group_id' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        # Check lowerbound support limit.
+        bad_locs = group_id < 0
+        n_bad = np.sum(bad_locs)
+        if n_bad != 0:
+            raise ValueError((
+                "The parameter 'group_id' contains integers less than 0. "
+                "Found {0} bad trial(s).").format(n_bad))
+        return group_id
 
     def subset(self, index):
         """Return subset of trials as new JudgedTrials object.
@@ -475,13 +502,13 @@ class JudgedTrials(SimilarityTrials):
 
         """
         stimulus_set = trials_list[0].stimulus_set
-        n_reference = trials_list[0].n_reference
         n_selected = trials_list[0].n_selected
         is_ranked = trials_list[0].is_ranked
         group_id = trials_list[0].group_id
         for trials in trials_list[1:]:
+            # TODO when allowing more than 9, vstack of stimulus set
+            # will require a padding operation first.
             stimulus_set = np.vstack((stimulus_set, trials.stimulus_set))
-            n_reference = np.hstack((n_reference, trials.n_reference))
             n_selected = np.hstack((n_selected, trials.n_selected))
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
             group_id = np.hstack((group_id, trials.group_id))

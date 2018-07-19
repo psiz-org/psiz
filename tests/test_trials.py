@@ -219,7 +219,7 @@ class TestUnjudgedTrials:
         n_selected = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
             trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
-        
+    
         # Above support.
         n_selected = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:
@@ -304,6 +304,24 @@ class TestUnjudgedTrials:
 
 class TestJudgedTrials:
     """Test class JudgedTrials."""
+
+    def test_invalid_group_id(self):
+        """Test handling of invalid 'group_id' argument."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Mismatch in number of trials
+        group_id = np.array((0, 0, 1))
+        with pytest.raises(Exception) as e_info:
+            trials = JudgedTrials(stimulus_set, group_id=group_id)
+
+        # Below support.
+        group_id = np.array((0, -1, 1, 0))
+        with pytest.raises(Exception) as e_info:
+            trials = JudgedTrials(stimulus_set, group_id=group_id)
 
     def test_n_trial_0(self, setup_obs_0):
         assert setup_obs_0['n_trial'] == setup_obs_0['tasks'].n_trial

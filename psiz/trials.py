@@ -32,15 +32,6 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
-    - make sure inputs are appropriate shape
-    - update documentation to use conventional notation for shape
-    - configuration id should ALWAYS correspond to the appropriate
-        index in the configuration list.
-            * rename to config_idx to reflect this
-            * make sure config_idx and config_list is re-computed after
-                a stack or subset operation.
-            * add tests
-            * document
     - when assembling configuration list, determine outcome_idx_list
     - include n_outcome in config_list
 
@@ -83,7 +74,8 @@ class SimilarityTrials(object):
             shape = (n_trial,)
         config_idx: An integer array indicating the
             configuration of each trial. The integer is an index
-            referencing the row of config_list.
+            referencing the row of config_list and the element of
+            outcome_idx_list.
             shape = (n_trial,)
         config_list: A DataFrame object describing the unique trial
             configurations.
@@ -350,13 +342,13 @@ class UnjudgedTrials(SimilarityTrials):
         Args:
             n_reference: An integer array indicating the number of
                 references in each trial.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
             n_selected: An integer array indicating the number of
                 references selected in each trial.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
             is_ranked:  Boolean array indicating which trials had
                 selected references that were ordered.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
 
         Returns:
             df_config: A DataFrame containing all the unique
@@ -377,7 +369,7 @@ class UnjudgedTrials(SimilarityTrials):
         n_config = len(df_config)
 
         # Assign display configuration ID for every observation.
-        config_idx = np.empty(n_trial)
+        config_idx = np.empty(n_trial, dtype=np.int)
         for i_type in range(n_config):
             a = (n_reference == df_config['n_reference'].iloc[i_type])
             b = (n_selected == df_config['n_selected'].iloc[i_type])
@@ -526,24 +518,24 @@ class JudgedTrials(SimilarityTrials):
         Args:
             n_reference: An integer array indicating the number of
                 references in each trial.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
             n_selected: An integer array indicating the number of
                 references selected in each trial.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
             is_ranked:  Boolean array indicating which trials had
                 selected references that were ordered.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
             group_id: An integer array indicating the group membership
                 of each trial. It is assumed that group is composed of
                 integers from [0, M-1] where M is the total number of
                 groups. Separate attention weights are inferred for
                 each group.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
             session_id: An integer array indicating the session ID of
                 a trial. It is assumed that observations with the same
                 session ID were judged by a single agent. A single
                 agent may have completed multiple sessions.
-                shape = [n_trial, 1]
+                shape = (n_trial,)
 
         Returns:
             df_config: A DataFrame containing all the unique
@@ -568,7 +560,7 @@ class JudgedTrials(SimilarityTrials):
         n_config = len(df_config)
 
         # Assign display configuration ID for every observation.
-        config_idx = np.empty(n_trial)
+        config_idx = np.empty(n_trial, dtype=np.int)
         for i_type in range(n_config):
             a = (n_reference == df_config['n_reference'].iloc[i_type])
             b = (n_selected == df_config['n_selected'].iloc[i_type])

@@ -199,8 +199,8 @@ def ground_truth(n_stimuli):
     return model
 
 
-class TestUnjudgedTrials:
-    """Test class UnjudgedTrials."""
+class TestSimilarityTrials:
+    """Test functionality of base class SimilarityTrials."""
 
     def test_invalid_n_selected(self):
         """Test handling of invalid 'n_selected' argument."""
@@ -241,6 +241,58 @@ class TestUnjudgedTrials:
         is_ranked = np.array((True, False, True, False))
         with pytest.raises(Exception) as e_info:
             trials = UnjudgedTrials(stimulus_set, is_ranked=is_ranked)
+
+
+class TestUnjudgedTrials:
+    """Test class UnjudgedTrials."""
+
+    def test_subset_config_idx(self):
+        """Test if config_idx is updated correctly after subset."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 2, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Create original trials.
+        n_selected = np.array((1, 1, 1, 1, 2))
+        trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        desired_config_idx = np.array((0, 0, 1, 1, 2))
+        np.testing.assert_array_equal(trials.config_idx, desired_config_idx)
+        # Grab subset and check that config_idx is updated to start at 0.
+        trials_subset = trials.subset(np.array((2, 3, 4)))
+        desired_config_idx = np.array((0, 0, 1))
+        np.testing.assert_array_equal(
+            trials_subset.config_idx, desired_config_idx)
+
+    def test_stack_config_idx(self):
+        """Test if config_idx is updated correctly after stack."""
+        stimulus_set = np.array((
+            (0, 1, 2, 3, -1, -1, -1, -1, -1),
+            (9, 12, 7, 1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 2, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Create first set of original trials.
+        n_selected = np.array((1, 1, 1, 1, 1))
+        trials_0 = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        desired_config_idx = np.array((0, 0, 1, 1, 2))
+        np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
+
+        # Create second set of original trials, with non-overlapping
+        # configuration.
+        n_selected = np.array((2, 2, 2, 2, 2))
+        trials_1 = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        desired_config_idx = np.array((0, 0, 1, 1, 2))
+        np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
+
+        # Stack trials
+        trials_stack = UnjudgedTrials.stack((trials_0, trials_1))
+        desired_config_idx = np.array((0, 0, 1, 1, 2, 3, 3, 4, 4, 5))
+        np.testing.assert_array_equal(
+            trials_stack.config_idx, desired_config_idx)
 
     def test_n_trial_0(self, setup_tasks_0):
         assert setup_tasks_0['n_trial'] == setup_tasks_0['tasks'].n_trial
@@ -322,6 +374,54 @@ class TestJudgedTrials:
         group_id = np.array((0, -1, 1, 0))
         with pytest.raises(Exception) as e_info:
             trials = JudgedTrials(stimulus_set, group_id=group_id)
+
+    def test_subset_config_idx(self):
+        """Test if config_idx is updated correctly after subset."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 2, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Create original trials.
+        n_selected = np.array((1, 1, 1, 1, 2))
+        trials = JudgedTrials(stimulus_set, n_selected=n_selected)
+        desired_config_idx = np.array((0, 0, 1, 1, 2))
+        np.testing.assert_array_equal(trials.config_idx, desired_config_idx)
+        # Grab subset and check that config_idx is updated to start at 0.
+        trials_subset = trials.subset(np.array((2, 3, 4)))
+        desired_config_idx = np.array((0, 0, 1))
+        np.testing.assert_array_equal(
+            trials_subset.config_idx, desired_config_idx)
+
+    def test_stack_config_idx(self):
+        """Test if config_idx is updated correctly after stack."""
+        stimulus_set = np.array((
+            (0, 1, 2, 3, -1, -1, -1, -1, -1),
+            (9, 12, 7, 1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 2, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Create first set of original trials.
+        n_selected = np.array((1, 1, 1, 1, 1))
+        trials_0 = JudgedTrials(stimulus_set, n_selected=n_selected)
+        desired_config_idx = np.array((0, 0, 1, 1, 2))
+        np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
+
+        # Create second set of original trials, with non-overlapping
+        # configuration.
+        n_selected = np.array((2, 2, 2, 2, 2))
+        trials_1 = JudgedTrials(stimulus_set, n_selected=n_selected)
+        desired_config_idx = np.array((0, 0, 1, 1, 2))
+        np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
+
+        # Stack trials
+        trials_stack = JudgedTrials.stack((trials_0, trials_1))
+        desired_config_idx = np.array((0, 0, 1, 1, 2, 3, 3, 4, 4, 5))
+        np.testing.assert_array_equal(
+            trials_stack.config_idx, desired_config_idx)
 
     def test_n_trial_0(self, setup_obs_0):
         assert setup_obs_0['n_trial'] == setup_obs_0['tasks'].n_trial
@@ -500,6 +600,7 @@ class TestStack:
         )
         # Check padding values of third set (non-padded and then padded values).
         assert np.sum(np.equal(trials_all.stimulus_set[10:15, :], -1)) == 0
+
 
 class TestPossibleOutcomes:
 

@@ -22,11 +22,7 @@ Notes:
         downstream applications make this assumption.
 
 Todo:
-    - write test for subset and test config_idx, it is important that
-    the config_idx and configuration is recomputed on initialization
-    because down-stream code assumes that config_idx is from [0,N[ and
-    corresponds to indices of config_list
-    - test stack different config for JudgedTrials
+
 """
 
 import pytest

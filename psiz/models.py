@@ -1414,24 +1414,6 @@ class PsychologicalEmbedding(object):
                 trial data.
 
         """
-        # TODO Here's an idea. I have two immediate problems. The first
-        # problem is that I need to write this function in a TensorFlow
-        # friendly manner, which means everything needs to be a tensor. I
-        # believe this boils down to figuring out how handle the variable
-        # length "possible_outcomes". The best idea I have is to create a 
-        # 3D tensor based on maximum requirements and then only fill it
-        # up partially based on need. The second issues is that there are
-        # some computations here that are being called unnecessarily often.
-        # It would be nice if I could factor some of it out and use a flag
-        # i.e., precomputed_data=None in order to accelerate the code. This
-        # means I need to factor the precomputation into it's own method
-        # and probably place it in utils.py or add it as a method of
-        # trials. The method could be something like, as_tensor.
-        # 
-        # possible_outcomes may be better off as a method of trials, 
-        # especially since it always takes a dataframe row from
-        # trials config_list property.
-
         if z is None:
             z = self.z['value']
         else:
@@ -1445,56 +1427,22 @@ class PsychologicalEmbedding(object):
         if group_id is None:
             group_id = np.zeros((trials.n_trial), dtype=np.int)
 
-        # what if trials object holds the various possible outcomes; a trial
-        # represents the content as well as what could happen. It's not
-        # perfect but it doesn't really make sense to split the info up and
-        # it would be nice to pass that info in on an existing object. I 
-        # guess this makes sense from the perspective that the possible
-        # outcomes only operates on trial data.
-        # ====== DOESN'T CHANGE with z only with obs =======
-        outcome_idx_list = []
-        n_outcome_list = []
-        n_reference_list = []
-        max_n_outcome = 0
-        max_n_reference = np.max(trials.config_list.n_reference.values)
-        for i_config in range(n_config):
-            outcome_idx_list.append(
-                possible_outcomes(
-                    trials.config_list.iloc[i_config]
-                )
-            )
-            n_outcome = outcome_idx_list[i_config].shape[0]
-            n_reference = outcome_idx_list[i_config].shape[1]
-            n_outcome_list.append(n_outcome)
-            n_reference_list.append(n_reference)
-            if n_outcome > max_n_outcome:
-                max_n_outcome = n_outcome
-        # Create an analogous tensor.
-        # shape = (n_config, max_n_outcome, max_n_ref)
-        outcome_idx_tensor = -1 * np.ones(
-            (n_config, max_n_outcome, max_n_reference), dtype=np.int32)
-        for i_config in range(n_config):
-            outcome_idx_tensor[
-                i_config,
-                0:n_outcome_list[i_config],
-                0:n_reference_list[i_config]] = outcome_idx_list[i_config]
-        # ====== DOESN'T CHANGE with z only with obs =======
-        # ====== DOESN'T CHANGE with z only with obs =======
-        outcome_idx_list = []
-        n_outcome_list = []
-        max_n_outcome = 0
-        for i_config in range(n_config):
-            outcome_idx_list.append(
-                possible_outcomes(
-                    trials.config_list.iloc[i_config]
-                )
-            )
-            n_outcome = outcome_idx_list[i_config].shape[0]
-            n_outcome_list.append(n_outcome)
-            if n_outcome > max_n_outcome:
-                max_n_outcome = n_outcome
-        # ====== DOESN'T CHANGE with z only with obs =======
-
+        outcome_idx_list = trials.outcome_idx_list
+        n_outcome_list = trials.config_list['n_outcome'].values
+        max_n_outcome = np.max(n_outcome_list)
+        # ==================================================
+        # # Create an analogous tensor.
+        # # shape = (n_config, max_n_outcome, max_n_ref)
+        # n_reference_list = trials.config_list['n_reference'].values
+        # max_n_reference = np.max(n_reference_list)
+        # outcome_idx_tensor = -1 * np.ones(
+        #     (n_config, max_n_outcome, max_n_reference), dtype=np.int32)
+        # for i_config in range(n_config):
+        #     outcome_idx_tensor[
+        #         i_config,
+        #         0:n_outcome_list[i_config],
+        #         0:n_reference_list[i_config]] = outcome_idx_list[i_config]
+        # ==================================================
         if unaltered_only:
             max_n_outcome = 1
 

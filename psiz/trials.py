@@ -32,8 +32,6 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
-    - when assembling configuration list, determine outcome_idx_list
-    - include n_outcome in config_list
 
 """
 

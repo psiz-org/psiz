@@ -199,139 +199,175 @@ def ground_truth(n_stimuli):
     return model
 
 
-class TestUnjudgedTrials1:
+class TestUnjudgedTrials:
+    """Test class UnjudgedTrials."""
 
-    def test_n_trial(self, setup_tasks_0):
+    def test_invalid_n_selected(self):
+        """Test handling of invalid 'n_selected' argument."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Mismatch in number of trials
+        n_selected = np.array((1, 1, 2))
+        with pytest.raises(Exception) as e_info:
+            trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+
+        # Below support.
+        n_selected = np.array((1, 0, 1, 0))
+        with pytest.raises(Exception) as e_info:
+            trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        
+        # Above support.
+        n_selected = np.array((2, 1, 1, 2))
+        with pytest.raises(Exception) as e_info:
+            trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+
+    def test_invalid_is_ranked(self):
+        """Test handling of invalid 'is_ranked' argument."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Mismatch in number of trials
+        is_ranked = np.array((True, True, True))
+        with pytest.raises(Exception) as e_info:
+            trials = UnjudgedTrials(stimulus_set, is_ranked=is_ranked)
+
+        is_ranked = np.array((True, False, True, False))
+        with pytest.raises(Exception) as e_info:
+            trials = UnjudgedTrials(stimulus_set, is_ranked=is_ranked)
+
+    def test_n_trial_0(self, setup_tasks_0):
         assert setup_tasks_0['n_trial'] == setup_tasks_0['tasks'].n_trial
 
-    def test_stimulus_set(self, setup_tasks_0):
+    def test_stimulus_set_0(self, setup_tasks_0):
         np.testing.assert_array_equal(
             setup_tasks_0['stimulus_set'],
             setup_tasks_0['tasks'].stimulus_set)
 
-    def test_n_reference(self, setup_tasks_0):
+    def test_n_reference_0(self, setup_tasks_0):
         np.testing.assert_array_equal(
             setup_tasks_0['n_reference'], setup_tasks_0['tasks'].n_reference)
 
-    def test_n_selected(self, setup_tasks_0):
+    def test_n_selected_0(self, setup_tasks_0):
         np.testing.assert_array_equal(
             setup_tasks_0['n_selected'], setup_tasks_0['tasks'].n_selected)
 
-    def test_is_ranked(self, setup_tasks_0):
+    def test_is_ranked_0(self, setup_tasks_0):
         np.testing.assert_array_equal(
             setup_tasks_0['is_ranked'], setup_tasks_0['tasks'].is_ranked)
 
-    def test_configurations(self, setup_tasks_0):
+    def test_configurations_0(self, setup_tasks_0):
         pd.testing.assert_frame_equal(
             setup_tasks_0['configurations'],
             setup_tasks_0['tasks'].config_list)
 
-    def test_configuration_id(self, setup_tasks_0):
+    def test_configuration_id_0(self, setup_tasks_0):
         np.testing.assert_array_equal(
             setup_tasks_0['configuration_id'],
             setup_tasks_0['tasks'].config_id)
 
-
-class TestUnjudgedTrials2:
-
-    def test_n_trial(self, setup_tasks_1):
+    def test_n_trial_1(self, setup_tasks_1):
         assert setup_tasks_1['n_trial'] == setup_tasks_1['tasks'].n_trial
 
-    def test_stimulus_set(self, setup_tasks_1):
+    def test_stimulus_set_1(self, setup_tasks_1):
         np.testing.assert_array_equal(
             setup_tasks_1['stimulus_set'], setup_tasks_1['tasks'].stimulus_set)
 
-    def test_n_reference(self, setup_tasks_1):
+    def test_n_reference_1(self, setup_tasks_1):
         np.testing.assert_array_equal(
             setup_tasks_1['n_reference'], setup_tasks_1['tasks'].n_reference)
 
-    def test_n_selected(self, setup_tasks_1):
+    def test_n_selected_1(self, setup_tasks_1):
         np.testing.assert_array_equal(
             setup_tasks_1['n_selected'], setup_tasks_1['tasks'].n_selected)
 
-    def test_is_ranked(self, setup_tasks_1):
+    def test_is_ranked_1(self, setup_tasks_1):
         np.testing.assert_array_equal(
             setup_tasks_1['is_ranked'], setup_tasks_1['tasks'].is_ranked)
 
-    def test_configurations(self, setup_tasks_1):
+    def test_configurations_1(self, setup_tasks_1):
         pd.testing.assert_frame_equal(
             setup_tasks_1['configurations'],
             setup_tasks_1['tasks'].config_list)
 
-    def test_configuration_id(self, setup_tasks_1):
+    def test_configuration_id_1(self, setup_tasks_1):
         np.testing.assert_array_equal(
             setup_tasks_1['configuration_id'],
             setup_tasks_1['tasks'].config_id)
 
 
-class TestJudgedTrials1:
+class TestJudgedTrials:
+    """Test class JudgedTrials."""
 
-    def test_n_trial(self, setup_obs_0):
+    def test_n_trial_0(self, setup_obs_0):
         assert setup_obs_0['n_trial'] == setup_obs_0['tasks'].n_trial
 
-    def test_stimulus_set(self, setup_obs_0):
+    def test_stimulus_set_0(self, setup_obs_0):
         np.testing.assert_array_equal(
             setup_obs_0['stimulus_set'], setup_obs_0['tasks'].stimulus_set)
 
-    def test_n_reference(self, setup_obs_0):
+    def test_n_reference_0(self, setup_obs_0):
         np.testing.assert_array_equal(
             setup_obs_0['n_reference'], setup_obs_0['tasks'].n_reference)
 
-    def test_n_selected(self, setup_obs_0):
+    def test_n_selected_0(self, setup_obs_0):
         np.testing.assert_array_equal(
             setup_obs_0['n_selected'], setup_obs_0['tasks'].n_selected)
 
-    def test_is_ranked(self, setup_obs_0):
+    def test_is_ranked_0(self, setup_obs_0):
         np.testing.assert_array_equal(
             setup_obs_0['is_ranked'], setup_obs_0['tasks'].is_ranked)
 
-    def test_configurations(self, setup_obs_0):
+    def test_configurations_0(self, setup_obs_0):
         pd.testing.assert_frame_equal(
             setup_obs_0['configurations'],
             setup_obs_0['tasks'].config_list)
 
-    def test_configuration_id(self, setup_obs_0):
+    def test_configuration_id_0(self, setup_obs_0):
         np.testing.assert_array_equal(
             setup_obs_0['configuration_id'],
             setup_obs_0['tasks'].config_id)
 
-
-class TestJudgedTrials2:
-
-    def test_n_trial(self, setup_obs_1):
+    def test_n_trial_1(self, setup_obs_1):
         assert setup_obs_1['n_trial'] == setup_obs_1['tasks'].n_trial
 
-    def test_stimulus_set(self, setup_obs_1):
+    def test_stimulus_set_1(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['stimulus_set'], setup_obs_1['tasks'].stimulus_set)
 
-    def test_n_reference(self, setup_obs_1):
+    def test_n_reference_1(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['n_reference'], setup_obs_1['tasks'].n_reference)
 
-    def test_n_selected(self, setup_obs_1):
+    def test_n_selected_1(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['n_selected'], setup_obs_1['tasks'].n_selected)
 
-    def test_is_ranked(self, setup_obs_1):
+    def test_is_ranked_1(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['is_ranked'], setup_obs_1['tasks'].is_ranked)
 
-    def test_configurations(self, setup_obs_1):
+    def test_configurations_1(self, setup_obs_1):
         pd.testing.assert_frame_equal(
             setup_obs_1['configurations'],
             setup_obs_1['tasks'].config_list)
 
-    def test_configuration_id(self, setup_obs_1):
+    def test_configuration_id_1(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['configuration_id'],
             setup_obs_1['tasks'].config_id)
 
 
 class TestStack:
+    """Test stack static method."""
 
     def test_stack_same_config(self):
-        """Test stack static method."""
         n_stimuli = 10
         model_truth = ground_truth(n_stimuli)
 
@@ -415,67 +451,96 @@ class TestStack:
             trials_all.n_reference, desired_n_reference
         )
 
+    def test_padding(self):
+        """Test padding values when using stack method."""
+        n_stimuli = 20
+        generator = RandomGenerator(n_stimuli)
 
-def test_possible_outcomes_2c1():
-    """Test outcomes 2 choose 1 ranked trial."""
-    stimulus_set = np.array(((0, 1, 2), (9, 12, 7)))
-    n_selected = 1 * np.ones((2))
-    tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        n_reference1 = 2
+        n_selected1 = 1
+        trials1 = generator.generate(5, n_reference1, n_selected1)
 
-    po = possible_outcomes(tasks.config_list.iloc[0])
+        n_reference2 = 4
+        n_selected2 = 2
+        trials2 = generator.generate(5, n_reference2, n_selected2)
 
-    correct = np.array(((0, 1), (1, 0)))
-    np.testing.assert_array_equal(po, correct)
+        n_reference3 = 8
+        n_selected3 = 2
+        trials3 = generator.generate(5, n_reference3, n_selected3)
 
+        trials_all = UnjudgedTrials.stack((trials1, trials2, trials3))
 
-def test_possible_outcomes_3c2():
-    """Test outcomes 3 choose 2 ranked trial."""
-    stimulus_set = np.array(((0, 1, 2, 3), (33, 9, 12, 7)))
-    n_selected = 2 * np.ones((2))
-    tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        # Check padding values of first set (non-padded and then padded values).
+        assert np.sum(np.equal(trials_all.stimulus_set[1:5, 0:3], -1)) == 0
+        np.testing.assert_array_equal(
+            trials_all.stimulus_set[0:5, 3:], -1 * np.ones((5, 6), dtype=np.int)
+        )
+        # Check padding values of second set (non-padded and then padded values).
+        assert np.sum(np.equal(trials_all.stimulus_set[5:10, 0:5], -1)) == 0
+        np.testing.assert_array_equal(
+            trials_all.stimulus_set[5:10, 5:], -1 * np.ones((5, 4), dtype=np.int)
+        )
+        # Check padding values of third set (non-padded and then padded values).
+        assert np.sum(np.equal(trials_all.stimulus_set[10:15, :], -1)) == 0
 
-    po = possible_outcomes(tasks.config_list.iloc[0])
+class TestPossibleOutcomes:
 
-    correct = np.array((
-        (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
-        (2, 0, 1), (2, 1, 0)))
-    np.testing.assert_array_equal(po, correct)
+    def test_possible_outcomes_2c1(self):
+        """Test outcomes 2 choose 1 ranked trial."""
+        stimulus_set = np.array(((0, 1, 2), (9, 12, 7)))
+        n_selected = 1 * np.ones((2))
+        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
 
+        po = possible_outcomes(tasks.config_list.iloc[0])
 
-def test_possible_outcomes_4c2():
-    """Test outcomes 4 choose 2 ranked trial."""
-    stimulus_set = np.array(((0, 1, 2, 3, 4), (45, 33, 9, 12, 7)))
-    n_selected = 2 * np.ones((2))
-    tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        correct = np.array(((0, 1), (1, 0)))
+        np.testing.assert_array_equal(po, correct)
 
-    po = possible_outcomes(tasks.config_list.iloc[0])
+    def test_possible_outcomes_3c2(self):
+        """Test outcomes 3 choose 2 ranked trial."""
+        stimulus_set = np.array(((0, 1, 2, 3), (33, 9, 12, 7)))
+        n_selected = 2 * np.ones((2))
+        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
 
-    correct = np.array((
-        (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
-        (1, 0, 2, 3), (1, 2, 0, 3), (1, 3, 0, 2),
-        (2, 0, 1, 3), (2, 1, 0, 3), (2, 3, 0, 1),
-        (3, 0, 1, 2), (3, 1, 0, 2), (3, 2, 0, 1)))
-    np.testing.assert_array_equal(po, correct)
+        po = possible_outcomes(tasks.config_list.iloc[0])
 
+        correct = np.array((
+            (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
+            (2, 0, 1), (2, 1, 0)))
+        np.testing.assert_array_equal(po, correct)
 
-def test_possible_outcomes_8c1():
-    """Test outcomes 8 choose 1 ranked trial."""
-    stimulus_set = np.array((
-        (0, 1, 2, 3, 4, 5, 6, 7, 8),
-        (45, 33, 9, 12, 7, 2, 5, 4, 3)))
-    n_selected = 1 * np.ones((2))
-    tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+    def test_possible_outcomes_4c2(self):
+        """Test outcomes 4 choose 2 ranked trial."""
+        stimulus_set = np.array(((0, 1, 2, 3, 4), (45, 33, 9, 12, 7)))
+        n_selected = 2 * np.ones((2))
+        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
 
-    po = possible_outcomes(tasks.config_list.iloc[0])
+        po = possible_outcomes(tasks.config_list.iloc[0])
 
-    correct = np.array((
-        (0, 1, 2, 3, 4, 5, 6, 7),
-        (1, 0, 2, 3, 4, 5, 6, 7),
-        (2, 0, 1, 3, 4, 5, 6, 7),
-        (3, 0, 1, 2, 4, 5, 6, 7),
-        (4, 0, 1, 2, 3, 5, 6, 7),
-        (5, 0, 1, 2, 3, 4, 6, 7),
-        (6, 0, 1, 2, 3, 4, 5, 7),
-        (7, 0, 1, 2, 3, 4, 5, 6)))
-    np.testing.assert_array_equal(po, correct)
+        correct = np.array((
+            (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
+            (1, 0, 2, 3), (1, 2, 0, 3), (1, 3, 0, 2),
+            (2, 0, 1, 3), (2, 1, 0, 3), (2, 3, 0, 1),
+            (3, 0, 1, 2), (3, 1, 0, 2), (3, 2, 0, 1)))
+        np.testing.assert_array_equal(po, correct)
 
+    def test_possible_outcomes_8c1(self):
+        """Test outcomes 8 choose 1 ranked trial."""
+        stimulus_set = np.array((
+            (0, 1, 2, 3, 4, 5, 6, 7, 8),
+            (45, 33, 9, 12, 7, 2, 5, 4, 3)))
+        n_selected = 1 * np.ones((2))
+        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+
+        po = possible_outcomes(tasks.config_list.iloc[0])
+
+        correct = np.array((
+            (0, 1, 2, 3, 4, 5, 6, 7),
+            (1, 0, 2, 3, 4, 5, 6, 7),
+            (2, 0, 1, 3, 4, 5, 6, 7),
+            (3, 0, 1, 2, 4, 5, 6, 7),
+            (4, 0, 1, 2, 3, 5, 6, 7),
+            (5, 0, 1, 2, 3, 4, 6, 7),
+            (6, 0, 1, 2, 3, 4, 5, 7),
+            (7, 0, 1, 2, 3, 4, 5, 6)))
+        np.testing.assert_array_equal(po, correct)

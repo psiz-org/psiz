@@ -34,9 +34,6 @@ Notes:
 Todo:
     - make sure inputs are appropriate shape
     - update documentation to use conventional notation for shape
-    - n_reference was tacked on as an init argument so as not to break
-        order, ideally it would occur in its natural order.
-    - pad with -1 not zero
     - configuration id should ALWAYS correspond to the appropriate
         index in the configuration list.
             * rename to config_idx to reflect this
@@ -97,9 +94,7 @@ class SimilarityTrials(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(
-            self, stimulus_set, n_selected=None, is_ranked=None,
-            n_reference=None):
+    def __init__(self, stimulus_set, n_selected=None, is_ranked=None):
         """Initialize.
 
         Args:
@@ -122,41 +117,27 @@ class SimilarityTrials(object):
             is_ranked (optional): A Boolean array indicating which
                 trials require reference selections to be ranked.
                 shape = [n_trial, 1]
-            n_reference (optional): An integer array indicating the
-                number of references in each trial. Values are assumed
-                to be greater than zero.
-                shape = [n_trial, 1]
         """
-        n_trial = stimulus_set.shape[0]
+        self.n_trial = stimulus_set.shape[0]
 
-        # Handle default settings.
-        if n_selected is None:
-            n_selected = np.ones((n_trial), dtype=np.int64)
-        else:
-            bad_locs = n_selected < 1
-            n_bad = np.sum(bad_locs)
-            if n_bad != 0:
-                warnings.warn("The parameter 'n_selected' containes integers \
-                    less than 1. Setting these values to 1.")
-                n_selected[bad_locs] = np.ones((n_bad), dtype=np.int64)
-        if is_ranked is None:
-            is_ranked = np.full((n_trial), True)
-
-        # Infer n_reference for each display.
-        if n_reference is None:
-            n_reference = self._infer_n_reference(stimulus_set)
-        # else check is good input TODO
-
-        # Pad stimulus_set
+        # Format stimulus set.
         self.max_n_reference = 9  # TODO np.amax(n_reference)
         n_pad = self.max_n_reference - stimulus_set.shape[1]
-        pad_mat = np.zeros((n_trial, n_pad), dtype=np.int64)
-        stimulus_set = np.hstack((stimulus_set, pad_mat))
+        pad_mat = -1 * np.ones((self.n_trial, n_pad), dtype=np.int64)
+        self.stimulus_set = np.hstack((stimulus_set, pad_mat))
 
-        self.stimulus_set = stimulus_set
-        self.n_trial = n_trial
-        self.n_reference = n_reference
+        self.n_reference = self._infer_n_reference(self.stimulus_set)
+
+        if n_selected is None:
+            n_selected = np.ones((self.n_trial), dtype=np.int64)
+        else:
+            n_selected = self._check_n_selected(n_selected)
         self.n_selected = n_selected
+
+        if is_ranked is None:
+            is_ranked = np.full((self.n_trial), True)
+        else:
+            is_ranked = self._check_is_ranked(is_ranked)
         self.is_ranked = is_ranked
 
         # Attributes determined by concrete class.
@@ -166,10 +147,9 @@ class SimilarityTrials(object):
     def _infer_n_reference(self, stimulus_set):
         """Return the number of references in each trial.
 
-        Helper function that infers the number of available references
-        for a given trial. The function assumes that values less than
-        zero, are placeholder values and should be treated as
-        non-existent.
+        Infers the number of available references for each trial. The
+        function assumes that values less than zero, are placeholder
+        values and should be treated as non-existent.
 
         Args:
             stimulus_set: shape = [n_trial, 1]
@@ -183,6 +163,44 @@ class SimilarityTrials(object):
         max_ref = stimulus_set.shape[1] - 1
         n_reference = max_ref - np.sum(stimulus_set < 0, axis=1)
         return np.array(n_reference, dtype=np.int64)
+
+    def _check_n_selected(self, n_selected):
+        """Check the argument n_selected."""
+        # Check shape argreement.
+        if not (n_selected.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'n_selected' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        # Check lowerbound support limit.
+        bad_locs = n_selected < 1
+        n_bad = np.sum(bad_locs)
+        if n_bad != 0:
+            raise ValueError((
+                "The parameter 'n_selected' contains integers less than 1. "
+                "Found {0} bad trial(s).").format(n_bad))
+        # Check upperbound support limit.
+        bad_locs = np.greater_equal(n_selected, self.n_reference)
+        n_bad = np.sum(bad_locs)
+        if n_bad != 0:
+            raise ValueError((
+                "The parameter 'n_selected' contains integers greater than "
+                "or equal to the corresponding 'n_reference'. Found {0} bad "
+                "trial(s).").format(n_bad))
+        return n_selected
+
+    def _check_is_ranked(self, is_ranked):
+        """Check the argument is_ranked."""
+        if not (is_ranked.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'n_selected' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        bad_locs = np.not_equal(is_ranked, True)
+        n_bad = np.sum(bad_locs)
+        if n_bad != 0:
+            raise ValueError((
+                "The unranked version is not implemented, Found {0} bad "
+                "trial(s).").format(n_bad))
+        return is_ranked
 
     @abstractmethod
     def _generate_configuration_id(self, *args):
@@ -249,9 +267,7 @@ class UnjudgedTrials(SimilarityTrials):
 
     """
 
-    def __init__(
-            self, stimulus_set, n_selected=None, is_ranked=None,
-            n_reference=None):
+    def __init__(self, stimulus_set, n_selected=None, is_ranked=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -262,10 +278,8 @@ class UnjudgedTrials(SimilarityTrials):
                 shape = [n_trial, max(n_reference) + 1]
             n_selected (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
-            n_reference (optional): See SimilarityTrials.
         """
-        SimilarityTrials.__init__(
-            self, stimulus_set, n_selected, is_ranked, n_reference)
+        SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
 
         # Determine unique display configurations.
         (config_list, config_id) = self._generate_configuration_id(
@@ -308,7 +322,7 @@ class UnjudgedTrials(SimilarityTrials):
             n_selected = np.hstack((n_selected, trials.n_selected))
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
         return UnjudgedTrials(
-            stimulus_set, n_selected, is_ranked, n_reference)
+            stimulus_set, n_selected, is_ranked)
 
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked):
         """Generate a unique ID for each trial configuration.
@@ -394,7 +408,7 @@ class JudgedTrials(SimilarityTrials):
     """
 
     def __init__(self, stimulus_set, n_selected=None, is_ranked=None,
-                 group_id=None, n_reference=None):
+                 group_id=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -407,15 +421,13 @@ class JudgedTrials(SimilarityTrials):
                 order. See SimilarityTrials.
             n_selected (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
-            n_reference (optional): See SimilarityTrials.
             group_id (optional): An integer array indicating the group
                 membership of each trial. It is assumed that group_id
                 is composed of integers from [0, M-1] where M is the
                 total number of groups.
                 shape = [n_trial, 1]
         """
-        SimilarityTrials.__init__(
-            self, stimulus_set, n_selected, is_ranked, n_reference)
+        SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
 
         # Handle default settings.
         if group_id is None:
@@ -474,7 +486,7 @@ class JudgedTrials(SimilarityTrials):
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
             group_id = np.hstack((group_id, trials.group_id))
         return JudgedTrials(
-            stimulus_set, n_selected, is_ranked, group_id, n_reference)
+            stimulus_set, n_selected, is_ranked, group_id)
 
     def _generate_configuration_id(self, n_reference, n_selected, is_ranked,
                                    group_id, session_id=None):

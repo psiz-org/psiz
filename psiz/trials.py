@@ -272,7 +272,9 @@ class UnjudgedTrials(SimilarityTrials):
         SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
 
         # Determine unique display configurations.
-        (config_idx, config_list, outcome_idx_list) = self._generate_configuration_id(
+        (
+            config_idx, config_list, outcome_idx_list
+        ) = self._generate_configuration_id(
             self.n_reference, self.n_selected, self.is_ranked)
         self.config_idx = config_idx
         self.config_list = config_list
@@ -413,7 +415,9 @@ class JudgedTrials(SimilarityTrials):
         self.group_id = group_id
 
         # Determine unique display configurations.
-        (config_idx, config_list, outcome_idx_list) = self._generate_configuration_id(
+        (
+            config_idx, config_list, outcome_idx_list
+        ) = self._generate_configuration_id(
             self.n_reference, self.n_selected, self.is_ranked, group_id)
         self.config_idx = config_idx
         self.config_list = config_list
@@ -619,7 +623,7 @@ def stack(trials_list):
             is_ranked = np.hstack((is_ranked, trials.is_ranked))
             if is_judged:
                 group_id = np.hstack((group_id, trials.group_id))
-        
+
         if is_judged:
             trials_stacked = JudgedTrials(
                 stimulus_set, n_selected, is_ranked, group_id)

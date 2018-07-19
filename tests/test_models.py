@@ -304,7 +304,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
     for param_name in ground_truth.theta:
         tf_theta[param_name] = tf.constant(
             ground_truth.theta[param_name]['value'], dtype=tf.float32)
-    (outcome_idx_list, prob_2_tf) = ground_truth.tf_outcome_probability(
+    prob_2_tf = ground_truth.tf_outcome_probability(
         unjudged_trials, z_tf, tf_theta)
 
     sess = tf.Session()

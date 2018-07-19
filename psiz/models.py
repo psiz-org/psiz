@@ -1431,17 +1431,17 @@ class PsychologicalEmbedding(object):
         n_outcome_list = trials.config_list['n_outcome'].values
         max_n_outcome = np.max(n_outcome_list)
         # ==================================================
-        # # Create an analogous tensor.
-        # # shape = (n_config, max_n_outcome, max_n_ref)
-        # n_reference_list = trials.config_list['n_reference'].values
-        # max_n_reference = np.max(n_reference_list)
-        # outcome_idx_tensor = -1 * np.ones(
-        #     (n_config, max_n_outcome, max_n_reference), dtype=np.int32)
-        # for i_config in range(n_config):
-        #     outcome_idx_tensor[
-        #         i_config,
-        #         0:n_outcome_list[i_config],
-        #         0:n_reference_list[i_config]] = outcome_idx_list[i_config]
+        # Create an analogous tensor.
+        # shape = (n_config, max_n_outcome, max_n_ref)
+        n_reference_list = trials.config_list['n_reference'].values
+        max_n_reference = np.max(n_reference_list)
+        outcome_idx_tensor = -1 * np.ones(
+            (n_config, max_n_outcome, max_n_reference), dtype=np.int32)
+        for i_config in range(n_config):
+            outcome_idx_tensor[
+                i_config,
+                0:n_outcome_list[i_config],
+                0:n_reference_list[i_config]] = outcome_idx_list[i_config]
         # ==================================================
         if unaltered_only:
             max_n_outcome = 1
@@ -1480,10 +1480,9 @@ class PsychologicalEmbedding(object):
             prob = np.ones((n_trial, n_outcome), dtype=np.float64)
             for i_outcome in range(n_outcome):
                 s_qref_perm = s_qref[:, outcome_idx[i_outcome, :]]
-                # Start with last choice
-                total = np.sum(s_qref_perm[:, n_selected_idx:], axis=1)
                 # Compute sampling without replacement probability in reverse
-                # order for numerical stabiltiy
+                # order for numerical stabiltiy.
+                total = np.sum(s_qref_perm[:, n_selected_idx:], axis=1)
                 for i_selected in range(n_selected_idx, -1, -1):
                     # Grab similarity of selected reference and divide by total
                     # similarity of all available references.
@@ -1541,19 +1540,9 @@ class PsychologicalEmbedding(object):
             attention, dtype=tf.float32
         )
 
-        outcome_idx_list = []
-        n_outcome_list = []
-        max_n_outcome = 0
-        for i_config in range(n_config):
-            outcome_idx_list.append(
-                possible_outcomes(
-                    trials.config_list.iloc[i_config]
-                )
-            )
-            n_outcome = outcome_idx_list[i_config].shape[0]
-            n_outcome_list.append(n_outcome)
-            if n_outcome > max_n_outcome:
-                max_n_outcome = n_outcome
+        outcome_idx_list = trials.outcome_idx_list
+        n_outcome_list = trials.config_list['n_outcome'].values
+        max_n_outcome = np.max(n_outcome_list)
 
         # prob_all = tf.Variable(tf.zeros((n_trial_all, max_n_outcome)), name='prob_all')
         prob_all = tf.zeros((0, max_n_outcome), dtype=tf.float32)
@@ -1614,7 +1603,7 @@ class PsychologicalEmbedding(object):
         # Correct for numerical inaccuracy.
         prob_all = tf.divide(
             prob_all, tf.reduce_sum(prob_all, axis=1, keepdims=True))
-        return (outcome_idx_list, prob_all)
+        return prob_all
 
     def posterior_samples(self, obs, n_sample=1000, n_burn=1000, thin_step=3):
         """Sample from the posterior of the embedding.

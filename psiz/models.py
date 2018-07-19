@@ -640,7 +640,7 @@ class PsychologicalEmbedding(object):
         # embedding algorithm.
         skf = StratifiedKFold(n_splits=10)
         (train_idx, test_idx) = list(
-            skf.split(obs.stimulus_set, obs.config_id))[0]
+            skf.split(obs.stimulus_set, obs.config_idx))[0]
 
         # Run multiple restarts of embedding algorithm.
         J_all_best = np.inf
@@ -783,7 +783,7 @@ class PsychologicalEmbedding(object):
             tf_obs['n_selected']: obs.n_selected,
             tf_obs['is_ranked']: obs.is_ranked,
             tf_obs['group_id']: obs.group_id,
-            tf_obs['config_id']: obs.config_id,
+            tf_obs['config_idx']: obs.config_idx,
             tf_obs['config_n_reference']: obs.config_list.n_reference.values,
             tf_obs['config_n_selected']: obs.config_list.n_selected.values,
             tf_obs['config_is_ranked']: obs.config_list.is_ranked.values.astype('int'),
@@ -1295,7 +1295,7 @@ class PsychologicalEmbedding(object):
             tf_n_selected = tf.placeholder(tf.int32, name='n_selected')
             tf_is_ranked = tf.placeholder(tf.int32, name='is_ranked')
             tf_group_id = tf.placeholder(tf.int32, name='group_id')
-            tf_config_id = tf.placeholder(tf.int32, name='config_id')
+            tf_config_idx = tf.placeholder(tf.int32, name='config_idx')
             # Configuration data.
             tf_config_n_reference = tf.placeholder(
                 tf.int32, name='config_n_reference')
@@ -1309,7 +1309,7 @@ class PsychologicalEmbedding(object):
                 'n_selected': tf_n_selected,
                 'is_ranked': tf_is_ranked,
                 'group_id': tf_group_id,
-                'config_id': tf_config_id,
+                'config_idx': tf_config_idx,
                 'config_n_reference': tf_config_n_reference,
                 'config_n_selected': tf_config_n_selected,
                 'config_is_ranked': tf_config_is_ranked
@@ -1507,7 +1507,7 @@ class PsychologicalEmbedding(object):
                 0:n_outcome_list[i_config],
                 0:n_reference_list[i_config]
             ]
-            trial_locs = trials.config_id == i_config
+            trial_locs = trials.config_idx == i_config
             n_trial = np.sum(trial_locs)
             n_outcome = n_outcome_list[i_config]
             n_reference = config['n_reference']
@@ -1613,7 +1613,7 @@ class PsychologicalEmbedding(object):
         for i_config in range(n_config):
             config = trials.config_list.iloc[i_config]
             outcome_idx = outcome_idx_list[i_config]
-            trial_locs = trials.config_id == i_config
+            trial_locs = trials.config_idx == i_config
             n_trial = np.sum(trial_locs)
             n_outcome = n_outcome_list[i_config]
             n_reference = config['n_reference']

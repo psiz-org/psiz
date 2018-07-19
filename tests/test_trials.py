@@ -22,9 +22,9 @@ Notes:
         downstream applications make this assumption.
 
 Todo:
-    - write test for subset and test config_id, it is important that
-    the config_id and configuration is recomputed on initialization
-    because down-stream code assumes that config_id is from [0,N[ and
+    - write test for subset and test config_idx, it is important that
+    the config_idx and configuration is recomputed on initialization
+    because down-stream code assumes that config_idx is from [0,N[ and
     corresponds to indices of config_list
     - test stack different config for JudgedTrials
 """
@@ -270,7 +270,7 @@ class TestUnjudgedTrials:
     def test_configuration_id_0(self, setup_tasks_0):
         np.testing.assert_array_equal(
             setup_tasks_0['configuration_id'],
-            setup_tasks_0['tasks'].config_id)
+            setup_tasks_0['tasks'].config_idx)
 
     def test_n_trial_1(self, setup_tasks_1):
         assert setup_tasks_1['n_trial'] == setup_tasks_1['tasks'].n_trial
@@ -299,7 +299,7 @@ class TestUnjudgedTrials:
     def test_configuration_id_1(self, setup_tasks_1):
         np.testing.assert_array_equal(
             setup_tasks_1['configuration_id'],
-            setup_tasks_1['tasks'].config_id)
+            setup_tasks_1['tasks'].config_idx)
 
 
 class TestJudgedTrials:
@@ -350,7 +350,7 @@ class TestJudgedTrials:
     def test_configuration_id_0(self, setup_obs_0):
         np.testing.assert_array_equal(
             setup_obs_0['configuration_id'],
-            setup_obs_0['tasks'].config_id)
+            setup_obs_0['tasks'].config_idx)
 
     def test_n_trial_1(self, setup_obs_1):
         assert setup_obs_1['n_trial'] == setup_obs_1['tasks'].n_trial
@@ -379,7 +379,7 @@ class TestJudgedTrials:
     def test_configuration_id_1(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['configuration_id'],
-            setup_obs_1['tasks'].config_id)
+            setup_obs_1['tasks'].config_idx)
 
 
 class TestStack:

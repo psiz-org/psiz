@@ -103,7 +103,7 @@ class Agent(object):
             outcome_idx = outcome_idx_list[i_config]
             n_outcome = outcome_idx.shape[0]
             dummy_idx = np.arange(0, n_outcome)
-            trial_locs = trials.config_id == i_config
+            trial_locs = trials.config_idx == i_config
             n_trial = np.sum(trial_locs)
             trial_idx = trial_idx_all[trial_locs]
             prob = prob_all[trial_locs, 0:n_outcome]

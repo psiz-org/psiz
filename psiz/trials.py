@@ -232,6 +232,26 @@ class SimilarityTrials(object):
         """
         pass
 
+    def outcome_tensor(self):
+        """Return outcome tensor."""
+        # TODO better doc, test
+        n_config = self.config_list.shape[0]
+
+        n_outcome_list = self.config_list['n_outcome'].values
+        max_n_outcome = np.max(n_outcome_list)
+
+        n_reference_list = self.config_list['n_reference'].values
+        max_n_reference = np.max(n_reference_list)
+
+        outcome_tensor = -1 * np.ones(
+            (n_config, max_n_outcome, max_n_reference), dtype=np.int32)
+        for i_config in range(n_config):
+            outcome_tensor[
+                i_config,
+                0:n_outcome_list[i_config],
+                0:n_reference_list[i_config]] = self.outcome_idx_list[i_config]
+        return outcome_tensor
+
 
 class UnjudgedTrials(SimilarityTrials):
     """Object that encapsulates unjudged similarity trials.

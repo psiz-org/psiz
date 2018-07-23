@@ -65,12 +65,7 @@ def main():
     generator = RandomGenerator(model_truth.n_stimuli)
     n_reference = 2
     n_selected = 1
-    trials = generator.generate(n_trial, n_reference, n_selected) # TODO
-    # ================= TODO
-    # trials1 = generator.generate(10, n_reference, n_selected)
-    # trials2 = generator.generate(10, 4, 2)
-    # trials = stack((trials1, trials2))
-    # ================= TODO
+    trials = generator.generate(n_trial, n_reference, n_selected)
 
     # Remove data for stimulus 8
     # locs = np.equal(trials.stimulus_set, 6)
@@ -208,28 +203,3 @@ def ground_truth():
 
 if __name__ == "__main__":
     main()
-
-# TODO similarity distribution
-# sim_values = simmat_truth.flatten()
-# n, bins, patches = plt.hist(sim_values, 10, density=True, facecolor='g', alpha=0.75)
-# plt.show()
-
-# TODO anchor point test
-# color_idx = np.zeros((n_stimuli), dtype=np.int64)
-# color_idx[anchor_idx[:, 0]] = 1
-# color_idx[anchor_idx[:, 1]] = 2
-
-# import matplotlib
-# import matplotlib.pyplot as plt
-# cmap = matplotlib.cm.get_cmap('jet')
-# norm = matplotlib.colors.Normalize(vmin=0., vmax=2.)
-# color_array = cmap(norm(range(3)))
-# fig, ax = plt.subplots()
-
-# plt.subplot(1, 1, 1)
-# for i_stimulus in range(n_stimuli):
-#     plt.scatter(
-#         z[i_stimulus, 0], z[i_stimulus, 1],
-#         c=color_array[color_idx[i_stimulus], :])
-# plt.axis('equal')
-# plt.show()

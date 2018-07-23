@@ -24,8 +24,7 @@ Classes:
         kernel.
     StudentsT: Embedding model using a Student's t similarity kernel.
 
-Todo:te
-    - implement general cost function that includes all scenarios
+Todo:
     - parallelization during fitting (MAYBE)
     - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
@@ -35,10 +34,6 @@ Todo:te
     - dcoument verbosity levels
         - modify verbosity so that some basic messages occur every time
     - document meaning of cold, warm, and exact
-    - custom exception
-        class MyException(Exception):
-            pass
-    - remove defualts for model initialization?
     - may want to change similarity_matrix to accept attention weight
         vector rather that group_id in order to allow matrices to be
         computed for arbitrary weights.
@@ -48,7 +43,7 @@ Todo:te
         * MAYBE Introduce additional tuning free parameters for each
             stimulus. Control flexibility using rule or L2
             regularization.
-    - sim_qr -> sim_qr
+
 """
 
 import sys
@@ -91,6 +86,7 @@ class PsychologicalEmbedding(object):
             for each trial.
         log_likelihood: Return the log-likelihood of a set of
             observations.
+        posterior_samples: Sample from the posterior distribution.
         set_log: Adjust the TensorBoard logging behavior.
 
     Attributes:
@@ -1053,7 +1049,7 @@ class PsychologicalEmbedding(object):
                 prob_all, np.sum(prob_all, axis=1, keepdims=True))
         return prob_all
 
-    def tf_outcome_probability(self, trials, z_tf, tf_theta):
+    def _tf_outcome_probability(self, trials, z_tf, tf_theta):
         """Return probability of outcomes for each trial.
 
         Args:

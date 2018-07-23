@@ -18,8 +18,7 @@
 
 Todo
     - test init
-    - freeze and thaw        
-    - general run
+    - freeze and thaw
     - attention
     - heavy-tailed similarity
     - Student's t similarity
@@ -288,7 +287,7 @@ def test_probability(ground_truth, unjudged_trials):
 
 
 def test_tf_probability(ground_truth, unjudged_trials):
-    """Test tf_outcome_probability method."""
+    """Test _tf_outcome_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
     prob_1 = ground_truth.outcome_probability(
@@ -299,12 +298,12 @@ def test_tf_probability(ground_truth, unjudged_trials):
     z_tf = tf.convert_to_tensor(
         z_tf, dtype=tf.float32
     )
-    # TODO clean this up
+
     tf_theta = {}
     for param_name in ground_truth.theta:
         tf_theta[param_name] = tf.constant(
             ground_truth.theta[param_name]['value'], dtype=tf.float32)
-    prob_2_tf = ground_truth.tf_outcome_probability(
+    prob_2_tf = ground_truth._tf_outcome_probability(
         unjudged_trials, z_tf, tf_theta)
 
     sess = tf.Session()
@@ -347,3 +346,23 @@ def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
         prob_2 = tf_prob_2.eval()
 
     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)
+
+# TODO anchor point test
+# color_idx = np.zeros((n_stimuli), dtype=np.int64)
+# color_idx[anchor_idx[:, 0]] = 1
+# color_idx[anchor_idx[:, 1]] = 2
+
+# import matplotlib
+# import matplotlib.pyplot as plt
+# cmap = matplotlib.cm.get_cmap('jet')
+# norm = matplotlib.colors.Normalize(vmin=0., vmax=2.)
+# color_array = cmap(norm(range(3)))
+# fig, ax = plt.subplots()
+
+# plt.subplot(1, 1, 1)
+# for i_stimulus in range(n_stimuli):
+#     plt.scatter(
+#         z[i_stimulus, 0], z[i_stimulus, 1],
+#         c=color_array[color_idx[i_stimulus], :])
+# plt.axis('equal')
+# plt.show()

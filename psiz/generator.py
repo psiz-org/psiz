@@ -43,7 +43,7 @@ class TrialGenerator(object):
     """Abstract base class for generating similarity judgment trials.
 
     Methods:
-        generate: TODO
+        generate: Generate trials.
 
     Attributes:
         n_stimuli: An integer indicating the total number of unique
@@ -92,10 +92,14 @@ class RandomGenerator(TrialGenerator):
         """Return generated trials based on provided arguments.
 
         Args:
-            n_trial: TODO
-            n_reference (optional): TODO
-            n_selected (optional): TODO
-            is_ranked (optional): TODO
+            n_trial: A scalar indicating the number of trials to
+                generate.
+            n_reference (optional): A scalar indicating the number of
+                references for each trial.
+            n_selected (optional): A scalar indicating the number of
+                selections an agent must make.
+            is_ranked (optional): Boolean indicating whether an agent
+                must make ranked selections.
 
         Returns:
             An UnjudgedTrials object.

@@ -87,6 +87,8 @@ don’t know free parameters (fit)
 - Inference is performed using a combination of gradient decent and Markov
 chain Monte Carlo methods.
 
+- mix trial configuration types
+
 Modules
 -------
 * ``dimensionality`` - Function for selecting the dimensionality of the embedding.

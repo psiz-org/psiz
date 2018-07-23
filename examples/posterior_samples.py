@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import tensorflow as tf
 
-from psiz.trials import UnjudgedTrials
+from psiz.trials import UnjudgedTrials, stack
 from psiz.models import Exponential, HeavyTailed, StudentsT
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
@@ -65,7 +65,12 @@ def main():
     generator = RandomGenerator(model_truth.n_stimuli)
     n_reference = 2
     n_selected = 1
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    trials = generator.generate(n_trial, n_reference, n_selected) # TODO
+    # ================= TODO
+    # trials1 = generator.generate(10, n_reference, n_selected)
+    # trials2 = generator.generate(10, 4, 2)
+    # trials = stack((trials1, trials2))
+    # ================= TODO
 
     # Remove data for stimulus 8
     # locs = np.equal(trials.stimulus_set, 6)
@@ -210,7 +215,7 @@ if __name__ == "__main__":
 # plt.show()
 
 # TODO anchor point test
-# color_idx = np.zeros((n_stimuli), dtype=np.int)
+# color_idx = np.zeros((n_stimuli), dtype=np.int64)
 # color_idx[anchor_idx[:, 0]] = 1
 # color_idx[anchor_idx[:, 1]] = 2
 

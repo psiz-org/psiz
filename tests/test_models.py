@@ -70,7 +70,7 @@ def unjudged_trials():
     ))
     n_selected = np.array((
         2, 2, 2, 2, 1, 1, 1
-        ), dtype=np.int64)
+        ), dtype=np.int32)
     unjudged_trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
     return unjudged_trials
 
@@ -280,7 +280,7 @@ def test_freeze():
 
 def test_probability(ground_truth, unjudged_trials):
     """Test probability method."""
-    (prob, outcome_idx_list) = ground_truth.outcome_probability(
+    prob = ground_truth.outcome_probability(
         unjudged_trials)
     prob_actual = np.sum(prob, axis=1)
     prob_desired = np.ones((unjudged_trials.n_trial))
@@ -291,7 +291,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
     """Test tf_outcome_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
-    (prob_1, _) = ground_truth.outcome_probability(
+    prob_1 = ground_truth.outcome_probability(
         unjudged_trials)
     prob_actual_1 = np.sum(prob_1, axis=1)
 
@@ -304,7 +304,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
     for param_name in ground_truth.theta:
         tf_theta[param_name] = tf.constant(
             ground_truth.theta[param_name]['value'], dtype=tf.float32)
-    (outcome_idx_list, prob_2_tf) = ground_truth.tf_outcome_probability(
+    prob_2_tf = ground_truth.tf_outcome_probability(
         unjudged_trials, z_tf, tf_theta)
 
     sess = tf.Session()
@@ -313,4 +313,37 @@ def test_tf_probability(ground_truth, unjudged_trials):
         prob_2 = prob_2_tf.eval()
 
     np.testing.assert_allclose(prob_actual_1, prob_desired)
+    np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)
+
+
+def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
+    """Test tf_ranked_sequence_probability."""
+    trials = unjudged_trials
+    n_reference = 4
+    n_selected = 2
+    trial_locs = np.logical_and(
+        trials.n_reference == n_reference,
+        trials.n_selected == n_selected
+    )
+
+    z = ground_truth.z['value']
+
+    attention = ground_truth.attention['value'][0, :]
+    attention = np.matlib.repmat(attention, unjudged_trials.n_trial, 1)
+
+    (z_q, z_r) = ground_truth._inflate_points(
+        trials.stimulus_set[trial_locs], n_reference, z)
+    s_qref = ground_truth.similarity(z_q, z_r, attention=attention[trial_locs])
+    prob_1 = ground_truth._ranked_sequence_probabiltiy(s_qref, n_selected)
+
+    tf_n_selected = tf.constant(n_selected, dtype=tf.int32)
+    # tf_s_qref = tf.constant(s_qref, dtype=tf.float32)
+    tf_s_qref = tf.convert_to_tensor(s_qref, dtype=tf.float32)
+    tf_prob_2 = ground_truth._tf_ranked_sequence_probability(
+        tf_s_qref, tf_n_selected)
+    sess = tf.Session()
+    with sess.as_default():
+        sess.run(tf.global_variables_initializer())
+        prob_2 = tf_prob_2.eval()
+
     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)

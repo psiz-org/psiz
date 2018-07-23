@@ -67,35 +67,35 @@ class Agent(object):
                 order of the stimuli is now informative.
 
         """
-        group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int)
-        (prob_all, outcome_idx_list) = self.embedding.outcome_probability(
+        group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int32)
+        prob_all = self.embedding.outcome_probability(
             trials, group_id=group_id)
-        judged_trials = self._select(trials, outcome_idx_list, prob_all)
+        judged_trials = self._select(trials, prob_all)
         return judged_trials
 
-    def _select(self, trials, outcome_idx_list, prob_all):
+    def _select(self, trials, prob_all):
         """Stochastically select from possible outcomes.
 
         Args:
             trials:
-            outcome_idx_list:
             prob_all:
 
 
         Returns:
             A JudgedTrials object.
-            The outcome index.
 
         """
+        outcome_idx_list = trials.outcome_idx_list
+
         n_trial_all = trials.n_trial
         trial_idx_all = np.arange(n_trial_all)
         max_n_ref = trials.stimulus_set.shape[1] - 1
         n_config = trials.config_list.shape[0]
 
         # Pre-allocate.
-        chosen_outcome_idx = np.empty((n_trial_all), dtype=np.int64)
+        chosen_outcome_idx = np.empty((n_trial_all), dtype=np.int32)
         stimulus_set = -1 * np.ones(
-            (n_trial_all, 1 + max_n_ref), dtype=np.int64
+            (n_trial_all, 1 + max_n_ref), dtype=np.int32
         )
         stimulus_set[:, 0] = trials.stimulus_set[:, 0]
         for i_config in range(n_config):
@@ -103,7 +103,7 @@ class Agent(object):
             outcome_idx = outcome_idx_list[i_config]
             n_outcome = outcome_idx.shape[0]
             dummy_idx = np.arange(0, n_outcome)
-            trial_locs = trials.config_id == i_config
+            trial_locs = trials.config_idx == i_config
             n_trial = np.sum(trial_locs)
             trial_idx = trial_idx_all[trial_locs]
             prob = prob_all[trial_locs, 0:n_outcome]
@@ -115,7 +115,7 @@ class Agent(object):
                 stimulus_set[trial_idx[i_trial], 1:n_reference+1] = \
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
-        group_id = np.full((trials.n_trial), self.group_id, dtype=np.int64)
+        group_id = np.full((trials.n_trial), self.group_id, dtype=np.int32)
         return JudgedTrials(
                 stimulus_set,
                 n_selected=trials.n_selected,

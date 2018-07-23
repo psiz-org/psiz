@@ -42,18 +42,18 @@ def setup_tasks_0():
     stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
                             (9, 12, 7, -1, -1, -1, -1, -1, -1),
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 1))
-    n_reference = np.array((2, 2, 4, 8))
+    n_selected = np.array((1, 1, 1, 1), dtype=np.int32)
+    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
 
     configurations = pd.DataFrame(
         {
-            'n_reference': [2, 4, 8],
-            'n_selected': [1, 1, 1],
+            'n_reference': np.array([2, 4, 8], dtype=np.int32),
+            'n_selected': np.array([1, 1, 1], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'n_outcome': [2, 4, 8]
+            'n_outcome': np.array([2, 4, 8], dtype=np.int32)
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -75,18 +75,18 @@ def setup_tasks_1():
     stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
                             (9, 12, 7, -1, -1, -1, -1, -1, -1),
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 2))
-    n_reference = np.array((2, 2, 4, 8))
+    n_selected = np.array((1, 1, 1, 2), dtype=np.int32)
+    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
 
     configurations = pd.DataFrame(
         {
-            'n_reference': [2, 4, 8],
-            'n_selected': [1, 1, 2],
+            'n_reference': np.array([2, 4, 8], dtype=np.int32),
+            'n_selected': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'n_outcome': [2, 4, 56]
+            'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -108,20 +108,20 @@ def setup_obs_0():
     stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
                             (9, 12, 7, -1, -1, -1, -1, -1, -1),
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 2))
-    n_reference = np.array((2, 2, 4, 8))
+    n_selected = np.array((1, 1, 1, 2), dtype=np.int32)
+    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
 
     configurations = pd.DataFrame(
         {
-            'n_reference': [2, 4, 8],
-            'n_selected': [1, 1, 2],
+            'n_reference': np.array([2, 4, 8], dtype=np.int32),
+            'n_selected': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'group_id': [0, 0, 0],
-            'session_id': [0, 0, 0],
-            'n_outcome': [2, 4, 56]
+            'group_id': np.array([0, 0, 0], dtype=np.int32),
+            'session_id': np.array([0, 0, 0], dtype=np.int32),
+            'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
@@ -143,24 +143,24 @@ def setup_obs_1():
     stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
                             (9, 12, 7, -1, -1, -1, -1, -1, -1),
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 2))
-    n_reference = np.array((2, 2, 4, 8))
+    n_selected = np.array((1, 1, 1, 2), dtype=np.int32)
+    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.array((0, 0, 1, 1))
+    group_id = np.array((0, 0, 1, 1), dtype=np.int32)
 
     configurations = pd.DataFrame(
         {
-            'n_reference': [2, 4, 8],
-            'n_selected': [1, 1, 2],
+            'n_reference': np.array([2, 4, 8], dtype=np.int32),
+            'n_selected': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'group_id': [0, 1, 1],
-            'session_id': [0, 0, 0],
-            'n_outcome': [2, 4, 56]
+            'group_id': np.array([0, 1, 1], dtype=np.int32),
+            'session_id': np.array([0, 0, 0], dtype=np.int32),
+            'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
-    configuration_id = np.array((0, 0, 1, 2))
+    configuration_id = np.array((0, 0, 1, 2), dtype=np.int32)
 
     tasks = JudgedTrials(stimulus_set, n_selected=n_selected,
                          group_id=group_id)
@@ -560,9 +560,9 @@ class TestStack:
         trials_all = stack((trials1, trials2, trials3))
 
         desired_n_reference = np.hstack((
-            n_reference1 * np.ones((5), dtype=np.int),
-            n_reference2 * np.ones((5), dtype=np.int),
-            n_reference3 * np.ones((5), dtype=np.int),
+            n_reference1 * np.ones((5), dtype=np.int32),
+            n_reference2 * np.ones((5), dtype=np.int32),
+            n_reference3 * np.ones((5), dtype=np.int32),
         ))
 
         np.testing.assert_array_equal(
@@ -593,14 +593,14 @@ class TestStack:
         assert np.sum(np.equal(trials_all.stimulus_set[1:5, 0:3], -1)) == 0
         np.testing.assert_array_equal(
             trials_all.stimulus_set[0:5, 3:],
-            -1 * np.ones((5, 6), dtype=np.int)
+            -1 * np.ones((5, 6), dtype=np.int32)
         )
         # Check padding values of second set (non-padded and then padded
         # values).
         assert np.sum(np.equal(trials_all.stimulus_set[5:10, 0:5], -1)) == 0
         np.testing.assert_array_equal(
             trials_all.stimulus_set[5:10, 5:],
-            -1 * np.ones((5, 4), dtype=np.int)
+            -1 * np.ones((5, 4), dtype=np.int32)
         )
         # Check padding values of third set (non-padded and then padded
         # values).
@@ -614,7 +614,7 @@ class TestStack:
         assert np.sum(np.equal(trials_subset.stimulus_set[1:5, 0:3], -1)) == 0
         np.testing.assert_array_equal(
             trials_subset.stimulus_set[0:5, 3:],
-            -1 * np.ones((5, 2), dtype=np.int)
+            -1 * np.ones((5, 2), dtype=np.int32)
         )
         # Check padding values of second set (non-padded and then padded
         # values).

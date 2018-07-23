@@ -32,6 +32,8 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
+    Add stimulus set check. It can be [-1, inf]. Exploit this fact when
+    creating z placeholder to inflate z.
 
 """
 
@@ -126,7 +128,7 @@ class SimilarityTrials(object):
         #     stimulus_set, max_n_reference)
 
         if n_selected is None:
-            n_selected = np.ones((self.n_trial), dtype=np.int64)
+            n_selected = np.ones((self.n_trial), dtype=np.int32)
         else:
             n_selected = self._check_n_selected(n_selected)
         self.n_selected = n_selected
@@ -160,11 +162,11 @@ class SimilarityTrials(object):
         """
         max_ref = stimulus_set.shape[1] - 1
         n_reference = max_ref - np.sum(stimulus_set < 0, axis=1)
-        return n_reference.astype(dtype=np.int64)
+        return n_reference.astype(dtype=np.int32)
 
     def _check_n_selected(self, n_selected):
         """Check the argument n_selected."""
-        n_selected = n_selected.astype(np.int64)
+        n_selected = n_selected.astype(np.int32)
         # Check shape argreement.
         if not (n_selected.shape[0] == self.n_trial):
             raise ValueError((
@@ -340,7 +342,7 @@ class UnjudgedTrials(SimilarityTrials):
         n_trial = len(n_reference)
 
         # Determine unique display configurations.
-        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int64)
+        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int32)
         d = {
             'n_reference': n_reference, 'n_selected': n_selected,
             'is_ranked': is_ranked, 'n_outcome': n_outcome_placeholder
@@ -351,7 +353,7 @@ class UnjudgedTrials(SimilarityTrials):
         n_out_idx = df_config.columns.get_loc("n_outcome")
 
         # Assign display configuration ID for every observation.
-        config_idx = np.empty(n_trial, dtype=np.int64)
+        config_idx = np.empty(n_trial, dtype=np.int32)
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
@@ -429,7 +431,7 @@ class JudgedTrials(SimilarityTrials):
 
         # Handle default settings.
         if group_id is None:
-            group_id = np.zeros((self.n_trial), dtype=np.int64)
+            group_id = np.zeros((self.n_trial), dtype=np.int32)
         else:
             group_id = self._check_group_id(group_id)
         self.group_id = group_id
@@ -445,7 +447,7 @@ class JudgedTrials(SimilarityTrials):
 
     def _check_group_id(self, group_id):
         """Check the argument n_selected."""
-        group_id = group_id.astype(np.int64)
+        group_id = group_id.astype(np.int32)
         # Check shape argreement.
         if not (group_id.shape[0] == self.n_trial):
             raise ValueError((
@@ -513,10 +515,10 @@ class JudgedTrials(SimilarityTrials):
         n_trial = len(n_reference)
 
         if session_id is None:
-            session_id = np.zeros((n_trial), dtype=np.int64)
+            session_id = np.zeros((n_trial), dtype=np.int32)
 
         # Determine unique display configurations.
-        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int64)
+        n_outcome_placeholder = np.zeros(n_selected.shape[0], dtype=np.int32)
         d = {
             'n_reference': n_reference, 'n_selected': n_selected,
             'is_ranked': is_ranked, 'group_id': group_id,
@@ -528,7 +530,7 @@ class JudgedTrials(SimilarityTrials):
         n_out_idx = df_config.columns.get_loc("n_outcome")
 
         # Assign display configuration index for every observation.
-        config_idx = np.empty(n_trial, dtype=np.int64)
+        config_idx = np.empty(n_trial, dtype=np.int32)
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
@@ -554,7 +556,7 @@ def pad_stimulus_set(stimulus_set, max_n_reference):
     n_trial = stimulus_set.shape[0]
     n_pad = max_n_reference - (stimulus_set.shape[1] - 1)
     if n_pad > 0:
-        pad_mat = -1 * np.ones((n_trial, n_pad), dtype=np.int64)
+        pad_mat = -1 * np.ones((n_trial, n_pad), dtype=np.int32)
         stimulus_set = np.hstack((stimulus_set, pad_mat))
     return stimulus_set
 
@@ -585,7 +587,7 @@ def possible_outcomes(trial_configuration):
     selection = list(perm)
     n_outcome = len(selection)
 
-    outcomes = np.empty((n_outcome, n_reference), dtype=np.int64)
+    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
     for i_outcome in range(n_outcome):
         # Fill in selections.
         outcomes[i_outcome, 0:n_selected] = selection[i_outcome]

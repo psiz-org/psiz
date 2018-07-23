@@ -65,7 +65,7 @@ def unjudged_trials():
     ))
     n_selected = np.array((
         2, 2, 2, 2, 1, 1, 1
-        ), dtype=np.int64)
+        ), dtype=np.int32)
     unjudged_trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
     return unjudged_trials
 

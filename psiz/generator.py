@@ -101,10 +101,10 @@ class RandomGenerator(TrialGenerator):
             An UnjudgedTrials object.
 
         """
-        n_reference = int(n_reference)
-        n_selected = np.repeat(int(n_selected), n_trial)
+        n_reference = np.int32(n_reference)
+        n_selected = np.repeat(np.int32(n_selected), n_trial)
         is_ranked = np.repeat(bool(is_ranked), n_trial)
-        stimulus_set = np.empty((n_trial, n_reference + 1), dtype=np.int64)
+        stimulus_set = np.empty((n_trial, n_reference + 1), dtype=np.int32)
         for i_trial in range(n_trial):
             stimulus_set[i_trial, :] = np.random.choice(
                 self.n_stimuli, (1, n_reference + 1), False

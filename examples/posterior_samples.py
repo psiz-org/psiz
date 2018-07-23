@@ -215,7 +215,7 @@ if __name__ == "__main__":
 # plt.show()
 
 # TODO anchor point test
-# color_idx = np.zeros((n_stimuli), dtype=np.int)
+# color_idx = np.zeros((n_stimuli), dtype=np.int64)
 # color_idx[anchor_idx[:, 0]] = 1
 # color_idx[anchor_idx[:, 1]] = 2
 

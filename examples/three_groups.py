@@ -59,7 +59,7 @@ def main():
 
     model_inferred = Exponential(
         model_truth.n_stimuli, n_dim, n_group)
-    model_inferred.fit(obs_all, 20, verbose=1)
+    model_inferred.fit(obs_all, 10, verbose=1)
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.

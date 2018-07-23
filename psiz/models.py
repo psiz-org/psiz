@@ -415,7 +415,7 @@ class PsychologicalEmbedding(object):
                 else:
                     self.theta[param_name]['trainable'] = True
 
-    def similarity(self, z_q, z_ref, theta=None, attention=None):
+    def similarity(self, z_q, z_r, theta=None, attention=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -424,7 +424,7 @@ class PsychologicalEmbedding(object):
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             theta (optional): The parameters governing the similarity
                 kernel. If not provided, the theta associated with the
@@ -451,24 +451,24 @@ class PsychologicalEmbedding(object):
                 attention = np.expand_dims(attention, axis=0)
 
         # Make sure z_q and attention have an appropriate singleton
-        # third dimension if z_ref has an array rank of 3.
-        if len(z_ref.shape) > 2:
+        # third dimension if z_r has an array rank of 3.
+        if len(z_r.shape) > 2:
             if len(z_q.shape) == 2:
                 z_q = np.expand_dims(z_q, axis=2)
             if len(attention.shape) == 2:
                 attention = np.expand_dims(attention, axis=2)
 
-        sim = self._similarity(z_q, z_ref, theta, attention)
+        sim = self._similarity(z_q, z_r, theta, attention)
         return sim
 
     @abstractmethod
-    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -484,13 +484,13 @@ class PsychologicalEmbedding(object):
         pass
 
     @abstractmethod
-    def _similarity(self, z_q, z_ref, theta, attention):
+    def _similarity(self, z_q, z_r, theta, attention):
         """Similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -1651,13 +1651,13 @@ class Exponential(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Exponential family similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -1678,7 +1678,7 @@ class Exponential(PsychologicalEmbedding):
         beta = tf_theta['beta']
 
         # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
+        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
         d_qref = tf.multiply(d_qref, tf_attention)
         d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
 
@@ -1686,13 +1686,13 @@ class Exponential(PsychologicalEmbedding):
         sim_qr = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau)) + gamma
         return sim_qr
 
-    def _similarity(self, z_q, z_ref, theta, attention):
+    def _similarity(self, z_q, z_r, theta, attention):
         """Exponential family similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -1713,7 +1713,7 @@ class Exponential(PsychologicalEmbedding):
         beta = theta['beta']['value']
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = (np.abs(z_q - z_r))**rho
         d_qref = np.multiply(d_qref, attention)
         d_qref = np.sum(d_qref, axis=1)**(1. / rho)
 
@@ -1841,13 +1841,13 @@ class HeavyTailed(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Heavy-tailed family similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -1868,7 +1868,7 @@ class HeavyTailed(PsychologicalEmbedding):
         alpha = tf_theta['alpha']
 
         # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
+        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
         d_qref = tf.multiply(d_qref, tf_attention)
         d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
 
@@ -1876,13 +1876,13 @@ class HeavyTailed(PsychologicalEmbedding):
         sim_qr = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
         return sim_qr
 
-    def _similarity(self, z_q, z_ref, theta, attention):
+    def _similarity(self, z_q, z_r, theta, attention):
         """Heavy-tailed family similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -1903,7 +1903,7 @@ class HeavyTailed(PsychologicalEmbedding):
         alpha = theta['alpha']['value']
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = (np.abs(z_q - z_r))**rho
         d_qref = np.multiply(d_qref, attention)
         d_qref = np.sum(d_qref, axis=1)**(1. / rho)
 
@@ -2037,13 +2037,13 @@ class StudentsT(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _tf_similarity(self, z_q, z_ref, tf_theta, tf_attention):
+    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Student-t family similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -2063,7 +2063,7 @@ class StudentsT(PsychologicalEmbedding):
         alpha = tf_theta['alpha']
 
         # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_ref), rho)
+        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
         d_qref = tf.multiply(d_qref, tf_attention)
         d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
 
@@ -2072,13 +2072,13 @@ class StudentsT(PsychologicalEmbedding):
             1 + (tf.pow(d_qref, tau) / alpha), tf.negative(alpha + 1)/2)
         return sim_qr
 
-    def _similarity(self, z_q, z_ref, theta, attention):
+    def _similarity(self, z_q, z_r, theta, attention):
         """Student-t family similarity kernel.
 
         Args:
             z_q: A set of embedding points.
                 shape = (n_sample, n_dim)
-            z_ref: A set of embedding points.
+            z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
@@ -2098,7 +2098,7 @@ class StudentsT(PsychologicalEmbedding):
         alpha = theta['alpha']['value']
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_ref))**rho
+        d_qref = (np.abs(z_q - z_r))**rho
         d_qref = np.multiply(d_qref, attention)
         d_qref = np.sum(d_qref, axis=1)**(1. / rho)
 

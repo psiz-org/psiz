@@ -786,7 +786,7 @@ class PsychologicalEmbedding(object):
             tf_obs['group_id']: obs.group_id,
             tf_obs['config_idx']: obs.config_idx,
             tf_obs['n_config']: len(obs.config_list.n_outcome.values),
-            tf_obs['config_max_n_outcome']: np.max(obs.config_list.n_outcome.values),
+            tf_obs['max_n_outcome']: np.max(obs.config_list.n_outcome.values),
             tf_obs['config_n_reference']: obs.config_list.n_reference.values,
             tf_obs['config_n_selected']: obs.config_list.n_selected.values,
             tf_obs['config_is_ranked']: obs.config_list.is_ranked.values,
@@ -834,7 +834,7 @@ class PsychologicalEmbedding(object):
             tf_n_config = tf.placeholder(
                 tf.int32, shape=(), name='n_config'
             )
-            tf_config_max_n_outcome = tf.placeholder(
+            tf_max_n_outcome = tf.placeholder(
                 tf.int32, shape=(), name='max_n_outcome'
             )
             tf_config_n_reference = tf.placeholder(
@@ -855,7 +855,7 @@ class PsychologicalEmbedding(object):
                 'group_id': tf_group_id,
                 'config_idx': tf_config_idx,
                 'n_config': tf_n_config,
-                'config_max_n_outcome': tf_config_max_n_outcome,
+                'max_n_outcome': tf_max_n_outcome,
                 'config_n_reference': tf_config_n_reference,
                 'config_n_selected': tf_config_n_selected,
                 'config_is_ranked': tf_config_is_ranked,
@@ -944,9 +944,10 @@ class PsychologicalEmbedding(object):
         if z is None:
             z = self.z['value']
 
+        cap = tf.constant(2.2204e-16)
         prob_all = self.outcome_probability(
             obs, z, group_id=obs.group_id, unaltered_only=True)
-        prob = np.maximum(np.finfo(np.double).tiny, prob_all[:, 0])
+        prob = np.maximum(cap, prob_all[:, 0])
         ll = np.sum(np.log(prob))
         return ll
 
@@ -1267,7 +1268,8 @@ class PsychologicalEmbedding(object):
         denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
 
         def cond_fn(selected_idx, seq_prob, denom):
-            return tf.greater_equal(selected_idx, tf.constant(0, dtype=tf.int32))
+            return tf.greater_equal(
+                selected_idx, tf.constant(0, dtype=tf.int32))
 
         def body_fn(selected_idx, seq_prob, denom):
             # Compute selection probability.
@@ -1398,9 +1400,11 @@ class PsychologicalEmbedding(object):
 
         # Replace anchors with samples from other set.
         for i_point in range(n_anchor_point):
-            combined_samples[0][:, anchor_idx[i_point, 0], :] = combined_samples[1][:, anchor_idx[i_point, 0], :]
+            combined_samples[0][:, anchor_idx[i_point, 0], :] = \
+                combined_samples[1][:, anchor_idx[i_point, 0], :]
         for i_point in range(n_anchor_point):
-            combined_samples[1][:, anchor_idx[i_point, 1], :] = combined_samples[0][:, anchor_idx[i_point, 1], :]
+            combined_samples[1][:, anchor_idx[i_point, 1], :] = \
+                combined_samples[0][:, anchor_idx[i_point, 1], :]
 
         samples_all = np.vstack((combined_samples[0], combined_samples[1]))
         samples_all = samples_all[0:n_sample]
@@ -1904,7 +1908,7 @@ class HeavyTailed(PsychologicalEmbedding):
 
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_ref))**rho
-        d_qref = np.multiply(d_qref, tf_attention)
+        d_qref = np.multiply(d_qref, attention)
         d_qref = np.sum(d_qref, axis=1)**(1. / rho)
 
         # Heavy-tailed family similarity kernel.

@@ -45,12 +45,16 @@ def ground_truth():
         (.7, 1.3)
     ))
     freeze_options = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 10,
-        'gamma': 0,
         'z': z,
-        'attention': attention
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 10,
+            'gamma': 0
+        },
+        'phi': {
+            'phi_1': attention
+        }
     }
     model.freeze(freeze_options)
     return model
@@ -75,7 +79,7 @@ def test_similarity_matrix(ground_truth):
     # Check explicit use of first set of attention weights.
     def similarity_func1(z_q, z_ref):
         sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.attention['value'][0])
+            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][0])
         return sim_func
 
     # Check without passing in explicit attention.
@@ -85,7 +89,7 @@ def test_similarity_matrix(ground_truth):
     # Check explicit use of second set of attention weights.
     def similarity_func2(z_q, z_ref):
         sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.attention['value'][1])
+            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][1])
         return sim_func
 
     computed_simmat2 = similarity_matrix(

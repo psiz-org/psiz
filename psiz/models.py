@@ -97,7 +97,7 @@ class PsychologicalEmbedding(object):
         theta: Dictionary containing data about the parameter values
             governing the similarity kernel. The dictionary contains
             the variable names as keys at the first level. For each
-            variable, there is an additional dictionary containing with
+            variable, there is an additional dictionary containing
             the keys 'value', 'trainable', and 'bounds'. The key
             'value' indicates the actual value of the parameter. The
             key 'trainable' is a boolean flag indicating whether the
@@ -106,11 +106,16 @@ class PsychologicalEmbedding(object):
             bounds are specified using a list of two items where the
             first item indicates the lower bound and the second item
             indicates the upper bound. Use None to indicate no bound.
-        attention: The attention weights associated with the embedding
-            model. Attention is a dictionary containing the keys
-            'value' and 'trainable'. The key 'value' contains the
-            actual weights and 'trainable' indicates if the weights are
-            trained during inference.
+        phi: Dictionary containing data about the group-specific
+            parameter values. These parameters are only trainable if
+            there is more than one group. The dictionary contains the
+            parameter names as keys at the first level. For each
+            parameter name, there is an additional dictionary
+            containing the keys 'value' and 'trainable'. The key
+            'value' indicates the actual value of the parameter. The
+            key 'trainable' is a boolean flag indicating whether the
+            variable is trainable during inference. The free parameter
+            phi_1 governs dimension-wide weights.
 
     Notes:
         The methods fit, freeze, thaw, and set_log modify the state of
@@ -155,7 +160,7 @@ class PsychologicalEmbedding(object):
         # Initialize model components.
         self.z = self._init_z()
         self.theta = self._init_theta()
-        self.attention = self._init_attention()
+        self.phi = self._init_phi()
 
         # Default inference settings.
         self.init_scale_list = [.001, .01, .1]
@@ -194,19 +199,20 @@ class PsychologicalEmbedding(object):
         """
         pass
 
-    def _init_attention(self):
-        """Return initialize attention.
+    def _init_phi(self):
+        """Return initialized phi.
 
-        Initialize attention weights using uniform distribution.
+        Initialize group-specific free parameters.
         """
-        attention = {}
-        attention['value'] = np.ones(
-            (self.n_group, self.n_dim), dtype=np.float32)
+        phi_1 = np.ones((self.n_group, self.n_dim), dtype=np.float32)
         if self.n_group is 1:
-            attention['trainable'] = False
+            is_trainable = False
         else:
-            attention['trainable'] = True
-        return attention
+            is_trainable = True
+        phi = dict(
+            phi_1=dict(value=phi_1, trainable=is_trainable)
+        )
+        return phi
 
     def _check_z(self, z):
         if z.shape[0] != self.n_stimuli:
@@ -218,7 +224,7 @@ class PsychologicalEmbedding(object):
                 "Input 'z' does not have the appropriate shape \
                 (dimensionality).")
 
-    def _check_attention(self, attention):
+    def _check_phi_1(self, attention):
         if attention.shape[0] != self.n_group:
             raise ValueError(
                 "Input 'attention' does not have the appropriate shape \
@@ -370,6 +376,7 @@ class PsychologicalEmbedding(object):
                 and corresponding values to be frozen (i.e., fixed)
                 during inference.
         """
+        # TODO freeze_options must handle nested phi.
         if freeze_options is not None:
             for param_name in freeze_options:
                 if param_name is 'z':
@@ -377,15 +384,19 @@ class PsychologicalEmbedding(object):
                     self._check_z(z)
                     self.z['value'] = z
                     self.z['trainable'] = False
-                elif param_name is 'attention':
-                    attention = freeze_options['attention']
-                    self._check_attention(attention)
-                    self.attention['value'] = attention
-                    self.attention['trainable'] = False
-                else:
-                    self.theta[param_name]['value'] = \
-                        freeze_options[param_name]
-                    self.theta[param_name]['trainable'] = False
+                elif param_name is 'theta':
+                    for sub_param_name in freeze_options[param_name]:
+                        self.theta[sub_param_name]['value'] = \
+                            freeze_options[param_name][sub_param_name]
+                        self.theta[sub_param_name]['trainable'] = False
+                elif param_name is 'phi':
+                    for sub_param_name in freeze_options[param_name]:
+                        if sub_param_name is 'phi_1':
+                            self._check_phi_1(
+                                freeze_options['phi']['phi_1'])
+                        self.phi[sub_param_name]['value'] = \
+                            freeze_options[param_name][sub_param_name]
+                        self.phi[sub_param_name]['trainable'] = False
 
     def thaw(self, thaw_options=None):
         """State changing method specifying trainable parameters.
@@ -399,6 +410,7 @@ class PsychologicalEmbedding(object):
                 include 'z', 'attention', and the parameters associated
                 with the similarity kernel.
         """
+        # TODO passing in phi.
         if thaw_options is None:
             self.z['trainable'] = True
             for param_name in self.theta:
@@ -407,13 +419,16 @@ class PsychologicalEmbedding(object):
             for param_name in thaw_options:
                 if param_name is 'z':
                     self.z['trainable'] = True
-                elif param_name is 'attention':
+                elif param_name is 'theta':
+                    for sub_param_name in thaw_options[param_name]:
+                        self.theta[sub_param_name]['trainable'] = True
+                elif param_name is 'phi':
                     if self.n_group is 1:
-                        self.attention['trainable'] = False
+                        is_trainable = False
                     else:
-                        self.attention['trainable'] = True
-                else:
-                    self.theta[param_name]['trainable'] = True
+                        is_trainable = True
+                    for sub_param_name in thaw_options[param_name]:
+                        self.phi[sub_param_name]['trainable'] = is_trainable
 
     def similarity(self, z_q, z_r, theta=None, attention=None):
         """Return similarity between two lists of points.
@@ -444,7 +459,7 @@ class PsychologicalEmbedding(object):
             theta = self.theta
 
         if attention is None:
-            attention = self.attention['value'][0, :]
+            attention = self.phi['phi_1']['value'][0, :]
             attention = np.expand_dims(attention, axis=0)
         else:
             if len(attention.shape) == 1:
@@ -507,19 +522,19 @@ class PsychologicalEmbedding(object):
 
     def _get_attention(self, init_mode):
         """Return attention weights of model as TensorFlow variable."""
-        if self.attention['trainable']:
+        if self.phi['phi_1']['trainable']:
             if init_mode is 'exact':
                 tf_attention = tf.get_variable(
                     "attention", [self.n_group, self.n_dim],
                     initializer=tf.constant_initializer(
-                        self.attention['value']
+                        self.phi['phi_1']['value']
                     )
                 )
             elif init_mode is 'warm':
                 tf_attention = tf.get_variable(
                     "attention", [self.n_group, self.n_dim],
                     initializer=tf.constant_initializer(
-                        self.attention['value']
+                        self.phi['phi_1']['value']
                     )
                 )
             else:
@@ -534,7 +549,7 @@ class PsychologicalEmbedding(object):
         else:
             tf_attention = tf.get_variable(
                 "attention", [self.n_group, self.n_dim],
-                initializer=tf.constant_initializer(self.attention['value']),
+                initializer=tf.constant_initializer(self.phi['phi_1']['value']),
                 trainable=False
             )
         return tf_attention
@@ -659,7 +674,7 @@ class PsychologicalEmbedding(object):
                 print('Restart ', i_restart)
 
         self.z['value'] = z_best
-        self.attention['value'] = attention_best
+        self.phi['phi_1']['value'] = attention_best
         self._set_parameters(params_best)
 
         return J_all_best
@@ -994,7 +1009,7 @@ class PsychologicalEmbedding(object):
 
         if group_id is None:
             group_id = np.zeros((trials.n_trial), dtype=np.int32)
-        attention = self.attention['value'][group_id, :]
+        attention = self.phi['phi_1']['value'][group_id, :]
 
         outcome_idx_list = trials.outcome_idx_list
         n_outcome_list = trials.config_list['n_outcome'].values
@@ -1078,7 +1093,7 @@ class PsychologicalEmbedding(object):
         stimulus_set = tf.constant(trials.stimulus_set, dtype=tf.int32)
         max_n_reference = stimulus_set.get_shape()[1] - 1
 
-        attention = self.attention['value'][0, :]  # TODO HACK
+        attention = self.phi['phi_1']['value'][0, :]  # TODO HACK
         attention = np.expand_dims(attention, axis=0)
         attention = np.expand_dims(attention, axis=2)
         tf_attention = tf.convert_to_tensor(
@@ -1579,7 +1594,7 @@ class Exponential(PsychologicalEmbedding):
             rho=dict(value=2., trainable=True, bounds=[1., None]),
             tau=dict(value=1., trainable=True, bounds=[1., None]),
             gamma=dict(value=0., trainable=True, bounds=[0., None]),
-            beta=dict(value=10., trainable=True, bounds=[1., None])
+            beta=dict(value=10., trainable=False, bounds=[1., None])
         )
         return theta
 

@@ -83,7 +83,7 @@ def main():
     # Infer an embedding model.  # TODO
     # model_inferred = Exponential(
     #     model_truth.n_stimuli, model_truth.n_dim)
-    # model_inferred.freeze({'beta': 10, 'rho': 2, 'tau': 1})
+    # model_inferred.freeze({'theta': {'beta': 10, 'rho': 2, 'tau': 1})
     # model_inferred.fit(obs, 10, verbose=1)
     model_inferred = model_truth
     z_original = copy.copy(model_inferred.z['value'])
@@ -191,11 +191,13 @@ def ground_truth():
     n_group = 1
     model = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
     freeze_options = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 10,
-        'gamma': 0,
-        'z': z
+        'z': z,
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 10,
+            'gamma': 0
+        }
     }
     model.freeze(freeze_options)
     return model

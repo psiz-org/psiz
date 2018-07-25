@@ -955,7 +955,7 @@ class PsychologicalEmbedding(object):
         if z is None:
             z = self.z['value']
 
-        cap = tf.constant(2.2204e-16)
+        cap = 2.2204e-16
         prob_all = self.outcome_probability(
             obs, z, group_id=obs.group_id, unaltered_only=True)
         prob = np.maximum(cap, prob_all[:, 0])

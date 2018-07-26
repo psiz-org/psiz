@@ -14,18 +14,13 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for testing utils.py.
-    
-    Todo:
-        - simple hard-coded example for similarity_matrix
-
-"""
+"""Module for testing utils.py."""
 
 
 import pytest
 import numpy as np
 
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz import utils
 from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential
 
@@ -45,12 +40,16 @@ def ground_truth():
         (.7, 1.3)
     ))
     freeze_options = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 10,
-        'gamma': 0,
         'z': z,
-        'attention': attention
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 10,
+            'gamma': 0
+        },
+        'phi': {
+            'phi_1': attention
+        }
     }
     model.freeze(freeze_options)
     return model
@@ -69,26 +68,26 @@ def test_similarity_matrix(ground_truth):
         (0.00548485, 0.01814493, 1.)
     ))
 
-    computed_simmat0 = similarity_matrix(
+    computed_simmat0 = utils.similarity_matrix(
         ground_truth.similarity, ground_truth.z['value'])
 
     # Check explicit use of first set of attention weights.
     def similarity_func1(z_q, z_ref):
         sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.attention['value'][0])
+            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][0])
         return sim_func
 
     # Check without passing in explicit attention.
-    computed_simmat1 = similarity_matrix(
+    computed_simmat1 = utils.similarity_matrix(
         similarity_func1, ground_truth.z['value'])
 
     # Check explicit use of second set of attention weights.
     def similarity_func2(z_q, z_ref):
         sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.attention['value'][1])
+            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][1])
         return sim_func
 
-    computed_simmat2 = similarity_matrix(
+    computed_simmat2 = utils.similarity_matrix(
         similarity_func2, ground_truth.z['value'])
 
     np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat0)
@@ -112,5 +111,21 @@ def test_matrix_correlation():
         (.11, .82, .02, 1.0)
     ))
 
-    r2_score_1 = matrix_correlation(a, b)
+    r2_score_1 = utils.matrix_correlation(a, b)
     np.testing.assert_almost_equal(r2_score_1, 0.96456543)
+
+
+def test_procrustean_solution():
+    """Test procrustean solution for simple problem."""
+    s = 2
+    x = -.8
+    y = 1
+    theta = np.pi/4
+    f = -1.
+    params = np.array((x, y, theta, s, f))
+
+    z_a = np.random.rand(10, 2)
+    z_b = utils.affine_transformation(z_a, params)
+    (z_c, _) = utils.procrustean_solution(z_a, z_b, n_restart=10)
+
+    np.testing.assert_almost_equal(z_a, z_c, decimal=2)

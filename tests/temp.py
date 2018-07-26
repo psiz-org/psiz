@@ -12,11 +12,11 @@ def main():
     model = ground_truth()
 
     def similarity_func1(z_q, z_ref):
-        return model.similarity(z_q, z_ref, attention=model.attention['value'][0])
+        return model.similarity(z_q, z_ref, attention=model.phi['phi_1']['value'][0])
     simmat1 = similarity_matrix(similarity_func1, model.z['value'])
 
     def similarity_func2(z_q, z_ref):
-        return model.similarity(z_q, z_ref, attention=model.attention['value'][1])
+        return model.similarity(z_q, z_ref, attention=model.phi['phi_1']['value'][1])
     simmat2 = similarity_matrix(similarity_func2, model.z['value'])
 
     print('here')
@@ -36,12 +36,16 @@ def ground_truth():
         (.7, 1.3)
     ))
     freeze_options = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 10,
-        'gamma': 0,
         'z': z,
-        'attention': attention
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 10,
+            'gamma': 0
+        },
+        'phi': {
+            'phi_1': attention
+        }
     }
     model.freeze(freeze_options)
     return model

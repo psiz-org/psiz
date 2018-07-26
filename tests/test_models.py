@@ -355,6 +355,7 @@ def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
 
 
 def test_tuning_distance():
+    """Test alternative formulation of distance."""
     z_q = np.array((
         (.11, -.13, .28),
         (.45, .09, -1.45),
@@ -433,6 +434,96 @@ def test_tuning_distance():
     d_qr_1 = d_qr_1**(1 / rho)
     d_qr_1 = np.squeeze(d_qr_1)
     np.testing.assert_array_almost_equal(d_qr_0, d_qr_1)
+
+
+def test_tuning_distance_with_multiple_references():
+    """Test alternative formulation of distance."""
+    z_q = np.array((
+        (.11, -.13, .28),
+        (.45, .09, -1.45),
+        (.21, .14, .58),
+        (-.91, -.41, -.19)
+    ))
+    z_q = np.expand_dims(z_q, axis=2)
+
+    z_r = np.array((
+        (.20, -.78, .12),
+        (-.10, -.34, -.28),
+        (.03, .38, -.12),
+        (-.15, -.42, -.78)
+    ))
+    z_r = np.expand_dims(z_r, axis=2)
+    z_r = np.tile(z_r, [1, 1, 2])
+
+    rho = 2
+
+    attention = np.array((
+        (1., 1.2, .8),
+        (1., 1.2, .8),
+        (1., 1.2, .8),
+        (1., 1.2, .8)
+    ))
+    attention = np.expand_dims(attention, axis=2)
+
+    d_qr_0 = (np.abs(z_q - z_r))**rho
+    d_qr_0 = np.multiply(d_qr_0, attention)
+    d_qr_0 = np.sum(d_qr_0, axis=1)**(1. / rho)
+
+    # Note: The weight matrix is a 3D tensor, first dimension corresponds to
+    # the pair being compared.
+    # Note: matmul treats the last two dimensions as the actual matrices and
+    # broadcasts appropriately.
+
+    # Common weight matrix.
+    w1 = np.array((
+        (1., 0., 0.),
+        (0., 1.2, 0.),
+        (0., 0., .8)
+    ))
+    w = np.expand_dims(w1, axis=0)
+    w = np.expand_dims(w, axis=0)
+    x = np.abs(z_q - z_r)**(rho / 2)
+    x = np.transpose(x, axes=(0, 2, 1))
+    x = np.expand_dims(x, axis=3)
+
+    x_t = np.transpose(x, axes=(0, 1, 3, 2))
+    d_qr_1 = np.matmul(x_t, w)
+    d_qr_1 = np.matmul(d_qr_1, x)
+    d_qr_1 = d_qr_1**(1 / rho)
+    d_qr_1 = np.squeeze(d_qr_1)
+    np.testing.assert_array_almost_equal(d_qr_0, d_qr_1)
+
+    # Separate weight matrix.
+    # attention = np.array((
+    #     (1., 1.2, .8),
+    #     (1., 1.2, .8),
+    #     (.7, 1., 1.3),
+    #     (.7, 1., 1.3),
+    # ))
+    # d_qr_0 = (np.abs(z_q - z_r))**rho
+    # d_qr_0 = np.multiply(d_qr_0, attention)
+    # d_qr_0 = np.sum(d_qr_0, axis=1)**(1. / rho)
+
+    # w1 = np.array((
+    #     (1., 0., 0.),
+    #     (0., 1.2, 0.),
+    #     (0., 0., .8)
+    # ))
+    # w1 = np.tile(w1, [2, 1, 1])
+    # w2 = np.array((
+    #     (.7, 0., 0.),
+    #     (0., 1., 0.),
+    #     (0., 0., 1.3)
+    # ))
+    # w2 = np.tile(w2, [2, 1, 1])
+    # w = np.concatenate((w1, w2), axis=0)
+    # x = np.expand_dims(np.abs(z_q - z_r)**(rho / 2), axis=2)
+    # x_t = np.transpose(x, axes=(0, 2, 1))
+    # d_qr_1 = np.matmul(x_t, w)
+    # d_qr_1 = np.matmul(d_qr_1, x)
+    # d_qr_1 = d_qr_1**(1 / rho)
+    # d_qr_1 = np.squeeze(d_qr_1)
+    # np.testing.assert_array_almost_equal(d_qr_0, d_qr_1)
 
 # TODO anchor point test
 # color_idx = np.zeros((n_stimuli), dtype=np.int64)

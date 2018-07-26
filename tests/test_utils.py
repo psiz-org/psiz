@@ -121,10 +121,11 @@ def test_procrustean_solution():
     x = -.8
     y = 1
     theta = np.pi/4
-    params = np.array((x, y, theta, s))
+    f = -1.
+    params = np.array((x, y, theta, s, f))
 
     z_a = np.random.rand(10, 2)
     z_b = utils.affine_transformation(z_a, params)
-    (z_c, _) = utils.procrustean_solution(z_a, z_b, n_restart=5)
+    (z_c, _) = utils.procrustean_solution(z_a, z_b, n_restart=10)
 
     np.testing.assert_almost_equal(z_a, z_c, decimal=2)

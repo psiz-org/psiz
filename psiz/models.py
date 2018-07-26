@@ -30,13 +30,8 @@ Todo:
     - document how to do warm restarts (warm restarts are sequential
       and can be created by the user using a for loop and fit with
       init_mode='warm')
-    - documeent broadcasting in similarity function
-    - dcoument verbosity levels
-        - modify verbosity so that some basic messages occur every time
+    - document broadcasting in similarity function
     - document meaning of cold, warm, and exact
-    - may want to change similarity_matrix to accept attention weight
-        vector rather that group_id in order to allow matrices to be
-        computed for arbitrary weights.
     - Change from "attention" to more general "tunings" perspective.
         * Encapsulate attention weights in new "tunings" object.
         * Refactor computation of similarity to use tuning object.
@@ -549,7 +544,8 @@ class PsychologicalEmbedding(object):
         else:
             tf_attention = tf.get_variable(
                 "attention", [self.n_group, self.n_dim],
-                initializer=tf.constant_initializer(self.phi['phi_1']['value']),
+                initializer=tf.constant_initializer(
+                    self.phi['phi_1']['value']),
                 trainable=False
             )
         return tf_attention
@@ -623,31 +619,33 @@ class PsychologicalEmbedding(object):
 
         Args:
             obs: A JudgedTrials object representing the observed data.
-            n_restart: An integer specifying the number of restarts to
-                use for the inference procedure. Since the embedding
-                procedure finds local optima, multiple restarts helps
-                find the global optimum.
-            init_mode: A string indicating the initialization mode.
-                Valid options are 'cold', 'warm', and 'exact'.
-            verbose: An integer specifying the verbosity of printed
-                output.
+            n_restart (optional): An integer specifying the number of
+                restarts to use for the inference procedure. Since the
+                embedding procedure can get stuck in local optima,
+                multiple restarts help find the global optimum.
+            init_mode (optional): A string indicating the
+                initialization mode. Valid options are 'cold', 'warm',
+                and 'exact'.
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
 
         Returns:
             J: The average loss per observation. Loss is defined as the
                 negative loglikelihood.
 
         """
-        n_dim = self.n_dim
-
         #  Infer embedding.
         if (verbose > 0):
-            print('Inferring embedding ...')
+            print('Inferring embedding...')
+        if (verbose > 1):
             print('    Settings:')
-            print('    n_observations: ', obs.n_trial)
-            print('    n_group: ', len(np.unique(obs.group_id)))
-            print('    n_dim: ', n_dim)
-            print('    n_restart: ', n_restart)
-
+            print(
+                '    n_stimuli: {0} | n_dim: {1} | n_group: {2}'
+                ' | n_obs: {3} | n_restart: {4}'.format(
+                    self.n_stimuli, self.n_dim, self.n_group,
+                    obs.n_trial, n_restart))
+            print('')
         # Partition data into train and validation set for early stopping of
         # embedding algorithm.
         skf = StratifiedKFold(n_splits=10)
@@ -655,29 +653,34 @@ class PsychologicalEmbedding(object):
             skf.split(obs.stimulus_set, obs.config_idx))[0]
 
         # Run multiple restarts of embedding algorithm.
-        J_all_best = np.inf
+        loss_val_best = np.inf
         z_best = None
         attention_best = None
         params_best = None
 
         for i_restart in range(n_restart):
-            (J_all, z, attention, params) = self._embed(
-                obs, train_idx, test_idx, i_restart, init_mode
+            if (verbose > 2):
+                print('        Restart {0}'.format(i_restart))
+            (loss_train, loss_val, z, attention, params) = self._embed(
+                obs, train_idx, test_idx, i_restart, init_mode, verbose
             )
-            if J_all < J_all_best:
-                J_all_best = J_all
+            if (verbose > 2):
+                print(
+                    '        '
+                    'best | loss: {0: .6f} | loss_val: {1: .6f}'.format(
+                        loss_train, loss_val))
+                print('')
+            if loss_val < loss_val_best:
+                loss_val_best = loss_val
                 z_best = z
                 attention_best = attention
                 params_best = params
-
-            if verbose > 1:
-                print('Restart ', i_restart)
 
         self.z['value'] = z_best
         self.phi['phi_1']['value'] = attention_best
         self._set_parameters(params_best)
 
-        return J_all_best
+        return loss_val_best
 
     def evaluate(self, obs):
         """Evaluate observations using the current state of the model.
@@ -686,8 +689,8 @@ class PsychologicalEmbedding(object):
             obs: A JudgedTrials object representing the observed data.
 
         Returns:
-            J: The average loss per observation. Loss is defined as the
-                negative loglikelihood.
+            loss: The average loss per observation. Loss is defined as
+                the negative loglikelihood.
 
         """
         (J, _, _, _, _, _, tf_obs) = self._core_model('exact')
@@ -695,16 +698,14 @@ class PsychologicalEmbedding(object):
         init = tf.global_variables_initializer()
         sess = tf.Session()
         sess.run(init)
-        J_all = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs))
+        loss = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs))
 
         sess.close()
         tf.reset_default_graph()
-        return J_all
+        return loss
 
-    def _embed(self, obs, train_idx, test_idx, i_restart, init_mode):
+    def _embed(self, obs, train_idx, test_idx, i_restart, init_mode, verbose):
         """Ebed using a TensorFlow implementation."""
-        verbose = 0  # TODO make parameter
-
         # Partition the observation data.
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(test_idx)
@@ -742,27 +743,27 @@ class PsychologicalEmbedding(object):
                 graph=tf.get_default_graph()
             )
 
-        J_all_best = np.inf
-        J_test_best = np.inf
+        loss_train_best = np.inf
+        loss_val_best = np.inf
+        z_best = self.z['value']
+        attention_best = self.phi['phi_1']['value']
+        params_best = self.theta
 
         last_improvement = 0
         for epoch in range(self.max_n_epoch):
-            _, J_train, summary = sess.run(
+            _, loss_train, summary = sess.run(
                 [train_op, J, merged_summary_op],
                 feed_dict=self._bind_obs(tf_obs, obs_train)
             )
 
             sess.run(tf_theta_bounds)
             sess.run(tf_attention_constraint)
-            J_test = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs_val))
-            J_all = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs))
+            loss_val = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs_val))
 
-            if J_test < J_test_best:
-                J_all_best = J_all
-                J_test_best = J_test
+            if loss_val < loss_val_best:
+                loss_train_best = loss_train
+                loss_val_best = loss_val
                 last_improvement = 0
-                # TODO handle worst case where there is no improvement from
-                # initialization.
                 (z_best, attention_best) = sess.run(
                     [tf_z, tf_attention])
                 params_best = {}
@@ -779,14 +780,19 @@ class PsychologicalEmbedding(object):
                 if self.do_log:
                     summary_writer.add_summary(summary, epoch)
             if not epoch % 100:
-                if verbose > 2:
-                    print("epoch ", epoch, "| J_train: ", J_train,
-                          "| J_test: ", J_test, "| J_all: ", J_all)
+                if verbose > 3:
+                    print(
+                        "        epoch {0:5d} | ".format(epoch),
+                        "loss: {0: .6f} | ".format(loss_train),
+                        "loss_val: {0: .6f}".format(loss_val)
+                    )
 
         sess.close()
         tf.reset_default_graph()
 
-        return (J_all_best, z_best, attention_best, params_best)
+        return (
+            loss_train_best, loss_val_best, z_best, attention_best,
+            params_best)
 
     def _bind_obs(self, tf_obs, obs):
         feed_dict = {
@@ -1302,7 +1308,8 @@ class PsychologicalEmbedding(object):
         )
         return r[1]
 
-    def posterior_samples(self, obs, n_sample=1000, n_burn=1000, thin_step=3):
+    def posterior_samples(
+            self, obs, n_sample=1000, n_burn=1000, thin_step=3, verbose=0):
         """Sample from the posterior of the embedding.
 
         Samples are drawn from the posterior holding theta constant. A
@@ -1325,6 +1332,9 @@ class PsychologicalEmbedding(object):
                 beginning of the sampling sequence.
             thin_step (optional): The interval to use in order to thin
                 (i.e., de-correlate) the samples.
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
 
         Returns:
             A NumPy array containing the posterior samples. The array
@@ -1346,6 +1356,14 @@ class PsychologicalEmbedding(object):
         n_dim = self.n_dim
         z = copy.copy(self.z['value'])
         n_anchor_point = n_dim
+
+        if verbose > 0:
+            print('Sampling from posterior...')
+        if (verbose > 1):
+            print('    Settings:')
+            print('    n_sample: ', n_sample)
+            print('    n_burn: ', n_burn)
+            print('    thin_step: ', thin_step)
 
         # Prior
         # p(z_k | Z_negk, theta) ~ N(mu, sigma)

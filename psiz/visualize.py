@@ -14,12 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for visualizing embeddings.
-
-Todo:
-    - Adjust embedding based on attention weights.
-    - Add procrustean solution functionality
-"""
+"""Module for visualizing embeddings."""
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
@@ -33,14 +28,14 @@ def visualize_embedding_static(
 
     Args:
       Z: A real-valued two-dimensional array representing the embedding.
-        shape = [n_stimuli, n_dim]
+        shape = (n_stimuli, n_dim)
       class_vec: (optional) An integer array contianing class IDs that indicate
         the class membership of each stimulus.
-        shape = [n_stimuli, 1]
+        shape = (n_stimuli, 1)
       classes: (optional) A dictionary mapping class IDs to strings.
       special_locs: (optional) A boolean array indicating special points to
         emphasize with a diamond. TODO
-        shape = [n_stimuli, 1]
+        shape = (n_stimuli, 1)
     """
     # Settings
     dot_size = 20

@@ -14,12 +14,14 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module of helpful utility functions."""
+"""Module of utility functions."""
+
+import math
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import r2_score
-import math
+from scipy.optimize import minimize
 
 
 def similarity_matrix(similarity_func, z):
@@ -76,8 +78,39 @@ def matrix_correlation(mat_a, mat_b):
     return r2_score(mat_a[idx], mat_b[idx])
 
 
+def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
+    """Compare two psychological embeddings.
+
+    Args:
+        model_a:  A psychological embedding model.
+        model_b:  A psychological embedding model.
+        group_id_a (optional):  A particular group ID to use when
+            computing the similarity matrix for model_a.
+        group_id_b (optional):  A particular group ID to use when
+            computing the similarity matrix for model_b.
+
+    Returns:
+        R^2 value of the two similarity matrices derived from each
+            embedding.
+
+    """
+    def sim_func_a(z_q, z_ref):
+        return model_a.similarity(
+            z_q, z_ref, attention=model_a.phi['phi_1']['value'][group_id_a])
+
+    def sim_func_b(z_q, z_ref):
+        return model_b.similarity(
+            z_q, z_ref, attention=model_b.phi['phi_1']['value'][group_id_b])
+
+    simmat_a = similarity_matrix(sim_func_a, model_a.z['value'])
+    simmat_b = similarity_matrix(sim_func_b, model_b.z['value'])
+
+    r_squared = matrix_correlation(simmat_a, simmat_b)
+    return r_squared
+
+
 def elliptical_slice(
-        initial_theta, prior, lnpdf, pdf_params=(), cur_lnpdf=None, 
+        initial_theta, prior, lnpdf, pdf_params=(), cur_lnpdf=None,
         angle_range=None):
     """Return samples from elliptical slice sampler.
 
@@ -128,13 +161,14 @@ def elliptical_slice(
         phi_max = phi
     else:
         # Randomly center bracket on current point
-        phi_min = -angle_range * np.random.uniform()
+        phi_min = -1 * angle_range * np.random.uniform()
         phi_max = phi_min + angle_range
         phi = np.random.uniform() * (phi_max - phi_min) + phi_min
 
     # Slice sampling loop
     while True:
-        # Compute xx for proposed angle difference and check if it's on the slice
+        # Compute xx for proposed angle difference and check if it's on the
+        # slice.
         xx_prop = initial_theta * math.cos(phi) + nu * math.sin(phi)
         cur_lnpdf = lnpdf(xx_prop, *pdf_params)
         if cur_lnpdf > hh:
@@ -146,7 +180,95 @@ def elliptical_slice(
         elif phi < 0:
             phi_min = phi
         else:
-            raise RuntimeError('BUG DETECTED: Shrunk to current position and still not acceptable.')
+            raise RuntimeError(
+                'BUG DETECTED: Shrunk to current position and still not',
+                ' acceptable.')
         # Propose new angle difference
         phi = np.random.uniform() * (phi_max - phi_min) + phi_min
     return (xx_prop, cur_lnpdf)
+
+
+def rotation_matrix(theta):
+    """Return 2D rotation matrix.
+
+    Args:
+        theta: Scalar value indicating radians of rotation.
+    """
+    return np.array((
+        (np.cos(theta), -np.sin(theta)),
+        (np.sin(theta), np.cos(theta)),
+    ))
+
+
+def affine_transformation(z, params):
+    """Return affine transformation of 2D points.
+
+    Args:
+        z: Original set of points.
+            shape = (n_point, 2)
+        params: Transformation parameters denoting x translation,
+            y translation, rotation (in radians), scaling, and flip
+            factor.
+            shape = (5,)
+    """
+    x = params[0]
+    y = params[1]
+    translation = np.array((x, y))
+    theta = params[2]
+    s = params[3]
+    f = params[4]
+    x = f * x
+    r = rotation_matrix(theta)
+    z_trans = s * (np.matmul(z, r) + translation)
+    return z_trans
+
+
+def procrustean_solution(z_a, z_b, n_restart=10):
+    """Align the two embeddings using an affine transformation.
+
+    Args:
+        z_a: A 2D embedding.
+            shape = (n_point, 2)
+        z_b: A 2D embedding.
+            shape = (n_point, 2)
+        n_restart (optional): A scalar indicating the number of
+            restarts for the optimization routine.
+
+    Returns:
+        z_c: An affine transformation of z_b that is maximally alligned
+            with z_a.
+        params: The affine transformation parameters.
+
+    """
+    def objective_fn(params, z_a, z_b):
+        z_c = affine_transformation(z_b, params)
+        # Loss is defined as the MSE of L2 distance.
+        loss = np.mean(np.sum((z_a - z_c)**2, axis=1))
+        return loss
+
+    params_best = np.array((0., 0., 0., 1.))
+    loss_best = np.inf
+    for _ in range(n_restart):
+        (x0, y0) = np.random.rand(2)
+        theta0 = 2 * np.pi * np.random.rand(1)
+        s0 = 2 * np.random.rand(1)
+        # Perform a flip on some restarts.
+        f0 = 1.
+        if np.random.rand(1) < .5:
+            f0 = -1.
+        params0 = np.array((x0, y0, theta0, s0, f0))
+        bnds = (
+            (None, None),
+            (None, None),
+            (0., 2*np.pi),
+            (0., None),
+            (f0, f0)
+        )
+        res = minimize(objective_fn, params0, args=(z_a, z_b), bounds=bnds)
+        params_candidate = res.x
+        loss_candidate = res.fun
+        if loss_candidate < loss_best:
+            loss_best = loss_candidate
+            params_best = params_candidate
+        z_c = affine_transformation(z_b, params_best)
+    return (z_c, params_best)

@@ -65,15 +65,15 @@ def main():
     # similarity matrices implied by each model.
     def truth_sim_func0(z_q, z_ref):
         return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.attention['value'][0])
+            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][0])
 
     def truth_sim_func1(z_q, z_ref):
         return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.attention['value'][1])
+            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][1])
 
     def truth_sim_func2(z_q, z_ref):
         return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.attention['value'][2])
+            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][2])
 
     simmat_truth = (
         similarity_matrix(truth_sim_func0, model_truth.z['value']),
@@ -83,15 +83,15 @@ def main():
 
     def infer_sim_func0(z_q, z_ref):
         return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.attention['value'][0])
+            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][0])
 
     def infer_sim_func1(z_q, z_ref):
         return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.attention['value'][1])
+            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][1])
 
     def infer_sim_func2(z_q, z_ref):
         return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.attention['value'][2])
+            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][2])
 
     simmat_infer = (
         similarity_matrix(infer_sim_func0, model_inferred.z['value']),
@@ -135,15 +135,20 @@ def ground_truth(n_stimuli, n_dim, n_group):
         (.1, 1., 1.9)
     ))
     freeze_options = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 1,
-        'gamma': 0,
         'z': z,
-        'attention': attention
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 1,
+            'gamma': 0
+        },
+        'phi': {
+            'phi_1': attention
+        }
     }
     model.freeze(freeze_options)
     return model
+
 
 if __name__ == "__main__":
     main()

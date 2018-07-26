@@ -54,23 +54,36 @@ class Agent(object):
         self.embedding = embedding
         self.group_id = group_id
 
-    def simulate(self, trials):
+    def simulate(self, trials, override_group_id=None):
         """Stochastically simulate similarity judgments.
 
         Args:
             trials: UnjudgedTrials object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
+            override_group_id (optional): A scalar indicating the group_id that
+                should be used to mark the observations. This is a
+                useful option when stacking observations generated
+                from different Agents.
 
         Returns:
             JudgedTrials object representing the judged trials. The
                 order of the stimuli is now informative.
 
         """
-        group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int32)
+        
+        group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int32)    
         prob_all = self.embedding.outcome_probability(
             trials, group_id=group_id)
         judged_trials = self._select(trials, prob_all)
+
+        if override_group_id is not None:
+            override_group_id = (
+                override_group_id * np.ones((trials.n_trial), dtype=np.int32)
+            )
+            judged_trials = JudgedTrials(
+                judged_trials.stimulus_set, judged_trials.n_selected,
+                judged_trials.is_ranked, override_group_id)
         return judged_trials
 
     def _select(self, trials, prob_all):

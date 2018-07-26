@@ -83,14 +83,17 @@ def ground_truth(n_stimuli, n_dim, n_group):
     cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     freeze_options = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 1,
-        'gamma': 0,
-        'z': z
+        'z': z,
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 1,
+            'gamma': 0
+        }
     }
     model.freeze(freeze_options)
     return model
+
 
 if __name__ == "__main__":
     main()

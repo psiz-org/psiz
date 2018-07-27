@@ -14,7 +14,12 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for testing utils.py."""
+"""Module for testing utils.py.
+
+Todo:
+    - test compare_models
+
+"""
 
 
 import pytest
@@ -73,8 +78,7 @@ def test_similarity_matrix(ground_truth):
 
     # Check explicit use of first set of attention weights.
     def similarity_func1(z_q, z_ref):
-        sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][0])
+        sim_func = ground_truth.similarity(z_q, z_ref, group_id=0)
         return sim_func
 
     # Check without passing in explicit attention.
@@ -83,8 +87,7 @@ def test_similarity_matrix(ground_truth):
 
     # Check explicit use of second set of attention weights.
     def similarity_func2(z_q, z_ref):
-        sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][1])
+        sim_func = ground_truth.similarity(z_q, z_ref, group_id=1)
         return sim_func
 
     computed_simmat2 = utils.similarity_matrix(

@@ -101,8 +101,9 @@ def main():
     n_obs = np.floor(np.linspace(20, n_trial, n_frame)).astype(np.int64)
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
-        z_samp = model_inferred.posterior_samples(
+        samples = model_inferred.posterior_samples(
             obs.subset(include_idx), n_sample, n_burn, thin_step)
+        z_samp = samples['z']
         z_central = np.median(z_samp, axis=0)
 
         z_samp_list[i_frame] = np.reshape(

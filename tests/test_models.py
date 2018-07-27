@@ -285,8 +285,7 @@ def test_freeze():
 
 def test_probability(ground_truth, unjudged_trials):
     """Test probability method."""
-    prob = ground_truth.outcome_probability(
-        unjudged_trials)
+    prob = ground_truth.outcome_probability(unjudged_trials)
     prob_actual = np.sum(prob, axis=1)
     prob_desired = np.ones((unjudged_trials.n_trial))
     np.testing.assert_allclose(prob_actual, prob_desired)
@@ -296,8 +295,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
     """Test _tf_outcome_probability method."""
     prob_desired = np.ones((unjudged_trials.n_trial))
 
-    prob_1 = ground_truth.outcome_probability(
-        unjudged_trials)
+    prob_1 = ground_truth.outcome_probability(unjudged_trials)
     prob_actual_1 = np.sum(prob_1, axis=1)
 
     z_tf = ground_truth.z['value']
@@ -338,7 +336,7 @@ def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
 
     (z_q, z_r) = ground_truth._inflate_points(
         trials.stimulus_set[trial_locs], n_reference, z)
-    s_qref = ground_truth.similarity(z_q, z_r, attention=attention[trial_locs])
+    s_qref = ground_truth.similarity(z_q, z_r, group_id=0)
     prob_1 = ground_truth._ranked_sequence_probabiltiy(s_qref, n_selected)
 
     tf_n_selected = tf.constant(n_selected, dtype=tf.int32)

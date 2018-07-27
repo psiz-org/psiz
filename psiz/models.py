@@ -25,6 +25,7 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
+    - ParameterSet, Theta and Phi object class
     - parallelization during fitting (MAYBE)
     - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
@@ -425,7 +426,7 @@ class PsychologicalEmbedding(object):
                     for sub_param_name in thaw_options[param_name]:
                         self.phi[sub_param_name]['trainable'] = is_trainable
 
-    def similarity(self, z_q, z_r, theta=None, attention=None):
+    def similarity(self, z_q, z_r, group_id=None, theta=None, phi=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -436,10 +437,12 @@ class PsychologicalEmbedding(object):
                 shape = (n_sample, n_dim)
             z_r: A set of embedding points.
                 shape = (n_sample, n_dim)
+            group_id (optional): The group ID for each sample.
+                shape = (), or (n_sample,1)
             theta (optional): The parameters governing the similarity
                 kernel. If not provided, the theta associated with the
                 current object is used.
-            attention (optional): The weights allocated to each
+            phi (optional): TODO The weights allocated to each
                 dimension in a weighted minkowski metric. The weights
                 should be positive and sum to the dimensionality of the
                 weight vector, although this is not enforced.
@@ -450,15 +453,29 @@ class PsychologicalEmbedding(object):
                 points.
 
         """
+        n_sample = z_q.shape[0]
+        # Handle group_id.
+        if group_id is None:
+            group_id = np.zeros((n_sample), dtype=np.int32)
+        else:
+            if np.isscalar(group_id):
+                group_id = group_id * np.ones((n_sample), dtype=np.int32)
+            else:
+                group_id = group_id.astype(dtype=np.int32)
+
+        attention = self.phi['phi_1']['value'][group_id, :]
+
         if theta is None:
             theta = self.theta
+        if phi is None:
+            phi = self.phi
 
-        if attention is None:
-            attention = self.phi['phi_1']['value'][0, :]
-            attention = np.expand_dims(attention, axis=0)
-        else:
-            if len(attention.shape) == 1:
-                attention = np.expand_dims(attention, axis=0)
+        # if attention is None:
+        #     attention = self.phi['phi_1']['value'][group_id, :]
+        #     # attention = np.expand_dims(attention, axis=0)
+        # else:
+        #     if len(attention.shape) == 1:
+        #         attention = np.expand_dims(attention, axis=0)
 
         # Make sure z_q and attention have an appropriate singleton
         # third dimension if z_r has an array rank of 3.
@@ -941,7 +958,7 @@ class PsychologicalEmbedding(object):
             tf_theta_bounds, tf_obs
         )
 
-    def log_likelihood(self, obs, z=None, theta=None):
+    def log_likelihood(self, obs, z=None, theta=None, phi=None):
         """Return the log likelihood of a set of observations.
 
         Args:
@@ -952,7 +969,9 @@ class PsychologicalEmbedding(object):
                 object are used.
             theta (optional): The similarity kernel parameters. If no
                 theta parameters are provided, the parameters
-                associated with the object are used. TODO
+                associated with the object are used.
+            phi (optional): If no phi parameters are provided, the
+                parameters associated with the object are used.
 
         Returns:
             The total log-likelihood of the observations.
@@ -960,30 +979,37 @@ class PsychologicalEmbedding(object):
         """
         if z is None:
             z = self.z['value']
+        # TODO theta, phi
+        # if theta is None:
+        #     theta = self.theta
+        # if phi is None:
+        #     phi = self.phi
 
         cap = 2.2204e-16
         prob_all = self.outcome_probability(
-            obs, z, group_id=obs.group_id, unaltered_only=True)
+            obs, group_id=obs.group_id, z=z, unaltered_only=True)
         prob = np.maximum(cap, prob_all[:, 0])
         ll = np.sum(np.log(prob))
         return ll
 
     def outcome_probability(
-            self, trials, z=None, theta=None, group_id=None,
+            self, trials, group_id=None, z=None, theta=None, phi=None,
             unaltered_only=False):
         """Return probability of each outcome for each trial.
 
         Args:
             trials: A set of unjudged similarity trials. The indices
                 used must correspond to the rows of z.
+            group_id (optional): The group ID for which to compute the
+                probabilities.
             z (optional): A set of embedding points. If no embedding
                 points are provided, the points associated with the
                 object are used.
             theta (optional): The similarity kernel parameters. If no
                 theta parameters are provided, the parameters
                 associated with the object are used.
-            group_id (optional): The group ID for which to compute the
-                probabilities.
+            phi (optionsl): If no phi parameters are provided, the
+                parameteres associated with the object are used.
             unaltered_only (optional): Flag the determines whether only
                 the unaltered ordering is evaluated.
 
@@ -1004,18 +1030,14 @@ class PsychologicalEmbedding(object):
                 trial data.
 
         """
+        n_trial_all = trials.n_trial
+
         if z is None:
             z = self.z['value']
         else:
             self._check_z(z)
-        # TODO theta
 
-        n_trial_all = trials.n_trial
         n_config = trials.config_list.shape[0]
-
-        if group_id is None:
-            group_id = np.zeros((trials.n_trial), dtype=np.int32)
-        attention = self.phi['phi_1']['value'][group_id, :]
 
         outcome_idx_list = trials.outcome_idx_list
         n_outcome_list = trials.config_list['n_outcome'].values
@@ -1034,7 +1056,8 @@ class PsychologicalEmbedding(object):
         # Compute similarity between query and references.
         (z_q, z_r) = self._inflate_points(
             trials.stimulus_set, trials.max_n_reference, z)
-        sim_qr = self.similarity(z_q, z_r, attention=attention)
+        sim_qr = self.similarity(
+            z_q, z_r, group_id=group_id, theta=theta, phi=phi)
 
         prob_all = np.zeros((n_trial_all, max_n_outcome))
         for i_config in range(n_config):
@@ -1337,8 +1360,9 @@ class PsychologicalEmbedding(object):
                 integers display an increasing amount of information.
 
         Returns:
-            A NumPy array containing the posterior samples. The array
-                has shape [n_sample, n_stimuli, n_dim].
+            A dictionary of posterior samples for different parameters.
+                The samples are stored as a NumPy array.
+                'z' : shape = (n_sample, n_stimuli, n_dim).
 
         Notes:
             The step_size of the Hamiltonian Monte Carlo procedure is
@@ -1373,7 +1397,6 @@ class PsychologicalEmbedding(object):
             n_components=1, covariance_type='spherical')
         gmm.fit(z)
         mu = gmm.means_
-        # If spherical and one component, only one element.
         sigma = gmm.covariances_[0] * np.identity(n_dim)
 
         # Center embedding to satisfy assumptions of elliptical slice sampling.
@@ -1394,7 +1417,7 @@ class PsychologicalEmbedding(object):
             n_samp_stimuli = len(sample_idx)
             z_full[sample_idx, :] = np.reshape(
                 z_samp, (n_samp_stimuli, n_dim), order='C')
-            return self.log_likelihood(obs, z_full)  # TODO theta, group_id?
+            return self.log_likelihood(obs, z=z_full) # TODO pass in phi
 
         combined_samples = [None, None]
         for i_set in range(2):
@@ -1437,7 +1460,8 @@ class PsychologicalEmbedding(object):
 
         samples_all = np.vstack((combined_samples[0], combined_samples[1]))
         samples_all = samples_all[0:n_sample]
-        return samples_all
+        samples = dict(z=samples_all)
+        return samples
 
     def _select_anchor_points(self, z, n_point):
         """Select anchor points for posterior inference.

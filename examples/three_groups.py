@@ -64,16 +64,13 @@ def main():
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
     def truth_sim_func0(z_q, z_ref):
-        return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][0])
+        return model_truth.similarity(z_q, z_ref, group_id=0)
 
     def truth_sim_func1(z_q, z_ref):
-        return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][1])
+        return model_truth.similarity(z_q, z_ref, group_id=1)
 
     def truth_sim_func2(z_q, z_ref):
-        return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][2])
+        return model_truth.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
         similarity_matrix(truth_sim_func0, model_truth.z['value']),
@@ -82,16 +79,13 @@ def main():
     )
 
     def infer_sim_func0(z_q, z_ref):
-        return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][0])
+        return model_inferred.similarity(z_q, z_ref, group_id=0)
 
     def infer_sim_func1(z_q, z_ref):
-        return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][1])
+        return model_inferred.similarity(z_q, z_ref, group_id=1)
 
     def infer_sim_func2(z_q, z_ref):
-        return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][2])
+        return model_inferred.similarity(z_q, z_ref, group_id=2)
 
     simmat_infer = (
         similarity_matrix(infer_sim_func0, model_inferred.z['value']),

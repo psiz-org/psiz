@@ -24,7 +24,7 @@ from sklearn.metrics import r2_score
 from scipy.optimize import minimize
 
 
-def similarity_matrix(similarity_func, z):
+def similarity_matrix(similarity_fn, z):
         """Return a pairwise similarity matrix.
 
         Returns:
@@ -41,7 +41,7 @@ def similarity_matrix(similarity_func, z):
 
         z_a = z[a, :]
         z_b = z[b, :]
-        simmat = similarity_func(z_a, z_b)
+        simmat = similarity_fn(z_a, z_b)
         simmat = simmat.reshape(n_stimuli, n_stimuli)
         return simmat
 
@@ -95,12 +95,10 @@ def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
 
     """
     def sim_func_a(z_q, z_ref):
-        return model_a.similarity(
-            z_q, z_ref, attention=model_a.phi['phi_1']['value'][group_id_a])
+        return model_a.similarity(z_q, z_ref, group_id=group_id_a)
 
     def sim_func_b(z_q, z_ref):
-        return model_b.similarity(
-            z_q, z_ref, attention=model_b.phi['phi_1']['value'][group_id_b])
+        return model_b.similarity(z_q, z_ref, group_id=group_id_b)
 
     simmat_a = similarity_matrix(sim_func_a, model_a.z['value'])
     simmat_b = similarity_matrix(sim_func_b, model_b.z['value'])

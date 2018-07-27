@@ -28,7 +28,6 @@ Classes:
 Todo:
     - implement ActiveGenerator
     - MAYBE document stimulus index formatting [0,N[
-    - MAYBE take a list of trial specifications
 
 """
 
@@ -131,17 +130,30 @@ class ActiveGenerator(TrialGenerator):
         """
         TrialGenerator.__init__(self, n_stimuli)
 
-    def generate(self, n_trial, n_reference=2, n_selected=1, is_ranked=True):
+    def generate(
+            self, n_trial, samples, n_reference=None, n_selected=None, is_ranked=True, verbose=0):
         """Return generated trials based on provided arguments.
 
         Args:
-            n_trial:
+            n_trial: A scalar indicating the number of trials to
+                generate.
+            samples: A dictionary containing the posterior samples of
+                parameters from a PsychologicalEmbedding object.
             n_reference (optional):
             n_selected (optional):
             is_ranked (optional):
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
 
         Returns:
             An UnjudgedTrials object.
 
         """
+        # Goal: Reduce uncertainty on positions and group-specific tunings.
+
+        # Point estimates of posterior samples.
+        z_central = np.median(samples['z'], axis=0)
+        utils.similarity_matrix(similarity_fn, z_central)
+
         return None  # TODO

@@ -26,9 +26,9 @@ import numpy as np
 import tensorflow as tf
 import pytest
 
+from psiz import simulate
 from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential
-from psiz.simulate import Agent
 
 
 @pytest.fixture(scope="module")
@@ -75,7 +75,7 @@ def unjudged_trials():
 
 def test_simulate(ground_truth, unjudged_trials):
     """Test simulation of agent."""
-    agent = Agent(ground_truth)
+    agent = simulate.Agent(ground_truth)
     obs = agent.simulate(unjudged_trials)
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], unjudged_trials.stimulus_set[:, 0]

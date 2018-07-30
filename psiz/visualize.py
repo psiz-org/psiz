@@ -26,7 +26,7 @@ def visualize_embedding_static(
         Z, class_vec=None, classes=None, special_locs=None, filename=None):
     """Generate a static scatter plot of the supplied embedding points.
 
-    Args:
+    Arguments:
       Z: A real-valued two-dimensional array representing the embedding.
         shape = (n_stimuli, n_dim)
       class_vec: (optional) An integer array contianing class IDs that indicate

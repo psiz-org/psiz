@@ -31,7 +31,6 @@ import tensorflow as tf
 
 from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential, HeavyTailed, StudentsT
-from psiz.simulate import Agent
 
 
 @pytest.fixture(scope="module")
@@ -44,6 +43,38 @@ def ground_truth():
     mean = np.ones((n_dim))
     cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    freeze_options = {
+        'z': z,
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 1,
+            'gamma': 0
+        }
+    }
+    model.freeze(freeze_options)
+    return model
+
+
+@pytest.fixture(scope="module")
+def ground_truth_deterministic():
+    """Return a ground truth embedding."""
+    n_stimuli = 10
+    model = Exponential(n_stimuli)
+    z = np.array(
+        [
+            [0.12737487, 1.3211997],
+            [0.8335809, 1.5255479],
+            [0.8801151, 0.6451549],
+            [0.55950886, 1.8086979],
+            [1.9089336, -0.15246096],
+            [2.8184545, 2.6377177],
+            [0.00032808, 0.94420123],
+            [0.21504205, 0.92544436],
+            [2.0352089, 0.84319389],
+            [-0.04342473, 1.4128358]
+        ], dtype=np.float32
+    )
     freeze_options = {
         'z': z,
         'theta': {
@@ -319,6 +350,77 @@ def test_tf_probability(ground_truth, unjudged_trials):
     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)
 
 
+def test_inflate_points_single_sample(
+        ground_truth_deterministic, unjudged_trials):
+    """Test inflation with z with 1 sample."""
+    n_reference = 4
+    n_selected = 2
+    trial_locs = np.logical_and(
+        unjudged_trials.n_reference == n_reference,
+        unjudged_trials.n_selected == n_selected
+    )
+
+    z = ground_truth_deterministic.z['value']
+    (z_q, z_r) = ground_truth_deterministic._inflate_points(
+        unjudged_trials.stimulus_set[trial_locs], n_reference,
+        np.expand_dims(z, axis=2)
+    )
+
+    z_q_desired = np.array(
+        [[0.12737487, 1.3211997], [0.55950886, 1.8086979]],
+        dtype=np.float32)
+    z_q_desired = np.expand_dims(z_q_desired, axis=2)
+    z_q_desired = np.expand_dims(z_q_desired, axis=3)
+    np.testing.assert_allclose(z_q, z_q_desired, rtol=1e-6)
+
+    z_r_desired = np.array(
+        [
+            [
+                [0.83358091, 0.88011509, 0.21504205, 0.55950886],
+                [1.52554786, 0.64515489, 0.92544436, 1.80869794]
+            ],
+            [
+                [1.90893364, 2.8184545, -0.04342473, 0.83358091],
+                [-0.15246096, 2.63771772, 1.41283584, 1.52554786]
+            ]
+        ], dtype=np.float32)
+    z_r_desired = np.expand_dims(z_r_desired, axis=3)
+    np.testing.assert_allclose(z_r, z_r_desired, rtol=1e-6)
+
+
+def test_inflate_points_multiple_samples(ground_truth_deterministic):
+    """Test inflation when z contains samples."""
+    n_stimuli = 7
+    n_dim = 2
+    n_sample = 10
+    n_reference = 3
+    n_trial = 5
+    stimulus_set = np.array((
+        (0, 1, 2, 3),
+        (3, 4, 0, 1),
+        (3, 5, 6, 1),
+        (1, 4, 5, 6),
+        (2, 1, 3, 6),
+    ))
+    mean = np.zeros((n_dim))
+    cov = .1 * np.identity(n_dim)
+    z = np.random.multivariate_normal(mean, cov, (n_sample, n_stimuli))
+    z = np.transpose(z, axes=[1, 2, 0])
+
+    # Desired inflation outcome.
+    z_q_desired = z[stimulus_set[:, 0], :, :]
+    z_q_desired = np.expand_dims(z_q_desired, axis=2)
+    z_r_desired = np.empty((n_trial, n_dim, n_reference, n_sample))
+    for i_ref in range(n_reference):
+        z_r_desired[:, :, i_ref, :] = z[stimulus_set[:, 1+i_ref], :]
+
+    (z_q, z_r) = ground_truth_deterministic._inflate_points(
+        stimulus_set, n_reference, z)
+
+    np.testing.assert_allclose(z_q, z_q_desired, rtol=1e-6)
+    np.testing.assert_allclose(z_r, z_r_desired, rtol=1e-6)
+
+
 def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
     """Test tf_ranked_sequence_probability."""
     trials = unjudged_trials
@@ -335,13 +437,17 @@ def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
     attention = np.matlib.repmat(attention, unjudged_trials.n_trial, 1)
 
     (z_q, z_r) = ground_truth._inflate_points(
-        trials.stimulus_set[trial_locs], n_reference, z)
+        trials.stimulus_set[trial_locs], n_reference,
+        np.expand_dims(z, axis=2)
+    )
     s_qref = ground_truth.similarity(z_q, z_r, group_id=0)
     prob_1 = ground_truth._ranked_sequence_probabiltiy(s_qref, n_selected)
+    prob_1 = prob_1[:, 0]
 
+    # NOTE: tf_ranked_sequence_probability is not implemented to handle
+    # samples.
     tf_n_selected = tf.constant(n_selected, dtype=tf.int32)
-    # tf_s_qref = tf.constant(s_qref, dtype=tf.float32)
-    tf_s_qref = tf.convert_to_tensor(s_qref, dtype=tf.float32)
+    tf_s_qref = tf.convert_to_tensor(s_qref[:, :, 0], dtype=tf.float32)
     tf_prob_2 = ground_truth._tf_ranked_sequence_probability(
         tf_s_qref, tf_n_selected)
     sess = tf.Session()

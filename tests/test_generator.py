@@ -18,12 +18,57 @@
 
 Todo:
     - test ActiveGenerator
+    - more information gain tests
 """
 
 import numpy as np
 import pytest
 
-from psiz.generator import RandomGenerator, ActiveGenerator
+from psiz import generator
+from psiz.models import Exponential
+from psiz.trials import stack, UnjudgedTrials
+from psiz.simulate import Agent
+
+
+@pytest.fixture(scope="module")
+def ground_truth():
+    """Return a ground truth embedding."""
+    n_stimuli = 10
+    n_dim = 2
+
+    model = Exponential(n_stimuli)
+    mean = np.zeros((n_dim))
+    cov = .1 * np.identity(n_dim)
+    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    freeze_options = {
+        'z': z,
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 10,
+            'gamma': 0
+        }
+    }
+    model.freeze(freeze_options)
+    return model
+
+
+def simulated_samples(z):
+    """Simulate posterior samples for a set of embedding points."""
+    n_stimuli = z.shape[0]
+    n_dim = z.shape[1]
+    n_sample = 1000
+
+    stim_cov = np.array((.08, .01, .01, .01, .01, .01, .01, .01, .01, .01))
+    # Draw samples
+    z_samples = np.empty((n_sample, n_stimuli, n_dim))
+    for i_stimulus in range(n_stimuli):
+        z_samples[:, i_stimulus, :] = np.random.multivariate_normal(
+            z[i_stimulus], stim_cov[i_stimulus] * np.identity(n_dim),
+            (n_sample)
+        )
+    z_samples = np.transpose(z_samples, axes=[1, 2, 0])
+    return {'z': z_samples}
 
 
 def test_random_generator():
@@ -33,8 +78,8 @@ def test_random_generator():
     n_reference_desired = 4
     n_selected_desired = 2
     is_ranked_desired = True
-    generator = RandomGenerator(n_stimuli_desired)
-    trials = generator.generate(
+    gen = generator.RandomGenerator(n_stimuli_desired)
+    trials = gen.generate(
         n_trial=n_trial_desired, n_reference=n_reference_desired,
         n_selected=n_selected_desired)
 
@@ -57,3 +102,52 @@ def test_random_generator():
         )
     assert sum(trials.n_selected == n_selected_desired) == n_trial_desired
     assert sum(trials.is_ranked == is_ranked_desired) == n_trial_desired
+
+
+def test_information_gain(ground_truth):
+    """Test expected information gain computation."""
+    z = ground_truth.z['value']
+    samples = simulated_samples(z)
+
+    n_stimuli = 10
+    gen = generator.ActiveGenerator(n_stimuli)
+    candidate_trial_0 = UnjudgedTrials(
+        np.array([[0, 1, 2]], dtype=np.int32),
+        np.array([1], dtype=np.int32)
+        )
+    candidate_trial_1 = UnjudgedTrials(
+        np.array([[3, 1, 2]], dtype=np.int32),
+        np.array([1], dtype=np.int32)
+        )
+    # Compute expected informatin gain.
+    ig_0 = gen._information_gain(ground_truth, samples, candidate_trial_0)
+    ig_1 = gen._information_gain(ground_truth, samples, candidate_trial_1)
+
+    assert ig_0 > ig_1
+
+
+# @pytest.fixture(scope="module")
+# def unbalanced_trials():
+#     """Return a set of unbalanced trials.
+
+#     In this context, unbalanced means trials in which a stimulus
+#     occurs rarely.
+#     """
+
+#     n_stimuli_desired = 9
+#     n_trial_desired = 200
+#     n_reference_desired = 2
+#     n_selected_desired = 1
+#     gen = generator.RandomGenerator(n_stimuli_desired)
+#     unjudged_trials_0 = gen.generate(
+#         n_trial=n_trial_desired, n_reference=n_reference_desired,
+#         n_selected=n_selected_desired)
+#     n_stimuli_desired = 10
+#     n_trial_desired = 50
+#     gen = generator.RandomGenerator(n_stimuli_desired)
+#     unjudged_trials_1 = gen.generate(
+#         n_trial=n_trial_desired, n_reference=n_reference_desired,
+#         n_selected=n_selected_desired)
+#     unjudged_trials = stack((unjudged_trials_0, unjudged_trials_1))    
+#     return unjudged_trials
+

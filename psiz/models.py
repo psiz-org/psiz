@@ -39,6 +39,7 @@ Todo:
         * MAYBE Introduce additional tuning free parameters for each
             stimulus. Control flexibility using rule or L2
             regularization.
+    - Raises section of docstring
 
 """
 
@@ -128,7 +129,7 @@ class PsychologicalEmbedding(object):
     def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
-        Args:
+        Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded. This must be equal to or
                 greater than three.
@@ -236,7 +237,7 @@ class PsychologicalEmbedding(object):
         This method encapsulates the setting of algorithm-specific free
         parameters governing the similarity kernel.
 
-        Args:
+        Arguments:
             params: A dictionary of algorithm-specific parameter names
                 and corresponding values.
         """
@@ -249,7 +250,7 @@ class PsychologicalEmbedding(object):
         This method encapsulates the creation of algorithm-specific
         free parameters governing the similarity kernel.
 
-        Args:
+        Arguments:
             init_mode: A string indicating the initialization mode.
                 Valid options are 'cold', 'warm', and 'exact'.
 
@@ -367,7 +368,7 @@ class PsychologicalEmbedding(object):
         you can pass in a dictionary containing multiple entries or
         call the freeze method multiple times.
 
-        Args:
+        Arguments:
             freeze_options (optional): Dictionary of parameter names
                 and corresponding values to be frozen (i.e., fixed)
                 during inference.
@@ -400,7 +401,7 @@ class PsychologicalEmbedding(object):
         Complement of freeze method. If thaw_options is None, all free
         parameters are set as trainable.
 
-        Args:
+        Arguments:
             thaw_options (optional): List of parameter names to set as
                 trainable during inference. Valid parameter names
                 include 'z', 'attention', and the parameters associated
@@ -430,15 +431,18 @@ class PsychologicalEmbedding(object):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
-        current similarity parameters.
+        current similarity parameters. This method implements the
+        logic for handling arguments of different shapes.
 
-        Args:
+        TODO better description of the input shapes that are allowed.
+
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim, [1, n_sample])
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
-            group_id (optional): The group ID for each sample.
-                shape = (), or (n_sample,1)
+                shape = (n_trial, n_dim, [n_reference, n_sample])
+            group_id (optional): The group ID for each sample. Can be a
+                scalar or an array of shape = (n_trial,).
             theta (optional): The parameters governing the similarity
                 kernel. If not provided, the theta associated with the
                 current object is used.
@@ -446,44 +450,42 @@ class PsychologicalEmbedding(object):
                 dimension in a weighted minkowski metric. The weights
                 should be positive and sum to the dimensionality of the
                 weight vector, although this is not enforced.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
 
         """
-        n_sample = z_q.shape[0]
+        n_trial = z_q.shape[0]
         # Handle group_id.
         if group_id is None:
-            group_id = np.zeros((n_sample), dtype=np.int32)
+            group_id = np.zeros((n_trial), dtype=np.int32)
         else:
             if np.isscalar(group_id):
-                group_id = group_id * np.ones((n_sample), dtype=np.int32)
+                group_id = group_id * np.ones((n_trial), dtype=np.int32)
             else:
                 group_id = group_id.astype(dtype=np.int32)
-
-        attention = self.phi['phi_1']['value'][group_id, :]
 
         if theta is None:
             theta = self.theta
         if phi is None:
             phi = self.phi
 
-        # if attention is None:
-        #     attention = self.phi['phi_1']['value'][group_id, :]
-        #     # attention = np.expand_dims(attention, axis=0)
-        # else:
-        #     if len(attention.shape) == 1:
-        #         attention = np.expand_dims(attention, axis=0)
+        attention = phi['phi_1']['value'][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
-        # third dimension if z_r has an array rank of 3.
-        if len(z_r.shape) > 2:
-            if len(z_q.shape) == 2:
+        # dimensions. TODO I don't like this code block.
+        if z_r.ndim > 2:
+            if z_q.ndim == 2:
                 z_q = np.expand_dims(z_q, axis=2)
-            if len(attention.shape) == 2:
+            if attention.ndim == 2:
                 attention = np.expand_dims(attention, axis=2)
+        if z_r.ndim == 4:
+            if z_q.ndim == 3:
+                z_q = np.expand_dims(z_q, axis=3)
+            if attention.ndim == 3:
+                attention = np.expand_dims(attention, axis=3)
 
         sim = self._similarity(z_q, z_r, theta, attention)
         return sim
@@ -492,20 +494,20 @@ class PsychologicalEmbedding(object):
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension in a
                 weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         pass
@@ -514,20 +516,20 @@ class PsychologicalEmbedding(object):
     def _similarity(self, z_q, z_r, theta, attention):
         """Similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension in a
                 weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         pass
@@ -570,7 +572,7 @@ class PsychologicalEmbedding(object):
     def _get_embedding(self, init_mode):
         """Return embedding of model as TensorFlow variable.
 
-        Args:
+        Arguments:
             init_mode: A string indicating the initialization mode.
                 valid options are 'cold', 'warm', and 'exact'.
 
@@ -613,7 +615,7 @@ class PsychologicalEmbedding(object):
     def set_log(self, do_log, log_dir=None, delete_prev=False):
         """State changing method that sets TensorBoard logging.
 
-        Args:
+        Arguments:
             do_log: Boolean that indicates whether logs should be
                 recorded.
             log_dir (optional): A string indicating the file path for
@@ -634,7 +636,7 @@ class PsychologicalEmbedding(object):
     def fit(self, obs, n_restart=40, init_mode='cold', verbose=0):
         """Fit the free parameters of the embedding model.
 
-        Args:
+        Arguments:
             obs: A JudgedTrials object representing the observed data.
             n_restart (optional): An integer specifying the number of
                 restarts to use for the inference procedure. Since the
@@ -702,7 +704,7 @@ class PsychologicalEmbedding(object):
     def evaluate(self, obs):
         """Evaluate observations using the current state of the model.
 
-        Args:
+        Arguments:
             obs: A JudgedTrials object representing the observed data.
 
         Returns:
@@ -961,33 +963,26 @@ class PsychologicalEmbedding(object):
     def log_likelihood(self, obs, z=None, theta=None, phi=None):
         """Return the log likelihood of a set of observations.
 
-        Args:
+        Arguments:
             obs: A set of judged similarity trials. The indices
                 used must correspond to the rows of z.
-            z (optional): A set of embedding points. If no embedding
-                points are provided, the points associated with the
-                object are used.
-            theta (optional): The similarity kernel parameters. If no
-                theta parameters are provided, the parameters
-                associated with the object are used.
-            phi (optional): If no phi parameters are provided, the
-                parameters associated with the object are used.
+            z (optional): The z parameters.
+            theta (optional): The theta parameters.
+            phi (optional): The phi parameters.
 
         Returns:
             The total log-likelihood of the observations.
 
-        """
-        if z is None:
-            z = self.z['value']
-        # TODO theta, phi
-        # if theta is None:
-        #     theta = self.theta
-        # if phi is None:
-        #     phi = self.phi
+        Notes:
+            The arguments z, theta, and phi are assigned in a lazy
+                manner. If they have a value of None when they are
+                needed, the attribute values of the object will be used.
 
+        """
         cap = 2.2204e-16
         prob_all = self.outcome_probability(
-            obs, group_id=obs.group_id, z=z, unaltered_only=True)
+            obs, group_id=obs.group_id, z=z, theta=theta, phi=phi,
+            unaltered_only=True)
         prob = np.maximum(cap, prob_all[:, 0])
         ll = np.sum(np.log(prob))
         return ll
@@ -997,7 +992,7 @@ class PsychologicalEmbedding(object):
             unaltered_only=False):
         """Return probability of each outcome for each trial.
 
-        Args:
+        Arguments:
             trials: A set of unjudged similarity trials. The indices
                 used must correspond to the rows of z.
             group_id (optional): The group ID for which to compute the
@@ -1005,18 +1000,13 @@ class PsychologicalEmbedding(object):
             z (optional): A set of embedding points. If no embedding
                 points are provided, the points associated with the
                 object are used.
-            theta (optional): The similarity kernel parameters. If no
-                theta parameters are provided, the parameters
-                associated with the object are used.
-            phi (optionsl): If no phi parameters are provided, the
-                parameteres associated with the object are used.
+                shape=(n_stimuli, n_dim, [n_sample])
+            theta (optional): The theta parameters.
+            phi (optionsl): The phi parameters.
             unaltered_only (optional): Flag the determines whether only
                 the unaltered ordering is evaluated.
 
         Returns:
-            outcome_idx_list: A list with one entry for each display
-                configuration. Each entry contains a 2D array where
-                each row contains the indices describing one outcome.
             prob_all: The probabilities associated with the different
                 outcomes for each unjudged trial. In general, different
                 trial configurations will have a different number of
@@ -1024,10 +1014,14 @@ class PsychologicalEmbedding(object):
                 possible outcomes are element padded with zeros to
                 match the trial with the maximum number of possible
                 outcomes.
+                shape = (n_trial, n_outcome, [n_sample])
 
         Notes:
             The first outcome corresponds to the original order of the
                 trial data.
+            The arguments theta and phi are assigned in a lazy
+                manner. If they have a value of None when they are
+                needed, the attribute values of the object will be used.
 
         """
         n_trial_all = trials.n_trial
@@ -1053,13 +1047,20 @@ class PsychologicalEmbedding(object):
         if unaltered_only:
             max_n_outcome = 1
 
+        if z.ndim == 2:
+            z = np.expand_dims(z, axis=2)
+        n_sample = z.shape[2]
+
         # Compute similarity between query and references.
         (z_q, z_r) = self._inflate_points(
             trials.stimulus_set, trials.max_n_reference, z)
+
         sim_qr = self.similarity(
             z_q, z_r, group_id=group_id, theta=theta, phi=phi)
 
-        prob_all = np.zeros((n_trial_all, max_n_outcome))
+        # TODO generalize remaining code for multiple samples.
+        # sim_qr = sim_qr[:, :, 0] TODO
+        prob_all = np.zeros((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
             config = trials.config_list.iloc[i_config]
             outcome_idx = outcome_idx_list[i_config]
@@ -1080,23 +1081,25 @@ class PsychologicalEmbedding(object):
                 n_outcome = 1
 
             # Compute probability of each possible outcome.
-            prob = np.ones((n_trial, n_outcome), dtype=np.float64)
+            prob = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
             for i_outcome in range(n_outcome):
-                s_qref_perm = sim_qr_config[:, outcome_idx[i_outcome, :]]
-                prob[:, i_outcome] = self._ranked_sequence_probabiltiy(
+                s_qref_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
+                prob[:, i_outcome, :] = self._ranked_sequence_probabiltiy(
                     s_qref_perm, config['n_selected'])
-            prob_all[trial_locs, 0:n_outcome] = prob
+            prob_all[trial_locs, 0:n_outcome, :] = prob
 
         # Correct for numerical inaccuracy.
         if not unaltered_only:
             prob_all = np.divide(
                 prob_all, np.sum(prob_all, axis=1, keepdims=True))
+        if n_sample == 1:
+            prob_all = prob_all[:, :, 0]
         return prob_all
 
     def _tf_outcome_probability(self, trials, z_tf, tf_theta):
         """Return probability of outcomes for each trial.
 
-        Args:
+        Arguments:
             trials: A set of unjudged similarity trials.
             z_tf: TensorFlow tensor representing embedding points.
             tf_theta: Dictionary of Tensorflow tensors representing
@@ -1179,21 +1182,36 @@ class PsychologicalEmbedding(object):
         return prob_all
 
     def _inflate_points(self, stimulus_set, n_reference, z):
-        """Inflate stimulus set into embedding points."""
+        """Inflate stimulus set into embedding points.
+
+        Arguments:
+            stimulus_set: Array of integers indicating the stimuli used
+                in each trial.
+                shape = (n_trial, >= (n_reference + 1))
+            n_reference: A scalar indicating the number of references
+                in each trial.
+            z: shape = (n_stimuli, n_dim, n_sample)
+
+        Returns:
+            z_q: shape = (n_trial, n_dim, 1, n_sample)
+            z_r: shape = (n_trial, n_dim, n_reference, n_sample)
+
+        """
         n_trial = stimulus_set.shape[0]
         n_dim = z.shape[1]
+        n_sample = z.shape[2]
 
         stimulus_set_temp = copy.copy(stimulus_set) + 1
-        z_placeholder = np.zeros((1, n_dim), dtype=np.float32)
+        z_placeholder = np.zeros((1, n_dim, n_sample), dtype=np.float32)
         z_temp = np.concatenate((z_placeholder, z), axis=0)
 
         # Inflate query stimuli.
-        z_q = z_temp[stimulus_set_temp[:, 0], :]
+        z_q = z_temp[stimulus_set_temp[:, 0], :, :]
         z_q = np.expand_dims(z_q, axis=2)
         # Inflate reference stimuli.
-        z_r = np.empty((n_trial, n_dim, n_reference))
+        z_r = np.empty((n_trial, n_dim, n_reference, n_sample))
         for i_ref in range(n_reference):
-            z_r[:, :, i_ref] = z_temp[stimulus_set_temp[:, 1+i_ref], :]
+            z_r[:, :, i_ref, :] = z_temp[stimulus_set_temp[:, 1+i_ref], :, :]
         return (z_q, z_r)
 
     def _tf_inflate_points(
@@ -1242,18 +1260,22 @@ class PsychologicalEmbedding(object):
     def _ranked_sequence_probabiltiy(self, sim_qr, n_selected):
         """Return probability of a ranked selection sequence.
 
-        Args:
-            sim_qr: A 2D tensor containing pairwise similarity values.
-                Each row contains the similarity between a trial's
-                query stimulus and reference stimuli. The tensor is
-                arranged such that the first column corresponds to the
-                first selection in a sequence, and the last column
-                corresponds to the last selection.
+        Arguments:
+            sim_qr: A 3D tensor containing pairwise similarity values.
+                Each row (dimension 0) contains the similarity between
+                a trial's query stimulus and reference stimuli. The
+                tensor is arranged such that the first column
+                corresponds to the first selection in a sequence, and
+                the last column corresponds to the last selection
+                (dimension 1). The third dimension indicates
+                different samples.
+                shape = (n_trial, n_reference, n_sample)
             n_selected: Scalar indicating the number of selections made
                 by an agent.
 
         Returns:
-            1D Tensor of probabilities.
+            A 2D tensor of probabilities.
+            shape = (n_trial, n_sample)
 
         Notes:
             For example, given query Q, the probability of selecting
@@ -1272,11 +1294,12 @@ class PsychologicalEmbedding(object):
 
         """
         n_trial = sim_qr.shape[0]
+        n_sample = sim_qr.shape[2]
 
         # Initialize.
-        seq_prob = np.ones((n_trial), dtype=np.float64)
+        seq_prob = np.ones((n_trial, n_sample), dtype=np.float64)
         selected_idx = n_selected - 1
-        denom = np.sum(sim_qr[:, selected_idx:], axis=1)
+        denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)
 
         for i_selected in range(selected_idx, -1, -1):
             # Compute selection probability.
@@ -1286,7 +1309,7 @@ class PsychologicalEmbedding(object):
             # Update denominator in preparation for computing the probability
             # of the previous selection in the sequence.
             if i_selected > 0:
-                denom = denom + sim_qr[:, i_selected-1]
+                denom = denom + sim_qr[:, i_selected-1, :]
         return seq_prob
 
     def _tf_ranked_sequence_probability(self, sim_qr, n_selected):
@@ -1294,10 +1317,11 @@ class PsychologicalEmbedding(object):
 
         See: _ranked_sequence_probability
 
-        Args:
+        Arguments:
             sim_qr:
             n_selected:
 
+        TODO complete docs, MAYBE implement samples dimension?
         """
         n_trial = tf.shape(sim_qr)[0]
         # n_trial = tf.cast(n_trial, dtype=tf.int32)
@@ -1347,7 +1371,7 @@ class PsychologicalEmbedding(object):
         the two chains are merged in order to get a posterior estimate
         for all points.
 
-        Args:
+        Arguments:
             obs: A JudgedTrials object representing the observed data.
             n_sample (optional): The number of samples desired after
                 removing the "burn in" samples and applying thinning.
@@ -1375,6 +1399,7 @@ class PsychologicalEmbedding(object):
             1732-1740).
 
         """
+        # TODO change posterior samples to shape = (n_stimuli, n_dim, n_sample)
         n_sample_set = np.ceil(n_sample/2).astype(np.int32)
         n_stimuli = self.n_stimuli
         n_dim = self.n_dim
@@ -1474,7 +1499,7 @@ class PsychologicalEmbedding(object):
         This code assumes that the incoming points have already been
         centered.
 
-        Args:
+        Arguments:
             z: The embedding points.
             n_point: The number of points in each set.
 
@@ -1610,7 +1635,7 @@ class Exponential(PsychologicalEmbedding):
     def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
-        Args:
+        Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
             n_dim (optional): An integer indicating the dimensionalty
@@ -1711,21 +1736,21 @@ class Exponential(PsychologicalEmbedding):
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Exponential family similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
@@ -1746,21 +1771,21 @@ class Exponential(PsychologicalEmbedding):
     def _similarity(self, z_q, z_r, theta, attention):
         """Exponential family similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
@@ -1792,7 +1817,7 @@ class HeavyTailed(PsychologicalEmbedding):
     def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
-        Args:
+        Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
             n_dim (optional): An integer indicating the dimensionalty
@@ -1901,21 +1926,21 @@ class HeavyTailed(PsychologicalEmbedding):
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Heavy-tailed family similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
@@ -1936,21 +1961,21 @@ class HeavyTailed(PsychologicalEmbedding):
     def _similarity(self, z_q, z_r, theta, attention):
         """Heavy-tailed family similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
@@ -1993,7 +2018,7 @@ class StudentsT(PsychologicalEmbedding):
     def __init__(self, n_stimuli, n_dim=2, n_group=1):
         """Initialize.
 
-        Args:
+        Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
             n_dim (optional): An integer indicating the dimensionalty
@@ -2097,21 +2122,21 @@ class StudentsT(PsychologicalEmbedding):
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Student-t family similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
@@ -2132,21 +2157,21 @@ class StudentsT(PsychologicalEmbedding):
     def _similarity(self, z_q, z_r, theta, attention):
         """Student-t family similarity kernel.
 
-        Args:
+        Arguments:
             z_q: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             z_r: A set of embedding points.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
             tf_theta: A dictionary of algorithm-specific parameters
                 governing the similarity kernel.
             tf_attention: The weights allocated to each dimension
                 in a weighted minkowski metric.
-                shape = (n_sample, n_dim)
+                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_sample,)
+                shape = (n_trial,)
 
         """
         # Algorithm-specific parameters governing the similarity kernel.

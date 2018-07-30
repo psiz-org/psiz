@@ -48,11 +48,11 @@ from psiz.utils import similarity_matrix, matrix_correlation
 def main():
     """Sample from posterior of pre-defined embedding model."""
     # Settings
-    n_trial = 10000  # 5000 10000
+    n_trial = 10000
     n_frame = 30
     n_sample = 1000
-    n_burn = 100  # 1000
-    thin_step = 1  # 3
+    n_burn = 1000
+    thin_step = 3
 
     # Ground truth model.
     model_truth = ground_truth()
@@ -67,15 +67,6 @@ def main():
     n_reference = 2
     n_selected = 1
     trials = generator.generate(n_trial, n_reference, n_selected)
-
-    # Remove data for stimulus 8
-    # locs = np.equal(trials.stimulus_set, 6)
-    # locs = np.sum(locs, axis=1)
-    # n_loc = np.sum(locs)
-    # locs[0:int(np.floor(n_trial/20))] = False
-    # print('dropped: {0}'.format(np.sum(locs) / n_loc))
-    # locs = np.logical_not(locs)
-    # trials = trials.subset(locs)
 
     # Simulate similarity judgements using ground truth model.
     agent = Agent(model_truth)

@@ -44,7 +44,7 @@ class Agent(object):
     def __init__(self, embedding, group_id=0):
         """Initialize.
 
-        Args:
+        Arguments:
             embedding: A concrete instance of a PsychologicalEmedding
                 object.
             group_id (optional): If the provided embedding was inferred
@@ -57,7 +57,7 @@ class Agent(object):
     def simulate(self, trials, override_group_id=None):
         """Stochastically simulate similarity judgments.
 
-        Args:
+        Arguments:
             trials: UnjudgedTrials object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
@@ -71,7 +71,6 @@ class Agent(object):
                 order of the stimuli is now informative.
 
         """
-        
         group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int32)    
         prob_all = self.embedding.outcome_probability(
             trials, group_id=group_id)
@@ -89,7 +88,7 @@ class Agent(object):
     def _select(self, trials, prob_all):
         """Stochastically select from possible outcomes.
 
-        Args:
+        Arguments:
             trials:
             prob_all:
 

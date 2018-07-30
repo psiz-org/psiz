@@ -49,7 +49,7 @@ def similarity_matrix(similarity_fn, z):
 def matrix_correlation(mat_a, mat_b):
     """Return the R^2 score between two square matrices.
 
-    Args:
+    Arguments:
         mat_a: A square matrix.
         mat_b: A square matrix the same size as mat_a
 
@@ -81,7 +81,7 @@ def matrix_correlation(mat_a, mat_b):
 def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
     """Compare two psychological embeddings.
 
-    Args:
+    Arguments:
         model_a:  A psychological embedding model.
         model_b:  A psychological embedding model.
         group_id_a (optional):  A particular group ID to use when
@@ -115,7 +115,7 @@ def elliptical_slice(
     Markov chain update for a distribution with a Gaussian "prior"
     factored out.
 
-    Args:
+    Arguments:
         initial_theta: initial vector
         prior: cholesky decomposition of the covariance matrix (like
             what numpy.linalg.cholesky returns), or a sample from the
@@ -189,7 +189,7 @@ def elliptical_slice(
 def rotation_matrix(theta):
     """Return 2D rotation matrix.
 
-    Args:
+    Arguments:
         theta: Scalar value indicating radians of rotation.
     """
     return np.array((
@@ -201,7 +201,7 @@ def rotation_matrix(theta):
 def affine_transformation(z, params):
     """Return affine transformation of 2D points.
 
-    Args:
+    Arguments:
         z: Original set of points.
             shape = (n_point, 2)
         params: Transformation parameters denoting x translation,
@@ -224,7 +224,7 @@ def affine_transformation(z, params):
 def procrustean_solution(z_a, z_b, n_restart=10):
     """Align the two embeddings using an affine transformation.
 
-    Args:
+    Arguments:
         z_a: A 2D embedding.
             shape = (n_point, 2)
         z_b: A 2D embedding.

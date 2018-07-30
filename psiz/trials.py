@@ -96,7 +96,7 @@ class SimilarityTrials(object):
     def __init__(self, stimulus_set, n_selected=None, is_ranked=None):
         """Initialize.
 
-        Args:
+        Arguments:
             stimulus_set: An integer matrix containing indices that
                 indicate the set of stimuli used in each trial. Each
                 row indicates the stimuli used in one trial. The first
@@ -151,7 +151,7 @@ class SimilarityTrials(object):
         function assumes that values less than zero, are placeholder
         values and should be treated as non-existent.
 
-        Args:
+        Arguments:
             stimulus_set: shape = [n_trial, 1]
 
         Returns:
@@ -225,7 +225,7 @@ class SimilarityTrials(object):
     def subset(self, index):
         """Return subset of trials as new SimilarityTrials object.
 
-        Args:
+        Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -285,7 +285,7 @@ class UnjudgedTrials(SimilarityTrials):
 
         Extends initialization of SimilarityTrials.
 
-        Args:
+        Arguments:
             stimulus_set: The order of the reference indices is not
                 important. See SimilarityTrials.
             n_selected (optional): See SimilarityTrials.
@@ -305,7 +305,7 @@ class UnjudgedTrials(SimilarityTrials):
     def subset(self, index):
         """Return subset of trials as new UnjudgedTrials object.
 
-        Args:
+        Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -321,7 +321,7 @@ class UnjudgedTrials(SimilarityTrials):
         Helper function that generates a unique ID for each of the
         unique trial configurations in the provided data set.
 
-        Args:
+        Arguments:
             n_reference: An integer array indicating the number of
                 references in each trial.
                 shape = (n_trial,)
@@ -413,7 +413,7 @@ class JudgedTrials(SimilarityTrials):
 
         Extends initialization of SimilarityTrials.
 
-        Args:
+        Arguments:
             stimulus_set: The order of reference indices is important.
                 An agent's selected references are listed first (in
                 order of selection if the trial is ranked) and
@@ -465,7 +465,7 @@ class JudgedTrials(SimilarityTrials):
     def subset(self, index):
         """Return subset of trials as new JudgedTrials object.
 
-        Args:
+        Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -483,7 +483,7 @@ class JudgedTrials(SimilarityTrials):
         Helper function that generates a unique ID for each of the
         unique trial configurations in the provided data set.
 
-        Args:
+        Arguments:
             n_reference: An integer array indicating the number of
                 references in each trial.
                 shape = (n_trial,)
@@ -564,7 +564,7 @@ def pad_stimulus_set(stimulus_set, max_n_reference):
 def possible_outcomes(trial_configuration):
     """Return the possible outcomes of a trial configuration.
 
-    Args:
+    Arguments:
         trial_configuration: A trial configuration Pandas Series.
 
     Returns:
@@ -609,7 +609,7 @@ def stack(trials_list):
         first to match the maximum number of references of all the
         objects.
 
-        Args:
+        Arguments:
             trials_list: A list of SimilarityTrials objects to be
                 stacked.
 

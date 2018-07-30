@@ -55,7 +55,7 @@ class TrialGenerator(object):
     def __init__(self, n_stimuli):
         """Initialize.
 
-        Args:
+        Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli.
         """
@@ -65,7 +65,7 @@ class TrialGenerator(object):
     def generate(self, args):
         """Return generated trials based on provided arguments.
 
-        Args:
+        Arguments:
             n_stimuli
 
         Returns:
@@ -81,7 +81,7 @@ class RandomGenerator(TrialGenerator):
     def __init__(self, n_stimuli):
         """Initialize.
 
-        Args:
+        Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli.
         """
@@ -90,7 +90,7 @@ class RandomGenerator(TrialGenerator):
     def generate(self, n_trial, n_reference=2, n_selected=1, is_ranked=True):
         """Return generated trials based on provided arguments.
 
-        Args:
+        Arguments:
             n_trial: A scalar indicating the number of trials to
                 generate.
             n_reference (optional): A scalar indicating the number of
@@ -125,16 +125,20 @@ class ActiveGenerator(TrialGenerator):
     def __init__(self, n_stimuli):
         """Initialize.
 
-        Args:
-            n_stimuli:
+        Arguments:
+            embedding:
         """
         TrialGenerator.__init__(self, n_stimuli)
 
     def generate(
-            self, n_trial, samples, n_reference=None, n_selected=None, is_ranked=True, verbose=0):
+            self, n_trial, samples, embedding, n_reference=None,
+            n_selected=None, is_ranked=True, verbose=0):
         """Return generated trials based on provided arguments.
 
-        Args:
+        Trials are selected in order to maximize expected information
+        gain. Information gain is estimated using posterior samples.
+
+        Arguments:
             n_trial: A scalar indicating the number of trials to
                 generate.
             samples: A dictionary containing the posterior samples of
@@ -153,7 +157,59 @@ class ActiveGenerator(TrialGenerator):
         # Goal: Reduce uncertainty on positions and group-specific tunings.
 
         # Point estimates of posterior samples.
-        z_central = np.median(samples['z'], axis=0)
-        utils.similarity_matrix(similarity_fn, z_central)
+        # z_central = np.median(samples['z'], axis=0)
+        # utils.similarity_matrix(similarity_fn, z_central)
 
         return None  # TODO
+
+    def _information_gain(self, embedding, samples, candidate_trial):
+        """Return expected information gain of candidate trial(s).
+
+        Information gain is determined by computing the mutual
+        mutual information between the candidate trial(s) and the
+        existing set of observations.
+
+        Arguments:
+            embedding:
+            samples:
+            candidate_trials:
+
+        Returns:
+            Expected information gain of candidate trial.
+            shape = (n_trial,)
+
+        """
+        # TODO important that no placeholder outcomes are passed in. Probably 
+        # solve problem by passing in the same configuraiton OR have outcome
+        # probability return number of outcomes, OR list.
+        cap = 2.2204e-16
+
+        # Note z_samples has shape = (n_stimuli, n_dim, n_sample)
+        z_samples = samples['z']
+        # group_id = 0  # TODO
+        # Note: prob_all has shape = (n_trial, n_outcome, n_sample)
+        prob_all = embedding.outcome_probability(
+            candidate_trial, group_id=None, z=z_samples)
+
+        # First term of mutual information.
+        # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c)
+        # Take mean over samples to approximate p(y_i | obs, c).
+        first_term = np.mean(prob_all, axis=2)
+        # Use threshold to avoid log(0) issues (unlikely to happen).
+        first_term = np.maximum(cap, first_term)
+        first_term = first_term * np.log(first_term)
+        # Sum over possible outcomes.
+        first_term = -1 * np.sum(first_term, axis=1)
+
+        # Second term of mutual information.
+        # E[H(Y | Z, D, x)]
+        # Use threshold to avoid log(0) issues (likely to happen).
+        prob_all = np.maximum(cap, prob_all)
+        second_term = prob_all * np.log(prob_all)
+        # Take the sum over the possible outcomes.
+        second_term = np.sum(second_term, axis=1)
+        # Take the sum over all samples.
+        second_term = np.mean(second_term, axis=1)
+
+        info_gain = first_term + second_term
+        return info_gain

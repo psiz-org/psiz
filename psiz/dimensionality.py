@@ -39,7 +39,7 @@ def suggest_dimensionality(
     dimensions in the dimension list. Each dimension is evaluated using
     the same cross-validation partion.
 
-    Args:
+    Arguments:
         obs: An JudgedTrials object representing the observed data.
             embedding_constructor: A PsychologicalEmbedding
             constructor.

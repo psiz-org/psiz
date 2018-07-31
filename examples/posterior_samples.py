@@ -24,8 +24,7 @@ example, using the ground truth allows us to see how the posterior
 sampling algorithm works under ideal conditions.
 
 Notes:
-    - Handling invariance to affine transformations (translation, scale,
-      and rotation).
+    - This script takes awhile to execute. 
 
 """
 
@@ -36,12 +35,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import tensorflow as tf
 
-from psiz.trials import UnjudgedTrials, stack
-from psiz.models import Exponential, HeavyTailed, StudentsT
+from psiz.trials import UnjudgedTrials
+from psiz.models import Exponential
 from psiz.simulate import Agent
-from psiz.generator import RandomGenerator, ActiveGenerator
+from psiz.generator import RandomGenerator
 from psiz.utils import similarity_matrix, matrix_correlation
 
 
@@ -51,7 +49,7 @@ def main():
     n_trial = 10000
     n_frame = 30
     n_sample = 1000
-    n_burn = 1000
+    n_burn = 100
     thin_step = 3
 
     # Ground truth model.
@@ -80,11 +78,11 @@ def main():
     model_inferred = model_truth
     z_original = copy.copy(model_inferred.z['value'])
 
-    z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
-    simmat_infer = similarity_matrix(
-        model_inferred.similarity, model_inferred.z['value'])
-    r_squared = matrix_correlation(simmat_infer, simmat_truth)
-    print('R^2 | {0: >6.2f}'.format(r_squared))
+    # z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
+    # simmat_infer = similarity_matrix(
+    #     model_inferred.similarity, model_inferred.z['value'])
+    # r_squared = matrix_correlation(simmat_infer, simmat_truth)
+    # print('R^2 | {0: >6.2f}'.format(r_squared))
 
     z_samp_list = n_frame * [None]
     z_central_list = n_frame * [None]
@@ -95,8 +93,8 @@ def main():
         samples = model_inferred.posterior_samples(
             obs.subset(include_idx), n_sample, n_burn, thin_step)
         z_samp = samples['z']
-        z_central = np.median(z_samp, axis=0)
-
+        z_central = np.median(z_samp, axis=2)
+        z_samp = np.transpose(z_samp, axes=[2, 0, 1])
         z_samp_list[i_frame] = np.reshape(
             z_samp, (n_sample * n_stimuli, n_dim))
         z_central_list[i_frame] = z_central
@@ -106,7 +104,7 @@ def main():
             model_inferred.similarity, model_inferred.z['value'])
         r_squared = matrix_correlation(simmat_infer, simmat_truth)
         r_squared_list[i_frame] = r_squared
-        print('R^2 | {0: >6.2f}'.format(r_squared))
+        print('Frame: {0} | R^2: {1: >6.2f}'.format(i_frame, r_squared))
         model_inferred.z['value'] = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
@@ -126,7 +124,7 @@ def main():
     fig = plt.figure(figsize=(5.5, 2), dpi=200)
 
     ax1 = fig.add_subplot(1, 3, 1)
-    scat1 = ax1.scatter(
+    ax1.scatter(
         z_true[:, 0], z_true[:, 1], s=15, c=color_array, marker='o')
     ax1.set_title('Ground Truth')
     ax1.set_aspect('equal')
@@ -163,7 +161,7 @@ def main():
         scat3.set_offsets(
             z_samp_list[frame_number])
     ani = animation.FuncAnimation(fig, update, frames=n_frame)
-    ani.save('posterior.mp4', writer=writer)
+    ani.save('posterior_samples.mp4', writer=writer)
 
 
 def ground_truth():

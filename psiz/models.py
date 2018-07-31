@@ -1042,7 +1042,6 @@ class PsychologicalEmbedding(object):
         # n_reference_list = trials.config_list['n_reference'].values
         # max_n_reference = np.max(n_reference_list)
         # outcome_tensor = trials.outcome_tensor()
-
         # ==================================================
         if unaltered_only:
             max_n_outcome = 1
@@ -1399,7 +1398,6 @@ class PsychologicalEmbedding(object):
             1732-1740).
 
         """
-        # TODO change posterior samples to shape = (n_stimuli, n_dim, n_sample)
         n_sample_set = np.ceil(n_sample/2).astype(np.int32)
         n_stimuli = self.n_stimuli
         n_dim = self.n_dim
@@ -1426,6 +1424,7 @@ class PsychologicalEmbedding(object):
 
         # Center embedding to satisfy assumptions of elliptical slice sampling.
         z = z - mu
+        mu = np.expand_dims(mu, axis=2)
 
         # Create a diagonally tiled covariance matrix in order to slice
         # multiple points simultaneously.
@@ -1451,7 +1450,7 @@ class PsychologicalEmbedding(object):
             n_total_sample = n_burn + (n_sample_set * thin_step)
             z_samp = z[sample_idx[:, i_set], :]
             z_samp = z_samp.flatten('C')
-            samples = np.empty((n_total_sample, n_stimuli, n_dim))
+            samples = np.empty((n_stimuli, n_dim, n_total_sample))
 
             # Sample from prior if there are no observations. TODO
             # if obs.n_trial is 0:
@@ -1469,22 +1468,24 @@ class PsychologicalEmbedding(object):
                 z_samp_r = np.reshape(
                     z_samp, (n_stimuli - n_anchor_point, n_dim), order='C')
                 z_full[sample_idx[:, i_set], :] = z_samp_r
-                samples[i_round, :, :] = z_full
+                samples[:, :, i_round] = z_full
 
             # Add back in mean.
             samples = samples + mu
-            combined_samples[i_set] = samples[n_burn::thin_step]
+            combined_samples[i_set] = samples[:, :, n_burn::thin_step]
 
         # Replace anchors with samples from other set.
         for i_point in range(n_anchor_point):
-            combined_samples[0][:, anchor_idx[i_point, 0], :] = \
-                combined_samples[1][:, anchor_idx[i_point, 0], :]
+            combined_samples[0][anchor_idx[i_point, 0], :, :] = \
+                combined_samples[1][anchor_idx[i_point, 0], :, :]
         for i_point in range(n_anchor_point):
-            combined_samples[1][:, anchor_idx[i_point, 1], :] = \
-                combined_samples[0][:, anchor_idx[i_point, 1], :]
+            combined_samples[1][anchor_idx[i_point, 1], :, :] = \
+                combined_samples[0][anchor_idx[i_point, 1], :, :]
 
-        samples_all = np.vstack((combined_samples[0], combined_samples[1]))
-        samples_all = samples_all[0:n_sample]
+        samples_all = np.concatenate(
+            (combined_samples[0], combined_samples[1]), axis=2
+        )
+        samples_all = samples_all[:, :, 0:n_sample]
         samples = dict(z=samples_all)
         return samples
 

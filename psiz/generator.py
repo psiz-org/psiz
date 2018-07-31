@@ -34,6 +34,7 @@ Todo:
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
+import numpy.ma as ma
 
 from psiz.trials import UnjudgedTrials
 
@@ -179,14 +180,15 @@ class ActiveGenerator(TrialGenerator):
             shape = (n_trial,)
 
         """
-        # TODO important that no placeholder outcomes are passed in. Probably 
-        # solve problem by passing in the same configuraiton OR have outcome
-        # probability return number of outcomes, OR list.
+        # group_id = 0  # TODO
+        # TODO important that probability for placeholder outcomes are not
+        # passed in. Could probably solve problem by passing in the same
+        # configuration OR have outcome probability return number of outcomes,
+        # OR return as a list.
         cap = 2.2204e-16
 
-        # Note z_samples has shape = (n_stimuli, n_dim, n_sample)
+        # Note: z_samples has shape = (n_stimuli, n_dim, n_sample)
         z_samples = samples['z']
-        # group_id = 0  # TODO
         # Note: prob_all has shape = (n_trial, n_outcome, n_sample)
         prob_all = embedding.outcome_probability(
             candidate_trial, group_id=None, z=z_samples)
@@ -194,22 +196,22 @@ class ActiveGenerator(TrialGenerator):
         # First term of mutual information.
         # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c)
         # Take mean over samples to approximate p(y_i | obs, c).
-        first_term = np.mean(prob_all, axis=2)
+        first_term = ma.mean(prob_all, axis=2)
         # Use threshold to avoid log(0) issues (unlikely to happen).
-        first_term = np.maximum(cap, first_term)
-        first_term = first_term * np.log(first_term)
+        first_term = ma.maximum(cap, first_term)
+        first_term = first_term * ma.log(first_term)
         # Sum over possible outcomes.
-        first_term = -1 * np.sum(first_term, axis=1)
+        first_term = -1 * ma.sum(first_term, axis=1)
 
         # Second term of mutual information.
         # E[H(Y | Z, D, x)]
         # Use threshold to avoid log(0) issues (likely to happen).
-        prob_all = np.maximum(cap, prob_all)
-        second_term = prob_all * np.log(prob_all)
+        prob_all = ma.maximum(cap, prob_all)
+        second_term = prob_all * ma.log(prob_all)
         # Take the sum over the possible outcomes.
-        second_term = np.sum(second_term, axis=1)
+        second_term = ma.sum(second_term, axis=1)
         # Take the sum over all samples.
-        second_term = np.mean(second_term, axis=1)
+        second_term = ma.mean(second_term, axis=1)
 
         info_gain = first_term + second_term
         return info_gain

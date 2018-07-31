@@ -50,6 +50,7 @@ import copy
 from random import randint
 
 import numpy as np
+import numpy.ma as ma
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import StratifiedKFold
@@ -983,8 +984,8 @@ class PsychologicalEmbedding(object):
         prob_all = self.outcome_probability(
             obs, group_id=obs.group_id, z=z, theta=theta, phi=phi,
             unaltered_only=True)
-        prob = np.maximum(cap, prob_all[:, 0])
-        ll = np.sum(np.log(prob))
+        prob = ma.maximum(cap, prob_all[:, 0])
+        ll = ma.sum(ma.log(prob))
         return ll
 
     def outcome_probability(
@@ -1007,14 +1008,14 @@ class PsychologicalEmbedding(object):
                 the unaltered ordering is evaluated.
 
         Returns:
-            prob_all: The probabilities associated with the different
-                outcomes for each unjudged trial. In general, different
-                trial configurations will have a different number of
-                possible outcomes. Trials with a smaller number of
-                possible outcomes are element padded with zeros to
-                match the trial with the maximum number of possible
-                outcomes.
-                shape = (n_trial, n_outcome, [n_sample])
+            prob_all: A MaskedArray representing the probabilities
+                associated with the different outcomes for each
+                unjudged trial. In general, different trial
+                configurations have a different number of possible
+                outcomes. The mask attribute of the MaskedArray
+                indicates which elements are actual outcome
+                probabilities.
+                shape = (n_trial, n_max_outcome, [n_sample])
 
         Notes:
             The first outcome corresponds to the original order of the
@@ -1059,7 +1060,7 @@ class PsychologicalEmbedding(object):
 
         # TODO generalize remaining code for multiple samples.
         # sim_qr = sim_qr[:, :, 0] TODO
-        prob_all = np.zeros((n_trial_all, max_n_outcome, n_sample))
+        prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
             config = trials.config_list.iloc[i_config]
             outcome_idx = outcome_idx_list[i_config]
@@ -1086,11 +1087,12 @@ class PsychologicalEmbedding(object):
                 prob[:, i_outcome, :] = self._ranked_sequence_probabiltiy(
                     s_qref_perm, config['n_selected'])
             prob_all[trial_locs, 0:n_outcome, :] = prob
+        prob_all = ma.masked_values(prob_all, -1)
 
         # Correct for numerical inaccuracy.
         if not unaltered_only:
-            prob_all = np.divide(
-                prob_all, np.sum(prob_all, axis=1, keepdims=True))
+            prob_all = ma.divide(
+                prob_all, ma.sum(prob_all, axis=1, keepdims=True))
         if n_sample == 1:
             prob_all = prob_all[:, :, 0]
         return prob_all

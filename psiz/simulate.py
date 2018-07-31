@@ -89,8 +89,8 @@ class Agent(object):
         """Stochastically select from possible outcomes.
 
         Arguments:
-            trials:
-            prob_all:
+            trials: An UnjudgedTrial object.
+            prob_all: A MaskedArray object.
 
 
         Returns:
@@ -118,7 +118,7 @@ class Agent(object):
             trial_locs = trials.config_idx == i_config
             n_trial = np.sum(trial_locs)
             trial_idx = trial_idx_all[trial_locs]
-            prob = prob_all[trial_locs, 0:n_outcome]
+            prob = prob_all.data[trial_locs, 0:n_outcome]
             stimuli_set_ref = trials.stimulus_set[trial_locs, 1:]
 
             for i_trial in range(n_trial):

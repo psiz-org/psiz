@@ -59,7 +59,7 @@ def visualize_embedding_static(
         unique_class_list = np.unique(class_vec)
         n_class = len(unique_class_list)
         norm = matplotlib.colors.Normalize(vmin=0., vmax=n_class)
-        color_array = cmap(norm(range(12))) # TODO should 12 be n_class?
+        color_array = cmap(norm(range(n_class)))
 
         if classes is not None:
             class_legend = infer_legend(unique_class_list, classes)

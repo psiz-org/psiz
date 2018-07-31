@@ -125,6 +125,36 @@ def test_information_gain(ground_truth):
 
     assert ig_0 > ig_1
 
+    # Check case for multiple candidate trials.
+    candidate_trial_01 = UnjudgedTrials(
+        np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
+        np.array([1, 1], dtype=np.int32)
+        )
+    ig_01 = gen._information_gain(ground_truth, samples, candidate_trial_01)
+    assert ig_01[0] == ig_0
+    assert ig_01[1] == ig_1
+
+    # Check case for multiple candidate trials with different configurations.
+    candidate_trial_23 = UnjudgedTrials(
+        np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
+        np.array([2, 2], dtype=np.int32)
+        )
+    ig_23 = gen._information_gain(ground_truth, samples, candidate_trial_23)
+
+    candidate_trial_0123 = UnjudgedTrials(
+        np.array([
+            [0, 1, 2, -1, -1],
+            [3, 1, 2, -1, -1],
+            [0, 1, 2, 4, 9],
+            [3, 1, 5, 6, 8]
+        ], dtype=np.int32),
+        np.array([1, 1, 2, 2], dtype=np.int32)
+        )
+    ig_0123 = gen._information_gain(ground_truth, samples, candidate_trial_0123)
+    assert ig_0123[0] == ig_0
+    assert ig_0123[1] == ig_1
+    assert ig_0123[2] == ig_23[0]
+    assert ig_0123[3] == ig_23[1]
 
 # @pytest.fixture(scope="module")
 # def unbalanced_trials():

@@ -172,19 +172,17 @@ class ActiveGenerator(TrialGenerator):
 
         Arguments:
             embedding:
-            samples:
+            samples: Dictionary of sampled parameters.
+                'z': shape = (n_stimuli, n_dim, n_sample)
             candidate_trials:
 
         Returns:
-            Expected information gain of candidate trial.
+            A numpy.ndarray representing the expected information gain
+            of the candidate trial(s).
             shape = (n_trial,)
 
         """
         # group_id = 0  # TODO
-        # TODO important that probability for placeholder outcomes are not
-        # passed in. Could probably solve problem by passing in the same
-        # configuration OR have outcome probability return number of outcomes,
-        # OR return as a list.
         cap = 2.2204e-16
 
         # Note: z_samples has shape = (n_stimuli, n_dim, n_sample)
@@ -214,4 +212,7 @@ class ActiveGenerator(TrialGenerator):
         second_term = ma.mean(second_term, axis=1)
 
         info_gain = first_term + second_term
+
+        # Convert to normal numpy.ndarray.
+        info_gain = info_gain.data
         return info_gain

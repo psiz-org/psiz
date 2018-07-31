@@ -20,6 +20,8 @@ Todo:
     - test outcome_idx_list
     - test resultant group_id of judged trials
     - test overide_group_id in simulate
+    - test simulate and select for a Trial object with different
+        configurations.
 """
 
 import numpy as np

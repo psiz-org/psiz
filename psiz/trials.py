@@ -32,8 +32,10 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
-    Add stimulus set check. It can be [-1, inf]. Exploit this fact when
+    - change attribute n_selected -> n_select
+    - Add stimulus set check. It can be [-1, inf]. Exploit this fact when
     creating z placeholder to inflate z.
+    - MAYBE make config_list a custom object
 
 """
 
@@ -165,7 +167,12 @@ class SimilarityTrials(object):
         return n_reference.astype(dtype=np.int32)
 
     def _check_n_selected(self, n_selected):
-        """Check the argument n_selected."""
+        """Check the argument n_selected.
+        
+        Raises:
+            ValueError
+
+        """
         n_selected = n_selected.astype(np.int32)
         # Check shape argreement.
         if not (n_selected.shape[0] == self.n_trial):
@@ -190,7 +197,12 @@ class SimilarityTrials(object):
         return n_selected
 
     def _check_is_ranked(self, is_ranked):
-        """Check the argument is_ranked."""
+        """Check the argument is_ranked.
+        
+        Raises:
+            ValueError
+
+        """
         if not (is_ranked.shape[0] == self.n_trial):
             raise ValueError((
                 "The argument 'n_selected' must have the same length as the "

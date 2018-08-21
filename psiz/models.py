@@ -25,6 +25,11 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
+    - method 'convert' takes z: shape=(n_stimuli, n_dim, n_sample) and
+        group_id scalar, a returns z after applying the group specific
+        transformations to z so that further calls to similarity or
+        distance would use basic settings (e.g., uniform attention
+        weights).
     - ParameterSet, Theta and Phi object class
     - parallelization during fitting (MAYBE)
     - implement warm (currently the same as exact)
@@ -1443,7 +1448,7 @@ class PsychologicalEmbedding(object):
             n_samp_stimuli = len(sample_idx)
             z_full[sample_idx, :] = np.reshape(
                 z_samp, (n_samp_stimuli, n_dim), order='C')
-            return self.log_likelihood(obs, z=z_full) # TODO pass in phi
+            return self.log_likelihood(obs, z=z_full)  # TODO pass in phi
 
         combined_samples = [None, None]
         for i_set in range(2):

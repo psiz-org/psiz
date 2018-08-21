@@ -24,7 +24,7 @@ example, using the ground truth allows us to see how the posterior
 sampling algorithm works under ideal conditions.
 
 Notes:
-    - This script takes awhile to execute. 
+    - This script takes awhile to execute.
 
 """
 

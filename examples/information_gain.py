@@ -18,6 +18,9 @@
 
 A comparison of the expected information gain for different candidate
 displays.
+
+Todo:
+    Make figure match style from information_gain_config.
 """
 
 import copy
@@ -55,7 +58,6 @@ def main():
     z_samp = np.transpose(z_samp, axes=[2, 0, 1])
     z_samp = np.reshape(z_samp, (n_sample * n_stimuli, n_dim))
 
-    n_stimuli = 16
     gen = ActiveGenerator(n_stimuli)
     candidate_trial = UnjudgedTrials(
         stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
@@ -123,8 +125,6 @@ def main():
             stimulus_set[display_idx[i_subplot]],
             ig[display_idx[i_subplot]], v[display_idx[i_subplot]],
             color_array, fontdict)
-
-    # plt.tight_layout()
     plt.suptitle('Candidate Trials', x=.58)
     plt.show()
 
@@ -150,7 +150,7 @@ def candidate_subplot(fig, idx, z, stimulus_set, ig, v, color_array, fontdict):
     #     fontdict=fontdict)
     rect_back = matplotlib.patches.Rectangle(
         (.45, .05), .06, .4, clip_on=False, color=[.9, .9, .9])
-    ax.add_patch(rect_back)    
+    ax.add_patch(rect_back)
     rect_val = matplotlib.patches.Rectangle(
         (.45, .05), .06, v * .4, clip_on=False, color=[.3, .3, .3])
     ax.add_patch(rect_val)
@@ -185,7 +185,7 @@ def simulated_samples_0(z, n_sample):
     n_stimuli = z.shape[0]
     n_dim = z.shape[1]
 
-    stim_cov = .0001 * np.ones((16))
+    stim_cov = .0001 * np.ones((n_stimuli))
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = stim_cov * np.expand_dims(np.identity(n_dim), axis=0)
@@ -206,7 +206,7 @@ def simulated_samples_1(z, n_sample):
     n_stimuli = z.shape[0]
     n_dim = z.shape[1]
 
-    stim_cov = .0001 * np.ones((16))
+    stim_cov = .0001 * np.ones((n_stimuli))
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = stim_cov * np.expand_dims(np.identity(n_dim), axis=0)
@@ -227,7 +227,7 @@ def simulated_samples_2(z, n_sample):
     n_stimuli = z.shape[0]
     n_dim = z.shape[1]
 
-    stim_cov = .0001 * np.ones((16))
+    stim_cov = .0001 * np.ones((n_stimuli))
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = stim_cov * np.expand_dims(np.identity(n_dim), axis=0)
@@ -259,12 +259,3 @@ def candidate_list(eligable_list, n_reference):
 
 if __name__ == "__main__":
     main()
-
-# Remove data for stimulus 8
-# locs = np.equal(trials.stimulus_set, 6)
-# locs = np.sum(locs, axis=1)
-# n_loc = np.sum(locs)
-# locs[0:int(np.floor(n_trial/20))] = False
-# print('dropped: {0}'.format(np.sum(locs) / n_loc))
-# locs = np.logical_not(locs)
-# trials = trials.subset(locs)

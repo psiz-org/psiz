@@ -215,7 +215,7 @@ class ActiveGenerator(TrialGenerator):
 
         # Prioritize query stimulus based on corresponding entropy.
         # embdding.convert(samples, group_id) TODO
-        h = self._stimulus_entropy(samples)
+        h = stimulus_entropy(samples)
         query_idx = np.argsort(-h)
         query_idx = query_idx[0:n_query]
 
@@ -239,34 +239,6 @@ class ActiveGenerator(TrialGenerator):
 
         # Return updated samples.
         return samples
-
-    def _stimulus_entropy(self, samples):
-        """Return the approximate entropy for every stimulus.
-
-        Arguments:
-            samples:
-
-        Returns:
-            The approximate entropy associated with each stimulus.
-                shape: (n_stimuli,)
-
-        Notes:
-            The computation is specific to a particular group.
-
-        """
-        # Unpack.
-        z_samp = samples['z']
-        n_stimuli = z_samp.shape[0]
-
-        # Fit multi-variate normal for each stimulus.
-        z_samp = np.transpose(z_samp, axes=[2, 0, 1])
-        entropy = np.empty((n_stimuli))
-        for i_stim in range(n_stimuli):
-            gmm = GaussianMixture(
-                n_components=1, covariance_type='full')
-            gmm.fit(z_samp[:, i_stim, :])
-            entropy[i_stim] = normal_entropy(gmm.covariances_[0])
-        return entropy
 
     def _query_kl_priority(self, samples):
         """Return a priority score for every stimulus.
@@ -497,6 +469,36 @@ def normal_kl_divergence(mu_a, sigma_a, mu_b, sigma_b):
         )
     )
     return kl
+
+
+def stimulus_entropy(samples):
+    """Return the approximate entropy associated with every stimulus.
+
+    Arguments:
+        samples: Posterior samples.
+            shape: (n_stimuli, n_dim, n_sample)
+
+    Returns:
+        The approximate entropy associated with each stimulus.
+            shape: (n_stimuli,)
+
+    Notes:
+        The computation is specific to a particular group.
+
+    """
+    # Unpack.
+    z_samp = samples['z']
+    n_stimuli = z_samp.shape[0]
+
+    # Fit multi-variate normal for each stimulus.
+    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
+    entropy = np.empty((n_stimuli))
+    for i_stim in range(n_stimuli):
+        gmm = GaussianMixture(
+            n_components=1, covariance_type='full')
+        gmm.fit(z_samp[:, i_stim, :])
+        entropy[i_stim] = normal_entropy(gmm.covariances_[0])
+    return entropy
 
 
 def normal_entropy(sigma):

@@ -14,7 +14,25 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Example that demonstrates that selection heursitics work well."""
+"""Example that evaluates the combined selection heuristics.
+
+This example shows that the heuristic-based approach is able to find
+candidate trials that have a similar expected information gain as the
+trials found using an exhaustive search. To compare the two approaches,
+the top three candidate trials are found for each scenario using
+heuristic and exhaustive search. We compute the difference between the
+total expected information gain for the top three trials. The results
+show that the heuristic solution finds trials that provide
+approximately 99% of the expected information gain one would achieve
+using an exhaustive search.
+
+Percent of Global Optimum
+  Minimum: 95.6
+  Mean:    98.8
+  Median:  99.0
+  Maximum: 100.0
+
+"""
 
 import copy
 import itertools
@@ -34,7 +52,7 @@ from psiz.utils import similarity_matrix, matrix_correlation
 
 
 def main():
-    """Examine validity of heuristics used during active selection."""
+    """Compare hueristic and exhaustive search method for trial selection."""
     # Settings.
     np.random.seed(123)
     n_sample = 2000
@@ -45,9 +63,13 @@ def main():
     n_scenario = 100
     n_keep = 3
 
+    # Exhaustive set of trials.
     eligable_list = np.arange(n_stimuli, dtype=np.int32)
     stimulus_set = candidate_list(eligable_list, n_reference)
     n_candidate = stimulus_set.shape[0]
+    candidate_trial = UnjudgedTrials(
+        stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
+    )
 
     diff_ig = np.empty((n_scenario))
     for i_scenario in range(n_scenario):
@@ -63,11 +85,7 @@ def main():
         })
         gen = ActiveGenerator(n_stimuli, config_list=config_list)
 
-        # Exhausive search.
-        # Exhaustive set of trials.
-        candidate_trial = UnjudgedTrials(
-            stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
-        )
+        # Exhaustive search.
         ig = gen._information_gain(model, samples, candidate_trial)
         min_ig = np.min(ig)
         rel_ig = ig - min_ig
@@ -93,12 +111,20 @@ def main():
         diff_ig[i_scenario] = (
             np.sum(exha_rel_ig_stim) - np.sum(heur_rel_ig_stim)) / n_stimuli
 
-    print('Average difference in total expected information gain: {0:.4f}'.format(np.mean(diff_ig)))
+    print('Percent of Global Optimum')
+    print('  Minimum: {0:.1f}'.format(100 * np.min(1-diff_ig)))
+    print('  Mean:    {0:.1f}'.format(100 * np.mean(1-diff_ig)))
+    print('  Median:  {0:.1f}'.format(100 * np.median(1-diff_ig)))
+    print('  Maximum: {0:.1f}'.format(100 * np.max(1-diff_ig)))
+    print('')
 
+    bin_edges = np.linspace(.9, 1., 11)
     fig = plt.figure(figsize=(6.5, 2), dpi=200)
     ax = fig.add_subplot(1, 1, 1)
-    ax.hist(1. - diff_ig, bins=np.linspace(.9, 1., 11))
-    ax.set_xlabel('Proportion of Global Optimum')
+    ax.hist(1. - diff_ig, bins=bin_edges)
+    ax.set_xticks(bin_edges)
+    ax.set_xticklabels((100*bin_edges).astype(np.int32))
+    ax.set_xlabel('Percent of Global Optimum')
     ax.set_ylabel('Frequency')
     plt.tight_layout()
     plt.show()
@@ -139,12 +165,6 @@ def simulated_samples(z, n_sample):
     n_dim = z.shape[1]
 
     stim_cov = np.random.uniform(low=.0001, high=.01, size=n_stimuli)
-    # stim_cov = np.random.uniform(low=.0001, high=.0005, size=n_stimuli)
-    # cov_high = np.random.uniform(low=.001, high=.01, size=4)
-    # stim_cov[1] = cov_high[0]
-    # stim_cov[5] = cov_high[1]
-    # stim_cov[9] = cov_high[2]
-    # stim_cov[15] = cov_high[3]
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = np.expand_dims(stim_cov, axis=1)
     stim_cov = stim_cov * np.expand_dims(np.identity(n_dim), axis=0)
@@ -171,17 +191,6 @@ def candidate_list(eligable_list, n_reference):
             stimulus_set = np.vstack((stimulus_set, item))
     stimulus_set = stimulus_set.astype(dtype=np.int32)
     return stimulus_set
-
-
-def normal_entropy(sigma):
-    """Return entropy of multivariate normal distribution."""
-    n_dim = sigma.shape[0]
-    h = (
-        (n_dim / 2) +
-        (n_dim / 2 * np.log(2 * np.pi)) +
-        (1 / 2 * np.log(np.linalg.det(sigma)))
-    )
-    return h
 
 
 if __name__ == "__main__":

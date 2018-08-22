@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Example that demonstrates that query entropy is a good predictor."""
+"""Example demonstrating the selection heuristic for references."""
 
 import copy
 import itertools

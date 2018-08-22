@@ -29,7 +29,7 @@ import tensorflow as tf
 import pytest
 
 from psiz import simulate
-from psiz.trials import UnjudgedTrials
+from psiz.trials import Docket
 from psiz.models import Exponential
 
 
@@ -57,7 +57,7 @@ def ground_truth():
 
 
 @pytest.fixture(scope="module")
-def unjudged_trials():
+def docket_0():
     """Return a set of unjudged trials."""
     stimulus_set = np.array((
         (0, 1, 2, 7, 3),
@@ -71,14 +71,14 @@ def unjudged_trials():
     n_selected = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    unjudged_trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
-    return unjudged_trials
+    docket = Docket(stimulus_set, n_selected=n_selected)
+    return docket
 
 
-def test_simulate(ground_truth, unjudged_trials):
+def test_simulate(ground_truth, docket_0):
     """Test simulation of agent."""
     agent = simulate.Agent(ground_truth)
-    obs = agent.simulate(unjudged_trials)
+    obs = agent.simulate(docket_0)
     np.testing.assert_array_equal(
-        obs.stimulus_set[:, 0], unjudged_trials.stimulus_set[:, 0]
+        obs.stimulus_set[:, 0], docket_0.stimulus_set[:, 0]
     )

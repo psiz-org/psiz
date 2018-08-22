@@ -41,7 +41,7 @@ import pandas as pd
 from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import NearestNeighbors
 
-from psiz.trials import UnjudgedTrials, stack
+from psiz.trials import Docket, stack
 from psiz.simulate import Agent
 
 
@@ -76,7 +76,7 @@ class TrialGenerator(object):
             n_stimuli
 
         Returns:
-            An UnjudgedTrials object.
+            A Docket object.
 
         """
         pass
@@ -108,7 +108,7 @@ class RandomGenerator(TrialGenerator):
                 must make ranked selections.
 
         Returns:
-            An UnjudgedTrials object.
+            A Docket object.
 
         """
         n_reference = np.int32(n_reference)
@@ -121,7 +121,7 @@ class RandomGenerator(TrialGenerator):
             )
         # Sort indices corresponding to references.
         stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
-        return UnjudgedTrials(
+        return Docket(
             stimulus_set, n_selected=n_selected, is_ranked=is_ranked
         )
 
@@ -134,7 +134,7 @@ class ActiveGenerator(TrialGenerator):
         n_neighbor: A scalar that influences the greedy behavior of the
             active selection procedure.
         config_list: TODO
-        placeholder_trials: TODO
+        placeholder_docket: TODO
 
     Methods:
         generate: TODO
@@ -170,13 +170,13 @@ class ActiveGenerator(TrialGenerator):
             })
         self.config_list = config_list
 
-        self.placeholder_trials = self._placeholder_trials(
+        self.placeholder_docket = self._placeholder_docket(
             config_list, n_neighbor)
 
     def generate(
             self, n_trial, embedding, samples, group_id=None, n_query=3,
             verbose=0):
-        """Return generated trials based on provided arguments.
+        """Return a docket of trials based on provided arguments.
 
         Trials are selected in order to maximize expected information
         gain given a specific group. Expected information gain is
@@ -198,8 +198,8 @@ class ActiveGenerator(TrialGenerator):
                 integers display an increasing amount of information.
 
         Returns:
-            top_trials: An UnjudgedTrials object.
-            top_ig: A numpy.ndarray containing the expected
+            best_docket: A Docket object.
+            best_ig: A numpy.ndarray containing the expected
                 information gain for each trial.
                 shape = (n_trial,)
 
@@ -219,11 +219,11 @@ class ActiveGenerator(TrialGenerator):
         query_idx = np.argsort(-h)
         query_idx = query_idx[0:n_query]
 
-        (top_trials, top_ig) = self._determine_references(
-            embedding, samples, self.placeholder_trials, query_idx,
+        (best_docket, best_ig) = self._determine_references(
+            embedding, samples, self.placeholder_docket, query_idx,
             n_trial, group_id
         )
-        return (top_trials, top_ig)
+        return (best_docket, best_ig)
 
     def update_samples(self, embedding, obs, trs, samples):
         """Update posterior samples."""
@@ -293,7 +293,7 @@ class ActiveGenerator(TrialGenerator):
         score = np.sum(kl_div, axis=1)
         return score
 
-    def _placeholder_trials(self, config_list, n_neighbor):
+    def _placeholder_docket(self, config_list, n_neighbor):
         """Return placeholder trials.
 
         These trials use dummy indices so that the stimulus set can
@@ -306,27 +306,27 @@ class ActiveGenerator(TrialGenerator):
             combos[n_ref] = stimulus_set_combos(n_neighbor, n_ref)
 
         # Fill in candidate trials.
-        placeholder_trials = None
+        placeholder_docket = None
         for i_config in config_list.itertuples():
             stimulus_set = combos[i_config.n_reference]
             n_candidate = stimulus_set.shape[0]
             n_selected = i_config.n_selected * np.ones(
                 n_candidate, dtype=np.int32)
             is_ranked = np.full(n_candidate, i_config.is_ranked, dtype=bool)
-            if placeholder_trials is None:
-                placeholder_trials = UnjudgedTrials(
+            if placeholder_docket is None:
+                placeholder_docket = Docket(
                     stimulus_set, n_selected=n_selected, is_ranked=is_ranked)
             else:
-                placeholder_trials = stack((
-                    placeholder_trials,
-                    UnjudgedTrials(
+                placeholder_docket = stack((
+                    placeholder_docket,
+                    Docket(
                         stimulus_set, n_selected=n_selected,
                         is_ranked=is_ranked)
                 ))
-        return placeholder_trials
+        return placeholder_docket
 
     def _determine_references(
-            self, embedding, samples, placeholder_trials, query_idx, n_trial,
+            self, embedding, samples, placeholder_docket, query_idx, n_trial,
             group_id):
         n_query = query_idx.shape[0]
 
@@ -346,9 +346,9 @@ class ActiveGenerator(TrialGenerator):
         ).fit(z_median)
         (_, nn_idx) = nbrs.kneighbors(z_median[query_idx])
 
-        top_trials = None
-        top_ig = None
-        placeholder_stimulus_set = copy.copy(placeholder_trials.stimulus_set)
+        best_docket = None
+        best_ig = None
+        placeholder_stimulus_set = copy.copy(placeholder_docket.stimulus_set)
         # TODO MAYBE parallelize this for loop.
         for i_query in range(n_query):
             # Substitute actual indices in candidate trials. The addition and
@@ -356,33 +356,33 @@ class ActiveGenerator(TrialGenerator):
             # in 'stimulus_set'.
             r = nn_idx[i_query] + 1
             r = np.hstack((0, r))
-            placeholder_trials.stimulus_set = r[placeholder_stimulus_set + 1]
-            placeholder_trials.stimulus_set = (
-                placeholder_trials.stimulus_set - 1
+            placeholder_docket.stimulus_set = r[placeholder_stimulus_set + 1]
+            placeholder_docket.stimulus_set = (
+                placeholder_docket.stimulus_set - 1
             )
 
             ig = self._information_gain(
-                embedding, samples, placeholder_trials, group_id=group_id)
+                embedding, samples, placeholder_docket, group_id=group_id)
             top_indices = np.argsort(-ig)
             # Grab the top N trials as specified by 'n_trial_per_query'.
-            top_candidate = placeholder_trials.subset(
+            top_candidate = placeholder_docket.subset(
                 top_indices[0:n_trial_per_query[i_query]]
             )
-            curr_top_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
-            if top_ig is None:
-                top_ig = curr_top_ig
+            curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
+            if best_ig is None:
+                best_ig = curr_best_ig
             else:
-                top_ig = np.hstack((top_ig, curr_top_ig))
+                best_ig = np.hstack((best_ig, curr_best_ig))
 
-            if top_trials is None:
-                top_trials = top_candidate
+            if best_docket is None:
+                best_docket = top_candidate
             else:
-                top_trials = stack((top_trials, top_candidate))
-        return (top_trials, top_ig)
+                best_docket = stack((best_docket, top_candidate))
+        return (best_docket, best_ig)
 
     def _information_gain(
-            self, embedding, samples, candidate_trials, group_id=None):
-        """Return expected information gain of candidate trial(s).
+            self, embedding, samples, docket, group_id=None):
+        """Return expected information gain of trial(s) in docket.
 
         Information gain is determined by computing the mutual
         mutual information between the candidate trial(s) and the
@@ -392,7 +392,7 @@ class ActiveGenerator(TrialGenerator):
             embedding: A PsychologicalEmbedding object.
             samples: Dictionary of sampled parameters.
                 'z': shape = (n_stimuli, n_dim, n_sample)
-            candidate_trials: An UnjudgedTrials object.
+            docket: A Docket object.
             group_id (optional): A scalar or an array with
                 shape = (n_trial,).
 
@@ -408,7 +408,7 @@ class ActiveGenerator(TrialGenerator):
         z_samples = samples['z']
         # Note: prob_all has shape = (n_trial, n_outcome, n_sample)
         prob_all = embedding.outcome_probability(
-            candidate_trials, group_id=group_id, z=z_samples)
+            docket, group_id=group_id, z=z_samples)
 
         # First term of mutual information.
         # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c)

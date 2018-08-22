@@ -26,7 +26,6 @@ import pytest
 import numpy as np
 
 from psiz import utils
-from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential
 
 

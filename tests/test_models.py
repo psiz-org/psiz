@@ -29,7 +29,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials import UnjudgedTrials
+from psiz.trials import Docket
 from psiz.models import Exponential, HeavyTailed, StudentsT
 
 
@@ -89,8 +89,8 @@ def ground_truth_deterministic():
 
 
 @pytest.fixture(scope="module")
-def unjudged_trials():
-    """Return a set of unjudged trials."""
+def docket_0():
+    """Return a docket of unjudged trials."""
     stimulus_set = np.array((
         (0, 1, 2, 7, 3),
         (3, 4, 5, 9, 1),
@@ -103,8 +103,8 @@ def unjudged_trials():
     n_selected = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    unjudged_trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
-    return unjudged_trials
+    docket = Docket(stimulus_set, n_selected=n_selected)
+    return docket
 
 
 def test_private_exponential_similarity():
@@ -314,19 +314,19 @@ def test_freeze():
         model.freeze({'phi': {'phi_1': np.ones((n_group, n_dim-1))}})
 
 
-def test_probability(ground_truth, unjudged_trials):
+def test_probability(ground_truth, docket_0):
     """Test probability method."""
-    prob = ground_truth.outcome_probability(unjudged_trials)
+    prob = ground_truth.outcome_probability(docket_0)
     prob_actual = np.sum(prob, axis=1)
-    prob_desired = np.ones((unjudged_trials.n_trial))
+    prob_desired = np.ones((docket_0.n_trial))
     np.testing.assert_allclose(prob_actual, prob_desired)
 
 
-def test_tf_probability(ground_truth, unjudged_trials):
+def test_tf_probability(ground_truth, docket_0):
     """Test _tf_outcome_probability method."""
-    prob_desired = np.ones((unjudged_trials.n_trial))
+    prob_desired = np.ones((docket_0.n_trial))
 
-    prob_1 = ground_truth.outcome_probability(unjudged_trials)
+    prob_1 = ground_truth.outcome_probability(docket_0)
     prob_actual_1 = np.sum(prob_1, axis=1)
 
     z_tf = ground_truth.z['value']
@@ -339,7 +339,7 @@ def test_tf_probability(ground_truth, unjudged_trials):
         tf_theta[param_name] = tf.constant(
             ground_truth.theta[param_name]['value'], dtype=tf.float32)
     prob_2_tf = ground_truth._tf_outcome_probability(
-        unjudged_trials, z_tf, tf_theta)
+        docket_0, z_tf, tf_theta)
 
     sess = tf.Session()
     with sess.as_default():
@@ -351,18 +351,18 @@ def test_tf_probability(ground_truth, unjudged_trials):
 
 
 def test_inflate_points_single_sample(
-        ground_truth_deterministic, unjudged_trials):
+        ground_truth_deterministic, docket_0):
     """Test inflation with z with 1 sample."""
     n_reference = 4
     n_selected = 2
     trial_locs = np.logical_and(
-        unjudged_trials.n_reference == n_reference,
-        unjudged_trials.n_selected == n_selected
+        docket_0.n_reference == n_reference,
+        docket_0.n_selected == n_selected
     )
 
     z = ground_truth_deterministic.z['value']
     (z_q, z_r) = ground_truth_deterministic._inflate_points(
-        unjudged_trials.stimulus_set[trial_locs], n_reference,
+        docket_0.stimulus_set[trial_locs], n_reference,
         np.expand_dims(z, axis=2)
     )
 
@@ -421,9 +421,9 @@ def test_inflate_points_multiple_samples(ground_truth_deterministic):
     np.testing.assert_allclose(z_r, z_r_desired, rtol=1e-6)
 
 
-def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
+def test_tf_ranked_sequence_probability(ground_truth, docket_0):
     """Test tf_ranked_sequence_probability."""
-    trials = unjudged_trials
+    trials = docket_0
     n_reference = 4
     n_selected = 2
     trial_locs = np.logical_and(
@@ -434,7 +434,7 @@ def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
     z = ground_truth.z['value']
 
     attention = ground_truth.phi['phi_1']['value'][0, :]
-    attention = np.matlib.repmat(attention, unjudged_trials.n_trial, 1)
+    attention = np.matlib.repmat(attention, docket_0.n_trial, 1)
 
     (z_q, z_r) = ground_truth._inflate_points(
         trials.stimulus_set[trial_locs], n_reference,

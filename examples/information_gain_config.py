@@ -27,7 +27,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from psiz.trials import UnjudgedTrials, stack
+from psiz.trials import Docket, stack
 from psiz.models import Exponential
 from psiz.generator import ActiveGenerator
 
@@ -48,25 +48,25 @@ def main():
 
     n_selected = 1
     n_candidate = stimulus_set_2.shape[0]
-    candidate_trial_2c1 = UnjudgedTrials(
+    candidate_docket_2c1 = Docket(
         stimulus_set_2, n_selected * np.ones(n_candidate, dtype=np.int32)
     )
 
     n_selected = 1
     n_candidate = stimulus_set_4.shape[0]
-    candidate_trial_4c1 = UnjudgedTrials(
+    candidate_docket_4c1 = Docket(
         stimulus_set_4, n_selected * np.ones(n_candidate, dtype=np.int32)
     )
 
     n_selected = 2
     n_candidate = stimulus_set_4.shape[0]
-    candidate_trial_4c2 = UnjudgedTrials(
+    candidate_docket_4c2 = Docket(
         stimulus_set_4, n_selected * np.ones(n_candidate, dtype=np.int32)
     )
 
-    candidate_trials = stack((
-        candidate_trial_2c1,
-        candidate_trial_4c1, candidate_trial_4c2
+    candidate_docket = stack((
+        candidate_docket_2c1,
+        candidate_docket_4c1, candidate_docket_4c2
     ))
 
     origin_cov = np.array([
@@ -85,7 +85,7 @@ def main():
     scenario_rel_ig = []
     for i_scenario in range(n_scenario):
         (curr_z_samp, curr_stim_set, curr_ig, curr_v) = process_scenario(
-            model, origin_cov[i_scenario], n_sample, candidate_trials)
+            model, origin_cov[i_scenario], n_sample, candidate_docket)
         scenario_trials.append(curr_z_samp)
         scenario_stim_set.append(curr_stim_set)
         scenario_ig.append(curr_ig)
@@ -111,7 +111,7 @@ def main():
     plt.show()
 
 
-def process_scenario(model, origin_cov, n_sample, candidate_trials):
+def process_scenario(model, origin_cov, n_sample, candidate_docket):
     """Evaluate scenario."""
     z_true = model.z['value']
     (n_stimuli, n_dim) = z_true.shape
@@ -121,7 +121,7 @@ def process_scenario(model, origin_cov, n_sample, candidate_trials):
 
     gen = ActiveGenerator(n_stimuli)
     # Compute expected information gain.
-    ig = gen._information_gain(model, samples, candidate_trials)
+    ig = gen._information_gain(model, samples, candidate_docket)
     # Relative information gain.
     rel_ig = copy.copy(ig)
     rel_ig = rel_ig - np.min(rel_ig)
@@ -131,25 +131,25 @@ def process_scenario(model, origin_cov, n_sample, candidate_trials):
     sorted_indices = np.argsort(-ig)
     ig = ig[sorted_indices]
     rel_ig = rel_ig[sorted_indices]
-    candidate_trials = candidate_trials.subset(sorted_indices)
+    candidate_docket = candidate_docket.subset(sorted_indices)
 
     # Select best of each trial configuration.
     n_config = 3
     for i_config in range(n_config):
         keep_locs = np.not_equal(
-            candidate_trials.config_idx, candidate_trials.config_idx[i_config])
+            candidate_docket.config_idx, candidate_docket.config_idx[i_config])
         keep_locs[i_config] = True
         ig = ig[keep_locs]
         rel_ig = rel_ig[keep_locs]
-        candidate_trials = candidate_trials.subset(keep_locs)
+        candidate_docket = candidate_docket.subset(keep_locs)
     # Select best three.
     # sorted_indices = np.argsort(-ig)
     # ig = ig[sorted_indices]
-    # trials_sub = candidate_trials.subset(sorted_indices)
+    # trials_sub = candidate_docket.subset(sorted_indices)
     # trials_sub = trials_sub.subset(np.arange(0, 4, dtype=np.int32))
     # ig = ig[0:4]
     # rel_ig = rel_ig[0:4]
-    return (z_samp, candidate_trials, ig, rel_ig)
+    return (z_samp, candidate_docket, ig, rel_ig)
 
 
 def scenario_subplot(

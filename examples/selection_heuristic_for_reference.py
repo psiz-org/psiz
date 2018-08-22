@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import NearestNeighbors
 
-from psiz.trials import UnjudgedTrials
+from psiz.trials import Docket
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
@@ -88,13 +88,13 @@ def main():
         ).fit(mu)
         (_, nn_idx) = nbrs.kneighbors(mu)
 
-        candidate_trial = UnjudgedTrials(
+        candidate_docket = Docket(
             stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
         )
 
         # Compute expected information gain.
         gen = ActiveGenerator(n_stimuli)
-        ig = gen._information_gain(model, samples, candidate_trial)
+        ig = gen._information_gain(model, samples, candidate_docket)
 
         ig = ig - np.min(ig)
         ig = ig / np.max(ig)
@@ -103,9 +103,9 @@ def main():
         best_ig = np.empty((n_stimuli))
         # nn_sum = np.empty((n_stimuli))
         for i_stim in range(n_stimuli):
-            locs = np.equal(candidate_trial.stimulus_set[:, 0], i_stim)
+            locs = np.equal(candidate_docket.stimulus_set[:, 0], i_stim)
             curr_ig = ig[locs]
-            # curr_stim_set = candidate_trial.stimulus_set[locs]
+            # curr_stim_set = candidate_docket.stimulus_set[locs]
 
             sorted_idx = np.argsort(-curr_ig)
 
@@ -116,7 +116,7 @@ def main():
             # nn_sum[i_stim] = check_neighbor_distance(best_stimulus_set, nn_idx)
 
         sorted_idx = np.argsort(-ig)
-        sorted_stim_set = candidate_trial.stimulus_set[sorted_idx]
+        sorted_stim_set = candidate_docket.stimulus_set[sorted_idx]
         curr_ig_2 = ig[sorted_idx]
         curr_ig_2 = curr_ig_2[0]
         nn_sum = [
@@ -126,9 +126,9 @@ def main():
             check_neighbor_distance(sorted_stim_set[4], nn_idx),
             check_neighbor_distance(sorted_stim_set[5], nn_idx)
         ]
-        # locs = np.equal(candidate_trial.stimulus_set[:, 0], best_stim_set[0])
+        # locs = np.equal(candidate_docket.stimulus_set[:, 0], best_stim_set[0])
         # curr_ig_2 = ig[locs]
-        # curr_stim_set = candidate_trial.stimulus_set[locs]
+        # curr_stim_set = candidate_docket.stimulus_set[locs]
         # n_candidate_trial = curr_stim_set.shape[0]
         # nn_sum = np.empty((n_candidate_trial))
         # for i_trial in range(n_candidate_trial):

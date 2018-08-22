@@ -29,7 +29,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from psiz.trials import UnjudgedTrials, stack
+from psiz.trials import Docket, stack
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator

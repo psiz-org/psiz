@@ -26,7 +26,7 @@ import pytest
 
 from psiz import generator
 from psiz.models import Exponential
-from psiz.trials import stack, UnjudgedTrials
+from psiz.trials import stack, Docket
 from psiz.simulate import Agent
 
 
@@ -111,37 +111,37 @@ def test_information_gain(ground_truth):
 
     n_stimuli = 10
     gen = generator.ActiveGenerator(n_stimuli)
-    candidate_trial_0 = UnjudgedTrials(
+    docket_0 = Docket(
         np.array([[0, 1, 2]], dtype=np.int32),
         np.array([1], dtype=np.int32)
         )
-    candidate_trial_1 = UnjudgedTrials(
+    docket_1 = Docket(
         np.array([[3, 1, 2]], dtype=np.int32),
         np.array([1], dtype=np.int32)
         )
     # Compute expected informatin gain.
-    ig_0 = gen._information_gain(ground_truth, samples, candidate_trial_0)
-    ig_1 = gen._information_gain(ground_truth, samples, candidate_trial_1)
+    ig_0 = gen._information_gain(ground_truth, samples, docket_0)
+    ig_1 = gen._information_gain(ground_truth, samples, docket_1)
 
     assert ig_0 > ig_1
 
     # Check case for multiple candidate trials.
-    candidate_trial_01 = UnjudgedTrials(
+    docket_01 = Docket(
         np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
         np.array([1, 1], dtype=np.int32)
         )
-    ig_01 = gen._information_gain(ground_truth, samples, candidate_trial_01)
+    ig_01 = gen._information_gain(ground_truth, samples, docket_01)
     assert ig_01[0] == ig_0
     assert ig_01[1] == ig_1
 
     # Check case for multiple candidate trials with different configurations.
-    candidate_trial_23 = UnjudgedTrials(
+    docket_23 = Docket(
         np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
         np.array([2, 2], dtype=np.int32)
         )
-    ig_23 = gen._information_gain(ground_truth, samples, candidate_trial_23)
+    ig_23 = gen._information_gain(ground_truth, samples, docket_23)
 
-    candidate_trial_0123 = UnjudgedTrials(
+    docket_0123 = Docket(
         np.array([
             [0, 1, 2, -1, -1],
             [3, 1, 2, -1, -1],
@@ -151,7 +151,7 @@ def test_information_gain(ground_truth):
         np.array([1, 1, 2, 2], dtype=np.int32)
         )
     ig_0123 = gen._information_gain(
-        ground_truth, samples, candidate_trial_0123)
+        ground_truth, samples, docket_0123)
     assert ig_0123[0] == ig_0
     assert ig_0123[1] == ig_1
     assert ig_0123[2] == ig_23[0]

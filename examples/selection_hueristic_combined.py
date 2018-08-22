@@ -44,7 +44,7 @@ import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import NearestNeighbors
 
-from psiz.trials import UnjudgedTrials
+from psiz.trials import Docket
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
@@ -67,7 +67,7 @@ def main():
     eligable_list = np.arange(n_stimuli, dtype=np.int32)
     stimulus_set = candidate_list(eligable_list, n_reference)
     n_candidate = stimulus_set.shape[0]
-    candidate_trial = UnjudgedTrials(
+    candidate_docket = Docket(
         stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
     )
 
@@ -86,7 +86,7 @@ def main():
         gen = ActiveGenerator(n_stimuli, config_list=config_list)
 
         # Exhaustive search.
-        ig = gen._information_gain(model, samples, candidate_trial)
+        ig = gen._information_gain(model, samples, candidate_docket)
         min_ig = np.min(ig)
         rel_ig = ig - min_ig
         max_rel_ig = np.max(rel_ig)
@@ -94,7 +94,7 @@ def main():
         # Find best trial for each stimulus when serving as query.
         exha_rel_ig_stim = np.empty((n_stimuli))
         for i_stim in range(n_stimuli):
-            locs = np.equal(candidate_trial.stimulus_set[:, 0], i_stim)
+            locs = np.equal(candidate_docket.stimulus_set[:, 0], i_stim)
             curr_rel_ig = rel_ig[locs]
             sorted_idx = np.argsort(-curr_rel_ig)
             sorted_rel_ig = curr_rel_ig[sorted_idx]

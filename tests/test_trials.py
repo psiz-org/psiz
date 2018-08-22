@@ -30,7 +30,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from psiz.trials import UnjudgedTrials, JudgedTrials, possible_outcomes, stack
+from psiz.trials import Docket, JudgedTrials, possible_outcomes, stack
 from psiz.generator import RandomGenerator
 from psiz.simulate import Agent
 from psiz.models import Exponential
@@ -59,7 +59,7 @@ def setup_tasks_0():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    tasks = UnjudgedTrials(stimulus_set)
+    tasks = Docket(stimulus_set)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_selected': n_selected,
@@ -92,7 +92,7 @@ def setup_tasks_1():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+    tasks = Docket(stimulus_set, n_selected=n_selected)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_selected': n_selected,
@@ -218,17 +218,17 @@ class TestSimilarityTrials:
         # Mismatch in number of trials
         n_selected = np.array((1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+            trials = Docket(stimulus_set, n_selected=n_selected)
 
         # Below support.
         n_selected = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
-            trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+            trials = Docket(stimulus_set, n_selected=n_selected)
     
         # Above support.
         n_selected = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+            trials = Docket(stimulus_set, n_selected=n_selected)
 
     def test_invalid_is_ranked(self):
         """Test handling of invalid 'is_ranked' argument."""
@@ -241,15 +241,15 @@ class TestSimilarityTrials:
         # Mismatch in number of trials
         is_ranked = np.array((True, True, True))
         with pytest.raises(Exception) as e_info:
-            trials = UnjudgedTrials(stimulus_set, is_ranked=is_ranked)
+            trials = Docket(stimulus_set, is_ranked=is_ranked)
 
         is_ranked = np.array((True, False, True, False))
         with pytest.raises(Exception) as e_info:
-            trials = UnjudgedTrials(stimulus_set, is_ranked=is_ranked)
+            trials = Docket(stimulus_set, is_ranked=is_ranked)
 
 
-class TestUnjudgedTrials:
-    """Test class UnjudgedTrials."""
+class TestDocket:
+    """Test class Docket."""
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -262,7 +262,7 @@ class TestUnjudgedTrials:
 
         # Create original trials.
         n_selected = np.array((1, 1, 1, 1, 2))
-        trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        trials = Docket(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -282,14 +282,14 @@ class TestUnjudgedTrials:
 
         # Create first set of original trials.
         n_selected = np.array((1, 1, 1, 1, 1))
-        trials_0 = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        trials_0 = Docket(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
         n_selected = np.array((2, 2, 2, 2, 2))
-        trials_1 = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        trials_1 = Docket(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
@@ -632,7 +632,7 @@ class TestPossibleOutcomes:
         """Test outcomes 2 choose 1 ranked trial."""
         stimulus_set = np.array(((0, 1, 2), (9, 12, 7)))
         n_selected = 1 * np.ones((2))
-        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        tasks = Docket(stimulus_set, n_selected=n_selected)
 
         po = possible_outcomes(tasks.config_list.iloc[0])
 
@@ -643,7 +643,7 @@ class TestPossibleOutcomes:
         """Test outcomes 3 choose 2 ranked trial."""
         stimulus_set = np.array(((0, 1, 2, 3), (33, 9, 12, 7)))
         n_selected = 2 * np.ones((2))
-        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        tasks = Docket(stimulus_set, n_selected=n_selected)
 
         po = possible_outcomes(tasks.config_list.iloc[0])
 
@@ -656,7 +656,7 @@ class TestPossibleOutcomes:
         """Test outcomes 4 choose 2 ranked trial."""
         stimulus_set = np.array(((0, 1, 2, 3, 4), (45, 33, 9, 12, 7)))
         n_selected = 2 * np.ones((2))
-        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        tasks = Docket(stimulus_set, n_selected=n_selected)
 
         po = possible_outcomes(tasks.config_list.iloc[0])
 
@@ -673,7 +673,7 @@ class TestPossibleOutcomes:
             (0, 1, 2, 3, 4, 5, 6, 7, 8),
             (45, 33, 9, 12, 7, 2, 5, 4, 3)))
         n_selected = 1 * np.ones((2))
-        tasks = UnjudgedTrials(stimulus_set, n_selected=n_selected)
+        tasks = Docket(stimulus_set, n_selected=n_selected)
 
         po = possible_outcomes(tasks.config_list.iloc[0])
 

@@ -18,7 +18,7 @@
 
 Classes:
     SimilarityTrials: Abstract class for similarity judgment trials.
-    UnjudgedTrials: Unjudged similarity judgment trials.
+    Docket: Unjudged similarity judgment trials.
     JudgedTrials: Similarity judgment trials that have been judged and
         will serve as observed data during inference.
 
@@ -270,10 +270,10 @@ class SimilarityTrials(object):
         return outcome_tensor
 
 
-class UnjudgedTrials(SimilarityTrials):
+class Docket(SimilarityTrials):
     """Object that encapsulates unjudged similarity trials.
 
-    The attributes and behavior of UnjudgedTrials is largely inherited
+    The attributes and behavior of Docket is largely inherited
     from SimilarityTrials.
 
     Attributes:
@@ -313,16 +313,16 @@ class UnjudgedTrials(SimilarityTrials):
             self.n_reference, self.n_selected, self.is_ranked)
 
     def subset(self, index):
-        """Return subset of trials as new UnjudgedTrials object.
+        """Return subset of trials as a new Docket object.
 
         Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
-            A new UnjudgedTrials object.
+            A new Docket object.
 
         """
-        return UnjudgedTrials(self.stimulus_set[index, :],
+        return Docket(self.stimulus_set[index, :],
                               self.n_selected[index], self.is_ranked[index])
 
     def _set_configuration_data(self, n_reference, n_selected, is_ranked):
@@ -682,6 +682,6 @@ def stack(trials_list):
             trials_stacked = JudgedTrials(
                 stimulus_set, n_selected, is_ranked, group_id)
         else:
-            trials_stacked = UnjudgedTrials(
+            trials_stacked = Docket(
                 stimulus_set, n_selected, is_ranked)
         return trials_stacked

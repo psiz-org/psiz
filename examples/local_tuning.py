@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 
 import tensorflow as tf
 
-from psiz.trials import UnjudgedTrials, stack
+from psiz.trials import Docket, stack
 from psiz.models import Exponential, HeavyTailed, StudentsT
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator

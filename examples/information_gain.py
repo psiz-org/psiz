@@ -30,7 +30,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from psiz.trials import UnjudgedTrials
+from psiz.trials import Docket
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
@@ -59,12 +59,12 @@ def main():
     z_samp = np.reshape(z_samp, (n_sample * n_stimuli, n_dim))
 
     gen = ActiveGenerator(n_stimuli)
-    candidate_trial = UnjudgedTrials(
+    candidate_docket = Docket(
         stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
     )
 
     # Compute expected information gain.
-    ig = gen._information_gain(model, samples, candidate_trial)
+    ig = gen._information_gain(model, samples, candidate_docket)
 
     # Sort
     sorted_indices = np.argsort(-ig)

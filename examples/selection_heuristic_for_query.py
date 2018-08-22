@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import NearestNeighbors
 
-from psiz.trials import UnjudgedTrials
+from psiz.trials import Docket
 from psiz.models import Exponential
 from psiz.generator import ActiveGenerator, stimulus_entropy
 from psiz.utils import similarity_matrix
@@ -46,7 +46,7 @@ def main():
     eligable_list = np.arange(n_stimuli, dtype=np.int32)
     stimulus_set = candidate_list(eligable_list, n_reference)
     n_candidate = stimulus_set.shape[0]
-    candidate_trial = UnjudgedTrials(
+    candidate_docket = Docket(
         stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
     )
 
@@ -65,14 +65,14 @@ def main():
 
         # Compute expected information gain.
         gen = ActiveGenerator(n_stimuli)
-        ig = gen._information_gain(model, samples, candidate_trial)
+        ig = gen._information_gain(model, samples, candidate_docket)
         rel_ig = ig - np.min(ig)
         rel_ig = rel_ig / np.max(rel_ig)
 
         # Find best trial for each stimulus when serving as query.
         best_ig = np.empty((n_stimuli))
         for i_stim in range(n_stimuli):
-            locs = np.equal(candidate_trial.stimulus_set[:, 0], i_stim)
+            locs = np.equal(candidate_docket.stimulus_set[:, 0], i_stim)
             curr_ig = rel_ig[locs]
             sorted_idx = np.argsort(-curr_ig)
             sorted_ig = curr_ig[sorted_idx]

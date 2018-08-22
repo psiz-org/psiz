@@ -198,8 +198,8 @@ class ActiveGenerator(TrialGenerator):
                 integers display an increasing amount of information.
 
         Returns:
-            best_trials: An UnjudgedTrials object.
-            info_gain: A numpy.ndarray containing the expected
+            top_trials: An UnjudgedTrials object.
+            top_ig: A numpy.ndarray containing the expected
                 information gain for each trial.
                 shape = (n_trial,)
 
@@ -288,7 +288,7 @@ class ActiveGenerator(TrialGenerator):
         # Unpack.
         z_samp = samples['z']
         z_median = np.median(z_samp, axis=2)
-        (n_stimuli, n_dim, n_sample) = z_samp.shape
+        (n_stimuli, n_dim, _) = z_samp.shape
 
         # Fit multi-variate normal for each stimulus.
         z_samp = np.transpose(z_samp, axes=[2, 0, 1])

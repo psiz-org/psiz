@@ -95,7 +95,6 @@ def main():
 
     fontdict = {
         'fontsize': 4,
-        # 'fontweight': rcParams[‘axes.titleweight’],
         'verticalalignment': 'baseline',
         'horizontalalignment': 'center'
     }

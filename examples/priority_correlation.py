@@ -23,6 +23,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
+from sklearn.neighbors import NearestNeighbors
 
 from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential
@@ -32,14 +33,20 @@ from psiz.utils import similarity_matrix, matrix_correlation
 
 
 def main():
-    """Sample from posterior of pre-defined embedding model."""
+    """Examine validity of heuristics used during active selection."""
     # Settings.
     np.random.seed(123)
     n_sample = 2000
-    n_reference = 3
+    n_reference = 2
     n_selected = 1
-    n_stimuli = 20
-    n_scenario = 10
+    n_dim = 2
+    n_stimuli = 25
+    n_scenario = 100
+    n_plot = 10
+
+    cmap = matplotlib.cm.get_cmap('jet')
+    norm = matplotlib.colors.Normalize(vmin=0., vmax=n_stimuli)
+    color_array = cmap(norm(range(n_stimuli)))
 
     eligable_list = np.arange(n_stimuli, dtype=np.int32)
     stimulus_set = candidate_list(eligable_list, n_reference)
@@ -47,9 +54,14 @@ def main():
 
     rel_entropy_all = np.empty((0))
     best_ig_all = np.empty((0))
+    nn_sum_all = np.empty((0))
+    ig_all_2 = np.empty((0))
 
-    for _ in range(n_scenario):
-        model = ground_truth()
+    fig = plt.figure(figsize=(10, 3), dpi=200)
+    plot_idx = 1
+    for i_scenario in range(n_scenario):
+        print("scenario {0}".format(i_scenario))
+        model = ground_truth(n_dim, n_stimuli)
         z_true = model.z['value']
         (n_stimuli, n_dim) = z_true.shape
 
@@ -67,105 +79,137 @@ def main():
             mu[i_stim, :] = gmm.means_[0]
             sigma[i_stim, :, :] = gmm.covariances_[0]
             entropy[i_stim] = normal_entropy(gmm.covariances_[0])
-
         rel_entropy = entropy - np.min(entropy)
         rel_entropy = rel_entropy / np.max(rel_entropy)
 
-        z_samp = np.reshape(z_samp, (n_sample * n_stimuli, n_dim))
+        rho = 2.
+        nbrs = NearestNeighbors(
+            n_neighbors=n_stimuli, algorithm='auto', p=rho
+        ).fit(mu)
+        (_, nn_idx) = nbrs.kneighbors(mu)
 
-        gen = ActiveGenerator(n_stimuli)
         candidate_trial = UnjudgedTrials(
             stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
         )
 
         # Compute expected information gain.
+        gen = ActiveGenerator(n_stimuli)
         ig = gen._information_gain(model, samples, candidate_trial)
-        # score = gen._query_priority(samples)
 
         ig = ig - np.min(ig)
         ig = ig / np.max(ig)
 
         # Find best trial for each stimulus when serving as query.
         best_ig = np.empty((n_stimuli))
+        # nn_sum = np.empty((n_stimuli))
         for i_stim in range(n_stimuli):
             locs = np.equal(candidate_trial.stimulus_set[:, 0], i_stim)
-            sorted_ig = np.sort(-ig[locs])
-            best_ig[i_stim] = -1 * sorted_ig[0]
+            curr_ig = ig[locs]
+            # curr_stim_set = candidate_trial.stimulus_set[locs]
+
+            sorted_idx = np.argsort(-curr_ig)
+
+            sorted_ig = curr_ig[sorted_idx]
+            best_ig[i_stim] = sorted_ig[0]
+            # sorted_stimulus_set = curr_stim_set[sorted_idx]
+            # best_stimulus_set = sorted_stimulus_set[0]
+            # nn_sum[i_stim] = check_neighbor_distance(best_stimulus_set, nn_idx)
+
+        sorted_idx = np.argsort(-ig)
+        sorted_stim_set = candidate_trial.stimulus_set[sorted_idx]
+        curr_ig_2 = ig[sorted_idx]
+        curr_ig_2 = curr_ig_2[0]
+        nn_sum = [
+            check_neighbor_distance(sorted_stim_set[0], nn_idx),
+            check_neighbor_distance(sorted_stim_set[1], nn_idx),
+            check_neighbor_distance(sorted_stim_set[3], nn_idx),
+            check_neighbor_distance(sorted_stim_set[4], nn_idx),
+            check_neighbor_distance(sorted_stim_set[5], nn_idx)
+        ]
+        # locs = np.equal(candidate_trial.stimulus_set[:, 0], best_stim_set[0])
+        # curr_ig_2 = ig[locs]
+        # curr_stim_set = candidate_trial.stimulus_set[locs]
+        # n_candidate_trial = curr_stim_set.shape[0]
+        # nn_sum = np.empty((n_candidate_trial))
+        # for i_trial in range(n_candidate_trial):
+        #     nn_sum[i_trial] = check_neighbor_distance(
+        #         curr_stim_set[i_trial], nn_idx)
 
         rel_entropy_all = np.concatenate((rel_entropy_all, rel_entropy))
         best_ig_all = np.concatenate((best_ig_all, best_ig))
+        nn_sum_all = np.append(nn_sum_all, nn_sum)
+        ig_all_2 = np.append(ig_all_2, curr_ig_2)
 
-    plt.scatter(rel_entropy_all, best_ig_all)
-    plt.xlabel('Relative Query Entropy')
-    plt.ylabel('Relative IG')
+        if i_scenario < n_plot:
+            ax = fig.add_subplot(3, n_plot, plot_idx)
+            # z_samp = np.transpose(z_samp, axes=[2, 0, 1])
+            z_samp = np.reshape(z_samp, (n_sample * n_stimuli, n_dim))
+
+            limits = {
+                'x': [np.min(z_samp[:, 0]), np.max(z_samp[:, 0])],
+                'y': [np.min(z_samp[:, 1]), np.max(z_samp[:, 1])]
+            }
+            color_array_samp = np.matlib.repmat(color_array, n_sample, 1)
+            ax.scatter(
+                z_samp[:, 0], z_samp[:, 1],
+                s=5, c=color_array_samp, alpha=.01, edgecolors='none')
+            ax.set_aspect('equal')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlim(limits['x'][0], limits['x'][1])
+            ax.set_ylim(limits['y'][0], limits['y'][1])
+
+            ax = fig.add_subplot(3, n_plot, plot_idx + n_plot)
+            candidate_subplot(
+                ax, mu, sorted_stim_set[0], n_selected, color_array, limits)
+
+            ax = fig.add_subplot(3, n_plot, plot_idx + 2 * n_plot)
+            candidate_subplot(
+                ax, mu, sorted_stim_set[1], n_selected, color_array, limits)
+
+            plot_idx = plot_idx + 1
+
     plt.show()
 
-    # # Sort
-    # sorted_indices = np.argsort(-ig)
-    # ig = ig[sorted_indices]
-    # v = copy.copy(ig)
-    # v = v - np.min(v)
-    # v = v / np.max(v)
-    # stimulus_set = stimulus_set[sorted_indices]
+    fig = plt.figure(figsize=(6.5, 2), dpi=200)
+    ax = fig.add_subplot(1, 2, 1)
+    ax.scatter(rel_entropy_all, best_ig_all, s=4, alpha=.25, edgecolors='none')
+    ax.set_xlabel('Rel. Query Entropy')
+    ax.set_ylabel('Rel. Information Gain')
 
-    # # Select the 10 best trials and a 30 trials evenly spaced from best to
-    # # worst.
-    # # intermediate_trials = np.linspace(10, n_candidate-1, 30, dtype=np.int32)
-    # # intermediate_trials = np.linspace(20, n_candidate-1, 20, dtype=np.int32)
-    # display_idx = np.concatenate(
-    #     (
-    #         np.arange(40),
-    #         # intermediate_trials
-    #     ), axis=0
-    # )
+    ax = fig.add_subplot(1, 2, 2)
+    ax.hist(nn_sum_all, bins=n_stimuli, density=True)
+    ax.set_xlabel('Nearest Neighbor Rank of References')
+    ax.set_ylabel('Proportion')
 
-    # # Visualize.
-    # cmap = matplotlib.cm.get_cmap('jet')
-    # norm = matplotlib.colors.Normalize(vmin=0., vmax=model.n_stimuli)
-    # color_array = cmap(norm(range(model.n_stimuli)))
-    # color_array_samp = np.matlib.repmat(color_array, n_sample, 1)
+    plt.tight_layout()
+    plt.show()
 
-    # fig = plt.figure(figsize=(6.5, 2), dpi=200)
+
+def check_neighbor_distance(stimulus_set, nn_idx):
+    """"""
+    curr_nn_idx = nn_idx[stimulus_set[0], 1:]
+    n_ref = np.sum(np.greater(stimulus_set[1:], 0))
+    dmy_idx = np.arange(len(curr_nn_idx))
+    nn_sum = 0
+    for i_ref in range(n_ref):
+        loc = np.equal(curr_nn_idx, stimulus_set[1 + i_ref])
+        nn_sum = nn_sum + dmy_idx[loc]
+    return nn_sum / n_ref
+
+
+def candidate_subplot(
+        ax, z, stimulus_set, n_selected, color_array, limits):
+    """Plot subplots for candidate trials."""
+    locs = np.not_equal(stimulus_set, -1)
+    stimulus_set = stimulus_set[locs]
 
     # fontdict = {
     #     'fontsize': 4,
-    #     # 'fontweight': rcParams[‘axes.titleweight’],
-    #     'verticalalignment': 'baseline',
+    #     'verticalalignment': 'center',
     #     'horizontalalignment': 'center'
     # }
 
-    # ax1 = fig.add_subplot(1, 6, 1)
-    # ax1.scatter(
-    #     z_samp[:, 0], z_samp[:, 1],
-    #     s=5, c=color_array_samp, alpha=.01, edgecolors='none')
-    # ax1.set_title('Posterior')
-    # ax1.set_aspect('equal')
-    # ax1.set_xlim(-.55, .55)
-    # ax1.set_xticks([])
-    # ax1.set_ylim(-.55, .55)
-    # ax1.set_yticks([])
-
-    # idx_list = np.concatenate(
-    #     (
-    #         np.arange(3, 13), np.arange(15, 25), np.arange(27, 37),
-    #         np.arange(39, 49)
-    #     ), axis=0
-    # )
-
-    # n_subplot = 40
-    # for i_subplot in range(n_subplot):
-    #     candidate_subplot(
-    #         fig, idx_list[i_subplot], z_true,
-    #         stimulus_set[display_idx[i_subplot]],
-    #         ig[display_idx[i_subplot]], v[display_idx[i_subplot]],
-    #         color_array, fontdict)
-    # plt.suptitle('Candidate Trials', x=.58)
-    # plt.show()
-
-
-def candidate_subplot(fig, idx, z, stimulus_set, ig, v, color_array, fontdict):
-    """Plot subplot of candidate trial."""
-    ax = fig.add_subplot(4, 12, idx)
     ax.scatter(
         z[stimulus_set[0], 0],
         z[stimulus_set[0], 1],
@@ -175,36 +219,26 @@ def candidate_subplot(fig, idx, z, stimulus_set, ig, v, color_array, fontdict):
         z[stimulus_set[1:], 1],
         s=15, c=color_array[stimulus_set[1:]], marker=r'$r$')
     ax.set_aspect('equal')
-    ax.set_xlim(-.55, .55)
     ax.set_xticks([])
-    ax.set_ylim(-.55, .55)
     ax.set_yticks([])
-    # plt.text(
-    #     .25, .47, "{0:.4f}".format(ig),
-    #     fontdict=fontdict)
-    rect_back = matplotlib.patches.Rectangle(
-        (.55, -.55), .06, 1.1, clip_on=False, color=[.9, .9, .9])
-    ax.add_patch(rect_back)
-    rect_val = matplotlib.patches.Rectangle(
-        (.55, -.55), .06, v * 1.1, clip_on=False, color=[.3, .3, .3])
-    ax.add_patch(rect_val)
+    ax.set_xlim(limits['x'][0], limits['x'][1])
+    ax.set_ylim(limits['y'][0], limits['y'][1])
+
+    # rect_back = matplotlib.patches.Rectangle(
+    #     (.55, -.55), .06, 1.1, clip_on=False, color=[.9, .9, .9])
+    # ax.add_patch(rect_back)
+    # rect_val = matplotlib.patches.Rectangle(
+    #     (.55, -.55), .06, rel_ig * 1.1, clip_on=False, color=[.3, .3, .3])
+    # ax.add_patch(rect_val)
+    # plt.text(-.45, .45, "{0}".format(n_selected), fontdict=fontdict)
 
 
-def ground_truth():
+def ground_truth(n_dim, n_stimuli):
     """Return a ground truth embedding."""
-    # Create embeddingp points arranged on a grid.
-    x, y = np.meshgrid([-.45, -.15, 0, .15, .45], [-.45, -.15, .15, .45])
-    x = np.expand_dims(x.flatten(), axis=1)
-    y = np.expand_dims(y.flatten(), axis=1)
-    z = np.hstack((x, y))
-
-    (n_stimuli, n_dim) = z.shape
-    # Add some Gaussian noise to the embedding points.
+    # Sample embeddingp points from Gaussian.
     mean = np.zeros((n_dim))
-    cov = .1 * np.identity(n_dim)
-    z_noise = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    # z = (.8 * z) + (.2 * z_noise)
-    z = (.7 * z) + (.3 * z_noise)
+    cov = .3 * np.identity(n_dim)
+    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
 
     # Create embedding model.
     n_group = 1
@@ -215,11 +249,16 @@ def ground_truth():
         'theta': {
             'rho': 2,
             'tau': 1,
-            'beta': 10,
+            'beta': 7,
             'gamma': 0
         }
     }
     model.freeze(freeze_options)
+
+    # sim_mat = similarity_matrix(model.similarity, z)
+    # idx_upper = np.triu_indices(n_stimuli, 1)
+    # plt.hist(sim_mat[idx_upper])
+    # plt.show()
     return model
 
 

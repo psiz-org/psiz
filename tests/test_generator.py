@@ -150,7 +150,8 @@ def test_information_gain(ground_truth):
         ], dtype=np.int32),
         np.array([1, 1, 2, 2], dtype=np.int32)
         )
-    ig_0123 = gen._information_gain(ground_truth, samples, candidate_trial_0123)
+    ig_0123 = gen._information_gain(
+        ground_truth, samples, candidate_trial_0123)
     assert ig_0123[0] == ig_0
     assert ig_0123[1] == ig_1
     assert ig_0123[2] == ig_23[0]
@@ -178,6 +179,5 @@ def test_information_gain(ground_truth):
 #     unjudged_trials_1 = gen.generate(
 #         n_trial=n_trial_desired, n_reference=n_reference_desired,
 #         n_selected=n_selected_desired)
-#     unjudged_trials = stack((unjudged_trials_0, unjudged_trials_1))    
+#     unjudged_trials = stack((unjudged_trials_0, unjudged_trials_1))
 #     return unjudged_trials
-

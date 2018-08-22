@@ -25,6 +25,7 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Todo:
+    - add save and load functionality (perhaps as HDF5 file)
     - method 'convert' takes z: shape=(n_stimuli, n_dim, n_sample) and
         group_id scalar, a returns z after applying the group specific
         transformations to z so that further calls to similarity or
@@ -54,6 +55,7 @@ import warnings
 import copy
 from random import randint
 
+import h5py
 import numpy as np
 import numpy.ma as ma
 import pandas as pd
@@ -145,6 +147,10 @@ class PsychologicalEmbedding(object):
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
                 each group. Must be equal to or greater than one.
+
+        Raises:
+            ValueError
+
         """
         if (n_stimuli < 3):
             raise ValueError("There must be at least three stimuli.")
@@ -1609,6 +1615,20 @@ class PsychologicalEmbedding(object):
             end_idx = ((i_stimuli + 1) * n_dim)
             sigma_inflated[start_idx:end_idx, start_idx:end_idx] = sigma
         return sigma_inflated
+
+    def save(self, filepath):
+        """Save the PsychologialEmbedding model as an HDF5 file.
+
+        Arguments:
+            filepath: String specifying the path to save the model.
+
+        Raises:
+            ImportError: if h5py is not available.
+
+        """
+        if h5py is None:
+            raise ImportError('`save_model` requires h5py.')
+        # TODO
 
 
 class Exponential(PsychologicalEmbedding):

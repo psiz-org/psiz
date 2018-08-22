@@ -29,7 +29,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from psiz.trials import Docket, stack
+from psiz.trials import stack
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
@@ -50,13 +50,13 @@ def main():
     simmat_true = similarity_matrix(
         model_true.similarity, model_true.z['value'])
 
-    # Create a random set of trials.
+    # Generate a random docket of trials.
     generator = RandomGenerator(n_stimuli)
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    docket = generator.generate(n_trial, n_reference, n_selected)
 
     # Simulate similarity judgments.
     agent = Agent(model_true)
-    obs = agent.simulate(trials)
+    obs = agent.simulate(docket)
 
     # Gradient decent solution.
     model_gd = Exponential(n_stimuli, n_dim)

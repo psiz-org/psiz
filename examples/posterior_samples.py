@@ -59,15 +59,15 @@ def main():
     simmat_truth = similarity_matrix(
         model_truth.similarity, model_truth.z['value'])
 
-    # Create some random trials.
+    # Generate a random docket of trials.
     generator = RandomGenerator(model_truth.n_stimuli)
     n_reference = 2
     n_selected = 1
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    docket = generator.generate(n_trial, n_reference, n_selected)
 
     # Simulate similarity judgements using ground truth model.
     agent = Agent(model_truth)
-    obs = agent.simulate(trials)
+    obs = agent.simulate(docket)
 
     # Infer an embedding model.  # TODO
     # model_inferred = Exponential(

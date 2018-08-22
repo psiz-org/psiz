@@ -153,7 +153,7 @@ def process_scenario(model, origin_cov, n_sample, candidate_docket):
 
 
 def scenario_subplot(
-        fig, idx, z_true, z_samp, trials, ig, rel_ig, color_array):
+        fig, idx, z_true, z_samp, docket, ig, rel_ig, color_array):
     """Plot scenario (posterior samples and trial candidates)."""
     # Plot posterior samples of scenario.
     posterior_subplot(fig, idx, z_samp, color_array)
@@ -163,8 +163,8 @@ def scenario_subplot(
     for i_subplot in range(n_subplot):
         candidate_subplot(
             fig, idx + i_subplot + 1, z_true,
-            trials.stimulus_set[i_subplot],
-            trials.n_selected[i_subplot],
+            docket.stimulus_set[i_subplot],
+            docket.n_selected[i_subplot],
             ig[i_subplot], rel_ig[i_subplot],
             color_array)
 

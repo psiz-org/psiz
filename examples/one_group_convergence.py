@@ -41,16 +41,16 @@ def main():
     simmat_truth = similarity_matrix(
         model_truth.similarity, model_truth.z['value'])
 
-    # Create a random set of trials.
+    # Generate a random docket of trials.
     n_trial = 1000
     n_reference = 8
     n_selected = 2
     generator = RandomGenerator(n_stimuli)
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    docket = generator.generate(n_trial, n_reference, n_selected)
 
     # Simulate similarity judgments.
     agent = Agent(model_truth)
-    obs = agent.simulate(trials)
+    obs = agent.simulate(docket)
 
     # Infer independent models with increasing amounts of data.
     n_step = 10

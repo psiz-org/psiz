@@ -423,12 +423,12 @@ def test_inflate_points_multiple_samples(ground_truth_deterministic):
 
 def test_tf_ranked_sequence_probability(ground_truth, docket_0):
     """Test tf_ranked_sequence_probability."""
-    trials = docket_0
+    docket = docket_0
     n_reference = 4
     n_selected = 2
     trial_locs = np.logical_and(
-        trials.n_reference == n_reference,
-        trials.n_selected == n_selected
+        docket.n_reference == n_reference,
+        docket.n_selected == n_selected
     )
 
     z = ground_truth.z['value']
@@ -437,7 +437,7 @@ def test_tf_ranked_sequence_probability(ground_truth, docket_0):
     attention = np.matlib.repmat(attention, docket_0.n_trial, 1)
 
     (z_q, z_r) = ground_truth._inflate_points(
-        trials.stimulus_set[trial_locs], n_reference,
+        docket.stimulus_set[trial_locs], n_reference,
         np.expand_dims(z, axis=2)
     )
     s_qref = ground_truth.similarity(z_q, z_r, group_id=0)

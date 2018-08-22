@@ -218,17 +218,17 @@ class TestSimilarityTrials:
         # Mismatch in number of trials
         n_selected = np.array((1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            trials = Docket(stimulus_set, n_selected=n_selected)
+            docket = Docket(stimulus_set, n_selected=n_selected)
 
         # Below support.
         n_selected = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
-            trials = Docket(stimulus_set, n_selected=n_selected)
+            docket = Docket(stimulus_set, n_selected=n_selected)
     
         # Above support.
         n_selected = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            trials = Docket(stimulus_set, n_selected=n_selected)
+            docket = Docket(stimulus_set, n_selected=n_selected)
 
     def test_invalid_is_ranked(self):
         """Test handling of invalid 'is_ranked' argument."""
@@ -241,11 +241,11 @@ class TestSimilarityTrials:
         # Mismatch in number of trials
         is_ranked = np.array((True, True, True))
         with pytest.raises(Exception) as e_info:
-            trials = Docket(stimulus_set, is_ranked=is_ranked)
+            docket = Docket(stimulus_set, is_ranked=is_ranked)
 
         is_ranked = np.array((True, False, True, False))
         with pytest.raises(Exception) as e_info:
-            trials = Docket(stimulus_set, is_ranked=is_ranked)
+            docket = Docket(stimulus_set, is_ranked=is_ranked)
 
 
 class TestDocket:
@@ -262,11 +262,11 @@ class TestDocket:
 
         # Create original trials.
         n_selected = np.array((1, 1, 1, 1, 2))
-        trials = Docket(stimulus_set, n_selected=n_selected)
+        docket = Docket(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
-        np.testing.assert_array_equal(trials.config_idx, desired_config_idx)
+        np.testing.assert_array_equal(docket.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
-        trials_subset = trials.subset(np.array((2, 3, 4)))
+        trials_subset = docket.subset(np.array((2, 3, 4)))
         desired_config_idx = np.array((0, 0, 1))
         np.testing.assert_array_equal(
             trials_subset.config_idx, desired_config_idx)
@@ -373,12 +373,12 @@ class TestObservations:
         # Mismatch in number of trials
         group_id = np.array((0, 0, 1))
         with pytest.raises(Exception) as e_info:
-            trials = Observations(stimulus_set, group_id=group_id)
+            obs = Observations(stimulus_set, group_id=group_id)
 
         # Below support.
         group_id = np.array((0, -1, 1, 0))
         with pytest.raises(Exception) as e_info:
-            trials = Observations(stimulus_set, group_id=group_id)
+            obs = Observations(stimulus_set, group_id=group_id)
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -391,11 +391,11 @@ class TestObservations:
 
         # Create original trials.
         n_selected = np.array((1, 1, 1, 1, 2))
-        trials = Observations(stimulus_set, n_selected=n_selected)
+        obs = Observations(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
-        np.testing.assert_array_equal(trials.config_idx, desired_config_idx)
+        np.testing.assert_array_equal(obs.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
-        trials_subset = trials.subset(np.array((2, 3, 4)))
+        trials_subset = obs.subset(np.array((2, 3, 4)))
         desired_config_idx = np.array((0, 0, 1))
         np.testing.assert_array_equal(
             trials_subset.config_idx, desired_config_idx)
@@ -498,30 +498,30 @@ class TestStack:
         n_reference = 8
         n_selected = 2
         generator = RandomGenerator(n_stimuli)
-        trials = generator.generate(n_trial, n_reference, n_selected)
+        docket = generator.generate(n_trial, n_reference, n_selected)
 
-        double_trials = stack((trials, trials))
+        double_trials = stack((docket, docket))
 
         assert double_trials.n_trial == 2 * n_trial
         np.testing.assert_array_equal(
-            double_trials.n_reference[0:n_trial], trials.n_reference)
+            double_trials.n_reference[0:n_trial], docket.n_reference)
         np.testing.assert_array_equal(
-            double_trials.n_reference[n_trial:], trials.n_reference)
+            double_trials.n_reference[n_trial:], docket.n_reference)
 
         np.testing.assert_array_equal(
-            double_trials.n_selected[0:n_trial], trials.n_selected)
+            double_trials.n_selected[0:n_trial], docket.n_selected)
         np.testing.assert_array_equal(
-            double_trials.n_selected[n_trial:], trials.n_selected)
+            double_trials.n_selected[n_trial:], docket.n_selected)
 
         np.testing.assert_array_equal(
-            double_trials.is_ranked[0:n_trial], trials.is_ranked)
+            double_trials.is_ranked[0:n_trial], docket.is_ranked)
         np.testing.assert_array_equal(
-            double_trials.is_ranked[n_trial:], trials.is_ranked)
+            double_trials.is_ranked[n_trial:], docket.is_ranked)
 
         agent_novice = Agent(model_truth, group_id=0)
         agent_expert = Agent(model_truth, group_id=1)
-        obs_novice = agent_novice.simulate(trials)
-        obs_expert = agent_expert.simulate(trials)
+        obs_novice = agent_novice.simulate(docket)
+        obs_expert = agent_expert.simulate(docket)
         obs_all = stack((obs_novice, obs_expert))
 
         assert obs_all.n_trial == 2 * n_trial

@@ -64,7 +64,6 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
 
-from psiz.trials import possible_outcomes
 from psiz.utils import elliptical_slice
 
 
@@ -1000,12 +999,12 @@ class PsychologicalEmbedding(object):
         return ll
 
     def outcome_probability(
-            self, trials, group_id=None, z=None, theta=None, phi=None,
+            self, docket, group_id=None, z=None, theta=None, phi=None,
             unaltered_only=False):
         """Return probability of each outcome for each trial.
 
         Arguments:
-            trials: A set of unjudged similarity trials. The indices
+            docket: A docket of unjudged similarity trials. The indices
                 used must correspond to the rows of z.
             group_id (optional): The group ID for which to compute the
                 probabilities.
@@ -1036,24 +1035,24 @@ class PsychologicalEmbedding(object):
                 needed, the attribute values of the object will be used.
 
         """
-        n_trial_all = trials.n_trial
+        n_trial_all = docket.n_trial
 
         if z is None:
             z = self.z['value']
         else:
             self._check_z(z)
 
-        n_config = trials.config_list.shape[0]
+        n_config = docket.config_list.shape[0]
 
-        outcome_idx_list = trials.outcome_idx_list
-        n_outcome_list = trials.config_list['n_outcome'].values
+        outcome_idx_list = docket.outcome_idx_list
+        n_outcome_list = docket.config_list['n_outcome'].values
         max_n_outcome = np.max(n_outcome_list)
         # ==================================================
         # Create an analogous tensor.
         # shape = (n_config, max_n_outcome, max_n_ref)
-        # n_reference_list = trials.config_list['n_reference'].values
+        # n_reference_list = docket.config_list['n_reference'].values
         # max_n_reference = np.max(n_reference_list)
-        # outcome_tensor = trials.outcome_tensor()
+        # outcome_tensor = docket.outcome_tensor()
         # ==================================================
         if unaltered_only:
             max_n_outcome = 1
@@ -1064,7 +1063,7 @@ class PsychologicalEmbedding(object):
 
         # Compute similarity between query and references.
         (z_q, z_r) = self._inflate_points(
-            trials.stimulus_set, trials.max_n_reference, z)
+            docket.stimulus_set, docket.max_n_reference, z)
 
         sim_qr = self.similarity(
             z_q, z_r, group_id=group_id, theta=theta, phi=phi)
@@ -1073,14 +1072,14 @@ class PsychologicalEmbedding(object):
         # sim_qr = sim_qr[:, :, 0] TODO
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
-            config = trials.config_list.iloc[i_config]
+            config = docket.config_list.iloc[i_config]
             outcome_idx = outcome_idx_list[i_config]
             # outcome_idx = outcome_tensor[
             #     i_config,
             #     0:n_outcome_list[i_config],
             #     0:n_reference_list[i_config]
             # ]
-            trial_locs = trials.config_idx == i_config
+            trial_locs = docket.config_idx == i_config
             n_trial = np.sum(trial_locs)
             n_reference = config['n_reference']
 
@@ -1108,11 +1107,11 @@ class PsychologicalEmbedding(object):
             prob_all = prob_all[:, :, 0]
         return prob_all
 
-    def _tf_outcome_probability(self, trials, z_tf, tf_theta):
+    def _tf_outcome_probability(self, docket, z_tf, tf_theta):
         """Return probability of outcomes for each trial.
 
         Arguments:
-            trials: A set of unjudged similarity trials.
+            docket: A docket of unjudged similarity trials.
             z_tf: TensorFlow tensor representing embedding points.
             tf_theta: Dictionary of Tensorflow tensors representing
                 free parameters of similarity kernel.
@@ -1130,11 +1129,11 @@ class PsychologicalEmbedding(object):
                 outcomes.
 
         """
-        n_trial_all = trials.n_trial
+        n_trial_all = docket.n_trial
         dmy_idx = np.arange(n_trial_all)
-        n_config = trials.config_list.shape[0]
+        n_config = docket.config_list.shape[0]
 
-        stimulus_set = tf.constant(trials.stimulus_set, dtype=tf.int32)
+        stimulus_set = tf.constant(docket.stimulus_set, dtype=tf.int32)
         max_n_reference = stimulus_set.get_shape()[1] - 1
 
         attention = self.phi['phi_1']['value'][0, :]  # TODO HACK
@@ -1149,16 +1148,16 @@ class PsychologicalEmbedding(object):
             stimulus_set, max_n_reference, z_tf)
         sim_qr = self._tf_similarity(z_q, z_r, tf_theta, tf_attention)
 
-        outcome_idx_list = trials.outcome_idx_list
-        n_outcome_list = trials.config_list['n_outcome'].values
+        outcome_idx_list = docket.outcome_idx_list
+        n_outcome_list = docket.config_list['n_outcome'].values
         max_n_outcome = np.max(n_outcome_list)
 
         prob_all = tf.zeros((0, max_n_outcome), dtype=tf.float32)
         indices_all = tf.zeros((0), dtype=tf.int32)
         for i_config in range(n_config):
-            config = trials.config_list.iloc[i_config]
+            config = docket.config_list.iloc[i_config]
             outcome_idx = outcome_idx_list[i_config]
-            trial_locs = trials.config_idx == i_config
+            trial_locs = docket.config_idx == i_config
             n_trial = np.sum(trial_locs)
             n_outcome = n_outcome_list[i_config]
             n_reference = tf.constant(config['n_reference'], dtype=tf.int32)

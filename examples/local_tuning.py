@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 
 import tensorflow as tf
 
-from psiz.trials import Docket, stack
+from psiz.trials import stack
 from psiz.models import Exponential, HeavyTailed, StudentsT
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
@@ -70,23 +70,23 @@ def main():
     #     z_nov_inf, z_exp_inf,
     #     z_jinf, z_nov_jinf, z_exp_jinf)
 
-    # Generate random trials.
+    # Generate random docket of trials.
     n_stimuli = model_nov_tru.n_stimuli
     n_dim = model_nov_tru.n_dim
     n_trial = 10000
     n_reference = 8
     n_selected = 2
     generator = RandomGenerator(n_stimuli)
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    docket = generator.generate(n_trial, n_reference, n_selected)
 
     # Simulate observations.
     agent_novice = Agent(model_nov_tru)
     agent_expert = Agent(model_exp_tru)
-    obs_novice = agent_novice.simulate(trials)
+    obs_novice = agent_novice.simulate(docket)
     obs_novice.set_group_id(0)
-    obs_expert_1 = agent_expert.simulate(trials)
+    obs_expert_1 = agent_expert.simulate(docket)
     obs_expert_1.set_group_id(0)
-    obs_expert_2 = agent_expert.simulate(trials)
+    obs_expert_2 = agent_expert.simulate(docket)
     obs_expert_2.set_group_id(1)
 
     # Infer separate models.

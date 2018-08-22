@@ -79,16 +79,16 @@ def test_random_generator():
     n_selected_desired = 2
     is_ranked_desired = True
     gen = generator.RandomGenerator(n_stimuli_desired)
-    trials = gen.generate(
+    docket = gen.generate(
         n_trial=n_trial_desired, n_reference=n_reference_desired,
         n_selected=n_selected_desired)
 
-    assert trials.n_trial == n_trial_desired
-    assert sum(trials.n_reference == n_reference_desired) == n_trial_desired
-    assert trials.stimulus_set.shape[0] == n_trial_desired
-    assert trials.stimulus_set.shape[1] == n_reference_desired + 1
-    min_actual = np.min(trials.stimulus_set)
-    max_actual = np.max(trials.stimulus_set)
+    assert docket.n_trial == n_trial_desired
+    assert sum(docket.n_reference == n_reference_desired) == n_trial_desired
+    assert docket.stimulus_set.shape[0] == n_trial_desired
+    assert docket.stimulus_set.shape[1] == n_reference_desired + 1
+    min_actual = np.min(docket.stimulus_set)
+    max_actual = np.max(docket.stimulus_set)
     assert min_actual >= -1  # Need -1 for padding.
     assert max_actual < n_stimuli_desired
     n_unique_desired = n_reference_desired + 1
@@ -97,11 +97,11 @@ def test_random_generator():
         # the indexing into stimulus set.
         assert (
             len(np.unique(
-                trials.stimulus_set[i_trial, 0:n_reference_desired+1])
+                docket.stimulus_set[i_trial, 0:n_reference_desired+1])
                 ) == n_unique_desired
         )
-    assert sum(trials.n_selected == n_selected_desired) == n_trial_desired
-    assert sum(trials.is_ranked == is_ranked_desired) == n_trial_desired
+    assert sum(docket.n_selected == n_selected_desired) == n_trial_desired
+    assert sum(docket.is_ranked == is_ranked_desired) == n_trial_desired
 
 
 def test_information_gain(ground_truth):

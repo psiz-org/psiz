@@ -41,20 +41,20 @@ def main():
     n_group = 3
     model_truth = ground_truth(n_stimuli, n_dim, n_group)
 
-    # Create a random set of trials to show to every group.
+    # Generate a random docket of trials to show each group.
     n_trial = 1000
     n_reference = 8
     n_selected = 2
     generator = RandomGenerator(n_stimuli)
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    docket = generator.generate(n_trial, n_reference, n_selected)
 
     # Simulate similarity judgments for the three groups.
     agent_novice = Agent(model_truth, group_id=0)
     agent_interm = Agent(model_truth, group_id=1)
     agent_expert = Agent(model_truth, group_id=2)
-    obs_novice = agent_novice.simulate(trials)
-    obs_interm = agent_interm.simulate(trials)
-    obs_expert = agent_expert.simulate(trials)
+    obs_novice = agent_novice.simulate(docket)
+    obs_interm = agent_interm.simulate(docket)
+    obs_expert = agent_expert.simulate(docket)
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
     model_inferred = Exponential(

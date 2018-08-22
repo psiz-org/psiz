@@ -22,6 +22,7 @@ Notes:
         downstream applications make this assumption.
 
 Todo:
+    test set_group_id
 
 """
 

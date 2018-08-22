@@ -82,9 +82,12 @@ def main():
     # Simulate observations.
     agent_novice = Agent(model_nov_tru)
     agent_expert = Agent(model_exp_tru)
-    obs_novice = agent_novice.simulate(trials, override_group_id=0)
-    obs_expert_1 = agent_expert.simulate(trials, override_group_id=0)
-    obs_expert_2 = agent_expert.simulate(trials, override_group_id=1)
+    obs_novice = agent_novice.simulate(trials)
+    obs_novice.set_group_id(0)
+    obs_expert_1 = agent_expert.simulate(trials)
+    obs_expert_1.set_group_id(0)
+    obs_expert_2 = agent_expert.simulate(trials)
+    obs_expert_2.set_group_id(1)
 
     # Infer separate models.
     model_nov_inf = Exponential(n_stimuli, n_dim)

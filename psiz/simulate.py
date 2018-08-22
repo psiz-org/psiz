@@ -22,7 +22,6 @@ Classes:
 
 """
 import numpy as np
-from numpy.random import multinomial
 import tensorflow as tf
 
 from psiz.trials import JudgedTrials
@@ -54,17 +53,13 @@ class Agent(object):
         self.embedding = embedding
         self.group_id = group_id
 
-    def simulate(self, trials, override_group_id=None):
+    def simulate(self, trials):
         """Stochastically simulate similarity judgments.
 
         Arguments:
             trials: UnjudgedTrials object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
-            override_group_id (optional): A scalar indicating the group_id that
-                should be used to mark the observations. This is a
-                useful option when stacking observations generated
-                from different Agents.
 
         Returns:
             JudgedTrials object representing the judged trials. The
@@ -75,14 +70,6 @@ class Agent(object):
         prob_all = self.embedding.outcome_probability(
             trials, group_id=group_id)
         judged_trials = self._select(trials, prob_all)
-
-        if override_group_id is not None:
-            override_group_id = (
-                override_group_id * np.ones((trials.n_trial), dtype=np.int32)
-            )
-            judged_trials = JudgedTrials(
-                judged_trials.stimulus_set, judged_trials.n_selected,
-                judged_trials.is_ranked, override_group_id)
         return judged_trials
 
     def _select(self, trials, prob_all):
@@ -122,7 +109,7 @@ class Agent(object):
             stimuli_set_ref = trials.stimulus_set[trial_locs, 1:]
 
             for i_trial in range(n_trial):
-                outcome_loc = multinomial(1, prob[i_trial, :]).astype(bool)
+                outcome_loc = np.random.multinomial(1, prob[i_trial, :]).astype(bool)
                 chosen_outcome_idx[trial_idx[i_trial]] = dummy_idx[outcome_loc]
                 stimulus_set[trial_idx[i_trial], 1:n_reference+1] = \
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]

@@ -32,6 +32,7 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
+    - add save and load functionality
     - change attribute n_selected -> n_select
     - Add stimulus set check. It can be [-1, inf]. Exploit this fact when
     creating z placeholder to inflate z.
@@ -41,6 +42,7 @@ Todo:
 
 from abc import ABCMeta, abstractmethod
 from itertools import permutations
+import copy
 
 import numpy as np
 import pandas as pd
@@ -216,16 +218,17 @@ class SimilarityTrials(object):
         return is_ranked
 
     @abstractmethod
-    def _generate_configuration_id(self, *args):
+    def _set_configuration_data(self, *args):
         """Generate a unique ID for each trial configuration.
 
         Helper function that generates a unique ID for each of the
         unique trial configurations in the provided data set.
 
-        Returns:
+        Notes:
+            Sets three attributes of object.
             config_idx: A unique index for each type of trial
                 configuration.
-            df_config: A DataFrame containing all the unique
+            config_list: A DataFrame containing all the unique
                 trial configurations.
             outcome_idx_list: A list of the possible outcomes for each
                 trial configuration.
@@ -306,13 +309,8 @@ class UnjudgedTrials(SimilarityTrials):
         SimilarityTrials.__init__(self, stimulus_set, n_selected, is_ranked)
 
         # Determine unique display configurations.
-        (
-            config_idx, config_list, outcome_idx_list
-        ) = self._generate_configuration_id(
+        self._set_configuration_data(
             self.n_reference, self.n_selected, self.is_ranked)
-        self.config_idx = config_idx
-        self.config_list = config_list
-        self.outcome_idx_list = outcome_idx_list
 
     def subset(self, index):
         """Return subset of trials as new UnjudgedTrials object.
@@ -327,7 +325,7 @@ class UnjudgedTrials(SimilarityTrials):
         return UnjudgedTrials(self.stimulus_set[index, :],
                               self.n_selected[index], self.is_ranked[index])
 
-    def _generate_configuration_id(self, n_reference, n_selected, is_ranked):
+    def _set_configuration_data(self, n_reference, n_selected, is_ranked):
         """Generate a unique ID for each trial configuration.
 
         Helper function that generates a unique ID for each of the
@@ -344,11 +342,14 @@ class UnjudgedTrials(SimilarityTrials):
                 selected references that were ordered.
                 shape = (n_trial,)
 
-        Returns:
-            df_config: A DataFrame containing all the unique
-                trial configurations.
+        Notes:
+            Sets three attributes of object.
             config_idx: A unique index for each type of trial
                 configuration.
+            config_list: A DataFrame containing all the unique
+                trial configurations.
+            outcome_idx_list: A list of the possible outcomes for each
+                trial configuration.
 
         """
         n_trial = len(n_reference)
@@ -381,7 +382,9 @@ class UnjudgedTrials(SimilarityTrials):
             display_type_locs = np.all(f, axis=0)
             config_idx[display_type_locs] = i_config
 
-        return (config_idx, df_config, outcome_idx_list)
+        self.config_idx = config_idx
+        self.config_list = df_config
+        self.outcome_idx_list = outcome_idx_list
 
 
 class JudgedTrials(SimilarityTrials):
@@ -449,13 +452,8 @@ class JudgedTrials(SimilarityTrials):
         self.group_id = group_id
 
         # Determine unique display configurations.
-        (
-            config_idx, config_list, outcome_idx_list
-        ) = self._generate_configuration_id(
+        self._set_configuration_data(
             self.n_reference, self.n_selected, self.is_ranked, group_id)
-        self.config_idx = config_idx
-        self.config_list = config_list
-        self.outcome_idx_list = outcome_idx_list
 
     def _check_group_id(self, group_id):
         """Check the argument n_selected."""
@@ -488,7 +486,7 @@ class JudgedTrials(SimilarityTrials):
                             self.n_selected[index], self.is_ranked[index],
                             self.group_id[index])
 
-    def _generate_configuration_id(self, n_reference, n_selected, is_ranked,
+    def _set_configuration_data(self, n_reference, n_selected, is_ranked,
                                    group_id, session_id=None):
         """Generate a unique ID for each trial configuration.
 
@@ -517,11 +515,14 @@ class JudgedTrials(SimilarityTrials):
                 agent may have completed multiple sessions.
                 shape = (n_trial,)
 
-        Returns:
-            df_config: A DataFrame containing all the unique
-                trial configurations.
+        Notes:
+            Sets three attributes of object.
             config_idx: A unique index for each type of trial
                 configuration.
+            config_list: A DataFrame containing all the unique
+                trial configurations.
+            outcome_idx_list: A list of the possible outcomes for each
+                trial configuration.
 
         """
         n_trial = len(n_reference)
@@ -560,7 +561,26 @@ class JudgedTrials(SimilarityTrials):
             display_type_locs = np.all(f, axis=0)
             config_idx[display_type_locs] = i_config
 
-        return (config_idx, df_config, outcome_idx_list)
+        self.config_idx = config_idx
+        self.config_list = df_config
+        self.outcome_idx_list = outcome_idx_list
+
+    def set_group_id(self, group_id):
+        """Override the existing group_ids.
+
+        Arguments:
+            group_id: The new group IDs. Can be an integer or an array
+                of integers with shape=(self.n_trial,).
+        """
+        if group_id.shape[0] == 1:
+            group_id = group_id * np.ones((self.n_trial), dtype=np.int32)
+        else:
+            group_id = self._check_group_id(group_id)
+        self.group_id = copy.copy(group_id)
+
+        # Re-derive unique display configurations.
+        self._set_configuration_data(
+            self.n_reference, self.n_selected, self.is_ranked, group_id)
 
 
 def pad_stimulus_set(stimulus_set, max_n_reference):

@@ -40,7 +40,7 @@ def suggest_dimensionality(
     the same cross-validation partion.
 
     Arguments:
-        obs: An JudgedTrials object representing the observed data.
+        obs: An Observations object representing the observed data.
             embedding_constructor: A PsychologicalEmbedding
             constructor.
         n_stimuli:  An integer indicating the number of unqiue stimuli.

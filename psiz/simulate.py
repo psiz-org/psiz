@@ -24,7 +24,7 @@ Classes:
 import numpy as np
 import tensorflow as tf
 
-from psiz.trials import JudgedTrials
+from psiz.trials import Observations
 
 
 class Agent(object):
@@ -62,7 +62,7 @@ class Agent(object):
                 stimulus set is ignored for the simulations.
 
         Returns:
-            JudgedTrials object representing the judged trials. The
+            Observations object representing the judged trials. The
                 order of the stimuli is now informative.
 
         """
@@ -81,7 +81,7 @@ class Agent(object):
 
 
         Returns:
-            A JudgedTrials object.
+            A Observations object.
 
         """
         outcome_idx_list = docket.outcome_idx_list
@@ -115,7 +115,7 @@ class Agent(object):
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
         group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
-        return JudgedTrials(
+        return Observations(
                 stimulus_set,
                 n_selected=docket.n_selected,
                 is_ranked=docket.is_ranked, group_id=group_id

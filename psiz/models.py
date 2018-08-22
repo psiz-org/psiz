@@ -649,7 +649,7 @@ class PsychologicalEmbedding(object):
         """Fit the free parameters of the embedding model.
 
         Arguments:
-            obs: A JudgedTrials object representing the observed data.
+            obs: A Observations object representing the observed data.
             n_restart (optional): An integer specifying the number of
                 restarts to use for the inference procedure. Since the
                 embedding procedure can get stuck in local optima,
@@ -717,7 +717,7 @@ class PsychologicalEmbedding(object):
         """Evaluate observations using the current state of the model.
 
         Arguments:
-            obs: A JudgedTrials object representing the observed data.
+            obs: A Observations object representing the observed data.
 
         Returns:
             loss: The average loss per observation. Loss is defined as
@@ -1384,7 +1384,7 @@ class PsychologicalEmbedding(object):
         for all points.
 
         Arguments:
-            obs: A JudgedTrials object representing the observed data.
+            obs: A Observations object representing the observed data.
             n_sample (optional): The number of samples desired after
                 removing the "burn in" samples and applying thinning.
             n_burn (optional): The number of samples to remove from the

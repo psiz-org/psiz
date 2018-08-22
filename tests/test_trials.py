@@ -30,7 +30,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from psiz.trials import Docket, JudgedTrials, possible_outcomes, stack
+from psiz.trials import Docket, Observations, possible_outcomes, stack
 from psiz.generator import RandomGenerator
 from psiz.simulate import Agent
 from psiz.models import Exponential
@@ -127,7 +127,7 @@ def setup_obs_0():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    tasks = JudgedTrials(stimulus_set, n_selected=n_selected)
+    tasks = Observations(stimulus_set, n_selected=n_selected)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_selected': n_selected,
@@ -163,7 +163,7 @@ def setup_obs_1():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2), dtype=np.int32)
 
-    tasks = JudgedTrials(stimulus_set, n_selected=n_selected,
+    tasks = Observations(stimulus_set, n_selected=n_selected,
                          group_id=group_id)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
@@ -359,8 +359,8 @@ class TestDocket:
             setup_tasks_1['tasks'].config_idx)
 
 
-class TestJudgedTrials:
-    """Test class JudgedTrials."""
+class TestObservations:
+    """Test class Observations."""
 
     def test_invalid_group_id(self):
         """Test handling of invalid 'group_id' argument."""
@@ -373,12 +373,12 @@ class TestJudgedTrials:
         # Mismatch in number of trials
         group_id = np.array((0, 0, 1))
         with pytest.raises(Exception) as e_info:
-            trials = JudgedTrials(stimulus_set, group_id=group_id)
+            trials = Observations(stimulus_set, group_id=group_id)
 
         # Below support.
         group_id = np.array((0, -1, 1, 0))
         with pytest.raises(Exception) as e_info:
-            trials = JudgedTrials(stimulus_set, group_id=group_id)
+            trials = Observations(stimulus_set, group_id=group_id)
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -391,7 +391,7 @@ class TestJudgedTrials:
 
         # Create original trials.
         n_selected = np.array((1, 1, 1, 1, 2))
-        trials = JudgedTrials(stimulus_set, n_selected=n_selected)
+        trials = Observations(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -411,14 +411,14 @@ class TestJudgedTrials:
 
         # Create first set of original trials.
         n_selected = np.array((1, 1, 1, 1, 1))
-        trials_0 = JudgedTrials(stimulus_set, n_selected=n_selected)
+        trials_0 = Observations(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
         n_selected = np.array((2, 2, 2, 2, 2))
-        trials_1 = JudgedTrials(stimulus_set, n_selected=n_selected)
+        trials_1 = Observations(stimulus_set, n_selected=n_selected)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 

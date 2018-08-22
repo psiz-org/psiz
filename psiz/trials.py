@@ -19,7 +19,7 @@
 Classes:
     SimilarityTrials: Abstract class for similarity judgment trials.
     Docket: Unjudged similarity judgment trials.
-    JudgedTrials: Similarity judgment trials that have been judged and
+    Observations: Similarity judgment trials that have been judged and
         will serve as observed data during inference.
 
 Notes:
@@ -322,8 +322,9 @@ class Docket(SimilarityTrials):
             A new Docket object.
 
         """
-        return Docket(self.stimulus_set[index, :],
-                              self.n_selected[index], self.is_ranked[index])
+        return Docket(
+            self.stimulus_set[index, :], self.n_selected[index],
+            self.is_ranked[index])
 
     def _set_configuration_data(self, n_reference, n_selected, is_ranked):
         """Generate a unique ID for each trial configuration.
@@ -387,10 +388,10 @@ class Docket(SimilarityTrials):
         self.outcome_idx_list = outcome_idx_list
 
 
-class JudgedTrials(SimilarityTrials):
+class Observations(SimilarityTrials):
     """Object that encapsulates judged similarity trials.
 
-    The attributes and behavior of JudgedTrials are largely inherited
+    The attributes and behavior of Observations are largely inherited
     from SimilarityTrials.
 
     Attributes:
@@ -473,16 +474,16 @@ class JudgedTrials(SimilarityTrials):
         return group_id
 
     def subset(self, index):
-        """Return subset of trials as new JudgedTrials object.
+        """Return subset of trials as a new Observations object.
 
         Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
-            A new JudgedTrials object.
+            A new Observations object.
 
         """
-        return JudgedTrials(self.stimulus_set[index, :],
+        return Observations(self.stimulus_set[index, :],
                             self.n_selected[index], self.is_ranked[index],
                             self.group_id[index])
 
@@ -651,9 +652,9 @@ def stack(trials_list):
         """
         # Determine the maximum number of references.
         max_n_reference = 0
-        for trials in trials_list:
-            if trials.max_n_reference > max_n_reference:
-                max_n_reference = trials.max_n_reference
+        for i_trials in trials_list:
+            if i_trials.max_n_reference > max_n_reference:
+                max_n_reference = i_trials.max_n_reference
 
         # Grab relevant information from first entry in list.
         stimulus_set = pad_stimulus_set(
@@ -668,18 +669,18 @@ def stack(trials_list):
         except AttributeError:
             is_judged = False
 
-        for trials in trials_list[1:]:
+        for i_trials in trials_list[1:]:
             stimulus_set = np.vstack((
                 stimulus_set,
-                pad_stimulus_set(trials.stimulus_set, max_n_reference)
+                pad_stimulus_set(i_trials.stimulus_set, max_n_reference)
             ))
-            n_selected = np.hstack((n_selected, trials.n_selected))
-            is_ranked = np.hstack((is_ranked, trials.is_ranked))
+            n_selected = np.hstack((n_selected, i_trials.n_selected))
+            is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
             if is_judged:
-                group_id = np.hstack((group_id, trials.group_id))
+                group_id = np.hstack((group_id, i_trials.group_id))
 
         if is_judged:
-            trials_stacked = JudgedTrials(
+            trials_stacked = Observations(
                 stimulus_set, n_selected, is_ranked, group_id)
         else:
             trials_stacked = Docket(

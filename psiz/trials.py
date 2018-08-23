@@ -22,6 +22,11 @@ Classes:
     Observations: Similarity judgment trials that have been judged and
         will serve as observed data during inference.
 
+Functions:
+    stack: Combine a list of multiple SimilarityTrial objects into one.
+    load_trials: Load a hdf5 file, saved using the `save` class method,
+        as a SimilarityTrial object.
+
 Notes:
     On each similarity judgment trial, an agent judges the similarity
         between a single query stimulus and multiple reference stimuli.
@@ -415,7 +420,7 @@ class Docket(SimilarityTrials):
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
-            outcome_idx = possible_outcomes(df_config.iloc[i_config])
+            outcome_idx = _possible_outcomes(df_config.iloc[i_config])
             outcome_idx_list.append(outcome_idx)
             n_outcome = outcome_idx.shape[0]
             df_config.iloc[i_config, n_out_idx] = n_outcome
@@ -611,7 +616,7 @@ class Observations(SimilarityTrials):
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
-            outcome_idx = possible_outcomes(df_config.iloc[i_config])
+            outcome_idx = _possible_outcomes(df_config.iloc[i_config])
             outcome_idx_list.append(outcome_idx)
             n_outcome = outcome_idx.shape[0]
             df_config.iloc[i_config, n_out_idx] = n_outcome
@@ -662,57 +667,6 @@ class Observations(SimilarityTrials):
         f.close()
 
 
-def pad_stimulus_set(stimulus_set, max_n_reference):
-    """Pad 2D array with columns composed of -1."""
-    n_trial = stimulus_set.shape[0]
-    n_pad = max_n_reference - (stimulus_set.shape[1] - 1)
-    if n_pad > 0:
-        pad_mat = -1 * np.ones((n_trial, n_pad), dtype=np.int32)
-        stimulus_set = np.hstack((stimulus_set, pad_mat))
-    return stimulus_set
-
-
-def possible_outcomes(trial_configuration):
-    """Return the possible outcomes of a trial configuration.
-
-    Arguments:
-        trial_configuration: A trial configuration Pandas Series.
-
-    Returns:
-        An 2D array indicating all possible outcomes where the values
-            indicate indices of the reference stimuli. Each row
-            corresponds to one outcome. Note the indices refer to
-            references only and does not include an index for the
-            query. Also note that the unpermuted index is returned
-            first.
-
-    """
-    n_reference = int(trial_configuration['n_reference'])
-    n_select = int(trial_configuration['n_select'])
-
-    reference_list = range(n_reference)
-
-    # Get all permutations of length n_select.
-    perm = permutations(reference_list, n_select)
-
-    selection = list(perm)
-    n_outcome = len(selection)
-
-    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
-    for i_outcome in range(n_outcome):
-        # Fill in selections.
-        outcomes[i_outcome, 0:n_select] = selection[i_outcome]
-        # Fill in unselected.
-        dummy_idx = np.arange(n_reference)
-        for i_selected in range(n_select):
-            loc = dummy_idx != outcomes[i_outcome, i_selected]
-            dummy_idx = dummy_idx[loc]
-
-        outcomes[i_outcome, n_select:] = dummy_idx
-
-    return outcomes
-
-
 def stack(trials_list):
         """Return a SimilarityTrials object containing all trials.
 
@@ -735,7 +689,7 @@ def stack(trials_list):
                 max_n_reference = i_trials.max_n_reference
 
         # Grab relevant information from first entry in list.
-        stimulus_set = pad_stimulus_set(
+        stimulus_set = _pad_stimulus_set(
             trials_list[0].stimulus_set,
             max_n_reference
         )
@@ -750,7 +704,7 @@ def stack(trials_list):
         for i_trials in trials_list[1:]:
             stimulus_set = np.vstack((
                 stimulus_set,
-                pad_stimulus_set(i_trials.stimulus_set, max_n_reference)
+                _pad_stimulus_set(i_trials.stimulus_set, max_n_reference)
             ))
             n_select = np.hstack((n_select, i_trials.n_select))
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
@@ -796,3 +750,54 @@ def load_trials(filepath):
     else:
         raise ValueError('No class found matching the provided `trial_type`.')
     return loaded_trials
+
+
+def _pad_stimulus_set(stimulus_set, max_n_reference):
+    """Pad 2D array with columns composed of -1."""
+    n_trial = stimulus_set.shape[0]
+    n_pad = max_n_reference - (stimulus_set.shape[1] - 1)
+    if n_pad > 0:
+        pad_mat = -1 * np.ones((n_trial, n_pad), dtype=np.int32)
+        stimulus_set = np.hstack((stimulus_set, pad_mat))
+    return stimulus_set
+
+
+def _possible_outcomes(trial_configuration):
+    """Return the possible outcomes of a trial configuration.
+
+    Arguments:
+        trial_configuration: A trial configuration Pandas Series.
+
+    Returns:
+        An 2D array indicating all possible outcomes where the values
+            indicate indices of the reference stimuli. Each row
+            corresponds to one outcome. Note the indices refer to
+            references only and does not include an index for the
+            query. Also note that the unpermuted index is returned
+            first.
+
+    """
+    n_reference = int(trial_configuration['n_reference'])
+    n_select = int(trial_configuration['n_select'])
+
+    reference_list = range(n_reference)
+
+    # Get all permutations of length n_select.
+    perm = permutations(reference_list, n_select)
+
+    selection = list(perm)
+    n_outcome = len(selection)
+
+    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
+    for i_outcome in range(n_outcome):
+        # Fill in selections.
+        outcomes[i_outcome, 0:n_select] = selection[i_outcome]
+        # Fill in unselected.
+        dummy_idx = np.arange(n_reference)
+        for i_selected in range(n_select):
+            loc = dummy_idx != outcomes[i_outcome, i_selected]
+            dummy_idx = dummy_idx[loc]
+
+        outcomes[i_outcome, n_select:] = dummy_idx
+
+    return outcomes

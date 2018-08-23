@@ -32,10 +32,16 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
-    - add save and load functionality
     - change attribute n_selected -> n_select
     - Add stimulus set check. It can be [-1, inf]. Exploit this fact when
     creating z placeholder to inflate z.
+    - MAYBE add agent_id and/or session_id. My preference is not to
+        have another attribute and let the user put whatever
+        information they want in the group_id field with the
+        understanding that this will impact inference of group
+        variables. Unless we add hierarchical models, don't need an
+        agent ID. If we did have hierarchical models, probably better
+        off making group_id a 2D array shape=[n_trial, n_group_level]
     - MAYBE make config_list a custom object
 
 """
@@ -43,10 +49,11 @@ Todo:
 from abc import ABCMeta, abstractmethod
 from itertools import permutations
 import copy
+import warnings
 
+import h5py
 import numpy as np
 import pandas as pd
-import warnings
 
 
 class SimilarityTrials(object):
@@ -269,6 +276,16 @@ class SimilarityTrials(object):
                 0:n_reference_list[i_config]] = self.outcome_idx_list[i_config]
         return outcome_tensor
 
+    @abstractmethod
+    def save(self, filepath):
+        """Save the SimilarityTrials object as an HDF5 file.
+
+        Arguments:
+            filepath: String specifying the path to save the data.
+
+        """
+        pass
+
 
 class Docket(SimilarityTrials):
     """Object that encapsulates unjudged similarity trials.
@@ -387,6 +404,20 @@ class Docket(SimilarityTrials):
         self.config_list = df_config
         self.outcome_idx_list = outcome_idx_list
 
+    def save(self, filepath):
+        """Save the Docket object as an HDF5 file.
+
+        Arguments:
+            filepath: String specifying the path to save the data.
+
+        """
+        f = h5py.File(filepath, "w")
+        f.create_dataset('trial_type', data='Docket')
+        f.create_dataset('stimulus_set', data=self.stimulus_set)
+        f.create_dataset('n_selected', data=self.n_selected)
+        f.create_dataset('is_ranked', data=self.is_ranked)
+        f.close()
+
 
 class Observations(SimilarityTrials):
     """Object that encapsulates judged similarity trials.
@@ -400,11 +431,15 @@ class Observations(SimilarityTrials):
             integers from [0, M-1] where M is the total number of
             groups.
             shape = (n_trial,)
+        agent_id: An integer array indicating the agent ID of a trial.
+            It is assumed that observations with the same agent ID were
+            judged by a single agent.
+            shape = (n_trial,) TODO MAYBE
         session_id: An integer array indicating the session ID of
             a trial. It is assumed that observations with the same
             session ID were judged by a single agent. A single agent
             may have completed multiple sessions.
-            shape = (n_trial,)
+            shape = (n_trial,) TODO MAYBE
 
     Notes:
         stimulus_set: The order of the reference stimuli is important.
@@ -573,7 +608,7 @@ class Observations(SimilarityTrials):
             group_id: The new group IDs. Can be an integer or an array
                 of integers with shape=(self.n_trial,).
         """
-        if group_id.shape[0] == 1:
+        if np.isscalar(group_id):
             group_id = group_id * np.ones((self.n_trial), dtype=np.int32)
         else:
             group_id = self._check_group_id(group_id)
@@ -582,6 +617,21 @@ class Observations(SimilarityTrials):
         # Re-derive unique display configurations.
         self._set_configuration_data(
             self.n_reference, self.n_selected, self.is_ranked, group_id)
+
+    def save(self, filepath):
+        """Save the Docket object as an HDF5 file.
+
+        Arguments:
+            filepath: String specifying the path to save the data.
+
+        """
+        f = h5py.File(filepath, "w")
+        f.create_dataset('trial_type', data='Observations')
+        f.create_dataset('stimulus_set', data=self.stimulus_set)
+        f.create_dataset('n_selected', data=self.n_selected)
+        f.create_dataset('is_ranked', data=self.is_ranked)
+        f.create_dataset('group_id', data=self.group_id)
+        f.close()
 
 
 def pad_stimulus_set(stimulus_set, max_n_reference):
@@ -686,3 +736,35 @@ def stack(trials_list):
             trials_stacked = Docket(
                 stimulus_set, n_selected, is_ranked)
         return trials_stacked
+
+
+def load_trials(filepath):
+    """Load data saved via the save method.
+
+    The loaded data is instantiated as a concrete class of
+    SimilarityTrials.
+
+    Arguments:
+        filepath: The location of the hdf5 file to load.
+    """
+    f = h5py.File(filepath, 'r')
+    # Common attributes.
+    trial_type = f['trial_type'][()]
+    stimulus_set = f['stimulus_set'][()]
+    n_selected = f['n_selected'][()]
+    is_ranked = f['is_ranked'][()]
+
+    if trial_type == 'Docket':
+        loaded_trials = Docket(
+            stimulus_set, n_selected=n_selected, is_ranked=is_ranked
+        )
+    elif trial_type == 'Observations':
+        # Observations specific attributes.
+        group_id = f['group_id'][()]
+        loaded_trials = Observations(
+            stimulus_set, n_selected=n_selected, is_ranked=is_ranked,
+            group_id=group_id
+        )
+    else:
+        raise ValueError('No class found matching the provided `trial_type`.')
+    return loaded_trials

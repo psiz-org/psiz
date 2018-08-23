@@ -252,6 +252,35 @@ class TestSimilarityTrials:
 class TestDocket:
     """Test class Docket."""
 
+    def test_invalid_stimulus_set(self):
+        """Test handling of invalid `stimulus_set` argument."""
+        # Non-integer input.
+        stimulus_set = np.array((
+            (0., 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+        with pytest.raises(Exception) as e_info:
+            docket = trials.Docket(stimulus_set)
+
+        # Contains integers below -1.
+        stimulus_set = np.array((
+            (0, 1, -2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+        with pytest.raises(Exception) as e_info:
+            docket = trials.Docket(stimulus_set)
+
+        # Does not contain enough references for each trial.
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, -1, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+        with pytest.raises(Exception) as e_info:
+            docket = trials.Docket(stimulus_set)
+
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
         stimulus_set = np.array((
@@ -388,8 +417,37 @@ class TestDocket:
 class TestObservations:
     """Test class Observations."""
 
+    def test_invalid_stimulus_set(self):
+        """Test handling of invalid `stimulus_set` argument."""
+        # Non-integer input.
+        stimulus_set = np.array((
+            (0., 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+        with pytest.raises(Exception) as e_info:
+            obs = trials.Observations(stimulus_set)
+
+        # Contains integers below -1.
+        stimulus_set = np.array((
+            (0, 1, -2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+        with pytest.raises(Exception) as e_info:
+            obs = trials.Observations(stimulus_set)
+
+        # Does not contain enough references for each trial.
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, -1, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+        with pytest.raises(Exception) as e_info:
+            obs = trials.Observations(stimulus_set)
+
     def test_invalid_group_id(self):
-        """Test handling of invalid 'group_id' argument."""
+        """Test handling of invalid `group_id` argument."""
         stimulus_set = np.array((
             (0, 1, 2, -1, -1, -1, -1, -1, -1),
             (9, 12, 7, -1, -1, -1, -1, -1, -1),
@@ -510,7 +568,8 @@ class TestObservations:
     def test_configuration_id_1(self, setup_obs_1):
         np.testing.assert_array_equal(
             setup_obs_1['configuration_id'],
-            setup_obs_1['obs'].config_idx)
+            setup_obs_1['obs'].config_idx
+        )
 
     def test_set_group_id(self, setup_obs_1):
         obs = setup_obs_1['obs']

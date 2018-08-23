@@ -32,8 +32,6 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
-    - Add stimulus set check. It can be [-1, inf]. Exploit this fact when
-    creating z placeholder to inflate z.
     - MAYBE add agent_id and/or session_id. My preference is not to
         have another attribute and let the user put whatever
         information they want in the group_id field with the
@@ -94,7 +92,7 @@ class SimilarityTrials(object):
             list corresponds to a trial configuration in config_list.
             Each row of the 2D array indicates one potential outcome.
             The values in the rows are the indices of the the reference
-            stimuli (as specified in the attribute 'stimulus_set'.
+            stimuli (as specified in the attribute `stimulus_set`.
 
     Methods:
         subset: Return a subset of similarity trials given an index.
@@ -126,16 +124,15 @@ class SimilarityTrials(object):
                 trials require reference selections to be ranked.
                 shape = (n_trial,)
         """
-        self.n_trial = stimulus_set.shape[0]
+        stimulus_set = self._check_stimulus_set(stimulus_set)
 
-        self.n_reference = self._infer_n_reference(stimulus_set)
+        self.n_trial = stimulus_set.shape[0]
+        n_reference = self._infer_n_reference(stimulus_set)
+        self.n_reference = self._check_n_reference(n_reference)
 
         # Format stimulus set.
-        # max_n_reference = 9
         self.max_n_reference = np.amax(self.n_reference)
         self.stimulus_set = stimulus_set[:, 0:self.max_n_reference+1]
-        # self.stimulus_set = pad_stimulus_set(
-        #     stimulus_set, max_n_reference)
 
         if n_select is None:
             n_select = np.ones((self.n_trial), dtype=np.int32)
@@ -153,6 +150,23 @@ class SimilarityTrials(object):
         self.config_idx = None
         self.config_list = None
         self.outcome_idx_list = None
+
+    def _check_stimulus_set(self, stimulus_set):
+        """Check the argument `stimulus_set`.
+
+        Raises:
+            ValueError
+
+        """
+        if not issubclass(stimulus_set.dtype.type, np.integer):
+            raise ValueError((
+                "The argument `stimulus_set` must be a 2D array of "
+                "integers."))
+        if np.sum(np.less(stimulus_set, -1)) > 0:
+            raise ValueError((
+                "The argument `stimulus_set` must only contain integers "
+                "greater than or equal to -1."))
+        return stimulus_set
 
     def _infer_n_reference(self, stimulus_set):
         """Return the number of references in each trial.
@@ -174,8 +188,22 @@ class SimilarityTrials(object):
         n_reference = max_ref - np.sum(stimulus_set < 0, axis=1)
         return n_reference.astype(dtype=np.int32)
 
+    def _check_n_reference(self, n_reference):
+        """Check the argument `n_reference`.
+
+        Raises:
+            ValueError
+
+        """
+        if np.sum(np.less(n_reference, 2)) > 0:
+            raise ValueError((
+                "The argument `stimulus_set` must contain at least three "
+                "non-negative integers per a row, i.e. one query and at least "
+                "two reference stimuli per trial."))
+        return n_reference
+
     def _check_n_select(self, n_select):
-        """Check the argument n_select.
+        """Check the argument `n_select`.
 
         Raises:
             ValueError
@@ -205,7 +233,7 @@ class SimilarityTrials(object):
         return n_select
 
     def _check_is_ranked(self, is_ranked):
-        """Check the argument is_ranked.
+        """Check the argument `is_ranked`.
 
         Raises:
             ValueError

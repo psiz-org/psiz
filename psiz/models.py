@@ -833,14 +833,14 @@ class PsychologicalEmbedding(object):
         feed_dict = {
             tf_obs['stimulus_set']: obs.stimulus_set,
             tf_obs['n_reference']: obs.n_reference,
-            tf_obs['n_selected']: obs.n_selected,
+            tf_obs['n_select']: obs.n_select,
             tf_obs['is_ranked']: obs.is_ranked,
             tf_obs['group_id']: obs.group_id,
             tf_obs['config_idx']: obs.config_idx,
             tf_obs['n_config']: len(obs.config_list.n_outcome.values),
             tf_obs['max_n_outcome']: np.max(obs.config_list.n_outcome.values),
             tf_obs['config_n_reference']: obs.config_list.n_reference.values,
-            tf_obs['config_n_selected']: obs.config_list.n_selected.values,
+            tf_obs['config_n_select']: obs.config_list.n_select.values,
             tf_obs['config_is_ranked']: obs.config_list.is_ranked.values,
             tf_obs['config_n_outcome']: obs.config_list.n_outcome.values,
             tf_obs['config_outcome_tensor']: obs.outcome_tensor()
@@ -874,8 +874,8 @@ class PsychologicalEmbedding(object):
             )
             tf_n_reference = tf.placeholder(
                 tf.int32, [None], name='n_reference')
-            tf_n_selected = tf.placeholder(
-                tf.int32, [None], name='n_selected')
+            tf_n_select = tf.placeholder(
+                tf.int32, [None], name='n_select')
             tf_is_ranked = tf.placeholder(
                 tf.int32, [None], name='is_ranked')
             tf_group_id = tf.placeholder(
@@ -891,8 +891,8 @@ class PsychologicalEmbedding(object):
             )
             tf_config_n_reference = tf.placeholder(
                 tf.int32, [None], name='config_n_reference')
-            tf_config_n_selected = tf.placeholder(
-                tf.int32, [None], name='config_n_selected')
+            tf_config_n_select = tf.placeholder(
+                tf.int32, [None], name='config_n_select')
             tf_config_is_ranked = tf.placeholder(
                 tf.int32, [None], name='config_is_ranked')
             tf_config_n_outcome = tf.placeholder(
@@ -902,14 +902,14 @@ class PsychologicalEmbedding(object):
             tf_obs = {
                 'stimulus_set': tf_stimulus_set,
                 'n_reference': tf_n_reference,
-                'n_selected': tf_n_selected,
+                'n_select': tf_n_select,
                 'is_ranked': tf_is_ranked,
                 'group_id': tf_group_id,
                 'config_idx': tf_config_idx,
                 'n_config': tf_n_config,
                 'max_n_outcome': tf_max_n_outcome,
                 'config_n_reference': tf_config_n_reference,
-                'config_n_selected': tf_config_n_selected,
+                'config_n_select': tf_config_n_select,
                 'config_is_ranked': tf_config_is_ranked,
                 'config_n_outcome': tf_config_n_outcome,
                 'config_outcome_tensor': tf_outcome_tensor
@@ -938,10 +938,10 @@ class PsychologicalEmbedding(object):
 
             def body_fn(cond_idx, prob_all):
                 n_reference = tf_n_reference[cond_idx]
-                n_selected = tf_n_selected[cond_idx]
+                n_select = tf_n_select[cond_idx]
                 trial_idx = tf.squeeze(tf.where(tf.logical_and(
                     tf.equal(tf_n_reference, n_reference),
-                    tf.equal(tf_n_selected, n_selected)))
+                    tf.equal(tf_n_select, n_select)))
                 )
                 sim_qr_config = tf.gather(sim_qr, trial_idx)
                 reference_idx = tf.range(
@@ -949,7 +949,7 @@ class PsychologicalEmbedding(object):
                 sim_qr_config = tf.gather(sim_qr_config, reference_idx, axis=1)
                 sim_qr_config.set_shape((None, None))
                 prob_config = self._tf_ranked_sequence_probability(
-                    sim_qr_config, n_selected)
+                    sim_qr_config, n_select)
                 prob_all = tf.concat((prob_all, prob_config), axis=0)
                 cond_idx = cond_idx + 1
                 return [cond_idx, prob_all]
@@ -1100,7 +1100,7 @@ class PsychologicalEmbedding(object):
             for i_outcome in range(n_outcome):
                 s_qref_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
                 prob[:, i_outcome, :] = self._ranked_sequence_probabiltiy(
-                    s_qref_perm, config['n_selected'])
+                    s_qref_perm, config['n_select'])
             prob_all[trial_locs, 0:n_outcome, :] = prob
         prob_all = ma.masked_values(prob_all, -1)
 
@@ -1166,7 +1166,7 @@ class PsychologicalEmbedding(object):
             n_trial = np.sum(trial_locs)
             n_outcome = n_outcome_list[i_config]
             n_reference = tf.constant(config['n_reference'], dtype=tf.int32)
-            n_selected = tf.constant(config['n_selected'], dtype=tf.int32)
+            n_select = tf.constant(config['n_select'], dtype=tf.int32)
 
             curr_trial_idx = tf.constant(dmy_idx[trial_locs], dtype=tf.int32)
             sim_qr_config = tf.gather(sim_qr, curr_trial_idx)
@@ -1181,7 +1181,7 @@ class PsychologicalEmbedding(object):
                 prob = tf.concat((
                     prob,
                     tf.expand_dims(self._tf_ranked_sequence_probability(
-                        s_qref_perm, n_selected), axis=0)
+                        s_qref_perm, n_select), axis=0)
                 ), axis=0)
             # Pad absent outcomes before putting in master prob_all.
             prob_zero = tf.zeros((max_n_outcome - n_outcome, n_trial))
@@ -1273,7 +1273,7 @@ class PsychologicalEmbedding(object):
         z_r = r[3]
         return (z_q, z_r)
 
-    def _ranked_sequence_probabiltiy(self, sim_qr, n_selected):
+    def _ranked_sequence_probabiltiy(self, sim_qr, n_select):
         """Return probability of a ranked selection sequence.
 
         Arguments:
@@ -1286,7 +1286,7 @@ class PsychologicalEmbedding(object):
                 (dimension 1). The third dimension indicates
                 different samples.
                 shape = (n_trial, n_reference, n_sample)
-            n_selected: Scalar indicating the number of selections made
+            n_select: Scalar indicating the number of selections made
                 by an agent.
 
         Returns:
@@ -1314,7 +1314,7 @@ class PsychologicalEmbedding(object):
 
         # Initialize.
         seq_prob = np.ones((n_trial, n_sample), dtype=np.float64)
-        selected_idx = n_selected - 1
+        selected_idx = n_select - 1
         denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)
 
         for i_selected in range(selected_idx, -1, -1):
@@ -1328,14 +1328,14 @@ class PsychologicalEmbedding(object):
                 denom = denom + sim_qr[:, i_selected-1, :]
         return seq_prob
 
-    def _tf_ranked_sequence_probability(self, sim_qr, n_selected):
+    def _tf_ranked_sequence_probability(self, sim_qr, n_select):
         """Return probability of a ranked selection sequence.
 
         See: _ranked_sequence_probability
 
         Arguments:
             sim_qr:
-            n_selected:
+            n_select:
 
         TODO complete docs, MAYBE implement samples dimension?
         """
@@ -1344,7 +1344,7 @@ class PsychologicalEmbedding(object):
 
         # Initialize.
         seq_prob = tf.ones([n_trial], dtype=tf.float32)
-        selected_idx = n_selected - 1
+        selected_idx = n_select - 1
         denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
 
         def cond_fn(selected_idx, seq_prob, denom):

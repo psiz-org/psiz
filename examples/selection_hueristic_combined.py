@@ -57,7 +57,7 @@ def main():
     np.random.seed(123)
     n_sample = 2000
     n_reference = 2
-    n_selected = 1
+    n_select = 1
     n_dim = 2
     n_stimuli = 30
     n_scenario = 100
@@ -68,7 +68,7 @@ def main():
     stimulus_set = candidate_list(eligable_list, n_reference)
     n_candidate = stimulus_set.shape[0]
     candidate_docket = Docket(
-        stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
+        stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
     )
 
     diff_ig = np.empty((n_scenario))
@@ -79,7 +79,7 @@ def main():
 
         config_list = pd.DataFrame({
             'n_reference': np.array([2], dtype=np.int32),
-            'n_selected': np.array([1], dtype=np.int32),
+            'n_select': np.array([1], dtype=np.int32),
             'is_ranked': [True],
             'n_outcome': np.array([2], dtype=np.int32)
         })

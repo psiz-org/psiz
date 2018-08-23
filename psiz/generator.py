@@ -94,7 +94,7 @@ class RandomGenerator(TrialGenerator):
         """
         TrialGenerator.__init__(self, n_stimuli)
 
-    def generate(self, n_trial, n_reference=2, n_selected=1, is_ranked=True):
+    def generate(self, n_trial, n_reference=2, n_select=1, is_ranked=True):
         """Return generated trials based on provided arguments.
 
         Arguments:
@@ -102,7 +102,7 @@ class RandomGenerator(TrialGenerator):
                 generate.
             n_reference (optional): A scalar indicating the number of
                 references for each trial.
-            n_selected (optional): A scalar indicating the number of
+            n_select (optional): A scalar indicating the number of
                 selections an agent must make.
             is_ranked (optional): Boolean indicating whether an agent
                 must make ranked selections.
@@ -112,7 +112,7 @@ class RandomGenerator(TrialGenerator):
 
         """
         n_reference = np.int32(n_reference)
-        n_selected = np.repeat(np.int32(n_selected), n_trial)
+        n_select = np.repeat(np.int32(n_select), n_trial)
         is_ranked = np.repeat(bool(is_ranked), n_trial)
         stimulus_set = np.empty((n_trial, n_reference + 1), dtype=np.int32)
         for i_trial in range(n_trial):
@@ -122,7 +122,7 @@ class RandomGenerator(TrialGenerator):
         # Sort indices corresponding to references.
         stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
         return Docket(
-            stimulus_set, n_selected=n_selected, is_ranked=is_ranked
+            stimulus_set, n_select=n_select, is_ranked=is_ranked
         )
 
 
@@ -164,7 +164,7 @@ class ActiveGenerator(TrialGenerator):
         if config_list is None:
             config_list = pd.DataFrame({
                 'n_reference': np.array([2, 8], dtype=np.int32),
-                'n_selected': np.array([1, 2], dtype=np.int32),
+                'n_select': np.array([1, 2], dtype=np.int32),
                 'is_ranked': [True, True],
                 'n_outcome': np.array([2, 56], dtype=np.int32)
             })
@@ -310,17 +310,17 @@ class ActiveGenerator(TrialGenerator):
         for i_config in config_list.itertuples():
             stimulus_set = combos[i_config.n_reference]
             n_candidate = stimulus_set.shape[0]
-            n_selected = i_config.n_selected * np.ones(
+            n_select = i_config.n_select * np.ones(
                 n_candidate, dtype=np.int32)
             is_ranked = np.full(n_candidate, i_config.is_ranked, dtype=bool)
             if placeholder_docket is None:
                 placeholder_docket = Docket(
-                    stimulus_set, n_selected=n_selected, is_ranked=is_ranked)
+                    stimulus_set, n_select=n_select, is_ranked=is_ranked)
             else:
                 placeholder_docket = stack((
                     placeholder_docket,
                     Docket(
-                        stimulus_set, n_selected=n_selected,
+                        stimulus_set, n_select=n_select,
                         is_ranked=is_ranked)
                 ))
         return placeholder_docket

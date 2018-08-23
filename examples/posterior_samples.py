@@ -62,8 +62,8 @@ def main():
     # Generate a random docket of trials.
     generator = RandomGenerator(model_truth.n_stimuli)
     n_reference = 2
-    n_selected = 1
-    docket = generator.generate(n_trial, n_reference, n_selected)
+    n_select = 1
+    docket = generator.generate(n_trial, n_reference, n_select)
 
     # Simulate similarity judgements using ground truth model.
     agent = Agent(model_truth)

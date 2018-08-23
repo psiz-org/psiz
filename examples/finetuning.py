@@ -40,7 +40,7 @@ def main():
     n_dim = 2
     n_trial = 1000
     n_reference = 8
-    n_selected = 2
+    n_select = 2
     n_scenario = 10
 
     r2_gd = np.empty((n_scenario))
@@ -53,7 +53,7 @@ def main():
 
         # Generate a random docket of trials.
         generator = RandomGenerator(n_stimuli)
-        docket = generator.generate(n_trial, n_reference, n_selected)
+        docket = generator.generate(n_trial, n_reference, n_select)
 
         # Simulate similarity judgments.
         agent = Agent(model_true)

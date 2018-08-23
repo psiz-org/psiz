@@ -38,7 +38,7 @@ def main():
     np.random.seed(123)
     n_sample = 2000
     n_reference = 2
-    n_selected = 1
+    n_select = 1
     n_dim = 2
     n_stimuli = 25
     n_scenario = 100
@@ -89,7 +89,7 @@ def main():
         (_, nn_idx) = nbrs.kneighbors(mu)
 
         candidate_docket = Docket(
-            stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
+            stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
         )
 
         # Compute expected information gain.
@@ -161,11 +161,11 @@ def main():
 
             ax = fig.add_subplot(3, n_plot, plot_idx + n_plot)
             candidate_subplot(
-                ax, mu, sorted_stim_set[0], n_selected, color_array, limits)
+                ax, mu, sorted_stim_set[0], n_select, color_array, limits)
 
             ax = fig.add_subplot(3, n_plot, plot_idx + 2 * n_plot)
             candidate_subplot(
-                ax, mu, sorted_stim_set[1], n_selected, color_array, limits)
+                ax, mu, sorted_stim_set[1], n_select, color_array, limits)
 
             plot_idx = plot_idx + 1
 
@@ -199,7 +199,7 @@ def check_neighbor_distance(stimulus_set, nn_idx):
 
 
 def candidate_subplot(
-        ax, z, stimulus_set, n_selected, color_array, limits):
+        ax, z, stimulus_set, n_select, color_array, limits):
     """Plot subplots for candidate trials."""
     locs = np.not_equal(stimulus_set, -1)
     stimulus_set = stimulus_set[locs]
@@ -230,7 +230,7 @@ def candidate_subplot(
     # rect_val = matplotlib.patches.Rectangle(
     #     (.55, -.55), .06, rel_ig * 1.1, clip_on=False, color=[.3, .3, .3])
     # ax.add_patch(rect_val)
-    # plt.text(-.45, .45, "{0}".format(n_selected), fontdict=fontdict)
+    # plt.text(-.45, .45, "{0}".format(n_select), fontdict=fontdict)
 
 
 def ground_truth(n_dim, n_stimuli):

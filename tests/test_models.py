@@ -100,10 +100,10 @@ def docket_0():
         (2, 1, 0, 6, -1),
         (3, 0, 2, 6, -1),
     ))
-    n_selected = np.array((
+    n_select = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    docket = Docket(stimulus_set, n_selected=n_selected)
+    docket = Docket(stimulus_set, n_select=n_select)
     return docket
 
 
@@ -354,10 +354,10 @@ def test_inflate_points_single_sample(
         ground_truth_deterministic, docket_0):
     """Test inflation with z with 1 sample."""
     n_reference = 4
-    n_selected = 2
+    n_select = 2
     trial_locs = np.logical_and(
         docket_0.n_reference == n_reference,
-        docket_0.n_selected == n_selected
+        docket_0.n_select == n_select
     )
 
     z = ground_truth_deterministic.z['value']
@@ -425,10 +425,10 @@ def test_tf_ranked_sequence_probability(ground_truth, docket_0):
     """Test tf_ranked_sequence_probability."""
     docket = docket_0
     n_reference = 4
-    n_selected = 2
+    n_select = 2
     trial_locs = np.logical_and(
         docket.n_reference == n_reference,
-        docket.n_selected == n_selected
+        docket.n_select == n_select
     )
 
     z = ground_truth.z['value']
@@ -441,15 +441,15 @@ def test_tf_ranked_sequence_probability(ground_truth, docket_0):
         np.expand_dims(z, axis=2)
     )
     s_qref = ground_truth.similarity(z_q, z_r, group_id=0)
-    prob_1 = ground_truth._ranked_sequence_probabiltiy(s_qref, n_selected)
+    prob_1 = ground_truth._ranked_sequence_probabiltiy(s_qref, n_select)
     prob_1 = prob_1[:, 0]
 
     # NOTE: tf_ranked_sequence_probability is not implemented to handle
     # samples.
-    tf_n_selected = tf.constant(n_selected, dtype=tf.int32)
+    tf_n_select = tf.constant(n_select, dtype=tf.int32)
     tf_s_qref = tf.convert_to_tensor(s_qref[:, :, 0], dtype=tf.float32)
     tf_prob_2 = ground_truth._tf_ranked_sequence_probability(
-        tf_s_qref, tf_n_selected)
+        tf_s_qref, tf_n_select)
     sess = tf.Session()
     with sess.as_default():
         sess.run(tf.global_variables_initializer())

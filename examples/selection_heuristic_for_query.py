@@ -38,7 +38,7 @@ def main():
     np.random.seed(123)
     n_sample = 2000
     n_reference = 2
-    n_selected = 1
+    n_select = 1
     n_dim = 2
     n_stimuli = 20  # 25 TODO
     n_scenario = 100
@@ -47,7 +47,7 @@ def main():
     stimulus_set = candidate_list(eligable_list, n_reference)
     n_candidate = stimulus_set.shape[0]
     candidate_docket = Docket(
-        stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
+        stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
     )
 
     rel_entropy_all = np.empty((0))

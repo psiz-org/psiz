@@ -76,12 +76,12 @@ def test_random_generator():
     n_stimuli_desired = 10
     n_trial_desired = 50
     n_reference_desired = 4
-    n_selected_desired = 2
+    n_select_desired = 2
     is_ranked_desired = True
     gen = generator.RandomGenerator(n_stimuli_desired)
     docket = gen.generate(
         n_trial=n_trial_desired, n_reference=n_reference_desired,
-        n_selected=n_selected_desired)
+        n_select=n_select_desired)
 
     assert docket.n_trial == n_trial_desired
     assert sum(docket.n_reference == n_reference_desired) == n_trial_desired
@@ -100,7 +100,7 @@ def test_random_generator():
                 docket.stimulus_set[i_trial, 0:n_reference_desired+1])
                 ) == n_unique_desired
         )
-    assert sum(docket.n_selected == n_selected_desired) == n_trial_desired
+    assert sum(docket.n_select == n_select_desired) == n_trial_desired
     assert sum(docket.is_ranked == is_ranked_desired) == n_trial_desired
 
 
@@ -168,16 +168,16 @@ def test_information_gain(ground_truth):
 #     n_stimuli_desired = 9
 #     n_trial_desired = 200
 #     n_reference_desired = 2
-#     n_selected_desired = 1
+#     n_select_desired = 1
 #     gen = generator.RandomGenerator(n_stimuli_desired)
 #     unjudged_trials_0 = gen.generate(
 #         n_trial=n_trial_desired, n_reference=n_reference_desired,
-#         n_selected=n_selected_desired)
+#         n_select=n_select_desired)
 #     n_stimuli_desired = 10
 #     n_trial_desired = 50
 #     gen = generator.RandomGenerator(n_stimuli_desired)
 #     unjudged_trials_1 = gen.generate(
 #         n_trial=n_trial_desired, n_reference=n_reference_desired,
-#         n_selected=n_selected_desired)
+#         n_select=n_select_desired)
 #     unjudged_trials = stack((unjudged_trials_0, unjudged_trials_1))
 #     return unjudged_trials

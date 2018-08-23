@@ -75,9 +75,9 @@ def main():
     n_dim = model_nov_tru.n_dim
     n_trial = 10000
     n_reference = 8
-    n_selected = 2
+    n_select = 2
     generator = RandomGenerator(n_stimuli)
-    docket = generator.generate(n_trial, n_reference, n_selected)
+    docket = generator.generate(n_trial, n_reference, n_select)
 
     # Simulate observations.
     agent_novice = Agent(model_nov_tru)

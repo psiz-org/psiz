@@ -46,14 +46,14 @@ def setup_docket_0():
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
                             (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 1), dtype=np.int32)
+    n_select = np.array((1, 1, 1, 1), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
 
     configurations = pd.DataFrame(
         {
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
-            'n_selected': np.array([1, 1, 1], dtype=np.int32),
+            'n_select': np.array([1, 1, 1], dtype=np.int32),
             'is_ranked': [True, True, True],
             'n_outcome': np.array([2, 4, 8], dtype=np.int32)
         },
@@ -63,7 +63,7 @@ def setup_docket_0():
     docket = trials.Docket(stimulus_set)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
-        'n_reference': n_reference, 'n_selected': n_selected,
+        'n_reference': n_reference, 'n_select': n_select,
         'is_ranked': is_ranked, 'docket': docket,
         'configurations': configurations,
         'configuration_id': configuration_id
@@ -79,24 +79,24 @@ def setup_docket_1():
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
                             (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 2), dtype=np.int32)
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
 
     configurations = pd.DataFrame(
         {
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
-            'n_selected': np.array([1, 1, 2], dtype=np.int32),
+            'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
             'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    docket = trials.Docket(stimulus_set, n_selected=n_selected)
+    docket = trials.Docket(stimulus_set, n_select=n_select)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
-        'n_reference': n_reference, 'n_selected': n_selected,
+        'n_reference': n_reference, 'n_select': n_select,
         'is_ranked': is_ranked, 'docket': docket,
         'configurations': configurations,
         'configuration_id': configuration_id
@@ -112,14 +112,14 @@ def setup_obs_0():
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
                             (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 2), dtype=np.int32)
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
     group_id = np.array([0, 0, 0, 0], dtype=np.int32)
     configurations = pd.DataFrame(
         {
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
-            'n_selected': np.array([1, 1, 2], dtype=np.int32),
+            'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
             'group_id': np.array([0, 0, 0], dtype=np.int32),
             'session_id': np.array([0, 0, 0], dtype=np.int32),
@@ -128,10 +128,10 @@ def setup_obs_0():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    obs = trials.Observations(stimulus_set, n_selected=n_selected)
+    obs = trials.Observations(stimulus_set, n_select=n_select)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
-        'n_reference': n_reference, 'n_selected': n_selected,
+        'n_reference': n_reference, 'n_select': n_select,
         'is_ranked': is_ranked, 'group_id': group_id, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
@@ -147,7 +147,7 @@ def setup_obs_1():
                             (3, 4, 5, 6, 7, -1, -1, -1, -1),
                             (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
     n_trial = 4
-    n_selected = np.array((1, 1, 1, 2), dtype=np.int32)
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
     group_id = np.array((0, 0, 1, 1), dtype=np.int32)
@@ -155,7 +155,7 @@ def setup_obs_1():
     configurations = pd.DataFrame(
         {
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
-            'n_selected': np.array([1, 1, 2], dtype=np.int32),
+            'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
             'group_id': np.array([0, 1, 1], dtype=np.int32),
             'session_id': np.array([0, 0, 0], dtype=np.int32),
@@ -165,10 +165,10 @@ def setup_obs_1():
     configuration_id = np.array((0, 0, 1, 2), dtype=np.int32)
 
     obs = trials.Observations(
-        stimulus_set, n_selected=n_selected, group_id=group_id)
+        stimulus_set, n_select=n_select, group_id=group_id)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
-        'n_reference': n_reference, 'n_selected': n_selected,
+        'n_reference': n_reference, 'n_select': n_select,
         'is_ranked': is_ranked, 'group_id': group_id, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
@@ -208,8 +208,8 @@ def ground_truth(n_stimuli):
 class TestSimilarityTrials:
     """Test functionality of base class SimilarityTrials."""
 
-    def test_invalid_n_selected(self):
-        """Test handling of invalid 'n_selected' argument."""
+    def test_invalid_n_select(self):
+        """Test handling of invalid 'n_select' argument."""
         stimulus_set = np.array((
             (0, 1, 2, -1, -1, -1, -1, -1, -1),
             (9, 12, 7, -1, -1, -1, -1, -1, -1),
@@ -217,19 +217,19 @@ class TestSimilarityTrials:
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
 
         # Mismatch in number of trials
-        n_selected = np.array((1, 1, 2))
+        n_select = np.array((1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, n_selected=n_selected)
+            docket = trials.Docket(stimulus_set, n_select=n_select)
 
         # Below support.
-        n_selected = np.array((1, 0, 1, 0))
+        n_select = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, n_selected=n_selected)
+            docket = trials.Docket(stimulus_set, n_select=n_select)
     
         # Above support.
-        n_selected = np.array((2, 1, 1, 2))
+        n_select = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, n_selected=n_selected)
+            docket = trials.Docket(stimulus_set, n_select=n_select)
 
     def test_invalid_is_ranked(self):
         """Test handling of invalid 'is_ranked' argument."""
@@ -262,8 +262,8 @@ class TestDocket:
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
 
         # Create original trials.
-        n_selected = np.array((1, 1, 1, 1, 2))
-        docket = trials.Docket(stimulus_set, n_selected=n_selected)
+        n_select = np.array((1, 1, 1, 1, 2))
+        docket = trials.Docket(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(docket.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -282,15 +282,15 @@ class TestDocket:
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
 
         # Create first set of original trials.
-        n_selected = np.array((1, 1, 1, 1, 1))
-        trials_0 = trials.Docket(stimulus_set, n_selected=n_selected)
+        n_select = np.array((1, 1, 1, 1, 1))
+        trials_0 = trials.Docket(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
-        n_selected = np.array((2, 2, 2, 2, 2))
-        trials_1 = trials.Docket(stimulus_set, n_selected=n_selected)
+        n_select = np.array((2, 2, 2, 2, 2))
+        trials_1 = trials.Docket(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
@@ -312,9 +312,9 @@ class TestDocket:
         np.testing.assert_array_equal(
             setup_docket_0['n_reference'], setup_docket_0['docket'].n_reference)
 
-    def test_n_selected_0(self, setup_docket_0):
+    def test_n_select_0(self, setup_docket_0):
         np.testing.assert_array_equal(
-            setup_docket_0['n_selected'], setup_docket_0['docket'].n_selected)
+            setup_docket_0['n_select'], setup_docket_0['docket'].n_select)
 
     def test_is_ranked_0(self, setup_docket_0):
         np.testing.assert_array_equal(
@@ -341,9 +341,9 @@ class TestDocket:
         np.testing.assert_array_equal(
             setup_docket_1['n_reference'], setup_docket_1['docket'].n_reference)
 
-    def test_n_selected_1(self, setup_docket_1):
+    def test_n_select_1(self, setup_docket_1):
         np.testing.assert_array_equal(
-            setup_docket_1['n_selected'], setup_docket_1['docket'].n_selected)
+            setup_docket_1['n_select'], setup_docket_1['docket'].n_select)
 
     def test_is_ranked_1(self, setup_docket_1):
         np.testing.assert_array_equal(
@@ -373,7 +373,7 @@ class TestDocket:
         np.testing.assert_array_equal(
             setup_docket_0['n_reference'], loaded_docket.n_reference)
         np.testing.assert_array_equal(
-            setup_docket_0['n_selected'], loaded_docket.n_selected)
+            setup_docket_0['n_select'], loaded_docket.n_select)
         np.testing.assert_array_equal(
             setup_docket_0['is_ranked'], loaded_docket.is_ranked)
         pd.testing.assert_frame_equal(
@@ -383,6 +383,7 @@ class TestDocket:
             setup_docket_0['configuration_id'],
             loaded_docket.config_idx)
         # TODO test possible_outcomes
+
 
 class TestObservations:
     """Test class Observations."""
@@ -415,8 +416,8 @@ class TestObservations:
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
 
         # Create original trials.
-        n_selected = np.array((1, 1, 1, 1, 2))
-        obs = trials.Observations(stimulus_set, n_selected=n_selected)
+        n_select = np.array((1, 1, 1, 1, 2))
+        obs = trials.Observations(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(obs.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -435,15 +436,15 @@ class TestObservations:
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
 
         # Create first set of original trials.
-        n_selected = np.array((1, 1, 1, 1, 1))
-        trials_0 = trials.Observations(stimulus_set, n_selected=n_selected)
+        n_select = np.array((1, 1, 1, 1, 1))
+        trials_0 = trials.Observations(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
-        n_selected = np.array((2, 2, 2, 2, 2))
-        trials_1 = trials.Observations(stimulus_set, n_selected=n_selected)
+        n_select = np.array((2, 2, 2, 2, 2))
+        trials_1 = trials.Observations(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
@@ -464,9 +465,9 @@ class TestObservations:
         np.testing.assert_array_equal(
             setup_obs_0['n_reference'], setup_obs_0['obs'].n_reference)
 
-    def test_n_selected_0(self, setup_obs_0):
+    def test_n_select_0(self, setup_obs_0):
         np.testing.assert_array_equal(
-            setup_obs_0['n_selected'], setup_obs_0['obs'].n_selected)
+            setup_obs_0['n_select'], setup_obs_0['obs'].n_select)
 
     def test_is_ranked_0(self, setup_obs_0):
         np.testing.assert_array_equal(
@@ -493,9 +494,9 @@ class TestObservations:
         np.testing.assert_array_equal(
             setup_obs_1['n_reference'], setup_obs_1['obs'].n_reference)
 
-    def test_n_selected_1(self, setup_obs_1):
+    def test_n_select_1(self, setup_obs_1):
         np.testing.assert_array_equal(
-            setup_obs_1['n_selected'], setup_obs_1['obs'].n_selected)
+            setup_obs_1['n_select'], setup_obs_1['obs'].n_select)
 
     def test_is_ranked_1(self, setup_obs_1):
         np.testing.assert_array_equal(
@@ -545,7 +546,7 @@ class TestObservations:
         np.testing.assert_array_equal(
             setup_obs_0['n_reference'], loaded_obs.n_reference)
         np.testing.assert_array_equal(
-            setup_obs_0['n_selected'], loaded_obs.n_selected)
+            setup_obs_0['n_select'], loaded_obs.n_select)
         np.testing.assert_array_equal(
             setup_obs_0['is_ranked'], loaded_obs.is_ranked)
         np.testing.assert_array_equal(
@@ -558,6 +559,7 @@ class TestObservations:
             loaded_obs.config_idx)
         # TODO test possible_outcomes
 
+
 class TestStack:
     """Test stack static method."""
 
@@ -567,9 +569,9 @@ class TestStack:
 
         n_trial = 50
         n_reference = 8
-        n_selected = 2
+        n_select = 2
         generator = RandomGenerator(n_stimuli)
-        docket = generator.generate(n_trial, n_reference, n_selected)
+        docket = generator.generate(n_trial, n_reference, n_select)
 
         double_trials = trials.stack((docket, docket))
 
@@ -580,9 +582,9 @@ class TestStack:
             double_trials.n_reference[n_trial:], docket.n_reference)
 
         np.testing.assert_array_equal(
-            double_trials.n_selected[0:n_trial], docket.n_selected)
+            double_trials.n_select[0:n_trial], docket.n_select)
         np.testing.assert_array_equal(
-            double_trials.n_selected[n_trial:], docket.n_selected)
+            double_trials.n_select[n_trial:], docket.n_select)
 
         np.testing.assert_array_equal(
             double_trials.is_ranked[0:n_trial], docket.is_ranked)
@@ -602,9 +604,9 @@ class TestStack:
             obs_all.n_reference[n_trial:], obs_expert.n_reference)
 
         np.testing.assert_array_equal(
-            obs_all.n_selected[0:n_trial], obs_novice.n_selected)
+            obs_all.n_select[0:n_trial], obs_novice.n_select)
         np.testing.assert_array_equal(
-            obs_all.n_selected[n_trial:], obs_expert.n_selected)
+            obs_all.n_select[n_trial:], obs_expert.n_select)
 
         np.testing.assert_array_equal(
             obs_all.is_ranked[0:n_trial], obs_novice.is_ranked)
@@ -622,16 +624,16 @@ class TestStack:
         generator = RandomGenerator(n_stimuli)
 
         n_reference1 = 2
-        n_selected1 = 1
-        trials1 = generator.generate(5, n_reference1, n_selected1)
+        n_select1 = 1
+        trials1 = generator.generate(5, n_reference1, n_select1)
 
         n_reference2 = 4
-        n_selected2 = 2
-        trials2 = generator.generate(5, n_reference2, n_selected2)
+        n_select2 = 2
+        trials2 = generator.generate(5, n_reference2, n_select2)
 
         n_reference3 = 6
-        n_selected3 = 2
-        trials3 = generator.generate(5, n_reference3, n_selected3)
+        n_select3 = 2
+        trials3 = generator.generate(5, n_reference3, n_select3)
 
         trials_all = trials.stack((trials1, trials2, trials3))
 
@@ -651,16 +653,16 @@ class TestStack:
         generator = RandomGenerator(n_stimuli)
 
         n_reference1 = 2
-        n_selected1 = 1
-        trials1 = generator.generate(5, n_reference1, n_selected1)
+        n_select1 = 1
+        trials1 = generator.generate(5, n_reference1, n_select1)
 
         n_reference2 = 4
-        n_selected2 = 2
-        trials2 = generator.generate(5, n_reference2, n_selected2)
+        n_select2 = 2
+        trials2 = generator.generate(5, n_reference2, n_select2)
 
         n_reference3 = 8
-        n_selected3 = 2
-        trials3 = generator.generate(5, n_reference3, n_selected3)
+        n_select3 = 2
+        trials3 = generator.generate(5, n_reference3, n_select3)
 
         trials_all = trials.stack((trials1, trials2, trials3))
 
@@ -703,8 +705,8 @@ class TestPossibleOutcomes:
     def test_possible_outcomes_2c1(self):
         """Test outcomes 2 choose 1 ranked trial."""
         stimulus_set = np.array(((0, 1, 2), (9, 12, 7)))
-        n_selected = 1 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_selected=n_selected)
+        n_select = 1 * np.ones((2))
+        tasks = trials.Docket(stimulus_set, n_select=n_select)
 
         po = trials.possible_outcomes(tasks.config_list.iloc[0])
 
@@ -714,8 +716,8 @@ class TestPossibleOutcomes:
     def test_possible_outcomes_3c2(self):
         """Test outcomes 3 choose 2 ranked trial."""
         stimulus_set = np.array(((0, 1, 2, 3), (33, 9, 12, 7)))
-        n_selected = 2 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_selected=n_selected)
+        n_select = 2 * np.ones((2))
+        tasks = trials.Docket(stimulus_set, n_select=n_select)
 
         po = trials.possible_outcomes(tasks.config_list.iloc[0])
 
@@ -727,8 +729,8 @@ class TestPossibleOutcomes:
     def test_possible_outcomes_4c2(self):
         """Test outcomes 4 choose 2 ranked trial."""
         stimulus_set = np.array(((0, 1, 2, 3, 4), (45, 33, 9, 12, 7)))
-        n_selected = 2 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_selected=n_selected)
+        n_select = 2 * np.ones((2))
+        tasks = trials.Docket(stimulus_set, n_select=n_select)
 
         po = trials.possible_outcomes(tasks.config_list.iloc[0])
 
@@ -744,8 +746,8 @@ class TestPossibleOutcomes:
         stimulus_set = np.array((
             (0, 1, 2, 3, 4, 5, 6, 7, 8),
             (45, 33, 9, 12, 7, 2, 5, 4, 3)))
-        n_selected = 1 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_selected=n_selected)
+        n_select = 1 * np.ones((2))
+        tasks = trials.Docket(stimulus_set, n_select=n_select)
 
         po = trials.possible_outcomes(tasks.config_list.iloc[0])
 

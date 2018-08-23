@@ -117,6 +117,6 @@ class Agent(object):
         group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
         return Observations(
                 stimulus_set,
-                n_selected=docket.n_selected,
+                n_select=docket.n_select,
                 is_ranked=docket.is_ranked, group_id=group_id
             )

@@ -68,10 +68,10 @@ def docket_0():
         (2, 1, 0, 6, -1),
         (3, 0, 2, 6, -1),
     ))
-    n_selected = np.array((
+    n_select = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    docket = Docket(stimulus_set, n_selected=n_selected)
+    docket = Docket(stimulus_set, n_select=n_select)
     return docket
 
 

@@ -43,7 +43,7 @@ def main():
     np.random.seed(123)
     n_sample = 2000
     n_reference = 3
-    n_selected = 1
+    n_select = 1
 
     model = ground_truth()
     z_true = model.z['value']
@@ -60,7 +60,7 @@ def main():
 
     gen = ActiveGenerator(n_stimuli)
     candidate_docket = Docket(
-        stimulus_set, n_selected * np.ones(n_candidate, dtype=np.int32)
+        stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
     )
 
     # Compute expected information gain.

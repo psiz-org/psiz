@@ -46,22 +46,22 @@ def main():
     stimulus_set_2 = candidate_stimulus_sets(eligable_list, 2)
     stimulus_set_4 = candidate_stimulus_sets(eligable_list, 4)
 
-    n_selected = 1
+    n_select = 1
     n_candidate = stimulus_set_2.shape[0]
     candidate_docket_2c1 = Docket(
-        stimulus_set_2, n_selected * np.ones(n_candidate, dtype=np.int32)
+        stimulus_set_2, n_select * np.ones(n_candidate, dtype=np.int32)
     )
 
-    n_selected = 1
+    n_select = 1
     n_candidate = stimulus_set_4.shape[0]
     candidate_docket_4c1 = Docket(
-        stimulus_set_4, n_selected * np.ones(n_candidate, dtype=np.int32)
+        stimulus_set_4, n_select * np.ones(n_candidate, dtype=np.int32)
     )
 
-    n_selected = 2
+    n_select = 2
     n_candidate = stimulus_set_4.shape[0]
     candidate_docket_4c2 = Docket(
-        stimulus_set_4, n_selected * np.ones(n_candidate, dtype=np.int32)
+        stimulus_set_4, n_select * np.ones(n_candidate, dtype=np.int32)
     )
 
     candidate_docket = stack((
@@ -164,7 +164,7 @@ def scenario_subplot(
         candidate_subplot(
             fig, idx + i_subplot + 1, z_true,
             docket.stimulus_set[i_subplot],
-            docket.n_selected[i_subplot],
+            docket.n_select[i_subplot],
             ig[i_subplot], rel_ig[i_subplot],
             color_array)
 
@@ -188,7 +188,7 @@ def posterior_subplot(fig, idx, z_samp, color_array):
 
 
 def candidate_subplot(
-        fig, idx, z, stimulus_set, n_selected, ig, rel_ig, color_array):
+        fig, idx, z, stimulus_set, n_select, ig, rel_ig, color_array):
     """Plot subplots for candidate trials."""
     locs = np.not_equal(stimulus_set, -1)
     stimulus_set = stimulus_set[locs]
@@ -219,7 +219,7 @@ def candidate_subplot(
     rect_val = matplotlib.patches.Rectangle(
         (.55, -.55), .06, rel_ig * 1.1, clip_on=False, color=[.3, .3, .3])
     ax.add_patch(rect_val)
-    plt.text(-.45, .45, "{0}".format(n_selected), fontdict=fontdict)
+    plt.text(-.45, .45, "{0}".format(n_select), fontdict=fontdict)
 
 
 def ground_truth():

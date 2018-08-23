@@ -24,6 +24,10 @@ Classes:
         kernel.
     StudentsT: Embedding model using a Student's t similarity kernel.
 
+Functions:
+    load_model: Load a hdf5 file, that was saved with the `save` class
+        method, as an embedding model.
+
 Todo:
     - add save and load functionality (perhaps as HDF5 file)
     - method 'convert' takes z: shape=(n_stimuli, n_dim, n_sample) and
@@ -92,6 +96,7 @@ class PsychologicalEmbedding(object):
             observations.
         posterior_samples: Sample from the posterior distribution.
         set_log: Adjust the TensorBoard logging behavior.
+        save: Save the embedding model as an hdf5 file.
 
     Attributes:
         z: A dictionary with the keys 'value', 'trainable'. The key
@@ -1621,12 +1626,7 @@ class PsychologicalEmbedding(object):
         Arguments:
             filepath: String specifying the path to save the model.
 
-        Raises:
-            ImportError: if h5py is not available.
-
         """
-        if h5py is None:
-            raise ImportError('`save_model` requires h5py.')
         # TODO
 
 
@@ -2214,3 +2214,12 @@ class StudentsT(PsychologicalEmbedding):
         # Student-t family similarity kernel.
         sim_qr = (1 + (d_qref**tau / alpha))**(np.negative(alpha + 1)/2)
         return sim_qr
+
+
+def load_embedding(filepath):
+    """Load embedding as a concrete class of PsychologicalEmbedding.
+
+    Arguments:
+        filepath: The location of the hdf5 file to load.
+    """
+    # TODO

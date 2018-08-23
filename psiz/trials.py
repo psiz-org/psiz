@@ -444,10 +444,10 @@ class Docket(SimilarityTrials):
 
         """
         f = h5py.File(filepath, "w")
-        f.create_dataset('trial_type', data='Docket')
-        f.create_dataset('stimulus_set', data=self.stimulus_set)
-        f.create_dataset('n_select', data=self.n_select)
-        f.create_dataset('is_ranked', data=self.is_ranked)
+        f.create_dataset("trial_type", data="Docket")
+        f.create_dataset("stimulus_set", data=self.stimulus_set)
+        f.create_dataset("n_select", data=self.n_select)
+        f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
 
@@ -659,11 +659,11 @@ class Observations(SimilarityTrials):
 
         """
         f = h5py.File(filepath, "w")
-        f.create_dataset('trial_type', data='Observations')
-        f.create_dataset('stimulus_set', data=self.stimulus_set)
-        f.create_dataset('n_select', data=self.n_select)
-        f.create_dataset('is_ranked', data=self.is_ranked)
-        f.create_dataset('group_id', data=self.group_id)
+        f.create_dataset("trial_type", data="Observations")
+        f.create_dataset("stimulus_set", data=self.stimulus_set)
+        f.create_dataset("n_select", data=self.n_select)
+        f.create_dataset("is_ranked", data=self.is_ranked)
+        f.create_dataset("group_id", data=self.group_id)
         f.close()
 
 
@@ -728,27 +728,35 @@ def load_trials(filepath):
 
     Arguments:
         filepath: The location of the hdf5 file to load.
-    """
-    f = h5py.File(filepath, 'r')
-    # Common attributes.
-    trial_type = f['trial_type'][()]
-    stimulus_set = f['stimulus_set'][()]
-    n_select = f['n_select'][()]
-    is_ranked = f['is_ranked'][()]
+    
+    Returns:
+        Loaded trials.
+    
+    Raises:
+        ValueError
 
-    if trial_type == 'Docket':
+    """
+    f = h5py.File(filepath, "r")
+    # Common attributes.
+    trial_type = f["trial_type"][()]
+    stimulus_set = f["stimulus_set"][()]
+    n_select = f["n_select"][()]
+    is_ranked = f["is_ranked"][()]
+
+    if trial_type == "Docket":
         loaded_trials = Docket(
             stimulus_set, n_select=n_select, is_ranked=is_ranked
         )
-    elif trial_type == 'Observations':
+    elif trial_type == "Observations":
         # Observations specific attributes.
-        group_id = f['group_id'][()]
+        group_id = f["group_id"][()]
         loaded_trials = Observations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
             group_id=group_id
         )
     else:
         raise ValueError('No class found matching the provided `trial_type`.')
+    f.close()
     return loaded_trials
 
 

@@ -25,31 +25,24 @@ Classes:
     StudentsT: Embedding model using a Student's t similarity kernel.
 
 Functions:
-    load_model: Load a hdf5 file, that was saved with the `save` class
-        method, as an embedding model.
+    load_embedding: Load a hdf5 file, that was saved with the `save`
+        class method, as a PsychologicalEmbedding object.
 
 Todo:
-    - add save and load functionality (perhaps as HDF5 file)
     - method 'convert' takes z: shape=(n_stimuli, n_dim, n_sample) and
         group_id scalar, a returns z after applying the group specific
         transformations to z so that further calls to similarity or
         distance would use basic settings (e.g., uniform attention
         weights).
-    - ParameterSet, Theta and Phi object class
-    - parallelization during fitting (MAYBE)
     - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
       and can be created by the user using a for loop and fit with
       init_mode='warm')
     - document broadcasting in similarity function
     - document meaning of cold, warm, and exact
-    - Change from "attention" to more general "tunings" perspective.
-        * Encapsulate attention weights in new "tunings" object.
-        * Refactor computation of similarity to use tuning object.
-        * MAYBE Introduce additional tuning free parameters for each
-            stimulus. Control flexibility using rule or L2
-            regularization.
-    - Raises section of docstring
+    - MAYBE ParameterSet, Theta and Phi object class
+    - MAYBE parallelization during fitting
+    
 
 """
 
@@ -99,6 +92,9 @@ class PsychologicalEmbedding(object):
         save: Save the embedding model as an hdf5 file.
 
     Attributes:
+        n_stimuli: The number of unique stimuli in the embedding.
+        n_dim: The dimensionality of the embedding.
+        n_group: The number of distinct groups in the embedding.
         z: A dictionary with the keys 'value', 'trainable'. The key
             'value' contains the actual embedding points. The key
             'trainable' is a boolean flag that determines whether
@@ -228,6 +224,12 @@ class PsychologicalEmbedding(object):
         return phi
 
     def _check_z(self, z):
+        """Check argument `z`
+        
+        Raises:
+            ValueError
+
+        """
         if z.shape[0] != self.n_stimuli:
             raise ValueError(
                 "Input 'z' does not have the appropriate shape (number of \
@@ -238,6 +240,12 @@ class PsychologicalEmbedding(object):
                 (dimensionality).")
 
     def _check_phi_1(self, attention):
+        """Check argument `phi_1`
+        
+        Raises:
+            ValueError
+
+        """
         if attention.shape[0] != self.n_group:
             raise ValueError(
                 "Input 'attention' does not have the appropriate shape \
@@ -1627,7 +1635,35 @@ class PsychologicalEmbedding(object):
             filepath: String specifying the path to save the model.
 
         """
-        # TODO
+        f = h5py.File(filepath, "w")
+        f.create_dataset("embedding_type", data=type(self).__name__)
+        f.create_dataset("n_stimuli", data=self.n_stimuli)
+        f.create_dataset("n_dim", data=self.n_dim)
+        f.create_dataset("n_group", data=self.n_group)
+
+        grp_z = f.create_group("z")
+        grp_z.create_dataset("value", data=self.z["value"])
+        grp_z.create_dataset("trainable", data=self.z["trainable"])
+
+        grp_theta = f.create_group("theta")
+        for theta_param_name in self.theta:
+            grp_theta_param = grp_theta.create_group(theta_param_name)
+            grp_theta_param.create_dataset(
+                "value", data=self.theta[theta_param_name]["value"])
+            grp_theta_param.create_dataset(
+                "trainable", data=self.theta[theta_param_name]["trainable"])
+            # grp_theta_param.create_dataset(
+            #   "bounds", data=self.theta[theta_param_name]["bounds"])
+
+        grp_phi = f.create_group("phi")
+        for phi_param_name in self.phi:
+            grp_phi_param = grp_phi.create_group(phi_param_name)
+            grp_phi_param.create_dataset(
+                "value", data=self.phi[phi_param_name]["value"])
+            grp_phi_param.create_dataset(
+                "trainable", data=self.phi[phi_param_name]["trainable"])
+
+        f.close()
 
 
 class Exponential(PsychologicalEmbedding):
@@ -2217,9 +2253,48 @@ class StudentsT(PsychologicalEmbedding):
 
 
 def load_embedding(filepath):
-    """Load embedding as a concrete class of PsychologicalEmbedding.
+    """Load embedding model saved via the save method.
+
+    The loaded data is instantiated as a concrete class of
+    SimilarityTrials.
 
     Arguments:
         filepath: The location of the hdf5 file to load.
+
+    Returns:
+        Loaded embedding model.
+    
+    Raises:
+        ValueError
+
     """
-    # TODO
+    f = h5py.File(filepath, 'r')
+    # Common attributes.
+    embedding_type = f['embedding_type'][()]
+    n_stimuli = f['n_stimuli'][()]
+    n_dim = f['n_dim'][()]
+    n_group = f['n_group'][()]
+
+    if embedding_type == 'Exponential':
+        embedding = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    elif embedding_type == 'HeavyTailed':
+        embedding = HeavyTailed(n_stimuli, n_dim=n_dim, n_group=n_group)
+    elif embedding_type == 'StudentsT':
+        embedding = StudentsT(n_stimuli, n_dim=n_dim, n_group=n_group)
+    else:
+        raise ValueError(
+            'No class found matching the provided `embedding_type`.')
+
+    for name in f['z']:
+        embedding.z[name] = f['z'][name][()]
+
+    for p_name in f['theta']:
+        for name in f['theta'][p_name]:
+            embedding.theta[p_name][name] = f['theta'][p_name][name][()]
+
+    for p_name in f['phi']:
+        for name in f['phi'][p_name]:
+            embedding.phi[p_name][name] = f['phi'][p_name][name][()]
+
+    f.close()
+    return embedding

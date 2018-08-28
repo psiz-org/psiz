@@ -472,6 +472,10 @@ class Observations(SimilarityTrials):
             session ID were judged by a single agent. A single agent
             may have completed multiple sessions.
             shape = (n_trial,) TODO MAYBE
+        start_timestamp: An array indicating the time the content of
+            the trial was displayed.
+        end_timestamp: An array indicating the time the trial was 
+            submitted. TODO MAYBE
 
     Notes:
         stimulus_set: The order of the reference stimuli is important.
@@ -728,10 +732,10 @@ def load_trials(filepath):
 
     Arguments:
         filepath: The location of the hdf5 file to load.
-    
+
     Returns:
         Loaded trials.
-    
+
     Raises:
         ValueError
 

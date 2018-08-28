@@ -33,45 +33,50 @@ from psiz.trials import stack
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
+from psiz import datasets
 from psiz.utils import similarity_matrix, matrix_correlation
 
 
 def main():
     """Sample from posterior of pre-defined embedding model."""
     # Settings.
-    np.random.seed(123)
-    n_stimuli = 30
-    n_dim = 2
-    n_trial = 1000
-    n_reference = 8
-    n_select = 2
 
-    model_true = ground_truth(n_dim, n_stimuli)
-    simmat_true = similarity_matrix(
-        model_true.similarity, model_true.z['value'])
+    dataset_name = 'birds-16'
+    (obs, catalog) = datasets.load_dataset(dataset_name)
 
-    # Generate a random docket of trials.
-    generator = RandomGenerator(n_stimuli)
-    docket = generator.generate(n_trial, n_reference, n_select)
+    # np.random.seed(123)
+    # n_stimuli = 30
+    # n_dim = 2
+    # n_trial = 1000
+    # n_reference = 8
+    # n_select = 2
 
-    # Simulate similarity judgments.
-    agent = Agent(model_true)
-    obs = agent.simulate(docket)
+    # model_true = ground_truth(n_dim, n_stimuli)
+    # simmat_true = similarity_matrix(
+    #     model_true.similarity, model_true.z['value'])
 
-    # Gradient decent solution.
-    model_gd = Exponential(n_stimuli, n_dim)
-    model_gd.fit(obs, n_restart=10, verbose=1)
-    simmat_gd = similarity_matrix(
-        model_gd.similarity, model_gd.z['value'])
-    r2_gd[i_scenario] = matrix_correlation(simmat_gd, simmat_true)
+    # # Generate a random docket of trials.
+    # generator = RandomGenerator(n_stimuli)
+    # docket = generator.generate(n_trial, n_reference, n_select)
 
-    # MCMC fine-tuned solution.
-    samples = model_gd.posterior_samples(obs, n_burn=200, verbose=1)
-    z_samp = samples['z']
-    z_mcmc = np.median(z_samp, axis=2)
-    simmat_mcmc = similarity_matrix(
-        model_gd.similarity, z_mcmc)
-    r2_mcmc[i_scenario] = matrix_correlation(simmat_mcmc, simmat_true)
+    # # Simulate similarity judgments.
+    # agent = Agent(model_true)
+    # obs = agent.simulate(docket)
+
+    # # Gradient decent solution.
+    # model_gd = Exponential(n_stimuli, n_dim)
+    # model_gd.fit(obs, n_restart=10, verbose=1)
+    # simmat_gd = similarity_matrix(
+    #     model_gd.similarity, model_gd.z['value'])
+    # r2_gd[i_scenario] = matrix_correlation(simmat_gd, simmat_true)
+
+    # # MCMC fine-tuned solution.
+    # samples = model_gd.posterior_samples(obs, n_burn=200, verbose=1)
+    # z_samp = samples['z']
+    # z_mcmc = np.median(z_samp, axis=2)
+    # simmat_mcmc = similarity_matrix(
+    #     model_gd.similarity, z_mcmc)
+    # r2_mcmc[i_scenario] = matrix_correlation(simmat_mcmc, simmat_true)
 
 
 def ground_truth(n_dim, n_stimuli):
@@ -84,7 +89,7 @@ def ground_truth(n_dim, n_stimuli):
     # Create embedding model.
     n_group = 1
     (n_stimuli, n_dim) = z.shape
-    model = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
     freeze_options = {
         'z': z,
         'theta': {
@@ -94,13 +99,13 @@ def ground_truth(n_dim, n_stimuli):
             'gamma': 0
         }
     }
-    model.freeze(freeze_options)
+    emb.freeze(freeze_options)
 
-    # sim_mat = similarity_matrix(model.similarity, z)
+    # sim_mat = similarity_matrix(emb.similarity, z)
     # idx_upper = np.triu_indices(n_stimuli, 1)
     # plt.hist(sim_mat[idx_upper])
     # plt.show()
-    return model
+    return emb
 
 
 if __name__ == "__main__":

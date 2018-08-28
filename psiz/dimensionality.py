@@ -28,8 +28,8 @@ import psiz.utils as ut
 
 
 def suggest_dimensionality(
-        obs, embedding_constructor, n_stimuli, dim_list=None, n_restart=20,
-        n_fold=3, verbose=0):
+        obs, embedding_constructor, n_stimuli, dim_list=None,
+        freeze_options=None, n_restart=20, n_fold=3, verbose=0):
     """Suggest an embedding dimensionality given provided observations.
 
     Sweep over the list of candidate dimensions, starting with the
@@ -44,15 +44,17 @@ def suggest_dimensionality(
             embedding_constructor: A PsychologicalEmbedding
             constructor.
         n_stimuli:  An integer indicating the number of unqiue stimuli.
-        dim_list: A list of integers indicating the dimensions to
-        search over.
-        n_restart: An integer specifying the number of restarts to use
-            for the inference procedure. Since the embedding procedure
-            sometimes gets stuck in local optima, multiple restarts
+        dim_list (optional): A list of integers indicating the dimensions to
+            search over.
+        freeze_options (optional): Dictionary of freeze options.
+        n_restart (optional): An integer specifying the number of
+            restarts to use for the inference procedure. Since the
+            embedding procedure finds local optima, multiple restarts
             helps find the global optimum.
-        n_fold: Integer specifying the number of folds to use for
-            cross-validation when selection the dimensionality.
-        verbose: An integer specifying the verbosity of printed output.
+        n_fold (optional): Integer specifying the number of folds to
+            use for cross-validation when selection the dimensionality.
+        verbose (optional): An integer specifying the verbosity of
+            printed output.
 
     Returns:
         best_dimensionality: An integer indicating the dimensionality
@@ -83,6 +85,8 @@ def suggest_dimensionality(
         # Instantiate embedding
         embedding = embedding_constructor(
             n_stimuli, n_dim=i_dimension, n_group=n_group)
+        if freeze_options is not None:
+            embedding.freeze(freeze_options)
         if verbose > 1:
             print('  Dimensionality: ', i_dimension)
         J_train = np.empty((n_fold))
@@ -95,7 +99,7 @@ def suggest_dimensionality(
             # Train
             obs_train = obs.subset(train_index)
             J_train[i_fold] = embedding.fit(
-                obs_train, n_restart=n_restart, verbose=0)
+                obs_train, n_restart=n_restart, verbose=verbose-1)
             # Test
             obs_test = obs.subset(test_index)
             J_test[i_fold] = embedding.evaluate(obs_test)

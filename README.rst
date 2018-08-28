@@ -27,9 +27,9 @@ information in order to infer an embedding.
   from psiz.models import Exponential
 
   # Load some observations (i.e., judged trials).
-  (obs, n_stimuli) = datasets.load_obs('birds-16')
+  (obs, catalog) = datasets.load_dataset('birds-16')
   # Initialize an embedding model.
-  embedding = Exponential(n_stimuli)
+  embedding = Exponential(catalog.n_stimuli)
   # Fit the embedding model using similarity judgment observations.
   embedding.fit(obs)
   # Optionally save the fitted model.

@@ -20,14 +20,13 @@ Functions:
     load_dataset: Load observations for the requested dataset.
 
 Todo:
-    - Return dataset info.
-        - complete implementation of Catalog.
-            (Should this be an hieral object?)
+    - Move Progbar to utils.
     - create .psiz directory on installation (if it doesn' exist)
     - change origin URLs once a better host location is created.
     - migrate to scalable solution described in roadmap.
     - Give credit to keras library.
     - Clean up python 2 compatible code to just be python 3.
+    - Query public (read-only) database.
 
 """
 
@@ -41,6 +40,7 @@ import collections
 from urllib import request
 
 import numpy as np
+import pandas as pd
 import six
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
@@ -50,24 +50,138 @@ import h5py
 
 from psiz.trials import load_trials
 
+# Temporary host url. TODO
+HOST_URL = "https://www.bdroads.com/homepage/static/psiz/datasets/"
+
 
 class Catalog(object):
-    """Class to keep track of stimuli information."""
+    """Class to keep track of stimuli information.
 
-    def __init__(self, stimulus_id, stimulus_path):
-        """Initialize."""
+    Attributes:
+        n_stimuli:  The number of unique stimuli.
+        stimuli: Pandas dataframe containing information about the
+            stimuli:
+            id: A unique stimulus id.
+            filepath: The filepath for the corresponding stimulus.
+
+    """
+
+    def __init__(self, stimulus_id, stimulus_filepath):
+        """Initialize.
+
+        Arguments:
+            stimulus_id: A 1D integer array.
+                shape=(n_stimuli,)
+            stimulus_filepath: A 1D list of strings.
+                len=n_stimuli
+        """
         # Basic stimulus information.
-        self.stimulus_id = stimulus_id  # TODO input checks.
-        self.stimulus_path = stimulus_path  # TODO input checks.
         self.n_stimuli = len(stimulus_id)
+        stimulus_id = self._check_stimulus_id(stimulus_id)
+        stimulus_filepath = self._check_stimulus_path(stimulus_filepath)
+        stimuli = pd.DataFrame(
+            data={'id': stimulus_id, 'filepath': stimulus_filepath}
+        )
+        stimuli = stimuli.sort_values('id')
+        self.stimuli = stimuli
         # Optional class information. TODO MAYBE
         # self.leaf_class_id
         # self.class_id_label
         # self.class_class
 
+    def _check_stimulus_id(self, stimulus_id):
+        """Check `stimulus_id` argument.
 
-def _load_catalog(dataset_name):
-    """Load catalog for the requested dataset.
+        Returns:
+            stimulus_id
+
+        Raises:
+            ValueError
+
+        """
+        if len(stimulus_id.shape) != 1:
+            raise ValueError((
+                "The argument `stimulus_id` must be a 1D array of "
+                "integers."))
+
+        if not issubclass(stimulus_id.dtype.type, np.integer):
+            raise ValueError((
+                "The argument `stimulus_id` must be a 1D array of "
+                "integers."))
+
+        n_stimuli = len(stimulus_id)
+
+        is_contiguous = False
+        if np.array_equal(np.unique(stimulus_id), np.arange(0, n_stimuli)):
+            is_contiguous = True
+        if not is_contiguous:
+            raise ValueError((
+                'The argument `stimulus_id` must contain a contiguous set of '
+                'integers [0, n_stimuli[.'))
+        return stimulus_id
+
+    def _check_stimulus_path(self, stimulus_filepath):
+        """Check `stimulus_filepath` argument.
+
+        Returns:
+            stimulus_filepath
+
+        Raises:
+            ValueError
+
+        """
+        stimulus_filepath = np.asarray(stimulus_filepath, dtype=object)
+
+        if len(stimulus_filepath.shape) != 1:
+            raise ValueError((
+                'The argument `stimulus_filepath` must have the same shape as '
+                '`stimulus_id`.'))
+
+        if stimulus_filepath.shape[0] != self.n_stimuli:
+            raise ValueError((
+                'The argument `stimulus_filepath` must have the same shape as '
+                '`stimulus_id`.'))
+
+        return stimulus_filepath
+
+    def save(self, filepath):
+        """Save the Catalog object as an HDF5 file.
+
+        Arguments:
+            filepath: String specifying the path to save the data.
+
+        """
+        f = h5py.File(filepath, "w")
+        f.create_dataset("stimulus_id", data=self.stimuli.id.values)
+        f.create_dataset(
+            "stimulus_filepath",
+            data=self.stimuli.filepath.values.astype(dtype="S50")
+        )  # TODO determine max string length
+        f.close()
+
+
+def load_catalog(filepath):
+    """Load data saved via the save method.
+
+    The loaded data is instantiated as a Catalog object.
+
+    Arguments:
+        filepath: The location of the hdf5 file to load.
+
+    Returns:
+        Loaded catalog.
+
+    """
+    f = h5py.File(filepath, "r")
+    stimulus_id = f["stimulus_id"][()]
+    stimulus_filepath = f["stimulus_filepath"][()]
+    catalog = Catalog(stimulus_id, stimulus_filepath)
+    f.close()
+    return catalog
+
+
+def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
+    """Fetch catalog for the requested dataset.
 
     Arguments:
         dataset_name: The name of the dataset to load.
@@ -78,17 +192,25 @@ def _load_catalog(dataset_name):
     """
     fname = 'catalog.hdf5'
 
-    if dataset_name == "birds-16":
-        # Temporary hosting origin.
-        origin = "https://www.bdroads.com/homepage/static/psiz/birds-16/catalog.hdf5"
+    if dataset_name == "birds-12":
+        origin = HOST_URL + "birds-12/catalog.hdf5"
+    elif dataset_name == "birds-16":
+        origin = HOST_URL + "birds-16/catalog.hdf5"
+    elif dataset_name == "lesions":
+        origin = HOST_URL + "lesions/catalog.hdf5"
+    elif dataset_name == "rocks_Nosofsky_etal_2016":
+        origin = HOST_URL + "rocks_Nosofsky_etal_2016/catalog.hdf5"
 
-    path = get_file(fname, origin, extract=True)
-    catalog = load_trials(path)
+    fname = os.path.join(dataset_name, fname)
+    path = get_file(
+        fname, origin, cache_subdir=cache_subdir, extract=True,
+        cache_dir=cache_dir)
+    catalog = load_catalog(path)
     return catalog
 
 
-def _load_obs(dataset_name):
-    """Load observations for the requested dataset.
+def _fetch_obs(dataset_name, cache_subdir='datasets', cache_dir=None):
+    """Fetch observations for the requested dataset.
 
     Arguments:
         dataset_name: The name of the dataset to load.
@@ -99,16 +221,24 @@ def _load_obs(dataset_name):
     """
     fname = 'obs.hdf5'
 
-    if dataset_name == "birds-16":
-        # Temporary hosting origin.
-        origin = "https://www.bdroads.com/homepage/static/psiz/birds-16/obs.hdf5"
+    if dataset_name == "birds-12":
+        origin = HOST_URL + "birds-12/obs.hdf5"
+    elif dataset_name == "birds-16":
+        origin = HOST_URL + "birds-16/obs.hdf5"
+    elif dataset_name == "lesions":
+        origin = HOST_URL + "lesions/obs.hdf5"
+    elif dataset_name == "rocks_Nosofsky_etal_2016":
+        origin = HOST_URL + "rocks_Nosofsky_etal_2016/obs.hdf5"
 
-    path = get_file(fname, origin, extract=True)
+    fname = os.path.join(dataset_name, fname)
+    path = get_file(
+        fname, origin, cache_subdir=cache_subdir, extract=True,
+        cache_dir=cache_dir)
     obs = load_trials(path)
     return obs
 
 
-def load_dataset(dataset_name):
+def load_dataset(dataset_name, cache_subdir='datasets', cache_dir=None):
     """Load observations for the requested dataset.
 
     Arguments:
@@ -120,8 +250,14 @@ def load_dataset(dataset_name):
             stimuli used to collect observations.
 
     """
-    obs = _load_obs(dataset_name)
-    catalog = _load_catalog(dataset_name)
+    if cache_dir is None:
+        cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
+    dataset_path = os.path.join(cache_dir, cache_subdir, dataset_name)
+    if not os.path.exists(dataset_path):
+        os.makedirs(dataset_path)
+
+    obs = _fetch_obs(dataset_name, cache_subdir, cache_dir)
+    catalog = _fetch_catalog(dataset_name, cache_subdir, cache_dir)
     return (obs, catalog)
 
 
@@ -254,8 +390,10 @@ class Progbar(object):
         interval: Minimum visual progress update interval (in seconds).
     """
 
-    def __init__(self, target, width=30, verbose=1, interval=0.05,
-                 stateful_metrics=None):
+    def __init__(
+            self, target, width=30, verbose=1, interval=0.05,
+            stateful_metrics=None):
+        """Initialize."""
         self.target = target
         self.width = width
         self.verbose = verbose
@@ -275,8 +413,9 @@ class Progbar(object):
         self._last_update = 0
 
     def update(self, current, values=None):
-        """Updates the progress bar.
-        # Arguments
+        """Update the progress bar.
+
+        Arguments
             current: Index of current step.
             values: List of tuples:
                 `(name, value_for_last_step)`.
@@ -397,4 +536,5 @@ class Progbar(object):
         self._last_update = now
 
     def add(self, n, values=None):
+        """Add progress."""
         self.update(self._seen_so_far + n, values)

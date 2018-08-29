@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for testing trials.py.
+"""Module for testing `trials.py`.
 
 Notes:
     It is critical that the function `_possible_outcomes` returns the
@@ -388,8 +388,8 @@ class TestDocket:
             setup_docket_1['configuration_id'],
             setup_docket_1['docket'].config_idx)
 
-    def test_save_load_file(self, setup_docket_0, tmpdir):
-        """Test saving and loading of Docket."""
+    def test_persistence(self, setup_docket_0, tmpdir):
+        """Test persistence of Docket."""
         # Save docket.
         fn = tmpdir.join('docket_test.hdf5')
         setup_docket_0['docket'].save(fn)

@@ -37,9 +37,9 @@ def main():
     n_stimuli = 10
     n_dim = 3
     n_group = 1
-    model_truth = ground_truth(n_stimuli, n_dim, n_group)
-    simmat_truth = similarity_matrix(
-        model_truth.similarity, model_truth.z['value'])
+    emb_true = ground_truth(n_stimuli, n_dim, n_group)
+    simmat_true = similarity_matrix(
+        emb_true.similarity, emb_true.z['value'])
 
     # Generate a random docket of trials.
     n_trial = 1000
@@ -49,7 +49,7 @@ def main():
     docket = generator.generate(n_trial, n_reference, n_select)
 
     # Simulate similarity judgments.
-    agent = Agent(model_truth)
+    agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
     # Infer independent models with increasing amounts of data.
@@ -57,14 +57,14 @@ def main():
     n_obs = np.floor(np.linspace(20, n_trial, n_step)).astype(np.int64)
     r_squared = np.empty((n_step))
     for i_step in range(n_step):
-        model_inferred = Exponential(n_stimuli, n_dim, n_group)
+        emb_inferred = Exponential(n_stimuli, n_dim, n_group)
         include_idx = np.arange(0, n_obs[i_step])
-        model_inferred.fit(obs.subset(include_idx), 10, verbose=1)
+        emb_inferred.fit(obs.subset(include_idx), 10, verbose=1)
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(
-            model_inferred.similarity, model_inferred.z['value'])
-        r_squared[i_step] = matrix_correlation(simmat_infer, simmat_truth)
+            emb_inferred.similarity, emb_inferred.z['value'])
+        r_squared[i_step] = matrix_correlation(simmat_infer, simmat_true)
 
     # Plot comparison results.
     plt.plot(n_obs, r_squared, 'ro-')

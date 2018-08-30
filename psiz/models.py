@@ -302,7 +302,6 @@ class PsychologicalEmbedding(object):
                         ),
                         trainable=False
                     )
-        # sim_scope.reuse_variables()
         return tf_theta
 
     def _get_similarity_parameters_exact(self):
@@ -616,6 +615,7 @@ class PsychologicalEmbedding(object):
                     initializer=tf.constant_initializer(self.z['value'])
                 )
             elif init_mode is 'warm':
+                # TODO mix current value with random value say 95:5
                 tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.n_dim],
                     initializer=tf.constant_initializer(self.z['value'])

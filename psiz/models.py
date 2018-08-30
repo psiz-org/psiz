@@ -224,7 +224,7 @@ class PsychologicalEmbedding(object):
         return phi
 
     def _check_z(self, z):
-        """Check argument `z`
+        """Check argument `z`.
         
         Raises:
             ValueError
@@ -240,8 +240,8 @@ class PsychologicalEmbedding(object):
                 (dimensionality).")
 
     def _check_phi_1(self, attention):
-        """Check argument `phi_1`
-        
+        """Check argument `phi_1`.
+
         Raises:
             ValueError
 
@@ -288,7 +288,7 @@ class PsychologicalEmbedding(object):
             if init_mode is 'exact':
                 tf_theta = self._get_similarity_parameters_exact()
             elif init_mode is 'warm':
-                tf_theta = self._get_similarity_parameters_warm()
+                tf_theta = self._get_similarity_parameters_exact()
             else:
                 tf_theta = self._get_similarity_parameters_cold()
 
@@ -337,19 +337,19 @@ class PsychologicalEmbedding(object):
         """
         pass
 
-    @abstractmethod
-    def _get_similarity_parameters_warm(self):
-        """Return a dictionary of TensorFlow parameters.
+    # @abstractmethod
+    # def _get_similarity_parameters_warm(self):
+    #     """Return a dictionary of TensorFlow parameters.
 
-        Parameters are initialized by adding a small amount of noise to
-        existing parameter values.
+    #     Parameters are initialized by adding a small amount of noise to
+    #     existing parameter values.
 
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
+    #     Returns:
+    #         tf_theta: A dictionary of algorithm-specific TensorFlow
+    #             variables.
 
-        """
-        pass
+    #     """
+    #     pass
 
     def _get_similarity_constraints(self, tf_theta):
         """Return a TensorFlow group of parameter constraints.
@@ -615,10 +615,18 @@ class PsychologicalEmbedding(object):
                     initializer=tf.constant_initializer(self.z['value'])
                 )
             elif init_mode is 'warm':
-                # TODO mix current value with random value say 95:5
+                # Mix current value with random initialization.
+                gmm = mixture.GaussianMixture(
+                    n_components=1, covariance_type='spherical')
+                gmm.fit(self.z['value'])
+                mu = gmm.means_
+                cov = gmm.covariances_[0] * np.identity(self.n_dim)
+                z_rand = np.random.multivariate_normal(
+                    mu, cov, (self.n_stimuli))
+                z = .95 * self.z['value'] + .05 * z_rand
                 tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.n_dim],
-                    initializer=tf.constant_initializer(self.z['value'])
+                    initializer=tf.constant_initializer(z)
                 )
             else:
                 tf_z = tf.get_variable(
@@ -1762,39 +1770,39 @@ class Exponential(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _get_similarity_parameters_warm(self):
-        """Return a dictionary of TensorFlow parameters.
+    # def _get_similarity_parameters_warm(self):
+    #     """Return a dictionary of TensorFlow parameters.
 
-        Parameters are initialized by adding a small amount of noise to
-        existing parameter values.
+    #     Parameters are initialized by adding a small amount of noise to
+    #     existing parameter values.
 
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
+    #     Returns:
+    #         tf_theta: A dictionary of algorithm-specific TensorFlow
+    #             variables.
 
-        """
-        tf_theta = {}
-        if self.theta['rho']['trainable']:
-            tf_theta["rho"] = tf.get_variable(
-                "rho", [1], initializer=tf.constant_initializer(
-                    self.theta['rho']['value'])
-            )
-        if self.theta['tau']['trainable']:
-            tf_theta["tau"] = tf.get_variable(
-                "tau", [1], initializer=tf.constant_initializer(
-                    self.theta['tau']['value'])
-            )
-        if self.theta['gamma']['trainable']:
-            tf_theta["gamma"] = tf.get_variable(
-                "gamma", [1], initializer=tf.constant_initializer(
-                    self.theta['gamma']['value'])
-            )
-        if self.theta['beta']['trainable']:
-            tf_theta["beta"] = tf.get_variable(
-                "beta", [1], initializer=tf.constant_initializer(
-                    self.theta['beta']['value'])
-            )
-        return tf_theta
+    #     """
+    #     tf_theta = {}
+    #     if self.theta['rho']['trainable']:
+    #         tf_theta["rho"] = tf.get_variable(
+    #             "rho", [1], initializer=tf.constant_initializer(
+    #                 self.theta['rho']['value'])
+    #         )
+    #     if self.theta['tau']['trainable']:
+    #         tf_theta["tau"] = tf.get_variable(
+    #             "tau", [1], initializer=tf.constant_initializer(
+    #                 self.theta['tau']['value'])
+    #         )
+    #     if self.theta['gamma']['trainable']:
+    #         tf_theta["gamma"] = tf.get_variable(
+    #             "gamma", [1], initializer=tf.constant_initializer(
+    #                 self.theta['gamma']['value'])
+    #         )
+    #     if self.theta['beta']['trainable']:
+    #         tf_theta["beta"] = tf.get_variable(
+    #             "beta", [1], initializer=tf.constant_initializer(
+    #                 self.theta['beta']['value'])
+    #         )
+    #     return tf_theta
 
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Exponential family similarity kernel.
@@ -1944,47 +1952,47 @@ class HeavyTailed(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _get_similarity_parameters_warm(self):
-        """Return a dictionary of TensorFlow parameters.
+    # def _get_similarity_parameters_warm(self):
+    #     """Return a dictionary of TensorFlow parameters.
 
-        Parameters are initialized by adding a small amount of noise to
-        existing parameter values.
+    #     Parameters are initialized by adding a small amount of noise to
+    #     existing parameter values.
 
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
+    #     Returns:
+    #         tf_theta: A dictionary of algorithm-specific TensorFlow
+    #             variables.
 
-        """
-        tf_theta = {}
-        if self.theta['rho']['trainable']:
-            tf_theta["rho"] = tf.get_variable(
-                "rho", [1],
-                initializer=tf.constant_initializer(
-                    self.theta['rho']['value']
-                )
-            )
-        if self.theta['tau']['trainable']:
-            tf_theta["tau"] = tf.get_variable(
-                "tau", [1],
-                initializer=tf.constant_initializer(
-                    self.theta['tau']['value']
-                )
-            )
-        if self.theta['kappa']['trainable']:
-            tf_theta["kappa"] = tf.get_variable(
-                "kappa", [1],
-                initializer=tf.constant_initializer(
-                    self.theta['kappa']['value']
-                )
-            )
-        if self.theta['alpha']['trainable']:
-            tf_theta["alpha"] = tf.get_variable(
-                "alpha", [1],
-                initializer=tf.constant_initializer(
-                    self.theta['alpha']['value']
-                )
-            )
-        return tf_theta
+    #     """
+    #     tf_theta = {}
+    #     if self.theta['rho']['trainable']:
+    #         tf_theta["rho"] = tf.get_variable(
+    #             "rho", [1],
+    #             initializer=tf.constant_initializer(
+    #                 self.theta['rho']['value']
+    #             )
+    #         )
+    #     if self.theta['tau']['trainable']:
+    #         tf_theta["tau"] = tf.get_variable(
+    #             "tau", [1],
+    #             initializer=tf.constant_initializer(
+    #                 self.theta['tau']['value']
+    #             )
+    #         )
+    #     if self.theta['kappa']['trainable']:
+    #         tf_theta["kappa"] = tf.get_variable(
+    #             "kappa", [1],
+    #             initializer=tf.constant_initializer(
+    #                 self.theta['kappa']['value']
+    #             )
+    #         )
+    #     if self.theta['alpha']['trainable']:
+    #         tf_theta["alpha"] = tf.get_variable(
+    #             "alpha", [1],
+    #             initializer=tf.constant_initializer(
+    #                 self.theta['alpha']['value']
+    #             )
+    #         )
+    #     return tf_theta
 
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Heavy-tailed family similarity kernel.
@@ -2147,40 +2155,40 @@ class StudentsT(PsychologicalEmbedding):
             )
         return tf_theta
 
-    def _get_similarity_parameters_warm(self):
-        """Return a dictionary of TensorFlow parameters.
+    # def _get_similarity_parameters_warm(self):
+    #     """Return a dictionary of TensorFlow parameters.
 
-        Parameters are initialized by adding a small amount of noise to
-        existing parameter values.
+    #     Parameters are initialized by adding a small amount of noise to
+    #     existing parameter values.
 
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
+    #     Returns:
+    #         tf_theta: A dictionary of algorithm-specific TensorFlow
+    #             variables.
 
-        """
-        tf_theta = {}
-        if self.theta['rho']['trainable']:
-            tf_theta["rho"] = tf.get_variable(
-                "rho", [1],
-                initializer=tf.constant_initializer(
-                    self.theta['rho']['value']
-                )
-            )
-        if self.theta['tau']['trainable']:
-            tf_theta["tau"] = tf.get_variable(
-                "tau", [1],
-                initializer=tf.constant_initializer(
-                    self.theta['tau']['value']
-                )
-            )
-        if self.theta['alpha']['trainable']:
-            tf_theta["alpha"] = tf.get_variable(
-                "alpha", [1],
-                initializer=tf.constant_initializer(
-                    self.theta['alpha']['value']
-                )
-            )
-        return tf_theta
+    #     """
+    #     tf_theta = {}
+    #     if self.theta['rho']['trainable']:
+    #         tf_theta["rho"] = tf.get_variable(
+    #             "rho", [1],
+    #             initializer=tf.constant_initializer(
+    #                 self.theta['rho']['value']
+    #             )
+    #         )
+    #     if self.theta['tau']['trainable']:
+    #         tf_theta["tau"] = tf.get_variable(
+    #             "tau", [1],
+    #             initializer=tf.constant_initializer(
+    #                 self.theta['tau']['value']
+    #             )
+    #         )
+    #     if self.theta['alpha']['trainable']:
+    #         tf_theta["alpha"] = tf.get_variable(
+    #             "alpha", [1],
+    #             initializer=tf.constant_initializer(
+    #                 self.theta['alpha']['value']
+    #             )
+    #         )
+    #     return tf_theta
 
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Student-t family similarity kernel.

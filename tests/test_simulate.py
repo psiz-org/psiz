@@ -19,13 +19,12 @@
 Todo:
     - test outcome_idx_list
     - test resultant group_id of judged trials
-    - test overide_group_id in simulate
-    - test simulate and select for a Trial object with different
+    - test simulate and _select for a Trial object with different
         configurations.
 """
 
 import numpy as np
-import tensorflow as tf
+import numpy.ma as ma
 import pytest
 
 from psiz import simulate
@@ -82,3 +81,51 @@ def test_simulate(ground_truth, docket_0):
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], docket_0.stimulus_set[:, 0]
     )
+
+
+def test_select(ground_truth):
+    """Test _select method."""
+    # TODO more cases, make assert safer
+    # stimulus_set = np.array((
+    #     (0, 1, 2, 7, 3),
+    #     (3, 4, 5, 9, 1),
+    #     (1, 8, 9, 2, -1),
+    #     (7, 3, 2, 7, -1),
+    #     (6, 7, 5, 0, -1),
+    #     (2, 1, 0, 6, -1),
+    # ))
+    # n_select = np.array((
+    #     2, 2, 2, 2, 1, 1
+    #     ), dtype=np.int32)
+
+    n_trial = 10000
+    stimulus_set = np.array((
+        (0, 1, 2, 7, 3),
+        (3, 4, 5, 9, 1),
+    ))
+    stimulus_set = np.tile(stimulus_set, (int(n_trial/2), 1))
+    n_select = 2 * np.ones(n_trial, dtype=np.int32)
+    docket = Docket(stimulus_set, n_select=n_select)
+
+    agent = simulate.Agent(ground_truth)
+    prob_all = np.array((
+        (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
+        (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
+    ))
+    prob_all = np.tile(prob_all, (int(n_trial/2), 1))
+    # prob_all = np.array((
+    #     (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
+    #     (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
+    #     (.1, .8, .07, .01, .01, .01, -1, -1, -1, -1, -1, -1),
+    #     (.1, .8, .07, .01, .01, .01, -1, -1, -1, -1, -1, -1),
+    #     (.1, .8, .1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+    #     (.1, .8, .1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+    #     (.1, .8, .1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+    # ))
+    prob_all = ma.masked_values(prob_all, -1)
+    (_, chosen_outcome_idx) = agent._select(docket, prob_all)
+    _, counts = np.unique(chosen_outcome_idx, return_counts=True)
+    prop = counts / np.sum(counts)
+
+    x = np.array([.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01])
+    np.testing.assert_allclose(x, prop, atol=.005)

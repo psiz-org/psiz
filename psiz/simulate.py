@@ -69,8 +69,8 @@ class Agent(object):
         group_id = self.group_id * np.ones((docket.n_trial), dtype=np.int32)    
         prob_all = self.embedding.outcome_probability(
             docket, group_id=group_id)
-        judged_trials = self._select(docket, prob_all)
-        return judged_trials
+        (obs, _) = self._select(docket, prob_all)
+        return obs
 
     def _select(self, docket, prob_all):
         """Stochastically select from possible outcomes.
@@ -81,7 +81,7 @@ class Agent(object):
 
 
         Returns:
-            A Observations object.
+            An Observations object.
 
         """
         outcome_idx_list = docket.outcome_idx_list
@@ -109,14 +109,16 @@ class Agent(object):
             stimuli_set_ref = docket.stimulus_set[trial_locs, 1:]
 
             for i_trial in range(n_trial):
-                outcome_loc = np.random.multinomial(1, prob[i_trial, :]).astype(bool)
+                outcome_loc = np.random.multinomial(
+                    1, prob[i_trial, :]).astype(bool)
                 chosen_outcome_idx[trial_idx[i_trial]] = dummy_idx[outcome_loc]
                 stimulus_set[trial_idx[i_trial], 1:n_reference+1] = \
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
         group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
-        return Observations(
+        return (
+            Observations(
                 stimulus_set,
                 n_select=docket.n_select,
                 is_ranked=docket.is_ranked, group_id=group_id
-            )
+            ), chosen_outcome_idx)

@@ -66,7 +66,9 @@ class Catalog(object):
 
     """
 
-    def __init__(self, stimulus_id, stimulus_filepath):
+    def __init__(
+            self, stimulus_id, stimulus_filepath, class_id=None,
+            class_label=None):
         """Initialize.
 
         Arguments:
@@ -74,16 +76,26 @@ class Catalog(object):
                 shape=(n_stimuli,)
             stimulus_filepath: A 1D list of strings.
                 len=n_stimuli
+            class_id (optional): A 1D integer array.
+            class_label (optional): A dictionary mapping between class_id and a
+                string label.
         """
         # Basic stimulus information.
         self.n_stimuli = len(stimulus_id)
         stimulus_id = self._check_stimulus_id(stimulus_id)
         stimulus_filepath = self._check_stimulus_path(stimulus_filepath)
+        if class_id is None:
+            class_id = np.zeros((self.n_stimuli))
         stimuli = pd.DataFrame(
-            data={'id': stimulus_id, 'filepath': stimulus_filepath}
+            data={
+                'id': stimulus_id,
+                'filepath': stimulus_filepath,
+                'class_id': class_id
+            }
         )
         stimuli = stimuli.sort_values('id')
         self.stimuli = stimuli
+        self.class_label = class_label
         # Optional class information. TODO MAYBE
         # self.leaf_class_id
         # self.class_id_label
@@ -157,6 +169,27 @@ class Catalog(object):
             "stimulus_filepath",
             data=self.stimuli.filepath.values.astype(dtype="S50")
         )  # TODO determine max string length
+        f.create_dataset("class_id", data=self.stimuli.class_id.values)
+
+        if self.class_label is not None:
+            n_class = len(self.class_label)
+            class_map_class_id = np.empty(n_class, dtype=np.int)
+            class_map_label = np.empty(n_class, dtype="S50")
+            idx = 0
+            for key, value in self.class_label.items():
+                class_map_class_id[idx] = key
+                class_map_label[idx] = value
+                idx = idx + 1
+
+            f.create_dataset(
+                "class_map_class_id",
+                data=class_map_class_id
+            )
+            f.create_dataset(
+                "class_map_label",
+                data=class_map_label
+            )
+
         f.close()
 
 
@@ -175,7 +208,19 @@ def load_catalog(filepath):
     f = h5py.File(filepath, "r")
     stimulus_id = f["stimulus_id"][()]
     stimulus_filepath = f["stimulus_filepath"][()]
-    catalog = Catalog(stimulus_id, stimulus_filepath)
+    class_id = f["class_id"][()]
+
+    try:
+        class_map_class_id = f["class_map_class_id"][()]
+        class_map_label = f["class_map_label"][()]
+        class_label_dict = {}
+        for idx in np.arange(len(class_map_class_id)):
+            class_label_dict[class_map_class_id[idx]] = class_map_label[idx].decode('ascii')
+    except KeyError:
+        class_label_dict = None
+
+    catalog = Catalog(
+        stimulus_id, stimulus_filepath, class_id, class_label_dict)
     f.close()
     return catalog
 

@@ -83,7 +83,7 @@ def ground_truth(n_dim, n_stimuli):
     """Return a ground truth embedding."""
     # Sample embeddingp points from Gaussian.
     mean = np.zeros((n_dim))
-    cov = .3 * np.identity(n_dim)
+    cov = .3 * np.identity(n_dim)  # TODO
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
 
     # Create embedding model.
@@ -95,7 +95,7 @@ def ground_truth(n_dim, n_stimuli):
         'theta': {
             'rho': 2,
             'tau': 1,
-            'beta': 7,
+            'beta': 7,  # TODO
             'gamma': 0
         }
     }

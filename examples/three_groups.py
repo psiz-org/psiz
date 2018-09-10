@@ -22,10 +22,23 @@ varying levels of skill: novices, intermediates, and experts. Each group
 has a different set of attention weights. An embedding model is
 inferred from the simulated data and compared to the ground truth
 model.
+
+Example output:
+
+    Model Comparison (R^2)
+    ================================
+      True  |        Inferred
+            | Novice  Interm  Expert
+    --------+-----------------------
+     Novice |   0.87    0.74    0.30
+     Interm |  -0.14    0.99    0.75
+     Expert |  -0.75    0.65    0.95
+
 """
 
 import numpy as np
-import tensorflow as tf
+import matplotlib
+import matplotlib.pyplot as plt
 
 from psiz.trials import stack
 from psiz.models import Exponential
@@ -39,6 +52,7 @@ def main():
     n_stimuli = 10
     n_dim = 3
     n_group = 3
+    # np.random.seed(123)  # TODO
     model_truth = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
@@ -59,7 +73,9 @@ def main():
 
     model_inferred = Exponential(
         model_truth.n_stimuli, n_dim, n_group)
-    model_inferred.fit(obs_all, 10, verbose=1)
+    freeze_options = {'theta': {'rho': 2, 'beta': 10}}
+    model_inferred.freeze(freeze_options=freeze_options)
+    model_inferred.fit(obs_all, 20, verbose=1)
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
@@ -102,26 +118,26 @@ def main():
     # Display comparison results. A good infferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
     # values on the off-diagonal elements.
-    print('\nModel Comparison (R^2)')
-    print('================================')
-    print('  True  |        Inferred')
-    print('        | Novice  Interm  Expert')
-    print('--------+-----------------------')
-    print(' Novice | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
+    print('\n    Model Comparison (R^2)')
+    print('    ================================')
+    print('      True  |        Inferred')
+    print('            | Novice  Interm  Expert')
+    print('    --------+-----------------------')
+    print('     Novice | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
         r_squared[0, 0], r_squared[0, 1], r_squared[0, 2]))
-    print(' Interm | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
+    print('     Interm | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
         r_squared[1, 0], r_squared[1, 1], r_squared[1, 2]))
-    print(' Expert | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
+    print('     Expert | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
         r_squared[2, 0], r_squared[2, 1], r_squared[2, 2]))
     print('\n')
 
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    model = Exponential(
+    emb = Exponential(
         n_stimuli, n_dim=n_dim, n_group=n_group)
-    mean = np.ones((n_dim))
-    cov = np.identity(n_dim)
+    mean = np.zeros((n_dim))
+    cov = .01 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     attention = np.array((
         (1.9, 1., .1),
@@ -133,15 +149,19 @@ def ground_truth(n_stimuli, n_dim, n_group):
         'theta': {
             'rho': 2,
             'tau': 1,
-            'beta': 1,
+            'beta': 10,
             'gamma': 0
         },
         'phi': {
             'phi_1': attention
         }
     }
-    model.freeze(freeze_options)
-    return model
+    emb.freeze(freeze_options)
+    # sim_mat = similarity_matrix(emb.similarity, z)
+    # idx_upper = np.triu_indices(n_stimuli, 1)
+    # plt.hist(sim_mat[idx_upper])
+    # plt.show()
+    return emb
 
 
 if __name__ == "__main__":

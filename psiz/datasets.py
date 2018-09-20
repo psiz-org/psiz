@@ -50,8 +50,7 @@ import h5py
 
 from psiz.trials import load_trials
 
-# Temporary host url. TODO
-HOST_URL = "https://www.bdroads.com/homepage/static/psiz/datasets/"
+HOST_URL = "https://www.psiz.org/datasets/"
 
 
 class Catalog(object):

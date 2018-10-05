@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 from psiz.trials import Docket
 from psiz.models import Exponential
 from psiz.simulate import Agent
-from psiz.generator import RandomGenerator, ActiveGenerator
+from psiz.generator import ActiveGenerator
 from psiz.utils import similarity_matrix, matrix_correlation
 
 
@@ -58,7 +58,7 @@ def main():
     z_samp = np.transpose(z_samp, axes=[2, 0, 1])
     z_samp = np.reshape(z_samp, (n_sample * n_stimuli, n_dim))
 
-    gen = ActiveGenerator(n_stimuli)
+    gen = ActiveGenerator()
     candidate_docket = Docket(
         stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
     )

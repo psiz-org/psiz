@@ -64,7 +64,7 @@ def main():
         rel_entropy = rel_entropy / np.max(rel_entropy)
 
         # Compute expected information gain.
-        gen = ActiveGenerator(n_stimuli)
+        gen = ActiveGenerator()
         ig = gen._information_gain(model, samples, candidate_docket)
         rel_ig = ig - np.min(ig)
         rel_ig = rel_ig / np.max(rel_ig)

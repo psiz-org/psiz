@@ -119,7 +119,7 @@ def process_scenario(model, origin_cov, n_sample, candidate_docket):
     samples = simulated_samples(z_true, n_sample, origin_cov)
     z_samp = samples['z']
 
-    gen = ActiveGenerator(n_stimuli)
+    gen = ActiveGenerator()
     # Compute expected information gain.
     ig = gen._information_gain(model, samples, candidate_docket)
     # Relative information gain.

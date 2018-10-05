@@ -27,6 +27,12 @@ Classes:
 
 Todo:
     - implement ActiveGenerator
+    - config_list should automatically generate number of outcomes,
+        user should not need to provide this. Perhaps
+        should be encapsulated as a class and class re-used within
+        trials classes?
+    - MAYBE change RandomGenerator API to take a config_list, generated
+        trials are then randomly chosen from config list.
     - MAYBE document stimulus index formatting [0,N[
 
 """
@@ -51,22 +57,15 @@ class TrialGenerator(object):
     Methods:
         generate: Generate unjudged trials.
 
-    Attributes:
-        n_stimuli: An integer indicating the total number of unique
-            stimuli.
-
     """
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, n_stimuli):
+    def __init__(self):
         """Initialize.
 
         Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli.
         """
-        self.n_stimuli = n_stimuli
 
     @abstractmethod
     def generate(self, args):
@@ -83,41 +82,49 @@ class TrialGenerator(object):
 
 
 class RandomGenerator(TrialGenerator):
-    """A random similarity trial generator."""
+    """A trial generator that independently samples trials."""
 
-    def __init__(self, n_stimuli):
+    def __init__(self, n_reference=2, n_select=1, is_ranked=True):
         """Initialize.
 
         Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli.
-        """
-        TrialGenerator.__init__(self, n_stimuli)
-
-    def generate(self, n_trial, n_reference=2, n_select=1, is_ranked=True):
-        """Return generated trials based on provided arguments.
-
-        Arguments:
-            n_trial: A scalar indicating the number of trials to
-                generate.
             n_reference (optional): A scalar indicating the number of
                 references for each trial.
             n_select (optional): A scalar indicating the number of
                 selections an agent must make.
             is_ranked (optional): Boolean indicating whether an agent
                 must make ranked selections.
+            config_list: TODO
+        """
+        TrialGenerator.__init__(self)
+
+        # TODO sanitize (re-use methods from elsewhere; move those methods
+        # out of classes and create method for sanitizing incoming
+        # config_list)
+        self.n_reference = np.int32(n_reference)
+        self.n_select = np.int32(n_select)
+        self.is_ranked = bool(is_ranked)
+
+    def generate(self, n_trial, n_stimuli):
+        """Return generated trials based on provided arguments.
+
+        Arguments:
+            n_trial: A scalar indicating the number of trials to
+                generate.
+            n_stimuli: An integer indicating the total number of unique
+                stimuli.
 
         Returns:
             A Docket object.
 
         """
-        n_reference = np.int32(n_reference)
-        n_select = np.repeat(np.int32(n_select), n_trial)
-        is_ranked = np.repeat(bool(is_ranked), n_trial)
+        n_reference = self.n_reference
+        n_select = np.repeat(self.n_select, n_trial)
+        is_ranked = np.repeat(self.is_ranked, n_trial)
         stimulus_set = np.empty((n_trial, n_reference + 1), dtype=np.int32)
         for i_trial in range(n_trial):
             stimulus_set[i_trial, :] = np.random.choice(
-                self.n_stimuli, (1, n_reference + 1), False
+                n_stimuli, (1, n_reference + 1), False
             )
         # Sort indices corresponding to references.
         stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
@@ -126,14 +133,19 @@ class RandomGenerator(TrialGenerator):
         )
 
 
+# TODO
+# API should be conceptually consistent for RandomGenerator and ActiveGenerator
+#   trial config given at init
+#   all embedding information given to generate (n_stimuli, etc.)
+# 
+# Should update_samples be included? probably not.
 class ActiveGenerator(TrialGenerator):
     """A trial generator that leverages expected information gain.
 
     Attributes:
-        n_stimuli: See TrialGenerator.
+        config_list: TODO
         n_neighbor: A scalar that influences the greedy behavior of the
             active selection procedure.
-        config_list: TODO
         placeholder_docket: TODO
 
     Methods:
@@ -142,22 +154,20 @@ class ActiveGenerator(TrialGenerator):
 
     """
 
-    def __init__(self, n_stimuli, n_neighbor=10, config_list=None):
+    def __init__(self, config_list=None, n_neighbor=10):
         """Initialize.
 
         Arguments:
-            n_stimuli:
+            config_list (optional): A DataFrame indicating the trial
+                configurations to consider.
             n_neighbor (optional): A scalar that influences the greedy
                 behavior of the active selection procedure. An
                 exhaustive search requires 'n_neighbor' to be equal to
                 'n_stimuli' - 1. For problems with more than ~10
                 stimuli, this becomes computationally infeasible.
-            config_list (optional): A DataFrame indicating the trial
-                configurations to consider.
         """
-        TrialGenerator.__init__(self, n_stimuli)
+        TrialGenerator.__init__(self)
 
-        n_neighbor = np.minimum(n_neighbor, n_stimuli - 1)
         self.n_neighbor = n_neighbor
 
         # Default trial configurations (2c1, 8c2).
@@ -208,9 +218,14 @@ class ActiveGenerator(TrialGenerator):
                 parameters.
 
         """
+        n_stimuli = embedding.n_stimuli
+        # Check if there are more stimuli than the requested number of
+        # neighbors.
+        self.n_neighbor = np.minimum(self.n_neighbor, n_stimuli - 1)
+
         if group_id is None:
             group_id = 0
-        n_query = np.minimum(n_query, self.n_stimuli)
+        n_query = np.minimum(n_query, n_stimuli)
         n_query = np.minimum(n_query, n_trial)
 
         # Prioritize query stimulus based on corresponding entropy.
@@ -349,7 +364,7 @@ class ActiveGenerator(TrialGenerator):
         best_docket = None
         best_ig = None
         placeholder_stimulus_set = copy.copy(placeholder_docket.stimulus_set)
-        # TODO MAYBE parallelize this for loop.
+        # MAYBE parallelize this for loop.
         for i_query in range(n_query):
             # Substitute actual indices in candidate trials. The addition and
             # substraction of 1 is to handle the -1 used as a placeholder
@@ -369,15 +384,17 @@ class ActiveGenerator(TrialGenerator):
                 top_indices[0:n_trial_per_query[i_query]]
             )
             curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
+            # Add to dynamic list.
             if best_ig is None:
                 best_ig = curr_best_ig
             else:
                 best_ig = np.hstack((best_ig, curr_best_ig))
-
             if best_docket is None:
                 best_docket = top_candidate
             else:
                 best_docket = stack((best_docket, top_candidate))
+        # Reset placeholder. TODO Verify.
+        placeholder_docket.stimulus_set = placeholder_stimulus_set
         return (best_docket, best_ig)
 
     def _information_gain(

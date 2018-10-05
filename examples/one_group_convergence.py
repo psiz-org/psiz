@@ -45,8 +45,8 @@ def main():
     n_trial = 1000
     n_reference = 8
     n_select = 2
-    generator = RandomGenerator(n_stimuli)
-    docket = generator.generate(n_trial, n_reference, n_select)
+    generator = RandomGenerator(n_reference, n_select)
+    docket = generator.generate(n_trial, n_stimuli)
 
     # Simulate similarity judgments.
     agent = Agent(emb_true)

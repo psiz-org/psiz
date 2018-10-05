@@ -18,7 +18,7 @@
 
 This example using simulated behavior to illustrate the theoretical
 advantage of using active selection over random trial selection. The
-simulation is time intensive.
+simulation is computationally expensive.
 
 """
 
@@ -56,8 +56,8 @@ def main():
     #     model_true.similarity, model_true.z['value'])
 
     # # Generate a random docket of trials.
-    # generator = RandomGenerator(n_stimuli)
-    # docket = generator.generate(n_trial, n_reference, n_select)
+    # generator = RandomGenerator(n_reference, n_select)
+    # docket = generator.generate(n_trial, n_stimuli)
 
     # # Simulate similarity judgments.
     # agent = Agent(model_true)

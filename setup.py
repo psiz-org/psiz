@@ -17,6 +17,6 @@ setup(name='psiz',
       author_email='brett.roads@gmail.com',
       license='Apache Licence 2.0',
       packages=['psiz'],
-      install_requires=['numpy', 'pandas', 'scikit-learn', 'tensorflow', 'h5py'],
+      install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'tensorflow', 'h5py'],
       include_package_data=True,
       )

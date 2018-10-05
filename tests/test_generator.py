@@ -78,10 +78,10 @@ def test_random_generator():
     n_reference_desired = 4
     n_select_desired = 2
     is_ranked_desired = True
-    gen = generator.RandomGenerator(n_stimuli_desired)
-    docket = gen.generate(
-        n_trial=n_trial_desired, n_reference=n_reference_desired,
+    gen = generator.RandomGenerator(
+        n_reference=n_reference_desired,
         n_select=n_select_desired)
+    docket = gen.generate(n_trial_desired, n_stimuli_desired)
 
     assert docket.n_trial == n_trial_desired
     assert sum(docket.n_reference == n_reference_desired) == n_trial_desired
@@ -110,7 +110,7 @@ def test_information_gain(ground_truth):
     samples = simulated_samples(z)
 
     n_stimuli = 10
-    gen = generator.ActiveGenerator(n_stimuli)
+    gen = generator.ActiveGenerator()
     docket_0 = Docket(
         np.array([[0, 1, 2]], dtype=np.int32),
         np.array([1], dtype=np.int32)
@@ -169,15 +169,17 @@ def test_information_gain(ground_truth):
 #     n_trial_desired = 200
 #     n_reference_desired = 2
 #     n_select_desired = 1
-#     gen = generator.RandomGenerator(n_stimuli_desired)
-#     unjudged_trials_0 = gen.generate(
-#         n_trial=n_trial_desired, n_reference=n_reference_desired,
+#     gen = generator.RandomGenerator(
+#         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
+#     unjudged_trials_0 = gen.generate(
+#         n_trial_desired, n_stimuli_desired)
 #     n_stimuli_desired = 10
 #     n_trial_desired = 50
-#     gen = generator.RandomGenerator(n_stimuli_desired)
-#     unjudged_trials_1 = gen.generate(
-#         n_trial=n_trial_desired, n_reference=n_reference_desired,
+#     gen = generator.RandomGenerator(
+#         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
+#     unjudged_trials_1 = gen.generate(
+#         n_trial_desired, n_stimuli_desired)
 #     unjudged_trials = stack((unjudged_trials_0, unjudged_trials_1))
 #     return unjudged_trials

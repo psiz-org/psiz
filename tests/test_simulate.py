@@ -98,7 +98,7 @@ def test_select(ground_truth):
     #     2, 2, 2, 2, 1, 1
     #     ), dtype=np.int32)
 
-    n_trial = 10000
+    n_trial = 100000
     stimulus_set = np.array((
         (0, 1, 2, 7, 3),
         (3, 4, 5, 9, 1),
@@ -128,4 +128,4 @@ def test_select(ground_truth):
     prop = counts / np.sum(counts)
 
     x = np.array([.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01])
-    np.testing.assert_allclose(x, prop, atol=.005)
+    np.testing.assert_allclose(x, prop, rtol=1e-6, atol=.005)

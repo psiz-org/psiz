@@ -629,8 +629,8 @@ class TestStack:
         n_trial = 50
         n_reference = 8
         n_select = 2
-        generator = RandomGenerator(n_stimuli)
-        docket = generator.generate(n_trial, n_reference, n_select)
+        generator = RandomGenerator(n_reference, n_select)
+        docket = generator.generate(n_trial, n_stimuli)
 
         double_trials = trials.stack((docket, docket))
 
@@ -680,26 +680,29 @@ class TestStack:
     def test_stack_different_config(self):
         """Test stack static method with different configurations."""
         n_stimuli = 20
-        generator = RandomGenerator(n_stimuli)
+        n_trial = 5
 
         n_reference1 = 2
         n_select1 = 1
-        trials1 = generator.generate(5, n_reference1, n_select1)
+        generator = RandomGenerator(n_reference1, n_select1)
+        trials1 = generator.generate(n_trial, n_stimuli)
 
         n_reference2 = 4
         n_select2 = 2
-        trials2 = generator.generate(5, n_reference2, n_select2)
+        generator = RandomGenerator(n_reference2, n_select2)
+        trials2 = generator.generate(n_trial, n_stimuli)
 
         n_reference3 = 6
         n_select3 = 2
-        trials3 = generator.generate(5, n_reference3, n_select3)
+        generator = RandomGenerator(n_reference3, n_select3)
+        trials3 = generator.generate(n_trial, n_stimuli)
 
         trials_all = trials.stack((trials1, trials2, trials3))
 
         desired_n_reference = np.hstack((
-            n_reference1 * np.ones((5), dtype=np.int32),
-            n_reference2 * np.ones((5), dtype=np.int32),
-            n_reference3 * np.ones((5), dtype=np.int32),
+            n_reference1 * np.ones((n_trial), dtype=np.int32),
+            n_reference2 * np.ones((n_trial), dtype=np.int32),
+            n_reference3 * np.ones((n_trial), dtype=np.int32),
         ))
 
         np.testing.assert_array_equal(
@@ -709,19 +712,22 @@ class TestStack:
     def test_padding(self):
         """Test padding values when using stack and subset method."""
         n_stimuli = 20
-        generator = RandomGenerator(n_stimuli)
+        n_trial = 5
 
         n_reference1 = 2
         n_select1 = 1
-        trials1 = generator.generate(5, n_reference1, n_select1)
+        generator = RandomGenerator(n_reference1, n_select1)
+        trials1 = generator.generate(n_trial, n_stimuli)
 
         n_reference2 = 4
         n_select2 = 2
-        trials2 = generator.generate(5, n_reference2, n_select2)
+        generator = RandomGenerator(n_reference2, n_select2)
+        trials2 = generator.generate(n_trial, n_stimuli)
 
         n_reference3 = 8
         n_select3 = 2
-        trials3 = generator.generate(5, n_reference3, n_select3)
+        generator = RandomGenerator(n_reference3, n_select3)
+        trials3 = generator.generate(n_trial, n_stimuli)
 
         trials_all = trials.stack((trials1, trials2, trials3))
 

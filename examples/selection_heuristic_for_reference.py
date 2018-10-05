@@ -28,7 +28,7 @@ from sklearn.neighbors import NearestNeighbors
 from psiz.trials import Docket
 from psiz.models import Exponential
 from psiz.simulate import Agent
-from psiz.generator import RandomGenerator, ActiveGenerator
+from psiz.generator import ActiveGenerator
 from psiz.utils import similarity_matrix, matrix_correlation
 
 
@@ -93,7 +93,7 @@ def main():
         )
 
         # Compute expected information gain.
-        gen = ActiveGenerator(n_stimuli)
+        gen = ActiveGenerator()
         ig = gen._information_gain(model, samples, candidate_docket)
 
         ig = ig - np.min(ig)

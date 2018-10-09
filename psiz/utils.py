@@ -47,7 +47,7 @@ def similarity_matrix(similarity_fn, z):
         return simmat
 
 
-def matrix_comparison(mat_a, mat_b, score='pearson', elements='upper'):
+def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
     """Return a comparison score between two square matrices.
 
     Arguments:

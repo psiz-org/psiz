@@ -44,7 +44,7 @@ from psiz.trials import stack
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
@@ -111,8 +111,9 @@ def main():
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):
         for j_infer in range(n_group):
-            r_squared[i_truth, j_infer] = matrix_correlation(
-                simmat_truth[i_truth], simmat_infer[j_infer]
+            r_squared[i_truth, j_infer] = matrix_comparison(
+                simmat_truth[i_truth], simmat_infer[j_infer],
+                score='r2'
             )
 
     # Display comparison results. A good infferred model will have a high

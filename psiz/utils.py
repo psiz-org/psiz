@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import r2_score
 from scipy.optimize import minimize
+from scipy.stats import pearsonr
 
 
 def similarity_matrix(similarity_fn, z):
@@ -46,17 +47,23 @@ def similarity_matrix(similarity_fn, z):
         return simmat
 
 
-def matrix_correlation(mat_a, mat_b):
-    """Return the R^2 score between two square matrices.
+def matrix_comparison(mat_a, mat_b, score='pearson', elements='upper'):
+    """Return a comparison score between two square matrices.
 
     Arguments:
         mat_a: A square matrix.
         mat_b: A square matrix the same size as mat_a
+        score (optional): The type of comparison to use.
+        elements (optional): Which elements to use in the computation.
+            The options are upper triangular elements (upper), lower
+            triangular elements (lower), or off-diagonal elements
+            (off).
 
     Returns:
-        The R^2 score between the two matrices.
+        The comparison score.
 
     Notes:
+        'r2'
         When computing R^2 values of two similarity matrices, it is
         assumed, by definition, that the corresponding diagonal
         elements are the same between the two matrices being compared.
@@ -70,12 +77,29 @@ def matrix_correlation(mat_a, mat_b):
     n_row = mat_a.shape[0]
     idx_upper = np.triu_indices(n_row, 1)
     idx_lower = np.triu_indices(n_row, 1)
-    idx = (
-        np.hstack((idx_upper[0], idx_lower[0])),
-        np.hstack((idx_upper[1], idx_lower[1])),
-    )
-    # Explained variance score.
-    return r2_score(mat_a[idx], mat_b[idx])
+    if elements == 'upper':
+        idx = idx_upper
+    elif elements == 'lower':
+        idx = idx_lower
+    elif elements == 'off':
+        idx = (
+            np.hstack((idx_upper[0], idx_lower[0])),
+            np.hstack((idx_upper[1], idx_lower[1])),
+        )
+    else:
+        raise ValueError(
+            'The argument to `elements` must be "upper", "lower", or "off".')
+
+    if score == 'pearson':
+        score, _ = pearsonr(mat_a[idx], mat_b[idx])
+    elif score == 'r2':
+        score = r2_score(mat_a[idx], mat_b[idx])
+    elif score == 'mse':
+        score = np.mean((mat_a[idx] - mat_b[idx])**2)
+    else:
+        raise ValueError(
+            'The provided `score` argument is not valid.')
+    return score
 
 
 def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
@@ -103,7 +127,7 @@ def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
     simmat_a = similarity_matrix(sim_func_a, model_a.z['value'])
     simmat_b = similarity_matrix(sim_func_b, model_b.z['value'])
 
-    r_squared = matrix_correlation(simmat_a, simmat_b)
+    r_squared = matrix_comparison(simmat_a, simmat_b)
     return r_squared
 
 

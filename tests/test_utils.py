@@ -97,7 +97,7 @@ def test_similarity_matrix(ground_truth):
     np.testing.assert_array_almost_equal(actual_simmat2, computed_simmat2)
 
 
-def test_matrix_correlation():
+def test_matrix_comparison():
     """Test matrix correlation."""
     a = np.array((
         (1.0, .50, .90, .13),
@@ -113,7 +113,7 @@ def test_matrix_correlation():
         (.11, .82, .02, 1.0)
     ))
 
-    r2_score_1 = utils.matrix_correlation(a, b)
+    r2_score_1 = utils.matrix_comparison(a, b, score='r2')
     np.testing.assert_almost_equal(r2_score_1, 0.96456543)
 
 

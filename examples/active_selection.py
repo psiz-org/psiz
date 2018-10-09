@@ -34,7 +34,7 @@ from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator, ActiveGenerator
 from psiz import datasets
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
@@ -68,7 +68,7 @@ def main():
     # model_gd.fit(obs, n_restart=10, verbose=1)
     # simmat_gd = similarity_matrix(
     #     model_gd.similarity, model_gd.z['value'])
-    # r2_gd[i_scenario] = matrix_correlation(simmat_gd, simmat_true)
+    # r2_gd[i_scenario] = matrix_comparison(simmat_gd, simmat_true)
 
     # # MCMC fine-tuned solution.
     # samples = model_gd.posterior_samples(obs, n_burn=200, verbose=1)
@@ -76,7 +76,7 @@ def main():
     # z_mcmc = np.median(z_samp, axis=2)
     # simmat_mcmc = similarity_matrix(
     #     model_gd.similarity, z_mcmc)
-    # r2_mcmc[i_scenario] = matrix_correlation(simmat_mcmc, simmat_true)
+    # r2_mcmc[i_scenario] = matrix_comparison(simmat_mcmc, simmat_true)
 
 
 def ground_truth(n_dim, n_stimuli):

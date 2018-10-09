@@ -18,10 +18,10 @@
 
 Synthetic data is generated from a ground truth embedding model. For
 simplicity, the ground truth model is also used as the inferred
-model in this example. In practice the judged trials would be used to
-infer an embedding model since the ground truth is not known. In this
-example, using the ground truth allows us to see how the posterior
-sampling algorithm works under ideal conditions.
+model in this example. In practice, the judged trials would be used to
+infer a separate embedding model since the ground truth is not known.
+In this example, using the ground truth allows us to see how the
+posterior sampling algorithm works under ideal conditions.
 
 Notes:
     - This script takes awhile to execute.
@@ -39,7 +39,7 @@ import matplotlib.animation as animation
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
@@ -60,9 +60,9 @@ def main():
         model_truth.similarity, model_truth.z['value'])
 
     # Generate a random docket of trials.
-    generator = RandomGenerator(n_reference, n_select)
     n_reference = 2
     n_select = 1
+    generator = RandomGenerator(n_reference, n_select)
     docket = generator.generate(n_trial, model_truth.n_stimuli)
 
     # Simulate similarity judgements using ground truth model.
@@ -80,7 +80,7 @@ def main():
     # z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
     # simmat_infer = similarity_matrix(
     #     model_inferred.similarity, model_inferred.z['value'])
-    # r_squared = matrix_correlation(simmat_infer, simmat_truth)
+    # r_squared = matrix_comparison(simmat_infer, simmat_truth)
     # print('R^2 | {0: >6.2f}'.format(r_squared))
 
     z_samp_list = n_frame * [None]
@@ -101,7 +101,7 @@ def main():
         model_inferred.z['value'] = z_central
         simmat_infer = similarity_matrix(
             model_inferred.similarity, model_inferred.z['value'])
-        r_squared = matrix_correlation(simmat_infer, simmat_truth)
+        r_squared = matrix_comparison(simmat_infer, simmat_truth)
         r_squared_list[i_frame] = r_squared
         print('Frame: {0} | R^2: {1: >6.2f}'.format(i_frame, r_squared))
         model_inferred.z['value'] = z_original

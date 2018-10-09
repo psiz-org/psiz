@@ -25,15 +25,17 @@ data is added.
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
+# import warnings  # TODO
 
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
     """Run the simulation that infers an embedding for two groups."""
+    # warnings.filterwarnings("ignore")  # TODO
     n_stimuli = 10
     n_dim = 3
     n_group = 1
@@ -56,21 +58,28 @@ def main():
     n_step = 10
     n_obs = np.floor(np.linspace(20, n_trial, n_step)).astype(np.int64)
     r_squared = np.empty((n_step))
-    for i_step in range(n_step):
+    loss = np.empty((n_step))
+    for i_round in range(n_step):
         emb_inferred = Exponential(n_stimuli, n_dim, n_group)
-        include_idx = np.arange(0, n_obs[i_step])
-        emb_inferred.fit(obs.subset(include_idx), 10, verbose=1)
+        include_idx = np.arange(0, n_obs[i_round])
+        loss[i_round] = emb_inferred.fit(obs.subset(include_idx), 40)
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(
             emb_inferred.similarity, emb_inferred.z['value'])
-        r_squared[i_step] = matrix_correlation(simmat_infer, simmat_true)
+        r_squared[i_round] = matrix_comparison(simmat_infer, simmat_true, score='r2')
+        print(
+            'Round {0} ({1} trials) | Loss: {2:.2f} | R^2: {3:.2f}'.format(
+                i_round, n_obs[i_round], loss[i_round], r_squared[i_round]
+            )
+        )
 
     # Plot comparison results.
     plt.plot(n_obs, r_squared, 'ro-')
     plt.title('Model Convergence to Ground Truth')
     plt.xlabel('Number of Judged Trials')
     plt.ylabel('R^2 Correlation')
+    plt.ylim(-0.05, 1.05)
     plt.show()
 
 
@@ -79,18 +88,23 @@ def ground_truth(n_stimuli, n_dim, n_group):
     model = Exponential(
         n_stimuli, n_dim=n_dim, n_group=n_group)
     mean = np.ones((n_dim))
-    cov = np.identity(n_dim)
+    cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     freeze_options = {
         'z': z,
         'theta': {
             'rho': 2,
             'tau': 1,
-            'beta': 1,
-            'gamma': 0
+            'beta': 10,
+            'gamma': 0.001
         }
     }
     model.freeze(freeze_options)
+    # sim_mat = similarity_matrix(model.similarity, z)
+    # idx_upper = np.triu_indices(n_stimuli, 1)
+    # plt.hist(sim_mat[idx_upper])
+    # plt.show()
+
     return model
 
 

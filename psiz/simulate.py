@@ -22,10 +22,9 @@ Classes:
 
 """
 import numpy as np
-from numpy.random import multinomial
 import tensorflow as tf
 
-from psiz.trials import JudgedTrials
+from psiz.trials import Observations
 
 
 class Agent(object):
@@ -44,7 +43,7 @@ class Agent(object):
     def __init__(self, embedding, group_id=0):
         """Initialize.
 
-        Args:
+        Arguments:
             embedding: A concrete instance of a PsychologicalEmedding
                 object.
             group_id (optional): If the provided embedding was inferred
@@ -54,83 +53,72 @@ class Agent(object):
         self.embedding = embedding
         self.group_id = group_id
 
-    def simulate(self, trials, override_group_id=None):
+    def simulate(self, docket):
         """Stochastically simulate similarity judgments.
 
-        Args:
-            trials: UnjudgedTrials object representing the
+        Arguments:
+            docket: A Docket object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
-            override_group_id (optional): A scalar indicating the group_id that
-                should be used to mark the observations. This is a
-                useful option when stacking observations generated
-                from different Agents.
 
         Returns:
-            JudgedTrials object representing the judged trials. The
+            Observations object representing the judged trials. The
                 order of the stimuli is now informative.
 
         """
-        
-        group_id = self.group_id * np.ones((trials.n_trial), dtype=np.int32)    
+        group_id = self.group_id * np.ones((docket.n_trial), dtype=np.int32)    
         prob_all = self.embedding.outcome_probability(
-            trials, group_id=group_id)
-        judged_trials = self._select(trials, prob_all)
+            docket, group_id=group_id)
+        (obs, _) = self._select(docket, prob_all)
+        return obs
 
-        if override_group_id is not None:
-            override_group_id = (
-                override_group_id * np.ones((trials.n_trial), dtype=np.int32)
-            )
-            judged_trials = JudgedTrials(
-                judged_trials.stimulus_set, judged_trials.n_selected,
-                judged_trials.is_ranked, override_group_id)
-        return judged_trials
-
-    def _select(self, trials, prob_all):
+    def _select(self, docket, prob_all):
         """Stochastically select from possible outcomes.
 
-        Args:
-            trials:
-            prob_all:
+        Arguments:
+            docket: An Docket object.
+            prob_all: A MaskedArray object.
 
 
         Returns:
-            A JudgedTrials object.
+            An Observations object.
 
         """
-        outcome_idx_list = trials.outcome_idx_list
+        outcome_idx_list = docket.outcome_idx_list
 
-        n_trial_all = trials.n_trial
+        n_trial_all = docket.n_trial
         trial_idx_all = np.arange(n_trial_all)
-        max_n_ref = trials.stimulus_set.shape[1] - 1
-        n_config = trials.config_list.shape[0]
+        max_n_ref = docket.stimulus_set.shape[1] - 1
+        n_config = docket.config_list.shape[0]
 
         # Pre-allocate.
         chosen_outcome_idx = np.empty((n_trial_all), dtype=np.int32)
         stimulus_set = -1 * np.ones(
             (n_trial_all, 1 + max_n_ref), dtype=np.int32
         )
-        stimulus_set[:, 0] = trials.stimulus_set[:, 0]
+        stimulus_set[:, 0] = docket.stimulus_set[:, 0]
         for i_config in range(n_config):
-            n_reference = trials.config_list.iloc[i_config]['n_reference']
+            n_reference = docket.config_list.iloc[i_config]['n_reference']
             outcome_idx = outcome_idx_list[i_config]
             n_outcome = outcome_idx.shape[0]
             dummy_idx = np.arange(0, n_outcome)
-            trial_locs = trials.config_idx == i_config
+            trial_locs = docket.config_idx == i_config
             n_trial = np.sum(trial_locs)
             trial_idx = trial_idx_all[trial_locs]
-            prob = prob_all[trial_locs, 0:n_outcome]
-            stimuli_set_ref = trials.stimulus_set[trial_locs, 1:]
+            prob = prob_all.data[trial_locs, 0:n_outcome]
+            stimuli_set_ref = docket.stimulus_set[trial_locs, 1:]
 
             for i_trial in range(n_trial):
-                outcome_loc = multinomial(1, prob[i_trial, :]).astype(bool)
+                outcome_loc = np.random.multinomial(
+                    1, prob[i_trial, :]).astype(bool)
                 chosen_outcome_idx[trial_idx[i_trial]] = dummy_idx[outcome_loc]
                 stimulus_set[trial_idx[i_trial], 1:n_reference+1] = \
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
-        group_id = np.full((trials.n_trial), self.group_id, dtype=np.int32)
-        return JudgedTrials(
+        group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
+        return (
+            Observations(
                 stimulus_set,
-                n_selected=trials.n_selected,
-                is_ranked=trials.is_ranked, group_id=group_id
-            )
+                n_select=docket.n_select,
+                is_ranked=docket.is_ranked, group_id=group_id
+            ), chosen_outcome_idx)

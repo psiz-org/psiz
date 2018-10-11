@@ -24,14 +24,17 @@ information in order to infer an embedding.
 .. code-block:: python
 
   from psiz import datasets
-  from psiz import models
+  from psiz.models import Exponential
 
-  # Load some example observations.
-  (obs, n_stimuli) = datasets.load_obs('birds-16')
+  # Load some observations (i.e., judged trials).
+  (obs, catalog) = datasets.load_dataset('birds-16')
   # Initialize an embedding model.
-  embedding = models.Exponential(n_stimuli)
+  embedding = Exponential(catalog.n_stimuli)
   # Fit the embedding model using similarity judgment observations.
   embedding.fit(obs)
+  # Optionally save the fitted model.
+  embedding.save('my_embedding.h5')
+  
 
 Trials and Observations
 -----------------------

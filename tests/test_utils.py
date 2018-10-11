@@ -14,14 +14,18 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for testing utils.py."""
+"""Module for testing utils.py.
+
+Todo:
+    - test compare_models
+
+"""
 
 
 import pytest
 import numpy as np
 
 from psiz import utils
-from psiz.trials import UnjudgedTrials
 from psiz.models import Exponential
 
 
@@ -73,8 +77,7 @@ def test_similarity_matrix(ground_truth):
 
     # Check explicit use of first set of attention weights.
     def similarity_func1(z_q, z_ref):
-        sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][0])
+        sim_func = ground_truth.similarity(z_q, z_ref, group_id=0)
         return sim_func
 
     # Check without passing in explicit attention.
@@ -83,8 +86,7 @@ def test_similarity_matrix(ground_truth):
 
     # Check explicit use of second set of attention weights.
     def similarity_func2(z_q, z_ref):
-        sim_func = ground_truth.similarity(
-            z_q, z_ref, attention=ground_truth.phi['phi_1']['value'][1])
+        sim_func = ground_truth.similarity(z_q, z_ref, group_id=1)
         return sim_func
 
     computed_simmat2 = utils.similarity_matrix(
@@ -95,7 +97,7 @@ def test_similarity_matrix(ground_truth):
     np.testing.assert_array_almost_equal(actual_simmat2, computed_simmat2)
 
 
-def test_matrix_correlation():
+def test_matrix_comparison():
     """Test matrix correlation."""
     a = np.array((
         (1.0, .50, .90, .13),
@@ -111,7 +113,7 @@ def test_matrix_correlation():
         (.11, .82, .02, 1.0)
     ))
 
-    r2_score_1 = utils.matrix_correlation(a, b)
+    r2_score_1 = utils.matrix_comparison(a, b, score='r2')
     np.testing.assert_almost_equal(r2_score_1, 0.96456543)
 
 

@@ -18,14 +18,13 @@
 
 Synthetic data is generated from a ground truth embedding model. For
 simplicity, the ground truth model is also used as the inferred
-model in this example. In practice the judged trials would be used to
-infer an embedding model since the ground truth is not known. In this
-example, using the ground truth allows us to see how the posterior
-sampling algorithm works under ideal conditions.
+model in this example. In practice, the judged trials would be used to
+infer a separate embedding model since the ground truth is not known.
+In this example, using the ground truth allows us to see how the
+posterior sampling algorithm works under ideal conditions.
 
 Notes:
-    - Handling invariance to affine transformations (translation, scale,
-      and rotation).
+    - This script takes awhile to execute.
 
 """
 
@@ -36,23 +35,21 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import tensorflow as tf
 
-from psiz.trials import UnjudgedTrials, stack
-from psiz.models import Exponential, HeavyTailed, StudentsT
+from psiz.models import Exponential
 from psiz.simulate import Agent
-from psiz.generator import RandomGenerator, ActiveGenerator
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz.generator import RandomGenerator
+from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
     """Sample from posterior of pre-defined embedding model."""
     # Settings
-    n_trial = 10000  # 5000 10000
+    n_trial = 10000
     n_frame = 30
     n_sample = 1000
-    n_burn = 100  # 1000
-    thin_step = 1  # 3
+    n_burn = 100
+    thin_step = 3
 
     # Ground truth model.
     model_truth = ground_truth()
@@ -62,24 +59,15 @@ def main():
     simmat_truth = similarity_matrix(
         model_truth.similarity, model_truth.z['value'])
 
-    # Create some random trials.
-    generator = RandomGenerator(model_truth.n_stimuli)
+    # Generate a random docket of trials.
     n_reference = 2
-    n_selected = 1
-    trials = generator.generate(n_trial, n_reference, n_selected)
-
-    # Remove data for stimulus 8
-    # locs = np.equal(trials.stimulus_set, 6)
-    # locs = np.sum(locs, axis=1)
-    # n_loc = np.sum(locs)
-    # locs[0:int(np.floor(n_trial/20))] = False
-    # print('dropped: {0}'.format(np.sum(locs) / n_loc))
-    # locs = np.logical_not(locs)
-    # trials = trials.subset(locs)
+    n_select = 1
+    generator = RandomGenerator(n_reference, n_select)
+    docket = generator.generate(n_trial, model_truth.n_stimuli)
 
     # Simulate similarity judgements using ground truth model.
     agent = Agent(model_truth)
-    obs = agent.simulate(trials)
+    obs = agent.simulate(docket)
 
     # Infer an embedding model.  # TODO
     # model_inferred = Exponential(
@@ -89,11 +77,11 @@ def main():
     model_inferred = model_truth
     z_original = copy.copy(model_inferred.z['value'])
 
-    z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
-    simmat_infer = similarity_matrix(
-        model_inferred.similarity, model_inferred.z['value'])
-    r_squared = matrix_correlation(simmat_infer, simmat_truth)
-    print('R^2 | {0: >6.2f}'.format(r_squared))
+    # z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
+    # simmat_infer = similarity_matrix(
+    #     model_inferred.similarity, model_inferred.z['value'])
+    # r_squared = matrix_comparison(simmat_infer, simmat_truth)
+    # print('R^2 | {0: >6.2f}'.format(r_squared))
 
     z_samp_list = n_frame * [None]
     z_central_list = n_frame * [None]
@@ -101,10 +89,11 @@ def main():
     n_obs = np.floor(np.linspace(20, n_trial, n_frame)).astype(np.int64)
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
-        z_samp = model_inferred.posterior_samples(
+        samples = model_inferred.posterior_samples(
             obs.subset(include_idx), n_sample, n_burn, thin_step)
-        z_central = np.median(z_samp, axis=0)
-
+        z_samp = samples['z']
+        z_central = np.median(z_samp, axis=2)
+        z_samp = np.transpose(z_samp, axes=[2, 0, 1])
         z_samp_list[i_frame] = np.reshape(
             z_samp, (n_sample * n_stimuli, n_dim))
         z_central_list[i_frame] = z_central
@@ -112,9 +101,9 @@ def main():
         model_inferred.z['value'] = z_central
         simmat_infer = similarity_matrix(
             model_inferred.similarity, model_inferred.z['value'])
-        r_squared = matrix_correlation(simmat_infer, simmat_truth)
+        r_squared = matrix_comparison(simmat_infer, simmat_truth)
         r_squared_list[i_frame] = r_squared
-        print('R^2 | {0: >6.2f}'.format(r_squared))
+        print('Frame: {0} | R^2: {1: >6.2f}'.format(i_frame, r_squared))
         model_inferred.z['value'] = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
@@ -134,7 +123,7 @@ def main():
     fig = plt.figure(figsize=(5.5, 2), dpi=200)
 
     ax1 = fig.add_subplot(1, 3, 1)
-    scat1 = ax1.scatter(
+    ax1.scatter(
         z_true[:, 0], z_true[:, 1], s=15, c=color_array, marker='o')
     ax1.set_title('Ground Truth')
     ax1.set_aspect('equal')
@@ -171,7 +160,7 @@ def main():
         scat3.set_offsets(
             z_samp_list[frame_number])
     ani = animation.FuncAnimation(fig, update, frames=n_frame)
-    ani.save('posterior.mp4', writer=writer)
+    ani.save('posterior_samples.mp4', writer=writer)
 
 
 def ground_truth():

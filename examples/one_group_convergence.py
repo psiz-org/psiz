@@ -25,53 +25,61 @@ data is added.
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
+# import warnings  # TODO
 
-from psiz.trials import JudgedTrials
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
     """Run the simulation that infers an embedding for two groups."""
-    n_stimuli = 10
+    # warnings.filterwarnings("ignore")  # TODO
+    n_stimuli = 25
     n_dim = 3
     n_group = 1
-    model_truth = ground_truth(n_stimuli, n_dim, n_group)
-    simmat_truth = similarity_matrix(
-        model_truth.similarity, model_truth.z['value'])
+    emb_true = ground_truth(n_stimuli, n_dim, n_group)
+    simmat_true = similarity_matrix(
+        emb_true.similarity, emb_true.z['value'])
 
-    # Create a random set of trials.
+    # Generate a random docket of trials.
     n_trial = 1000
     n_reference = 8
-    n_selected = 2
-    generator = RandomGenerator(n_stimuli)
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    n_select = 2
+    generator = RandomGenerator(n_reference, n_select)
+    docket = generator.generate(n_trial, n_stimuli)
 
     # Simulate similarity judgments.
-    agent = Agent(model_truth)
-    obs = agent.simulate(trials)
+    agent = Agent(emb_true)
+    obs = agent.simulate(docket)
 
     # Infer independent models with increasing amounts of data.
     n_step = 10
     n_obs = np.floor(np.linspace(20, n_trial, n_step)).astype(np.int64)
     r_squared = np.empty((n_step))
-    for i_step in range(n_step):
-        model_inferred = Exponential(n_stimuli, n_dim, n_group)
-        include_idx = np.arange(0, n_obs[i_step])
-        model_inferred.fit(obs.subset(include_idx), 10, verbose=1)
+    loss = np.empty((n_step))
+    for i_round in range(n_step):
+        emb_inferred = Exponential(n_stimuli, n_dim, n_group)
+        include_idx = np.arange(0, n_obs[i_round])
+        loss[i_round] = emb_inferred.fit(obs.subset(include_idx), 40)
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(
-            model_inferred.similarity, model_inferred.z['value'])
-        r_squared[i_step] = matrix_correlation(simmat_infer, simmat_truth)
+            emb_inferred.similarity, emb_inferred.z['value'])
+        r_squared[i_round] = matrix_comparison(simmat_infer, simmat_true, score='r2')
+        print(
+            'Round {0} ({1} trials) | Loss: {2:.2f} | R^2: {3:.2f}'.format(
+                i_round, n_obs[i_round], loss[i_round], r_squared[i_round]
+            )
+        )
 
     # Plot comparison results.
     plt.plot(n_obs, r_squared, 'ro-')
     plt.title('Model Convergence to Ground Truth')
     plt.xlabel('Number of Judged Trials')
     plt.ylabel('R^2 Correlation')
+    plt.ylim(-0.05, 1.05)
     plt.show()
 
 
@@ -80,18 +88,22 @@ def ground_truth(n_stimuli, n_dim, n_group):
     model = Exponential(
         n_stimuli, n_dim=n_dim, n_group=n_group)
     mean = np.ones((n_dim))
-    cov = np.identity(n_dim)
+    cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     freeze_options = {
         'z': z,
         'theta': {
             'rho': 2,
             'tau': 1,
-            'beta': 1,
-            'gamma': 0
+            'beta': 10,
+            'gamma': 0.001
         }
     }
     model.freeze(freeze_options)
+    # sim_mat = similarity_matrix(model.similarity, z)
+    # idx_upper = np.triu_indices(n_stimuli, 1)
+    # plt.hist(sim_mat[idx_upper])
+    # plt.show()
     return model
 
 

@@ -22,76 +22,86 @@ varying levels of skill: novices, intermediates, and experts. Each group
 has a different set of attention weights. An embedding model is
 inferred from the simulated data and compared to the ground truth
 model.
+
+Example output:
+
+    Model Comparison (R^2)
+    ================================
+      True  |        Inferred
+            | Novice  Interm  Expert
+    --------+-----------------------
+     Novice |   0.87    0.74    0.30
+     Interm |  -0.14    0.99    0.75
+     Expert |  -0.75    0.65    0.95
+
 """
 
 import numpy as np
-import tensorflow as tf
+import matplotlib
+import matplotlib.pyplot as plt
 
-from psiz.trials import JudgedTrials, stack
+from psiz.trials import stack
 from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_correlation
+from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
     """Run the simulation that infers an embedding for three groups."""
-    n_stimuli = 10
+    n_stimuli = 25
     n_dim = 3
     n_group = 3
-    model_truth = ground_truth(n_stimuli, n_dim, n_group)
+    # np.random.seed(123)  # TODO
+    emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
-    # Create a random set of trials to show to every group.
+    # Generate a random docket of trials to show each group.
     n_trial = 1000
     n_reference = 8
-    n_selected = 2
-    generator = RandomGenerator(n_stimuli)
-    trials = generator.generate(n_trial, n_reference, n_selected)
+    n_select = 2
+    generator = RandomGenerator(n_reference, n_select)
+    docket = generator.generate(n_trial, n_stimuli)
 
     # Simulate similarity judgments for the three groups.
-    agent_novice = Agent(model_truth, group_id=0)
-    agent_interm = Agent(model_truth, group_id=1)
-    agent_expert = Agent(model_truth, group_id=2)
-    obs_novice = agent_novice.simulate(trials)
-    obs_interm = agent_interm.simulate(trials)
-    obs_expert = agent_expert.simulate(trials)
+    agent_novice = Agent(emb_true, group_id=0)
+    agent_interm = Agent(emb_true, group_id=1)
+    agent_expert = Agent(emb_true, group_id=2)
+    obs_novice = agent_novice.simulate(docket)
+    obs_interm = agent_interm.simulate(docket)
+    obs_expert = agent_expert.simulate(docket)
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
     model_inferred = Exponential(
-        model_truth.n_stimuli, n_dim, n_group)
-    model_inferred.fit(obs_all, 10, verbose=1)
+        emb_true.n_stimuli, n_dim, n_group)
+    freeze_options = {'theta': {'rho': 2, 'beta': 10}}
+    model_inferred.freeze(freeze_options=freeze_options)
+    model_inferred.fit(obs_all, 20, verbose=1)
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
     def truth_sim_func0(z_q, z_ref):
-        return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][0])
+        return emb_true.similarity(z_q, z_ref, group_id=0)
 
     def truth_sim_func1(z_q, z_ref):
-        return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][1])
+        return emb_true.similarity(z_q, z_ref, group_id=1)
 
     def truth_sim_func2(z_q, z_ref):
-        return model_truth.similarity(
-            z_q, z_ref, attention=model_truth.phi['phi_1']['value'][2])
+        return emb_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        similarity_matrix(truth_sim_func0, model_truth.z['value']),
-        similarity_matrix(truth_sim_func1, model_truth.z['value']),
-        similarity_matrix(truth_sim_func2, model_truth.z['value'])
+        similarity_matrix(truth_sim_func0, emb_true.z['value']),
+        similarity_matrix(truth_sim_func1, emb_true.z['value']),
+        similarity_matrix(truth_sim_func2, emb_true.z['value'])
     )
 
     def infer_sim_func0(z_q, z_ref):
-        return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][0])
+        return model_inferred.similarity(z_q, z_ref, group_id=0)
 
     def infer_sim_func1(z_q, z_ref):
-        return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][1])
+        return model_inferred.similarity(z_q, z_ref, group_id=1)
 
     def infer_sim_func2(z_q, z_ref):
-        return model_inferred.similarity(
-            z_q, z_ref, attention=model_inferred.phi['phi_1']['value'][2])
+        return model_inferred.similarity(z_q, z_ref, group_id=2)
 
     simmat_infer = (
         similarity_matrix(infer_sim_func0, model_inferred.z['value']),
@@ -101,33 +111,34 @@ def main():
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):
         for j_infer in range(n_group):
-            r_squared[i_truth, j_infer] = matrix_correlation(
-                simmat_truth[i_truth], simmat_infer[j_infer]
+            r_squared[i_truth, j_infer] = matrix_comparison(
+                simmat_truth[i_truth], simmat_infer[j_infer],
+                score='r2'
             )
 
     # Display comparison results. A good infferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
     # values on the off-diagonal elements.
-    print('\nModel Comparison (R^2)')
-    print('================================')
-    print('  True  |        Inferred')
-    print('        | Novice  Interm  Expert')
-    print('--------+-----------------------')
-    print(' Novice | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
+    print('\n    Model Comparison (R^2)')
+    print('    ================================')
+    print('      True  |        Inferred')
+    print('            | Novice  Interm  Expert')
+    print('    --------+-----------------------')
+    print('     Novice | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
         r_squared[0, 0], r_squared[0, 1], r_squared[0, 2]))
-    print(' Interm | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
+    print('     Interm | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
         r_squared[1, 0], r_squared[1, 1], r_squared[1, 2]))
-    print(' Expert | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
+    print('     Expert | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
         r_squared[2, 0], r_squared[2, 1], r_squared[2, 2]))
     print('\n')
 
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    model = Exponential(
+    emb = Exponential(
         n_stimuli, n_dim=n_dim, n_group=n_group)
-    mean = np.ones((n_dim))
-    cov = np.identity(n_dim)
+    mean = np.zeros((n_dim))
+    cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     attention = np.array((
         (1.9, 1., .1),
@@ -139,15 +150,19 @@ def ground_truth(n_stimuli, n_dim, n_group):
         'theta': {
             'rho': 2,
             'tau': 1,
-            'beta': 1,
-            'gamma': 0
+            'beta': 10,
+            'gamma': 0.001
         },
         'phi': {
             'phi_1': attention
         }
     }
-    model.freeze(freeze_options)
-    return model
+    emb.freeze(freeze_options)
+    # sim_mat = similarity_matrix(emb.similarity, z)
+    # idx_upper = np.triu_indices(n_stimuli, 1)
+    # plt.hist(sim_mat[idx_upper])
+    # plt.show()
+    return emb
 
 
 if __name__ == "__main__":

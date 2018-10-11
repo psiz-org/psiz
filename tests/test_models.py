@@ -29,13 +29,12 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials import UnjudgedTrials
-from psiz.models import Exponential, HeavyTailed, StudentsT
-from psiz.simulate import Agent
+from psiz.trials import Docket
+from psiz.models import Exponential, HeavyTailed, StudentsT, load_embedding
 
 
 @pytest.fixture(scope="module")
-def ground_truth():
+def model_true():
     """Return a ground truth embedding."""
     n_stimuli = 10
     n_dim = 2
@@ -58,8 +57,40 @@ def ground_truth():
 
 
 @pytest.fixture(scope="module")
-def unjudged_trials():
-    """Return a set of unjudged trials."""
+def model_true_det():
+    """Return a ground truth embedding."""
+    n_stimuli = 10
+    model = Exponential(n_stimuli)
+    z = np.array(
+        [
+            [0.12737487, 1.3211997],
+            [0.8335809, 1.5255479],
+            [0.8801151, 0.6451549],
+            [0.55950886, 1.8086979],
+            [1.9089336, -0.15246096],
+            [2.8184545, 2.6377177],
+            [0.00032808, 0.94420123],
+            [0.21504205, 0.92544436],
+            [2.0352089, 0.84319389],
+            [-0.04342473, 1.4128358]
+        ], dtype=np.float32
+    )
+    freeze_options = {
+        'z': z,
+        'theta': {
+            'rho': 2,
+            'tau': 1,
+            'beta': 1,
+            'gamma': 0
+        }
+    }
+    model.freeze(freeze_options)
+    return model
+
+
+@pytest.fixture(scope="module")
+def docket_0():
+    """Return a docket of unjudged trials."""
     stimulus_set = np.array((
         (0, 1, 2, 7, 3),
         (3, 4, 5, 9, 1),
@@ -69,11 +100,11 @@ def unjudged_trials():
         (2, 1, 0, 6, -1),
         (3, 0, 2, 6, -1),
     ))
-    n_selected = np.array((
+    n_select = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    unjudged_trials = UnjudgedTrials(stimulus_set, n_selected=n_selected)
-    return unjudged_trials
+    docket = Docket(stimulus_set, n_select=n_select)
+    return docket
 
 
 def test_private_exponential_similarity():
@@ -275,7 +306,7 @@ def test_freeze():
         model.freeze({'z': np.ones((n_stimuli-1, n_dim))})
     with pytest.raises(Exception):
         model.freeze({'z': np.ones((n_stimuli, n_dim-1))})
-    
+
     model.freeze({'phi': {'phi_1': np.ones((n_group, n_dim))}})
     with pytest.raises(Exception):
         model.freeze({'phi': {'phi_1': np.ones((n_group+1, n_dim))}})
@@ -283,34 +314,32 @@ def test_freeze():
         model.freeze({'phi': {'phi_1': np.ones((n_group, n_dim-1))}})
 
 
-def test_probability(ground_truth, unjudged_trials):
+def test_probability(model_true, docket_0):
     """Test probability method."""
-    prob = ground_truth.outcome_probability(
-        unjudged_trials)
+    prob = model_true.outcome_probability(docket_0)
     prob_actual = np.sum(prob, axis=1)
-    prob_desired = np.ones((unjudged_trials.n_trial))
+    prob_desired = np.ones((docket_0.n_trial))
     np.testing.assert_allclose(prob_actual, prob_desired)
 
 
-def test_tf_probability(ground_truth, unjudged_trials):
+def test_tf_probability(model_true, docket_0):
     """Test _tf_outcome_probability method."""
-    prob_desired = np.ones((unjudged_trials.n_trial))
+    prob_desired = np.ones((docket_0.n_trial))
 
-    prob_1 = ground_truth.outcome_probability(
-        unjudged_trials)
+    prob_1 = model_true.outcome_probability(docket_0)
     prob_actual_1 = np.sum(prob_1, axis=1)
 
-    z_tf = ground_truth.z['value']
+    z_tf = model_true.z['value']
     z_tf = tf.convert_to_tensor(
         z_tf, dtype=tf.float32
     )
 
     tf_theta = {}
-    for param_name in ground_truth.theta:
+    for param_name in model_true.theta:
         tf_theta[param_name] = tf.constant(
-            ground_truth.theta[param_name]['value'], dtype=tf.float32)
-    prob_2_tf = ground_truth._tf_outcome_probability(
-        unjudged_trials, z_tf, tf_theta)
+            model_true.theta[param_name]['value'], dtype=tf.float32)
+    prob_2_tf = model_true._tf_outcome_probability(
+        docket_0, z_tf, tf_theta)
 
     sess = tf.Session()
     with sess.as_default():
@@ -321,31 +350,106 @@ def test_tf_probability(ground_truth, unjudged_trials):
     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)
 
 
-def test_tf_ranked_sequence_probability(ground_truth, unjudged_trials):
-    """Test tf_ranked_sequence_probability."""
-    trials = unjudged_trials
+def test_inflate_points_single_sample(
+        model_true_det, docket_0):
+    """Test inflation with z with 1 sample."""
     n_reference = 4
-    n_selected = 2
+    n_select = 2
     trial_locs = np.logical_and(
-        trials.n_reference == n_reference,
-        trials.n_selected == n_selected
+        docket_0.n_reference == n_reference,
+        docket_0.n_select == n_select
     )
 
-    z = ground_truth.z['value']
+    z = model_true_det.z['value']
+    (z_q, z_r) = model_true_det._inflate_points(
+        docket_0.stimulus_set[trial_locs], n_reference,
+        np.expand_dims(z, axis=2)
+    )
 
-    attention = ground_truth.phi['phi_1']['value'][0, :]
-    attention = np.matlib.repmat(attention, unjudged_trials.n_trial, 1)
+    z_q_desired = np.array(
+        [[0.12737487, 1.3211997], [0.55950886, 1.8086979]],
+        dtype=np.float32)
+    z_q_desired = np.expand_dims(z_q_desired, axis=2)
+    z_q_desired = np.expand_dims(z_q_desired, axis=3)
+    np.testing.assert_allclose(z_q, z_q_desired, rtol=1e-6)
 
-    (z_q, z_r) = ground_truth._inflate_points(
-        trials.stimulus_set[trial_locs], n_reference, z)
-    s_qref = ground_truth.similarity(z_q, z_r, attention=attention[trial_locs])
-    prob_1 = ground_truth._ranked_sequence_probabiltiy(s_qref, n_selected)
+    z_r_desired = np.array(
+        [
+            [
+                [0.83358091, 0.88011509, 0.21504205, 0.55950886],
+                [1.52554786, 0.64515489, 0.92544436, 1.80869794]
+            ],
+            [
+                [1.90893364, 2.8184545, -0.04342473, 0.83358091],
+                [-0.15246096, 2.63771772, 1.41283584, 1.52554786]
+            ]
+        ], dtype=np.float32)
+    z_r_desired = np.expand_dims(z_r_desired, axis=3)
+    np.testing.assert_allclose(z_r, z_r_desired, rtol=1e-6)
 
-    tf_n_selected = tf.constant(n_selected, dtype=tf.int32)
-    # tf_s_qref = tf.constant(s_qref, dtype=tf.float32)
-    tf_s_qref = tf.convert_to_tensor(s_qref, dtype=tf.float32)
-    tf_prob_2 = ground_truth._tf_ranked_sequence_probability(
-        tf_s_qref, tf_n_selected)
+
+def test_inflate_points_multiple_samples(model_true_det):
+    """Test inflation when z contains samples."""
+    n_stimuli = 7
+    n_dim = 2
+    n_sample = 10
+    n_reference = 3
+    n_trial = 5
+    stimulus_set = np.array((
+        (0, 1, 2, 3),
+        (3, 4, 0, 1),
+        (3, 5, 6, 1),
+        (1, 4, 5, 6),
+        (2, 1, 3, 6),
+    ))
+    mean = np.zeros((n_dim))
+    cov = .1 * np.identity(n_dim)
+    z = np.random.multivariate_normal(mean, cov, (n_sample, n_stimuli))
+    z = np.transpose(z, axes=[1, 2, 0])
+
+    # Desired inflation outcome.
+    z_q_desired = z[stimulus_set[:, 0], :, :]
+    z_q_desired = np.expand_dims(z_q_desired, axis=2)
+    z_r_desired = np.empty((n_trial, n_dim, n_reference, n_sample))
+    for i_ref in range(n_reference):
+        z_r_desired[:, :, i_ref, :] = z[stimulus_set[:, 1+i_ref], :]
+
+    (z_q, z_r) = model_true_det._inflate_points(
+        stimulus_set, n_reference, z)
+
+    np.testing.assert_allclose(z_q, z_q_desired, rtol=1e-6)
+    np.testing.assert_allclose(z_r, z_r_desired, rtol=1e-6)
+
+
+def test_tf_ranked_sequence_probability(model_true, docket_0):
+    """Test tf_ranked_sequence_probability."""
+    docket = docket_0
+    n_reference = 4
+    n_select = 2
+    trial_locs = np.logical_and(
+        docket.n_reference == n_reference,
+        docket.n_select == n_select
+    )
+
+    z = model_true.z['value']
+
+    attention = model_true.phi['phi_1']['value'][0, :]
+    attention = np.matlib.repmat(attention, docket_0.n_trial, 1)
+
+    (z_q, z_r) = model_true._inflate_points(
+        docket.stimulus_set[trial_locs], n_reference,
+        np.expand_dims(z, axis=2)
+    )
+    s_qref = model_true.similarity(z_q, z_r, group_id=0)
+    prob_1 = model_true._ranked_sequence_probabiltiy(s_qref, n_select)
+    prob_1 = prob_1[:, 0]
+
+    # NOTE: tf_ranked_sequence_probability is not implemented to handle
+    # samples.
+    tf_n_select = tf.constant(n_select, dtype=tf.int32)
+    tf_s_qref = tf.convert_to_tensor(s_qref[:, :, 0], dtype=tf.float32)
+    tf_prob_2 = model_true._tf_ranked_sequence_probability(
+        tf_s_qref, tf_n_select)
     sess = tf.Session()
     with sess.as_default():
         sess.run(tf.global_variables_initializer())
@@ -396,7 +500,7 @@ def test_tuning_distance():
     ))
     w = np.expand_dims(w1, axis=0)
     x = np.expand_dims(np.abs(z_q - z_r)**(rho / 2), axis=2)
-    x_t = np.transpose(x, axes=(0, 2, 1)) 
+    x_t = np.transpose(x, axes=(0, 2, 1))
     d_qr_1 = np.matmul(x_t, w)
     d_qr_1 = np.matmul(d_qr_1, x)
     d_qr_1 = d_qr_1**(1 / rho)
@@ -524,6 +628,38 @@ def test_tuning_distance_with_multiple_references():
     # d_qr_1 = d_qr_1**(1 / rho)
     # d_qr_1 = np.squeeze(d_qr_1)
     # np.testing.assert_array_almost_equal(d_qr_0, d_qr_1)
+
+
+def test_save_load(model_true_det, tmpdir):
+    """Test loading and saving of embedding model."""
+    # Save embedding model.
+    fn = tmpdir.join('embedding_test.hdf5')
+    model_true_det.save(fn)
+    # Load the saved embedding model.
+    loaded_embedding = load_embedding(fn)
+    # Test for equality.
+    assert loaded_embedding.n_stimuli == model_true_det.n_stimuli
+    assert loaded_embedding.n_dim == model_true_det.n_dim
+    assert loaded_embedding.n_group == model_true_det.n_group
+
+    np.testing.assert_array_equal(
+        loaded_embedding.z['value'],
+        model_true_det.z['value']
+    )
+    assert loaded_embedding.z['trainable'] == model_true_det.z['trainable']
+
+    assert loaded_embedding.theta == model_true_det.theta
+
+    for param_name in model_true_det.phi:
+        np.testing.assert_array_equal(
+            loaded_embedding.phi[param_name]['value'],
+            model_true_det.phi[param_name]['value']
+        )
+        assert (
+            loaded_embedding.phi[param_name]['trainable'] ==
+            model_true_det.phi[param_name]['trainable']
+        )
+
 
 # TODO anchor point test
 # color_idx = np.zeros((n_stimuli), dtype=np.int64)

@@ -22,9 +22,10 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import r2_score
 from scipy.optimize import minimize
+from scipy.stats import pearsonr
 
 
-def similarity_matrix(similarity_func, z):
+def similarity_matrix(similarity_fn, z):
         """Return a pairwise similarity matrix.
 
         Returns:
@@ -41,22 +42,28 @@ def similarity_matrix(similarity_func, z):
 
         z_a = z[a, :]
         z_b = z[b, :]
-        simmat = similarity_func(z_a, z_b)
+        simmat = similarity_fn(z_a, z_b)
         simmat = simmat.reshape(n_stimuli, n_stimuli)
         return simmat
 
 
-def matrix_correlation(mat_a, mat_b):
-    """Return the R^2 score between two square matrices.
+def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
+    """Return a comparison score between two square matrices.
 
-    Args:
+    Arguments:
         mat_a: A square matrix.
         mat_b: A square matrix the same size as mat_a
+        score (optional): The type of comparison to use.
+        elements (optional): Which elements to use in the computation.
+            The options are upper triangular elements (upper), lower
+            triangular elements (lower), or off-diagonal elements
+            (off).
 
     Returns:
-        The R^2 score between the two matrices.
+        The comparison score.
 
     Notes:
+        'r2'
         When computing R^2 values of two similarity matrices, it is
         assumed, by definition, that the corresponding diagonal
         elements are the same between the two matrices being compared.
@@ -70,18 +77,35 @@ def matrix_correlation(mat_a, mat_b):
     n_row = mat_a.shape[0]
     idx_upper = np.triu_indices(n_row, 1)
     idx_lower = np.triu_indices(n_row, 1)
-    idx = (
-        np.hstack((idx_upper[0], idx_lower[0])),
-        np.hstack((idx_upper[1], idx_lower[1])),
-    )
-    # Explained variance score.
-    return r2_score(mat_a[idx], mat_b[idx])
+    if elements == 'upper':
+        idx = idx_upper
+    elif elements == 'lower':
+        idx = idx_lower
+    elif elements == 'off':
+        idx = (
+            np.hstack((idx_upper[0], idx_lower[0])),
+            np.hstack((idx_upper[1], idx_lower[1])),
+        )
+    else:
+        raise ValueError(
+            'The argument to `elements` must be "upper", "lower", or "off".')
+
+    if score == 'pearson':
+        score, _ = pearsonr(mat_a[idx], mat_b[idx])
+    elif score == 'r2':
+        score = r2_score(mat_a[idx], mat_b[idx])
+    elif score == 'mse':
+        score = np.mean((mat_a[idx] - mat_b[idx])**2)
+    else:
+        raise ValueError(
+            'The provided `score` argument is not valid.')
+    return score
 
 
 def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
     """Compare two psychological embeddings.
 
-    Args:
+    Arguments:
         model_a:  A psychological embedding model.
         model_b:  A psychological embedding model.
         group_id_a (optional):  A particular group ID to use when
@@ -95,17 +119,15 @@ def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
 
     """
     def sim_func_a(z_q, z_ref):
-        return model_a.similarity(
-            z_q, z_ref, attention=model_a.phi['phi_1']['value'][group_id_a])
+        return model_a.similarity(z_q, z_ref, group_id=group_id_a)
 
     def sim_func_b(z_q, z_ref):
-        return model_b.similarity(
-            z_q, z_ref, attention=model_b.phi['phi_1']['value'][group_id_b])
+        return model_b.similarity(z_q, z_ref, group_id=group_id_b)
 
     simmat_a = similarity_matrix(sim_func_a, model_a.z['value'])
     simmat_b = similarity_matrix(sim_func_b, model_b.z['value'])
 
-    r_squared = matrix_correlation(simmat_a, simmat_b)
+    r_squared = matrix_comparison(simmat_a, simmat_b)
     return r_squared
 
 
@@ -117,7 +139,7 @@ def elliptical_slice(
     Markov chain update for a distribution with a Gaussian "prior"
     factored out.
 
-    Args:
+    Arguments:
         initial_theta: initial vector
         prior: cholesky decomposition of the covariance matrix (like
             what numpy.linalg.cholesky returns), or a sample from the
@@ -191,7 +213,7 @@ def elliptical_slice(
 def rotation_matrix(theta):
     """Return 2D rotation matrix.
 
-    Args:
+    Arguments:
         theta: Scalar value indicating radians of rotation.
     """
     return np.array((
@@ -203,7 +225,7 @@ def rotation_matrix(theta):
 def affine_transformation(z, params):
     """Return affine transformation of 2D points.
 
-    Args:
+    Arguments:
         z: Original set of points.
             shape = (n_point, 2)
         params: Transformation parameters denoting x translation,
@@ -226,7 +248,7 @@ def affine_transformation(z, params):
 def procrustean_solution(z_a, z_b, n_restart=10):
     """Align the two embeddings using an affine transformation.
 
-    Args:
+    Arguments:
         z_a: A 2D embedding.
             shape = (n_point, 2)
         z_b: A 2D embedding.

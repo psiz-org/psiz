@@ -693,8 +693,9 @@ class PsychologicalEmbedding(object):
                 integers display an increasing amount of information.
 
         Returns:
-            J: The average loss per observation. Loss is defined as the
-                negative loglikelihood.
+            loss_val_best: The average loss per observation on the
+                validation set. Loss is defined as the negative
+                loglikelihood.
 
         """
         #  Infer embedding.
@@ -711,7 +712,7 @@ class PsychologicalEmbedding(object):
         # Partition data into train and validation set for early stopping of
         # embedding algorithm.
         skf = StratifiedKFold(n_splits=10)
-        (train_idx, test_idx) = list(
+        (train_idx, val_idx) = list(
             skf.split(obs.stimulus_set, obs.config_idx))[0]
 
         # Run multiple restarts of embedding algorithm.
@@ -721,12 +722,22 @@ class PsychologicalEmbedding(object):
         attention_best = None
         params_best = None
 
+        # Partition the observation data.
+        obs_train = obs.subset(train_idx)
+        obs_val = obs.subset(val_idx)
+
+        (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
+            tf_theta_bounds, tf_obs) = self._core_model(init_mode)
+
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
-            (loss_train, loss_val, z, attention, params) = self._embed(
-                obs, train_idx, test_idx, i_restart, init_mode, verbose
+            (loss_train, loss_val, z, attention, params) = self._fit_restart(
+                obs_train, obs_val, i_restart, init_mode, verbose
             )
+            # (loss_train, loss_val, z, attention, params) = self._fit_restart(
+            #     obs_train, obs_val, i_restart, verbose
+            # )
             # TODO
             # gmm = mixture.GaussianMixture(
             #             n_components=1, covariance_type='spherical')
@@ -761,61 +772,27 @@ class PsychologicalEmbedding(object):
 
         return loss_val_best  # TODO also return loss_train_best
 
-    def evaluate(self, obs):
-        """Evaluate observations using the current state of the model.
-
-        Arguments:
-            obs: A Observations object representing the observed data.
-
-        Returns:
-            loss: The average loss per observation. Loss is defined as
-                the negative loglikelihood.
-
-        """
-        (J, _, _, _, _, _, tf_obs) = self._core_model('exact')
-
-        init = tf.global_variables_initializer()
-        sess = tf.Session()
-        sess.run(init)
-        loss = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs))
-
-        sess.close()
-        tf.reset_default_graph()
-        return loss
-
-    def _embed(self, obs, train_idx, test_idx, i_restart, init_mode, verbose):
+    def _fit_restart(self, obs_train, obs_val, i_restart, init_mode, verbose):
         """Ebed using a TensorFlow implementation."""
-        # Partition the observation data.
-        obs_train = obs.subset(train_idx)
-        obs_val = obs.subset(test_idx)
-
-        (J, tf_z, tf_attention, tf_attention_constraint, tf_theta,
+        (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
             tf_theta_bounds, tf_obs) = self._core_model(init_mode)
 
         tf_learning_rate = tf.placeholder(FLOAT_X, shape=[])
-        # train_op = tf.train.AdamOptimizer(
-        #     learning_rate=tf_learning_rate).minimize(J)  # TODO
+        # TODO Make optimizer passable argument.
         train_op = tf.train.RMSPropOptimizer(
             learning_rate=tf_learning_rate
-        ).minimize(J)
-        # train_op = tf.train.MomentumOptimizer(
-        #     learning_rate=tf_learning_rate
-        # ).minimize(J)
-        # train_op = tf.train.GradientDescentOptimizer(
-        #     learning_rate=tf_learning_rate
-        # ).minimize(J)
+        ).minimize(tf_loss)
 
         init = tf.global_variables_initializer()
 
         with tf.name_scope('summaries'):
             # Create a summary to monitor cost tensor.
-            tf.summary.scalar('loss_train', J)
+            tf.summary.scalar('loss_train', tf_loss)
             # Create a summary of the embedding tensor.
             # tf.summary.tensor_summary('z', tf_z)  # Feature not supported.
 
             # Create a summary to monitor parameters of similarity kernel.
             with tf.name_scope('similarity'):
-
                 for param_name in tf_theta:
                     param_mean = tf.reduce_mean(tf_theta[param_name])
                     tf.summary.scalar(param_name + '_mean', param_mean)
@@ -856,7 +833,7 @@ class PsychologicalEmbedding(object):
         #     for i_batch in range(n_batch):
         #         obs_train_batch = obs_train.subset(np.equal(batch_idx, i_batch))
         #         _, loss_train_batch[i_batch], summary = sess.run(
-        #             [train_op, J, merged_summary_op],
+        #             [train_op, tf_loss, merged_summary_op],
         #             feed_dict={
         #                 tf_learning_rate: lr,
         #                 **self._bind_obs(tf_obs, obs_train_batch)
@@ -868,7 +845,7 @@ class PsychologicalEmbedding(object):
 
         for epoch in range(self.max_n_epoch):
             _, loss_train, summary = sess.run(
-                [train_op, J, merged_summary_op],
+                [train_op, tf_loss, merged_summary_op],
                 feed_dict={
                     tf_learning_rate: lr,
                     **self._bind_obs(tf_obs, obs_train)
@@ -876,7 +853,9 @@ class PsychologicalEmbedding(object):
             )
             sess.run(tf_theta_bounds)
             sess.run(tf_attention_constraint)
-            loss_val = sess.run(J, feed_dict=self._bind_obs(tf_obs, obs_val))
+            loss_val = sess.run(
+                tf_loss, feed_dict=self._bind_obs(tf_obs, obs_val)
+            )
 
             # Compare current loss to best loss.
             if loss_val < loss_val_best:
@@ -922,6 +901,28 @@ class PsychologicalEmbedding(object):
         return (
             loss_train_best, loss_val_best, z_best, attention_best,
             params_best)
+
+    def evaluate(self, obs):
+        """Evaluate observations using the current state of the model.
+
+        Arguments:
+            obs: A Observations object representing the observed data.
+
+        Returns:
+            loss: The average loss per observation. Loss is defined as
+                the negative loglikelihood.
+
+        """
+        (tf_loss, _, _, _, _, _, tf_obs) = self._core_model('exact')
+
+        init = tf.global_variables_initializer()
+        sess = tf.Session()
+        sess.run(init)
+        loss = sess.run(tf_loss, feed_dict=self._bind_obs(tf_obs, obs))
+
+        sess.close()
+        tf.reset_default_graph()
+        return loss
 
     def _bind_obs(self, tf_obs, obs):
         feed_dict = {

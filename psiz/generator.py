@@ -34,6 +34,12 @@ Todo:
     - MAYBE change RandomGenerator API to take a config_list, generated
         trials are then randomly chosen from config list.
     - MAYBE document stimulus index formatting [0,N[
+    - MAYBE move update_samples somewhere else.
+
+TODO additional Docs
+# API conceptually consistent for RandomGenerator and ActiveGenerator
+#   trial config given at init
+#   all embedding information given to generate (n_stimuli, etc.)
 
 """
 
@@ -133,12 +139,6 @@ class RandomGenerator(TrialGenerator):
         )
 
 
-# TODO
-# API should be conceptually consistent for RandomGenerator and ActiveGenerator
-#   trial config given at init
-#   all embedding information given to generate (n_stimuli, etc.)
-# 
-# Should update_samples be included? probably not.
 class ActiveGenerator(TrialGenerator):
     """A trial generator that leverages expected information gain.
 
@@ -228,14 +228,27 @@ class ActiveGenerator(TrialGenerator):
         n_query = np.minimum(n_query, n_stimuli)
         n_query = np.minimum(n_query, n_trial)
 
-        # Prioritize query stimulus based on corresponding entropy.
         # embdding.convert(samples, group_id) TODO
-        h = stimulus_entropy(samples)
-        query_idx = np.argsort(-h)
-        query_idx = query_idx[0:n_query]
 
+        # Stochastically prioritize query stimulus based on corresponding
+        # entropy.
+        entropy = stimulus_entropy(samples)
+        # query_idx = np.argsort(-entropy)
+        # query_idx = query_idx[0:n_query]
+        query_idx = np.arange(0, n_stimuli)
+        rel_entropy = entropy - np.min(entropy)
+        query_prob = rel_entropy / np.sum(rel_entropy)
+        query_idx = np.random.choice(
+            query_idx, n_query, replace=False, p=query_prob)
+
+        # Deep copy.
+        placeholder_docket = Docket(
+            copy.copy(self.placeholder_docket.stimulus_set),
+            n_select=copy.copy(self.placeholder_docket.n_select),
+            is_ranked=copy.copy(self.placeholder_docket.is_ranked)
+        )
         (best_docket, best_ig) = self._determine_references(
-            embedding, samples, self.placeholder_docket, query_idx,
+            embedding, samples, placeholder_docket, query_idx,
             n_trial, group_id
         )
         return (best_docket, best_ig)
@@ -341,7 +354,7 @@ class ActiveGenerator(TrialGenerator):
         return placeholder_docket
 
     def _determine_references(
-            self, embedding, samples, placeholder_docket, query_idx, n_trial,
+            self, embedding, samples, docket, query_idx, n_trial,
             group_id):
         n_query = query_idx.shape[0]
 
@@ -352,35 +365,71 @@ class ActiveGenerator(TrialGenerator):
                 n_trial_per_query[np.mod(i_trial, n_query)] + 1
             )
 
+        # Select references randomly.
+        # dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+        # chosen_idx = np.empty(
+        #     [len(query_idx), self.n_neighbor + 1], dtype=np.int)
+        # for idx, q_idx in enumerate(query_idx):
+        #     candidate_locs = np.not_equal(dmy_idx, q_idx)
+        #     candidate_idx = dmy_idx[candidate_locs]
+        #     chosen_idx[idx, 0] = q_idx
+        #     chosen_idx[idx, 1:] = np.random.choice(
+        #         candidate_idx, self.n_neighbor, replace=False)
+
+        # Select references stochastically based on similarity.
+        z = embedding.z['value']
+        dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+        chosen_idx = np.empty(
+            [len(query_idx), self.n_neighbor + 1], dtype=np.int)
+        for idx, q_idx in enumerate(query_idx):
+            candidate_locs = np.not_equal(dmy_idx, q_idx)
+            candidate_idx = dmy_idx[candidate_locs]
+            simmat = embedding.similarity(
+                np.expand_dims(z[q_idx], axis=0), z, group_id=group_id)
+            candidate_sim = simmat[candidate_locs]
+            candidate_prob = candidate_sim / np.sum(candidate_sim)
+            chosen_idx[idx, 0] = q_idx
+            chosen_idx[idx, 1:] = np.random.choice(
+                candidate_idx, self.n_neighbor, replace=False,
+                p=candidate_prob)
+
+        # Select references based on nearest neighbors.
         # TODO convert using group_specific "view".
-        z_median = np.median(samples['z'], axis=2)
-        rho = embedding.theta['rho']['value']
+        # z_median = np.median(samples['z'], axis=2)
         # TODO MAYBE faiss nearest neighbors
-        nbrs = NearestNeighbors(
-            n_neighbors=self.n_neighbor+1, algorithm='auto', p=rho
-        ).fit(z_median)
-        (_, nn_idx) = nbrs.kneighbors(z_median[query_idx])
+        # rho = embedding.theta['rho']['value']
+        # nbrs = NearestNeighbors(
+        #     n_neighbors=self.n_neighbor+1, algorithm='auto', p=rho
+        # ).fit(z_median)
+        # (_, chosen_idx) = nbrs.kneighbors(z_median[query_idx])
+
+        # Prepare indices by taking into account -1 which is used as a
+        # placeholder in `stimulus_set` to denote absent stimuli.
+        # Initially, the incoming docket is placeholder with stimulus_set
+        # values [-1, n_chosen].
+        placeholder_stimulus_set = copy.copy(docket.stimulus_set) + 1
+        # Adjust `chosen_idx` as well. Initially has values [0, n_stimuli-1].
+        chosen_idx = chosen_idx + 1
+        # Prepend 0 for placeholder in case of absent stimulus.
+        placeholder_zeros = np.zeros([n_query, 1], dtype=np.int)
+        chosen_idx = np.hstack((placeholder_zeros, chosen_idx))
 
         best_docket = None
         best_ig = None
-        placeholder_stimulus_set = copy.copy(placeholder_docket.stimulus_set)
-        # MAYBE parallelize this for loop.
         for i_query in range(n_query):
-            # Substitute actual indices in candidate trials. The addition and
-            # substraction of 1 is to handle the -1 used as a placeholder
-            # in 'stimulus_set'.
-            r = nn_idx[i_query] + 1
-            r = np.hstack((0, r))
-            placeholder_docket.stimulus_set = r[placeholder_stimulus_set + 1]
-            placeholder_docket.stimulus_set = (
-                placeholder_docket.stimulus_set - 1
-            )
+            # Substitute actual indices in candidate trials. 
+            r = chosen_idx[i_query]
+            stimulus_set = r[placeholder_stimulus_set]
+            stimulus_set = stimulus_set - 1  # Now [-1, n_stimuli - 1]
+            # Set docket using actual stimulus_set.
+            docket.stimulus_set = stimulus_set
 
             ig = self._information_gain(
-                embedding, samples, placeholder_docket, group_id=group_id)
-            top_indices = np.argsort(-ig)
+                embedding, samples, docket, group_id=group_id)
+
             # Grab the top N trials as specified by 'n_trial_per_query'.
-            top_candidate = placeholder_docket.subset(
+            top_indices = np.argsort(-ig)
+            top_candidate = docket.subset(
                 top_indices[0:n_trial_per_query[i_query]]
             )
             curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
@@ -393,8 +442,7 @@ class ActiveGenerator(TrialGenerator):
                 best_docket = top_candidate
             else:
                 best_docket = stack((best_docket, top_candidate))
-        # Reset placeholder. TODO Verify.
-        placeholder_docket.stimulus_set = placeholder_stimulus_set
+
         return (best_docket, best_ig)
 
     def _information_gain(

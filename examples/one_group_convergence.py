@@ -36,7 +36,7 @@ from psiz.utils import similarity_matrix, matrix_comparison
 def main():
     """Run the simulation that infers an embedding for two groups."""
     # warnings.filterwarnings("ignore")  # TODO
-    n_stimuli = 10
+    n_stimuli = 25
     n_dim = 3
     n_group = 1
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
@@ -104,7 +104,6 @@ def ground_truth(n_stimuli, n_dim, n_group):
     # idx_upper = np.triu_indices(n_stimuli, 1)
     # plt.hist(sim_mat[idx_upper])
     # plt.show()
-
     return model
 
 

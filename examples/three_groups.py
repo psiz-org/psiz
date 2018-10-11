@@ -49,11 +49,11 @@ from psiz.utils import similarity_matrix, matrix_comparison
 
 def main():
     """Run the simulation that infers an embedding for three groups."""
-    n_stimuli = 10
+    n_stimuli = 25
     n_dim = 3
     n_group = 3
     # np.random.seed(123)  # TODO
-    model_truth = ground_truth(n_stimuli, n_dim, n_group)
+    emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
     n_trial = 1000
@@ -63,16 +63,16 @@ def main():
     docket = generator.generate(n_trial, n_stimuli)
 
     # Simulate similarity judgments for the three groups.
-    agent_novice = Agent(model_truth, group_id=0)
-    agent_interm = Agent(model_truth, group_id=1)
-    agent_expert = Agent(model_truth, group_id=2)
+    agent_novice = Agent(emb_true, group_id=0)
+    agent_interm = Agent(emb_true, group_id=1)
+    agent_expert = Agent(emb_true, group_id=2)
     obs_novice = agent_novice.simulate(docket)
     obs_interm = agent_interm.simulate(docket)
     obs_expert = agent_expert.simulate(docket)
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
     model_inferred = Exponential(
-        model_truth.n_stimuli, n_dim, n_group)
+        emb_true.n_stimuli, n_dim, n_group)
     freeze_options = {'theta': {'rho': 2, 'beta': 10}}
     model_inferred.freeze(freeze_options=freeze_options)
     model_inferred.fit(obs_all, 20, verbose=1)
@@ -80,18 +80,18 @@ def main():
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
     def truth_sim_func0(z_q, z_ref):
-        return model_truth.similarity(z_q, z_ref, group_id=0)
+        return emb_true.similarity(z_q, z_ref, group_id=0)
 
     def truth_sim_func1(z_q, z_ref):
-        return model_truth.similarity(z_q, z_ref, group_id=1)
+        return emb_true.similarity(z_q, z_ref, group_id=1)
 
     def truth_sim_func2(z_q, z_ref):
-        return model_truth.similarity(z_q, z_ref, group_id=2)
+        return emb_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        similarity_matrix(truth_sim_func0, model_truth.z['value']),
-        similarity_matrix(truth_sim_func1, model_truth.z['value']),
-        similarity_matrix(truth_sim_func2, model_truth.z['value'])
+        similarity_matrix(truth_sim_func0, emb_true.z['value']),
+        similarity_matrix(truth_sim_func1, emb_true.z['value']),
+        similarity_matrix(truth_sim_func2, emb_true.z['value'])
     )
 
     def infer_sim_func0(z_q, z_ref):
@@ -138,7 +138,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
     emb = Exponential(
         n_stimuli, n_dim=n_dim, n_group=n_group)
     mean = np.zeros((n_dim))
-    cov = .01 * np.identity(n_dim)
+    cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     attention = np.array((
         (1.9, 1., .1),
@@ -151,7 +151,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
             'rho': 2,
             'tau': 1,
             'beta': 10,
-            'gamma': 0
+            'gamma': 0.001
         },
         'phi': {
             'phi_1': attention

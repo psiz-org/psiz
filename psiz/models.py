@@ -34,12 +34,11 @@ Todo:
         transformations to z so that further calls to similarity or
         distance would use basic settings (e.g., uniform attention
         weights).
-    - implement warm (currently the same as exact)
     - document how to do warm restarts (warm restarts are sequential
       and can be created by the user using a for loop and fit with
       init_mode='warm')
     - document broadcasting in similarity function
-    - document meaning of cold, warm, and exact
+    - document meaning of cold, warm, and exact initialization
     - document default tensorboard log location
         i.e., /tmp/psiz/tensorboard_logs/
     - init_scale_list -> init_cov_list
@@ -296,7 +295,8 @@ class PsychologicalEmbedding(object):
             if init_mode is 'exact':
                 tf_theta = self._get_similarity_parameters_exact()
             elif init_mode is 'warm':
-                tf_theta = self._get_similarity_parameters_exact()
+                # tf_theta = self._get_similarity_parameters_exact()  # TODO
+                tf_theta = self._get_similarity_parameters_cold()
             else:
                 tf_theta = self._get_similarity_parameters_cold()
 
@@ -607,21 +607,27 @@ class PsychologicalEmbedding(object):
 
         if self.z['trainable']:
             if init_mode is 'exact':
+                z = self.z['value']
                 tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self.z['value'], dtype=FLOAT_X)
+                        z, dtype=FLOAT_X)
                 )
             elif init_mode is 'warm':
-                # Mix current value with random initialization.
-                gmm = mixture.GaussianMixture(
-                    n_components=1, covariance_type='spherical')
-                gmm.fit(self.z['value'])
-                mu = gmm.means_[0]
-                cov = gmm.covariances_[0] * np.identity(self.n_dim)
-                z_rand = np.random.multivariate_normal(
+                # Mix current value with a random initialization.
+                # gmm = mixture.GaussianMixture(
+                #     n_components=1, covariance_type='spherical')
+                # gmm.fit(self.z['value'])
+                # mu = gmm.means_[0]
+                # cov = gmm.covariances_[0] * np.identity(self.n_dim)
+                # TODO Is there something wrong with this way of initializing
+                # the embedding? No
+                mu = np.zeros((self.n_dim))
+                cov = self.init_scale_list[rand_scale_idx] * np.identity(self.n_dim)
+                z_noise = np.random.multivariate_normal(
                     mu, cov, (self.n_stimuli))
-                z = .95 * self.z['value'] + .05 * z_rand
+                # z = .8 * self.z['value'] + .2 * z_noise
+                z = z_noise  # TODO
                 tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
@@ -670,7 +676,7 @@ class PsychologicalEmbedding(object):
                 tf.gfile.DeleteRecursively(self.log_dir)
         tf.gfile.MakeDirs(self.log_dir)
 
-    def fit(self, obs, n_restart=40, init_mode='cold', verbose=0):
+    def fit(self, obs, n_restart=50, init_mode='cold', verbose=0):
         """Fit the free parameters of the embedding model.
 
         Arguments:
@@ -740,6 +746,14 @@ class PsychologicalEmbedding(object):
                 z_best = z
                 attention_best = attention
                 params_best = params
+                # print('        updated best')  # TODO
+                # print('        current best | z:   {0}'.format(z[0, 0:2]))  # TODO
+                # print('        current best | rho: {0}'.format(params['rho']))  # TODO
+                # print('        current best | tau: {0}'.format(params['tau']))  # TODO
+
+        # print('        final | z:   {0}'.format(z_best[0, 0:2]))  # TODO
+        # print('        final | rho: {0}'.format(params_best['rho']))  # TODO
+        # print('        final | tau: {0}'.format(params_best['tau']))  # TODO
 
         self.z['value'] = z_best
         self.phi['phi_1']['value'] = attention_best
@@ -779,8 +793,17 @@ class PsychologicalEmbedding(object):
             tf_theta_bounds, tf_obs) = self._core_model(init_mode)
 
         tf_learning_rate = tf.placeholder(FLOAT_X, shape=[])
-        train_op = tf.train.AdamOptimizer(
-            learning_rate=tf_learning_rate).minimize(J)
+        # train_op = tf.train.AdamOptimizer(
+        #     learning_rate=tf_learning_rate).minimize(J)  # TODO
+        train_op = tf.train.RMSPropOptimizer(
+            learning_rate=tf_learning_rate
+        ).minimize(J)
+        # train_op = tf.train.MomentumOptimizer(
+        #     learning_rate=tf_learning_rate
+        # ).minimize(J)
+        # train_op = tf.train.GradientDescentOptimizer(
+        #     learning_rate=tf_learning_rate
+        # ).minimize(J)
 
         init = tf.global_variables_initializer()
 
@@ -1774,7 +1797,8 @@ class Exponential(PsychologicalEmbedding):
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
 
         # Default inference settings.
-        self.lr = 0.003
+        # self.lr = 0.003
+        self.lr = 0.001  # TODO
 
     def _init_theta(self):
         """Return dictionary of default theta parameters.

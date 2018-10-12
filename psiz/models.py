@@ -232,7 +232,7 @@ class PsychologicalEmbedding(object):
 
     def _check_z(self, z):
         """Check argument `z`.
-        
+
         Raises:
             ValueError
 
@@ -726,14 +726,41 @@ class PsychologicalEmbedding(object):
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(val_idx)
 
+        # Initialize model.
         (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
             tf_theta_bounds, tf_obs) = self._core_model(init_mode)
+
+        tf_learning_rate = tf.placeholder(FLOAT_X, shape=[])
+        # TODO Make optimizer passable argument.
+        train_op = tf.train.RMSPropOptimizer(
+            learning_rate=tf_learning_rate
+        ).minimize(tf_loss)
+
+        with tf.name_scope('summaries'):
+            # Create a summary to monitor cost tensor.
+            tf.summary.scalar('loss_train', tf_loss)
+            # Create a summary of the embedding tensor.
+            # tf.summary.tensor_summary('z', tf_z)  # Feature not supported.
+
+            # Create a summary to monitor parameters of similarity kernel.
+            with tf.name_scope('similarity'):
+                for param_name in tf_theta:
+                    param_mean = tf.reduce_mean(tf_theta[param_name])
+                    tf.summary.scalar(param_name + '_mean', param_mean)
+
+            # Merge all summaries into a single op.
+            merged_summary_op = tf.summary.merge_all()
+
+        sess = tf.Session()
 
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
             (loss_train, loss_val, z, attention, params) = self._fit_restart(
-                obs_train, obs_val, i_restart, init_mode, verbose
+                sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
+                tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, train_op,
+                merged_summary_op, obs_train, obs_val, i_restart, init_mode,
+                verbose
             )
             # (loss_train, loss_val, z, attention, params) = self._fit_restart(
             #     obs_train, obs_val, i_restart, verbose
@@ -765,6 +792,8 @@ class PsychologicalEmbedding(object):
         # print('        final | z:   {0}'.format(z_best[0, 0:2]))  # TODO
         # print('        final | rho: {0}'.format(params_best['rho']))  # TODO
         # print('        final | tau: {0}'.format(params_best['tau']))  # TODO
+        sess.close()
+        tf.reset_default_graph()
 
         self.z['value'] = z_best
         self.phi['phi_1']['value'] = attention_best
@@ -772,35 +801,14 @@ class PsychologicalEmbedding(object):
 
         return loss_val_best  # TODO also return loss_train_best
 
-    def _fit_restart(self, obs_train, obs_val, i_restart, init_mode, verbose):
-        """Ebed using a TensorFlow implementation."""
-        (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
-            tf_theta_bounds, tf_obs) = self._core_model(init_mode)
-
-        tf_learning_rate = tf.placeholder(FLOAT_X, shape=[])
-        # TODO Make optimizer passable argument.
-        train_op = tf.train.RMSPropOptimizer(
-            learning_rate=tf_learning_rate
-        ).minimize(tf_loss)
-
+    def _fit_restart(
+            self, sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
+            tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, train_op,
+            merged_summary_op, obs_train, obs_val, i_restart, init_mode,
+            verbose):
+        """Embed using a TensorFlow implementation."""
         init = tf.global_variables_initializer()
 
-        with tf.name_scope('summaries'):
-            # Create a summary to monitor cost tensor.
-            tf.summary.scalar('loss_train', tf_loss)
-            # Create a summary of the embedding tensor.
-            # tf.summary.tensor_summary('z', tf_z)  # Feature not supported.
-
-            # Create a summary to monitor parameters of similarity kernel.
-            with tf.name_scope('similarity'):
-                for param_name in tf_theta:
-                    param_mean = tf.reduce_mean(tf_theta[param_name])
-                    tf.summary.scalar(param_name + '_mean', param_mean)
-
-            # Merge all summaries into a single op.
-            merged_summary_op = tf.summary.merge_all()
-
-        sess = tf.Session()
         sess.run(init)
 
         # op to write logs for TensorBoard
@@ -894,9 +902,6 @@ class PsychologicalEmbedding(object):
                     "loss: {0: .6f} | ".format(loss_train),
                     "loss_val: {0: .6f}".format(loss_val)
                 )
-
-        sess.close()
-        tf.reset_default_graph()
 
         return (
             loss_train_best, loss_val_best, z_best, attention_best,
@@ -2240,7 +2245,7 @@ def load_embedding(filepath):
 
     Returns:
         Loaded embedding model.
-    
+
     Raises:
         ValueError
 

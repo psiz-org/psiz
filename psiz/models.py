@@ -706,61 +706,54 @@ class PsychologicalEmbedding(object):
                     self.n_stimuli, self.n_dim, self.n_group,
                     obs.n_trial, n_restart))
             print('')
-        # Partition data into train and validation set for early stopping of
-        # embedding algorithm.
-        skf = StratifiedKFold(n_splits=10)
-        (train_idx, val_idx) = list(
-            skf.split(obs.stimulus_set, obs.config_idx))[0]
-
-        # Run multiple restarts of embedding algorithm.
-        loss_train_best = np.inf
-        loss_val_best = np.inf
-        z_best = None
-        attention_best = None
-        params_best = None
-
-        # Partition the observation data.
-        obs_train = obs.subset(train_idx)
-        obs_val = obs.subset(val_idx)
 
         # Initialize model.
         (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
             tf_theta_bounds, tf_obs) = self._core_model(init_mode)
 
-        # Define optimizer.
+        # Partition and bind observations into train and validation set to
+        # control early stopping of embedding algorithm.
+        skf = StratifiedKFold(n_splits=10)
+        (train_idx, val_idx) = list(
+            skf.split(obs.stimulus_set, obs.config_idx))[0]
+        obs_train = obs.subset(train_idx)
+        obs_val = obs.subset(val_idx)
+        tf_obs_train = self._bind_obs(tf_obs, obs_train)
+        tf_obs_val = self._bind_obs(tf_obs, obs_val)
+
+        # Define optimizer op.
         tf_learning_rate = tf.placeholder(FLOAT_X, shape=[])
         # TODO Make optimizer passable argument.
         train_op = tf.train.RMSPropOptimizer(
             learning_rate=tf_learning_rate
         ).minimize(tf_loss)
 
+        # Define summary op.
         with tf.name_scope('summaries'):
-            # Create a summary to monitor cost tensor.
+            # Create a summary to monitor loss.
             tf.summary.scalar('loss_train', tf_loss)
             # Create a summary of the embedding tensor.
             # tf.summary.tensor_summary('z', tf_z)  # Feature not supported.
-
             # Create a summary to monitor parameters of similarity kernel.
             with tf.name_scope('similarity'):
                 for param_name in tf_theta:
                     param_mean = tf.reduce_mean(tf_theta[param_name])
                     tf.summary.scalar(param_name + '_mean', param_mean)
-
-            # Merge all summaries into a single op.
             summary_op = tf.summary.merge_all()
 
-        init_op = tf.global_variables_initializer()
-
+        # Run multiple restarts of embedding algorithm.
+        loss_val_best = np.inf
+        z_best = None
+        attention_best = None
+        params_best = None
         sess = tf.Session()
-
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
             (loss_train, loss_val, z, attention, params) = self._fit_restart(
                 sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
-                tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, init_op,
-                train_op, summary_op, obs_train, obs_val, i_restart,
-                verbose
+                tf_theta, tf_theta_bounds, tf_learning_rate, train_op,
+                summary_op, tf_obs_train, tf_obs_val, i_restart, verbose
             )
             # TODO
             # gmm = mixture.GaussianMixture(
@@ -800,13 +793,12 @@ class PsychologicalEmbedding(object):
 
     def _fit_restart(
             self, sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
-            tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, init_op,
-            train_op, summary_op, obs_train, obs_val, i_restart,
-            verbose):
+            tf_theta, tf_theta_bounds, tf_learning_rate, train_op, summary_op,
+            tf_obs_train, tf_obs_val, i_restart, verbose):
         """Embed using a TensorFlow implementation."""
-        sess.run(init_op)
+        sess.run(tf.global_variables_initializer())
 
-        # op to write logs for TensorBoard
+        # Write logs for TensorBoard
         if self.do_log:
             summary_writer = tf.summary.FileWriter(
                 '%s/%s' % (self.log_dir, i_restart),
@@ -849,15 +841,12 @@ class PsychologicalEmbedding(object):
         for epoch in range(self.max_n_epoch):
             _, loss_train, summary = sess.run(
                 [train_op, tf_loss, summary_op],
-                feed_dict={
-                    tf_learning_rate: lr,
-                    **self._bind_obs(tf_obs, obs_train)
-                }
+                feed_dict={tf_learning_rate: lr, **tf_obs_train}
             )
             sess.run(tf_theta_bounds)
             sess.run(tf_attention_constraint)
             loss_val = sess.run(
-                tf_loss, feed_dict=self._bind_obs(tf_obs, obs_val)
+                tf_loss, feed_dict=tf_obs_val
             )
 
             # Compare current loss to best loss.

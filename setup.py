@@ -17,6 +17,6 @@ setup(name='psiz',
       author_email='brett.roads@gmail.com',
       license='Apache Licence 2.0',
       packages=['psiz'],
-      install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'h5py'],
+      install_requires=['numpy', 'scipy', 'pandas', 'scikit-learn', 'h5py', 'matplotlib'],
       include_package_data=True,
       )

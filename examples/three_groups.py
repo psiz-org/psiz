@@ -52,7 +52,6 @@ def main():
     n_stimuli = 25
     n_dim = 3
     n_group = 3
-    # np.random.seed(123)  # TODO
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.

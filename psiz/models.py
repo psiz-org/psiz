@@ -34,6 +34,7 @@ Todo:
         transformations to z so that further calls to similarity or
         distance would use basic settings (e.g., uniform attention
         weights).
+    - implement warm restarts (primarily embedding aspect)
     - document how to do warm restarts (warm restarts are sequential
       and can be created by the user using a for loop and fit with
       init_mode='warm')
@@ -41,7 +42,6 @@ Todo:
     - document meaning of cold, warm, and exact initialization
     - document default tensorboard log location
         i.e., /tmp/psiz/tensorboard_logs/
-    - init_scale_list -> init_cov_list
     - expose optimizer
     - MAYBE ParameterSet, Theta and Phi object class
     - MAYBE parallelization during fitting
@@ -63,6 +63,9 @@ from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
+from keras.initializers import Initializer
+from tensorflow import random_uniform, random_normal
+from tensorflow.contrib.distributions import Dirichlet
 
 from psiz.utils import elliptical_slice
 
@@ -177,7 +180,6 @@ class PsychologicalEmbedding(object):
         self.phi = self._init_phi()
 
         # Default inference settings.
-        self.init_scale_list = [.001, .003, .01, .03, .1, .3, 1.]
         # self.batch_size = 2048
         self.lr = 0.001
         self.max_n_epoch = 5000
@@ -571,14 +573,11 @@ class PsychologicalEmbedding(object):
                     )
                 )
             else:
-                alpha = 1. * np.ones((self.n_dim))
-                new_attention = (
-                    np.random.dirichlet(alpha) * self.n_dim
-                )
+                n_dim = tf.constant(self.n_dim, dtype=FLOAT_X)
+                alpha = tf.constant(np.ones((self.n_dim)), dtype=FLOAT_X)
                 tf_attention = tf.get_variable(
                     "attention", [self.n_group, self.n_dim],
-                    initializer=tf.constant_initializer(
-                        new_attention, dtype=FLOAT_X)
+                    initializer=RandomAttention(n_dim, alpha, dtype=FLOAT_X)
                 )
         else:
             tf_attention = tf.get_variable(
@@ -600,10 +599,7 @@ class PsychologicalEmbedding(object):
             TensorFlow variable representing the embedding points.
 
         """
-        # Initialize z with different scales for different restarts
-        rand_scale_idx = np.random.randint(0, len(self.init_scale_list))
-        scale_value = np.sqrt(self.init_scale_list[rand_scale_idx])
-        tf_scale_value = tf.constant(scale_value, dtype=FLOAT_X)
+        # Initialize z with different scales for different restarts        
 
         if self.z['trainable']:
             if init_mode is 'exact':
@@ -620,10 +616,12 @@ class PsychologicalEmbedding(object):
                 # gmm.fit(self.z['value'])
                 # mu = gmm.means_[0]
                 # cov = gmm.covariances_[0] * np.identity(self.n_dim)
-                # TODO Is there something wrong with this way of initializing
-                # the embedding? No
+                # TODO re-work warm
+                # TODO get rid init_scale_list and rand_scale_idx
+                init_scale_list = [.001, .003, .01, .03, .1, .3, 1.]
+                rand_scale_idx = np.random.randint(0, len(init_scale_list))
                 mu = np.zeros((self.n_dim))
-                cov = self.init_scale_list[rand_scale_idx] * np.identity(self.n_dim)
+                cov = init_scale_list[rand_scale_idx] * np.identity(self.n_dim)
                 z_noise = np.random.multivariate_normal(
                     mu, cov, (self.n_stimuli))
                 # z = .8 * self.z['value'] + .2 * z_noise
@@ -636,12 +634,11 @@ class PsychologicalEmbedding(object):
             else:
                 tf_z = tf.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
-                    initializer=tf.random_normal_initializer(
+                    initializer=RandomEmbedding(
                         mean=tf.zeros([self.n_dim], dtype=FLOAT_X),
-                        stddev=(
-                            tf.ones([self.n_dim], dtype=FLOAT_X) *
-                            tf_scale_value
-                        ),
+                        stdev=tf.ones([self.n_dim], dtype=FLOAT_X),
+                        minval=tf.constant(-3., dtype=FLOAT_X),
+                        maxval=tf.constant(0., dtype=FLOAT_X),
                         dtype=FLOAT_X
                     )
                 )
@@ -730,6 +727,7 @@ class PsychologicalEmbedding(object):
         (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
             tf_theta_bounds, tf_obs) = self._core_model(init_mode)
 
+        # Define optimizer.
         tf_learning_rate = tf.placeholder(FLOAT_X, shape=[])
         # TODO Make optimizer passable argument.
         train_op = tf.train.RMSPropOptimizer(
@@ -749,7 +747,9 @@ class PsychologicalEmbedding(object):
                     tf.summary.scalar(param_name + '_mean', param_mean)
 
             # Merge all summaries into a single op.
-            merged_summary_op = tf.summary.merge_all()
+            summary_op = tf.summary.merge_all()
+
+        init_op = tf.global_variables_initializer()
 
         sess = tf.Session()
 
@@ -758,13 +758,10 @@ class PsychologicalEmbedding(object):
                 print('        Restart {0}'.format(i_restart))
             (loss_train, loss_val, z, attention, params) = self._fit_restart(
                 sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
-                tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, train_op,
-                merged_summary_op, obs_train, obs_val, i_restart, init_mode,
+                tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, init_op,
+                train_op, summary_op, obs_train, obs_val, i_restart,
                 verbose
             )
-            # (loss_train, loss_val, z, attention, params) = self._fit_restart(
-            #     obs_train, obs_val, i_restart, verbose
-            # )
             # TODO
             # gmm = mixture.GaussianMixture(
             #             n_components=1, covariance_type='spherical')
@@ -803,13 +800,11 @@ class PsychologicalEmbedding(object):
 
     def _fit_restart(
             self, sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
-            tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, train_op,
-            merged_summary_op, obs_train, obs_val, i_restart, init_mode,
+            tf_theta, tf_theta_bounds, tf_obs, tf_learning_rate, init_op,
+            train_op, summary_op, obs_train, obs_val, i_restart,
             verbose):
         """Embed using a TensorFlow implementation."""
-        init = tf.global_variables_initializer()
-
-        sess.run(init)
+        sess.run(init_op)
 
         # op to write logs for TensorBoard
         if self.do_log:
@@ -841,7 +836,7 @@ class PsychologicalEmbedding(object):
         #     for i_batch in range(n_batch):
         #         obs_train_batch = obs_train.subset(np.equal(batch_idx, i_batch))
         #         _, loss_train_batch[i_batch], summary = sess.run(
-        #             [train_op, tf_loss, merged_summary_op],
+        #             [train_op, tf_loss, summary_op],
         #             feed_dict={
         #                 tf_learning_rate: lr,
         #                 **self._bind_obs(tf_obs, obs_train_batch)
@@ -853,7 +848,7 @@ class PsychologicalEmbedding(object):
 
         for epoch in range(self.max_n_epoch):
             _, loss_train, summary = sess.run(
-                [train_op, tf_loss, merged_summary_op],
+                [train_op, tf_loss, summary_op],
                 feed_dict={
                     tf_learning_rate: lr,
                     **self._bind_obs(tf_obs, obs_train)
@@ -2232,6 +2227,98 @@ class StudentsT(PsychologicalEmbedding):
         # Student-t family similarity kernel.
         sim_qr = (1 + (d_qref**tau / alpha))**(np.negative(alpha + 1)/2)
         return sim_qr
+
+
+def _assert_float_dtype(dtype):
+    """Validate and return floating point type based on `dtype`.
+    `dtype` must be a floating point type.
+    Args:
+        dtype: The data type to validate.
+    Returns:
+        Validated type.
+    Raises:
+        ValueError: if `dtype` is not a floating point type.
+    """
+    if not dtype.is_floating:
+        raise ValueError("Expected floating point type, got %s." % dtype)
+    return dtype
+
+
+class RandomEmbedding(Initializer):
+    """Initializer that generates tensors with a normal distribution.
+
+    Arguments:
+        mean: A python scalar or a scalar tensor. Mean of the random
+            values to generate.
+        minval: TODO
+        maxval: TODO
+        seed: A Python integer. Used to create random seeds. See
+        `tf.set_random_seed` for behavior.
+        dtype: The data type. Only floating point types are supported.
+    """
+
+    def __init__(self, mean=0.0, stdev=1.0, minval=0.0, maxval=0.0, seed=None, dtype=tf.float32):
+        self.mean = mean
+        self.stdev = stdev
+        self.minval = minval
+        self.maxval = maxval
+        self.seed = seed
+        self.dtype = _assert_float_dtype(dtype)
+
+    def __call__(self, shape, dtype=None, partition_info=None):
+        if dtype is None:
+            dtype = self.dtype
+        scale = tf.pow(
+            tf.constant(10., dtype=FLOAT_X),
+            random_uniform(
+                [1],
+                minval=self.minval,
+                maxval=self.maxval,
+                dtype=dtype,
+                seed=self.seed,
+                name=None
+            )
+        )
+        stdev = scale * self.stdev
+        return random_normal(
+            shape, self.mean, stdev, dtype, seed=self.seed)
+
+    def get_config(self):
+        return {
+            "mean": self.mean,
+            "stdev": self.stdev,
+            "min": self.minval,
+            "max": self.maxval,
+            "seed": self.seed,
+            "dtype": self.dtype.name
+        }
+
+
+class RandomAttention(Initializer):
+    """Initializer that generates tensors for attention weights.
+
+    Arguments:
+        alpha: A python scalar or a scalar tensor. Alpha parameter(s)
+            governing distribution.
+        dtype: The data type. Only floating point types are supported.
+    """
+
+    def __init__(self, n_dim, concentration=0.0, dtype=tf.float32):
+        self.n_dim = n_dim
+        self.concentration = concentration
+        self.dtype = _assert_float_dtype(dtype)
+
+    def __call__(self, shape, dtype=None, partition_info=None):
+        if dtype is None:
+            dtype = self.dtype
+        dist = tf.distributions.Dirichlet(self.concentration)
+        return self.n_dim * dist.sample([shape[0]])
+
+    def get_config(self):
+        return {
+            "concentration": self.concentration,
+            "dtype": self.dtype.name
+        }
 
 
 def load_embedding(filepath):

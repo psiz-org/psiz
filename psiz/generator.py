@@ -321,12 +321,13 @@ class ActiveGenerator(TrialGenerator):
         kl_div = np.empty((n_stimuli, k))
         for query_idx in range(n_stimuli):
             for j_nn in range(k):
-                nn_idx = nn_idx[query_idx, j_nn]
+                idx_j = nn_idx[query_idx, j_nn]
                 kl_div[query_idx, j_nn] = normal_kl_divergence(
-                    mu[nn_idx], cov[nn_idx], mu[query_idx], cov[query_idx]
+                    mu[idx_j], cov[idx_j], mu[query_idx], cov[query_idx]
                 )
         score = np.sum(kl_div, axis=1)
         score = 1 / score
+
         return score
 
     def _placeholder_docket(self, config_list, n_neighbor):

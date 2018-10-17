@@ -230,14 +230,18 @@ class ActiveGenerator(TrialGenerator):
 
         # embdding.convert(samples, group_id) TODO
 
-        # Stochastically prioritize query stimulus based on corresponding
-        # entropy.
-        entropy = stimulus_entropy(samples)
-        # query_idx = np.argsort(-entropy)
-        # query_idx = query_idx[0:n_query]
         query_idx = np.arange(0, n_stimuli)
-        rel_entropy = entropy - np.min(entropy)
-        query_prob = rel_entropy / np.sum(rel_entropy)
+
+        # Determine priory for each query stimulus based on entropy.
+        # entropy = stimulus_entropy(samples)
+        # rel_entropy = entropy - np.min(entropy)
+        # query_prob = rel_entropy / np.sum(rel_entropy)
+
+        # Determine priory for each query stimulus based on KL divergence.
+        query_priority = self._query_kl_priority(embedding, samples)
+        query_prob = query_priority / np.sum(query_priority)
+
+        # Stochastically select query stimulus based on priority.
         query_idx = np.random.choice(
             query_idx, n_query, replace=False, p=query_prob)
 
@@ -268,14 +272,15 @@ class ActiveGenerator(TrialGenerator):
         # Return updated samples.
         return samples
 
-    def _query_kl_priority(self, samples):
+    def _query_kl_priority(self, embedding, samples):
         """Return a priority score for every stimulus.
 
         The score indicates the priority each stimulus should serve as
         a query stimulus in a trial.
 
         Arguments:
-            samples:
+            z: TODO
+            samples: TODO
 
         Returns:
             A priority score.
@@ -286,28 +291,30 @@ class ActiveGenerator(TrialGenerator):
 
         """
         # Unpack.
+        # z = embedding.z['value']
+        z = np.median(samples['z'], axis=2)
+        rho = embedding.theta['rho']['value']
         z_samp = samples['z']
-        z_median = np.median(z_samp, axis=2)
+        # z_median = np.median(z_samp, axis=2)
         (n_stimuli, n_dim, _) = z_samp.shape
 
         # Fit multi-variate normal for each stimulus.
         z_samp = np.transpose(z_samp, axes=[2, 0, 1])
         mu = np.empty((n_stimuli, n_dim))
-        sigma = np.empty((n_stimuli, n_dim, n_dim))
+        cov = np.empty((n_stimuli, n_dim, n_dim))
         for i_stim in range(n_stimuli):
             gmm = GaussianMixture(
                 n_components=1, covariance_type='full')
             gmm.fit(z_samp[:, i_stim, :])
             mu[i_stim, :] = gmm.means_[0]
-            sigma[i_stim, :, :] = gmm.covariances_[0]
+            cov[i_stim, :, :] = gmm.covariances_[0]
 
         # Determine nearest neighbors.
         # TODO maybe convert to faiss
-        rho = 2  # TODO
         k = np.minimum(10, n_stimuli-1)
         nbrs = NearestNeighbors(
-            n_neighbors=k+1, algorithm='auto', p=rho).fit(z_median)
-        (_, idx) = nbrs.kneighbors(z_median)
+            n_neighbors=k+1, algorithm='auto', p=rho).fit(z)
+        (_, idx) = nbrs.kneighbors(z)
         idx = idx[:, 1:]
 
         # Compute KL divergence for nearest neighbors.
@@ -316,9 +323,10 @@ class ActiveGenerator(TrialGenerator):
             for j_stim in range(k):
                 idx_j = idx[i_stim, j_stim]
                 kl_div[i_stim, j_stim] = normal_kl_divergence(
-                    mu[i_stim], sigma[i_stim], mu[idx_j], sigma[idx_j]
+                    mu[i_stim], cov[i_stim], mu[idx_j], cov[idx_j]
                 )
         score = np.sum(kl_div, axis=1)
+        score = 1 / score
         return score
 
     def _placeholder_docket(self, config_list, n_neighbor):
@@ -377,7 +385,8 @@ class ActiveGenerator(TrialGenerator):
         #         candidate_idx, self.n_neighbor, replace=False)
 
         # Select references stochastically based on similarity.
-        z = embedding.z['value']
+        # z = embedding.z['value']
+        z = np.median(samples['z'], axis=2)
         dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
         chosen_idx = np.empty(
             [len(query_idx), self.n_neighbor + 1], dtype=np.int)
@@ -520,15 +529,15 @@ def stimulus_set_combos(n_neighbor, n_reference):
     return stimulus_set
 
 
-def normal_kl_divergence(mu_a, sigma_a, mu_b, sigma_b):
+def normal_kl_divergence(mu_a, cov_a, mu_b, cov_b):
     """Return the Kullback-Leiler divergence between two normals."""
     mu_diff = mu_b - mu_a
     mu_diff = np.expand_dims(mu_diff, 1)
     n_dim = len(mu_a)
-    sigma_b_inv = np.linalg.inv(sigma_b)
+    sigma_b_inv = np.linalg.inv(cov_b)
     kl = .5 * (
-        np.log(np.linalg.det(sigma_b) / np.linalg.det(sigma_a)) - n_dim +
-        np.matrix.trace(np.matmul(sigma_b_inv, sigma_a)) +
+        np.log(np.linalg.det(cov_b) / np.linalg.det(cov_a)) - n_dim +
+        np.matrix.trace(np.matmul(sigma_b_inv, cov_a)) +
         np.matmul(
             np.matmul(np.transpose(mu_diff), sigma_b_inv), mu_diff
         )
@@ -566,13 +575,13 @@ def stimulus_entropy(samples):
     return entropy
 
 
-def normal_entropy(sigma):
+def normal_entropy(cov):
     """Return entropy of multivariate normal distribution."""
-    n_dim = sigma.shape[0]
+    n_dim = cov.shape[0]
     h = (
         (n_dim / 2) +
         (n_dim / 2 * np.log(2 * np.pi)) +
-        (1 / 2 * np.log(np.linalg.det(sigma)))
+        (1 / 2 * np.log(np.linalg.det(cov)))
     )
     return h
 

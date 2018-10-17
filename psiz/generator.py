@@ -314,16 +314,16 @@ class ActiveGenerator(TrialGenerator):
         k = np.minimum(10, n_stimuli-1)
         nbrs = NearestNeighbors(
             n_neighbors=k+1, algorithm='auto', p=rho).fit(z)
-        (_, idx) = nbrs.kneighbors(z)
-        idx = idx[:, 1:]
+        (_, nn_idx) = nbrs.kneighbors(z)
+        nn_idx = nn_idx[:, 1:]  # Drop self index.
 
         # Compute KL divergence for nearest neighbors.
         kl_div = np.empty((n_stimuli, k))
-        for i_stim in range(n_stimuli):
-            for j_stim in range(k):
-                idx_j = idx[i_stim, j_stim]
-                kl_div[i_stim, j_stim] = normal_kl_divergence(
-                    mu[i_stim], cov[i_stim], mu[idx_j], cov[idx_j]
+        for query_idx in range(n_stimuli):
+            for j_nn in range(k):
+                nn_idx = nn_idx[query_idx, j_nn]
+                kl_div[query_idx, j_nn] = normal_kl_divergence(
+                    mu[nn_idx], cov[nn_idx], mu[query_idx], cov[query_idx]
                 )
         score = np.sum(kl_div, axis=1)
         score = 1 / score

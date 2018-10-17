@@ -534,12 +534,12 @@ def normal_kl_divergence(mu_a, cov_a, mu_b, cov_b):
     mu_diff = mu_b - mu_a
     mu_diff = np.expand_dims(mu_diff, 1)
     n_dim = len(mu_a)
-    sigma_b_inv = np.linalg.inv(cov_b)
+    cov_b_inv = np.linalg.inv(cov_b)
     kl = .5 * (
         np.log(np.linalg.det(cov_b) / np.linalg.det(cov_a)) - n_dim +
-        np.matrix.trace(np.matmul(sigma_b_inv, cov_a)) +
+        np.matrix.trace(np.matmul(cov_b_inv, cov_a)) +
         np.matmul(
-            np.matmul(np.transpose(mu_diff), sigma_b_inv), mu_diff
+            np.matmul(np.transpose(mu_diff), cov_b_inv), mu_diff
         )
     )
     return kl

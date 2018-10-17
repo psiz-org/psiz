@@ -159,25 +159,27 @@ def test_information_gain(ground_truth):
 
 
 def test_kl_divergence():
-
-    n_sample = 1000
-
+    """Test computation of KL divergence."""
+    
     mu_left = np.array([0, 0])
     mu_right = np.array([10, 0])
 
     cov_sm = np.eye(2)
     cov_lg = 10 * np.eye(2)
 
-    # z_left_sm = np.random.multivariate_normal(mu_left, cov_sm, n_sample)
-    # z_left_lg = np.random.multivariate_normal(mu_left, cov_lg, n_sample)
-    # z_right_sm = np.random.multivariate_normal(mu_right, cov_sm, n_sample)
-    # z_righ_lg = np.random.multivariate_normal(mu_right, cov_lg, n_sample)
-    
-    kl_sm_sm = generator.normal_kl_divergence(mu_left, cov_sm, mu_right, cov_sm)
-    kl_sm_lg = generator.normal_kl_divergence(mu_left, cov_sm, mu_right, cov_lg)
-    kl_lg_sm = generator.normal_kl_divergence(mu_left, cov_lg, mu_right, cov_sm)
-    kl_lg_lg = generator.normal_kl_divergence(mu_left, cov_lg, mu_right, cov_lg)
-    fprint('here')
+    kl_sm_sm = generator.normal_kl_divergence(
+        mu_left, cov_sm, mu_right, cov_sm)
+    kl_sm_lg = generator.normal_kl_divergence(
+        mu_left, cov_sm, mu_right, cov_lg)
+    kl_lg_sm = generator.normal_kl_divergence(
+        mu_left, cov_lg, mu_right, cov_sm)
+    kl_lg_lg = generator.normal_kl_divergence(
+        mu_left, cov_lg, mu_right, cov_lg)
+
+    np.testing.assert_almost_equal(kl_sm_sm, 50.00000, decimal=5)
+    np.testing.assert_almost_equal(kl_sm_lg, 6.402585, decimal=5)
+    np.testing.assert_almost_equal(kl_lg_sm, 56.697415, decimal=5)
+    np.testing.assert_almost_equal(kl_lg_lg, 5.000000, decimal=5)
 
 # @pytest.fixture(scope="module")
 # def unbalanced_trials():

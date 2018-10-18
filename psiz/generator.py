@@ -231,19 +231,21 @@ class ActiveGenerator(TrialGenerator):
         # embdding.convert(samples, group_id) TODO
 
         query_idx = np.arange(0, n_stimuli)
+        # Stochastically select query stimulus.
+        query_idx = np.random.choice(query_idx, n_query, replace=False)
 
-        # Determine priory for each query stimulus based on entropy.
+        # Stochastically select each query stimulus based on entropy.
         # entropy = stimulus_entropy(samples)
         # rel_entropy = entropy - np.min(entropy)
         # query_prob = rel_entropy / np.sum(rel_entropy)
+        # query_idx = np.random.choice(
+        #     query_idx, n_query, replace=False, p=query_prob)
 
-        # Determine priory for each query stimulus based on KL divergence.
-        query_priority = self._query_kl_priority(embedding, samples)
-        query_prob = query_priority / np.sum(query_priority)
-
-        # Stochastically select query stimulus based on priority.
-        query_idx = np.random.choice(
-            query_idx, n_query, replace=False, p=query_prob)
+        # Stochastically select query stimulus based on KL divergence.
+        # query_priority = self._query_kl_priority(embedding, samples)
+        # query_prob = query_priority / np.sum(query_priority)
+        # query_idx = np.random.choice(
+        #     query_idx, n_query, replace=False, p=query_prob)
 
         # Deep copy.
         placeholder_docket = Docket(
@@ -375,33 +377,32 @@ class ActiveGenerator(TrialGenerator):
             )
 
         # Select references randomly.
-        # dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
-        # chosen_idx = np.empty(
-        #     [len(query_idx), self.n_neighbor + 1], dtype=np.int)
-        # for idx, q_idx in enumerate(query_idx):
-        #     candidate_locs = np.not_equal(dmy_idx, q_idx)
-        #     candidate_idx = dmy_idx[candidate_locs]
-        #     chosen_idx[idx, 0] = q_idx
-        #     chosen_idx[idx, 1:] = np.random.choice(
-        #         candidate_idx, self.n_neighbor, replace=False)
-
-        # Select references stochastically based on similarity.
-        # z = embedding.z['value']
-        z = np.median(samples['z'], axis=2)
         dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
         chosen_idx = np.empty(
             [len(query_idx), self.n_neighbor + 1], dtype=np.int)
         for idx, q_idx in enumerate(query_idx):
             candidate_locs = np.not_equal(dmy_idx, q_idx)
             candidate_idx = dmy_idx[candidate_locs]
-            simmat = embedding.similarity(
-                np.expand_dims(z[q_idx], axis=0), z, group_id=group_id)
-            candidate_sim = simmat[candidate_locs]
-            candidate_prob = candidate_sim / np.sum(candidate_sim)
             chosen_idx[idx, 0] = q_idx
             chosen_idx[idx, 1:] = np.random.choice(
-                candidate_idx, self.n_neighbor, replace=False,
-                p=candidate_prob)
+                candidate_idx, self.n_neighbor, replace=False)
+
+        # Select references stochastically based on similarity.
+        # z = np.median(samples['z'], axis=2)
+        # dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+        # chosen_idx = np.empty(
+        #     [len(query_idx), self.n_neighbor + 1], dtype=np.int)
+        # for idx, q_idx in enumerate(query_idx):
+        #     candidate_locs = np.not_equal(dmy_idx, q_idx)
+        #     candidate_idx = dmy_idx[candidate_locs]
+        #     simmat = embedding.similarity(
+        #         np.expand_dims(z[q_idx], axis=0), z, group_id=group_id)
+        #     candidate_sim = simmat[candidate_locs]
+        #     candidate_prob = candidate_sim / np.sum(candidate_sim)
+        #     chosen_idx[idx, 0] = q_idx
+        #     chosen_idx[idx, 1:] = np.random.choice(
+        #         candidate_idx, self.n_neighbor, replace=False,
+        #         p=candidate_prob)
 
         # Select references based on nearest neighbors.
         # TODO convert using group_specific "view".

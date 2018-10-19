@@ -439,7 +439,9 @@ class ActiveGenerator(TrialGenerator):
                 embedding, samples, docket, group_id=group_id)
 
             # Grab the top N trials as specified by 'n_trial_per_query'.
-            top_indices = np.argsort(-ig)
+            # top_indices = np.argsort(-ig)
+            top_indices = np.random.choice(np.arange(len(ig), dtype=np.int), len(ig), replace=False)  # TODO
+
             top_candidate = docket.subset(
                 top_indices[0:n_trial_per_query[i_query]]
             )

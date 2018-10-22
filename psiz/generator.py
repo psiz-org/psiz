@@ -232,7 +232,7 @@ class ActiveGenerator(TrialGenerator):
 
         query_idx = np.arange(0, n_stimuli)
         # Stochastically select query stimulus.
-        query_idx = np.random.choice(query_idx, n_query, replace=False)
+        # query_idx = np.random.choice(query_idx, n_query, replace=False)
 
         # Stochastically select each query stimulus based on entropy.
         # entropy = stimulus_entropy(samples)
@@ -242,10 +242,12 @@ class ActiveGenerator(TrialGenerator):
         #     query_idx, n_query, replace=False, p=query_prob)
 
         # Stochastically select query stimulus based on KL divergence.
-        # query_priority = self._query_kl_priority(embedding, samples)
-        # query_prob = query_priority / np.sum(query_priority)
-        # query_idx = np.random.choice(
-        #     query_idx, n_query, replace=False, p=query_prob)
+        query_priority = self._query_kl_priority(embedding, samples)
+        query_prob = query_priority / np.sum(query_priority)
+        query_idx = np.random.choice(
+            query_idx, n_query, replace=False, p=query_prob)
+
+        # query_idx = np.array([360, 55, 376], dtype=np.int32) - 1 # TODO CRITICAL
 
         # Deep copy.
         placeholder_docket = Docket(
@@ -377,32 +379,35 @@ class ActiveGenerator(TrialGenerator):
             )
 
         # Select references randomly.
-        dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
-        chosen_idx = np.empty(
-            [len(query_idx), self.n_neighbor + 1], dtype=np.int)
-        for idx, q_idx in enumerate(query_idx):
-            candidate_locs = np.not_equal(dmy_idx, q_idx)
-            candidate_idx = dmy_idx[candidate_locs]
-            chosen_idx[idx, 0] = q_idx
-            chosen_idx[idx, 1:] = np.random.choice(
-                candidate_idx, self.n_neighbor, replace=False)
-
-        # Select references stochastically based on similarity.
-        # z = np.median(samples['z'], axis=2)
         # dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
         # chosen_idx = np.empty(
         #     [len(query_idx), self.n_neighbor + 1], dtype=np.int)
         # for idx, q_idx in enumerate(query_idx):
         #     candidate_locs = np.not_equal(dmy_idx, q_idx)
         #     candidate_idx = dmy_idx[candidate_locs]
-        #     simmat = embedding.similarity(
-        #         np.expand_dims(z[q_idx], axis=0), z, group_id=group_id)
-        #     candidate_sim = simmat[candidate_locs]
-        #     candidate_prob = candidate_sim / np.sum(candidate_sim)
         #     chosen_idx[idx, 0] = q_idx
         #     chosen_idx[idx, 1:] = np.random.choice(
-        #         candidate_idx, self.n_neighbor, replace=False,
-        #         p=candidate_prob)
+        #         candidate_idx, self.n_neighbor, replace=False)
+
+        # Select references stochastically based on similarity.
+        z = np.median(samples['z'], axis=2)
+        dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+        chosen_idx = np.empty(
+            [len(query_idx), self.n_neighbor + 1], dtype=np.int)
+        for idx, q_idx in enumerate(query_idx):
+            candidate_locs = np.not_equal(dmy_idx, q_idx)
+            candidate_idx = dmy_idx[candidate_locs]
+            simmat = embedding.similarity(
+                np.expand_dims(z[q_idx], axis=0), z, group_id=group_id)
+            candidate_sim = simmat[candidate_locs]
+            candidate_prob = candidate_sim / np.sum(candidate_sim)
+            chosen_idx[idx, 0] = q_idx
+            chosen_idx[idx, 1:] = np.random.choice(
+                candidate_idx, self.n_neighbor, replace=False,
+                p=candidate_prob)
+            # chosen_idx[idx, 1:] = np.array([
+            #     198, 248, 299, 56, 323, 69, 209, 188, 354, 158
+            # ], dtype=np.int32) - 1  # TODO CRITICAL
 
         # Select references based on nearest neighbors.
         # TODO convert using group_specific "view".
@@ -428,7 +433,7 @@ class ActiveGenerator(TrialGenerator):
         best_docket = None
         best_ig = None
         for i_query in range(n_query):
-            # Substitute actual indices in candidate trials. 
+            # Substitute actual indices in candidate trials.
             r = chosen_idx[i_query]
             stimulus_set = r[placeholder_stimulus_set]
             stimulus_set = stimulus_set - 1  # Now [-1, n_stimuli - 1]
@@ -439,8 +444,8 @@ class ActiveGenerator(TrialGenerator):
                 embedding, samples, docket, group_id=group_id)
 
             # Grab the top N trials as specified by 'n_trial_per_query'.
-            # top_indices = np.argsort(-ig)
-            top_indices = np.random.choice(np.arange(len(ig), dtype=np.int), len(ig), replace=False)  # TODO
+            top_indices = np.argsort(-ig)
+            # top_indices = np.random.choice(np.arange(len(ig), dtype=np.int), len(ig), replace=False)
 
             top_candidate = docket.subset(
                 top_indices[0:n_trial_per_query[i_query]]
@@ -491,6 +496,7 @@ class ActiveGenerator(TrialGenerator):
         # First term of mutual information.
         # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c)
         # Take mean over samples to approximate p(y_i | obs, c).
+        # shape = (n_trial, n_outcome)
         first_term = ma.mean(prob_all, axis=2)
         # Use threshold to avoid log(0) issues (unlikely to happen).
         first_term = ma.maximum(cap, first_term)
@@ -501,12 +507,12 @@ class ActiveGenerator(TrialGenerator):
         # Second term of mutual information.
         # E[H(Y | Z, D, x)]
         # Use threshold to avoid log(0) issues (likely to happen).
-        prob_all = ma.maximum(cap, prob_all)
-        second_term = prob_all * ma.log(prob_all)
+        prob_all = ma.maximum(cap, prob_all)        # shape = (n_trial, n_outcome, n_sample)
+        second_term = prob_all * ma.log(prob_all)   # shape = (n_trial, n_outcome, n_sample)
         # Take the sum over the possible outcomes.
-        second_term = ma.sum(second_term, axis=1)
+        second_term = ma.sum(second_term, axis=1)   # shape = (n_trial, n_sample)
         # Take the sum over all samples.
-        second_term = ma.mean(second_term, axis=1)
+        second_term = ma.mean(second_term, axis=1)  # shape = (n_trial)
 
         info_gain = first_term + second_term
 

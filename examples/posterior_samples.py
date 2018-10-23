@@ -45,8 +45,8 @@ from psiz.utils import similarity_matrix, matrix_comparison
 def main():
     """Sample from posterior of pre-defined embedding model."""
     # Settings
-    n_trial = 10000
-    n_frame = 30
+    n_trial = 6000
+    n_frame = 20
     n_sample = 1000
     n_burn = 100
     thin_step = 3

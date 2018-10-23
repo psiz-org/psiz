@@ -1499,11 +1499,10 @@ class PsychologicalEmbedding(object):
             1732-1740).
 
         """
-        n_sample_set = np.ceil(n_sample/2).astype(np.int32)
+        n_sample = int(n_sample)
         n_stimuli = self.n_stimuli
         n_dim = self.n_dim
         z = copy.copy(self.z['value'])
-        n_anchor_point = n_dim
 
         if verbose > 0:
             print('Sampling from posterior...')
@@ -1527,68 +1526,233 @@ class PsychologicalEmbedding(object):
         z = z - mu
         mu = np.expand_dims(mu, axis=2)
 
+        # Partition stimuli into two groups.
+        n_partition = 2
+        part_idx, n_stimuli_part = self._make_partition(n_stimuli, n_partition)
+
         # Create a diagonally tiled covariance matrix in order to slice
         # multiple points simultaneously.
-        prior = np.linalg.cholesky(
-            self._inflate_sigma(sigma, n_stimuli - n_anchor_point, n_dim))
-
-        # Select anchor points.
-        anchor_idx = self._select_anchor_points(z, n_anchor_point)
-        sample_idx = self._create_sample_idx(n_stimuli, anchor_idx)
+        prior = []
+        for i_part in range(n_partition):
+            prior.append(
+                np.linalg.cholesky(
+                    self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim))
+            )
 
         # Define log-likelihood for elliptical slice sampler.
-        def flat_log_likelihood(z_samp, sample_idx, z_full, obs):
+        def flat_log_likelihood(z_part, part_idx, z_full, obs):
             # Assemble full z.
-            n_samp_stimuli = len(sample_idx)
-            z_full[sample_idx, :] = np.reshape(
-                z_samp, (n_samp_stimuli, n_dim), order='C')
+            n_stim_part = np.sum(part_idx)
+            z_full[part_idx, :] = np.reshape(
+                z_part, (n_stim_part, n_dim), order='C')
             return self.log_likelihood(obs, z=z_full)  # TODO pass in phi
 
-        combined_samples = [None, None]
-        for i_set in range(2):
+        # Initalize sampler.
+        n_total_sample = n_burn + (n_sample * thin_step)
+        z_full = copy.copy(z)
+        samples = np.empty((n_stimuli, n_dim, n_total_sample))
 
-            # Initalize sampler.
-            n_total_sample = n_burn + (n_sample_set * thin_step)
-            z_samp = z[sample_idx[:, i_set], :]
-            z_samp = z_samp.flatten('C')
-            samples = np.empty((n_stimuli, n_dim, n_total_sample))
+        # # Sample from prior if there are no observations. TODO
+        # if obs.n_trial is 0:
+        #     z = np.random.multivariate_normal(
+        #         np.zeros((n_dim)), sigma, n_stimuli)
+        # else:
 
-            # Sample from prior if there are no observations. TODO
-            # if obs.n_trial is 0:
-            #     z = np.random.multivariate_normal(
-            #         np.zeros((n_dim)), sigma, n_stimuli)
+        for i_round in range(n_total_sample):
+            # print('\r{0}'.format(i_round)) # TODO
+            for i_part in range(n_partition):
+                z_part = z_full[part_idx[i_part], :]
+                z_part = z_part.flatten('C')
 
-            for i_round in range(n_total_sample):
-                # print('\r{0}'.format(i_round)) # TODO
-                # TODO should pdf params allow for keyword arguments?
-                (z_samp, _) = elliptical_slice(
-                    z_samp, prior, flat_log_likelihood,
-                    pdf_params=[sample_idx[:, i_set], copy.copy(z), obs])
-                # Merge z_samp_r and z_anchor
-                z_full = copy.copy(z)
-                z_samp_r = np.reshape(
-                    z_samp, (n_stimuli - n_anchor_point, n_dim), order='C')
-                z_full[sample_idx[:, i_set], :] = z_samp_r
-                samples[:, :, i_round] = z_full
+                (z_part, _) = elliptical_slice(
+                    z_part, prior[i_part], flat_log_likelihood,
+                    pdf_params=[part_idx[i_part], copy.copy(z), obs])
 
-            # Add back in mean.
-            samples = samples + mu
-            combined_samples[i_set] = samples[:, :, n_burn::thin_step]
+                z_part = np.reshape(
+                    z_part, (n_stimuli_part[i_part], n_dim), order='C')
+                # Update z_full.
+                z_full[part_idx[i_part], :] = z_part
+            samples[:, :, i_round] = z_full
 
-        # Replace anchors with samples from other set.
-        for i_point in range(n_anchor_point):
-            combined_samples[0][anchor_idx[i_point, 0], :, :] = \
-                combined_samples[1][anchor_idx[i_point, 0], :, :]
-        for i_point in range(n_anchor_point):
-            combined_samples[1][anchor_idx[i_point, 1], :, :] = \
-                combined_samples[0][anchor_idx[i_point, 1], :, :]
+        # Add back in mean.
+        samples = samples + mu
 
-        samples_all = np.concatenate(
-            (combined_samples[0], combined_samples[1]), axis=2
-        )
+        samples_all = samples[:, :, n_burn::thin_step]
         samples_all = samples_all[:, :, 0:n_sample]
         samples = dict(z=samples_all)
         return samples
+
+    def _make_partition(self, n_stimuli, n_partition):
+        """Partition stimuli.
+        
+        Arguments:
+            n_stimuli: Scalar indicating the total number of stimuli.
+            n_partition: Scalar indicating the number of partitions.
+        
+        Returns:
+            part_idx: A boolean array indicating partition membership.
+                shape = (n_partition, n_stimuli)
+            n_stimuli_part: An integer array indicating the number of
+                stimuli in each partition.
+                shape = (n_partition)
+
+        """
+        n_stimuli_part = np.floor(n_stimuli / n_partition)
+        n_stimuli_part = n_stimuli_part * np.ones([n_partition])
+        n_stimuli_part[1] = n_stimuli_part[1] + (
+            n_stimuli - (n_stimuli_part[1] * n_partition)
+        )
+        n_stimuli_part = n_stimuli_part.astype(np.int32)
+
+        partition = np.empty([0])
+        for i_part in range(n_partition):
+            partition = np.hstack(
+                (partition, i_part * np.ones([n_stimuli_part[i_part]]))
+            )
+        partition = np.random.choice(partition, n_stimuli, replace=False)
+
+        part_idx = np.zeros((n_partition, n_stimuli), dtype=np.int32)
+        for i_part in range(n_partition):
+            locs = np.equal(partition, i_part)
+            part_idx[i_part, locs] = 1
+        part_idx = part_idx.astype(bool)
+
+        return part_idx, n_stimuli_part
+
+    # def posterior_samples(
+    #         self, obs, n_sample=1000, n_burn=1000, thin_step=3, verbose=0):
+    #     """Sample from the posterior of the embedding.
+
+    #     Samples are drawn from the posterior holding theta constant. A
+    #     variant of Eliptical Slice Sampling (Murray & Adams 2010) is
+    #     used to estimate the posterior for the embedding points. Since
+    #     the latent embedding variables are translation and rotation
+    #     invariant, generic sampling will artificailly inflate the
+    #     entropy of the samples. To compensate for this issue, N
+    #     embedding points are selected to serve as anchor points, where
+    #     N is two times the dimensionality of the embedding. Two chains
+    #     are run each using half of the anchor points. The samples from
+    #     the two chains are merged in order to get a posterior estimate
+    #     for all points.
+
+    #     Arguments:
+    #         obs: A Observations object representing the observed data.
+    #         n_sample (optional): The number of samples desired after
+    #             removing the "burn in" samples and applying thinning.
+    #         n_burn (optional): The number of samples to remove from the
+    #             beginning of the sampling sequence.
+    #         thin_step (optional): The interval to use in order to thin
+    #             (i.e., de-correlate) the samples.
+    #         verbose (optional): An integer specifying the verbosity of
+    #             printed output. If zero, nothing is printed. Increasing
+    #             integers display an increasing amount of information.
+
+    #     Returns:
+    #         A dictionary of posterior samples for different parameters.
+    #             The samples are stored as a NumPy array.
+    #             'z' : shape = (n_sample, n_stimuli, n_dim).
+
+    #     Notes:
+    #         The step_size of the Hamiltonian Monte Carlo procedure is
+    #             determined by the scale of the current embedding.
+
+    #     References:
+    #         Murray, I., & Adams, R. P. (2010). Slice sampling
+    #         covariance hyperparameters of latent Gaussian models. In
+    #         Advances in Neural Information Processing Systems (pp.
+    #         1732-1740).
+
+    #     """
+    #     n_sample_set = np.ceil(n_sample/2).astype(np.int32)
+    #     n_stimuli = self.n_stimuli
+    #     n_dim = self.n_dim
+    #     z = copy.copy(self.z['value'])
+    #     n_anchor_point = n_dim
+
+    #     if verbose > 0:
+    #         print('Sampling from posterior...')
+    #     if (verbose > 1):
+    #         print('    Settings:')
+    #         print('    n_sample: ', n_sample)
+    #         print('    n_burn: ', n_burn)
+    #         print('    thin_step: ', thin_step)
+
+    #     # Prior
+    #     # p(z_k | Z_negk, theta) ~ N(mu, sigma)
+    #     # Approximate prior of z_k using all embedding points to reduce
+    #     # computational burden.
+    #     gmm = mixture.GaussianMixture(
+    #         n_components=1, covariance_type='spherical')
+    #     gmm.fit(z)
+    #     mu = gmm.means_[0]  # TODO verify was mu = gmm.means_ without [0]
+    #     sigma = gmm.covariances_[0] * np.identity(n_dim)
+
+    #     # Center embedding to satisfy assumptions of elliptical slice sampling.
+    #     z = z - mu
+    #     mu = np.expand_dims(mu, axis=2)
+
+    #     # Create a diagonally tiled covariance matrix in order to slice
+    #     # multiple points simultaneously.
+    #     prior = np.linalg.cholesky(
+    #         self._inflate_sigma(sigma, n_stimuli - n_anchor_point, n_dim))
+
+    #     # Select anchor points.
+    #     anchor_idx = self._select_anchor_points(z, n_anchor_point)
+    #     sample_idx = self._create_sample_idx(n_stimuli, anchor_idx)
+
+    #     # Define log-likelihood for elliptical slice sampler.
+    #     def flat_log_likelihood(z_samp, sample_idx, z_full, obs):
+    #         # Assemble full z.
+    #         n_samp_stimuli = len(sample_idx)
+    #         z_full[sample_idx, :] = np.reshape(
+    #             z_samp, (n_samp_stimuli, n_dim), order='C')
+    #         return self.log_likelihood(obs, z=z_full)  # TODO pass in phi
+
+    #     combined_samples = [None, None]
+    #     for i_set in range(2):
+
+    #         # Initalize sampler.
+    #         n_total_sample = n_burn + (n_sample_set * thin_step)
+    #         z_samp = z[sample_idx[:, i_set], :]
+    #         z_samp = z_samp.flatten('C')
+    #         samples = np.empty((n_stimuli, n_dim, n_total_sample))
+
+    #         # Sample from prior if there are no observations. TODO
+    #         # if obs.n_trial is 0:
+    #         #     z = np.random.multivariate_normal(
+    #         #         np.zeros((n_dim)), sigma, n_stimuli)
+
+    #         for i_round in range(n_total_sample):
+    #             # print('\r{0}'.format(i_round)) # TODO
+    #             # TODO should pdf params allow for keyword arguments?
+    #             (z_samp, _) = elliptical_slice(
+    #                 z_samp, prior, flat_log_likelihood,
+    #                 pdf_params=[sample_idx[:, i_set], copy.copy(z), obs])
+    #             # Merge z_samp_r and z_anchor
+    #             z_full = copy.copy(z)
+    #             z_samp_r = np.reshape(
+    #                 z_samp, (n_stimuli - n_anchor_point, n_dim), order='C')
+    #             z_full[sample_idx[:, i_set], :] = z_samp_r
+    #             samples[:, :, i_round] = z_full
+
+    #         # Add back in mean.
+    #         samples = samples + mu
+    #         combined_samples[i_set] = samples[:, :, n_burn::thin_step]
+
+    #     # Replace anchors with samples from other set.
+    #     for i_point in range(n_anchor_point):
+    #         combined_samples[0][anchor_idx[i_point, 0], :, :] = \
+    #             combined_samples[1][anchor_idx[i_point, 0], :, :]
+    #     for i_point in range(n_anchor_point):
+    #         combined_samples[1][anchor_idx[i_point, 1], :, :] = \
+    #             combined_samples[0][anchor_idx[i_point, 1], :, :]
+
+    #     samples_all = np.concatenate(
+    #         (combined_samples[0], combined_samples[1]), axis=2
+    #     )
+    #     samples_all = samples_all[:, :, 0:n_sample]
+    #     samples = dict(z=samples_all)
+    #     return samples
 
     def _select_anchor_points(self, z, n_point):
         """Select anchor points for posterior inference.
@@ -1801,7 +1965,7 @@ class Exponential(PsychologicalEmbedding):
             rho=dict(value=2., trainable=True, bounds=[1., None]),
             tau=dict(value=1., trainable=True, bounds=[1., None]),
             gamma=dict(value=0., trainable=True, bounds=[0., None]),
-            beta=dict(value=10., trainable=False, bounds=[1., None])
+            beta=dict(value=10., trainable=True, bounds=[1., None])
         )
         return theta
 

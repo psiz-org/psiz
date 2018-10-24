@@ -1399,7 +1399,7 @@ class PsychologicalEmbedding(object):
         # Initialize.
         seq_prob = np.ones((n_trial, n_sample), dtype=np.float64)
         selected_idx = n_select - 1
-        denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)
+        denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)  # TODO faster to sum over first dimension?
 
         for i_selected in range(selected_idx, -1, -1):
             # Compute selection probability.
@@ -1456,7 +1456,7 @@ class PsychologicalEmbedding(object):
         return r[1]
 
     def posterior_samples(
-            self, obs, n_sample=1000, n_burn=1000, thin_step=3, verbose=0):
+            self, obs, n_sample=1000, n_burn=100, thin_step=5, verbose=0):
         """Sample from the posterior of the embedding.
 
         Samples are drawn from the posterior holding theta constant. A
@@ -1524,7 +1524,6 @@ class PsychologicalEmbedding(object):
 
         # Center embedding to satisfy assumptions of elliptical slice sampling.
         z = z - mu
-        mu = np.expand_dims(mu, axis=2)
 
         # Partition stimuli into two groups.
         n_partition = 2
@@ -1575,6 +1574,7 @@ class PsychologicalEmbedding(object):
             samples[:, :, i_round] = z_full
 
         # Add back in mean.
+        mu = np.expand_dims(mu, axis=2)
         samples = samples + mu
 
         samples_all = samples[:, :, n_burn::thin_step]
@@ -2067,7 +2067,7 @@ class Exponential(PsychologicalEmbedding):
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
         d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)  # TODO faster to sum over first dimension?
 
         # Exponential family similarity kernel.
         sim_qr = np.exp(np.negative(beta) * d_qref**tau) + gamma

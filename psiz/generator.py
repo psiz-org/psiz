@@ -271,7 +271,7 @@ class ActiveGenerator(TrialGenerator):
         # Set embedding to last samples.
         embedding.z['values'] = samples['z'][:, :, -1]
         # Run sampler.
-        samples = embedding.posterior_samples(obs, n_sample=1000, n_burn=10)
+        samples = embedding.posterior_samples(obs, n_final_sample=1000, n_burn=10)
 
         # Return updated samples.
         return samples

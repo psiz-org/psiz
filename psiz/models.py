@@ -264,18 +264,18 @@ class PsychologicalEmbedding(object):
                 "Input 'attention' does not have the appropriate shape \
                 (dimensionality).")
 
-    def _set_parameters(self, params):
+    def _set_theta(self, theta):
         """State changing method sets algorithm-specific parameters.
 
         This method encapsulates the setting of algorithm-specific free
         parameters governing the similarity kernel.
 
         Arguments:
-            params: A dictionary of algorithm-specific parameter names
+            theta: A dictionary of algorithm-specific parameter names
                 and corresponding values.
         """
-        for param_name in params:
-            self.theta[param_name]['value'] = params[param_name]['value']
+        for param_name in theta:
+            self.theta[param_name]['value'] = theta[param_name]['value']
 
     def _get_similarity_parameters(self, init_mode):
         """Return a dictionary of TensorFlow variables.
@@ -707,17 +707,35 @@ class PsychologicalEmbedding(object):
                     obs.n_trial, n_restart))
             print('')
 
-        # Initialize model.
-        (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
-            tf_theta_bounds, tf_obs) = self._core_model(init_mode)
-
-        # Partition and bind observations into train and validation set to
+        # Partition observations into train and validation set to
         # control early stopping of embedding algorithm.
         skf = StratifiedKFold(n_splits=10)
         (train_idx, val_idx) = list(
             skf.split(obs.stimulus_set, obs.config_idx))[0]
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(val_idx)
+
+        # Evaluate current model as baseline.
+        loss_train_best = self.evaluate(obs_train)
+        loss_val_best = self.evaluate(obs_val)
+        # loss_val_best = np.inf
+        z_best = self.z['value']
+        attention_best = self.phi['phi_1']['value']
+        theta_best = self.theta
+        if (verbose > 2):
+            print('        Baseline')
+            print(
+                '        '
+                '     --     | loss: {0: .6f} | loss_val: {1: .6f}'.format(
+                    loss_train_best, loss_val_best)
+            )
+            print('')
+        
+        # Initialize new model.
+        (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
+            tf_theta_bounds, tf_obs) = self._core_model(init_mode)
+
+        # Bind observations        
         tf_obs_train = self._bind_obs(tf_obs, obs_train)
         tf_obs_val = self._bind_obs(tf_obs, obs_val)
 
@@ -742,15 +760,12 @@ class PsychologicalEmbedding(object):
             summary_op = tf.summary.merge_all()
 
         # Run multiple restarts of embedding algorithm.
-        loss_val_best = np.inf
-        z_best = None
-        attention_best = None
-        params_best = None
+        # TODO evaluate current setting first.
         sess = tf.Session()
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
-            (loss_train, loss_val, z, attention, params) = self._fit_restart(
+            (loss_train, loss_val, epoch, z, attention, theta) = self._fit_restart(
                 sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
                 tf_theta, tf_theta_bounds, tf_learning_rate, train_op,
                 summary_op, tf_obs_train, tf_obs_val, i_restart, verbose
@@ -765,29 +780,30 @@ class PsychologicalEmbedding(object):
             if (verbose > 2):
                 print(
                     '        '
-                    'final      | loss: {0: .6f} | loss_val: {1: .6f}'.format(
-                        loss_train, loss_val))
+                    'final {0:5d} | loss: {1: .6f} | loss_val: {2: .6f}'.format(
+                        epoch, loss_train, loss_val)
+                )
                 print('')
             if loss_val < loss_val_best:
                 loss_val_best = loss_val
                 loss_train_best = loss_train
                 z_best = z
                 attention_best = attention
-                params_best = params
+                theta_best = theta
                 # print('        updated best')  # TODO
                 # print('        current best | z:   {0}'.format(z[0, 0:2]))  # TODO
-                # print('        current best | rho: {0}'.format(params['rho']))  # TODO
-                # print('        current best | tau: {0}'.format(params['tau']))  # TODO
+                # print('        current best | rho: {0}'.format(theta['rho']))  # TODO
+                # print('        current best | tau: {0}'.format(theta['tau']))  # TODO
 
         # print('        final | z:   {0}'.format(z_best[0, 0:2]))  # TODO
-        # print('        final | rho: {0}'.format(params_best['rho']))  # TODO
-        # print('        final | tau: {0}'.format(params_best['tau']))  # TODO
+        # print('        final | rho: {0}'.format(theta_best['rho']))  # TODO
+        # print('        final | tau: {0}'.format(theta_best['tau']))  # TODO
         sess.close()
         tf.reset_default_graph()
 
         self.z['value'] = z_best
         self.phi['phi_1']['value'] = attention_best
-        self._set_parameters(params_best)
+        self._set_theta(theta_best)
 
         return loss_val_best  # TODO also return loss_train_best
 
@@ -860,6 +876,7 @@ class PsychologicalEmbedding(object):
             if loss_val < loss_val_best:
                 loss_train_best = loss_train
                 loss_val_best = loss_val
+                epoch_best = epoch + 1
                 (z_best, attention_best) = sess.run(
                     [tf_z, tf_attention])
                 theta_best = {}
@@ -887,12 +904,14 @@ class PsychologicalEmbedding(object):
 
         # Handle pathological case where there is no improvement.
         if z_best is None:
+            epoch_best = epoch + 1
             z_best = self.z['value']
             attention_best = self.phi['phi_1']['value']
             theta_best = self.theta
 
+        # TODO loss_all ?
         return (
-            loss_train_best, loss_val_best, z_best, attention_best,
+            loss_train_best, loss_val_best, epoch_best, z_best, attention_best,
             theta_best)
 
     def evaluate(self, obs):
@@ -1461,7 +1480,8 @@ class PsychologicalEmbedding(object):
         return r[1]
 
     def posterior_samples(
-            self, obs, n_sample=1000, n_burn=100, thin_step=5, verbose=0):
+            self, obs, n_final_sample=1000, n_burn=100, thin_step=5,
+            z_init=None, verbose=0):
         """Sample from the posterior of the embedding.
 
         Samples are drawn from the posterior holding theta constant. A
@@ -1478,12 +1498,16 @@ class PsychologicalEmbedding(object):
 
         Arguments:
             obs: A Observations object representing the observed data.
-            n_sample (optional): The number of samples desired after
-                removing the "burn in" samples and applying thinning.
+            n_final_sample (optional): The number of samples desired
+                after removing the "burn in" samples and applying
+                thinning.
             n_burn (optional): The number of samples to remove from the
                 beginning of the sampling sequence.
             thin_step (optional): The interval to use in order to thin
                 (i.e., de-correlate) the samples.
+            z_init (optional): Initialization of z. If not provided,
+                the current embedding values associated with the object
+                are used.
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
@@ -1491,7 +1515,7 @@ class PsychologicalEmbedding(object):
         Returns:
             A dictionary of posterior samples for different parameters.
                 The samples are stored as a NumPy array.
-                'z' : shape = (n_sample, n_stimuli, n_dim).
+                'z' : shape = (n_final_sample, n_stimuli, n_dim).
 
         Notes:
             The step_size of the Hamiltonian Monte Carlo procedure is
@@ -1504,18 +1528,24 @@ class PsychologicalEmbedding(object):
             1732-1740).
 
         """
-        n_sample = int(n_sample)
+        n_final_sample = int(n_final_sample)
+        n_total_sample = n_burn + (n_final_sample * thin_step)
         n_stimuli = self.n_stimuli
         n_dim = self.n_dim
-        z = copy.copy(self.z['value'])
+        if z_init is None:
+            z = copy.copy(self.z['value'])
+        else:
+            z = z_init
 
         if verbose > 0:
             print('Sampling from posterior...')
         if (verbose > 1):
             print('    Settings:')
-            print('    n_sample: ', n_sample)
-            print('    n_burn: ', n_burn)
-            print('    thin_step: ', thin_step)
+            print('    n_total_sample: ', n_total_sample)
+            print('    n_burn:         ', n_burn)
+            print('    thin_step:      ', thin_step)
+            print('    --------------------------')
+            print('    n_final_sample: ', n_final_sample)
 
         # Prior
         # p(z_k | Z_negk, theta) ~ N(mu, sigma)
@@ -1530,18 +1560,7 @@ class PsychologicalEmbedding(object):
         # Center embedding to satisfy assumptions of elliptical slice sampling.
         z = z - mu
 
-        # Partition stimuli into two groups.
         n_partition = 2
-        part_idx, n_stimuli_part = self._make_partition(n_stimuli, n_partition)
-
-        # Create a diagonally tiled covariance matrix in order to slice
-        # multiple points simultaneously.
-        prior = []
-        for i_part in range(n_partition):
-            prior.append(
-                np.linalg.cholesky(
-                    self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim))
-            )
 
         # Define log-likelihood for elliptical slice sampler.
         def flat_log_likelihood(z_part, part_idx, z_full, obs):
@@ -1552,7 +1571,6 @@ class PsychologicalEmbedding(object):
             return self.log_likelihood(obs, z=z_full)  # TODO pass in phi
 
         # Initalize sampler.
-        n_total_sample = n_burn + (n_sample * thin_step)
         z_full = copy.copy(z)
         samples = np.empty((n_stimuli, n_dim, n_total_sample))
 
@@ -1563,6 +1581,17 @@ class PsychologicalEmbedding(object):
         # else:
 
         for i_round in range(n_total_sample):
+            # Partition stimuli into two groups.
+            if np.mod(i_round, 100) == 0:
+                part_idx, n_stimuli_part = self._make_partition(n_stimuli, n_partition)
+                # Create a diagonally tiled covariance matrix in order to slice
+                # multiple points simultaneously.
+                prior = []
+                for i_part in range(n_partition):
+                    prior.append(
+                        np.linalg.cholesky(
+                            self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim))
+                    )
             # print('\r{0}'.format(i_round)) # TODO
             for i_part in range(n_partition):
                 z_part = z_full[part_idx[i_part], :]
@@ -1583,7 +1612,7 @@ class PsychologicalEmbedding(object):
         samples = samples + mu
 
         samples_all = samples[:, :, n_burn::thin_step]
-        samples_all = samples_all[:, :, 0:n_sample]
+        samples_all = samples_all[:, :, 0:n_final_sample]
         samples = dict(z=samples_all)
         return samples
 
@@ -1625,7 +1654,7 @@ class PsychologicalEmbedding(object):
         return part_idx, n_stimuli_part
 
     # def posterior_samples(
-    #         self, obs, n_sample=1000, n_burn=1000, thin_step=3, verbose=0):
+    #         self, obs, n_final_sample=1000, n_burn=1000, thin_step=3, verbose=0):
     #     """Sample from the posterior of the embedding.
 
     #     Samples are drawn from the posterior holding theta constant. A
@@ -1642,7 +1671,7 @@ class PsychologicalEmbedding(object):
 
     #     Arguments:
     #         obs: A Observations object representing the observed data.
-    #         n_sample (optional): The number of samples desired after
+    #         n_final_sample (optional): The number of samples desired after
     #             removing the "burn in" samples and applying thinning.
     #         n_burn (optional): The number of samples to remove from the
     #             beginning of the sampling sequence.
@@ -1655,7 +1684,7 @@ class PsychologicalEmbedding(object):
     #     Returns:
     #         A dictionary of posterior samples for different parameters.
     #             The samples are stored as a NumPy array.
-    #             'z' : shape = (n_sample, n_stimuli, n_dim).
+    #             'z' : shape = (n_final_sample, n_stimuli, n_dim).
 
     #     Notes:
     #         The step_size of the Hamiltonian Monte Carlo procedure is
@@ -1668,7 +1697,7 @@ class PsychologicalEmbedding(object):
     #         1732-1740).
 
     #     """
-    #     n_sample_set = np.ceil(n_sample/2).astype(np.int32)
+    #     n_sample_set = np.ceil(n_final_sample/2).astype(np.int32)
     #     n_stimuli = self.n_stimuli
     #     n_dim = self.n_dim
     #     z = copy.copy(self.z['value'])
@@ -1678,7 +1707,7 @@ class PsychologicalEmbedding(object):
     #         print('Sampling from posterior...')
     #     if (verbose > 1):
     #         print('    Settings:')
-    #         print('    n_sample: ', n_sample)
+    #         print('    n_final_sample: ', n_final_sample)
     #         print('    n_burn: ', n_burn)
     #         print('    thin_step: ', thin_step)
 
@@ -1755,7 +1784,7 @@ class PsychologicalEmbedding(object):
     #     samples_all = np.concatenate(
     #         (combined_samples[0], combined_samples[1]), axis=2
     #     )
-    #     samples_all = samples_all[:, :, 0:n_sample]
+    #     samples_all = samples_all[:, :, 0:n_final_sample]
     #     samples = dict(z=samples_all)
     #     return samples
 

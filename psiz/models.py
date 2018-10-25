@@ -275,7 +275,7 @@ class PsychologicalEmbedding(object):
                 and corresponding values.
         """
         for param_name in params:
-            self.theta[param_name]['value'] = params[param_name]
+            self.theta[param_name]['value'] = params[param_name]['value']
 
     def _get_similarity_parameters(self, init_mode):
         """Return a dictionary of TensorFlow variables.
@@ -807,9 +807,6 @@ class PsychologicalEmbedding(object):
 
         loss_train_best = np.inf
         loss_val_best = np.inf
-        z_best = self.z['value']
-        attention_best = self.phi['phi_1']['value']
-        params_best = self.theta
 
         lr = copy.copy(self.lr)
 
@@ -865,9 +862,10 @@ class PsychologicalEmbedding(object):
                 loss_val_best = loss_val
                 (z_best, attention_best) = sess.run(
                     [tf_z, tf_attention])
-                params_best = {}
+                theta_best = {}
                 for param_name in tf_theta:
-                    params_best[param_name] = sess.run(tf_theta[param_name])
+                    theta_best[param_name] = {}
+                    theta_best[param_name]['value'] = sess.run(tf_theta[param_name])[0]
 
             if last_improvement_stop >= self.patience_stop:
                 break
@@ -887,9 +885,15 @@ class PsychologicalEmbedding(object):
                     "loss_val: {0: .6f}".format(loss_val)
                 )
 
+        # Handle pathological case where there is no improvement.
+        if z_best is None:
+            z_best = self.z['value']
+            attention_best = self.phi['phi_1']['value']
+            theta_best = self.theta
+
         return (
             loss_train_best, loss_val_best, z_best, attention_best,
-            params_best)
+            theta_best)
 
     def evaluate(self, obs):
         """Evaluate observations using the current state of the model.
@@ -1011,6 +1015,7 @@ class PsychologicalEmbedding(object):
             sim_qr = self._tf_similarity(
                 z_q, z_r, tf_theta, tf.expand_dims(tf_atten_expanded, axis=2)
             )
+            # sim_qr_var = tf.Variable(sim_qr, trainable=False, name="sim_qr_var")  # TODO try, use_resource=True
 
             # Compute the probability of observations for the different trial
             # configurations.

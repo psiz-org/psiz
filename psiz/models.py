@@ -1515,7 +1515,7 @@ class PsychologicalEmbedding(object):
         Returns:
             A dictionary of posterior samples for different parameters.
                 The samples are stored as a NumPy array.
-                'z' : shape = (n_final_sample, n_stimuli, n_dim).
+                'z' : shape = (n_stimuli, n_dim, n_total_sample).
 
         Notes:
             The step_size of the Hamiltonian Monte Carlo procedure is

@@ -735,7 +735,7 @@ class PsychologicalEmbedding(object):
         (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
             tf_theta_bounds, tf_obs) = self._core_model(init_mode)
 
-        # Bind observations        
+        # Bind observations.
         tf_obs_train = self._bind_obs(tf_obs, obs_train)
         tf_obs_val = self._bind_obs(tf_obs, obs_val)
 
@@ -784,7 +784,7 @@ class PsychologicalEmbedding(object):
                         epoch, loss_train, loss_val)
                 )
                 print('')
-            if loss_val < loss_val_best:
+            if loss_train < loss_train_best:
                 loss_val_best = loss_val
                 loss_train_best = loss_train
                 z_best = z
@@ -805,7 +805,7 @@ class PsychologicalEmbedding(object):
         self.phi['phi_1']['value'] = attention_best
         self._set_theta(theta_best)
 
-        return loss_val_best  # TODO also return loss_train_best
+        return loss_train_best  # TODO also return loss_train_best
 
     def _fit_restart(
             self, sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,

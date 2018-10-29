@@ -722,6 +722,7 @@ class PsychologicalEmbedding(object):
         z_best = self.z['value']
         attention_best = self.phi['phi_1']['value']
         theta_best = self.theta
+        beat_baseline = False
         if (verbose > 2):
             print('        Baseline')
             print(
@@ -784,7 +785,7 @@ class PsychologicalEmbedding(object):
                         epoch, loss_train, loss_val)
                 )
                 print('')
-            beat_baseline = False
+
             if loss_train < loss_train_best:
                 loss_val_best = loss_val
                 loss_train_best = loss_train

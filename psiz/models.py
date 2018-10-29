@@ -730,7 +730,7 @@ class PsychologicalEmbedding(object):
                     loss_train_best, loss_val_best)
             )
             print('')
-        
+
         # Initialize new model.
         (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
             tf_theta_bounds, tf_obs) = self._core_model(init_mode)
@@ -784,12 +784,14 @@ class PsychologicalEmbedding(object):
                         epoch, loss_train, loss_val)
                 )
                 print('')
+            beat_baseline = False
             if loss_train < loss_train_best:
                 loss_val_best = loss_val
                 loss_train_best = loss_train
                 z_best = z
                 attention_best = attention
                 theta_best = theta
+                beat_baseline = True
                 # print('        updated best')  # TODO
                 # print('        current best | z:   {0}'.format(z[0, 0:2]))  # TODO
                 # print('        current best | rho: {0}'.format(theta['rho']))  # TODO
@@ -800,6 +802,11 @@ class PsychologicalEmbedding(object):
         # print('        final | tau: {0}'.format(theta_best['tau']))  # TODO
         sess.close()
         tf.reset_default_graph()
+
+        if beat_baseline:
+            print('Beat baseline.')
+        else:
+            print('Did not beat baseline.')
 
         self.z['value'] = z_best
         self.phi['phi_1']['value'] = attention_best

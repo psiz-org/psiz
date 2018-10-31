@@ -183,7 +183,7 @@ class PsychologicalEmbedding(object):
         # self.batch_size = 2048
         self.lr = 0.001
         self.max_n_epoch = 5000
-        self.patience_stop = 10
+        self.patience_stop = 10  # 5
         self.patience_reduce = 2
 
         # Default TensorBoard log attributes.
@@ -1576,7 +1576,7 @@ class PsychologicalEmbedding(object):
             n_stim_part = np.sum(part_idx)
             z_full[part_idx, :] = np.reshape(
                 z_part, (n_stim_part, n_dim), order='C')
-            return self.log_likelihood(obs, z=z_full)  # TODO pass in phi
+            return self.log_likelihood(obs, z=z_full)  # TODO pass in theta and phi
 
         # Initalize sampler.
         z_full = copy.copy(z)

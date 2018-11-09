@@ -836,6 +836,7 @@ class PsychologicalEmbedding(object):
 
         last_improvement_stop = 0
         last_improvement_reduce = 0
+        z_best = None
         # n_batch = int(np.ceil(obs_train.n_trial / self.batch_size))
         # batch_idx = np.repeat(
         #     np.expand_dims(np.arange(n_batch, dtype=np.int), axis=1),

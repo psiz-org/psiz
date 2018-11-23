@@ -30,9 +30,9 @@ Example output:
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.87    0.74    0.30
-     Interm |  -0.14    0.99    0.75
-     Expert |  -0.75    0.65    0.95
+     Novice |   0.98    0.61   -0.52
+     Interm |   0.54    0.98   -0.08
+     Expert |   0.07    0.65    0.95
 
 """
 
@@ -50,12 +50,12 @@ from psiz.utils import similarity_matrix, matrix_comparison
 def main():
     """Run the simulation that infers an embedding for three groups."""
     n_stimuli = 25
-    n_dim = 3
+    n_dim = 4
     n_group = 3
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
-    n_trial = 1000
+    n_trial = 3000
     n_reference = 8
     n_select = 2
     generator = RandomGenerator(n_reference, n_select)
@@ -140,9 +140,9 @@ def ground_truth(n_stimuli, n_dim, n_group):
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     attention = np.array((
-        (1.9, 1., .1),
-        (1., 1., 1.),
-        (.1, 1., 1.9)
+        (1.8, 1.8, .2, .2),
+        (1., 1., 1., 1.),
+        (.2, .2, 1.8, 1.8)
     ))
     freeze_options = {
         'z': z,

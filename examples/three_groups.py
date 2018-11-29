@@ -25,14 +25,14 @@ model.
 
 Example output:
 
-    Model Comparison (R^2)
+     Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.98    0.61   -0.52
-     Interm |   0.54    0.98   -0.08
-     Expert |   0.07    0.65    0.95
+     Novice |   0.99    0.63    0.11
+     Interm |   0.63    0.99    0.53
+     Expert |   0.13    0.59    0.98
 
 """
 
@@ -118,7 +118,7 @@ def main():
     # Display comparison results. A good infferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
     # values on the off-diagonal elements.
-    print('\n    Model Comparison (R^2)')
+    print('\n    Model Comparison (r^2)')
     print('    ================================')
     print('      True  |        Inferred')
     print('            | Novice  Interm  Expert')

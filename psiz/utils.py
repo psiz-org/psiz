@@ -93,7 +93,9 @@ def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
     if score == 'pearson':
         score, _ = pearsonr(mat_a[idx], mat_b[idx])
     elif score == 'r2':
-        score = r2_score(mat_a[idx], mat_b[idx])
+        rho, _ = pearsonr(mat_a[idx], mat_b[idx])
+        score = rho**2
+        # score = r2_score(mat_a[idx], mat_b[idx])
     elif score == 'mse':
         score = np.mean((mat_a[idx] - mat_b[idx])**2)
     else:

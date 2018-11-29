@@ -24,7 +24,7 @@ In this example, using the ground truth allows us to see how the
 posterior sampling algorithm works under ideal conditions.
 
 Notes:
-    - This script takes awhile to execute.
+    This script takes awhile to execute.
 
 """
 
@@ -80,12 +80,14 @@ def main():
     # z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
     # simmat_infer = similarity_matrix(
     #     model_inferred.similarity, model_inferred.z['value'])
-    # r_squared = matrix_comparison(simmat_infer, simmat_truth)
-    # print('R^2 | {0: >6.2f}'.format(r_squared))
+    # r_pearson = matrix_comparison(
+    #     simmat_infer, simmat_truth, score='pearson'
+    # )
+    # print('r | {0: >6.2f}'.format(r_pearson))
 
     z_samp_list = n_frame * [None]
     z_central_list = n_frame * [None]
-    r_squared_list = n_frame * [None]
+    r_pearson_list = n_frame * [None]
     n_obs = np.floor(np.linspace(20, n_trial, n_frame)).astype(np.int64)
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
@@ -101,9 +103,11 @@ def main():
         model_inferred.z['value'] = z_central
         simmat_infer = similarity_matrix(
             model_inferred.similarity, model_inferred.z['value'])
-        r_squared = matrix_comparison(simmat_infer, simmat_truth)
-        r_squared_list[i_frame] = r_squared
-        print('Frame: {0} | R^2: {1: >6.2f}'.format(i_frame, r_squared))
+        r_pearson = matrix_comparison(
+            simmat_infer, simmat_truth, score='pearson'
+        )
+        r_pearson_list[i_frame] = r_pearson
+        print('Frame: {0} | r: {1: >6.2f}'.format(i_frame, r_pearson))
         model_inferred.z['value'] = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')

@@ -1043,7 +1043,7 @@ class PsychologicalEmbedding(object):
             sim_qr = self._tf_similarity(
                 z_q, z_r, tf_theta, tf.expand_dims(tf_atten_expanded, axis=2)
             )
-            # sim_qr_var = tf.Variable(sim_qr, trainable=False, name="sim_qr_var")  # TODO try, use_resource=True
+            # sim_qr_var = tf.Variable(sim_qr, trainable=False, name="sim_qr_var", use_resource=True)  # TODO try, 
 
             # Compute the probability of observations for the different trial
             # configurations.

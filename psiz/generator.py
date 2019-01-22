@@ -247,8 +247,6 @@ class ActiveGenerator(TrialGenerator):
         query_idx = np.random.choice(
             query_idx, n_query, replace=False, p=query_prob)
 
-        # query_idx = np.array([360, 55, 376], dtype=np.int32) - 1 # TODO CRITICAL
-
         # Deep copy.
         placeholder_docket = Docket(
             copy.copy(self.placeholder_docket.stimulus_set),
@@ -595,25 +593,3 @@ def normal_entropy(cov):
     )
     return h
 
-# How should I prioritize queries and references?
-# TODO When prioritizing, must prioritize taking into account the
-# group_id. Maybe by adjusting samples and z to take into account
-# attention weights?
-
-# Want to sample trials that also minimize uncertainty associated
-# with attention weights. If they are just tacked on to the existing
-# sample calculation, will the gain from the relatively high number
-# of embedding points swamp the gain from the attention weights?
-# Is there actually any benefit in including the attention weights,
-# or is the uncertainty already well captures by the information
-# gain computation which takes into account group_id.
-
-# THOUGHTS: The current query prioritization strategy may be wrong.
-# Not sure assymmetrical KL divergence is a good approach.
-
-# Evaluate all combos of nearest neighbors.
-
-# For selecting trials, select trial, continue sampler (100 samples,
-# 0 burn-in), select next trial, repeat.
-
-# Does query entropy correlate with expected information gain.

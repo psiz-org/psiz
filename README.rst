@@ -76,22 +76,6 @@ Optionally, you can also provide additional information.
   embedding = psiz.models.Exponential(n_stimuli, n_dim=4, n_group=2)
   embedding.fit(obs)
 
-
-know free parameters (set)
-
-don’t know free parameters (fit)
-
-- The dimensionality can be inferred using the function "suggest_dimensionality".
-
-- New embedding models can be created by sub-classing PsychologicalEmbedding.
-
-- sampling from the posterior
-
-- Inference is performed using a combination of gradient decent and Markov
-chain Monte Carlo methods.
-
-- mix trial configuration types
-
 Modules
 -------
 * ``dimensionality`` - Function for selecting the dimensionality of the embedding.
@@ -101,12 +85,13 @@ Modules
 * ``trials`` - Data structure used for trials and observations.
 * ``utils`` - Utility functions.
 * ``visualize`` - Functions for visualizing embeddings.
+* ``datasets`` - Functions for loading pre-collecgted datasets.
 
 Installation
 ------------
 There are two ways to install PsiZ:
 
-   1. Install from PyPI using pip: ``pip install psiz``
+   1. Install from PyPI using pip: ``pip install psiz`` (coming soon)
    2. Clone from Git Hub: https://github.com/roads/psiz.git
 
 Support

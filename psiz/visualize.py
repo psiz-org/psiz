@@ -123,7 +123,7 @@ def visualize_embedding_static(
     else:
         # Note: The dpi must be supplied otherwise the aspect ratio will be
         # changed when savefig is called.
-        plt.savefig(filename, format='pdf', bbox_inches="tight", dpi=100)
+        plt.savefig(filename, format='pdf', bbox_inches="tight", dpi=300)
 
 
 # def visualize_embedding_movie(

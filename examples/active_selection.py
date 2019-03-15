@@ -42,7 +42,7 @@ def main():
     # Settings.
 
     dataset_name = 'birds-16'
-    (obs, catalog) = datasets.load_dataset(dataset_name)
+    (obs, catalog) = datasets.load_dataset(dataset_name, is_hosted=True)
 
     # np.random.seed(123)
     # n_stimuli = 30

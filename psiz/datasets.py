@@ -234,22 +234,34 @@ def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
         catalog: An Catalog object.
 
     """
-    fname = 'catalog.hdf5'
+    fname = "catalog.hdf5"
 
+    dataset_exists = True
     if dataset_name == "birds-12":
-        origin = HOST_URL + "birds-12/catalog.hdf5"
+        origin = HOST_URL + "birds-12/" + fname
     elif dataset_name == "birds-16":
-        origin = HOST_URL + "birds-16/catalog.hdf5"
+        origin = HOST_URL + "birds-16/" + fname
     elif dataset_name == "lesions":
-        origin = HOST_URL + "lesions/catalog.hdf5"
+        origin = HOST_URL + "lesions/" + fname
     elif dataset_name == "rocks_Nosofsky_etal_2016":
-        origin = HOST_URL + "rocks_Nosofsky_etal_2016/catalog.hdf5"
+        origin = HOST_URL + "rocks_Nosofsky_etal_2016/" + fname
+    else:
+        dataset_exists = False
 
-    fname = os.path.join(dataset_name, fname)
-    path = get_file(
-        fname, origin, cache_subdir=cache_subdir, extract=True,
-        cache_dir=cache_dir)
-    catalog = load_catalog(path)
+    if dataset_exists:
+        path = get_file(
+            os.path.join(dataset_name, fname), origin,
+            cache_subdir=cache_subdir, extract=True,
+            cache_dir=cache_dir
+        )
+        catalog = load_catalog(path)
+    else:
+        raise ValueError(
+            'The requested dataset `{0}` may not exist since the '
+            'corresponding catalog.hdf5 file does not '
+            'exist.'.format(dataset_name)
+        )
+
     return catalog
 
 
@@ -265,28 +277,49 @@ def _fetch_obs(dataset_name, cache_subdir='datasets', cache_dir=None):
     """
     fname = 'obs.hdf5'
 
+    dataset_exists = True
     if dataset_name == "birds-12":
-        origin = HOST_URL + "birds-12/obs.hdf5"
+        origin = HOST_URL + "birds-12/" + fname
     elif dataset_name == "birds-16":
-        origin = HOST_URL + "birds-16/obs.hdf5"
+        origin = HOST_URL + "birds-16/" + fname
     elif dataset_name == "lesions":
-        origin = HOST_URL + "lesions/obs.hdf5"
+        origin = HOST_URL + "lesions/" + fname
     elif dataset_name == "rocks_Nosofsky_etal_2016":
-        origin = HOST_URL + "rocks_Nosofsky_etal_2016/obs.hdf5"
+        origin = HOST_URL + "rocks_Nosofsky_etal_2016/" + fname
+    else:
+        dataset_exists = False
 
-    fname = os.path.join(dataset_name, fname)
-    path = get_file(
-        fname, origin, cache_subdir=cache_subdir, extract=True,
-        cache_dir=cache_dir)
-    obs = load_trials(path)
+    if dataset_exists:
+        path = get_file(
+            os.path.join(dataset_name, fname), origin,
+            cache_subdir=cache_subdir, extract=True, cache_dir=cache_dir
+        )
+        obs = load_trials(path)
+    else:
+        raise ValueError(
+            'The requested dataset `{0}` may not exist since the '
+            'corresponding obs.hdf5 file does not '
+            'exist.'.format(dataset_name)
+        )
+
     return obs
 
 
-def load_dataset(dataset_name, cache_subdir='datasets', cache_dir=None):
-    """Load observations for the requested dataset.
+def load_dataset(
+        fp_dataset, is_hosted=False, cache_subdir='datasets', cache_dir=None,
+        verbose=0):
+    """Load observations and catalog for the requested dataset.
 
     Arguments:
-        dataset_name: The name of the dataset to load.
+        fp_dataset: The filepath to the dataset. If loading a hosted
+            dataset, just provide the name of the dataset.
+        is_hosted (optional): Specifies if the dataset is hosted on the
+            PsiZ server and should be downloaded to the specified cache
+            directory.
+        cache_subdir (optional): The subdirectory where downloaded
+            datasets are cached.
+        cache_dir (optional): The cache directory for PsiZ.
+        verbose (optional): Controls the verbosity of printed dataset summary.
 
     Returns:
         obs: An Observations object.
@@ -294,14 +327,36 @@ def load_dataset(dataset_name, cache_subdir='datasets', cache_dir=None):
             stimuli used to collect observations.
 
     """
-    if cache_dir is None:
-        cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
-    dataset_path = os.path.join(cache_dir, cache_subdir, dataset_name)
-    if not os.path.exists(dataset_path):
-        os.makedirs(dataset_path)
 
-    obs = _fetch_obs(dataset_name, cache_subdir, cache_dir)
-    catalog = _fetch_catalog(dataset_name, cache_subdir, cache_dir)
+    fp_obs = os.path.join(fp_dataset, 'obs.hdf5')
+    fp_catalog = os.path.join(fp_dataset, 'catalog.hdf5')
+
+    if not is_hosted:
+        # Load locally.
+        if os.path.isdir(fp_dataset):
+            obs = load_trials(fp_obs)
+            catalog = load_catalog(fp_catalog)
+        else:
+            raise ValueError(
+                'The requested dataset `{0}` does not '
+                'exist.'.format(fp_dataset)
+            )
+    else:
+        # Load from download cache.
+        if cache_dir is None:
+            cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
+        dataset_path = os.path.join(cache_dir, cache_subdir, fp_dataset)
+        if not os.path.exists(dataset_path):
+            os.makedirs(dataset_path)
+
+        obs = _fetch_obs(fp_dataset, cache_subdir, cache_dir)
+        catalog = _fetch_catalog(fp_dataset, cache_subdir, cache_dir)
+
+    if verbose > 0:
+        print("Dataset Summary")
+        print('  n_stimuli: {0}'.format(catalog.n_stimuli))
+        print('  n_trial: {0}'.format(obs.n_trial))
+
     return (obs, catalog)
 
 

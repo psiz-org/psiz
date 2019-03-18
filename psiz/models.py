@@ -952,6 +952,7 @@ class PsychologicalEmbedding(object):
             tf_obs['n_select']: obs.n_select,
             tf_obs['is_ranked']: obs.is_ranked,
             tf_obs['group_id']: obs.group_id,
+            tf_obs['weight']: obs.weight,
             tf_obs['config_idx']: obs.config_idx,
             tf_obs['n_config']: len(obs.config_list.n_outcome.values),
             tf_obs['max_n_outcome']: np.max(obs.config_list.n_outcome.values),
@@ -996,6 +997,8 @@ class PsychologicalEmbedding(object):
                 tf.int32, [None], name='is_ranked')
             tf_group_id = tf.placeholder(
                 tf.int32, [None], name='group_id')
+            tf_weight = tf.placeholder(
+                FLOAT_X, [None], name='weight')
             tf_config_idx = tf.placeholder(
                 tf.int32, [None], name='config_idx')
             # Configuration data.
@@ -1021,6 +1024,7 @@ class PsychologicalEmbedding(object):
                 'n_select': tf_n_select,
                 'is_ranked': tf_is_ranked,
                 'group_id': tf_group_id,
+                'weight': tf_weight,
                 'config_idx': tf_config_idx,
                 'n_config': tf_n_config,
                 'max_n_outcome': tf_max_n_outcome,
@@ -1047,6 +1051,7 @@ class PsychologicalEmbedding(object):
 
             # Compute the probability of observations for the different trial
             # configurations.
+            cap = tf.constant(2.2204e-16, dtype=FLOAT_X)
             prob_all = tf.zeros((0), dtype=FLOAT_X)
             cond_idx = tf.constant(0, dtype=tf.int32)
 
@@ -1060,6 +1065,7 @@ class PsychologicalEmbedding(object):
                     tf.equal(tf_n_reference, n_reference),
                     tf.equal(tf_n_select, n_select)))
                 )
+                weight_config = tf.gather(tf_weight, trial_idx)
                 sim_qr_config = tf.gather(sim_qr, trial_idx)
                 reference_idx = tf.range(
                     0, n_reference, delta=1, dtype=tf.int32)
@@ -1067,6 +1073,8 @@ class PsychologicalEmbedding(object):
                 sim_qr_config.set_shape((None, None))
                 prob_config = self._tf_ranked_sequence_probability(
                     sim_qr_config, n_select)
+                prob_config = tf.log(tf.maximum(prob_config, cap))  # TODO Actually loss
+                prob_config = tf.multiply(weight_config, prob_config)
                 prob_all = tf.concat((prob_all, prob_config), axis=0)
                 cond_idx = cond_idx + 1
                 return [cond_idx, prob_all]
@@ -1080,9 +1088,8 @@ class PsychologicalEmbedding(object):
 
             # Cost function
             n_trial = tf.cast(n_trial, dtype=FLOAT_X)
-            cap = tf.constant(2.2204e-16, dtype=FLOAT_X)
-            loss = tf.negative(
-                tf.reduce_sum(tf.log(tf.maximum(prob_all, cap))))
+            # loss = tf.log(tf.maximum(prob_all, cap))
+            loss = tf.negative(tf.reduce_sum(prob_all))
             loss = tf.divide(loss, n_trial)
 
             tf_attention_constraint = tf_attention.assign(

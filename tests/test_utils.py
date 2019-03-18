@@ -114,7 +114,7 @@ def test_matrix_comparison():
     ))
 
     r2_score_1 = utils.matrix_comparison(a, b, score='r2')
-    np.testing.assert_almost_equal(r2_score_1, 0.96456543)
+    np.testing.assert_almost_equal(r2_score_1, 0.96723696)
 
 
 def test_procrustean_solution():

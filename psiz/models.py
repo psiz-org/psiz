@@ -1423,7 +1423,7 @@ class PsychologicalEmbedding(object):
 
             P(A,B,C) = s_QA/(s_QA + s_QB + s_QC) * s_QB/(s_QB + s_QC)
 
-            where s_QA denotes the similarity between they query and
+            where s_QA denotes the similarity between the query and
             reference A.
 
             The probability is computed by starting with the last
@@ -1954,6 +1954,13 @@ class PsychologicalEmbedding(object):
                 "trainable", data=self.phi[phi_param_name]["trainable"])
 
         f.close()
+
+    def subset(self, idx):
+        """Return subset of embedding."""
+        emb = copy.deepcopy(self)
+        emb.z['value'] = emb.z['value'][idx, :]
+        emb.n_stimuli = emb.z['value'].shape[0]
+        return emb
 
 
 class Exponential(PsychologicalEmbedding):

@@ -18,6 +18,7 @@
 
 Todo:
     * Test Catalog creation, save, and load.
+    * Test subset method.
 
 """
 

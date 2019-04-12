@@ -24,6 +24,9 @@ Notes:
 Todo:
     * Test _possible_outcomes attribute on instantiation and loading from
         saved file.
+    * Test weights initialization, subset, stacking, saving, loading
+    * Test rt_ms initialization, subset, stacking, saving, loading
+    * Test agent_id initialization, subset, stacking, saving, loading
 
 """
 

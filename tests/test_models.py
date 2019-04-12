@@ -17,11 +17,12 @@
 """Module for testing models.py.
 
 Todo
-    - test init
-    - freeze and thaw
-    - attention
-    - heavy-tailed similarity
-    - Student's t similarity
+    * test init
+    * freeze and thaw
+    * attention
+    * heavy-tailed similarity
+    * Student's t similarity
+    * test subset method
 """
 
 

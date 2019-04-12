@@ -464,16 +464,20 @@ class Observations(SimilarityTrials):
             groups.
             shape = (n_trial,)
         agent_id: An integer array indicating the agent ID of a trial.
-            It is assumed that observations with the same agent ID were
-            judged by a single agent.
-            shape = (n_trial,) TODO MAYBE
+            It is assumed that all IDs are non-negative and that
+            observations with the same agent ID were judged by a single
+            agent.
+            shape = (n_trial,)
+        weight: An float array indicating the inference weight of each
+            trial.
+            shape = (n_trial,)
+        rt_ms: An array indicating the response time (in milliseconds)
+            of the agent for each trial.
         session_id: An integer array indicating the session ID of
             a trial. It is assumed that observations with the same
             session ID were judged by a single agent. A single agent
             may have completed multiple sessions.
             shape = (n_trial,) TODO MAYBE
-        rt_ms: An array indicating the response time of the agent for
-            each trial.
 
     Notes:
         stimulus_set: The order of the reference stimuli is important.
@@ -489,11 +493,13 @@ class Observations(SimilarityTrials):
 
     Methods:
         subset: Return a subset of judged trials given an index.
+        set_group_id: Override the group ID of all trials.
+        save: Save the observations data structure to disk.
 
     """
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None,
-                 group_id=None):
+                 group_id=None, agent_id=None, weight=None, rt_ms=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -511,6 +517,17 @@ class Observations(SimilarityTrials):
                 is composed of integers from [0, M-1] where M is the
                 total number of groups.
                 shape = (n_trial,)
+            agent_id: An integer array indicating the agent ID of a
+                trial. It is assumed that all IDs are non-negative and
+                that observations with the same agent ID were judged by
+                a single agent.
+                shape = (n_trial,)
+            weight (optional): A float array indicating the inference
+                weight of each trial.
+                shape = (n_trial,1)
+            rt_ms(optional): An array indicating the response time
+                (in milliseconds) of the agent for each trial.
+                shape = (n_trial,1)
         """
         SimilarityTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
@@ -521,12 +538,30 @@ class Observations(SimilarityTrials):
             group_id = self._check_group_id(group_id)
         self.group_id = group_id
 
+        if agent_id is None:
+            agent_id = np.zeros((self.n_trial), dtype=np.int32)
+        else:
+            agent_id = self._check_agent_id(agent_id)
+        self.agent_id = agent_id
+
+        if weight is None:
+            weight = np.ones((self.n_trial))
+        else:
+            weight = self._check_weight(weight)
+        self.weight = weight
+
+        if rt_ms is None:
+            rt_ms = -np.ones((self.n_trial))
+        else:
+            rt_ms = self._check_rt(rt_ms)
+        self.rt_ms = rt_ms
+
         # Determine unique display configurations.
         self._set_configuration_data(
             self.n_reference, self.n_select, self.is_ranked, group_id)
 
     def _check_group_id(self, group_id):
-        """Check the argument n_select."""
+        """Check the argument group_id."""
         group_id = group_id.astype(np.int32)
         # Check shape argreement.
         if not (group_id.shape[0] == self.n_trial):
@@ -542,6 +577,43 @@ class Observations(SimilarityTrials):
                 "Found {0} bad trial(s).").format(n_bad))
         return group_id
 
+    def _check_agent_id(self, agent_id):
+        """Check the argument agent_id."""
+        agent_id = agent_id.astype(np.int32)
+        # Check shape argreement.
+        if not (agent_id.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'agent_id' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        # Check lowerbound support limit.
+        bad_locs = agent_id < 0
+        n_bad = np.sum(bad_locs)
+        if n_bad != 0:
+            raise ValueError((
+                "The parameter 'agent_id' contains integers less than 0. "
+                "Found {0} bad trial(s).").format(n_bad))
+        return agent_id
+
+    def _check_weight(self, weight):
+        """Check the argument weight."""
+        weight = weight.astype(np.float)
+        # Check shape argreement.
+        if not (weight.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'weight' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        return weight
+
+    def _check_rt(self, rt_ms):
+        """Check the argument rt_ms."""
+        rt_ms = rt_ms.astype(np.float)
+        # Check shape argreement.
+        if not (rt_ms.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'rt_ms' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        return rt_ms
+
     def subset(self, index):
         """Return subset of trials as a new Observations object.
 
@@ -552,9 +624,12 @@ class Observations(SimilarityTrials):
             A new Observations object.
 
         """
-        return Observations(self.stimulus_set[index, :],
-                            self.n_select[index], self.is_ranked[index],
-                            self.group_id[index])
+        return Observations(
+            self.stimulus_set[index, :], n_select=self.n_select[index],
+            is_ranked=self.is_ranked[index], group_id=self.group_id[index],
+            agent_id=self.agent_id[index], weight=self.weight[index],
+            rt_ms=self.rt_ms[index]
+        )
 
     def _set_configuration_data(
                 self, n_reference, n_select, is_ranked, group_id,
@@ -666,6 +741,9 @@ class Observations(SimilarityTrials):
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.create_dataset("group_id", data=self.group_id)
+        f.create_dataset("agent_id", data=self.agent_id)
+        f.create_dataset("weight", data=self.weight)
+        f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
 
 
@@ -700,6 +778,9 @@ def stack(trials_list):
         is_judged = True
         try:
             group_id = trials_list[0].group_id
+            agent_id = trials_list[0].agent_id
+            weight = trials_list[0].weight
+            rt_ms = trials_list[0].rt_ms
         except AttributeError:
             is_judged = False
 
@@ -712,10 +793,16 @@ def stack(trials_list):
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
             if is_judged:
                 group_id = np.hstack((group_id, i_trials.group_id))
+                agent_id = np.hstack((agent_id, i_trials.agent_id))
+                weight = np.hstack((weight, i_trials.weight))
+                rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
 
         if is_judged:
             trials_stacked = Observations(
-                stimulus_set, n_select, is_ranked, group_id)
+                stimulus_set, n_select=n_select, is_ranked=is_ranked,
+                group_id=group_id, agent_id=agent_id, weight=weight,
+                rt_ms=rt_ms
+            )
         else:
             trials_stacked = Docket(
                 stimulus_set, n_select, is_ranked)
@@ -752,9 +839,24 @@ def load_trials(filepath):
     elif trial_type == "Observations":
         # Observations specific attributes.
         group_id = f["group_id"][()]
+
+        # For backwards compatability.
+        if "weight" in f:
+            weight = f["weight"][()]
+        else:
+            weight = np.ones((len(n_select)))
+        if "rt_ms" in f:
+            rt_ms = f["rt_ms"][()]
+        else:
+            rt_ms = -np.ones((len(n_select)))
+        if "agent_id" in f:
+            agent_id = f["agent_id"][()]
+        else:
+            agent_id = np.zeros((len(n_select)))
         loaded_trials = Observations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            group_id=group_id
+            group_id=group_id, agent_id=agent_id, weight=weight,
+            rt_ms=rt_ms
         )
     else:
         raise ValueError('No class found matching the provided `trial_type`.')

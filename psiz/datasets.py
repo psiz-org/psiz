@@ -31,6 +31,7 @@ Todo:
 """
 
 import os
+import copy
 import shutil
 import sys
 import tarfile
@@ -191,6 +192,14 @@ class Catalog(object):
 
         f.close()
 
+    def subset(self, idx):
+        """Return a subset of catalog with new stimulus IDs."""
+        catalog = copy.deepcopy(self)
+        catalog.stimuli = catalog.stimuli.iloc[idx]
+        catalog.n_stimuli = len(catalog.stimuli)
+        catalog.stimuli.at[:, "id"] = np.arange(0, catalog.n_stimuli)
+        return catalog
+
 
 def load_catalog(filepath):
     """Load data saved via the save method.
@@ -327,7 +336,6 @@ def load_dataset(
             stimuli used to collect observations.
 
     """
-
     fp_obs = os.path.join(fp_dataset, 'obs.hdf5')
     fp_catalog = os.path.join(fp_dataset, 'catalog.hdf5')
 

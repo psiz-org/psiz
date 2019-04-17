@@ -201,13 +201,14 @@ class Catalog(object):
         return catalog
 
 
-def load_catalog(filepath):
+def load_catalog(filepath, verbose=0):
     """Load data saved via the save method.
 
     The loaded data is instantiated as a Catalog object.
 
     Arguments:
         filepath: The location of the hdf5 file to load.
+        verbose (optional): Controls the verbosity of printed summary.
 
     Returns:
         Loaded catalog.
@@ -230,6 +231,11 @@ def load_catalog(filepath):
     catalog = Catalog(
         stimulus_id, stimulus_filepath, class_id, class_label_dict)
     f.close()
+
+    if verbose > 0:
+        print("Catalog Summary")
+        print('  n_stimuli: {0}'.format(catalog.n_stimuli))
+        print('')
     return catalog
 
 

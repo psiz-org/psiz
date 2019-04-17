@@ -809,7 +809,7 @@ def stack(trials_list):
         return trials_stacked
 
 
-def load_trials(filepath):
+def load_trials(filepath, verbose=0):
     """Load data saved via the save method.
 
     The loaded data is instantiated as a concrete class of
@@ -817,6 +817,7 @@ def load_trials(filepath):
 
     Arguments:
         filepath: The location of the hdf5 file to load.
+        verbose (optional): Controls the verbosity of printed summary.
 
     Returns:
         Loaded trials.
@@ -861,6 +862,15 @@ def load_trials(filepath):
     else:
         raise ValueError('No class found matching the provided `trial_type`.')
     f.close()
+
+    if verbose > 0:
+        print("Trial Summary")
+        print('  trial_type: {0}'.format(trial_type))
+        print('  n_trial: {0}'.format(loaded_trials.n_trial))
+        if trial_type == "Observations":
+            print('  n_agent: {0}'.format(len(np.unique(loaded_trials.agent_id))))
+            print('  n_group: {0}'.format(len(np.unique(loaded_trials.group_id))))
+        print('')
     return loaded_trials
 
 

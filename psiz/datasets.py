@@ -215,7 +215,7 @@ def load_catalog(filepath):
     """
     f = h5py.File(filepath, "r")
     stimulus_id = f["stimulus_id"][()]
-    stimulus_filepath = f["stimulus_filepath"][()]
+    stimulus_filepath = f["stimulus_filepath"][()].astype('U')
     class_id = f["class_id"][()]
 
     try:

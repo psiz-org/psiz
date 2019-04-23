@@ -60,7 +60,6 @@ from sklearn import mixture
 import tensorflow as tf
 from keras.initializers import Initializer
 from tensorflow import random_uniform, random_normal
-from tensorflow.contrib.distributions import Dirichlet
 
 from psiz.utils import elliptical_slice
 
@@ -220,9 +219,10 @@ class PsychologicalEmbedding(object):
         """
         phi_1 = np.ones((self.n_group, self.n_dim), dtype=np.float32)
         if self.n_group is 1:
-            is_trainable = False
+            is_trainable = np.zeros([1], dtype=bool)
         else:
-            is_trainable = True
+            # is_trainable = True
+            is_trainable = np.ones([self.n_group], dtype=bool)
         phi = dict(
             phi_1=dict(value=phi_1, trainable=is_trainable)
         )
@@ -390,7 +390,6 @@ class PsychologicalEmbedding(object):
                 and corresponding values to be frozen (i.e., fixed)
                 during inference.
         """
-        # TODO freeze_options must handle nested phi.
         if freeze_options is not None:
             for param_name in freeze_options:
                 if param_name is 'z':
@@ -406,11 +405,20 @@ class PsychologicalEmbedding(object):
                 elif param_name is 'phi':
                     for sub_param_name in freeze_options[param_name]:
                         if sub_param_name is 'phi_1':
-                            self._check_phi_1(
-                                freeze_options['phi']['phi_1'])
-                        self.phi[sub_param_name]['value'] = \
-                            freeze_options[param_name][sub_param_name]
-                        self.phi[sub_param_name]['trainable'] = False
+                            # TODO check if trainable provided.
+                            if 'value' in freeze_options['phi'][sub_param_name]:
+                                phi_val = freeze_options['phi'][sub_param_name]['value']
+                            else:
+                                phi_val = freeze_options['phi'][sub_param_name]
+
+                            if 'trainable' in freeze_options['phi'][sub_param_name]:
+                                trainable = freeze_options['phi'][sub_param_name]['trainable']
+                            else:
+                                trainable = np.zeros([self.n_group], dtype=bool)
+                            self._check_phi_1(phi_val)
+                            
+                        self.phi[sub_param_name]['value'] = phi_val
+                        self.phi[sub_param_name]['trainable'] = trainable
 
     def thaw(self, thaw_options=None):
         """State changing method specifying trainable parameters.
@@ -438,9 +446,9 @@ class PsychologicalEmbedding(object):
                         self.theta[sub_param_name]['trainable'] = True
                 elif param_name is 'phi':
                     if self.n_group is 1:
-                        is_trainable = False
+                        is_trainable = np.zeros([1], dtype=bool)
                     else:
-                        is_trainable = True
+                        is_trainable = np.ones([self.n_group], dtype=bool)
                     for sub_param_name in thaw_options[param_name]:
                         self.phi[sub_param_name]['trainable'] = is_trainable
 
@@ -646,33 +654,47 @@ class PsychologicalEmbedding(object):
 
     def _get_attention(self, init_mode):
         """Return attention weights of model as TensorFlow variable."""
-        if self.phi['phi_1']['trainable']:
+        attention_list = []
+        constraint_list = []
+        for group_id in range(self.n_group):
+            tf_attention = self._get_group_attention(init_mode, group_id)
+            attention_list.append(tf_attention)
+            constraint_list.append(
+                tf_attention.assign(self._project_attention(tf_attention))
+            ) 
+        tf_attention_constraint = tf.group(*constraint_list)
+        tf_attention = tf.concat(attention_list, axis=0)
+        return tf_attention, tf_attention_constraint
+
+    def _get_group_attention(self, init_mode, group_id):
+        tf_var_name = "attention_{0}".format(group_id) 
+        if self.phi['phi_1']['trainable'][group_id]:
             if init_mode is 'exact':
                 tf_attention = tf.get_variable(
-                    "attention", [self.n_group, self.n_dim], dtype=FLOAT_X,
+                    tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self.phi['phi_1']['value'], dtype=FLOAT_X
+                        self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X
                     )
                 )
             elif init_mode is 'warm':
                 tf_attention = tf.get_variable(
-                    "attention", [self.n_group, self.n_dim], dtype=FLOAT_X,
+                    tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self.phi['phi_1']['value'], dtype=FLOAT_X
+                        self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X
                     )
                 )
             else:
                 n_dim = tf.constant(self.n_dim, dtype=FLOAT_X)
                 alpha = tf.constant(np.ones((self.n_dim)), dtype=FLOAT_X)
                 tf_attention = tf.get_variable(
-                    "attention", [self.n_group, self.n_dim],
+                    tf_var_name, [1, self.n_dim],
                     initializer=RandomAttention(n_dim, alpha, dtype=FLOAT_X)
                 )
         else:
             tf_attention = tf.get_variable(
-                "attention", [self.n_group, self.n_dim], dtype=FLOAT_X,
+                tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                 initializer=tf.constant_initializer(
-                    self.phi['phi_1']['value'], dtype=FLOAT_X),
+                    self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X),
                 trainable=False
             )
         return tf_attention
@@ -1071,7 +1093,7 @@ class PsychologicalEmbedding(object):
             # Free parameters.
             tf_theta = self._get_similarity_parameters(init_mode)
             tf_theta_bounds = self._get_similarity_constraints(tf_theta)
-            tf_attention = self._get_attention(init_mode)
+            tf_attention, tf_attention_constraint = self._get_attention(init_mode)
             tf_z = self._get_embedding(init_mode)
 
             # Observation data.
@@ -1162,7 +1184,7 @@ class PsychologicalEmbedding(object):
                 sim_qr_config.set_shape((None, None))
                 prob_config = self._tf_ranked_sequence_probability(
                     sim_qr_config, n_select)
-                prob_config = tf.log(tf.maximum(prob_config, cap))  # TODO Actually loss
+                prob_config = tf.log(tf.maximum(prob_config, cap))
                 prob_config = tf.multiply(weight_config, prob_config)
                 prob_all = tf.concat((prob_all, prob_config), axis=0)
                 cond_idx = cond_idx + 1
@@ -1177,12 +1199,11 @@ class PsychologicalEmbedding(object):
 
             # Cost function
             n_trial = tf.cast(n_trial, dtype=FLOAT_X)
-            # loss = tf.log(tf.maximum(prob_all, cap))
             loss = tf.negative(tf.reduce_sum(prob_all))
             loss = tf.divide(loss, n_trial)
 
-            tf_attention_constraint = tf_attention.assign(
-                self._project_attention(tf_attention))
+            # tf_attention_constraint = tf_attention.assign(
+            #     self._project_attention(tf_attention))
 
         return (
             loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,

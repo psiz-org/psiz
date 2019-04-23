@@ -29,11 +29,7 @@ Functions:
         class method, as a PsychologicalEmbedding object.
 
 Todo:
-    - method 'convert' takes z: shape=(n_stimuli, n_dim, n_sample) and
-        group_id scalar, a returns z after applying the group specific
-        transformations to z so that further calls to similarity or
-        distance would use basic settings (e.g., uniform attention
-        weights).
+    - freeze some group-specific paramters
     - implement warm restarts (primarily embedding aspect)
     - document how to do warm restarts (warm restarts are sequential
       and can be created by the user using a for loop and fit with
@@ -45,7 +41,6 @@ Todo:
     - expose optimizer
     - MAYBE ParameterSet, Theta and Phi object class
     - MAYBE parallelization during fitting
-
 
 """
 
@@ -87,8 +82,9 @@ class PsychologicalEmbedding(object):
         evaluate: Evaluate the embedding model using the provided
             observations.
         similarity: Return the similarity between provided points.
-        similarity_matrix: Return the similarity matrix characterizing
-            the embedding.
+        distance: Return the (weighted) minkowski distance between
+            provided points.
+        view: Returns a view-specific embedding.
         freeze: Freeze the free parameters of an embedding model.
         thaw: Make free parameters trainable.
         probability: Return the probability of the possible outcomes
@@ -510,6 +506,99 @@ class PsychologicalEmbedding(object):
 
         sim = self._similarity(z_q, z_r, theta, attention)
         return sim
+
+    def distance(self, z_q, z_r, group_id=None, theta=None, phi=None):
+        """Return dsitance between two lists of points.
+
+        Distance is determined using the weighted Minkowski metric.
+        This method implements the logic for handling arguments of
+        different shapes.
+
+        TODO better description of the input shapes that are allowed.
+
+        Arguments:
+            z_q: A set of embedding points.
+                shape = (n_trial, n_dim, [1, n_sample])
+            z_r: A set of embedding points.
+                shape = (n_trial, n_dim, [n_reference, n_sample])
+            group_id (optional): The group ID for each sample. Can be a
+                scalar or an array of shape = (n_trial,).
+            theta (optional): The parameters governing the similarity
+                kernel. If not provided, the theta associated with the
+                current object is used.
+            phi (optional): TODO The weights allocated to each
+                dimension in a weighted minkowski metric. The weights
+                should be positive and sum to the dimensionality of the
+                weight vector, although this is not enforced.
+                shape = (n_trial, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+
+        """
+        n_trial = z_q.shape[0]
+        # Handle group_id.
+        if group_id is None:
+            group_id = np.zeros((n_trial), dtype=np.int32)
+        else:
+            if np.isscalar(group_id):
+                group_id = group_id * np.ones((n_trial), dtype=np.int32)
+            else:
+                group_id = group_id.astype(dtype=np.int32)
+
+        if theta is None:
+            theta = self.theta
+        if phi is None:
+            phi = self.phi
+
+        attention = phi['phi_1']['value'][group_id, :]
+
+        # Make sure z_q and attention have an appropriate singleton
+        # dimensions. TODO I don't like this code block.
+        if z_r.ndim > 2:
+            if z_q.ndim == 2:
+                z_q = np.expand_dims(z_q, axis=2)
+            if attention.ndim == 2:
+                attention = np.expand_dims(attention, axis=2)
+        if z_r.ndim == 4:
+            if z_q.ndim == 3:
+                z_q = np.expand_dims(z_q, axis=3)
+            if attention.ndim == 3:
+                attention = np.expand_dims(attention, axis=3)
+
+        d = self._distance(z_q, z_r, theta, attention)
+        return d
+
+    def _distance(self, z_q, z_r, theta, attention):
+        """Weighted minkowski distance function.
+
+        Arguments:
+            z_q: A set of embedding points.
+                shape = (n_trial, n_dim)
+            z_r: A set of embedding points.
+                shape = (n_trial, n_dim)
+            theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_trial, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_r))**rho
+        d_qref = np.multiply(d_qref, attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)  # TODO faster to sum over first dimension?
+
+        return d_qref
 
     @abstractmethod
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
@@ -1960,6 +2049,35 @@ class PsychologicalEmbedding(object):
         emb = copy.deepcopy(self)
         emb.z['value'] = emb.z['value'][idx, :]
         emb.n_stimuli = emb.z['value'].shape[0]
+        return emb
+
+    def view(self, group_id):
+        """Return a view-specific embedding.
+
+        The returned embedding contains information only about the
+        requested group. The embedding is appropriately adjusted such
+        that the group-specific parameters are rolled into the other
+        parameters. Specifically the embedding points are adjusted to
+        account for the attention weights, and the attention weights
+        are returned to ones. This function is useful if you would like
+        to visualize and compare how group-specific embeddings differ
+        in terms of percieved similarity.
+
+        Arguments:
+            group_id: Scalar indicating the group_id.
+
+        Returns:
+            emb: A group-specific embedding.
+
+        """
+        emb = copy.deepcopy(self)
+        z = self.z["value"]
+        rho = self.theta["rho"]["value"]
+        attention_weights = self.phi["phi_1"]["value"][group_id, :]
+        z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
+        emb.z["value"] = z_group
+        emb.n_group = 1
+        emb.phi["phi_1"]["value"] = np.ones([1, self.n_dim])
         return emb
 
 

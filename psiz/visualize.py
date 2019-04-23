@@ -29,11 +29,11 @@ import numpy as np
 
 
 def visualize_embedding_static(
-        Z, class_vec=None, classes=None, filename=None):
+        z, class_vec=None, classes=None, filename=None):
     """Generate a static scatter plot of the supplied embedding points.
 
     Arguments:
-        Z: A real-valued two-dimensional array representing the embedding.
+        z: A real-valued two-dimensional array representing the embedding.
             shape = (n_stimuli, n_dim)
         class_vec: (optional) An integer array contianing class IDs
             that indicate the class membership of each stimulus.
@@ -47,7 +47,7 @@ def visualize_embedding_static(
     dot_size = 20
     cmap = matplotlib.cm.get_cmap('jet')
 
-    [n_stimuli, n_dim] = Z.shape
+    [n_stimuli, n_dim] = z.shape
 
     n_class = 1
     if class_vec is None:
@@ -78,7 +78,7 @@ def visualize_embedding_static(
         for i_class in range(n_class):
             locs = class_vec == unique_class_list[i_class]
             ax.scatter(
-                Z[locs, 0], Z[locs, 1], c=color_array[np.newaxis, i_class, :],
+                z[locs, 0], z[locs, 1], c=color_array[np.newaxis, i_class, :],
                 s=dot_size, label=class_legend[i_class], edgecolors='none')
 
         if use_legend:
@@ -106,7 +106,7 @@ def visualize_embedding_static(
         for i_class in range(n_class):
             locs = class_vec == unique_class_list[i_class]
             ax.scatter(
-                Z[locs, 0], Z[locs, 1], Z[locs, 2],
+                z[locs, 0], z[locs, 1], z[locs, 2],
                 c=color_array[np.newaxis, i_class, :], s=dot_size,
                 label=class_legend[i_class], edgecolors='none')
 

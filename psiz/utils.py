@@ -14,7 +14,17 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module of utility functions."""
+"""Module of utility functions.
+
+similarity_matrix: Return the similarity matrix characterizing
+    the embedding.
+matrix_comparison:
+compare_models:
+elliptical_slice:
+rotation_matrix:
+affine_transformation:
+procrustean_solution:
+"""
 
 import math
 

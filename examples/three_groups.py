@@ -25,7 +25,7 @@ model.
 
 Example output:
 
-     Model Comparison (R^2)
+     Model Comparison (r^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert

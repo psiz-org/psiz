@@ -405,7 +405,6 @@ class PsychologicalEmbedding(object):
                 elif param_name is 'phi':
                     for sub_param_name in freeze_options[param_name]:
                         if sub_param_name is 'phi_1':
-                            # TODO check if trainable provided.
                             if 'value' in freeze_options['phi'][sub_param_name]:
                                 phi_val = freeze_options['phi'][sub_param_name]['value']
                             else:
@@ -432,11 +431,18 @@ class PsychologicalEmbedding(object):
                 include 'z', 'attention', and the parameters associated
                 with the similarity kernel.
         """
-        # TODO passing in phi.
         if thaw_options is None:
             self.z['trainable'] = True
             for param_name in self.theta:
                 self.theta[param_name]['trainable'] = True
+            # TODO handle phi.
+            # for param_name in self.phi:
+            #     if self.n_group is 1:
+            #         is_trainable = np.zeros([1], dtype=bool)
+            #     else:
+            #         is_trainable = np.ones([self.n_group], dtype=bool)
+            #     self.phi[param_name]['trainable'] = is_trainable
+
         else:
             for param_name in thaw_options:
                 if param_name is 'z':
@@ -500,7 +506,8 @@ class PsychologicalEmbedding(object):
         attention = phi['phi_1']['value'][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
-        # dimensions. TODO I don't like this code block.
+        # dimensions. TODO Clean up this code block so it is more
+        # readable.
         if z_r.ndim > 2:
             if z_q.ndim == 2:
                 z_q = np.expand_dims(z_q, axis=2)
@@ -563,7 +570,8 @@ class PsychologicalEmbedding(object):
         attention = phi['phi_1']['value'][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
-        # dimensions. TODO I don't like this code block.
+        # dimensions. TODO Clean up this code block so that it is more
+        # readable.
         if z_r.ndim > 2:
             if z_q.ndim == 2:
                 z_q = np.expand_dims(z_q, axis=2)
@@ -604,7 +612,7 @@ class PsychologicalEmbedding(object):
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
         d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)  # TODO faster to sum over first dimension?
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
 
         return d_qref
 
@@ -882,12 +890,6 @@ class PsychologicalEmbedding(object):
                 tf_theta, tf_theta_bounds, tf_learning_rate, train_op,
                 summary_op, tf_obs_train, tf_obs_val, i_restart, verbose
             )
-            # TODO
-            # gmm = mixture.GaussianMixture(
-            #             n_components=1, covariance_type='spherical')
-            # gmm.fit(z)
-            # cov = gmm.covariances_[0]
-            # print('        cov: {0:.2g}'.format(cov))
 
             if (verbose > 2):
                 print(
@@ -915,10 +917,15 @@ class PsychologicalEmbedding(object):
         sess.close()
         tf.reset_default_graph()
 
-        if beat_baseline:
-            print('Beat baseline.')
-        else:
-            print('Did not beat baseline.')
+        if (verbose > 1):
+            if beat_baseline:
+                print(
+                    '        '
+                    'Best Restart\n        loss: {1: .6f} | loss_val: {2: .6f}'.format(
+                        epoch, loss_train_best, loss_val_best)
+                )
+            else:
+                print('        Did not beat initialization.')
 
         self.z['value'] = z_best
         self.phi['phi_1']['value'] = attention_best
@@ -1006,10 +1013,6 @@ class PsychologicalEmbedding(object):
 
             if last_improvement_stop >= self.patience_stop:
                 break
-            # if last_improvement_reduce >= self.patience_reduce:
-            #     lr = .9 * lr
-            #     lr = np.maximum(lr, 1e-10)
-            #     last_improvement_reduce = 0
 
             if not epoch % 10:
                 # Write logs at every 10th iteration
@@ -1029,7 +1032,6 @@ class PsychologicalEmbedding(object):
             attention_best = self.phi['phi_1']['value']
             theta_best = self.theta
 
-        # TODO loss_all ?
         return (
             loss_train_best, loss_val_best, epoch_best, z_best, attention_best,
             theta_best)
@@ -1200,15 +1202,30 @@ class PsychologicalEmbedding(object):
             # Cost function
             n_trial = tf.cast(n_trial, dtype=FLOAT_X)
             loss = tf.negative(tf.reduce_sum(prob_all))
-            loss = tf.divide(loss, n_trial)
-
-            # tf_attention_constraint = tf_attention.assign(
-            #     self._project_attention(tf_attention))
+            loss = tf.divide(loss, n_trial) 
+            # TODO Is dividing by trails still necessary? This was originally
+            # done to compare train vs test loss. Now it may stabilize the
+            # gradient decent optimization parameters.
+            # attention_loss = tf.negative(
+            #     self.attention_distance(tf_attention[0, :], tf_attention[1, :]) +
+            #     self.attention_distance(tf_attention[0, :], tf_attention[2, :]) +
+            #     self.attention_distance(tf_attention[1, :], tf_attention[2, :])
+            # ) / 3
+            # loss = loss + attention_loss
 
         return (
             loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
             tf_theta_bounds, tf_obs
         )
+
+    def attention_distance(self, p, q):
+        """Distance between attention weights."""
+        c = tf.cast(2.0, dtype=FLOAT_X)
+        n_dim = tf.cast(tf.shape(p)[0], dtype=FLOAT_X)
+        d = tf.divide(
+            tf.reduce_sum(tf.abs(p - q)), tf.multiply(c, n_dim)
+        )
+        return d
 
     def log_likelihood(self, obs, z=None, theta=None, phi=None):
         """Return the log likelihood of a set of observations.
@@ -1308,7 +1325,7 @@ class PsychologicalEmbedding(object):
             z_q, z_r, group_id=group_id, theta=theta, phi=phi)
 
         # TODO generalize remaining code for multiple samples.
-        # sim_qr = sim_qr[:, :, 0] TODO
+        # sim_qr = sim_qr[:, :, 0]
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
             config = docket.config_list.iloc[i_config]
@@ -1344,91 +1361,6 @@ class PsychologicalEmbedding(object):
                 prob_all, ma.sum(prob_all, axis=1, keepdims=True))
         if n_sample == 1:
             prob_all = prob_all[:, :, 0]
-        return prob_all
-
-    def _tf_outcome_probability(self, docket, z_tf, tf_theta):
-        """Return probability of outcomes for each trial.
-
-        Arguments:
-            docket: A docket of unjudged similarity trials.
-            z_tf: TensorFlow tensor representing embedding points.
-            tf_theta: Dictionary of Tensorflow tensors representing
-                free parameters of similarity kernel.
-
-        Returns:
-            outcome_idx_list: A list with one entry for each display
-                configuration. Each entry contains a 2D array where
-                each row contains the indices describing one outcome.
-            prob_all: The probabilities associated with the different
-                outcomes for each unjudged trial. In general, different
-                trial configurations will have a different number of
-                possible outcomes. Trials with a smaller number of
-                possible outcomes are element padded with zeros to
-                match the trial with the maximum number of possible
-                outcomes.
-
-        """
-        n_trial_all = docket.n_trial
-        dmy_idx = np.arange(n_trial_all)
-        n_config = docket.config_list.shape[0]
-
-        stimulus_set = tf.constant(docket.stimulus_set, dtype=tf.int32)
-        max_n_reference = stimulus_set.get_shape()[1] - 1
-
-        attention = self.phi['phi_1']['value'][0, :]  # TODO HACK
-        attention = np.expand_dims(attention, axis=0)
-        attention = np.expand_dims(attention, axis=2)
-        tf_attention = tf.convert_to_tensor(
-            attention, dtype=FLOAT_X
-        )
-
-        # Compute similarity between query and references.
-        (z_q, z_r) = self._tf_inflate_points(
-            stimulus_set, max_n_reference, z_tf)
-        sim_qr = self._tf_similarity(z_q, z_r, tf_theta, tf_attention)
-
-        outcome_idx_list = docket.outcome_idx_list
-        n_outcome_list = docket.config_list['n_outcome'].values
-        max_n_outcome = np.max(n_outcome_list)
-
-        prob_all = tf.zeros((0, max_n_outcome), dtype=FLOAT_X)
-        indices_all = tf.zeros((0), dtype=tf.int32)
-        for i_config in range(n_config):
-            config = docket.config_list.iloc[i_config]
-            outcome_idx = outcome_idx_list[i_config]
-            trial_locs = docket.config_idx == i_config
-            n_trial = np.sum(trial_locs)
-            n_outcome = n_outcome_list[i_config]
-            n_reference = tf.constant(config['n_reference'], dtype=tf.int32)
-            n_select = tf.constant(config['n_select'], dtype=tf.int32)
-
-            curr_trial_idx = tf.constant(dmy_idx[trial_locs], dtype=tf.int32)
-            sim_qr_config = tf.gather(sim_qr, curr_trial_idx)
-            reference_idx = tf.range(0, n_reference, delta=1, dtype=tf.int32)
-            sim_qr_config = tf.gather(sim_qr_config, reference_idx, axis=1)
-
-            # Compute probability of each possible outcome.
-            prob = tf.ones((0, n_trial), dtype=np.float32)
-            for i_outcome in range(n_outcome):
-                s_qref_perm = tf.gather(
-                    sim_qr_config, outcome_idx[i_outcome, :], axis=1)
-                prob = tf.concat((
-                    prob,
-                    tf.expand_dims(self._tf_ranked_sequence_probability(
-                        s_qref_perm, n_select), axis=0)
-                ), axis=0)
-            # Pad absent outcomes before putting in master prob_all.
-            prob_zero = tf.zeros((max_n_outcome - n_outcome, n_trial))
-            prob = tf.concat((prob, prob_zero), axis=0)
-            prob = tf.transpose(prob)
-            indices = dmy_idx[trial_locs]
-            indices_all = tf.concat((indices_all, indices), axis=0)
-            prob_all = tf.concat((prob_all, prob), axis=0)
-        prob_all = tf.gather(prob_all, indices_all)
-
-        # Correct for numerical inaccuracy.
-        prob_all = tf.divide(
-            prob_all, tf.reduce_sum(prob_all, axis=1, keepdims=True))
         return prob_all
 
     def _inflate_points(self, stimulus_set, n_reference, z):
@@ -1549,7 +1481,7 @@ class PsychologicalEmbedding(object):
         # Initialize.
         seq_prob = np.ones((n_trial, n_sample), dtype=np.float64)
         selected_idx = n_select - 1
-        denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)  # TODO faster to sum over first dimension?
+        denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)
 
         for i_selected in range(selected_idx, -1, -1):
             # Compute selection probability.
@@ -1680,7 +1612,7 @@ class PsychologicalEmbedding(object):
         gmm = mixture.GaussianMixture(
             n_components=1, covariance_type='spherical')
         gmm.fit(z)
-        mu = gmm.means_[0]  # TODO verify was mu = gmm.means_ without [0]
+        mu = gmm.means_[0]
         sigma = gmm.covariances_[0] * np.identity(n_dim)
 
         # Center embedding to satisfy assumptions of elliptical slice sampling.
@@ -1718,7 +1650,6 @@ class PsychologicalEmbedding(object):
                         np.linalg.cholesky(
                             self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim))
                     )
-            # print('\r{0}'.format(i_round)) # TODO
             for i_part in range(n_partition):
                 z_part = z_full[part_idx[i_part], :]
                 z_part = z_part.flatten('C')
@@ -1778,231 +1709,6 @@ class PsychologicalEmbedding(object):
         part_idx = part_idx.astype(bool)
 
         return part_idx, n_stimuli_part
-
-    # def posterior_samples(
-    #         self, obs, n_final_sample=1000, n_burn=1000, thin_step=3, verbose=0):
-    #     """Sample from the posterior of the embedding.
-
-    #     Samples are drawn from the posterior holding theta constant. A
-    #     variant of Eliptical Slice Sampling (Murray & Adams 2010) is
-    #     used to estimate the posterior for the embedding points. Since
-    #     the latent embedding variables are translation and rotation
-    #     invariant, generic sampling will artificailly inflate the
-    #     entropy of the samples. To compensate for this issue, N
-    #     embedding points are selected to serve as anchor points, where
-    #     N is two times the dimensionality of the embedding. Two chains
-    #     are run each using half of the anchor points. The samples from
-    #     the two chains are merged in order to get a posterior estimate
-    #     for all points.
-
-    #     Arguments:
-    #         obs: A Observations object representing the observed data.
-    #         n_final_sample (optional): The number of samples desired after
-    #             removing the "burn in" samples and applying thinning.
-    #         n_burn (optional): The number of samples to remove from the
-    #             beginning of the sampling sequence.
-    #         thin_step (optional): The interval to use in order to thin
-    #             (i.e., de-correlate) the samples.
-    #         verbose (optional): An integer specifying the verbosity of
-    #             printed output. If zero, nothing is printed. Increasing
-    #             integers display an increasing amount of information.
-
-    #     Returns:
-    #         A dictionary of posterior samples for different parameters.
-    #             The samples are stored as a NumPy array.
-    #             'z' : shape = (n_final_sample, n_stimuli, n_dim).
-
-    #     Notes:
-    #         The step_size of the Hamiltonian Monte Carlo procedure is
-    #             determined by the scale of the current embedding.
-
-    #     References:
-    #         Murray, I., & Adams, R. P. (2010). Slice sampling
-    #         covariance hyperparameters of latent Gaussian models. In
-    #         Advances in Neural Information Processing Systems (pp.
-    #         1732-1740).
-
-    #     """
-    #     n_sample_set = np.ceil(n_final_sample/2).astype(np.int32)
-    #     n_stimuli = self.n_stimuli
-    #     n_dim = self.n_dim
-    #     z = copy.copy(self.z['value'])
-    #     n_anchor_point = n_dim
-
-    #     if verbose > 0:
-    #         print('Sampling from posterior...')
-    #     if (verbose > 1):
-    #         print('    Settings:')
-    #         print('    n_final_sample: ', n_final_sample)
-    #         print('    n_burn: ', n_burn)
-    #         print('    thin_step: ', thin_step)
-
-    #     # Prior
-    #     # p(z_k | Z_negk, theta) ~ N(mu, sigma)
-    #     # Approximate prior of z_k using all embedding points to reduce
-    #     # computational burden.
-    #     gmm = mixture.GaussianMixture(
-    #         n_components=1, covariance_type='spherical')
-    #     gmm.fit(z)
-    #     mu = gmm.means_[0]  # TODO verify was mu = gmm.means_ without [0]
-    #     sigma = gmm.covariances_[0] * np.identity(n_dim)
-
-    #     # Center embedding to satisfy assumptions of elliptical slice sampling.
-    #     z = z - mu
-    #     mu = np.expand_dims(mu, axis=2)
-
-    #     # Create a diagonally tiled covariance matrix in order to slice
-    #     # multiple points simultaneously.
-    #     prior = np.linalg.cholesky(
-    #         self._inflate_sigma(sigma, n_stimuli - n_anchor_point, n_dim))
-
-    #     # Select anchor points.
-    #     anchor_idx = self._select_anchor_points(z, n_anchor_point)
-    #     sample_idx = self._create_sample_idx(n_stimuli, anchor_idx)
-
-    #     # Define log-likelihood for elliptical slice sampler.
-    #     def flat_log_likelihood(z_samp, sample_idx, z_full, obs):
-    #         # Assemble full z.
-    #         n_samp_stimuli = len(sample_idx)
-    #         z_full[sample_idx, :] = np.reshape(
-    #             z_samp, (n_samp_stimuli, n_dim), order='C')
-    #         return self.log_likelihood(obs, z=z_full)  # TODO pass in phi
-
-    #     combined_samples = [None, None]
-    #     for i_set in range(2):
-
-    #         # Initalize sampler.
-    #         n_total_sample = n_burn + (n_sample_set * thin_step)
-    #         z_samp = z[sample_idx[:, i_set], :]
-    #         z_samp = z_samp.flatten('C')
-    #         samples = np.empty((n_stimuli, n_dim, n_total_sample))
-
-    #         # Sample from prior if there are no observations. TODO
-    #         # if obs.n_trial is 0:
-    #         #     z = np.random.multivariate_normal(
-    #         #         np.zeros((n_dim)), sigma, n_stimuli)
-
-    #         for i_round in range(n_total_sample):
-    #             # print('\r{0}'.format(i_round)) # TODO
-    #             # TODO should pdf params allow for keyword arguments?
-    #             (z_samp, _) = elliptical_slice(
-    #                 z_samp, prior, flat_log_likelihood,
-    #                 pdf_params=[sample_idx[:, i_set], copy.copy(z), obs])
-    #             # Merge z_samp_r and z_anchor
-    #             z_full = copy.copy(z)
-    #             z_samp_r = np.reshape(
-    #                 z_samp, (n_stimuli - n_anchor_point, n_dim), order='C')
-    #             z_full[sample_idx[:, i_set], :] = z_samp_r
-    #             samples[:, :, i_round] = z_full
-
-    #         # Add back in mean.
-    #         samples = samples + mu
-    #         combined_samples[i_set] = samples[:, :, n_burn::thin_step]
-
-    #     # Replace anchors with samples from other set.
-    #     for i_point in range(n_anchor_point):
-    #         combined_samples[0][anchor_idx[i_point, 0], :, :] = \
-    #             combined_samples[1][anchor_idx[i_point, 0], :, :]
-    #     for i_point in range(n_anchor_point):
-    #         combined_samples[1][anchor_idx[i_point, 1], :, :] = \
-    #             combined_samples[0][anchor_idx[i_point, 1], :, :]
-
-    #     samples_all = np.concatenate(
-    #         (combined_samples[0], combined_samples[1]), axis=2
-    #     )
-    #     samples_all = samples_all[:, :, 0:n_final_sample]
-    #     samples = dict(z=samples_all)
-    #     return samples
-
-    def _select_anchor_points(self, z, n_point):
-        """Select anchor points for posterior inference.
-
-        Anchor points are selected so that the sets are
-        non-overlapping, all points are far from the center of the
-        distribution, all points are far from each other, all points
-        within a set are far from one another.
-
-        This code assumes that the incoming points have already been
-        centered.
-
-        Arguments:
-            z: The embedding points.
-            n_point: The number of points in each set.
-
-        Returns:
-            anchor_idx
-
-        """
-        n_set = 2
-        n_stimuli = z.shape[0]
-        n_point_total = n_point * n_set
-
-        # if n_point_total > n_stimuli:
-        # TODO issue warning or handle special case
-
-        # First select all points regardless of set assignment.
-        # Initialize greedy search.
-        candidate_idx = np.random.permutation(n_stimuli)
-        best_val = 0
-
-        def obj_func_1(z_candidate):
-            # Select those far from mean and far from one another.
-            rho = 2.
-            n_stim = z_candidate.shape[0]
-            loss1 = np.sum(np.abs(z_candidate)**(rho))**(1/rho) / n_stim
-            loss2 = np.mean(pdist(z_candidate))
-            return (.5 * loss1) + loss2
-
-        n_step = 100
-        for _ in range(n_step):
-            # Swap a selected point out with a non-selected point.
-            selected_idx = randint(0, n_point_total-1)
-            nonselected_idx = randint(n_point_total, n_stimuli-1)
-            copied_idx = copy.copy(candidate_idx[selected_idx])
-            candidate_idx[selected_idx] = candidate_idx[nonselected_idx]
-            candidate_idx[nonselected_idx] = copied_idx
-
-            # Evaluate candidate
-            z_candidate = z[candidate_idx[0:n_point_total], :]
-            candidate_val = obj_func_1(z_candidate)
-            if candidate_val > best_val:
-                best_val = copy.copy(candidate_val)
-                best_idx = copy.copy(candidate_idx)
-        best_idx = best_idx[0:n_point_total]
-
-        # Now that points are selected, assign points such that points
-        # within a set are far from each other.
-        # Initialize greedy search.
-        def obj_func_2(z_candidate, n_point):
-            # Create two sets such that members within a set are far from
-            # one another.
-            loss1 = np.mean(pdist(z_candidate[0:n_point]))
-            loss2 = np.mean(pdist(z_candidate[n_point:]))
-            return loss1 + loss2
-
-        candidate_idx = best_idx
-        best_val = 0
-
-        n_step = 2 * n_point**2
-        for _ in range(n_step):
-            # Swap a selected point out with a non-selected point.
-            selected_idx = randint(0, n_point-1)
-            nonselected_idx = randint(n_point, (2 * n_point) - 1)
-            copied_idx = copy.copy(candidate_idx[selected_idx])
-            candidate_idx[selected_idx] = candidate_idx[nonselected_idx]
-            candidate_idx[nonselected_idx] = copied_idx
-
-            # Evaluate candidate
-            z_candidate = z[candidate_idx, :]
-            candidate_val = obj_func_2(z_candidate, n_point)
-            if candidate_val > best_val:
-                best_val = copy.copy(candidate_val)
-                best_idx = copy.copy(candidate_idx)
-
-        anchor_idx = np.zeros((n_point, n_set), dtype=np.int32)
-        anchor_idx[:, 0] = best_idx[0:n_point]
-        anchor_idx[:, 1] = best_idx[n_point:]
-        return anchor_idx
 
     def _create_sample_idx(self, n_stimuli, anchor_idx):
         """Create sampling index from anchor index."""
@@ -2102,6 +1808,148 @@ class PsychologicalEmbedding(object):
         return emb
 
 
+class Interval(PsychologicalEmbedding):
+    """An model based on Interval MDS.
+
+    This embedding technique uses the following similarity kernel:
+        s(x,y) = beta .* norm(x - y, rho) - gamma,
+    where x and y are n-dimensional vectors. The similarity kernel has
+    three free parameters: rho, gamma, and beta.
+
+    """
+
+    def __init__(self, n_stimuli, n_dim=2, n_group=1):
+        """Initialize.
+
+        Arguments:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded.
+            n_dim (optional): An integer indicating the dimensionalty
+                of the embedding.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group.
+        """
+        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
+
+        # Default inference settings.
+        self.lr = 0.001
+
+    def _init_theta(self):
+        """Return dictionary of default theta parameters.
+
+        Returns:
+            Dictionary of theta parameters.
+
+        """
+        theta = dict(
+            rho=dict(value=2., trainable=True, bounds=[1., None]),
+            gamma=dict(value=0., trainable=True, bounds=[None, None]),
+            beta=dict(value=10., trainable=True, bounds=[0., None])
+        )
+        return theta
+
+    def _get_similarity_parameters_cold(self):
+        """Return a dictionary of TensorFlow parameters.
+
+        Parameters are initialized by sampling from a relatively large
+        set.
+
+        Returns:
+            tf_theta: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        tf_theta = {}
+        if self.theta['rho']['trainable']:
+            tf_theta['rho'] = tf.get_variable(
+                "rho", [1], dtype=FLOAT_X,
+                initializer=tf.random_uniform_initializer(1., 3.)
+            )
+        if self.theta['gamma']['trainable']:
+            tf_theta['gamma'] = tf.get_variable(
+                "gamma", [1], dtype=FLOAT_X,
+                initializer=tf.random_uniform_initializer(1., 10.)
+            )
+        if self.theta['beta']['trainable']:
+            tf_theta['beta'] = tf.get_variable(
+                "beta", [1], dtype=FLOAT_X,
+                initializer=tf.random_uniform_initializer(0., 10.)
+            )
+        return tf_theta
+
+    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
+        """Exponential family similarity kernel.
+
+        Arguments:
+            z_q: A set of embedding points.
+                shape = (n_trial, n_dim)
+            z_r: A set of embedding points.
+                shape = (n_trial, n_dim)
+            tf_theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            tf_attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_trial, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = tf_theta['rho']
+        gamma = tf_theta['gamma']
+        beta = tf_theta['beta']
+
+        # Weighted Minkowski distance.
+        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
+        d_qref = tf.multiply(d_qref, tf_attention)
+        d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
+
+        # Linear similarity kernel.
+        # sim_qr = (beta * d_qref) + gamma
+        # max_d_qref = tf.reduce_max(d_qref)
+        sim_qr = gamma - (beta * d_qref)
+        return sim_qr
+
+    def _similarity(self, z_q, z_r, theta, attention):
+        """Exponential family similarity kernel.
+
+        Arguments:
+            z_q: A set of embedding points.
+                shape = (n_trial, n_dim)
+            z_r: A set of embedding points.
+                shape = (n_trial, n_dim)
+            theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_trial, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+        gamma = theta['gamma']['value']
+        beta = theta['beta']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_r))**rho
+        d_qref = np.multiply(d_qref, attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+
+        # Exponential family similarity kernel.
+        sim_qr = gamma - (beta * d_qref)
+        return sim_qr
+
+
 class Exponential(PsychologicalEmbedding):
     """An exponential family stochastic display embedding algorithm.
 
@@ -2147,8 +1995,7 @@ class Exponential(PsychologicalEmbedding):
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
 
         # Default inference settings.
-        # self.lr = 0.003
-        self.lr = 0.001  # TODO
+        self.lr = 0.001
 
     def _init_theta(self):
         """Return dictionary of default theta parameters.

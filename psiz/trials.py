@@ -24,6 +24,7 @@ Classes:
 
 Functions:
     stack: Combine a list of multiple SimilarityTrial objects into one.
+    squeeze: Squeeze indices to be small and consecutive.
     load_trials: Load a hdf5 file, saved using the `save` class method,
         as a SimilarityTrial object.
 
@@ -494,6 +495,7 @@ class Observations(SimilarityTrials):
     Methods:
         subset: Return a subset of judged trials given an index.
         set_group_id: Override the group ID of all trials.
+        set_weight: Override the weight of all trials.
         save: Save the observations data structure to disk.
 
     """
@@ -728,6 +730,19 @@ class Observations(SimilarityTrials):
         self._set_configuration_data(
             self.n_reference, self.n_select, self.is_ranked, group_id)
 
+    def set_weight(self, weight):
+        """Override the existing group_ids.
+
+        Arguments:
+            weight: The new weight. Can be an float or an array
+                of floats with shape=(self.n_trial,).
+        """
+        if np.isscalar(weight):
+            weight = weight * np.ones((self.n_trial), dtype=np.int32)
+        else:
+            weight = self._check_weight(weight)
+        self.weight = copy.copy(weight)
+
     def save(self, filepath):
         """Save the Docket object as an HDF5 file.
 
@@ -755,7 +770,7 @@ def stack(trials_list):
         objects.
 
         Arguments:
-            trials_list: A list of SimilarityTrials objects to be
+            trials_list: A tuple of SimilarityTrials objects to be
                 stacked.
 
         Returns:
@@ -807,6 +822,36 @@ def stack(trials_list):
             trials_stacked = Docket(
                 stimulus_set, n_select, is_ranked)
         return trials_stacked
+
+
+def squeeze(sim_trials, mode="sg"):
+    """Squeeze indices in trials to be small and consecutive.
+
+    Indices are reset to be between 0 and N-1 where N is the number of
+    unique stimuli used in sim_trials.
+
+    Arguments:
+        sim_trials: A SimilarityTrials object.
+        mode (optional): The mode in which to squueze the indices.
+
+    Returns:
+        sim_trials_sq: A SimilarityTrials object.
+
+    """
+    unique_stimuli = np.unique(sim_trials.stimulus_set)
+
+    # Remove placeholder value from list of unique stimuli indices.
+    loc = np.equal(unique_stimuli, -1)
+    unique_stimuli = unique_stimuli[np.logical_not(loc)]
+
+    # Squeeze trials.
+    sim_trials_sq = copy.deepcopy(sim_trials)
+    for new_idx, old_idx in enumerate(unique_stimuli):
+        locs = np.equal(sim_trials.stimulus_set, old_idx)
+        sim_trials_sq.stimulus_set[locs] = new_idx
+
+    # MAYBE Squeeze groups.
+    return sim_trials_sq, unique_stimuli
 
 
 def load_trials(filepath, verbose=0):

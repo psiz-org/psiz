@@ -192,12 +192,13 @@ class Catalog(object):
 
         f.close()
 
-    def subset(self, idx):
+    def subset(self, idx, squeeze=False):
         """Return a subset of catalog with new stimulus IDs."""
         catalog = copy.deepcopy(self)
         catalog.stimuli = catalog.stimuli.iloc[idx]
         catalog.n_stimuli = len(catalog.stimuli)
-        catalog.stimuli.at[:, "id"] = np.arange(0, catalog.n_stimuli)
+        if squeeze:
+            catalog.stimuli.at[:, "id"] = np.arange(0, catalog.n_stimuli)
         return catalog
 
 

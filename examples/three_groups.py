@@ -25,14 +25,19 @@ model.
 
 Example output:
 
-     Model Comparison (r^2)
+    Attention weights:
+          Novice | [0.81 0.20 0.26 2.72]
+    Intermediate | [0.42 0.92 1.12 1.54]
+          Expert | [0.08 1.80 1.80 0.32]
+
+    Model Comparison (r^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.99    0.63    0.11
-     Interm |   0.63    0.99    0.53
-     Expert |   0.13    0.59    0.98
+     Novice |   0.99    0.76    0.25
+     Interm |   0.77    0.99    0.63
+     Expert |   0.25    0.63    0.98
 
 """
 
@@ -114,6 +119,19 @@ def main():
                 simmat_truth[i_truth], simmat_infer[j_infer],
                 score='r2'
             )
+
+    # Display attention weights.
+    attention_weight = model_inferred.phi["phi_1"]["value"]
+    group_labels = ["Novice", "Intermediate", "Expert"]
+    print("    Attention weights:")
+    for i_group in range(model_inferred.n_group):        
+        print("    {0:>12} | {1}".format(
+            group_labels[i_group],
+            np.array2string(
+                attention_weight[i_group, :],
+                formatter={'float_kind':lambda x: "%.2f" % x})
+            )
+        )
 
     # Display comparison results. A good infferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2

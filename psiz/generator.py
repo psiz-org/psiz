@@ -519,6 +519,142 @@ class ActiveGenerator(TrialGenerator):
         return info_gain
 
 
+class HeuristicGenerator(TrialGenerator):
+    """A trial generator that uses a divide an conquer strategy.
+
+    Attributes:
+        config_list: TODO
+        placeholder_docket: TODO
+
+    Methods:
+        generate: TODO
+        update: TODO
+
+    """
+
+    def __init__(self, config_list=None):
+        """Initialize.
+
+        Arguments:
+            config_list (optional): A DataFrame indicating the trial
+                configurations to consider.
+        """
+        TrialGenerator.__init__(self)
+
+        # Default trial configurations (8c2).
+        if config_list is None:
+            config_list = pd.DataFrame({
+                'n_reference': np.array([8], dtype=np.int32),
+                'n_select': np.array([2], dtype=np.int32),
+                'is_ranked': [True],
+                'n_outcome': np.array([56], dtype=np.int32)
+            })
+        self.config_list = config_list
+
+    def generate(
+            self, n_trial, embedding, obs=None, group_id=None, verbose=0):
+        """Return a docket of trials based on provided arguments.
+
+        Trials are selected according to a divide and conquer strategy.
+
+        Arguments:
+            n_trial: A scalar indicating the number of trials to
+                generate.
+            embedding: A PsychologicalEmbedding object.
+            obs: An Observations object.
+            group_id (optional): Scalar indicating which group to
+                target.
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
+
+        Returns:
+            best_docket: A Docket object.
+
+        """
+        # TODO
+        n_reference = 8
+        n_select = 2
+        is_ranked = True
+
+        n_stimuli = embedding.n_stimuli
+        with_replacement = False
+        if n_trial > n_stimuli:
+            with_replacement = True
+
+        if group_id is None:
+            group_id = 0
+
+        # Create docket prioritizing least sampled stimuli and nearby
+        # references.
+        if obs is None:
+            query_priority = np.ones(n_stimuli) / n_stimuli
+        else:
+            # query_priority = np.zeros(n_stimuli)
+            # # Handle query.
+            # unique_elements, counts_elements = np.unique(
+            #     obs.stimulus_set[:, 0], return_counts=True
+            # )
+            # query_priority[unique_elements] = counts_elements
+            # query_priority = (np.max(query_priority) - query_priority) + .1
+            # query_priority = query_priority / np.sum(query_priority)
+            stim_weight = np.array([13, 7, 7, 2, 2, 2, 2, 2, 2])
+            stim_occurence = np.zeros(n_stimuli)
+            for idx in range(n_reference + 1):
+                unique_elements, counts_elements = np.unique(
+                    obs.stimulus_set[:, idx], return_counts=True
+                )
+                stim_occurence[unique_elements] = stim_occurence[unique_elements] + (stim_weight[idx] * counts_elements)
+            query_priority = (np.max(stim_occurence) - stim_occurence) + .01
+            query_priority = query_priority / np.sum(query_priority)
+
+        # Stochastically select query stimulus.
+        dmy_idx = np.arange(0, n_stimuli)
+        query_idx = np.random.choice(
+            dmy_idx, n_trial, replace=with_replacement, p=query_priority
+        )
+
+        # Stochastically select references based on distance.
+        stimulus_set = self._determine_references(
+            embedding, query_idx, n_reference, group_id
+        )
+        n_select = n_select * np.ones(n_trial, dtype=np.int32)
+        is_ranked = np.full(n_trial, is_ranked, dtype=bool)
+        docket = Docket(
+            stimulus_set, n_select=n_select, is_ranked=is_ranked
+        )
+        return docket
+
+    def _determine_references(
+            self, embedding, query_idx, n_reference, group_id):
+        """Select references stochastically based on distance."""
+        neighbor_threshold = np.minimum(10, embedding.n_stimuli)
+
+        n_trial = query_idx.shape[0]
+        dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+        z = embedding.z['value']
+
+        stimulus_set = np.zeros([n_trial, n_reference + 1], dtype=int)
+        stimulus_set[:, 0] = query_idx
+        for idx, q_idx in enumerate(query_idx):
+            distvec = embedding.distance(
+                np.expand_dims(z[q_idx], axis=0), z, group_id=group_id
+            )
+            # TODO
+            # distvec = distvec**2
+            # sorted_distvec = np.sort(distvec)
+            # locs = np.less(distvec, sorted_distvec[neighbor_threshold])
+            # distvec[locs] = sorted_distvec[neighbor_threshold]
+
+            ref_prob = np.max(distvec) - distvec
+            ref_prob[q_idx] = 0
+            ref_prob = ref_prob / np.sum(ref_prob)
+            stimulus_set[idx, 1:] = np.random.choice(
+                dmy_idx, n_reference, replace=False, p=ref_prob
+            )
+        return stimulus_set
+
+
 def stimulus_set_combos(n_neighbor, n_reference):
     """Determine all possible stimulus set combinations.
 
@@ -592,4 +728,3 @@ def normal_entropy(cov):
         (1 / 2 * np.log(np.linalg.det(cov)))
     )
     return h
-

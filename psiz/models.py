@@ -18,6 +18,7 @@
 
 Classes:
     PsychologicalEmbedding: Abstract base class for embedding model.
+    Linear: Embedding model using a linear similarity kernel.
     Exponential: Embedding model using an exponential family similarity
         kernel.
     HeavyTailed: Embedding model using a heavy-tailed similarity
@@ -1808,8 +1809,8 @@ class PsychologicalEmbedding(object):
         return emb
 
 
-class Interval(PsychologicalEmbedding):
-    """An model based on Interval MDS.
+class Linear(PsychologicalEmbedding):
+    """An linear model based on interval MDS.
 
     This embedding technique uses the following similarity kernel:
         s(x,y) = beta .* norm(x - y, rho) - gamma,

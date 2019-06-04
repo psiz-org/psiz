@@ -6,6 +6,15 @@ Purpose
 -------
 PsiZ provides the computational tools to infer a continuous, multivariate representation for a set of stimuli from ordinal similarity relations.
 
+Installation
+------------
+There are two ways to install PsiZ:
+
+   1. Install from PyPI using pip: ``pip install psiz`` (coming soon)
+   2. Clone from Git Hub: https://github.com/roads/psiz.git
+
+PsiZ also requires TensorFlow, which is not installed automatically since users will want to specify whether they use a GPU enabled version of TensorFlow.
+
 Quick Start
 -----------
 There are three pre-defined embedding models to choose from:
@@ -73,15 +82,6 @@ Modules
 * ``utils`` - Utility functions.
 * ``visualize`` - Functions for visualizing embeddings.
 * ``datasets`` - Functions for loading pre-collecgted datasets.
-
-Installation
-------------
-There are two ways to install PsiZ:
-
-   1. Install from PyPI using pip: ``pip install psiz`` (coming soon)
-   2. Clone from Git Hub: https://github.com/roads/psiz.git
-
-PsiZ also requires TensorFlow, which is not installed automatically since users will want to specify whether they use a GPU enabled version of TensorFlow.
 
 Support
 -------

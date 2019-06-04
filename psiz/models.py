@@ -835,16 +835,16 @@ class PsychologicalEmbedding(object):
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(val_idx)
 
-        # Evaluate current model as baseline.
+        # Evaluate current model to obtain starting loss.
         loss_train_best = self.evaluate(obs_train)
         loss_val_best = self.evaluate(obs_val)
         # loss_val_best = np.inf
         z_best = self.z['value']
         attention_best = self.phi['phi_1']['value']
         theta_best = self.theta
-        beat_baseline = False
+        beat_init = False
         if (verbose > 2):
-            print('        Baseline')
+            print('        Initialization')
             print(
                 '        '
                 '     --     | loss: {0: .6f} | loss_val: {1: .6f}'.format(
@@ -906,7 +906,7 @@ class PsychologicalEmbedding(object):
                 z_best = z
                 attention_best = attention
                 theta_best = theta
-                beat_baseline = True
+                beat_init = True
                 # print('        updated best')  # TODO
                 # print('        current best | z:   {0}'.format(z[0, 0:2]))  # TODO
                 # print('        current best | rho: {0}'.format(theta['rho']))  # TODO
@@ -919,7 +919,7 @@ class PsychologicalEmbedding(object):
         tf.reset_default_graph()
 
         if (verbose > 1):
-            if beat_baseline:
+            if beat_init:
                 print(
                     '        '
                     'Best Restart\n        loss: {1: .6f} | loss_val: {2: .6f}'.format(
@@ -1948,6 +1948,147 @@ class Linear(PsychologicalEmbedding):
 
         # Exponential family similarity kernel.
         sim_qr = gamma - (beta * d_qref)
+        return sim_qr
+
+
+class Inverse(PsychologicalEmbedding):
+    """An inverse-distance model.
+
+    This embedding technique uses the following similarity kernel:
+        s(x,y) = 1 / norm(x - y, rho)**tau,
+    where x and y are n-dimensional vectors. The similarity kernel has
+    two free parameters: rho, tau.
+
+    """
+
+    def __init__(self, n_stimuli, n_dim=2, n_group=1):
+        """Initialize.
+
+        Arguments:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded.
+            n_dim (optional): An integer indicating the dimensionalty
+                of the embedding.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group.
+        """
+        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
+
+        # Default inference settings.
+        self.lr = 0.001
+
+    def _init_theta(self):
+        """Return dictionary of default theta parameters.
+
+        Returns:
+            Dictionary of theta parameters.
+
+        """
+        cap = 2.2204e-16
+        theta = dict(
+            rho=dict(value=2., trainable=True, bounds=[1., None]),
+            tau=dict(value=1., trainable=True, bounds=[1., None]),
+            mu=dict(value=0., trainable=True, bounds=[cap, None])
+        )
+        return theta
+
+    def _get_similarity_parameters_cold(self):
+        """Return a dictionary of TensorFlow parameters.
+
+        Parameters are initialized by sampling from a relatively large
+        set.
+
+        Returns:
+            tf_theta: A dictionary of algorithm-specific TensorFlow
+                variables.
+
+        """
+        tf_theta = {}
+        if self.theta['rho']['trainable']:
+            tf_theta['rho'] = tf.get_variable(
+                "rho", [1], dtype=FLOAT_X,
+                initializer=tf.random_uniform_initializer(1., 3.)
+            )
+        if self.theta['tau']['trainable']:
+            tf_theta['tau'] = tf.get_variable(
+                "tau", [1], dtype=FLOAT_X,
+                initializer=tf.random_uniform_initializer(1., 2.)
+            )
+        if self.theta['mu']['trainable']:
+            tf_theta['mu'] = tf.get_variable(
+                "mu", [1], dtype=FLOAT_X,
+                initializer=tf.random_uniform_initializer(0.0000000001, .001)
+            )
+        return tf_theta
+
+    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
+        """Exponential family similarity kernel.
+
+        Arguments:
+            z_q: A set of embedding points.
+                shape = (n_trial, n_dim)
+            z_r: A set of embedding points.
+                shape = (n_trial, n_dim)
+            tf_theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            tf_attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_trial, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = tf_theta['rho']
+        tau = tf_theta['tau']
+        mu = tf_theta['mu']
+
+        # Weighted Minkowski distance.
+        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
+        d_qref = tf.multiply(d_qref, tf_attention)
+        d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
+
+        # Inverse distance similarity kernel.
+        sim_qr = 1 / (tf.pow(d_qref, tau) + mu)
+        return sim_qr
+
+    def _similarity(self, z_q, z_r, theta, attention):
+        """Exponential family similarity kernel.
+
+        Arguments:
+            z_q: A set of embedding points.
+                shape = (n_trial, n_dim)
+            z_r: A set of embedding points.
+                shape = (n_trial, n_dim)
+            theta: A dictionary of algorithm-specific parameters
+                governing the similarity kernel.
+            attention: The weights allocated to each dimension
+                in a weighted minkowski metric.
+                shape = (n_trial, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        # Algorithm-specific parameters governing the similarity kernel.
+        rho = theta['rho']['value']
+        tau = theta['tau']['value']
+        mu = theta['mu']['value']
+
+        # Weighted Minkowski distance.
+        d_qref = (np.abs(z_q - z_r))**rho
+        d_qref = np.multiply(d_qref, attention)
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+
+        # Exponential family similarity kernel.
+        sim_qr = 1 / (d_qref**tau + mu)
         return sim_qr
 
 

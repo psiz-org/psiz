@@ -1914,6 +1914,7 @@ class Linear(PsychologicalEmbedding):
         # sim_qr = (beta * d_qref) + gamma
         # max_d_qref = tf.reduce_max(d_qref)
         sim_qr = gamma - (beta * d_qref)
+        sim_qr = tf.maximum(sim_qr, 0)
         return sim_qr
 
     def _similarity(self, z_q, z_r, theta, attention):
@@ -1948,6 +1949,7 @@ class Linear(PsychologicalEmbedding):
 
         # Exponential family similarity kernel.
         sim_qr = gamma - (beta * d_qref)
+        sim_qr = np.maximum(sim_qr, 0)
         return sim_qr
 
 

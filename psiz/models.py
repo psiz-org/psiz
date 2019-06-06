@@ -902,21 +902,16 @@ class PsychologicalEmbedding(object):
                 )
                 print('')
 
-            if loss_val < loss_val_best:
+            loss_combined = .9 * loss_train + .1 * loss_val
+            loss_combined_best = .9 * loss_train_best + .1 * loss_val_best
+            if loss_combined < loss_combined_best:
                 loss_val_best = loss_val
                 loss_train_best = loss_train
                 z_best = z
                 attention_best = attention
                 theta_best = theta
                 beat_init = True
-                # print('        updated best')  # TODO
-                # print('        current best | z:   {0}'.format(z[0, 0:2]))  # TODO
-                # print('        current best | rho: {0}'.format(theta['rho']))  # TODO
-                # print('        current best | tau: {0}'.format(theta['tau']))  # TODO
 
-        # print('        final | z:   {0}'.format(z_best[0, 0:2]))  # TODO
-        # print('        final | rho: {0}'.format(theta_best['rho']))  # TODO
-        # print('        final | tau: {0}'.format(theta_best['tau']))  # TODO
         sess.close()
         tf.reset_default_graph()
 

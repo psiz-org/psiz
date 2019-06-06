@@ -36,6 +36,75 @@ from scipy.optimize import minimize
 from scipy.stats import pearsonr
 
 
+def probe_convergence(
+        obs, model, n_stimuli, n_dim, n_partition=10, n_back=2, n_shuffle=3,
+        n_restart=50):
+    """Evaluate if a sufficient number of observations have been collected.
+
+    In general, more observations improve model inference. However,
+    there are generally diminishing returns to collecting more data.
+    This function determines the impact of adding a little bit more
+    data. Ideally, you should have sufficient data that adding more
+    does not dramatically alter the structure of the inferred
+    embedding. Structural changes are assesed by comparing the pair-
+    wise similarity matrix of different embeddings.
+
+    Arguments:
+        obs: An Observations object.
+        model: A PsychologicalEmbedding object.
+        n_stimuli: The number of stimuli.
+        n_dim: The dimensionality of the embedding.
+        n_partition (optional): The number of partitions.
+        n_back (optional):  The number of partitions to evaluate. Can
+            be [1, n_partition-1].
+        n_shuffle (optional): The number of times to shuffle and
+            repeeat tha analysis.
+        n_restart (optional): The number of restarts to use when
+            fitting the embeddings.
+    """
+    # Check arguments.
+    n_back = np.maximum(n_back, 1)
+    n_back = np.minimum(n_back, n_partition-1)
+
+    n_trial_array = np.linspace(0, obs.n_trial, n_partition + 1)
+    n_trial_array = np.ceil(n_trial_array[1:]).astype(int)
+
+    rho = np.ones([n_shuffle, n_partition]) * np.nan
+    for i_shuffle in range(n_shuffle):
+        print('  Shuffle {0}'.format(i_shuffle + 1))
+        # Randomize observations.
+        rand_idx = np.random.permutation(obs.n_trial)
+        obs = obs.subset(rand_idx)
+
+        # Infer embeddings for an increasing number of observations.
+        first_part = True
+        emb_list = [None] * n_partition
+        for i_part in range(n_partition-n_back-1, n_partition):
+            include_idx = np.arange(0, n_trial_array[i_part])
+            curr_obs = obs.subset(include_idx)
+            curr_emb = model(n_stimuli, n_dim=n_dim)
+            curr_emb.fit(curr_obs, n_restart=n_restart, verbose=2)
+            emb_list[i_part] = curr_emb
+
+            if not first_part:
+                simmat_0 = similarity_matrix(
+                    emb_list[i_part - 1].similarity,
+                    emb_list[i_part - 1].z['value']
+                )
+                simmat_1 = similarity_matrix(
+                    emb_list[i_part].similarity, emb_list[i_part].z['value']
+                )
+                rho[i_shuffle, i_part] = matrix_comparison(
+                    simmat_0, simmat_1, score='pearson'
+                )
+                print('    {0} | rho: {1:.2f}'.format(i_part, rho[i_shuffle, i_part]))
+            else:
+                first_part = False
+    rho = rho[:, 1:]
+
+    return {"n_trial_array": n_trial_array, "rho": rho}
+
+
 def similarity_matrix(similarity_fn, z):
         """Return a pairwise similarity matrix.
 

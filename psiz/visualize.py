@@ -22,6 +22,8 @@ Todo:
     filename -> fname
 """
 
+import os
+
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
 import matplotlib.pyplot as plt
@@ -40,7 +42,8 @@ def visualize_embedding_static(
             shape = (n_stimuli, 1)
         classes: (optional) A dictionary mapping class IDs to strings.
         filename (optional): The pdf filename to save the figure,
-            otherwise the figure is displayed.
+            otherwise the figure is displayed. Can be either a path
+            string or a pathlib Path object.
 
     """
     # Settings
@@ -123,7 +126,7 @@ def visualize_embedding_static(
     else:
         # Note: The dpi must be supplied otherwise the aspect ratio will be
         # changed when savefig is called.
-        plt.savefig(filename, format='pdf', bbox_inches="tight", dpi=300)
+        plt.savefig(os.fspath(filename), format='pdf', bbox_inches="tight", dpi=300)
 
 
 # def visualize_embedding_movie(
@@ -131,6 +134,47 @@ def visualize_embedding_static(
 #     """
 #     """
 # TODO
+
+def visualize_convergence(data, filename=None):
+    """Visualize convergence analysis.
+
+    Arguments:
+        data: The output of calling psiz.utils.probe_convergence.
+        filename (optional): The pdf filename to save the figure,
+            otherwise the figure is displayed. Can be either a path
+            string or a pathlib Path object.
+    """
+    n_trial_array = data["n_trial_array"][1:]
+    rho = data["rho"]
+    rho_mean = np.mean(rho, axis=0)
+    rho_std = np.std(rho, axis=0)
+
+    fig, ax = plt.subplots()
+    ax.plot(
+        n_trial_array, rho_mean,
+        linestyle='-', marker="o"
+    )
+    ax.fill_between(
+        n_trial_array, rho_mean - rho_std, rho_mean + rho_std,
+        alpha=.5
+    )
+    ax.set_xlabel('Number of Trials')
+    ax.set_ylabel('Pearson Correlation')
+    ax.set_ylim([0, 1])
+
+    str_rho = r"$\rho$ = {0:.2f}".format(rho_mean[-1])
+    ax.text(
+        n_trial_array[-1], rho_mean[-1] + .03, str_rho,
+        horizontalalignment='center', verticalalignment='center'
+    )
+
+    if filename is None:
+        plt.show()
+    else:
+        # Note: The dpi must be supplied otherwise the aspect ratio will be
+        # changed when savefig is called.
+        plt.savefig(os.fspath(filename), format='pdf', bbox_inches="tight", dpi=300)
+
 
 def infer_legend(unique_class_list, classes):
     """Infer text for legend entries."""

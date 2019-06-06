@@ -670,7 +670,7 @@ class PsychologicalEmbedding(object):
             attention_list.append(tf_attention)
             constraint_list.append(
                 tf_attention.assign(self._project_attention(tf_attention))
-            ) 
+            )
         tf_attention_constraint = tf.group(*constraint_list)
         tf_attention = tf.concat(attention_list, axis=0)
         return tf_attention, tf_attention_constraint
@@ -770,7 +770,8 @@ class PsychologicalEmbedding(object):
                 ),
                 trainable=False
             )
-        return tf_z
+        tf_z_constraint = tf_z.assign(self._center_z(tf_z))
+        return tf_z, tf_z_constraint
 
     def set_log(self, do_log, log_dir=None, delete_prev=False):
         """State changing method that sets TensorBoard logging.
@@ -853,8 +854,9 @@ class PsychologicalEmbedding(object):
             print('')
 
         # Initialize new model.
-        (tf_loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
-            tf_theta_bounds, tf_obs) = self._core_model(init_mode)
+        (tf_loss, tf_z, tf_z_constraint, tf_attention,
+            tf_attention_constraint, tf_theta, tf_theta_bounds,
+            tf_obs) = self._core_model(init_mode)
 
         # Bind observations.
         tf_obs_train = self._bind_obs(tf_obs, obs_train)
@@ -1048,7 +1050,7 @@ class PsychologicalEmbedding(object):
                 the negative loglikelihood.
 
         """
-        (tf_loss, _, _, _, _, _, tf_obs) = self._core_model('exact')
+        (tf_loss, _, _, _, _, _, _, tf_obs) = self._core_model('exact')
 
         init = tf.global_variables_initializer()
         sess = tf.Session()
@@ -1078,6 +1080,15 @@ class PsychologicalEmbedding(object):
         }
         return feed_dict
 
+    def _center_z(self, tf_z):
+        """Return zero-centered embedding.
+
+        Constraint is used to improve numerical stability.
+        """
+        tf_mean = tf.reduce_mean(tf_z, axis=0, keepdims=True)
+        tf_z_centered = tf_z - tf_mean
+        return tf_z_centered
+
     def _project_attention(self, tf_attention_0):
         """Return projection of attention weights."""
         n_dim = tf.shape(tf_attention_0, out_type=FLOAT_X)[1]
@@ -1087,7 +1098,6 @@ class PsychologicalEmbedding(object):
         tf_attention_proj = tf.divide(
             tf_attention_0, tf_attention_1
         )
-
         return tf_attention_proj
 
     def _core_model(self, init_mode):
@@ -1097,7 +1107,7 @@ class PsychologicalEmbedding(object):
             tf_theta = self._get_similarity_parameters(init_mode)
             tf_theta_bounds = self._get_similarity_constraints(tf_theta)
             tf_attention, tf_attention_constraint = self._get_attention(init_mode)
-            tf_z = self._get_embedding(init_mode)
+            tf_z, tf_z_constraint = self._get_embedding(init_mode)
 
             # Observation data.
             tf_stimulus_set = tf.placeholder(
@@ -1215,8 +1225,8 @@ class PsychologicalEmbedding(object):
             # loss = loss + attention_loss
 
         return (
-            loss, tf_z, tf_attention, tf_attention_constraint, tf_theta,
-            tf_theta_bounds, tf_obs
+            loss, tf_z, tf_z_constraint, tf_attention,
+            tf_attention_constraint, tf_theta, tf_theta_bounds, tf_obs
         )
 
     def attention_distance(self, p, q):

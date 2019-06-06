@@ -902,7 +902,7 @@ class PsychologicalEmbedding(object):
                 )
                 print('')
 
-            if loss_train < loss_train_best:
+            if loss_val < loss_val_best:
                 loss_val_best = loss_val
                 loss_train_best = loss_train
                 z_best = z
@@ -924,7 +924,7 @@ class PsychologicalEmbedding(object):
             if beat_init:
                 print(
                     '        '
-                    'Best Restart\n        loss: {1: .6f} | loss_val: {2: .6f}'.format(
+                    'Best Restart\n        n_epoch: {0} | loss: {1: .6f} | loss_val: {2: .6f}'.format(
                         epoch, loss_train_best, loss_val_best)
                 )
             else:

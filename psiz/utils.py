@@ -36,9 +36,9 @@ from scipy.optimize import minimize
 from scipy.stats import pearsonr
 
 
-def probe_convergence(
+def assess_convergence(
         obs, model, n_stimuli, n_dim, n_partition=10, n_back=2, n_shuffle=3,
-        n_restart=50):
+        n_restart=50, score='pearson', verbose=0):
     """Evaluate if a sufficient number of observations have been collected.
 
     In general, more observations improve model inference. However,
@@ -61,6 +61,9 @@ def probe_convergence(
             repeeat tha analysis.
         n_restart (optional): The number of restarts to use when
             fitting the embeddings.
+        score (optional): Measure to use when comparing two similarity
+            matrices.
+        verbose (optional): Verbosity.
     """
     # Check arguments.
     n_back = np.maximum(n_back, 1)
@@ -71,7 +74,8 @@ def probe_convergence(
 
     rho = np.ones([n_shuffle, n_partition]) * np.nan
     for i_shuffle in range(n_shuffle):
-        print('  Shuffle {0}'.format(i_shuffle + 1))
+        if verbose > 0:
+            print('  Shuffle {0}'.format(i_shuffle + 1))
         # Randomize observations.
         rand_idx = np.random.permutation(obs.n_trial)
         obs = obs.subset(rand_idx)
@@ -83,7 +87,7 @@ def probe_convergence(
             include_idx = np.arange(0, n_trial_array[i_part])
             curr_obs = obs.subset(include_idx)
             curr_emb = model(n_stimuli, n_dim=n_dim)
-            curr_emb.fit(curr_obs, n_restart=n_restart, verbose=2)
+            curr_emb.fit(curr_obs, n_restart=n_restart, verbose=verbose)
             emb_list[i_part] = curr_emb
 
             if not first_part:
@@ -95,9 +99,12 @@ def probe_convergence(
                     emb_list[i_part].similarity, emb_list[i_part].z['value']
                 )
                 rho[i_shuffle, i_part] = matrix_comparison(
-                    simmat_0, simmat_1, score='pearson'
+                    simmat_0, simmat_1, score=score
                 )
-                print('    {0} | rho: {1:.2f}'.format(i_part, rho[i_shuffle, i_part]))
+                if verbose > 0:
+                    print('    {0} | rho: {1:.2f}'.format(
+                        i_part, rho[i_shuffle, i_part]
+                    ))
             else:
                 first_part = False
     rho = rho[:, 1:]

@@ -139,7 +139,7 @@ def visualize_convergence(data, filename=None):
     """Visualize convergence analysis.
 
     Arguments:
-        data: The output of calling psiz.utils.probe_convergence.
+        data: The output of calling psiz.utils.assess_convergence.
         filename (optional): The pdf filename to save the figure,
             otherwise the figure is displayed. Can be either a path
             string or a pathlib Path object.

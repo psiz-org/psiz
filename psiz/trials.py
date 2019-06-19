@@ -481,7 +481,7 @@ class Observations(SimilarityTrials):
             shape = (n_trial,) TODO MAYBE
 
     Notes:
-        stimulus_set: The order of the reference stimuli is important.
+        response_set: The order of the reference stimuli is important.
             As usual, the the first column contains indices indicating
             query stimulus. The remaining columns contain indices
             indicating the reference stimuli. An agent's selected
@@ -500,14 +500,14 @@ class Observations(SimilarityTrials):
 
     """
 
-    def __init__(self, stimulus_set, n_select=None, is_ranked=None,
+    def __init__(self, response_set, n_select=None, is_ranked=None,
                  group_id=None, agent_id=None, weight=None, rt_ms=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
 
         Arguments:
-            stimulus_set: The order of reference indices is important.
+            response_set: The order of reference indices is important.
                 An agent's selected references are listed first (in
                 order of selection if the trial is ranked) and
                 remaining unselected references are listed in any
@@ -531,7 +531,7 @@ class Observations(SimilarityTrials):
                 (in milliseconds) of the agent for each trial.
                 shape = (n_trial,1)
         """
-        SimilarityTrials.__init__(self, stimulus_set, n_select, is_ranked)
+        SimilarityTrials.__init__(self, response_set, n_select, is_ranked)
 
         # Handle default settings.
         if group_id is None:

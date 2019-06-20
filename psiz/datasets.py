@@ -163,18 +163,24 @@ class Catalog(object):
             filepath: String specifying the path to save the data.
 
         """
+        max_filepath_length = len(max(self.stimuli.filepath.values, key=len))
+
         f = h5py.File(filepath, "w")
         f.create_dataset("stimulus_id", data=self.stimuli.id.values)
         f.create_dataset(
             "stimulus_filepath",
-            data=self.stimuli.filepath.values.astype(dtype="S50")
-        )  # TODO determine max string length
+            data=self.stimuli.filepath.values.astype(
+                dtype="S{0}".format(max_filepath_length)
+            )
+        )
         f.create_dataset("class_id", data=self.stimuli.class_id.values)
 
         if self.class_label is not None:
+            max_label_length = len(max(self.class_label.values(), key=len))
+
             n_class = len(self.class_label)
             class_map_class_id = np.empty(n_class, dtype=np.int)
-            class_map_label = np.empty(n_class, dtype="S50")
+            class_map_label = np.empty(n_class, dtype="S{0}".format(max_label_length))
             idx = 0
             for key, value in self.class_label.items():
                 class_map_class_id[idx] = key

@@ -60,7 +60,7 @@ def main():
     for i_round in range(n_step):
         emb_inferred = Exponential(n_stimuli, n_dim, n_group)
         include_idx = np.arange(0, n_obs[i_round])
-        loss[i_round] = emb_inferred.fit(obs.subset(include_idx), 40)
+        loss[i_round], _ = emb_inferred.fit(obs.subset(include_idx), 40)
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(

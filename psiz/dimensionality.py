@@ -103,7 +103,7 @@ def suggest_dimensionality(
                 print('    Fold: ', i_fold)
             # Train
             obs_train = obs.subset(train_index)
-            loss_train[i_fold] = embedding.fit(
+            loss_train[i_fold], _ = embedding.fit(
                 obs_train, n_restart=n_restart, verbose=verbose-1)
             # Test
             obs_test = obs.subset(test_index)
@@ -212,7 +212,7 @@ def dimension_search(
                 print('    Fold: ', i_fold)
             # Train
             obs_train = obs.subset(train_index)
-            loss_train[i_fold] = embedding.fit(
+            loss_train[i_fold], _ = embedding.fit(
                 obs_train, n_restart=n_restart, verbose=verbose-1)
             # Test
             obs_test = obs.subset(test_index)

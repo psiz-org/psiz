@@ -811,6 +811,9 @@ class PsychologicalEmbedding(object):
                 integers display an increasing amount of information.
 
         Returns:
+            loss_train_best: The average loss per observation on the
+                train set. Loss is defined as the negative
+                loglikelihood.
             loss_val_best: The average loss per observation on the
                 validation set. Loss is defined as the negative
                 loglikelihood.
@@ -889,9 +892,10 @@ class PsychologicalEmbedding(object):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
             (loss_train, loss_val, epoch, z, attention, theta) = self._fit_restart(
-                sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
-                tf_theta, tf_theta_bounds, tf_learning_rate, train_op,
-                summary_op, tf_obs_train, tf_obs_val, i_restart, verbose
+                sess, tf_loss, tf_z, tf_z_constraint, tf_attention,
+                tf_attention_constraint, tf_theta, tf_theta_bounds,
+                tf_learning_rate, train_op, summary_op, tf_obs_train,
+                tf_obs_val, i_restart, verbose
             )
 
             if (verbose > 2):
@@ -929,10 +933,11 @@ class PsychologicalEmbedding(object):
         self.phi['phi_1']['value'] = attention_best
         self._set_theta(theta_best)
 
-        return loss_train_best  # TODO also return loss_train_best
+        return loss_train_best, loss_val_best
 
     def _fit_restart(
-            self, sess, tf_loss, tf_z, tf_attention, tf_attention_constraint,
+            self, sess, tf_loss, tf_z, tf_z_constraint,
+            tf_attention, tf_attention_constraint,
             tf_theta, tf_theta_bounds, tf_learning_rate, train_op, summary_op,
             tf_obs_train, tf_obs_val, i_restart, verbose):
         """Embed using a TensorFlow implementation."""
@@ -982,6 +987,7 @@ class PsychologicalEmbedding(object):
                 feed_dict={tf_learning_rate: lr, **tf_obs_train}
             )
             sess.run(tf_theta_bounds)
+            sess.run(tf_z_constraint)  # TODO
             sess.run(tf_attention_constraint)
             loss_val = sess.run(
                 tf_loss, feed_dict=tf_obs_val

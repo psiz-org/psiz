@@ -209,8 +209,9 @@ class ActiveGenerator(TrialGenerator):
 
         Returns:
             best_docket: A Docket object.
-            best_ig: A numpy.ndarray containing the expected
-                information gain for each trial.
+            ig_info: A dictionary containing information gain information.
+                ig_best: A numpy.ndarray containing the expected
+                information gain for each trial in the docket.
                 shape = (n_trial,)
 
         Todo:
@@ -241,11 +242,13 @@ class ActiveGenerator(TrialGenerator):
         # query_idx = np.random.choice(
         #     query_idx, n_query, replace=False, p=query_prob)
 
-        # Stochastically select query stimulus based on KL divergence.
-        query_priority = self._query_kl_priority(embedding, samples)
-        query_prob = query_priority / np.sum(query_priority)
-        query_idx = np.random.choice(
-            query_idx, n_query, replace=False, p=query_prob)
+        # If necessary, stochastically select query stimulus based on
+        # KL divergence.
+        if n_query < n_stimuli:
+            query_priority = self._query_kl_priority(embedding, samples)
+            query_prob = query_priority / np.sum(query_priority)
+            query_idx = np.random.choice(
+                query_idx, n_query, replace=False, p=query_prob)
 
         # Deep copy.
         placeholder_docket = Docket(
@@ -253,11 +256,15 @@ class ActiveGenerator(TrialGenerator):
             n_select=copy.copy(self.placeholder_docket.n_select),
             is_ranked=copy.copy(self.placeholder_docket.is_ranked)
         )
-        (best_docket, best_ig) = self._determine_references(
+        (best_docket, ig_best, ig_all) = self._determine_references(
             embedding, samples, placeholder_docket, query_idx,
-            n_trial, group_id
+            n_trial, group_id, verbose=verbose
         )
-        return (best_docket, best_ig)
+        ig_info = {
+            "ig_all": ig_best,
+            "ig_trial": ig_all
+        }
+        return (best_docket, ig_info)
 
     def update_samples(self, embedding, obs, trs, samples):
         """Update posterior samples."""
@@ -366,7 +373,7 @@ class ActiveGenerator(TrialGenerator):
 
     def _determine_references(
             self, embedding, samples, docket, query_idx, n_trial,
-            group_id):
+            group_id, verbose=0):
         n_query = query_idx.shape[0]
 
         # Determine how many times each query stimulus should be used.
@@ -429,8 +436,11 @@ class ActiveGenerator(TrialGenerator):
         chosen_idx = np.hstack((placeholder_zeros, chosen_idx))
 
         best_docket = None
-        best_ig = None
+        ig_best = None
+        ig_all = []
         for i_query in range(n_query):
+            if verbose > 0:
+                print("  Trial {0} of {1}".format(i_query, n_query))
             # Substitute actual indices in candidate trials.
             r = chosen_idx[i_query]
             stimulus_set = r[placeholder_stimulus_set]
@@ -449,17 +459,22 @@ class ActiveGenerator(TrialGenerator):
                 top_indices[0:n_trial_per_query[i_query]]
             )
             curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
+            if verbose > 0:
+                print("    {0}".format(curr_best_ig))
+
+            ig_all.append(ig)
             # Add to dynamic list.
-            if best_ig is None:
-                best_ig = curr_best_ig
+            if ig_best is None:
+                ig_best = curr_best_ig
             else:
-                best_ig = np.hstack((best_ig, curr_best_ig))
+                ig_best = np.hstack((ig_best, curr_best_ig))
+
             if best_docket is None:
                 best_docket = top_candidate
             else:
                 best_docket = stack((best_docket, top_candidate))
 
-        return (best_docket, best_ig)
+        return (best_docket, ig_best, ig_all)
 
     def _information_gain(
             self, embedding, samples, docket, group_id=None):

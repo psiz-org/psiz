@@ -38,13 +38,9 @@ Notes:
         weights for each group while sharing all other parameters.
 
 Todo:
-    - MAYBE add agent_id and/or session_id. My preference is not to
-        have another attribute and let the user put whatever
-        information they want in the group_id field with the
-        understanding that this will impact inference of group
-        variables. Unless we add hierarchical models, don't need an
-        agent ID. If we did have hierarchical models, probably better
-        off making group_id a 2D array shape=[n_trial, n_group_level]
+    - MAYBE restructure group_id and agent_id. If we wanted to allow
+    for arbitrary hierarchical models, maybe better off making
+    group_id a 2D array of shape=(n_trial, n_group_level)
     - MAYBE make config_list a custom object
 
 """

@@ -19,12 +19,15 @@
 Functions:
     similarity_matrix: Return the similarity matrix characterizing
         the embedding.
-    matrix_comparison:
-    compare_models:
-    elliptical_slice:
-    rotation_matrix:
-    affine_transformation:
-    procrustean_solution:
+    matrix_comparison: Compute correlation between two matrices.
+    compare_models: Compare the similarity structure between two
+        embedding models.
+    elliptical_slice: An elliptical slice sampler.
+    rotation_matrix: Returns a two-dimensional rotation matrix.
+    affine_transformation: Performs an affine transformation on a set
+        of points.
+    procrustean_solution: Attempt to allign two embeddings by finding
+        a Procrustean solution.
 """
 
 import math

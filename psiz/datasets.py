@@ -20,12 +20,9 @@ Functions:
     load_dataset: Load observations for the requested dataset.
 
 Todo:
-    - Move Progbar to utils.
     - create .psiz directory on installation (if it doesn' exist)
-    - change origin URLs once a better host location is created.
     - migrate to scalable solution described in roadmap.
     - Give credit to keras library.
-    - Clean up python 2 compatible code to just be python 3.
     - Query public (read-only) database.
 
 """

@@ -26,7 +26,6 @@ Classes:
         informatin gain.
 
 Todo:
-    - implement ActiveGenerator
     - config_list should automatically generate number of outcomes,
         user should not need to provide this. Perhaps
         should be encapsulated as a class and class re-used within

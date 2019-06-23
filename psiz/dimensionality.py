@@ -18,7 +18,7 @@
 
 Functions:
     suggest_dimensionality: Use a cross-validation procedure to select
-        a dimensionality for an embedding procedure.
+        a dimensionality for an embedding procedure. DEPRECATED
     dimension_search: Use a validation procedure to select
         the dimensionality for an embedding procedure.
     visualize_dimension_search: Visualize results of dimension search.

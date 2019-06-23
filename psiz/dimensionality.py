@@ -36,6 +36,8 @@ def suggest_dimensionality(
         freeze_options=None, n_restart=20, n_fold=3, verbose=0):
     """Suggest an embedding dimensionality given provided observations.
 
+    DEPRECATED use `dimension_search`.
+
     Sweep over the list of candidate dimensions, starting with the
     smallest, in order to find the best dimensionality for the data.
     Dimensions are examined in ascending order. The search stops when
@@ -156,15 +158,17 @@ def dimension_search(
             train and test data.
         n_fold (optional): Integer specifying the number of folds to
             use for cross-validation when selection the dimensionality.
-            Can not be more than n_split.
+            Must be at least one and cannot be more than n_split.
         max_patience (optional): Integer specifying how many dimensions
             to wait for an improvement in test loss.
         verbose (optional): An integer specifying the verbosity of
             printed output.
 
     Returns:
-        best_dimensionality: An integer indicating the dimensionality
-        (from the candiate list) that minimized the loss function.
+        summary: A dictionary.
+            dim_best: An integer indicating the dimensionality
+                (from the candiate list) that minimized the loss
+                function.
 
     """
     n_group = len(np.unique(obs.group_id))
@@ -260,7 +264,7 @@ def dimension_search(
         "loss_test": loss_test_list,
         "dim_best": best_dimensionality
     }
-    return best_dimensionality, summary
+    return summary
 
 
 def visualize_dimension_search(summary, fp_fig=None):

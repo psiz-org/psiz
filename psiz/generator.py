@@ -261,8 +261,8 @@ class ActiveGenerator(TrialGenerator):
             n_trial, group_id, verbose=verbose
         )
         ig_info = {
-            "ig_all": ig_best,
-            "ig_trial": ig_all
+            "ig_trial": ig_best,
+            "ig_all": ig_all
         }
         return (best_docket, ig_info)
 
@@ -448,8 +448,9 @@ class ActiveGenerator(TrialGenerator):
             # Set docket using actual stimulus_set.
             docket.stimulus_set = stimulus_set
 
-            ig = self._information_gain(
-                embedding, samples, docket, group_id=group_id)
+            ig = information_gain(
+                embedding, samples, docket, group_id=group_id
+            )
 
             # Grab the top N trials as specified by 'n_trial_per_query'.
             top_indices = np.argsort(-ig)
@@ -475,63 +476,6 @@ class ActiveGenerator(TrialGenerator):
                 best_docket = stack((best_docket, top_candidate))
 
         return (best_docket, ig_best, ig_all)
-
-    def _information_gain(
-            self, embedding, samples, docket, group_id=None):
-        """Return expected information gain of trial(s) in docket.
-
-        Information gain is determined by computing the mutual
-        mutual information between the candidate trial(s) and the
-        existing set of observations.
-
-        Arguments:
-            embedding: A PsychologicalEmbedding object.
-            samples: Dictionary of sampled parameters.
-                'z': shape = (n_stimuli, n_dim, n_sample)
-            docket: A Docket object.
-            group_id (optional): A scalar or an array with
-                shape = (n_trial,).
-
-        Returns:
-            A numpy.ndarray representing the expected information gain
-            of the candidate trial(s).
-            shape = (n_trial,)
-
-        """
-        cap = 2.2204e-16
-
-        # Note: z_samples has shape = (n_stimuli, n_dim, n_sample)
-        z_samples = samples['z']
-        # Note: prob_all has shape = (n_trial, n_outcome, n_sample)
-        prob_all = embedding.outcome_probability(
-            docket, group_id=group_id, z=z_samples)
-
-        # First term of mutual information.
-        # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c)
-        # Take mean over samples to approximate p(y_i | obs, c).
-        # shape = (n_trial, n_outcome)
-        first_term = ma.mean(prob_all, axis=2)
-        # Use threshold to avoid log(0) issues (unlikely to happen).
-        first_term = ma.maximum(cap, first_term)
-        first_term = first_term * ma.log(first_term)
-        # Sum over possible outcomes.
-        first_term = -1 * ma.sum(first_term, axis=1)
-
-        # Second term of mutual information.
-        # E[H(Y | Z, D, x)]
-        # Use threshold to avoid log(0) issues (likely to happen).
-        prob_all = ma.maximum(cap, prob_all)        # shape = (n_trial, n_outcome, n_sample)
-        second_term = prob_all * ma.log(prob_all)   # shape = (n_trial, n_outcome, n_sample)
-        # Take the sum over the possible outcomes.
-        second_term = ma.sum(second_term, axis=1)   # shape = (n_trial, n_sample)
-        # Take the sum over all samples.
-        second_term = ma.mean(second_term, axis=1)  # shape = (n_trial)
-
-        info_gain = first_term + second_term
-
-        # Convert to normal numpy.ndarray.
-        info_gain = info_gain.data
-        return info_gain
 
 
 class HeuristicGenerator(TrialGenerator):
@@ -668,6 +612,63 @@ class HeuristicGenerator(TrialGenerator):
                 dmy_idx, n_reference, replace=False, p=ref_prob
             )
         return stimulus_set
+
+
+def information_gain(embedding, samples, docket, group_id=None):
+    """Return expected information gain of trial(s) in docket.
+
+    Information gain is determined by computing the mutual
+    mutual information between the candidate trial(s) and the
+    existing set of observations.
+
+    Arguments:
+        embedding: A PsychologicalEmbedding object.
+        samples: Dictionary of sampled parameters.
+            'z': shape = (n_stimuli, n_dim, n_sample)
+        docket: A Docket object.
+        group_id (optional): A scalar or an array with
+            shape = (n_trial,).
+
+    Returns:
+        A numpy.ndarray representing the expected information gain
+        of the candidate trial(s).
+        shape = (n_trial,)
+
+    """
+    cap = 2.2204e-16
+
+    # Note: z_samples has shape = (n_stimuli, n_dim, n_sample)
+    z_samples = samples['z']
+    # Note: prob_all has shape = (n_trial, n_outcome, n_sample)
+    prob_all = embedding.outcome_probability(
+        docket, group_id=group_id, z=z_samples)
+
+    # First term of mutual information.
+    # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c)
+    # Take mean over samples to approximate p(y_i | obs, c).
+    # shape = (n_trial, n_outcome)
+    first_term = ma.mean(prob_all, axis=2)
+    # Use threshold to avoid log(0) issues (unlikely to happen).
+    first_term = ma.maximum(cap, first_term)
+    first_term = first_term * ma.log(first_term)
+    # Sum over possible outcomes.
+    first_term = -1 * ma.sum(first_term, axis=1)
+
+    # Second term of mutual information.
+    # E[H(Y | Z, D, x)]
+    # Use threshold to avoid log(0) issues (likely to happen).
+    prob_all = ma.maximum(cap, prob_all)        # shape = (n_trial, n_outcome, n_sample)
+    second_term = prob_all * ma.log(prob_all)   # shape = (n_trial, n_outcome, n_sample)
+    # Take the sum over the possible outcomes.
+    second_term = ma.sum(second_term, axis=1)   # shape = (n_trial, n_sample)
+    # Take the sum over all samples.
+    second_term = ma.mean(second_term, axis=1)  # shape = (n_trial)
+
+    info_gain = first_term + second_term
+
+    # Convert to normal numpy.ndarray.
+    info_gain = info_gain.data
+    return info_gain
 
 
 def stimulus_set_combos(n_neighbor, n_reference):

@@ -24,9 +24,12 @@ Functions:
     visualize_dimension_search: Visualize results of dimension search.
 """
 
+import os
+
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import matplotlib.pyplot as plt
+from scipy.stats import sem
 
 import psiz.utils as ut
 
@@ -176,7 +179,7 @@ def dimension_search(
     if dim_list is None:
         dim_list = range(2, 21)
     else:
-        # Make sure dimensions are in ascending order
+        # Make sure dimensions are in ascending order.
         dim_list = np.sort(dim_list)
 
     if (verbose > 0):
@@ -197,8 +200,8 @@ def dimension_search(
 
     # Sweep over the list of candidate dimensions.
     loss_test_avg_best = np.inf
-    loss_train_list = np.nan * np.ones(len(dim_list))
-    loss_test_list = np.nan * np.ones(len(dim_list))
+    loss_train = np.nan * np.ones([len(dim_list), n_fold])
+    loss_test = np.nan * np.ones([len(dim_list), n_fold])
     patience = 0
     for idx_dim, i_dimension in enumerate(dim_list):
         # Instantiate embedding
@@ -208,39 +211,38 @@ def dimension_search(
             embedding.freeze(freeze_options)
         if verbose > 1:
             print('  Dimensionality: ', i_dimension)
-        loss_train = np.empty((n_fold))
-        loss_test = np.empty((n_fold))
+
         for i_fold in range(n_fold):
             (train_index, test_index) = split_list[i_fold]
             if verbose > 2:
                 print('    Fold: ', i_fold)
             # Train
             obs_train = obs.subset(train_index)
-            loss_train[i_fold], _ = embedding.fit(
-                obs_train, n_restart=n_restart, verbose=verbose-1)
+            loss_train[idx_dim, i_fold], _ = embedding.fit(
+                obs_train, n_restart=n_restart, verbose=verbose-1
+            )
             # Test
             obs_test = obs.subset(test_index)
-            loss_test[i_fold] = embedding.evaluate(obs_test)
+            loss_test[idx_dim, i_fold] = embedding.evaluate(obs_test)
+
             i_fold = i_fold + 1
         # Compute average cross-validation train and test loss.
-        loss_train_avg = np.mean(loss_train)
-        loss_test_avg = np.mean(loss_test)
-        loss_train_list[idx_dim] = loss_train_avg
-        loss_test_list[idx_dim] = loss_test_avg
+        loss_train_avg = np.mean(loss_train[idx_dim])
+        loss_test_avg = np.mean(loss_test[idx_dim])
 
         if verbose > 1:
             print("    Avg. Train Loss: {0:.2f}".format(loss_train_avg))
             print("    Avg. Test Loss: {0:.2f}".format(loss_test_avg))
 
         if loss_test_avg < loss_test_avg_best:
-            # Larger dimensionality yielded a better loss.
+            # Larger dimensionality yielded a better test loss.
             loss_test_avg_best = loss_test_avg
             best_dimensionality = i_dimension
             patience = 0
             if verbose > 1:
                 print("    Test loss improved.")
         else:
-            # Larger dimensionality yielded a worse loss.
+            # Larger dimensionality yielded a worse test loss.
             patience = patience + 1
             if verbose > 1:
                 print(
@@ -260,8 +262,8 @@ def dimension_search(
 
     summary = {
         "dim_list": dim_list,
-        "loss_train": loss_train_list,
-        "loss_test": loss_test_list,
+        "loss_train": loss_train,
+        "loss_test": loss_test,
         "dim_best": best_dimensionality
     }
     return summary
@@ -274,17 +276,31 @@ def visualize_dimension_search(summary, fp_fig=None):
 
     plt.plot(dim_list, summary["loss_train"], 'b', label="Train")
     plt.plot(dim_list, summary["loss_test"], 'r', label="Test")
+
+    train_sem = sem(summary["loss_test"], axis=0)
+    test_sem = sem(summary["loss_test"], axis=0)
+    plt.fill_between(
+        dim_list, summary["loss_train"] - train_sem,
+        summary["loss_train"] + train_sem,
+        alpha=.5
+    )
+    plt.fill_between(
+        dim_list, summary["loss_test"] - test_sem,
+        summary["loss_test"] + test_sem,
+        alpha=.5
+    )
     plt.scatter(
         dim_best, summary["loss_test"][np.equal(dim_list, dim_best)], c="r"
     )
+    
     plt.xlabel("Dimensionality")
     plt.ylabel("Loss")
     plt.legend()
+    plt.tight_layout()
 
     if fp_fig is None:
-        # plt.tight_layout()
         plt.show()
     else:
-        # Note: The dpi must be supplied otherwise the aspect ratio will be
-        # changed when savefig is called.
-        plt.savefig(fp_fig, format='pdf', bbox_inches="tight", dpi=300)
+        plt.savefig(
+            os.fspath(fp_fig), format='pdf', bbox_inches="tight", dpi=300
+        )

@@ -77,6 +77,7 @@ Modules
 * ``dimensionality`` - Function for selecting the dimensionality of the embedding.
 * ``generator`` - Generate new trials randomly or using active selection.
 * ``models`` - A set of pre-defined pscyhological embedding models.
+* ``preprocess`` - Functions for preprocessing observations.
 * ``simulate`` - Simulate an agent making similarity judgements.
 * ``trials`` - Data structure used for trials and observations.
 * ``utils`` - Utility functions.

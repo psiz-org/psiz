@@ -4,6 +4,7 @@ Modules:
     dimensionality
     generator
     models
+    preprocess
     simulate
     trials
     utils
@@ -11,6 +12,6 @@ Modules:
 """
 
 __all__ = [
-    'datasets', 'dimensionality', 'generator', 'models', 'simulate',
-    'trials', 'utils', 'visualize'
+    'datasets', 'dimensionality', 'generator', 'models', 'preprocess',
+    'simulate', 'trials', 'utils', 'visualize'
 ]

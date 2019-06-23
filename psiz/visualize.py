@@ -19,7 +19,6 @@
 Todo:
     class_vec -> class_id
     classes -> class_dict
-    filename -> fname
 """
 
 import os
@@ -31,7 +30,7 @@ import numpy as np
 
 
 def visualize_embedding_static(
-        z, class_vec=None, classes=None, filename=None):
+        z, class_vec=None, classes=None, fname=None):
     """Generate a static scatter plot of the supplied embedding points.
 
     Arguments:
@@ -41,7 +40,7 @@ def visualize_embedding_static(
             that indicate the class membership of each stimulus.
             shape = (n_stimuli, 1)
         classes: (optional) A dictionary mapping class IDs to strings.
-        filename (optional): The pdf filename to save the figure,
+        fname (optional): The pdf filename to save the figure,
             otherwise the figure is displayed. Can be either a path
             string or a pathlib Path object.
 
@@ -120,27 +119,27 @@ def visualize_embedding_static(
         ax.set_yticks([], [])
         ax.set_zticks([], [])
 
-    if filename is None:
+    if fname is None:
         # plt.tight_layout()
         plt.show()
     else:
         # Note: The dpi must be supplied otherwise the aspect ratio will be
         # changed when savefig is called.
-        plt.savefig(os.fspath(filename), format='pdf', bbox_inches="tight", dpi=300)
+        plt.savefig(os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300)
 
 
 # def visualize_embedding_movie(
-#       Z3, class_vec=None, classes=None, filename=None):
+#       Z3, class_vec=None, classes=None, fname=None):
 #     """
 #     """
 # TODO
 
-def visualize_convergence(data, filename=None):
+def visualize_convergence(data, fname=None):
     """Visualize convergence analysis.
 
     Arguments:
         data: The output of calling psiz.utils.assess_convergence.
-        filename (optional): The pdf filename to save the figure,
+        fname (optional): The pdf filename to save the figure,
             otherwise the figure is displayed. Can be either a path
             string or a pathlib Path object.
     """
@@ -168,12 +167,12 @@ def visualize_convergence(data, filename=None):
         horizontalalignment='center', verticalalignment='center'
     )
 
-    if filename is None:
+    if fname is None:
         plt.show()
     else:
         # Note: The dpi must be supplied otherwise the aspect ratio will be
         # changed when savefig is called.
-        plt.savefig(os.fspath(filename), format='pdf', bbox_inches="tight", dpi=300)
+        plt.savefig(os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300)
 
 
 def infer_legend(unique_class_list, classes):

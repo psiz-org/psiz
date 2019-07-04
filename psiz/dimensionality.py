@@ -227,8 +227,8 @@ def dimension_search(
 
             i_fold = i_fold + 1
         # Compute average cross-validation train and test loss.
-        loss_train_avg = np.mean(loss_train[idx_dim])
-        loss_test_avg = np.mean(loss_test[idx_dim])
+        loss_train_avg = np.mean(loss_train[idx_dim, :])
+        loss_test_avg = np.mean(loss_test[idx_dim, :])
 
         if verbose > 1:
             print("    Avg. Train Loss: {0:.2f}".format(loss_train_avg))
@@ -274,25 +274,27 @@ def visualize_dimension_search(summary, fp_fig=None):
     dim_list = summary["dim_list"]
     dim_best = summary["dim_best"]
 
-    plt.plot(dim_list, summary["loss_train"], 'b', label="Train")
-    plt.plot(dim_list, summary["loss_test"], 'r', label="Test")
+    train_mean = np.mean(summary["loss_train"], axis=1)
+    test_mean = np.mean(summary["loss_test"], axis=1)
 
-    train_sem = sem(summary["loss_test"], axis=0)
-    test_sem = sem(summary["loss_test"], axis=0)
-    plt.fill_between(
-        dim_list, summary["loss_train"] - train_sem,
-        summary["loss_train"] + train_sem,
-        alpha=.5
-    )
-    plt.fill_between(
-        dim_list, summary["loss_test"] - test_sem,
-        summary["loss_test"] + test_sem,
-        alpha=.5
-    )
+    plt.plot(dim_list, train_mean, 'b', label="Train")
+    plt.plot(dim_list, test_mean, 'r', label="Test")
+
+    if summary["loss_train"].shape[1] > 1:
+        train_sem = sem(summary["loss_train"], axis=1)
+        test_sem = sem(summary["loss_test"], axis=1)
+        plt.fill_between(
+            dim_list, train_mean - train_sem, train_mean + train_sem,
+            alpha=.5
+        )
+        plt.fill_between(
+            dim_list, test_mean - test_sem, test_mean + test_sem,
+            alpha=.5
+        )
     plt.scatter(
-        dim_best, summary["loss_test"][np.equal(dim_list, dim_best)], c="r"
+        dim_best, test_mean[np.equal(dim_list, dim_best)], c="r"
     )
-    
+
     plt.xlabel("Dimensionality")
     plt.ylabel("Loss")
     plt.legend()

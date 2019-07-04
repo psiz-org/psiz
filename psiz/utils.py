@@ -68,6 +68,11 @@ def assess_convergence(
         score (optional): Measure to use when comparing two similarity
             matrices.
         verbose (optional): Verbosity.
+
+    Returns:
+        summary: Dictionary of results.
+            n_trial_array: Number of trials in each set.
+
     """
     # Check arguments.
     n_back = np.maximum(n_back, 1)
@@ -76,7 +81,7 @@ def assess_convergence(
     n_trial_array = np.linspace(0, obs.n_trial, n_partition + 1)
     n_trial_array = np.ceil(n_trial_array[1:]).astype(int)
 
-    rho = np.ones([n_shuffle, n_partition]) * np.nan
+    val = np.ones([n_shuffle, n_partition]) * np.nan
     for i_shuffle in range(n_shuffle):
         if verbose > 0:
             print('  Shuffle {0}'.format(i_shuffle + 1))
@@ -102,18 +107,18 @@ def assess_convergence(
                 simmat_1 = similarity_matrix(
                     emb_list[i_part].similarity, emb_list[i_part].z['value']
                 )
-                rho[i_shuffle, i_part] = matrix_comparison(
+                val[i_shuffle, i_part] = matrix_comparison(
                     simmat_0, simmat_1, score=score
                 )
                 if verbose > 0:
-                    print('    {0} | rho: {1:.2f}'.format(
-                        i_part, rho[i_shuffle, i_part]
+                    print('    {0} | measure: {1:.2f}'.format(
+                        i_part, val[i_shuffle, i_part]
                     ))
             else:
                 first_part = False
-    rho = rho[:, 1:]
+    val = val[:, 1:]
 
-    return {"n_trial_array": n_trial_array, "rho": rho}
+    return {"n_trial_array": n_trial_array, "val": val, "measure": score}
 
 
 def similarity_matrix(similarity_fn, z):

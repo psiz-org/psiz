@@ -154,7 +154,7 @@ class ActiveGenerator(TrialGenerator):
 
     """
 
-    def __init__(self, config_list=None, n_neighbor=10):
+    def __init__(self, config_list=None, n_neighbor=10, priority='kl'):
         """Initialize.
 
         Arguments:
@@ -165,10 +165,12 @@ class ActiveGenerator(TrialGenerator):
                 exhaustive search requires 'n_neighbor' to be equal to
                 'n_stimuli' - 1. For problems with more than ~10
                 stimuli, this becomes computationally infeasible.
+            priority (optional): Can be 'random', 'entropy' or kl'.
         """
         TrialGenerator.__init__(self)
 
         self.n_neighbor = n_neighbor
+        self.priority = priority
 
         # Default trial configurations (2c1, 8c2).
         if config_list is None:
@@ -232,22 +234,24 @@ class ActiveGenerator(TrialGenerator):
         # embdding.convert(samples, group_id) TODO
 
         query_idx = np.arange(0, n_stimuli)
-        # Stochastically select query stimulus.
-        # query_idx = np.random.choice(query_idx, n_query, replace=False)
 
-        # Stochastically select each query stimulus based on entropy.
-        # entropy = stimulus_entropy(samples)
-        # rel_entropy = entropy - np.min(entropy)
-        # query_prob = rel_entropy / np.sum(rel_entropy)
-        # query_idx = np.random.choice(
-        #     query_idx, n_query, replace=False, p=query_prob)
-
-        # If necessary, stochastically select query stimulus based on
-        # KL divergence.
+        # If necessary, stochastically select query stimulus.
         if n_query < n_stimuli:
-            query_priority = self._query_kl_priority(embedding, samples)
-            query_prob = query_priority / np.sum(query_priority)
-            query_idx = np.random.choice(
+            if self.priority is "random":
+                # Completely random.
+                query_idx = np.random.choice(query_idx, n_query, replace=False)
+            elif self.priority is "entropy":
+                # Based on entropy.
+                entropy = stimulus_entropy(samples)
+                rel_entropy = entropy - np.min(entropy)
+                query_prob = rel_entropy / np.sum(rel_entropy)
+                query_idx = np.random.choice(
+                    query_idx, n_query, replace=False, p=query_prob)
+            elif self.priority is "kl":
+                # Based on KL divergence.
+                query_priority = query_kl_priority(embedding, samples)
+                query_prob = query_priority / np.sum(query_priority)
+                query_idx = np.random.choice(
                 query_idx, n_query, replace=False, p=query_prob)
 
         # Deep copy.
@@ -280,64 +284,6 @@ class ActiveGenerator(TrialGenerator):
 
         # Return updated samples.
         return samples
-
-    def _query_kl_priority(self, embedding, samples):
-        """Return a priority score for every stimulus.
-
-        The score indicates the priority each stimulus should serve as
-        a query stimulus in a trial.
-
-        Arguments:
-            z: TODO
-            samples: TODO
-
-        Returns:
-            A priority score.
-                shape: (n_stimuli,)
-
-        Notes:
-            The priority scores are specific to a particular group.
-
-        """
-        # Unpack.
-        # z = embedding.z['value']
-        z = np.median(samples['z'], axis=2)
-        rho = embedding.theta['rho']['value']
-        z_samp = samples['z']
-        # z_median = np.median(z_samp, axis=2)
-        (n_stimuli, n_dim, _) = z_samp.shape
-
-        # Fit multi-variate normal for each stimulus.
-        z_samp = np.transpose(z_samp, axes=[2, 0, 1])
-        mu = np.empty((n_stimuli, n_dim))
-        cov = np.empty((n_stimuli, n_dim, n_dim))
-        for i_stim in range(n_stimuli):
-            gmm = GaussianMixture(
-                n_components=1, covariance_type='full')
-            gmm.fit(z_samp[:, i_stim, :])
-            mu[i_stim, :] = gmm.means_[0]
-            cov[i_stim, :, :] = gmm.covariances_[0]
-
-        # Determine nearest neighbors.
-        # TODO maybe convert to faiss
-        k = np.minimum(10, n_stimuli-1)
-        nbrs = NearestNeighbors(
-            n_neighbors=k+1, algorithm='auto', p=rho).fit(z)
-        (_, nn_idx) = nbrs.kneighbors(z)
-        nn_idx = nn_idx[:, 1:]  # Drop self index.
-
-        # Compute KL divergence for nearest neighbors.
-        kl_div = np.empty((n_stimuli, k))
-        for query_idx in range(n_stimuli):
-            for j_nn in range(k):
-                idx_j = nn_idx[query_idx, j_nn]
-                kl_div[query_idx, j_nn] = normal_kl_divergence(
-                    mu[idx_j], cov[idx_j], mu[query_idx], cov[query_idx]
-                )
-        score = np.sum(kl_div, axis=1)
-        score = 1 / score
-
-        return score
 
     def _placeholder_docket(self, config_list, n_neighbor):
         """Return placeholder trials.
@@ -495,11 +441,16 @@ class ActiveShotgunGenerator(TrialGenerator):
 
     def __init__(
             self, n_reference=2, n_select=1, is_ranked=True,
-            n_trial_shotgun=1000):
+            n_trial_shotgun=1000, priority='kl'):
         """Initialize.
 
         Arguments:
-            
+            n_reference (optional):
+            n_select (optional):
+            is_ranked (optional):
+            n_trial_shotgun (optional):
+            priority (optional): Can be 'random', 'entropy' or kl'.
+
         """
         TrialGenerator.__init__(self)
 
@@ -507,6 +458,7 @@ class ActiveShotgunGenerator(TrialGenerator):
         self.n_select = np.int32(n_select)
         self.is_ranked = bool(is_ranked)
         self.n_trial_shotgun = n_trial_shotgun
+        self.priority = priority
 
     def generate(
             self, n_trial, embedding, samples, group_id=None, n_query=3,
@@ -555,23 +507,24 @@ class ActiveShotgunGenerator(TrialGenerator):
 
         query_idx = np.arange(0, n_stimuli)
 
-        # If necessary, stochastically select query stimulus. 
+        # If necessary, stochastically select query stimulus.
         if n_query < n_stimuli:
-            # Randomly
-            query_idx = np.random.choice(query_idx, n_query, replace=False)
-
-            # Based on entropy.
-            # entropy = stimulus_entropy(samples)
-            # rel_entropy = entropy - np.min(entropy)
-            # query_prob = rel_entropy / np.sum(rel_entropy)
-            # query_idx = np.random.choice(
-            #     query_idx, n_query, replace=False, p=query_prob)
-
-            # Based on KL divergence.
-            # query_priority = self._query_kl_priority(embedding, samples)
-            # query_prob = query_priority / np.sum(query_priority)
-            # query_idx = np.random.choice(
-            #     query_idx, n_query, replace=False, p=query_prob)
+            if self.priority is "random":
+                # Compeltely random.
+                query_idx = np.random.choice(query_idx, n_query, replace=False)
+            elif self.priority is "entropy":
+                # Based on entropy.
+                entropy = stimulus_entropy(samples)
+                rel_entropy = entropy - np.min(entropy)
+                query_prob = rel_entropy / np.sum(rel_entropy)
+                query_idx = np.random.choice(
+                    query_idx, n_query, replace=False, p=query_prob)
+            elif self.priority is "kl":
+                # Based on KL divergence.
+                query_priority = query_kl_priority(embedding, samples)
+                query_prob = query_priority / np.sum(query_priority)
+                query_idx = np.random.choice(
+                    query_idx, n_query, replace=False, p=query_prob)
 
         (best_docket, ig_best, ig_all) = self._determine_references(
             embedding, samples, query_idx, n_trial, group_id, verbose=verbose
@@ -586,6 +539,9 @@ class ActiveShotgunGenerator(TrialGenerator):
             self, embedding, samples, query_idx, n_trial, group_id, verbose=0):
         n_query = query_idx.shape[0]
 
+        z = embedding.z['value']
+        dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+
         # Determine how many times each query stimulus should be used.
         n_trial_per_query = np.zeros((n_query), dtype=np.int32)
         for i_trial in range(n_trial):
@@ -593,7 +549,6 @@ class ActiveShotgunGenerator(TrialGenerator):
                 n_trial_per_query[np.mod(i_trial, n_query)] + 1
             )
 
-        generator = RandomGenerator(self.n_reference, self.n_select)
         best_docket = None
         ig_best = None
         ig_all = []
@@ -608,9 +563,20 @@ class ActiveShotgunGenerator(TrialGenerator):
                 (self.n_trial_shotgun, self.n_reference + 1), dtype=np.int32
             )
             stimulus_set[:, 0] = query_idx[i_query]
+            candidate_locs = np.not_equal(dmy_idx, query_idx[i_query])
+            candidate_idx = dmy_idx[candidate_locs]
+            z_q = z[query_idx[i_query], :]
+
+            simmat = embedding.similarity(
+                np.expand_dims(z_q, axis=0), z, group_id=group_id
+            )
+            candidate_sim = simmat[candidate_locs]
+            candidate_prob = candidate_sim / np.sum(candidate_sim)
+
             for i_trial in range(self.n_trial_shotgun):
                 stimulus_set[i_trial, 1:] = np.random.choice(
-                    embedding.n_stimuli, (1, self.n_reference), False
+                    candidate_idx, (1, self.n_reference), replace=False,
+                    p=candidate_prob
                 )
             # Sort indices corresponding to references.
             stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
@@ -856,6 +822,65 @@ def stimulus_set_combos(n_neighbor, n_reference):
         stimulus_set = np.vstack((stimulus_set, item))
     stimulus_set = stimulus_set.astype(dtype=np.int32)
     return stimulus_set
+
+
+def query_kl_priority(embedding, samples):
+        """Return a priority score for every stimulus.
+
+        The score indicates the priority each stimulus should serve as
+        a query stimulus in a trial.
+
+        Arguments:
+            z: TODO
+            samples: TODO
+
+        Returns:
+            A priority score.
+                shape: (n_stimuli,)
+
+        Notes:
+            The priority scores are specific to a particular group.
+
+        """
+        # Unpack.
+        # z = embedding.z['value']
+        z = np.median(samples['z'], axis=2)
+        rho = embedding.theta['rho']['value']
+        z_samp = samples['z']
+        # z_median = np.median(z_samp, axis=2)
+        (n_stimuli, n_dim, _) = z_samp.shape
+
+        # Fit multi-variate normal for each stimulus.
+        z_samp = np.transpose(z_samp, axes=[2, 0, 1])
+        mu = np.empty((n_stimuli, n_dim))
+        cov = np.empty((n_stimuli, n_dim, n_dim))
+        for i_stim in range(n_stimuli):
+            gmm = GaussianMixture(
+                n_components=1, covariance_type='full')
+            gmm.fit(z_samp[:, i_stim, :])
+            mu[i_stim, :] = gmm.means_[0]
+            cov[i_stim, :, :] = gmm.covariances_[0]
+
+        # Determine nearest neighbors.
+        # TODO maybe convert to faiss
+        k = np.minimum(10, n_stimuli-1)
+        nbrs = NearestNeighbors(
+            n_neighbors=k+1, algorithm='auto', p=rho).fit(z)
+        (_, nn_idx) = nbrs.kneighbors(z)
+        nn_idx = nn_idx[:, 1:]  # Drop self index.
+
+        # Compute KL divergence for nearest neighbors.
+        kl_div = np.empty((n_stimuli, k))
+        for query_idx in range(n_stimuli):
+            for j_nn in range(k):
+                idx_j = nn_idx[query_idx, j_nn]
+                kl_div[query_idx, j_nn] = normal_kl_divergence(
+                    mu[idx_j], cov[idx_j], mu[query_idx], cov[query_idx]
+                )
+        score = np.sum(kl_div, axis=1)
+        score = 1 / score
+
+        return score
 
 
 def normal_kl_divergence(mu_a, cov_a, mu_b, cov_b):

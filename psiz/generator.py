@@ -54,6 +54,7 @@ from sklearn.neighbors import NearestNeighbors
 
 from psiz.trials import Docket, stack
 from psiz.simulate import Agent
+from psiz.preprocess import remove_catch_trials
 
 
 class TrialGenerator(object):
@@ -397,21 +398,21 @@ class ActiveGenerator(TrialGenerator):
         z = np.median(samples['z'], axis=2)
         dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
         chosen_idx = np.empty(
-            [len(query_idx), self.n_neighbor + 1], dtype=np.int)
+            [len(query_idx), self.n_neighbor + 1], dtype=np.int
+        )
         for idx, q_idx in enumerate(query_idx):
             candidate_locs = np.not_equal(dmy_idx, q_idx)
             candidate_idx = dmy_idx[candidate_locs]
             simmat = embedding.similarity(
-                np.expand_dims(z[q_idx], axis=0), z, group_id=group_id)
+                np.expand_dims(z[q_idx], axis=0), z, group_id=group_id
+            )
             candidate_sim = simmat[candidate_locs]
             candidate_prob = candidate_sim / np.sum(candidate_sim)
             chosen_idx[idx, 0] = q_idx
             chosen_idx[idx, 1:] = np.random.choice(
                 candidate_idx, self.n_neighbor, replace=False,
-                p=candidate_prob)
-            # chosen_idx[idx, 1:] = np.array([
-            #     198, 248, 299, 56, 323, 69, 209, 188, 354, 158
-            # ], dtype=np.int32) - 1  # TODO CRITICAL
+                p=candidate_prob
+            )
 
         # Select references based on nearest neighbors.
         # TODO convert using group_specific "view".
@@ -454,6 +455,175 @@ class ActiveGenerator(TrialGenerator):
             # Grab the top N trials as specified by 'n_trial_per_query'.
             top_indices = np.argsort(-ig)
             # top_indices = np.random.choice(np.arange(len(ig), dtype=np.int), len(ig), replace=False)
+
+            top_candidate = docket.subset(
+                top_indices[0:n_trial_per_query[i_query]]
+            )
+            curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
+            if verbose > 0:
+                print("    {0}".format(curr_best_ig))
+
+            ig_all.append(ig)
+            # Add to dynamic list.
+            if ig_best is None:
+                ig_best = curr_best_ig
+            else:
+                ig_best = np.hstack((ig_best, curr_best_ig))
+
+            if best_docket is None:
+                best_docket = top_candidate
+            else:
+                best_docket = stack((best_docket, top_candidate))
+
+        return (best_docket, ig_best, ig_all)
+
+
+class ActiveShotgunGenerator(TrialGenerator):
+    """A trial generator that leverages expected information gain.
+
+    Attributes:
+        config_list: TODO
+        n_neighbor: A scalar that influences the greedy behavior of the
+            active selection procedure.
+        placeholder_docket: TODO
+
+    Methods:
+        generate: TODO
+        update: TODO
+
+    """
+
+    def __init__(
+            self, n_reference=2, n_select=1, is_ranked=True,
+            n_trial_shotgun=1000):
+        """Initialize.
+
+        Arguments:
+            
+        """
+        TrialGenerator.__init__(self)
+
+        self.n_reference = np.int32(n_reference)
+        self.n_select = np.int32(n_select)
+        self.is_ranked = bool(is_ranked)
+        self.n_trial_shotgun = n_trial_shotgun
+
+    def generate(
+            self, n_trial, embedding, samples, group_id=None, n_query=3,
+            verbose=0):
+        """Return a docket of trials based on provided arguments.
+
+        Trials are selected in order to maximize expected information
+        gain given a specific group. Expected information gain is
+        approximated using MCMC posterior samples.
+
+        Arguments:
+            n_trial: A scalar indicating the number of trials to
+                generate.
+            embedding: A PsychologicalEmbedding object.
+            samples: A dictionary containing the posterior
+                samples of parameters from a PsychologicalEmbedding
+                object.
+            group_id (optional): Scalar indicating which group to
+                target.
+            n_query (optional): Scalar indicating the number of unique
+                query stimuli that should be chosen.
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
+
+        Returns:
+            best_docket: A Docket object.
+            ig_info: A dictionary containing information gain information.
+                ig_best: A numpy.ndarray containing the expected
+                information gain for each trial in the docket.
+                shape = (n_trial,)
+
+        Todo:
+            - Reduce uncertainty on positions AND group-specific
+                parameters.
+
+        """
+        n_stimuli = embedding.n_stimuli
+
+        if group_id is None:
+            group_id = 0
+        n_query = np.minimum(n_query, n_stimuli)
+        n_query = np.minimum(n_query, n_trial)
+
+        # embdding.convert(samples, group_id) TODO
+
+        query_idx = np.arange(0, n_stimuli)
+
+        # If necessary, stochastically select query stimulus. 
+        if n_query < n_stimuli:
+            # Randomly
+            query_idx = np.random.choice(query_idx, n_query, replace=False)
+
+            # Based on entropy.
+            # entropy = stimulus_entropy(samples)
+            # rel_entropy = entropy - np.min(entropy)
+            # query_prob = rel_entropy / np.sum(rel_entropy)
+            # query_idx = np.random.choice(
+            #     query_idx, n_query, replace=False, p=query_prob)
+
+            # Based on KL divergence.
+            # query_priority = self._query_kl_priority(embedding, samples)
+            # query_prob = query_priority / np.sum(query_priority)
+            # query_idx = np.random.choice(
+            #     query_idx, n_query, replace=False, p=query_prob)
+
+        (best_docket, ig_best, ig_all) = self._determine_references(
+            embedding, samples, query_idx, n_trial, group_id, verbose=verbose
+        )
+        ig_info = {
+            "ig_trial": ig_best,
+            "ig_all": ig_all
+        }
+        return (best_docket, ig_info)
+
+    def _determine_references(
+            self, embedding, samples, query_idx, n_trial, group_id, verbose=0):
+        n_query = query_idx.shape[0]
+
+        # Determine how many times each query stimulus should be used.
+        n_trial_per_query = np.zeros((n_query), dtype=np.int32)
+        for i_trial in range(n_trial):
+            n_trial_per_query[np.mod(i_trial, n_query)] = (
+                n_trial_per_query[np.mod(i_trial, n_query)] + 1
+            )
+
+        generator = RandomGenerator(self.n_reference, self.n_select)
+        best_docket = None
+        ig_best = None
+        ig_all = []
+        for i_query in range(n_query):
+            if verbose > 0:
+                print("  Trial {0} of {1}".format(i_query, n_query))
+
+            # Random docket (i.e., shotgun approach).
+            n_select = np.repeat(self.n_select, self.n_trial_shotgun)
+            is_ranked = np.repeat(self.is_ranked, self.n_trial_shotgun)
+            stimulus_set = np.empty(
+                (self.n_trial_shotgun, self.n_reference + 1), dtype=np.int32
+            )
+            stimulus_set[:, 0] = query_idx[i_query]
+            for i_trial in range(self.n_trial_shotgun):
+                stimulus_set[i_trial, 1:] = np.random.choice(
+                    embedding.n_stimuli, (1, self.n_reference), False
+                )
+            # Sort indices corresponding to references.
+            stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
+            docket = Docket(
+                stimulus_set, n_select=n_select, is_ranked=is_ranked
+            )
+
+            ig = information_gain(
+                embedding, samples, docket, group_id=group_id
+            )
+
+            # Grab the top N trials as specified by 'n_trial_per_query'.
+            top_indices = np.argsort(-ig)
 
             top_candidate = docket.subset(
                 top_indices[0:n_trial_per_query[i_query]]

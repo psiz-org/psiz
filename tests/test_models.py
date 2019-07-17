@@ -323,34 +323,6 @@ def test_probability(model_true, docket_0):
     np.testing.assert_allclose(prob_actual, prob_desired)
 
 
-def test_tf_probability(model_true, docket_0):
-    """Test _tf_outcome_probability method."""
-    prob_desired = np.ones((docket_0.n_trial))
-
-    prob_1 = model_true.outcome_probability(docket_0)
-    prob_actual_1 = np.sum(prob_1, axis=1)
-
-    z_tf = model_true.z['value']
-    z_tf = tf.convert_to_tensor(
-        z_tf, dtype=tf.float32
-    )
-
-    tf_theta = {}
-    for param_name in model_true.theta:
-        tf_theta[param_name] = tf.constant(
-            model_true.theta[param_name]['value'], dtype=tf.float32)
-    prob_2_tf = model_true._tf_outcome_probability(
-        docket_0, z_tf, tf_theta)
-
-    sess = tf.compat.v1.Session()
-    with sess.as_default():
-        sess.run(tf.compat.v1.global_variables_initializer())
-        prob_2 = prob_2_tf.eval()
-
-    np.testing.assert_allclose(prob_actual_1, prob_desired)
-    np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)
-
-
 def test_inflate_points_single_sample(
         model_true_det, docket_0):
     """Test inflation with z with 1 sample."""
@@ -435,7 +407,7 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
     z = model_true.z['value']
 
     attention = model_true.phi['phi_1']['value'][0, :]
-    attention = np.matlib.repmat(attention, docket_0.n_trial, 1)
+    attention = np.tile(attention, (docket_0.n_trial, 1))
 
     (z_q, z_r) = model_true._inflate_points(
         docket.stimulus_set[trial_locs], n_reference,
@@ -660,24 +632,3 @@ def test_save_load(model_true_det, tmpdir):
             loaded_embedding.phi[param_name]['trainable'] ==
             model_true_det.phi[param_name]['trainable']
         )
-
-
-# TODO anchor point test
-# color_idx = np.zeros((n_stimuli), dtype=np.int64)
-# color_idx[anchor_idx[:, 0]] = 1
-# color_idx[anchor_idx[:, 1]] = 2
-
-# import matplotlib
-# import matplotlib.pyplot as plt
-# cmap = matplotlib.cm.get_cmap('jet')
-# norm = matplotlib.colors.Normalize(vmin=0., vmax=2.)
-# color_array = cmap(norm(range(3)))
-# fig, ax = plt.subplots()
-
-# plt.subplot(1, 1, 1)
-# for i_stimulus in range(n_stimuli):
-#     plt.scatter(
-#         z[i_stimulus, 0], z[i_stimulus, 1],
-#         c=color_array[color_idx[i_stimulus], :])
-# plt.axis('equal')
-# plt.show()

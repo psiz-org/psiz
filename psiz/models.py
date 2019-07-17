@@ -58,8 +58,8 @@ from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
-from keras.initializers import Initializer
-from tensorflow import random_uniform, random_normal
+import tensorflow_probability as tfp
+from tensorflow.keras.initializers import Initializer
 
 from psiz.utils import elliptical_slice
 
@@ -288,7 +288,7 @@ class PsychologicalEmbedding(object):
                 variables.
 
         """
-        with tf.variable_scope("similarity_params"):
+        with tf.compat.v1.variable_scope("similarity_params"):
             tf_theta = {}
             if init_mode is 'exact':
                 tf_theta = self._get_similarity_parameters_exact()
@@ -302,7 +302,7 @@ class PsychologicalEmbedding(object):
             # value in the class attribute theta.
             for param_name in self.theta:
                 if not self.theta[param_name]['trainable']:
-                    tf_theta[param_name] = tf.get_variable(
+                    tf_theta[param_name] = tf.compat.v1.get_variable(
                         param_name, [1], dtype=FLOAT_X,
                         initializer=tf.constant_initializer(
                             self.theta[param_name]['value'], dtype=FLOAT_X
@@ -322,7 +322,7 @@ class PsychologicalEmbedding(object):
         tf_theta = {}
         for param_name in self.theta:
             if self.theta[param_name]['trainable']:
-                tf_theta[param_name] = tf.get_variable(
+                tf_theta[param_name] = tf.compat.v1.get_variable(
                     param_name, [1], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
                         self.theta[param_name]['value'], dtype=FLOAT_X
@@ -398,28 +398,32 @@ class PsychologicalEmbedding(object):
                     self.z['value'] = z
                     self.z['trainable'] = False
                 elif param_name is 'theta':
-                    for sub_param_name in freeze_options[param_name]:
+                    for sub_param_name in freeze_options['theta']:
                         self.theta[sub_param_name]['value'] = \
                             freeze_options[param_name][sub_param_name]
                         self.theta[sub_param_name]['trainable'] = False
                 elif param_name is 'phi':
-                    for sub_param_name in freeze_options[param_name]:
-                        if sub_param_name is 'phi_1':
-                            if 'value' in freeze_options['phi'][sub_param_name]:
-                                phi_val = freeze_options['phi'][sub_param_name]['value']
-                            else:
-                                phi_val = freeze_options['phi'][sub_param_name]
+                    self._freeze_phi(freeze_options)
 
-                            if 'trainable' in freeze_options['phi'][sub_param_name]:
-                                trainable = freeze_options['phi'][sub_param_name]['trainable']
-                            else:
-                                trainable = np.zeros(
-                                    [self.n_group], dtype=bool
-                                )
-                            self._check_phi_1(phi_val)
+    def _freeze_phi(self, freeze_options):
+        for sub_param_name in freeze_options['phi']:
+            if sub_param_name is 'phi_1':
+                if 'value' in freeze_options['phi'][sub_param_name]:
+                    phi_val = freeze_options['phi'][sub_param_name]['value']
+                else:
+                    phi_val = freeze_options['phi'][sub_param_name]
 
-                        self.phi[sub_param_name]['value'] = phi_val
-                        self.phi[sub_param_name]['trainable'] = trainable
+                if 'trainable' in freeze_options['phi'][sub_param_name]:
+                    trainable = \
+                        freeze_options['phi'][sub_param_name]['trainable']
+                else:
+                    trainable = np.zeros(
+                        [self.n_group], dtype=bool
+                    )
+                self._check_phi_1(phi_val)
+
+            self.phi[sub_param_name]['value'] = phi_val
+            self.phi[sub_param_name]['trainable'] = trainable
 
     def thaw(self, thaw_options=None):
         """State changing method specifying trainable parameters.
@@ -680,14 +684,14 @@ class PsychologicalEmbedding(object):
         tf_var_name = "attention_{0}".format(group_id)
         if self.phi['phi_1']['trainable'][group_id]:
             if init_mode is 'exact':
-                tf_attention = tf.get_variable(
+                tf_attention = tf.compat.v1.get_variable(
                     tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
                         self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X
                     )
                 )
             elif init_mode is 'warm':
-                tf_attention = tf.get_variable(
+                tf_attention = tf.compat.v1.get_variable(
                     tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
                         self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X
@@ -696,12 +700,12 @@ class PsychologicalEmbedding(object):
             else:
                 n_dim = tf.constant(self.n_dim, dtype=FLOAT_X)
                 alpha = tf.constant(np.ones((self.n_dim)), dtype=FLOAT_X)
-                tf_attention = tf.get_variable(
+                tf_attention = tf.compat.v1.get_variable(
                     tf_var_name, [1, self.n_dim],
                     initializer=RandomAttention(n_dim, alpha, dtype=FLOAT_X)
                 )
         else:
-            tf_attention = tf.get_variable(
+            tf_attention = tf.compat.v1.get_variable(
                 tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                 initializer=tf.constant_initializer(
                     self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X),
@@ -723,7 +727,7 @@ class PsychologicalEmbedding(object):
         if self.z['trainable']:
             if init_mode is 'exact':
                 z = self.z['value']
-                tf_z = tf.get_variable(
+                tf_z = tf.compat.v1.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
                         z, dtype=FLOAT_X)
@@ -745,13 +749,13 @@ class PsychologicalEmbedding(object):
                     mu, cov, (self.n_stimuli))
                 # z = .8 * self.z['value'] + .2 * z_noise
                 z = z_noise  # TODO
-                tf_z = tf.get_variable(
+                tf_z = tf.compat.v1.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
                         z, dtype=FLOAT_X)
                 )
             else:
-                tf_z = tf.get_variable(
+                tf_z = tf.compat.v1.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                     initializer=RandomEmbedding(
                         mean=tf.zeros([self.n_dim], dtype=FLOAT_X),
@@ -762,7 +766,7 @@ class PsychologicalEmbedding(object):
                     )
                 )
         else:
-            tf_z = tf.get_variable(
+            tf_z = tf.compat.v1.get_variable(
                 "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                 initializer=tf.constant_initializer(
                     self.z['value'], dtype=FLOAT_X
@@ -865,32 +869,36 @@ class PsychologicalEmbedding(object):
         tf_obs_val = self._bind_obs(tf_obs, obs_val)
 
         # Define optimizer op.
-        tf_learning_rate = tf.placeholder(FLOAT_X, shape=[])
+        tf_learning_rate = tf.compat.v1.placeholder(FLOAT_X, shape=[])
         # TODO Make optimizer passable argument.
-        train_op = tf.train.RMSPropOptimizer(
+        train_op = tf.compat.v1.train.RMSPropOptimizer(
             learning_rate=tf_learning_rate
         ).minimize(tf_loss)
 
         # Define summary op.
         with tf.name_scope('summaries'):
             # Create a summary to monitor loss.
-            tf.summary.scalar('loss_train', tf_loss)
+            tf.compat.v1.summary.scalar('loss_train', tf_loss)
             # Create a summary of the embedding tensor.
             # tf.summary.tensor_summary('z', tf_z)  # Feature not supported.
             # Create a summary to monitor parameters of similarity kernel.
             with tf.name_scope('similarity'):
                 for param_name in tf_theta:
                     param_mean = tf.reduce_mean(tf_theta[param_name])
-                    tf.summary.scalar(param_name + '_mean', param_mean)
-            summary_op = tf.summary.merge_all()
+                    tf.compat.v1.summary.scalar(
+                        param_name + '_mean', param_mean
+                    )
+            summary_op = tf.compat.v1.summary.merge_all()
 
         # Run multiple restarts of embedding algorithm.
         # TODO evaluate current setting first.
-        sess = tf.Session()
+        sess = tf.compat.v1.Session()
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
-            (loss_train, loss_val, epoch, z, attention, theta) = self._fit_restart(
+            (
+                loss_train, loss_val, epoch, z, attention, theta
+            ) = self._fit_restart(
                 sess, tf_loss, tf_z, tf_z_constraint, tf_attention,
                 tf_attention_constraint, tf_theta, tf_theta_bounds,
                 tf_learning_rate, train_op, summary_op, tf_obs_train,
@@ -899,8 +907,8 @@ class PsychologicalEmbedding(object):
 
             if (verbose > 2):
                 print(
-                    '        '
-                    'final {0:5d} | loss: {1: .6f} | loss_val: {2: .6f}'.format(
+                    '        final {0:5d} | loss: {1: .6f} | '
+                    'loss_val: {2: .6f}'.format(
                         epoch, loss_train, loss_val)
                 )
                 print('')
@@ -916,14 +924,15 @@ class PsychologicalEmbedding(object):
                 beat_init = True
 
         sess.close()
-        tf.reset_default_graph()
+        tf.compat.v1.reset_default_graph()
 
         if (verbose > 1):
             if beat_init:
                 print(
-                    '        '
-                    'Best Restart\n        n_epoch: {0} | loss: {1: .6f} | loss_val: {2: .6f}'.format(
-                        epoch, loss_train_best, loss_val_best)
+                    '        Best Restart\n        n_epoch: {0} | '
+                    'loss: {1: .6f} | loss_val: {2: .6f}'.format(
+                        epoch, loss_train_best, loss_val_best
+                    )
                 )
             else:
                 print('        Did not beat initialization.')
@@ -940,7 +949,7 @@ class PsychologicalEmbedding(object):
             tf_theta, tf_theta_bounds, tf_learning_rate, train_op, summary_op,
             tf_obs_train, tf_obs_val, i_restart, verbose):
         """Embed using a TensorFlow implementation."""
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         # Write logs for TensorBoard
         if self.do_log:
@@ -1032,13 +1041,13 @@ class PsychologicalEmbedding(object):
         """
         (tf_loss, _, _, _, _, _, _, tf_obs) = self._core_model('exact')
 
-        init = tf.global_variables_initializer()
-        sess = tf.Session()
+        init = tf.compat.v1.global_variables_initializer()
+        sess = tf.compat.v1.Session()
         sess.run(init)
         loss = sess.run(tf_loss, feed_dict=self._bind_obs(tf_obs, obs))
 
         sess.close()
-        tf.reset_default_graph()
+        tf.compat.v1.reset_default_graph()
         return loss
 
     def _bind_obs(self, tf_obs, obs):
@@ -1082,7 +1091,7 @@ class PsychologicalEmbedding(object):
 
     def _core_model(self, init_mode):
         """Embedding model implemented using TensorFlow."""
-        with tf.variable_scope("model"):
+        with tf.compat.v1.variable_scope("model"):
             # Free parameters.
             tf_theta = self._get_similarity_parameters(init_mode)
             tf_theta_bounds = self._get_similarity_constraints(tf_theta)
@@ -1092,37 +1101,37 @@ class PsychologicalEmbedding(object):
             tf_z, tf_z_constraint = self._get_embedding(init_mode)
 
             # Observation data.
-            tf_stimulus_set = tf.placeholder(
+            tf_stimulus_set = tf.compat.v1.placeholder(
                 tf.int32, [None, None], name='stimulus_set'
             )
-            tf_n_reference = tf.placeholder(
+            tf_n_reference = tf.compat.v1.placeholder(
                 tf.int32, [None], name='n_reference')
-            tf_n_select = tf.placeholder(
+            tf_n_select = tf.compat.v1.placeholder(
                 tf.int32, [None], name='n_select')
-            tf_is_ranked = tf.placeholder(
+            tf_is_ranked = tf.compat.v1.placeholder(
                 tf.int32, [None], name='is_ranked')
-            tf_group_id = tf.placeholder(
+            tf_group_id = tf.compat.v1.placeholder(
                 tf.int32, [None], name='group_id')
-            tf_weight = tf.placeholder(
+            tf_weight = tf.compat.v1.placeholder(
                 FLOAT_X, [None], name='weight')
-            tf_config_idx = tf.placeholder(
+            tf_config_idx = tf.compat.v1.placeholder(
                 tf.int32, [None], name='config_idx')
             # Configuration data.
-            tf_n_config = tf.placeholder(
+            tf_n_config = tf.compat.v1.placeholder(
                 tf.int32, shape=(), name='n_config'
             )
-            tf_max_n_outcome = tf.placeholder(
+            tf_max_n_outcome = tf.compat.v1.placeholder(
                 tf.int32, shape=(), name='max_n_outcome'
             )
-            tf_config_n_reference = tf.placeholder(
+            tf_config_n_reference = tf.compat.v1.placeholder(
                 tf.int32, [None], name='config_n_reference')
-            tf_config_n_select = tf.placeholder(
+            tf_config_n_select = tf.compat.v1.placeholder(
                 tf.int32, [None], name='config_n_select')
-            tf_config_is_ranked = tf.placeholder(
+            tf_config_is_ranked = tf.compat.v1.placeholder(
                 tf.int32, [None], name='config_is_ranked')
-            tf_config_n_outcome = tf.placeholder(
+            tf_config_n_outcome = tf.compat.v1.placeholder(
                 tf.int32, [None], name='config_n_outcome')
-            tf_outcome_tensor = tf.placeholder(
+            tf_outcome_tensor = tf.compat.v1.placeholder(
                 tf.int32, name='config_outcome_tensor')
             tf_obs = {
                 'stimulus_set': tf_stimulus_set,
@@ -1182,7 +1191,7 @@ class PsychologicalEmbedding(object):
                 sim_qr_config.set_shape((None, None))
                 prob_config = self._tf_ranked_sequence_probability(
                     sim_qr_config, n_select)
-                prob_config = tf.log(tf.maximum(prob_config, cap))
+                prob_config = tf.math.log(tf.maximum(prob_config, cap))
                 prob_config = tf.multiply(weight_config, prob_config)
                 prob_all = tf.concat((prob_all, prob_config), axis=0)
                 cond_idx = cond_idx + 1
@@ -1858,17 +1867,17 @@ class Inverse(PsychologicalEmbedding):
         """
         tf_theta = {}
         if self.theta['rho']['trainable']:
-            tf_theta['rho'] = tf.get_variable(
+            tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
         if self.theta['tau']['trainable']:
-            tf_theta['tau'] = tf.get_variable(
+            tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
         if self.theta['mu']['trainable']:
-            tf_theta['mu'] = tf.get_variable(
+            tf_theta['mu'] = tf.compat.v1.get_variable(
                 "mu", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(0.0000000001, .001)
             )
@@ -2018,22 +2027,22 @@ class Exponential(PsychologicalEmbedding):
         """
         tf_theta = {}
         if self.theta['rho']['trainable']:
-            tf_theta['rho'] = tf.get_variable(
+            tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
         if self.theta['tau']['trainable']:
-            tf_theta['tau'] = tf.get_variable(
+            tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
         if self.theta['gamma']['trainable']:
-            tf_theta['gamma'] = tf.get_variable(
+            tf_theta['gamma'] = tf.compat.v1.get_variable(
                 "gamma", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(0., .001)
             )
         if self.theta['beta']['trainable']:
-            tf_theta['beta'] = tf.get_variable(
+            tf_theta['beta'] = tf.compat.v1.get_variable(
                 "beta", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 30.)
             )
@@ -2166,22 +2175,22 @@ class HeavyTailed(PsychologicalEmbedding):
         """
         tf_theta = {}
         if self.theta['rho']['trainable']:
-            tf_theta['rho'] = tf.get_variable(
+            tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
         if self.theta['tau']['trainable']:
-            tf_theta['tau'] = tf.get_variable(
+            tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
         if self.theta['kappa']['trainable']:
-            tf_theta['kappa'] = tf.get_variable(
+            tf_theta['kappa'] = tf.compat.v1.get_variable(
                 "kappa", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 11.)
             )
         if self.theta['alpha']['trainable']:
-            tf_theta['alpha'] = tf.get_variable(
+            tf_theta['alpha'] = tf.compat.v1.get_variable(
                 "alpha", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(10., 60.)
             )
@@ -2328,19 +2337,19 @@ class StudentsT(PsychologicalEmbedding):
         """
         tf_theta = {}
         if self.theta['rho']['trainable']:
-            tf_theta['rho'] = tf.get_variable(
+            tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
         if self.theta['tau']['trainable']:
-            tf_theta['tau'] = tf.get_variable(
+            tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
         if self.theta['alpha']['trainable']:
             min_alpha = np.max((1, self.n_dim - 5.))
             max_alpha = self.n_dim + 5.
-            tf_theta['alpha'] = tf.get_variable(
+            tf_theta['alpha'] = tf.compat.v1.get_variable(
                 "alpha", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(
                     min_alpha, max_alpha
@@ -2468,7 +2477,7 @@ class RandomEmbedding(Initializer):
             dtype = self.dtype
         scale = tf.pow(
             tf.constant(10., dtype=FLOAT_X),
-            random_uniform(
+            tf.random.uniform(
                 [1],
                 minval=self.minval,
                 maxval=self.maxval,
@@ -2478,7 +2487,7 @@ class RandomEmbedding(Initializer):
             )
         )
         stdev = scale * self.stdev
-        return random_normal(
+        return tf.random.normal(
             shape, self.mean, stdev, dtype, seed=self.seed)
 
     def get_config(self):
@@ -2512,7 +2521,7 @@ class RandomAttention(Initializer):
         """Call."""
         if dtype is None:
             dtype = self.dtype
-        dist = tf.distributions.Dirichlet(self.concentration)
+        dist = tfp.distributions.Dirichlet(self.concentration)
         return self.n_dim * dist.sample([shape[0]])
 
     def get_config(self):

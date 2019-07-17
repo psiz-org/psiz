@@ -13,7 +13,8 @@ There are two ways to install PsiZ:
    1. Install from PyPI using pip: ``pip install psiz`` (coming soon)
    2. Clone from Git Hub: https://github.com/roads/psiz.git
 
-PsiZ also requires TensorFlow, which is not installed automatically since users will want to specify whether they use a GPU enabled version of TensorFlow.
+Note: PsiZ also requires TensorFlow, which is not installed automatically since is not included as a dependency of the PsiZ package (in setup.py). You must explicitly install the latest stable TensorFlow package (tensorflow or tensorflow-gpu). This allows users to specify whether they use a GPU enabled version of TensorFlow.
+
 
 Quick Start
 -----------

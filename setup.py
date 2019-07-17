@@ -21,7 +21,7 @@ setup(
     packages=['psiz'],
     install_requires=[
         'numpy', 'scipy', 'pandas', 'scikit-learn', 'h5py', 'matplotlib',
-        'tensorflow==1.5.0'
+        'tensorflow-probability'
     ],
     include_package_data=True,
 )

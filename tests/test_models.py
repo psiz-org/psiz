@@ -132,12 +132,12 @@ def test_private_exponential_similarity():
 
     attention_weights = tf.constant(1., shape=[2, 3])
 
-    z_q = tf.placeholder(tf.float32, [None, n_dim], name='z_q')
-    z_ref = tf.placeholder(tf.float32, [None, n_dim], name='z_ref')
+    z_q = tf.compat.v1.placeholder(tf.float32, [None, n_dim], name='z_q')
+    z_ref = tf.compat.v1.placeholder(tf.float32, [None, n_dim], name='z_ref')
 
     s = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
 
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
     s_actual = sess.run(
         s, feed_dict={z_q: z_q_in, z_ref: z_ref_in}
     )
@@ -177,12 +177,12 @@ def test_private_exponential_similarity_broadcast():
     gamma = tf.constant(.001, dtype=tf.float32)
     sim_params = {'rho': rho, 'tau': tau, 'gamma': gamma, 'beta': beta}
 
-    z_q = tf.placeholder(tf.float32, name='z_q')
-    z_ref = tf.placeholder(tf.float32, name='z_ref')
+    z_q = tf.compat.v1.placeholder(tf.float32, name='z_q')
+    z_ref = tf.compat.v1.placeholder(tf.float32, name='z_ref')
 
     s = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
 
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
     s_actual = sess.run(
         s, feed_dict={z_q: z_q_in, z_ref: z_ref_in}
     )
@@ -288,7 +288,7 @@ def test_weight_projections():
         attention, dtype=tf.float32
     )
     attention_actual_op = model._project_attention(tf_attention)
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
     attention_actual = sess.run(attention_actual_op)
     sess.close()
 
@@ -342,9 +342,9 @@ def test_tf_probability(model_true, docket_0):
     prob_2_tf = model_true._tf_outcome_probability(
         docket_0, z_tf, tf_theta)
 
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
     with sess.as_default():
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         prob_2 = prob_2_tf.eval()
 
     np.testing.assert_allclose(prob_actual_1, prob_desired)
@@ -451,9 +451,9 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
     tf_s_qref = tf.convert_to_tensor(s_qref[:, :, 0], dtype=tf.float32)
     tf_prob_2 = model_true._tf_ranked_sequence_probability(
         tf_s_qref, tf_n_select)
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
     with sess.as_default():
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         prob_2 = tf_prob_2.eval()
 
     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)

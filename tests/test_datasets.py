@@ -129,7 +129,7 @@ class TestCatalog:
         # Create Catalog object.
         stimulus_id = np.array([0, 1, 2, 3, 4, 5])
         stimulus_filepath = np.array(
-            ['r/a', 'r/b12', 'r/c', 'r/d', 'r/e', 'r/f'], dtype='S10')
+            ['r/a', 'r/b12', 'r/c', 'r/d', 'r/e', 'r/f'], dtype='O')
         catalog = datasets.Catalog(stimulus_id, stimulus_filepath)
         # Save Catalog.
         fn = tmpdir.join('catalog_test.hdf5')

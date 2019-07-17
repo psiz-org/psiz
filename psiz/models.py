@@ -408,18 +408,24 @@ class PsychologicalEmbedding(object):
     def _freeze_phi(self, freeze_options):
         for sub_param_name in freeze_options['phi']:
             if sub_param_name is 'phi_1':
-                if 'value' in freeze_options['phi'][sub_param_name]:
-                    phi_val = freeze_options['phi'][sub_param_name]['value']
-                else:
+                if type(freeze_options['phi'][sub_param_name]) is np.ndarray:
                     phi_val = freeze_options['phi'][sub_param_name]
-
-                if 'trainable' in freeze_options['phi'][sub_param_name]:
-                    trainable = \
-                        freeze_options['phi'][sub_param_name]['trainable']
+                    trainable = np.zeros([self.n_group], dtype=bool)
                 else:
-                    trainable = np.zeros(
-                        [self.n_group], dtype=bool
-                    )
+                    phi_val = freeze_options['phi'][sub_param_name]['value']
+                    trainable = (
+                        freeze_options['phi'][sub_param_name]['trainable']
+                    )      
+                # if 'value' in freeze_options['phi'][sub_param_name]:
+                #     phi_val = freeze_options['phi'][sub_param_name]['value']
+                # else:
+                #     phi_val = freeze_options['phi'][sub_param_name]
+
+                # if 'trainable' in freeze_options['phi'][sub_param_name]:
+                #     trainable = \
+                #         freeze_options['phi'][sub_param_name]['trainable']
+                # else:
+                #     trainable = np.zeros([self.n_group], dtype=bool)
                 self._check_phi_1(phi_val)
 
             self.phi[sub_param_name]['value'] = phi_val

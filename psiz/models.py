@@ -415,17 +415,7 @@ class PsychologicalEmbedding(object):
                     phi_val = freeze_options['phi'][sub_param_name]['value']
                     trainable = (
                         freeze_options['phi'][sub_param_name]['trainable']
-                    )      
-                # if 'value' in freeze_options['phi'][sub_param_name]:
-                #     phi_val = freeze_options['phi'][sub_param_name]['value']
-                # else:
-                #     phi_val = freeze_options['phi'][sub_param_name]
-
-                # if 'trainable' in freeze_options['phi'][sub_param_name]:
-                #     trainable = \
-                #         freeze_options['phi'][sub_param_name]['trainable']
-                # else:
-                #     trainable = np.zeros([self.n_group], dtype=bool)
+                    )
                 self._check_phi_1(phi_val)
 
             self.phi[sub_param_name]['value'] = phi_val

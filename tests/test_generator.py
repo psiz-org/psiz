@@ -109,7 +109,6 @@ def test_information_gain(ground_truth):
     z = ground_truth.z['value']
     samples = simulated_samples(z)
 
-    n_stimuli = 10
     gen = generator.ActiveGenerator()
     docket_0 = Docket(
         np.array([[0, 1, 2]], dtype=np.int32),
@@ -120,8 +119,8 @@ def test_information_gain(ground_truth):
         np.array([1], dtype=np.int32)
         )
     # Compute expected informatin gain.
-    ig_0 = gen._information_gain(ground_truth, samples, docket_0)
-    ig_1 = gen._information_gain(ground_truth, samples, docket_1)
+    ig_0 = generator.information_gain(ground_truth, samples, docket_0)
+    ig_1 = generator.information_gain(ground_truth, samples, docket_1)
 
     assert ig_0 > ig_1
 
@@ -130,7 +129,7 @@ def test_information_gain(ground_truth):
         np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
         np.array([1, 1], dtype=np.int32)
         )
-    ig_01 = gen._information_gain(ground_truth, samples, docket_01)
+    ig_01 = generator.information_gain(ground_truth, samples, docket_01)
     assert ig_01[0] == ig_0
     assert ig_01[1] == ig_1
 
@@ -139,7 +138,7 @@ def test_information_gain(ground_truth):
         np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
         np.array([2, 2], dtype=np.int32)
         )
-    ig_23 = gen._information_gain(ground_truth, samples, docket_23)
+    ig_23 = generator.information_gain(ground_truth, samples, docket_23)
 
     docket_0123 = Docket(
         np.array([
@@ -150,7 +149,7 @@ def test_information_gain(ground_truth):
         ], dtype=np.int32),
         np.array([1, 1, 2, 2], dtype=np.int32)
         )
-    ig_0123 = gen._information_gain(
+    ig_0123 = generator.information_gain(
         ground_truth, samples, docket_0123)
     assert ig_0123[0] == ig_0
     assert ig_0123[1] == ig_1
@@ -160,7 +159,6 @@ def test_information_gain(ground_truth):
 
 def test_kl_divergence():
     """Test computation of KL divergence."""
-    
     mu_left = np.array([0, 0])
     mu_right = np.array([10, 0])
 

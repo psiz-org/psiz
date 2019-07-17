@@ -125,7 +125,9 @@ def visualize_embedding_static(
     else:
         # Note: The dpi must be supplied otherwise the aspect ratio will be
         # changed when savefig is called.
-        plt.savefig(os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300)
+        plt.savefig(
+            os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
+        )
 
 
 # def visualize_embedding_movie(
@@ -148,7 +150,7 @@ def visualize_convergence(data, fname=None):
     rho_mean = np.mean(rho, axis=0)
     rho_std = np.std(rho, axis=0)
 
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     ax.plot(
         n_trial_array, rho_mean,
         linestyle='-', marker="o"
@@ -172,7 +174,9 @@ def visualize_convergence(data, fname=None):
     else:
         # Note: The dpi must be supplied otherwise the aspect ratio will be
         # changed when savefig is called.
-        plt.savefig(os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300)
+        plt.savefig(
+            os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
+        )
 
 
 def infer_legend(unique_class_list, classes):

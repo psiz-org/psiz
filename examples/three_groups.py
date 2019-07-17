@@ -124,12 +124,12 @@ def main():
     attention_weight = model_inferred.phi["phi_1"]["value"]
     group_labels = ["Novice", "Intermediate", "Expert"]
     print("    Attention weights:")
-    for i_group in range(model_inferred.n_group):        
+    for i_group in range(model_inferred.n_group):
         print("    {0:>12} | {1}".format(
             group_labels[i_group],
             np.array2string(
                 attention_weight[i_group, :],
-                formatter={'float_kind':lambda x: "%.2f" % x})
+                formatter={'float_kind': lambda x: "%.2f" % x})
             )
         )
 

@@ -18,7 +18,6 @@
 
 Classes:
     PsychologicalEmbedding: Abstract base class for embedding model.
-    Linear: Embedding model using a linear similarity kernel.
     Exponential: Embedding model using an exponential family similarity
         kernel.
     HeavyTailed: Embedding model using a heavy-tailed similarity
@@ -414,9 +413,11 @@ class PsychologicalEmbedding(object):
                             if 'trainable' in freeze_options['phi'][sub_param_name]:
                                 trainable = freeze_options['phi'][sub_param_name]['trainable']
                             else:
-                                trainable = np.zeros([self.n_group], dtype=bool)
+                                trainable = np.zeros(
+                                    [self.n_group], dtype=bool
+                                )
                             self._check_phi_1(phi_val)
-                            
+
                         self.phi[sub_param_name]['value'] = phi_val
                         self.phi[sub_param_name]['trainable'] = trainable
 
@@ -676,7 +677,7 @@ class PsychologicalEmbedding(object):
         return tf_attention, tf_attention_constraint
 
     def _get_group_attention(self, init_mode, group_id):
-        tf_var_name = "attention_{0}".format(group_id) 
+        tf_var_name = "attention_{0}".format(group_id)
         if self.phi['phi_1']['trainable'][group_id]:
             if init_mode is 'exact':
                 tf_attention = tf.get_variable(
@@ -719,8 +720,6 @@ class PsychologicalEmbedding(object):
             TensorFlow variable representing the embedding points.
 
         """
-        # Initialize z with different scales for different restarts        
-
         if self.z['trainable']:
             if init_mode is 'exact':
                 z = self.z['value']
@@ -958,28 +957,6 @@ class PsychologicalEmbedding(object):
         last_improvement_stop = 0
         last_improvement_reduce = 0
         z_best = None
-        # n_batch = int(np.ceil(obs_train.n_trial / self.batch_size))
-        # batch_idx = np.repeat(
-        #     np.expand_dims(np.arange(n_batch, dtype=np.int), axis=1),
-        #     self.batch_size, axis=1
-        # )
-        # batch_idx = batch_idx.flatten()
-        # batch_idx = batch_idx[0:obs_train.n_trial]
-        # for epoch in range(self.max_n_epoch):
-        #     np.random.shuffle(batch_idx)
-        #     loss_train_batch = np.empty(n_batch)
-        #     for i_batch in range(n_batch):
-        #         obs_train_batch = obs_train.subset(np.equal(batch_idx, i_batch))
-        #         _, loss_train_batch[i_batch], summary = sess.run(
-        #             [train_op, tf_loss, summary_op],
-        #             feed_dict={
-        #                 tf_learning_rate: lr,
-        #                 **self._bind_obs(tf_obs, obs_train_batch)
-        #             }
-        #         )
-        #         sess.run(tf_theta_bounds)
-        #         sess.run(tf_attention_constraint)
-        #     loss_train = np.mean(loss_train_batch)
 
         for epoch in range(self.max_n_epoch):
             _, loss_train, summary = sess.run(
@@ -1013,7 +990,9 @@ class PsychologicalEmbedding(object):
                 theta_best = {}
                 for param_name in tf_theta:
                     theta_best[param_name] = {}
-                    theta_best[param_name]['value'] = sess.run(tf_theta[param_name])[0]
+                    theta_best[param_name]['value'] = sess.run(
+                        tf_theta[param_name]
+                    )[0]
 
             if last_improvement_stop >= self.patience_stop:
                 break
@@ -1107,7 +1086,9 @@ class PsychologicalEmbedding(object):
             # Free parameters.
             tf_theta = self._get_similarity_parameters(init_mode)
             tf_theta_bounds = self._get_similarity_constraints(tf_theta)
-            tf_attention, tf_attention_constraint = self._get_attention(init_mode)
+            tf_attention, tf_attention_constraint = self._get_attention(
+                init_mode
+            )
             tf_z, tf_z_constraint = self._get_embedding(init_mode)
 
             # Observation data.
@@ -1172,7 +1153,10 @@ class PsychologicalEmbedding(object):
             sim_qr = self._tf_similarity(
                 z_q, z_r, tf_theta, tf.expand_dims(tf_atten_expanded, axis=2)
             )
-            # sim_qr_var = tf.Variable(sim_qr, trainable=False, name="sim_qr_var", use_resource=True)  # TODO try, 
+            # sim_qr_var = tf.Variable(
+            #     sim_qr, trainable=False, name="sim_qr_var",
+            #     use_resource=True
+            # )  # TODO try,
 
             # Compute the probability of observations for the different trial
             # configurations.
@@ -1214,16 +1198,9 @@ class PsychologicalEmbedding(object):
             # Cost function
             n_trial = tf.cast(n_trial, dtype=FLOAT_X)
             loss = tf.negative(tf.reduce_sum(prob_all))
-            loss = tf.divide(loss, n_trial) 
-            # TODO Is dividing by trails still necessary? This was originally
-            # done to compare train vs test loss. Now it may stabilize the
-            # gradient decent optimization parameters.
-            # attention_loss = tf.negative(
-            #     self.attention_distance(tf_attention[0, :], tf_attention[1, :]) +
-            #     self.attention_distance(tf_attention[0, :], tf_attention[2, :]) +
-            #     self.attention_distance(tf_attention[1, :], tf_attention[2, :])
-            # ) / 3
-            # loss = loss + attention_loss
+            # Divide by number of trials to make train and test loss
+            # comparable.
+            loss = tf.divide(loss, n_trial)
 
         return (
             loss, tf_z, tf_z_constraint, tf_attention,
@@ -1638,7 +1615,8 @@ class PsychologicalEmbedding(object):
             n_stim_part = np.sum(part_idx)
             z_full[part_idx, :] = np.reshape(
                 z_part, (n_stim_part, n_dim), order='C')
-            return self.log_likelihood(obs, z=z_full)  # TODO pass in theta and phi
+            # TODO pass in theta and phi.
+            return self.log_likelihood(obs, z=z_full)
 
         # Initalize sampler.
         z_full = copy.copy(z)
@@ -1653,14 +1631,18 @@ class PsychologicalEmbedding(object):
         for i_round in range(n_total_sample):
             # Partition stimuli into two groups.
             if np.mod(i_round, 100) == 0:
-                part_idx, n_stimuli_part = self._make_partition(n_stimuli, n_partition)
+                part_idx, n_stimuli_part = self._make_partition(
+                    n_stimuli, n_partition
+                )
                 # Create a diagonally tiled covariance matrix in order to slice
                 # multiple points simultaneously.
                 prior = []
                 for i_part in range(n_partition):
                     prior.append(
                         np.linalg.cholesky(
-                            self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim))
+                            self._inflate_sigma(
+                                sigma, n_stimuli_part[i_part], n_dim)
+                            )
                     )
             for i_part in range(n_partition):
                 z_part = z_full[part_idx[i_part], :]
@@ -1687,11 +1669,11 @@ class PsychologicalEmbedding(object):
 
     def _make_partition(self, n_stimuli, n_partition):
         """Partition stimuli.
-        
+
         Arguments:
             n_stimuli: Scalar indicating the total number of stimuli.
             n_partition: Scalar indicating the number of partitions.
-        
+
         Returns:
             part_idx: A boolean array indicating partition membership.
                 shape = (n_partition, n_stimuli)
@@ -1818,150 +1800,6 @@ class PsychologicalEmbedding(object):
         emb.n_group = 1
         emb.phi["phi_1"]["value"] = np.ones([1, self.n_dim])
         return emb
-
-
-class Linear(PsychologicalEmbedding):
-    """An linear model based on interval MDS.
-
-    This embedding technique uses the following similarity kernel:
-        s(x,y) = beta .* norm(x - y, rho) - gamma,
-    where x and y are n-dimensional vectors. The similarity kernel has
-    three free parameters: rho, gamma, and beta.
-
-    """
-
-    def __init__(self, n_stimuli, n_dim=2, n_group=1):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionalty
-                of the embedding.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group.
-        """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-
-        # Default inference settings.
-        self.lr = 0.001
-
-    def _init_theta(self):
-        """Return dictionary of default theta parameters.
-
-        Returns:
-            Dictionary of theta parameters.
-
-        """
-        theta = dict(
-            rho=dict(value=2., trainable=True, bounds=[1., None]),
-            gamma=dict(value=0., trainable=True, bounds=[None, None]),
-            beta=dict(value=10., trainable=True, bounds=[0., None])
-        )
-        return theta
-
-    def _get_similarity_parameters_cold(self):
-        """Return a dictionary of TensorFlow parameters.
-
-        Parameters are initialized by sampling from a relatively large
-        set.
-
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
-
-        """
-        tf_theta = {}
-        if self.theta['rho']['trainable']:
-            tf_theta['rho'] = tf.get_variable(
-                "rho", [1], dtype=FLOAT_X,
-                initializer=tf.random_uniform_initializer(1., 3.)
-            )
-        if self.theta['gamma']['trainable']:
-            tf_theta['gamma'] = tf.get_variable(
-                "gamma", [1], dtype=FLOAT_X,
-                initializer=tf.random_uniform_initializer(1., 10.)
-            )
-        if self.theta['beta']['trainable']:
-            tf_theta['beta'] = tf.get_variable(
-                "beta", [1], dtype=FLOAT_X,
-                initializer=tf.random_uniform_initializer(0., 10.)
-            )
-        return tf_theta
-
-    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
-        """Exponential family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = tf_theta['rho']
-        gamma = tf_theta['gamma']
-        beta = tf_theta['beta']
-
-        # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qref = tf.multiply(d_qref, tf_attention)
-        d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
-
-        # Linear similarity kernel.
-        # sim_qr = (beta * d_qref) + gamma
-        # max_d_qref = tf.reduce_max(d_qref)
-        sim_qr = gamma - (beta * d_qref)
-        sim_qr = tf.maximum(sim_qr, 0)
-        return sim_qr
-
-    def _similarity(self, z_q, z_r, theta, attention):
-        """Exponential family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']['value']
-        gamma = theta['gamma']['value']
-        beta = theta['beta']['value']
-
-        # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_r))**rho
-        d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
-
-        # Exponential family similarity kernel.
-        sim_qr = gamma - (beta * d_qref)
-        sim_qr = np.maximum(sim_qr, 0)
-        return sim_qr
 
 
 class Inverse(PsychologicalEmbedding):
@@ -2265,7 +2103,7 @@ class Exponential(PsychologicalEmbedding):
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
         d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)  # TODO faster to sum over first dimension?
+        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
 
         # Exponential family similarity kernel.
         sim_qr = np.exp(np.negative(beta) * d_qref**tau) + gamma
@@ -2582,11 +2420,15 @@ class StudentsT(PsychologicalEmbedding):
 
 def _assert_float_dtype(dtype):
     """Validate and return floating point type based on `dtype`.
+
     `dtype` must be a floating point type.
+
     Args:
         dtype: The data type to validate.
+
     Returns:
         Validated type.
+
     Raises:
         ValueError: if `dtype` is not a floating point type.
 
@@ -2609,7 +2451,10 @@ class RandomEmbedding(Initializer):
         dtype: The data type. Only floating point types are supported.
     """
 
-    def __init__(self, mean=0.0, stdev=1.0, minval=0.0, maxval=0.0, seed=None, dtype=tf.float32):
+    def __init__(
+            self, mean=0.0, stdev=1.0, minval=0.0, maxval=0.0, seed=None,
+            dtype=tf.float32):
+        """Initialize."""
         self.mean = mean
         self.stdev = stdev
         self.minval = minval
@@ -2618,6 +2463,7 @@ class RandomEmbedding(Initializer):
         self.dtype = _assert_float_dtype(dtype)
 
     def __call__(self, shape, dtype=None, partition_info=None):
+        """Call."""
         if dtype is None:
             dtype = self.dtype
         scale = tf.pow(
@@ -2636,6 +2482,7 @@ class RandomEmbedding(Initializer):
             shape, self.mean, stdev, dtype, seed=self.seed)
 
     def get_config(self):
+        """Return configuration."""
         return {
             "mean": self.mean,
             "stdev": self.stdev,
@@ -2656,17 +2503,20 @@ class RandomAttention(Initializer):
     """
 
     def __init__(self, n_dim, concentration=0.0, dtype=tf.float32):
+        """Initialize."""
         self.n_dim = n_dim
         self.concentration = concentration
         self.dtype = _assert_float_dtype(dtype)
 
     def __call__(self, shape, dtype=None, partition_info=None):
+        """Call."""
         if dtype is None:
             dtype = self.dtype
         dist = tf.distributions.Dirichlet(self.concentration)
         return self.n_dim * dist.sample([shape[0]])
 
     def get_config(self):
+        """Return configuration."""
         return {
             "concentration": self.concentration,
             "dtype": self.dtype.name

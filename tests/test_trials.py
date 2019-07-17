@@ -338,58 +338,77 @@ class TestDocket:
     def test_stimulus_set_0(self, setup_docket_0):
         np.testing.assert_array_equal(
             setup_docket_0['stimulus_set'],
-            setup_docket_0['docket'].stimulus_set)
+            setup_docket_0['docket'].stimulus_set
+        )
 
     def test_n_reference_0(self, setup_docket_0):
         np.testing.assert_array_equal(
-            setup_docket_0['n_reference'], setup_docket_0['docket'].n_reference)
+            setup_docket_0['n_reference'],
+            setup_docket_0['docket'].n_reference
+        )
 
     def test_n_select_0(self, setup_docket_0):
         np.testing.assert_array_equal(
-            setup_docket_0['n_select'], setup_docket_0['docket'].n_select)
+            setup_docket_0['n_select'],
+            setup_docket_0['docket'].n_select
+        )
 
     def test_is_ranked_0(self, setup_docket_0):
         np.testing.assert_array_equal(
-            setup_docket_0['is_ranked'], setup_docket_0['docket'].is_ranked)
+            setup_docket_0['is_ranked'],
+            setup_docket_0['docket'].is_ranked
+        )
 
     def test_configurations_0(self, setup_docket_0):
         pd.testing.assert_frame_equal(
             setup_docket_0['configurations'],
-            setup_docket_0['docket'].config_list)
+            setup_docket_0['docket'].config_list
+        )
 
     def test_configuration_id_0(self, setup_docket_0):
         np.testing.assert_array_equal(
             setup_docket_0['configuration_id'],
-            setup_docket_0['docket'].config_idx)
+            setup_docket_0['docket'].config_idx
+        )
 
     def test_n_trial_1(self, setup_docket_1):
         assert setup_docket_1['n_trial'] == setup_docket_1['docket'].n_trial
 
     def test_stimulus_set_1(self, setup_docket_1):
         np.testing.assert_array_equal(
-            setup_docket_1['stimulus_set'], setup_docket_1['docket'].stimulus_set)
+            setup_docket_1['stimulus_set'],
+            setup_docket_1['docket'].stimulus_set
+        )
 
     def test_n_reference_1(self, setup_docket_1):
         np.testing.assert_array_equal(
-            setup_docket_1['n_reference'], setup_docket_1['docket'].n_reference)
+            setup_docket_1['n_reference'],
+            setup_docket_1['docket'].n_reference
+        )
 
     def test_n_select_1(self, setup_docket_1):
         np.testing.assert_array_equal(
-            setup_docket_1['n_select'], setup_docket_1['docket'].n_select)
+            setup_docket_1['n_select'],
+            setup_docket_1['docket'].n_select
+        )
 
     def test_is_ranked_1(self, setup_docket_1):
         np.testing.assert_array_equal(
-            setup_docket_1['is_ranked'], setup_docket_1['docket'].is_ranked)
+            setup_docket_1['is_ranked'],
+            setup_docket_1['docket'].is_ranked
+        )
 
     def test_configurations_1(self, setup_docket_1):
         pd.testing.assert_frame_equal(
             setup_docket_1['configurations'],
-            setup_docket_1['docket'].config_list)
+            setup_docket_1['docket'].config_list
+        )
 
     def test_configuration_id_1(self, setup_docket_1):
         np.testing.assert_array_equal(
             setup_docket_1['configuration_id'],
-            setup_docket_1['docket'].config_idx)
+            setup_docket_1['docket'].config_idx
+        )
 
     def test_persistence(self, setup_docket_0, tmpdir):
         """Test persistence of Docket."""

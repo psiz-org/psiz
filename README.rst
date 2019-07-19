@@ -105,8 +105,9 @@ This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file
 .. [vanderMaaten] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet
    embedding. In Machine learning for signal processing (mlsp), 2012 IEEE
    international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720
-.. [RoadsA] Roads, B. D., & Mozer, M. C. (submitted). Obtaining psychological
-   embeddings through joint kernel and metric learning.
+.. [RoadsA] Roads, B. D., & Mozer, M. C. (in press). Obtaining psychological
+   embeddings through joint kernel and metric learning. Behavior Research
+   Methods.
 .. [Wah2011] Wah, C., Branson, S., Welinder, P., Perona, P., & Belongie, S. (2011). The
    Caltech-UCSD Birds-200-2011 Dataset (Tech. Rep. No. CNS-TR-2011-001).
    California Institute of Technology.

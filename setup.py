@@ -24,4 +24,6 @@ setup(
         'tensorflow-probability'
     ],
     include_package_data=True,
+    url='https://github.com/roads/psiz',
+    download_url='https://github.com/roads/psiz/archive/v0.1.0.tar.gz'
 )

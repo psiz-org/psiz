@@ -197,7 +197,7 @@ class ActiveGenerator(TrialGenerator):
             config_list, n_neighbor)
 
     def generate(
-            self, n_trial, embedding, samples, group_id=None, n_query=3,
+            self, n_trial, embedding, samples, group_id=None, n_query=None,
             verbose=0):
         """Return a docket of trials based on provided arguments.
 
@@ -215,7 +215,8 @@ class ActiveGenerator(TrialGenerator):
             group_id (optional): Scalar indicating which group to
                 target.
             n_query (optional): Scalar indicating the number of unique
-                query stimuli that should be chosen.
+                query stimuli that should be chosen. By default, this
+                is equal to n_trial or n_stimuli, whichever is smaller.
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
@@ -239,6 +240,8 @@ class ActiveGenerator(TrialGenerator):
 
         if group_id is None:
             group_id = 0
+        if n_query is None:
+            n_query = n_trial
         n_query = np.minimum(n_query, n_stimuli)
         n_query = np.minimum(n_query, n_trial)
 
@@ -477,7 +480,7 @@ class ActiveShotgunGenerator(TrialGenerator):
         self.priority = priority
 
     def generate(
-            self, n_trial, embedding, samples, group_id=None, n_query=3,
+            self, n_trial, embedding, samples, group_id=None, n_query=None,
             verbose=0):
         """Return a docket of trials based on provided arguments.
 
@@ -495,7 +498,8 @@ class ActiveShotgunGenerator(TrialGenerator):
             group_id (optional): Scalar indicating which group to
                 target.
             n_query (optional): Scalar indicating the number of unique
-                query stimuli that should be chosen.
+                query stimuli that should be chosen. By default, this
+                is equal to n_trial or n_stimuli, whichever is smaller.
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
@@ -516,6 +520,8 @@ class ActiveShotgunGenerator(TrialGenerator):
 
         if group_id is None:
             group_id = 0
+        if n_query is None:
+            n_query = n_trial
         n_query = np.minimum(n_query, n_stimuli)
         n_query = np.minimum(n_query, n_trial)
 

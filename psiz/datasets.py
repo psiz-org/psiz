@@ -177,7 +177,9 @@ class Catalog(object):
 
             n_class = len(self.class_label)
             class_map_class_id = np.empty(n_class, dtype=np.int)
-            class_map_label = np.empty(n_class, dtype="S{0}".format(max_label_length))
+            class_map_label = np.empty(n_class, dtype="S{0}".format(
+                max_label_length
+            ))
             idx = 0
             for key, value in self.class_label.items():
                 class_map_class_id[idx] = key
@@ -228,7 +230,9 @@ def load_catalog(filepath, verbose=0):
         class_map_label = f["class_map_label"][()]
         class_label_dict = {}
         for idx in np.arange(len(class_map_class_id)):
-            class_label_dict[class_map_class_id[idx]] = class_map_label[idx].decode('ascii')
+            class_label_dict[class_map_class_id[idx]] = (
+                class_map_label[idx].decode('ascii')
+            )
     except KeyError:
         class_label_dict = None
 
@@ -325,16 +329,13 @@ def _fetch_obs(dataset_name, cache_subdir='datasets', cache_dir=None):
 
 
 def load_dataset(
-        fp_dataset, is_hosted=False, cache_subdir='datasets', cache_dir=None,
+        fp_dataset, cache_subdir='datasets', cache_dir=None,
         verbose=0):
-    """Load observations and catalog for the requested dataset.
+    """Load observations and catalog for the requested hosted dataset.
 
     Arguments:
         fp_dataset: The filepath to the dataset. If loading a hosted
             dataset, just provide the name of the dataset.
-        is_hosted (optional): Specifies if the dataset is hosted on the
-            PsiZ server and should be downloaded to the specified cache
-            directory.
         cache_subdir (optional): The subdirectory where downloaded
             datasets are cached.
         cache_dir (optional): The cache directory for PsiZ.
@@ -346,29 +347,15 @@ def load_dataset(
             stimuli used to collect observations.
 
     """
-    fp_obs = os.path.join(fp_dataset, 'obs.hdf5')
-    fp_catalog = os.path.join(fp_dataset, 'catalog.hdf5')
+    # Load from download cache.
+    if cache_dir is None:
+        cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
+    dataset_path = os.path.join(cache_dir, cache_subdir, fp_dataset)
+    if not os.path.exists(dataset_path):
+        os.makedirs(dataset_path)
 
-    if not is_hosted:
-        # Load locally.
-        if os.path.isdir(fp_dataset):
-            obs = load_trials(fp_obs)
-            catalog = load_catalog(fp_catalog)
-        else:
-            raise ValueError(
-                'The requested dataset `{0}` does not '
-                'exist.'.format(fp_dataset)
-            )
-    else:
-        # Load from download cache.
-        if cache_dir is None:
-            cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
-        dataset_path = os.path.join(cache_dir, cache_subdir, fp_dataset)
-        if not os.path.exists(dataset_path):
-            os.makedirs(dataset_path)
-
-        obs = _fetch_obs(fp_dataset, cache_subdir, cache_dir)
-        catalog = _fetch_catalog(fp_dataset, cache_subdir, cache_dir)
+    obs = _fetch_obs(fp_dataset, cache_subdir, cache_dir)
+    catalog = _fetch_catalog(fp_dataset, cache_subdir, cache_dir)
 
     if verbose > 0:
         print("Dataset Summary")

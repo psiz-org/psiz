@@ -27,6 +27,7 @@ Functions:
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 
 def identify_catch_trials(obs, grade_mode='lenient'):
@@ -132,9 +133,14 @@ def quality_control(obs, grade_thresh=1.0, grade_mode='lenient'):
 
     """
     agent_list = np.unique(obs.agent_id)
+    grade_record = {
+        'assignment_id': agent_list,
+        'grade': np.zeros(len(agent_list)),
+        'is_retained': np.ones(len(agent_list), dtype=bool)
+    }
 
     keep_locs = np.ones([obs.n_trial], dtype=bool)
-    for i_agent in agent_list:
+    for idx, i_agent in enumerate(agent_list):
         agent_locs = np.equal(obs.agent_id, i_agent)
         obs_agent = obs.subset(agent_locs)
         (is_catch, grade) = identify_catch_trials(
@@ -145,17 +151,17 @@ def quality_control(obs, grade_thresh=1.0, grade_mode='lenient'):
         if n_catch > 0:
             # Compute proportion correct.
             grade = grade[is_catch]
-            prop_correct = np.sum(grade) / n_catch
+            avg_grade = np.sum(grade) / n_catch
+            grade_record['grade'][idx] = avg_grade
 
-            # Drop agent if below required proportion correct.
-            if prop_correct < 1:
-                print("  agent {0}: {1:.2f}".format(i_agent, prop_correct))
-            if prop_correct < grade_thresh:
+            # Drop agent if below required grade threshold.
+            if avg_grade < grade_thresh:
                 keep_locs[agent_locs] = False
-                print("    DROPPED")
+                grade_record['is_retained'][idx] = False
 
     obs_new = obs.subset(keep_locs)
-    return obs_new
+    df_grade = pd.DataFrame.from_dict(grade_record)
+    return obs_new, df_grade
 
 
 def remove_catch_trials(obs):

@@ -36,7 +36,7 @@ Once you have selected an embedding model, you must provide two pieces of inform
   from psiz.models import Exponential
 
   # Load some observations (i.e., judged trials).
-  (obs, catalog) = datasets.load_dataset('birds-16', is_hosted=True)
+  (obs, catalog) = datasets.load_dataset('birds-16')
   # Initialize an embedding model.
   embedding = Exponential(catalog.n_stimuli)
   # Fit the embedding model using similarity judgment observations.

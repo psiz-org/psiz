@@ -18,15 +18,16 @@ Note: PsiZ also requires TensorFlow, which is not installed automatically since 
 
 Quick Start
 -----------
-There are three pre-defined embedding models to choose from:
+There are four predefined embedding models to choose from:
 
-   1. Exponential
-   2. HeavyTailed
-   3. StudentsT
+   1. Inverse
+   2. Exponential
+   3. HeavyTailed
+   4. StudentsT
 
 Once you have selected an embedding model, you must provide two pieces of information in order to infer an embedding.
 
-   1. The similarity judgment observations.
+   1. The similarity judgment observations (abbreviated as obs).
    2. The number of unique stimuli that will be in your embedding.
 
 .. code-block:: python

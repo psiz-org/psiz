@@ -221,7 +221,6 @@ class PsychologicalEmbedding(object):
         if self.n_group is 1:
             is_trainable = np.zeros([1], dtype=bool)
         else:
-            # is_trainable = True
             is_trainable = np.ones([self.n_group], dtype=bool)
         phi = dict(
             phi_1=dict(value=phi_1, trainable=is_trainable)

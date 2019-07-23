@@ -78,7 +78,7 @@ def main():
     model_inferred = Exponential(
         emb_true.n_stimuli, n_dim, n_group)
     freeze_options = {'theta': {'rho': 2, 'beta': 10}}
-    model_inferred.freeze(freeze_options=freeze_options)
+    model_inferred.freeze(freeze_options)
     model_inferred.fit(obs_all, 20, verbose=1)
 
     # Compare the inferred model with ground truth by comparing the

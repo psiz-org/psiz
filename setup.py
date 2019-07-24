@@ -4,12 +4,12 @@ from setuptools import setup
 
 def readme():
     """Read in README file."""
-    with open('README.rst') as f:
+    with open('README.md') as f:
         return f.read()
 
 setup(
     name='psiz',
-    version='0.1.0',
+    version='0.2.0',
     description='Toolbox for inferring psychological embeddings.',
     long_description=readme(),
     classifiers=[
@@ -25,5 +25,5 @@ setup(
     ],
     include_package_data=True,
     url='https://github.com/roads/psiz',
-    download_url='https://github.com/roads/psiz/archive/v0.1.0.tar.gz'
+    download_url='https://github.com/roads/psiz/archive/v0.2.0.tar.gz'
 )

@@ -1,1 +1,2 @@
 v 0.1.0, July 19, 2019 -- Initial development release.
+v 0.2.0, July 24, 2019 -- Changed syntax for accessing free parameter values, setting free parameters and setting which parameters are trainable. Also changed the README to a markdown document.

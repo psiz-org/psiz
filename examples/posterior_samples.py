@@ -70,11 +70,7 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Infer an embedding model.  # TODO
-    # emb_inferred = Exponential(
-    #     emb_true.n_stimuli, emb_true.n_dim)
-    # emb_inferred.freeze({'theta': {'beta': 10, 'rho': 2, 'tau': 1})
-    # emb_inferred.fit(obs, 10, verbose=1)
+    # Use the ground-truth embedding model.
     emb_inferred = emb_true
     z_original = copy.copy(emb_inferred.z)
 

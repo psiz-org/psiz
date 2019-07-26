@@ -89,7 +89,7 @@ class PsychologicalEmbedding(object):
         distance: Return the (weighted) minkowski distance between
             provided points.
         view: Returns a view-specific embedding.
-        trainable: Set which parameters are trainable.
+        trainable: Get or set which parameters are trainable.
         freeze (deprecated): Freeze the free parameters of an embedding
             model.
         thaw (deprecated): Make free parameters trainable.
@@ -135,7 +135,7 @@ class PsychologicalEmbedding(object):
     Notes:
         The methods fit, freeze, thaw, and set_log modify the state of
             the PsychologicalEmbedding object.
-        The abstract methods _init_theta,
+        The abstract methods _default_theta,
             _get_similarity_parameters_cold,
             _get_similarity_parameters_warm, and _tf_similarity must be
             implemented by each concrete class.
@@ -213,7 +213,7 @@ class PsychologicalEmbedding(object):
         return z
 
     @abstractmethod
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -432,7 +432,7 @@ class PsychologicalEmbedding(object):
         tf_theta_bounds = tf.group(*constraint_list)
         return tf_theta_bounds
 
-    def trainable(self, spec):
+    def trainable(self, spec=None):
         """Specify which parameters are trainable.
 
         During inference, you may want to fix some free parameters or
@@ -447,23 +447,44 @@ class PsychologicalEmbedding(object):
         Arguments:
 
         """
-        # if isinstance(spec, str):TODO
-        #     if spec == 'default':
-        #         self._set_trainable_to_default()
-        # else:
-        # Assume spec is a dictionary.
+        if spec is None:
+            trainable_spec = {
+                'z': self._z["trainable"],
+                'w': self._phi["phi_1"]["trainable"]
+            }
+            trainable_spec_theta = self._theta_trainable()
+            trainable_spec = {**trainable_spec, **trainable_spec_theta}
+            return trainable_spec
+        elif isinstance(spec, str):
+            if spec == 'default':
+                spec_default = self._trainable_default()
+                self._set_trainable(spec_default)
+        else:
+            # Assume spec is a dictionary.
+            self._set_trainable(spec)
+
+    def _set_trainable(self, spec):
+        """Set trainable variables using dictionary."""
         for param_name in spec:
             if param_name is 'z':
                 self._z["trainable"] = self._check_z_trainable(spec["z"])
-
-            elif param_name is 'phi':
+            elif param_name is 'w':
                 self._phi["phi_1"]["trainable"] = self._check_w_trainable(
-                    spec["phi"]
+                    spec["w"]
                 )
             else:
-                self._assign_parameter_trainable(param_name, spec[param_name])
+                self._set_theta_parameter_trainable(
+                    param_name, spec[param_name]
+                )
 
-    def _check_z_trainable(val):
+    def _theta_trainable(self):
+        """Return trainable status of theta parameters."""
+        trainable_spec = {}
+        for param_name in self._theta:
+            trainable_spec[param_name] = self._theta[param_name]["trainable"]
+        return trainable_spec
+
+    def _check_z_trainable(self, val):
         """Validate the provided trainable settings."""
         if not np.isscalar(val):
             raise ValueError(
@@ -472,7 +493,7 @@ class PsychologicalEmbedding(object):
             )
         return val
 
-    def _check_w_trainable(val):
+    def _check_w_trainable(self, val):
         """Validate the provided trainable settings."""
         if val.shape[0] != self.n_group:
             raise ValueError(
@@ -482,20 +503,24 @@ class PsychologicalEmbedding(object):
             )
         return val
 
-    # TODO
-    # @abstractmethod
-    # def _set_trainable_to_default(self):
-    #     """Set the free parameters to the default trainable settings."""
+    def _trainable_default(self):
+        """Set the free parameters to the default trainable settings."""
+        if self.n_group == 1:
+            w_trainable = np.zeros([1], dtype=bool)
+        else:
+            w_trainable = np.ones([self.n_group], dtype=bool)
+        trainable_spec = {
+            'z': True,
+            'w': w_trainable
+        }
+        theta_default = self._default_theta()
+        for param_name in theta_default:
+            trainable_spec[param_name] = theta_default[param_name]["trainable"]
+        return trainable_spec
 
-    # TODO
-    # @abstractmethod
-    def _assign_parameter_trainable(self, param_name, param_value):
-        """Handle model specific parameters."""
+    def _set_theta_parameter_trainable(self, param_name, param_value):
+        """Handle model specific theta parameters."""
         self._theta[param_name]["trainable"] = param_value
-        # try:
-        #     doStuff(a.property)
-        # except AttributeError:
-        #     otherStuff()
 
     def freeze(self, freeze_options=None):
         """State changing method specifing which parameters are fixed.
@@ -1952,15 +1977,15 @@ class Inverse(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._init_theta()
-        self.rho = self._theta["rho"]["value"]
-        self.tau = self._theta["tau"]["value"]
-        self.mu = self._theta["mu"]["value"]
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.mu = self._theta["mu"]["value"]
 
         # Default inference settings.
         self.lr = 0.001
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2007,10 +2032,6 @@ class Inverse(PsychologicalEmbedding):
         """Setter method for mu."""
         mu = self._check_theta_param('mu', mu)
         self._theta["mu"]["value"] = mu
-
-    # def _assign_parameter_trainable(self, param_name, param_value):
-    #     """Handle model specific parameters."""
-    #     # TODO
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
@@ -2153,16 +2174,16 @@ class Exponential(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._init_theta()
-        self.rho = self._theta["rho"]["value"]
-        self.tau = self._theta["tau"]["value"]
-        self.gamma = self._theta["gamma"]["value"]
-        self.beta = self._theta["beta"]["value"]
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.gamma = self._theta["gamma"]["value"]
+        # self.beta = self._theta["beta"]["value"]
 
         # Default inference settings.
         self.lr = 0.001
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2220,10 +2241,6 @@ class Exponential(PsychologicalEmbedding):
         """Setter method for beta."""
         beta = self._check_theta_param('beta', beta)
         self._theta["beta"]["value"] = beta
-
-    # def _assign_parameter_trainable(self, param_name, param_value):
-    #     """Handle model specific parameters."""
-    #     # TODO
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
@@ -2354,16 +2371,16 @@ class HeavyTailed(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._init_theta()
-        self.rho = self._theta["rho"]["value"]
-        self.tau = self._theta["tau"]["value"]
-        self.kappa = self._theta["kappa"]["value"]
-        self.alpha = self._theta["alpha"]["value"]
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.kappa = self._theta["kappa"]["value"]
+        # self.alpha = self._theta["alpha"]["value"]
 
         # Default inference settings.
         self.lr = 0.003
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2421,10 +2438,6 @@ class HeavyTailed(PsychologicalEmbedding):
         """Setter method for alpha."""
         alpha = self._check_theta_param('alpha', alpha)
         self._theta["alpha"]["value"] = alpha
-
-    # def _assign_parameter_trainable(self, param_name, param_value):
-    #     """Handle model specific parameters."""
-    #     # TODO
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
@@ -2566,15 +2579,15 @@ class StudentsT(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._init_theta()
-        self.rho = self._theta["rho"]["value"]
-        self.tau = self._theta["tau"]["value"]
-        self.alpha = self._theta["alpha"]["value"]
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.alpha = self._theta["alpha"]["value"]
 
         # Default inference settings.
         self.lr = 0.01
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2624,10 +2637,6 @@ class StudentsT(PsychologicalEmbedding):
         """Setter method for alpha."""
         alpha = self._check_theta_param('alpha', alpha)
         self._theta["alpha"]["value"] = alpha
-
-    # def _assign_parameter_trainable(self, param_name, param_value):
-    #     """Handle model specific parameters."""
-    #     # TODO
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.

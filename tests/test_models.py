@@ -17,7 +17,9 @@
 """Module for testing models.py.
 
 Todo
-    * test init
+    * init
+    * getters and setters
+    * trainable
     * freeze and thaw
     * attention
     * heavy-tailed similarity
@@ -31,7 +33,8 @@ import pytest
 import tensorflow as tf
 
 from psiz.trials import Docket
-from psiz.models import Exponential, HeavyTailed, StudentsT, load_embedding
+from psiz.models import Inverse, Exponential, HeavyTailed, StudentsT
+from psiz.models import load_embedding
 
 
 @pytest.fixture(scope="module")
@@ -106,6 +109,347 @@ def docket_0():
         ), dtype=np.int32)
     docket = Docket(stimulus_set, n_select=n_select)
     return docket
+
+
+def test_inverse_get_and_set():
+    """Test Inverse getters and setters."""
+    common_parameters_set_get(Inverse)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = Inverse(n_stimuli, n_dim=n_dim)
+
+    # Check in sync following initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    mu_init = emb.mu
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert mu_init == emb._theta["mu"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    mu_new = mu_init + 1.1
+    emb.mu = mu_new
+    assert emb.mu == mu_new
+    assert emb._theta["mu"]["value"] == mu_new
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.mu = 1
+    assert isinstance(emb.mu, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.mu = 0
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.mu = 0.00001
+
+
+def test_exponential_get_and_set():
+    """Test Exponential getters and setters."""
+    common_parameters_set_get(Exponential)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = Exponential(n_stimuli, n_dim=n_dim)
+
+    # Check in sync following initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    gamma_init = emb.gamma
+    beta_init = emb.beta
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert gamma_init == emb._theta["gamma"]["value"]
+    assert beta_init == emb._theta["beta"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    gamma_new = gamma_init + .1
+    emb.gamma = gamma_new
+    assert emb.gamma == gamma_new
+    assert emb._theta["gamma"]["value"] == gamma_new
+
+    beta_new = beta_init + .1
+    emb.beta = beta_new
+    assert emb.beta == beta_new
+    assert emb._theta["beta"]["value"] == beta_new
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.gamma = 1
+    assert isinstance(emb.gamma, float)
+
+    emb.beta = 6
+    assert isinstance(emb.beta, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.gamma = -.1
+    with pytest.raises(ValueError):
+        emb.beta = .1
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.gamma = 0
+    emb.beta = 1
+
+
+def test_heavytailed_get_and_set():
+    """Test HeavyTailed getters and setters."""
+    common_parameters_set_get(HeavyTailed)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = HeavyTailed(n_stimuli, n_dim=n_dim)
+
+    # Check in sync following initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    kappa_init = emb.kappa
+    alpha_init = emb.alpha
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert kappa_init == emb._theta["kappa"]["value"]
+    assert alpha_init == emb._theta["alpha"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    kappa_new = kappa_init + 1.1
+    emb.kappa = kappa_new
+    assert emb.kappa == kappa_new
+    assert emb._theta["kappa"]["value"] == kappa_new
+
+    alpha_new = alpha_init + 1.1
+    emb.alpha = alpha_new
+    assert emb.alpha == alpha_new
+    assert emb._theta["alpha"]["value"] == alpha_new
+
+    # rho=dict(value=2., trainable=True, bounds=[1., None]),
+    # tau=dict(value=1., trainable=True, bounds=[1., None]),
+    # kappa=dict(value=2., trainable=True, bounds=[0., None]),
+    # alpha=dict(value=30., trainable=True, bounds=[0., None])
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.kappa = 1
+    assert isinstance(emb.kappa, float)
+
+    emb.alpha = 4
+    assert isinstance(emb.alpha, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.kappa = -.1
+    with pytest.raises(ValueError):
+        emb.alpha = -.1
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.kappa = 0
+    emb.alpha = 0
+
+
+def test_studentst_get_and_set():
+    """Test StudentsT getters and setters."""
+    common_parameters_set_get(StudentsT)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = StudentsT(n_stimuli, n_dim=n_dim)
+
+    # Check in sync follow initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    alpha_init = emb.alpha
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert alpha_init == emb._theta["alpha"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    alpha_new = alpha_init + 1.1
+    emb.alpha = alpha_new
+    assert emb.alpha == alpha_new
+    assert emb._theta["alpha"]["value"] == alpha_new
+
+    # rho=dict(value=2., trainable=False, bounds=[1., None]),
+    # tau=dict(value=2., trainable=False, bounds=[1., None]),
+    # alpha=dict(
+    #     value=(self.n_dim - 1.),
+    #     trainable=False,
+    #     bounds=[0.000001, None]
+    # ),
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.alpha = 4
+    assert isinstance(emb.alpha, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.alpha = 0
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.alpha = 0.001
+
+
+def common_parameters_set_get(model):
+    """Check common parameters."""
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = model(n_stimuli, n_dim=n_dim)
+
+    z_init = emb.z
+    w_init = emb.w
+
+    # Check in sync following initialization.
+    np.testing.assert_array_equal(z_init, emb._z["value"])
+    np.testing.assert_array_equal(w_init, emb._phi["phi_1"]["value"])
+
+    set_and_check_z(emb)
+    set_and_check_w(emb)
+
+    # Two groups.
+    n_group = 2
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    set_and_check_z(emb)
+    set_and_check_w(emb)
+
+    # Three groups.
+    n_group = 3
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    set_and_check_z(emb)
+    set_and_check_w(emb)
+
+
+def set_and_check_z(emb):
+    """Set and check z."""
+    z_new = np.random.rand(emb.n_stimuli, emb.n_dim)
+    emb.z = z_new
+    np.testing.assert_array_equal(emb.z, z_new)
+    np.testing.assert_array_equal(emb._z["value"], z_new)
+
+    z_new = np.random.rand(emb.n_stimuli + 1, emb.n_dim)
+    with pytest.raises(Exception):
+        emb.z = z_new
+
+    z_new = np.random.rand(emb.n_stimuli, emb.n_dim + 1)
+    with pytest.raises(Exception):
+        emb.z = z_new
+
+
+def random_weights(n_group, n_dim):
+    """Generate random attention weights."""
+    w = np.random.rand(n_group, n_dim)
+    w = w / np.sum(w, axis=1, keepdims=True)
+    w = w * n_dim
+    return w
+
+
+def set_and_check_w(emb):
+    """Set and check w."""
+    w_new = random_weights(emb.n_group, emb.n_dim)
+    emb.w = w_new
+    np.testing.assert_array_equal(emb.w, w_new)
+    np.testing.assert_array_equal(emb._phi["phi_1"]["value"], w_new)
+
+    w_new = random_weights(emb.n_group + 1, emb.n_dim)
+    with pytest.raises(Exception):
+        emb.w = w_new
+
+    w_new = random_weights(emb.n_group, emb.n_dim + 1)
+    with pytest.raises(Exception):
+        emb.w = w_new
 
 
 def test_private_exponential_similarity():
@@ -628,8 +972,8 @@ def test_save_load(model_true_det, tmpdir):
     assert loaded_embedding._theta == model_true_det._theta
 
     np.testing.assert_array_equal(
-        loaded_embedding.phi,
-        model_true_det.phi
+        loaded_embedding.w,
+        model_true_det.w
     )
     for param_name in model_true_det._phi:
         np.testing.assert_array_equal(

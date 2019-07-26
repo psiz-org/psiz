@@ -228,7 +228,7 @@ class TestSimilarityTrials:
         n_select = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
             docket = trials.Docket(stimulus_set, n_select=n_select)
-    
+
         # Above support.
         n_select = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:

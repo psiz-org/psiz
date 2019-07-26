@@ -24,7 +24,6 @@ data is added.
 
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
 
 from psiz.models import Exponential
 from psiz.simulate import Agent
@@ -86,26 +85,22 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    model = Exponential(
+    emb = Exponential(
         n_stimuli, n_dim=n_dim, n_group=n_group)
     mean = np.ones((n_dim))
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 10,
-            'gamma': 0.001
-        }
-    }
-    model.freeze(freeze_options)
-    # sim_mat = similarity_matrix(model.similarity, z)
+    emb.z = z
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 10
+    emb.gamma = 0.001
+    emb.trainable("freeze")
+    # sim_mat = similarity_matrix(emb.similarity, z)
     # idx_upper = np.triu_indices(n_stimuli, 1)
     # plt.hist(sim_mat[idx_upper])
     # plt.show()
-    return model
+    return emb
 
 
 if __name__ == "__main__":

@@ -42,7 +42,6 @@ Example output:
 """
 
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 
 from psiz.trials import stack
@@ -75,11 +74,8 @@ def main():
     obs_expert = agent_expert.simulate(docket)
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
-    model_inferred = Exponential(
-        emb_true.n_stimuli, n_dim, n_group)
-    freeze_options = {'theta': {'rho': 2, 'beta': 10}}
-    model_inferred.freeze(freeze_options)
-    model_inferred.fit(obs_all, 20, verbose=1)
+    emb_inferred = Exponential(emb_true.n_stimuli, n_dim, n_group)
+    emb_inferred.fit(obs_all, 20, verbose=1)
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
@@ -99,18 +95,18 @@ def main():
     )
 
     def infer_sim_func0(z_q, z_ref):
-        return model_inferred.similarity(z_q, z_ref, group_id=0)
+        return emb_inferred.similarity(z_q, z_ref, group_id=0)
 
     def infer_sim_func1(z_q, z_ref):
-        return model_inferred.similarity(z_q, z_ref, group_id=1)
+        return emb_inferred.similarity(z_q, z_ref, group_id=1)
 
     def infer_sim_func2(z_q, z_ref):
-        return model_inferred.similarity(z_q, z_ref, group_id=2)
+        return emb_inferred.similarity(z_q, z_ref, group_id=2)
 
     simmat_infer = (
-        similarity_matrix(infer_sim_func0, model_inferred.z),
-        similarity_matrix(infer_sim_func1, model_inferred.z),
-        similarity_matrix(infer_sim_func2, model_inferred.z)
+        similarity_matrix(infer_sim_func0, emb_inferred.z),
+        similarity_matrix(infer_sim_func1, emb_inferred.z),
+        similarity_matrix(infer_sim_func2, emb_inferred.z)
     )
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):
@@ -121,10 +117,10 @@ def main():
             )
 
     # Display attention weights.
-    attention_weight = model_inferred.phi["phi_1"]["value"]
+    attention_weight = emb_inferred.w
     group_labels = ["Novice", "Intermediate", "Expert"]
     print("    Attention weights:")
-    for i_group in range(model_inferred.n_group):
+    for i_group in range(emb_inferred.n_group):
         print("    {0:>12} | {1}".format(
             group_labels[i_group],
             np.array2string(
@@ -152,33 +148,20 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    emb = Exponential(
-        n_stimuli, n_dim=n_dim, n_group=n_group)
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
     mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    attention = np.array((
+    emb.z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    emb.w = np.array((
         (1.8, 1.8, .2, .2),
         (1., 1., 1., 1.),
         (.2, .2, 1.8, 1.8)
     ))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 10,
-            'gamma': 0.001
-        },
-        'phi': {
-            'phi_1': attention
-        }
-    }
-    emb.freeze(freeze_options)
-    # sim_mat = similarity_matrix(emb.similarity, z)
-    # idx_upper = np.triu_indices(n_stimuli, 1)
-    # plt.hist(sim_mat[idx_upper])
-    # plt.show()
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 10
+    emb.gamma = 0.001
+    emb.trainable("freeze")
     return emb
 
 

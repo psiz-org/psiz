@@ -36,21 +36,16 @@ def ground_truth():
     n_stimuli = 10
     n_dim = 2
 
-    model = Exponential(n_stimuli)
+    emb = Exponential(n_stimuli)
     mean = np.zeros((n_dim))
     cov = .1 * np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 10,
-            'gamma': 0
-        }
-    }
-    model.freeze(freeze_options)
-    return model
+    emb.z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 10
+    emb.gamma = 0
+    emb.trainable('freeze')
+    return emb
 
 
 def simulated_samples(z):

@@ -40,28 +40,23 @@ def model_true():
     n_stimuli = 10
     n_dim = 2
 
-    model = Exponential(n_stimuli)
+    emb = Exponential(n_stimuli)
     mean = np.ones((n_dim))
     cov = np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 1,
-            'gamma': 0
-        }
-    }
-    model.freeze(freeze_options)
-    return model
+    emb.z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 1
+    emb.gamma = 0
+    emb.trainable('freeze')
+    return emb
 
 
 @pytest.fixture(scope="module")
 def model_true_det():
     """Return a ground truth embedding."""
     n_stimuli = 10
-    model = Exponential(n_stimuli)
+    emb = Exponential(n_stimuli)
     z = np.array(
         [
             [0.12737487, 1.3211997],
@@ -76,17 +71,13 @@ def model_true_det():
             [-0.04342473, 1.4128358]
         ], dtype=np.float32
     )
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 1,
-            'gamma': 0
-        }
-    }
-    model.freeze(freeze_options)
-    return model
+    emb.z = z
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 1
+    emb.gamma = 0
+    emb.trainable('freeze')
+    return emb
 
 
 @pytest.fixture(scope="module")
@@ -876,12 +867,11 @@ def test_public_exponential_similarity():
     n_stimuli = 10
     n_dim = 3
     model = Exponential(n_stimuli, n_dim=n_dim)
-    freeze_options = {
-        'theta': {
-            'rho': 1.9, 'tau': 2.1, 'beta': 1.11, 'gamma': .001
-        }
-    }
-    model.freeze(freeze_options)
+    model.rho = 1.9
+    model.tau = 2.1
+    model.beta = 1.11
+    model.gamma = .001
+    model.trainable("freeze")
 
     z_q = np.array((
         (.11, -.13, .28),
@@ -968,24 +958,24 @@ def test_weight_projections():
     np.testing.assert_allclose(attention_actual, attention_desired)
 
 
-def test_freeze():
-    """Test freeze method."""
-    n_stimuli = 10
-    n_dim = 2
-    n_group = 2
-    model = Exponential(n_stimuli, n_dim, n_group)
+# def test_freeze():
+#     """Test freeze method."""
+#     n_stimuli = 10
+#     n_dim = 2
+#     n_group = 2
+#     model = Exponential(n_stimuli, n_dim, n_group)
 
-    model.freeze({'z': np.ones((n_stimuli, n_dim))})
-    with pytest.raises(Exception):
-        model.freeze({'z': np.ones((n_stimuli-1, n_dim))})
-    with pytest.raises(Exception):
-        model.freeze({'z': np.ones((n_stimuli, n_dim-1))})
+#     model.freeze({'z': np.ones((n_stimuli, n_dim))})
+#     with pytest.raises(Exception):
+#         model.freeze({'z': np.ones((n_stimuli-1, n_dim))})
+#     with pytest.raises(Exception):
+#         model.freeze({'z': np.ones((n_stimuli, n_dim-1))})
 
-    model.freeze({'phi': {'w': np.ones((n_group, n_dim))}})
-    with pytest.raises(Exception):
-        model.freeze({'phi': {'w': np.ones((n_group+1, n_dim))}})
-    with pytest.raises(Exception):
-        model.freeze({'phi': {'w': np.ones((n_group, n_dim-1))}})
+#     model.freeze({'phi': {'w': np.ones((n_group, n_dim))}})
+#     with pytest.raises(Exception):
+#         model.freeze({'phi': {'w': np.ones((n_group+1, n_dim))}})
+#     with pytest.raises(Exception):
+#         model.freeze({'phi': {'w': np.ones((n_group, n_dim-1))}})
 
 
 def test_probability(model_true, docket_0):

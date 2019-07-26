@@ -201,7 +201,7 @@ def ground_truth(n_stimuli):
             'gamma': 0
         },
         'phi': {
-            'phi_1': attention
+            'w': attention
         }
     }
     model.freeze(freeze_options)

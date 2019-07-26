@@ -31,7 +31,7 @@ Functions:
 Todo:
     - remove external references to .z["value"] and .z["value"], change to .z
         # self.trainable = SimpleNameSpace(**trainable)?
-    - change external and internal references to phi["phi_1"] to w
+    - change external and internal references to "phi_1" to w
     - freeze some group-specific paramters
     - implement warm restarts (primarily embedding aspect)
     - document how to do warm restarts (warm restarts are sequential
@@ -53,7 +53,6 @@ from abc import ABCMeta, abstractmethod
 import warnings
 import copy
 from random import randint
-# from types import SimpleNamespace
 
 import h5py
 import numpy as np
@@ -130,7 +129,7 @@ class PsychologicalEmbedding(object):
             'value' indicates the actual value of the parameter. The
             key 'trainable' is a boolean flag indicating whether the
             variable is trainable during inference. The free parameter
-            phi_1 governs dimension-wide weights.
+            `w` governs dimension-wide weights.
 
     Notes:
         The methods fit, freeze, thaw, and set_log modify the state of
@@ -181,7 +180,7 @@ class PsychologicalEmbedding(object):
         self.z = self._z["value"]
 
         self._phi = self._init_phi()
-        self.w = self._phi["phi_1"]["value"]
+        self.w = self._phi["w"]["value"]
 
         self._theta = {}
 
@@ -227,13 +226,13 @@ class PsychologicalEmbedding(object):
 
         Initialize group-specific free parameters.
         """
-        phi_1 = np.ones((self.n_group, self.n_dim), dtype=np.float32)
+        w = np.ones((self.n_group, self.n_dim), dtype=np.float32)
         if self.n_group is 1:
             is_trainable = np.zeros([1], dtype=bool)
         else:
             is_trainable = np.ones([self.n_group], dtype=bool)
         phi = dict(
-            phi_1=dict(value=phi_1, trainable=is_trainable)
+            w=dict(value=w, trainable=is_trainable)
         )
         return phi
 
@@ -269,16 +268,16 @@ class PsychologicalEmbedding(object):
     @property
     def w(self):
         """Getter method for phi."""
-        return self._phi["phi_1"]["value"]
+        return self._phi["w"]["value"]
 
     @w.setter
     def w(self, w):
         """Setter method for w."""
         self._check_w(w)
-        self._phi["phi_1"]["value"] = w
+        self._phi["w"]["value"] = w
 
     def _check_w(self, attention):
-        """Check argument `phi_1`.
+        """Check argument `w`.
 
         Raises:
             ValueError
@@ -440,17 +439,24 @@ class PsychologicalEmbedding(object):
         dictionary specifying how you would like to update the
         trainability of the parameters.
 
-        Todo:
-            You can restore the default settings by providing the
-            string 'default'.
+        In addition to a dictionary, you can pass in three different
+        strings: `default`, `freeze`, and `thaw`. The `default` option
+        restores the defaults, `freeze` makes all parameters
+        untrainable, and `thaw` makes all parameters trainable.
 
         Arguments:
-
+            spec (optional): If no arguments are provided, the current
+                settings are returned as a dictionary. Otherwise a
+                string (see above) or a dictionary must be passed as
+                an argument. The dictionary is organized such that the
+                keys refer to the parameter names and the values
+                use boolean values to indicate if the parameters are
+                trainable.
         """
         if spec is None:
             trainable_spec = {
                 'z': self._z["trainable"],
-                'w': self._phi["phi_1"]["trainable"]
+                'w': self._phi["w"]["trainable"]
             }
             trainable_spec_theta = self._theta_trainable()
             trainable_spec = {**trainable_spec, **trainable_spec_theta}
@@ -459,6 +465,16 @@ class PsychologicalEmbedding(object):
             if spec == 'default':
                 spec_default = self._trainable_default()
                 self._set_trainable(spec_default)
+            elif spec == 'freeze':
+                self._z["trainable"] = False
+                self._phi["w"]["trainable"] = np.zeros(self.n_group, dtype=bool)
+                for param_name in self._theta:
+                    self._theta[param_name]["trainable"] = False
+            elif spec == 'thaw':
+                self._z["trainable"] = True
+                self._phi["w"]["trainable"] = np.ones(self.n_group, dtype=bool)
+                for param_name in self._theta:
+                    self._theta[param_name]["trainable"] = True
         else:
             # Assume spec is a dictionary.
             self._set_trainable(spec)
@@ -469,7 +485,7 @@ class PsychologicalEmbedding(object):
             if param_name is 'z':
                 self._z["trainable"] = self._check_z_trainable(spec["z"])
             elif param_name is 'w':
-                self._phi["phi_1"]["trainable"] = self._check_w_trainable(
+                self._phi["w"]["trainable"] = self._check_w_trainable(
                     spec["w"]
                 )
             else:
@@ -553,7 +569,7 @@ class PsychologicalEmbedding(object):
 
     def _freeze_phi(self, freeze_options):
         for sub_param_name in freeze_options['phi']:
-            if sub_param_name is 'phi_1':
+            if sub_param_name is 'w':
                 if type(freeze_options['phi'][sub_param_name]) is np.ndarray:
                     phi_val = freeze_options['phi'][sub_param_name]
                     trainable = np.zeros([self.n_group], dtype=bool)
@@ -651,7 +667,7 @@ class PsychologicalEmbedding(object):
         if phi is None:
             phi = self._phi
 
-        attention = phi['phi_1']["value"][group_id, :]
+        attention = phi['w']["value"][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
         # dimensions. TODO Clean up this code block so it is more
@@ -715,7 +731,7 @@ class PsychologicalEmbedding(object):
         if phi is None:
             phi = self._phi
 
-        attention = phi['phi_1']["value"][group_id, :]
+        attention = phi['w']["value"][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
         # dimensions. TODO Clean up this code block so that it is more
@@ -824,19 +840,19 @@ class PsychologicalEmbedding(object):
 
     def _get_group_attention(self, init_mode, group_id):
         tf_var_name = "attention_{0}".format(group_id)
-        if self._phi['phi_1']["trainable"][group_id]:
+        if self._phi['w']["trainable"][group_id]:
             if init_mode is 'exact':
                 tf_attention = tf.compat.v1.get_variable(
                     tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self._phi['phi_1']["value"][group_id, :], dtype=FLOAT_X
+                        self._phi['w']["value"][group_id, :], dtype=FLOAT_X
                     )
                 )
             elif init_mode is 'warm':
                 tf_attention = tf.compat.v1.get_variable(
                     tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self._phi['phi_1']["value"][group_id, :], dtype=FLOAT_X
+                        self._phi['w']["value"][group_id, :], dtype=FLOAT_X
                     )
                 )
             else:
@@ -850,7 +866,7 @@ class PsychologicalEmbedding(object):
             tf_attention = tf.compat.v1.get_variable(
                 tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                 initializer=tf.constant_initializer(
-                    self._phi['phi_1']["value"][group_id, :], dtype=FLOAT_X),
+                    self._phi['w']["value"][group_id, :], dtype=FLOAT_X),
                 trainable=False
             )
         return tf_attention
@@ -989,7 +1005,7 @@ class PsychologicalEmbedding(object):
         loss_val_best = self.evaluate(obs_val)
         # loss_val_best = np.inf
         z_best = self._z["value"]
-        attention_best = self._phi['phi_1']["value"]
+        attention_best = self._phi['w']["value"]
         theta_best = self._theta
         beat_init = False
         if (verbose > 2):
@@ -1080,7 +1096,7 @@ class PsychologicalEmbedding(object):
                 print('        Did not beat initialization.')
 
         self._z["value"] = z_best
-        self._phi['phi_1']["value"] = attention_best
+        self._phi['w']["value"] = attention_best
         self._set_theta(theta_best)
 
         return loss_train_best, loss_val_best
@@ -1163,7 +1179,7 @@ class PsychologicalEmbedding(object):
         if z_best is None:
             epoch_best = epoch + 1
             z_best = self._z["value"]
-            attention_best = self._phi['phi_1']["value"]
+            attention_best = self._phi['w']["value"]
             theta_best = self._theta
 
         return (
@@ -1945,11 +1961,11 @@ class PsychologicalEmbedding(object):
         emb = copy.deepcopy(self)
         z = self._z["value"]
         rho = self._theta["rho"]["value"]
-        attention_weights = self._phi["phi_1"]["value"][group_id, :]
+        attention_weights = self._phi["w"]["value"][group_id, :]
         z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
         emb._z["value"] = z_group
         emb.n_group = 1
-        emb.phi["phi_1"]["value"] = np.ones([1, self.n_dim])
+        emb.phi["w"]["value"] = np.ones([1, self.n_dim])
         return emb
 
 

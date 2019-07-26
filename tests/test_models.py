@@ -17,8 +17,7 @@
 """Module for testing models.py.
 
 Todo
-    * trainable
-    * freeze and thaw
+    * remove freeze and thaw
     * attention
     * heavy-tailed similarity
     * Student's t similarity
@@ -392,7 +391,7 @@ def common_parameters_set_get(model):
 
     # Check in sync following initialization.
     np.testing.assert_array_equal(z_init, emb._z["value"])
-    np.testing.assert_array_equal(w_init, emb._phi["phi_1"]["value"])
+    np.testing.assert_array_equal(w_init, emb._phi["w"]["value"])
 
     set_and_check_z(emb)
     set_and_check_w(emb)
@@ -431,7 +430,7 @@ def set_and_check_w(emb):
     w_new = random_weights(emb.n_group, emb.n_dim)
     emb.w = w_new
     np.testing.assert_array_equal(emb.w, w_new)
-    np.testing.assert_array_equal(emb._phi["phi_1"]["value"], w_new)
+    np.testing.assert_array_equal(emb._phi["w"]["value"], w_new)
 
     w_new = random_weights(emb.n_group + 1, emb.n_dim)
     with pytest.raises(Exception):
@@ -491,7 +490,7 @@ def test_inverse_trainable():
     emb.trainable('default')
     assert emb._z["trainable"]
     np.testing.assert_array_equal(
-        np.ones([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
     assert emb._theta["rho"]["trainable"]
     assert emb._theta["tau"]["trainable"]
@@ -501,7 +500,7 @@ def test_inverse_trainable():
     emb.trainable({'w': np.array([True])})
     emb.trainable('default')
     np.testing.assert_array_equal(
-        np.zeros([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
 
 
@@ -557,7 +556,7 @@ def test_exponential_trainable():
     emb.trainable('default')
     assert emb._z["trainable"]
     np.testing.assert_array_equal(
-        np.ones([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
     assert emb._theta["rho"]["trainable"]
     assert emb._theta["tau"]["trainable"]
@@ -568,7 +567,7 @@ def test_exponential_trainable():
     emb.trainable({'w': np.array([True])})
     emb.trainable('default')
     np.testing.assert_array_equal(
-        np.zeros([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
 
 
@@ -624,7 +623,7 @@ def test_heavytailed_trainable():
     emb.trainable('default')
     assert emb._z["trainable"]
     np.testing.assert_array_equal(
-        np.ones([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
     assert emb._theta["rho"]["trainable"]
     assert emb._theta["tau"]["trainable"]
@@ -635,7 +634,7 @@ def test_heavytailed_trainable():
     emb.trainable({'w': np.array([True])})
     emb.trainable('default')
     np.testing.assert_array_equal(
-        np.zeros([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
 
 
@@ -688,7 +687,7 @@ def test_studentst_trainable():
     emb.trainable('default')
     assert emb._z["trainable"]
     np.testing.assert_array_equal(
-        np.ones([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
     assert not emb._theta["rho"]["trainable"]
     assert not emb._theta["tau"]["trainable"]
@@ -698,7 +697,7 @@ def test_studentst_trainable():
     emb.trainable({'w': np.array([True])})
     emb.trainable('default')
     np.testing.assert_array_equal(
-        np.zeros([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
 
 
@@ -725,7 +724,7 @@ def common_parameters_trainable(model, n_group=1):
     spec_trainable = dict(w=np.zeros([emb.n_group], dtype=bool))
     emb.trainable(spec_trainable)
     np.testing.assert_array_equal(
-        np.zeros([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
 
     returned_spec = emb.trainable()
@@ -736,7 +735,7 @@ def common_parameters_trainable(model, n_group=1):
     spec_trainable = dict(w=np.ones([emb.n_group], dtype=bool))
     emb.trainable(spec_trainable)
     np.testing.assert_array_equal(
-        np.ones([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
 
     # Toggle z and w.
@@ -747,8 +746,26 @@ def common_parameters_trainable(model, n_group=1):
     emb.trainable(spec_trainable)
     assert not emb._z["trainable"]
     np.testing.assert_array_equal(
-        np.zeros([emb.n_group], dtype=bool), emb._phi["phi_1"]["trainable"]
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
     )
+
+    # Test freeze.
+    emb.trainable('freeze')
+    assert not emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    for param_name in emb._theta:
+        assert not emb._theta[param_name]["trainable"]
+
+    # Test thaw.
+    emb.trainable('thaw')
+    assert emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    for param_name in emb._theta:
+        assert emb._theta[param_name]["trainable"]
 
 
 def assert_equal_trainable(a, b):
@@ -964,11 +981,11 @@ def test_freeze():
     with pytest.raises(Exception):
         model.freeze({'z': np.ones((n_stimuli, n_dim-1))})
 
-    model.freeze({'phi': {'phi_1': np.ones((n_group, n_dim))}})
+    model.freeze({'phi': {'w': np.ones((n_group, n_dim))}})
     with pytest.raises(Exception):
-        model.freeze({'phi': {'phi_1': np.ones((n_group+1, n_dim))}})
+        model.freeze({'phi': {'w': np.ones((n_group+1, n_dim))}})
     with pytest.raises(Exception):
-        model.freeze({'phi': {'phi_1': np.ones((n_group, n_dim-1))}})
+        model.freeze({'phi': {'w': np.ones((n_group, n_dim-1))}})
 
 
 def test_probability(model_true, docket_0):
@@ -1062,7 +1079,7 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
 
     z = model_true.z
 
-    attention = model_true._phi['phi_1']['value'][0, :]
+    attention = model_true._phi["w"]["value"][0, :]
     attention = np.tile(attention, (docket_0.n_trial, 1))
 
     (z_q, z_r) = model_true._inflate_points(

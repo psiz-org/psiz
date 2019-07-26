@@ -93,9 +93,9 @@ def main():
         return emb_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        similarity_matrix(truth_sim_func0, emb_true.z['value']),
-        similarity_matrix(truth_sim_func1, emb_true.z['value']),
-        similarity_matrix(truth_sim_func2, emb_true.z['value'])
+        similarity_matrix(truth_sim_func0, emb_true.z),
+        similarity_matrix(truth_sim_func1, emb_true.z),
+        similarity_matrix(truth_sim_func2, emb_true.z)
     )
 
     def infer_sim_func0(z_q, z_ref):
@@ -108,9 +108,9 @@ def main():
         return model_inferred.similarity(z_q, z_ref, group_id=2)
 
     simmat_infer = (
-        similarity_matrix(infer_sim_func0, model_inferred.z['value']),
-        similarity_matrix(infer_sim_func1, model_inferred.z['value']),
-        similarity_matrix(infer_sim_func2, model_inferred.z['value'])
+        similarity_matrix(infer_sim_func0, model_inferred.z),
+        similarity_matrix(infer_sim_func1, model_inferred.z),
+        similarity_matrix(infer_sim_func2, model_inferred.z)
     )
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):

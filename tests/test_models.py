@@ -333,7 +333,7 @@ def test_inflate_points_single_sample(
         docket_0.n_select == n_select
     )
 
-    z = model_true_det.z['value']
+    z = model_true_det.z
     (z_q, z_r) = model_true_det._inflate_points(
         docket_0.stimulus_set[trial_locs], n_reference,
         np.expand_dims(z, axis=2)
@@ -404,9 +404,9 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
         docket.n_select == n_select
     )
 
-    z = model_true.z['value']
+    z = model_true.z
 
-    attention = model_true.phi['phi_1']['value'][0, :]
+    attention = model_true._phi['phi_1']['value'][0, :]
     attention = np.tile(attention, (docket_0.n_trial, 1))
 
     (z_q, z_r) = model_true._inflate_points(
@@ -616,19 +616,27 @@ def test_save_load(model_true_det, tmpdir):
     assert loaded_embedding.n_group == model_true_det.n_group
 
     np.testing.assert_array_equal(
-        loaded_embedding.z['value'],
-        model_true_det.z['value']
+        loaded_embedding.z,
+        model_true_det.z
     )
-    assert loaded_embedding.z['trainable'] == model_true_det.z['trainable']
+    np.testing.assert_array_equal(
+        loaded_embedding._z["value"],
+        model_true_det._z["value"]
+    )
+    assert loaded_embedding._z['trainable'] == model_true_det._z['trainable']
 
-    assert loaded_embedding.theta == model_true_det.theta
+    assert loaded_embedding._theta == model_true_det._theta
 
-    for param_name in model_true_det.phi:
+    np.testing.assert_array_equal(
+        loaded_embedding.phi,
+        model_true_det.phi
+    )
+    for param_name in model_true_det._phi:
         np.testing.assert_array_equal(
-            loaded_embedding.phi[param_name]['value'],
-            model_true_det.phi[param_name]['value']
+            loaded_embedding._phi[param_name]['value'],
+            model_true_det._phi[param_name]['value']
         )
-        assert (
-            loaded_embedding.phi[param_name]['trainable'] ==
-            model_true_det.phi[param_name]['trainable']
+        np.testing.assert_array_equal(
+            loaded_embedding._phi[param_name]['trainable'],
+            model_true_det._phi[param_name]['trainable']
         )

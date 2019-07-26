@@ -39,7 +39,7 @@ def main():
     n_group = 1
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
     simmat_true = similarity_matrix(
-        emb_true.similarity, emb_true.z['value'])
+        emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
     n_trial = 1000
@@ -64,7 +64,7 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(
-            emb_inferred.similarity, emb_inferred.z['value'])
+            emb_inferred.similarity, emb_inferred.z)
         r_pearson[i_round] = matrix_comparison(
             simmat_infer, simmat_true, score='pearson'
         )

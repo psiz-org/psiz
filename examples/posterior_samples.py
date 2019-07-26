@@ -53,11 +53,11 @@ def main():
 
     # Ground truth model.
     model_truth = ground_truth()
-    n_stimuli = model_truth.z['value'].shape[0]
-    n_dim = model_truth.z['value'].shape[1]
-    z_true = model_truth.z['value'].astype(np.float64)
+    n_stimuli = model_truth.z.shape[0]
+    n_dim = model_truth.z.shape[1]
+    z_true = model_truth.z.astype(np.float64)
     simmat_truth = similarity_matrix(
-        model_truth.similarity, model_truth.z['value'])
+        model_truth.similarity, model_truth.z)
 
     # Generate a random docket of trials.
     n_reference = 2
@@ -75,11 +75,11 @@ def main():
     # model_inferred.freeze({'theta': {'beta': 10, 'rho': 2, 'tau': 1})
     # model_inferred.fit(obs, 10, verbose=1)
     model_inferred = model_truth
-    z_original = copy.copy(model_inferred.z['value'])
+    z_original = copy.copy(model_inferred.z)
 
-    # z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
+    # z_inferred = copy.copy(model_inferred.z.astype(np.float64))
     # simmat_infer = similarity_matrix(
-    #     model_inferred.similarity, model_inferred.z['value'])
+    #     model_inferred.similarity, model_inferred.z)
     # r_pearson = matrix_comparison(
     #     simmat_infer, simmat_truth, score='pearson'
     # )
@@ -100,15 +100,15 @@ def main():
             z_samp, (n_sample * n_stimuli, n_dim))
         z_central_list[i_frame] = z_central
 
-        model_inferred.z['value'] = z_central
+        model_inferred.z = z_central
         simmat_infer = similarity_matrix(
-            model_inferred.similarity, model_inferred.z['value'])
+            model_inferred.similarity, model_inferred.z)
         r_pearson = matrix_comparison(
             simmat_infer, simmat_truth, score='pearson'
         )
         r_pearson_list[i_frame] = r_pearson
         print('Frame: {0} | r: {1: >6.2f}'.format(i_frame, r_pearson))
-        model_inferred.z['value'] = z_original
+        model_inferred.z = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
     norm = matplotlib.colors.Normalize(vmin=0., vmax=model_truth.n_stimuli)

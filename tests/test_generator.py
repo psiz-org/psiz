@@ -106,7 +106,7 @@ def test_random_generator():
 
 def test_information_gain(ground_truth):
     """Test expected information gain computation."""
-    z = ground_truth.z['value']
+    z = ground_truth.z
     samples = simulated_samples(z)
 
     gen = generator.ActiveGenerator()

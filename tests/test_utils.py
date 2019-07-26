@@ -73,7 +73,7 @@ def test_similarity_matrix(ground_truth):
     ))
 
     computed_simmat0 = utils.similarity_matrix(
-        ground_truth.similarity, ground_truth.z['value'])
+        ground_truth.similarity, ground_truth.z)
 
     # Check explicit use of first set of attention weights.
     def similarity_func1(z_q, z_ref):
@@ -82,7 +82,7 @@ def test_similarity_matrix(ground_truth):
 
     # Check without passing in explicit attention.
     computed_simmat1 = utils.similarity_matrix(
-        similarity_func1, ground_truth.z['value'])
+        similarity_func1, ground_truth.z)
 
     # Check explicit use of second set of attention weights.
     def similarity_func2(z_q, z_ref):
@@ -90,7 +90,7 @@ def test_similarity_matrix(ground_truth):
         return sim_func
 
     computed_simmat2 = utils.similarity_matrix(
-        similarity_func2, ground_truth.z['value'])
+        similarity_func2, ground_truth.z)
 
     np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat0)
     np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat1)

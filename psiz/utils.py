@@ -102,10 +102,10 @@ def assess_convergence(
             if not first_part:
                 simmat_0 = similarity_matrix(
                     emb_list[i_part - 1].similarity,
-                    emb_list[i_part - 1].z['value']
+                    emb_list[i_part - 1].z
                 )
                 simmat_1 = similarity_matrix(
-                    emb_list[i_part].similarity, emb_list[i_part].z['value']
+                    emb_list[i_part].similarity, emb_list[i_part].z
                 )
                 val[i_shuffle, i_part] = matrix_comparison(
                     simmat_0, simmat_1, score=score
@@ -222,8 +222,8 @@ def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
     def sim_func_b(z_q, z_ref):
         return model_b.similarity(z_q, z_ref, group_id=group_id_b)
 
-    simmat_a = similarity_matrix(sim_func_a, model_a.z['value'])
-    simmat_b = similarity_matrix(sim_func_b, model_b.z['value'])
+    simmat_a = similarity_matrix(sim_func_a, model_a.z)
+    simmat_b = similarity_matrix(sim_func_b, model_b.z)
 
     r_squared = matrix_comparison(simmat_a, simmat_b)
     return r_squared

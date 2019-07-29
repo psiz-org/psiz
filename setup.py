@@ -2,16 +2,11 @@
 from setuptools import setup
 
 
-def readme():
-    """Read in README file."""
-    with open('README.md') as f:
-        return f.read()
-
 setup(
     name='psiz',
     version='0.2.0',
     description='Toolbox for inferring psychological embeddings.',
-    long_description=readme(),
+    long_description='See README for more information.',
     classifiers=[
         'Programming Language :: Python :: 3',
     ],

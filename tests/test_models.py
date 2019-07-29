@@ -17,7 +17,6 @@
 """Module for testing models.py.
 
 Todo
-    * remove freeze and thaw
     * attention
     * heavy-tailed similarity
     * Student's t similarity
@@ -895,12 +894,10 @@ def test_public_exponential_similarity_broadcast():
     n_stimuli = 10
     n_dim = 3
     model = Exponential(n_stimuli, n_dim=n_dim)
-    freeze_options = {
-        'theta': {
-            'rho': 1.9, 'tau': 2.1, 'beta': 1.11, 'gamma': .001
-        }
-    }
-    model.freeze(freeze_options)
+    model.rho = 1.9
+    model.tau = 2.1
+    model.beta = 1.11
+    model.gamma = .001
 
     z_q = np.array((
         (.11, -.13, .28),
@@ -956,26 +953,6 @@ def test_weight_projections():
     sess.close()
 
     np.testing.assert_allclose(attention_actual, attention_desired)
-
-
-# def test_freeze():
-#     """Test freeze method."""
-#     n_stimuli = 10
-#     n_dim = 2
-#     n_group = 2
-#     model = Exponential(n_stimuli, n_dim, n_group)
-
-#     model.freeze({'z': np.ones((n_stimuli, n_dim))})
-#     with pytest.raises(Exception):
-#         model.freeze({'z': np.ones((n_stimuli-1, n_dim))})
-#     with pytest.raises(Exception):
-#         model.freeze({'z': np.ones((n_stimuli, n_dim-1))})
-
-#     model.freeze({'phi': {'w': np.ones((n_group, n_dim))}})
-#     with pytest.raises(Exception):
-#         model.freeze({'phi': {'w': np.ones((n_group+1, n_dim))}})
-#     with pytest.raises(Exception):
-#         model.freeze({'phi': {'w': np.ones((n_group, n_dim-1))}})
 
 
 def test_probability(model_true, docket_0):

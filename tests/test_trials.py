@@ -192,19 +192,12 @@ def ground_truth(n_stimuli):
         (1.9, 1., .1),
         (.1, 1., 1.9)
     ))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 1,
-            'gamma': 0
-        },
-        'phi': {
-            'w': attention
-        }
-    }
-    model.freeze(freeze_options)
+    model.z = z
+    model.rho = 2
+    model.tau = 1
+    model.beta = 1
+    model.gamma = 0
+    model.w = attention
     return model
 
 

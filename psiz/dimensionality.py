@@ -34,7 +34,7 @@ import psiz.utils as ut
 
 def dimension_search(
         obs, embedding_constructor, n_stimuli, dim_list=None,
-        freeze_options=None, n_restart=20, n_split=5, n_fold=1,
+        modifier_func=None, n_restart=20, n_split=5, n_fold=1,
         max_patience=1, verbose=0):
     """Suggest an embedding dimensionality given provided observations.
 
@@ -50,9 +50,12 @@ def dimension_search(
             embedding_constructor: A PsychologicalEmbedding
             constructor.
         n_stimuli:  An integer indicating the number of unqiue stimuli.
-        dim_list (optional): A list of integers indicating the dimensions to
-            search over.
-        freeze_options (optional): Dictionary of freeze options.
+        dim_list (optional): A list of integers indicating the
+            dimensions to search over.
+        modifier_func (optional): A function that takes an embedding
+            as the only argument and returns a modified embedding. This
+            argument can be used to modify an embedding after it is
+            initialized. For example, to set and freeze parameters.
         n_restart (optional): An integer specifying the number of
             restarts to use for the inference procedure. Since the
             embedding procedure finds local optima, multiple restarts
@@ -105,11 +108,12 @@ def dimension_search(
     loss_test = np.nan * np.ones([len(dim_list), n_fold])
     patience = 0
     for idx_dim, i_dimension in enumerate(dim_list):
-        # Instantiate embedding
-        embedding = embedding_constructor(
-            n_stimuli, n_dim=i_dimension, n_group=n_group)
-        if freeze_options is not None:
-            embedding.freeze(freeze_options)
+        # Instantiate embedding.
+        emb = embedding_constructor(
+            n_stimuli, n_dim=i_dimension, n_group=n_group
+        )
+        if modifier_func is not None:
+            emb = modifier_func(emb)
         if verbose > 1:
             print('  Dimensionality: ', i_dimension)
 
@@ -119,12 +123,12 @@ def dimension_search(
                 print('    Fold: ', i_fold)
             # Train
             obs_train = obs.subset(train_index)
-            loss_train[idx_dim, i_fold], _ = embedding.fit(
+            loss_train[idx_dim, i_fold], _ = emb.fit(
                 obs_train, n_restart=n_restart, verbose=verbose-1
             )
             # Test
             obs_test = obs.subset(test_index)
-            loss_test[idx_dim, i_fold] = embedding.evaluate(obs_test)
+            loss_test[idx_dim, i_fold] = emb.evaluate(obs_test)
 
             i_fold = i_fold + 1
         # Compute average cross-validation train and test loss.

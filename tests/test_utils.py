@@ -43,19 +43,13 @@ def ground_truth():
         (1.2, .8),
         (.7, 1.3)
     ))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 10,
-            'gamma': 0
-        },
-        'phi': {
-            'w': attention
-        }
-    }
-    model.freeze(freeze_options)
+    model.z = z
+    model.rho = 2
+    model.tau = 1
+    model.beta = 10
+    model.gamma = 0
+    model.w = attention
+
     return model
 
 

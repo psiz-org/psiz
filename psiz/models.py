@@ -1080,6 +1080,9 @@ class PsychologicalEmbedding(object):
 
         sess.close()
         tf.compat.v1.reset_default_graph()
+
+        if np.isnan(loss):
+            loss = np.inf
         return loss
 
     def _bind_obs(self, tf_obs, obs):

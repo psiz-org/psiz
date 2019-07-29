@@ -4,9 +4,9 @@ from setuptools import setup
 
 setup(
     name='psiz',
-    version='0.2.0',
+    version='0.2.1',
     description='Toolbox for inferring psychological embeddings.',
-    long_description='See README for more information.',
+    long_description='See https://github.com/roads/psiz for more information.',
     classifiers=[
         'Programming Language :: Python :: 3',
     ],
@@ -20,5 +20,5 @@ setup(
     ],
     include_package_data=True,
     url='https://github.com/roads/psiz',
-    download_url='https://github.com/roads/psiz/archive/v0.2.0.tar.gz'
+    download_url='https://github.com/roads/psiz/archive/v0.2.1.tar.gz'
 )

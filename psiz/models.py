@@ -29,18 +29,12 @@ Functions:
         class method, as a PsychologicalEmbedding object.
 
 Todo:
-    - freeze some group-specific paramters
-    - implement warm restarts (primarily embedding aspect)
-    - document how to do warm restarts (warm restarts are sequential
-      and can be created by the user using a for loop and fit with
-      init_mode='warm')
-    - document broadcasting in similarity function
-    - document meaning of cold, warm, and exact initialization
-    - document default tensorboard log location
-        i.e., /tmp/psiz/tensorboard_logs/
-    - expose optimizer
-    - MAYBE ParameterSet, Theta and Phi object class
-    - MAYBE parallelization during fitting
+    - Expose optimizer
+    - Expand posterior sampler to handle theta and phi and sampling
+        from the prior.
+    - Allow different float precision.
+    - Document broadcasting in similarity function.
+    - MAYBE allow different elements of z to be trainable or not.
 
 """
 
@@ -84,8 +78,7 @@ class PsychologicalEmbedding(object):
         distance: Return the (weighted) minkowski distance between
             provided points.
         view: Returns a view-specific embedding.
-        freeze: Freeze the free parameters of an embedding model.
-        thaw: Make free parameters trainable.
+        trainable: Get or set which parameters are trainable.
         probability: Return the probability of the possible outcomes
             for each trial.
         log_likelihood: Return the log-likelihood of a set of
@@ -123,14 +116,19 @@ class PsychologicalEmbedding(object):
             'value' indicates the actual value of the parameter. The
             key 'trainable' is a boolean flag indicating whether the
             variable is trainable during inference. The free parameter
-            phi_1 governs dimension-wide weights.
-
+            `w` governs dimension-wide weights.
+        do_log: A boolean variable that controls whether gradient
+            decent progress is logged. By default, this is initialized
+            to False.
+        log_dir: The location of the logs. The defualt location is
+            `/tmp/psiz/tensorboard_logs/`.
+        
     Notes:
-        The methods fit, freeze, thaw, and set_log modify the state of
-            the PsychologicalEmbedding object.
-        The abstract methods _init_theta,
-            _get_similarity_parameters_cold,
-            _get_similarity_parameters_warm, and _tf_similarity must be
+        The setter methods as well as the methods fit, trainable, and
+            set_log modify the state of the PsychologicalEmbedding
+            object.
+        The abstract methods _default_theta,
+            _get_similarity_parameters_cold, and _tf_similarity must be
             implemented by each concrete class.
 
     """
@@ -170,12 +168,15 @@ class PsychologicalEmbedding(object):
         self.n_group = n_group
 
         # Initialize model components.
-        self.z = self._init_z()
-        self.theta = self._init_theta()
-        self.phi = self._init_phi()
+        self._z = self._init_z()
+        self.z = self._z["value"]
+
+        self._phi = self._init_phi()
+        self.w = self._phi["w"]["value"]
+
+        self._theta = {}
 
         # Default inference settings.
-        # self.batch_size = 2048
         self.lr = 0.001
         self.max_n_epoch = 5000
         self.patience_stop = 10  # 5
@@ -196,14 +197,14 @@ class PsychologicalEmbedding(object):
         mean = np.ones((self.n_dim))
         cov = .03 * np.identity(self.n_dim)
         z = {}
-        z['value'] = np.random.multivariate_normal(
+        z["value"] = np.random.multivariate_normal(
             mean, cov, (self.n_stimuli)
         )
-        z['trainable'] = True
+        z["trainable"] = True
         return z
 
     @abstractmethod
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -217,15 +218,26 @@ class PsychologicalEmbedding(object):
 
         Initialize group-specific free parameters.
         """
-        phi_1 = np.ones((self.n_group, self.n_dim), dtype=np.float32)
+        w = np.ones((self.n_group, self.n_dim), dtype=np.float32)
         if self.n_group is 1:
             is_trainable = np.zeros([1], dtype=bool)
         else:
             is_trainable = np.ones([self.n_group], dtype=bool)
         phi = dict(
-            phi_1=dict(value=phi_1, trainable=is_trainable)
+            w=dict(value=w, trainable=is_trainable)
         )
         return phi
+
+    @property
+    def z(self):
+        """Getter method for z."""
+        return self._z["value"]
+
+    @z.setter
+    def z(self, z):
+        """Setter method for z."""
+        self._check_z(z)
+        self._z["value"] = z
 
     def _check_z(self, z):
         """Check argument `z`.
@@ -237,14 +249,27 @@ class PsychologicalEmbedding(object):
         if z.shape[0] != self.n_stimuli:
             raise ValueError(
                 "Input 'z' does not have the appropriate shape (number of \
-                stimuli).")
+                stimuli)."
+            )
         if z.shape[1] != self.n_dim:
             raise ValueError(
                 "Input 'z' does not have the appropriate shape \
-                (dimensionality).")
+                (dimensionality)."
+            )
 
-    def _check_phi_1(self, attention):
-        """Check argument `phi_1`.
+    @property
+    def w(self):
+        """Getter method for phi."""
+        return self._phi["w"]["value"]
+
+    @w.setter
+    def w(self, w):
+        """Setter method for w."""
+        self._check_w(w)
+        self._phi["w"]["value"] = w
+
+    def _check_w(self, attention):
+        """Check argument `w`.
 
         Raises:
             ValueError
@@ -270,7 +295,30 @@ class PsychologicalEmbedding(object):
                 and corresponding values.
         """
         for param_name in theta:
-            self.theta[param_name]['value'] = theta[param_name]['value']
+            self._theta[param_name]["value"] = theta[param_name]["value"]
+
+    def _check_theta_param(self, name, val):
+        """Check if value is a numerical scalar."""
+        if not np.isscalar(val):
+            raise ValueError(
+                "The parameter `{0}` must be a numerical scalar.".format(name)
+            )
+        else:
+            val = float(val)
+
+        # Check if within bounds.
+        bnds = copy.copy(self._theta[name]["bounds"])
+        if bnds[0] is None:
+            bnds[0] = -np.inf
+        if bnds[1] is None:
+            bnds[1] = np.inf
+        if (val < bnds[0]) or (val > bnds[1]):
+            raise ValueError(
+                "The parameter `{0}` must be between {1} and {2}.".format(
+                    name, bnds[0], bnds[1]
+                )
+            )
+        return val
 
     def _get_similarity_parameters(self, init_mode):
         """Return a dictionary of TensorFlow variables.
@@ -280,7 +328,7 @@ class PsychologicalEmbedding(object):
 
         Arguments:
             init_mode: A string indicating the initialization mode.
-                Valid options are 'cold', 'warm', and 'exact'.
+                Valid options are 'cold' and 'hot'.
 
         Returns:
             tf_theta: A dictionary of algorithm-specific TensorFlow
@@ -289,28 +337,25 @@ class PsychologicalEmbedding(object):
         """
         with tf.compat.v1.variable_scope("similarity_params"):
             tf_theta = {}
-            if init_mode is 'exact':
-                tf_theta = self._get_similarity_parameters_exact()
-            elif init_mode is 'warm':
-                # tf_theta = self._get_similarity_parameters_exact()  # TODO
-                tf_theta = self._get_similarity_parameters_cold()
+            if init_mode is 'hot':
+                tf_theta = self._get_similarity_parameters_hot()
             else:
                 tf_theta = self._get_similarity_parameters_cold()
 
             # If a parameter is untrainable, set the parameter value to the
             # value in the class attribute theta.
-            for param_name in self.theta:
-                if not self.theta[param_name]['trainable']:
+            for param_name in self._theta:
+                if not self._theta[param_name]["trainable"]:
                     tf_theta[param_name] = tf.compat.v1.get_variable(
                         param_name, [1], dtype=FLOAT_X,
                         initializer=tf.constant_initializer(
-                            self.theta[param_name]['value'], dtype=FLOAT_X
+                            self._theta[param_name]["value"], dtype=FLOAT_X
                         ),
                         trainable=False
                     )
         return tf_theta
 
-    def _get_similarity_parameters_exact(self):
+    def _get_similarity_parameters_hot(self):
         """Return a dictionary.
 
         Returns:
@@ -319,12 +364,12 @@ class PsychologicalEmbedding(object):
 
         """
         tf_theta = {}
-        for param_name in self.theta:
-            if self.theta[param_name]['trainable']:
+        for param_name in self._theta:
+            if self._theta[param_name]["trainable"]:
                 tf_theta[param_name] = tf.compat.v1.get_variable(
                     param_name, [1], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self.theta[param_name]['value'], dtype=FLOAT_X
+                        self._theta[param_name]["value"], dtype=FLOAT_X
                     ),
                     trainable=True
                 )
@@ -354,8 +399,8 @@ class PsychologicalEmbedding(object):
 
         """
         constraint_list = []
-        for param_name in self.theta:
-            bounds = self.theta[param_name]['bounds']
+        for param_name in self._theta:
+            bounds = self._theta[param_name]["bounds"]
             if bounds[0] is not None:
                 # Add lower bound.
                 constraint_list.append(
@@ -375,89 +420,112 @@ class PsychologicalEmbedding(object):
         tf_theta_bounds = tf.group(*constraint_list)
         return tf_theta_bounds
 
-    def freeze(self, freeze_options=None):
-        """State changing method specifing which parameters are fixed.
+    def trainable(self, spec=None):
+        """Specify which parameters are trainable.
 
-        During inference, you may want to freeze some parameters at
-        specific values. To freeze a particular parameter, pass in a
-        value for it. If you would like to freeze multiple parameters,
-        you can pass in a dictionary containing multiple entries or
-        call the freeze method multiple times.
+        During inference, you may want to fix some free parameters or
+        allow non-default parameters to be trained. Pass in a
+        dictionary specifying how you would like to update the
+        trainability of the parameters.
 
-        Arguments:
-            freeze_options (optional): Dictionary of parameter names
-                and corresponding values to be frozen (i.e., fixed)
-                during inference.
-        """
-        if freeze_options is not None:
-            for param_name in freeze_options:
-                if param_name is 'z':
-                    z = freeze_options['z'].astype(np.float32)
-                    self._check_z(z)
-                    self.z['value'] = z
-                    self.z['trainable'] = False
-                elif param_name is 'theta':
-                    for sub_param_name in freeze_options['theta']:
-                        self.theta[sub_param_name]['value'] = \
-                            freeze_options[param_name][sub_param_name]
-                        self.theta[sub_param_name]['trainable'] = False
-                elif param_name is 'phi':
-                    self._freeze_phi(freeze_options)
-
-    def _freeze_phi(self, freeze_options):
-        for sub_param_name in freeze_options['phi']:
-            if sub_param_name is 'phi_1':
-                if type(freeze_options['phi'][sub_param_name]) is np.ndarray:
-                    phi_val = freeze_options['phi'][sub_param_name]
-                    trainable = np.zeros([self.n_group], dtype=bool)
-                else:
-                    phi_val = freeze_options['phi'][sub_param_name]['value']
-                    trainable = (
-                        freeze_options['phi'][sub_param_name]['trainable']
-                    )
-                self._check_phi_1(phi_val)
-
-            self.phi[sub_param_name]['value'] = phi_val
-            self.phi[sub_param_name]['trainable'] = trainable
-
-    def thaw(self, thaw_options=None):
-        """State changing method specifying trainable parameters.
-
-        Complement of freeze method. If thaw_options is None, all free
-        parameters are set as trainable.
+        In addition to a dictionary, you can pass in three different
+        strings: `default`, `freeze`, and `thaw`. The `default` option
+        restores the defaults, `freeze` makes all parameters
+        untrainable, and `thaw` makes all parameters trainable.
 
         Arguments:
-            thaw_options (optional): List of parameter names to set as
-                trainable during inference. Valid parameter names
-                include 'z', 'attention', and the parameters associated
-                with the similarity kernel.
+            spec (optional): If no arguments are provided, the current
+                settings are returned as a dictionary. Otherwise a
+                string (see above) or a dictionary must be passed as
+                an argument. The dictionary is organized such that the
+                keys refer to the parameter names and the values
+                use boolean values to indicate if the parameters are
+                trainable.
         """
-        if thaw_options is None:
-            self.z['trainable'] = True
-            for param_name in self.theta:
-                self.theta[param_name]['trainable'] = True
-            # TODO handle phi.
-            # for param_name in self.phi:
-            #     if self.n_group is 1:
-            #         is_trainable = np.zeros([1], dtype=bool)
-            #     else:
-            #         is_trainable = np.ones([self.n_group], dtype=bool)
-            #     self.phi[param_name]['trainable'] = is_trainable
-
+        if spec is None:
+            trainable_spec = {
+                'z': self._z["trainable"],
+                'w': self._phi["w"]["trainable"]
+            }
+            trainable_spec_theta = self._theta_trainable()
+            trainable_spec = {**trainable_spec, **trainable_spec_theta}
+            return trainable_spec
+        elif isinstance(spec, str):
+            if spec == 'default':
+                spec_default = self._trainable_default()
+                self._set_trainable(spec_default)
+            elif spec == 'freeze':
+                self._z["trainable"] = False
+                self._phi["w"]["trainable"] = np.zeros(self.n_group, dtype=bool)
+                for param_name in self._theta:
+                    self._theta[param_name]["trainable"] = False
+            elif spec == 'thaw':
+                self._z["trainable"] = True
+                self._phi["w"]["trainable"] = np.ones(self.n_group, dtype=bool)
+                for param_name in self._theta:
+                    self._theta[param_name]["trainable"] = True
         else:
-            for param_name in thaw_options:
-                if param_name is 'z':
-                    self.z['trainable'] = True
-                elif param_name is 'theta':
-                    for sub_param_name in thaw_options[param_name]:
-                        self.theta[sub_param_name]['trainable'] = True
-                elif param_name is 'phi':
-                    if self.n_group is 1:
-                        is_trainable = np.zeros([1], dtype=bool)
-                    else:
-                        is_trainable = np.ones([self.n_group], dtype=bool)
-                    for sub_param_name in thaw_options[param_name]:
-                        self.phi[sub_param_name]['trainable'] = is_trainable
+            # Assume spec is a dictionary.
+            self._set_trainable(spec)
+
+    def _set_trainable(self, spec):
+        """Set trainable variables using dictionary."""
+        for param_name in spec:
+            if param_name is 'z':
+                self._z["trainable"] = self._check_z_trainable(spec["z"])
+            elif param_name is 'w':
+                self._phi["w"]["trainable"] = self._check_w_trainable(
+                    spec["w"]
+                )
+            else:
+                self._set_theta_parameter_trainable(
+                    param_name, spec[param_name]
+                )
+
+    def _theta_trainable(self):
+        """Return trainable status of theta parameters."""
+        trainable_spec = {}
+        for param_name in self._theta:
+            trainable_spec[param_name] = self._theta[param_name]["trainable"]
+        return trainable_spec
+
+    def _check_z_trainable(self, val):
+        """Validate the provided trainable settings."""
+        if not np.isscalar(val):
+            raise ValueError(
+                "The parameter `z` requires a boolean value to set it's "
+                "`trainable` property."
+            )
+        return val
+
+    def _check_w_trainable(self, val):
+        """Validate the provided trainable settings."""
+        if val.shape[0] != self.n_group:
+            raise ValueError(
+                "The parameter `phi` requires a boolean array that has the "
+                "same length as the number of groups in order to set it's "
+                "`trainable` property."
+            )
+        return val
+
+    def _trainable_default(self):
+        """Set the free parameters to the default trainable settings."""
+        if self.n_group == 1:
+            w_trainable = np.zeros([1], dtype=bool)
+        else:
+            w_trainable = np.ones([self.n_group], dtype=bool)
+        trainable_spec = {
+            'z': True,
+            'w': w_trainable
+        }
+        theta_default = self._default_theta()
+        for param_name in theta_default:
+            trainable_spec[param_name] = theta_default[param_name]["trainable"]
+        return trainable_spec
+
+    def _set_theta_parameter_trainable(self, param_name, param_value):
+        """Handle model specific theta parameters."""
+        self._theta[param_name]["trainable"] = param_value
 
     def similarity(self, z_q, z_r, group_id=None, theta=None, phi=None):
         """Return similarity between two lists of points.
@@ -465,8 +533,6 @@ class PsychologicalEmbedding(object):
         Similarity is determined using the similarity kernel and the
         current similarity parameters. This method implements the
         logic for handling arguments of different shapes.
-
-        TODO better description of the input shapes that are allowed.
 
         Arguments:
             z_q: A set of embedding points.
@@ -478,7 +544,7 @@ class PsychologicalEmbedding(object):
             theta (optional): The parameters governing the similarity
                 kernel. If not provided, the theta associated with the
                 current object is used.
-            phi (optional): TODO The weights allocated to each
+            phi (optional): The weights allocated to each
                 dimension in a weighted minkowski metric. The weights
                 should be positive and sum to the dimensionality of the
                 weight vector, although this is not enforced.
@@ -500,21 +566,21 @@ class PsychologicalEmbedding(object):
                 group_id = group_id.astype(dtype=np.int32)
 
         if theta is None:
-            theta = self.theta
+            theta = self._theta
         if phi is None:
-            phi = self.phi
+            phi = self._phi
 
-        attention = phi['phi_1']['value'][group_id, :]
+        attention = phi['w']["value"][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
-        # dimensions. TODO Clean up this code block so it is more
-        # readable.
+        # dimensions.
         if z_r.ndim > 2:
             if z_q.ndim == 2:
                 z_q = np.expand_dims(z_q, axis=2)
             if attention.ndim == 2:
                 attention = np.expand_dims(attention, axis=2)
         if z_r.ndim == 4:
+            # A fourth dimension means there are samples for each point.
             if z_q.ndim == 3:
                 z_q = np.expand_dims(z_q, axis=3)
             if attention.ndim == 3:
@@ -530,8 +596,6 @@ class PsychologicalEmbedding(object):
         This method implements the logic for handling arguments of
         different shapes.
 
-        TODO better description of the input shapes that are allowed.
-
         Arguments:
             z_q: A set of embedding points.
                 shape = (n_trial, n_dim, [1, n_sample])
@@ -542,7 +606,7 @@ class PsychologicalEmbedding(object):
             theta (optional): The parameters governing the similarity
                 kernel. If not provided, the theta associated with the
                 current object is used.
-            phi (optional): TODO The weights allocated to each
+            phi (optional): The weights allocated to each
                 dimension in a weighted minkowski metric. The weights
                 should be positive and sum to the dimensionality of the
                 weight vector, although this is not enforced.
@@ -564,21 +628,21 @@ class PsychologicalEmbedding(object):
                 group_id = group_id.astype(dtype=np.int32)
 
         if theta is None:
-            theta = self.theta
+            theta = self._theta
         if phi is None:
-            phi = self.phi
+            phi = self._phi
 
-        attention = phi['phi_1']['value'][group_id, :]
+        attention = phi['w']["value"][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
-        # dimensions. TODO Clean up this code block so that it is more
-        # readable.
+        # dimensions.
         if z_r.ndim > 2:
             if z_q.ndim == 2:
                 z_q = np.expand_dims(z_q, axis=2)
             if attention.ndim == 2:
                 attention = np.expand_dims(attention, axis=2)
         if z_r.ndim == 4:
+            # A fourth dimension means there are samples for each point.
             if z_q.ndim == 3:
                 z_q = np.expand_dims(z_q, axis=3)
             if attention.ndim == 3:
@@ -608,7 +672,7 @@ class PsychologicalEmbedding(object):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']['value']
+        rho = theta['rho']["value"]
 
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
@@ -677,19 +741,12 @@ class PsychologicalEmbedding(object):
 
     def _get_group_attention(self, init_mode, group_id):
         tf_var_name = "attention_{0}".format(group_id)
-        if self.phi['phi_1']['trainable'][group_id]:
-            if init_mode is 'exact':
+        if self._phi['w']["trainable"][group_id]:
+            if init_mode is 'hot':
                 tf_attention = tf.compat.v1.get_variable(
                     tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X
-                    )
-                )
-            elif init_mode is 'warm':
-                tf_attention = tf.compat.v1.get_variable(
-                    tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
-                    initializer=tf.constant_initializer(
-                        self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X
+                        self._phi['w']["value"][group_id, :], dtype=FLOAT_X
                     )
                 )
             else:
@@ -703,7 +760,7 @@ class PsychologicalEmbedding(object):
             tf_attention = tf.compat.v1.get_variable(
                 tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                 initializer=tf.constant_initializer(
-                    self.phi['phi_1']['value'][group_id, :], dtype=FLOAT_X),
+                    self._phi['w']["value"][group_id, :], dtype=FLOAT_X),
                 trainable=False
             )
         return tf_attention
@@ -713,37 +770,15 @@ class PsychologicalEmbedding(object):
 
         Arguments:
             init_mode: A string indicating the initialization mode.
-                valid options are 'cold', 'warm', and 'exact'.
+                valid options are 'cold' and 'hot'.
 
         Returns:
             TensorFlow variable representing the embedding points.
 
         """
-        if self.z['trainable']:
-            if init_mode is 'exact':
-                z = self.z['value']
-                tf_z = tf.compat.v1.get_variable(
-                    "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
-                    initializer=tf.constant_initializer(
-                        z, dtype=FLOAT_X)
-                )
-            elif init_mode is 'warm':
-                # Mix current value with a random initialization.
-                # gmm = mixture.GaussianMixture(
-                #     n_components=1, covariance_type='spherical')
-                # gmm.fit(self.z['value'])
-                # mu = gmm.means_[0]
-                # cov = gmm.covariances_[0] * np.identity(self.n_dim)
-                # TODO re-work warm
-                # TODO get rid init_scale_list and rand_scale_idx
-                init_scale_list = [.001, .003, .01, .03, .1, .3, 1.]
-                rand_scale_idx = np.random.randint(0, len(init_scale_list))
-                mu = np.zeros((self.n_dim))
-                cov = init_scale_list[rand_scale_idx] * np.identity(self.n_dim)
-                z_noise = np.random.multivariate_normal(
-                    mu, cov, (self.n_stimuli))
-                # z = .8 * self.z['value'] + .2 * z_noise
-                z = z_noise  # TODO
+        if self._z["trainable"]:
+            if init_mode is 'hot':
+                z = self._z["value"]
                 tf_z = tf.compat.v1.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
@@ -764,7 +799,7 @@ class PsychologicalEmbedding(object):
             tf_z = tf.compat.v1.get_variable(
                 "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
                 initializer=tf.constant_initializer(
-                    self.z['value'], dtype=FLOAT_X
+                    self._z["value"], dtype=FLOAT_X
                 ),
                 trainable=False
             )
@@ -802,8 +837,12 @@ class PsychologicalEmbedding(object):
                 embedding procedure can get stuck in local optima,
                 multiple restarts help find the global optimum.
             init_mode (optional): A string indicating the
-                initialization mode. Valid options are 'cold', 'warm',
-                and 'exact'.
+                initialization mode. Valid options are 'cold' and
+                'hot'. When fitting using a `cold` initialization, all
+                trainable paramters will be randomly initialized on
+                thier defined support. When fitting using a `hot`
+                initiazation, trainable parameters will continue from
+                their current value.
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
@@ -840,10 +879,10 @@ class PsychologicalEmbedding(object):
         # Evaluate current model to obtain starting loss.
         loss_train_best = self.evaluate(obs_train)
         loss_val_best = self.evaluate(obs_val)
-        # loss_val_best = np.inf
-        z_best = self.z['value']
-        attention_best = self.phi['phi_1']['value']
-        theta_best = self.theta
+
+        z_best = self._z["value"]
+        attention_best = self._phi['w']["value"]
+        theta_best = self._theta
         beat_init = False
         if (verbose > 2):
             print('        Initialization')
@@ -865,7 +904,6 @@ class PsychologicalEmbedding(object):
 
         # Define optimizer op.
         tf_learning_rate = tf.compat.v1.placeholder(FLOAT_X, shape=[])
-        # TODO Make optimizer passable argument.
         train_op = tf.compat.v1.train.RMSPropOptimizer(
             learning_rate=tf_learning_rate
         ).minimize(tf_loss)
@@ -886,7 +924,6 @@ class PsychologicalEmbedding(object):
             summary_op = tf.compat.v1.summary.merge_all()
 
         # Run multiple restarts of embedding algorithm.
-        # TODO evaluate current setting first.
         sess = tf.compat.v1.Session()
         for i_restart in range(n_restart):
             if (verbose > 2):
@@ -932,8 +969,8 @@ class PsychologicalEmbedding(object):
             else:
                 print('        Did not beat initialization.')
 
-        self.z['value'] = z_best
-        self.phi['phi_1']['value'] = attention_best
+        self._z["value"] = z_best
+        self._phi['w']["value"] = attention_best
         self._set_theta(theta_best)
 
         return loss_train_best, loss_val_best
@@ -968,7 +1005,7 @@ class PsychologicalEmbedding(object):
                 feed_dict={tf_learning_rate: lr, **tf_obs_train}
             )
             sess.run(tf_theta_bounds)
-            sess.run(tf_z_constraint)  # TODO
+            sess.run(tf_z_constraint)
             sess.run(tf_attention_constraint)
             loss_val = sess.run(
                 tf_loss, feed_dict=tf_obs_val
@@ -994,7 +1031,7 @@ class PsychologicalEmbedding(object):
                 theta_best = {}
                 for param_name in tf_theta:
                     theta_best[param_name] = {}
-                    theta_best[param_name]['value'] = sess.run(
+                    theta_best[param_name]["value"] = sess.run(
                         tf_theta[param_name]
                     )[0]
 
@@ -1015,9 +1052,9 @@ class PsychologicalEmbedding(object):
         # Handle pathological case where there is no improvement.
         if z_best is None:
             epoch_best = epoch + 1
-            z_best = self.z['value']
-            attention_best = self.phi['phi_1']['value']
-            theta_best = self.theta
+            z_best = self._z["value"]
+            attention_best = self._phi['w']["value"]
+            theta_best = self._theta
 
         return (
             loss_train_best, loss_val_best, epoch_best, z_best, attention_best,
@@ -1034,7 +1071,7 @@ class PsychologicalEmbedding(object):
                 the negative loglikelihood.
 
         """
-        (tf_loss, _, _, _, _, _, _, tf_obs) = self._core_model('exact')
+        (tf_loss, _, _, _, _, _, _, tf_obs) = self._core_model('hot')
 
         init = tf.compat.v1.global_variables_initializer()
         sess = tf.compat.v1.Session()
@@ -1157,10 +1194,6 @@ class PsychologicalEmbedding(object):
             sim_qr = self._tf_similarity(
                 z_q, z_r, tf_theta, tf.expand_dims(tf_atten_expanded, axis=2)
             )
-            # sim_qr_var = tf.Variable(
-            #     sim_qr, trainable=False, name="sim_qr_var",
-            #     use_resource=True
-            # )  # TODO try,
 
             # Compute the probability of observations for the different trial
             # configurations.
@@ -1287,7 +1320,7 @@ class PsychologicalEmbedding(object):
         n_trial_all = docket.n_trial
 
         if z is None:
-            z = self.z['value']
+            z = self._z["value"]
         else:
             self._check_z(z)
 
@@ -1317,8 +1350,6 @@ class PsychologicalEmbedding(object):
         sim_qr = self.similarity(
             z_q, z_r, group_id=group_id, theta=theta, phi=phi)
 
-        # TODO generalize remaining code for multiple samples.
-        # sim_qr = sim_qr[:, :, 0]
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
             config = docket.config_list.iloc[i_config]
@@ -1496,7 +1527,6 @@ class PsychologicalEmbedding(object):
             sim_qr:
             n_select:
 
-        TODO complete docs, MAYBE implement samples dimension?
         """
         n_trial = tf.shape(sim_qr)[0]
         # n_trial = tf.cast(n_trial, dtype=tf.int32)
@@ -1584,7 +1614,7 @@ class PsychologicalEmbedding(object):
         n_stimuli = self.n_stimuli
         n_dim = self.n_dim
         if z_init is None:
-            z = copy.copy(self.z['value'])
+            z = copy.copy(self._z["value"])
         else:
             z = z_init
 
@@ -1746,34 +1776,34 @@ class PsychologicalEmbedding(object):
         f.create_dataset("n_group", data=self.n_group)
 
         grp_z = f.create_group("z")
-        grp_z.create_dataset("value", data=self.z["value"])
-        grp_z.create_dataset("trainable", data=self.z["trainable"])
+        grp_z.create_dataset("value", data=self._z["value"])
+        grp_z.create_dataset("trainable", data=self._z["trainable"])
 
         grp_theta = f.create_group("theta")
-        for theta_param_name in self.theta:
+        for theta_param_name in self._theta:
             grp_theta_param = grp_theta.create_group(theta_param_name)
             grp_theta_param.create_dataset(
-                "value", data=self.theta[theta_param_name]["value"])
+                "value", data=self._theta[theta_param_name]["value"])
             grp_theta_param.create_dataset(
-                "trainable", data=self.theta[theta_param_name]["trainable"])
+                "trainable", data=self._theta[theta_param_name]["trainable"])
             # grp_theta_param.create_dataset(
-            #   "bounds", data=self.theta[theta_param_name]["bounds"])
+            #   "bounds", data=self._theta[theta_param_name]["bounds"])
 
         grp_phi = f.create_group("phi")
-        for phi_param_name in self.phi:
+        for phi_param_name in self._phi:
             grp_phi_param = grp_phi.create_group(phi_param_name)
             grp_phi_param.create_dataset(
-                "value", data=self.phi[phi_param_name]["value"])
+                "value", data=self._phi[phi_param_name]["value"])
             grp_phi_param.create_dataset(
-                "trainable", data=self.phi[phi_param_name]["trainable"])
+                "trainable", data=self._phi[phi_param_name]["trainable"])
 
         f.close()
 
     def subset(self, idx):
         """Return subset of embedding."""
         emb = copy.deepcopy(self)
-        emb.z['value'] = emb.z['value'][idx, :]
-        emb.n_stimuli = emb.z['value'].shape[0]
+        emb._z["value"] = emb._z["value"][idx, :]
+        emb.n_stimuli = emb._z["value"].shape[0]
         return emb
 
     def view(self, group_id):
@@ -1796,13 +1826,13 @@ class PsychologicalEmbedding(object):
 
         """
         emb = copy.deepcopy(self)
-        z = self.z["value"]
-        rho = self.theta["rho"]["value"]
-        attention_weights = self.phi["phi_1"]["value"][group_id, :]
+        z = self._z["value"]
+        rho = self._theta["rho"]["value"]
+        attention_weights = self._phi["w"]["value"][group_id, :]
         z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
-        emb.z["value"] = z_group
+        emb._z["value"] = z_group
         emb.n_group = 1
-        emb.phi["phi_1"]["value"] = np.ones([1, self.n_dim])
+        emb.phi["w"]["value"] = np.ones([1, self.n_dim])
         return emb
 
 
@@ -1830,11 +1860,15 @@ class Inverse(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.mu = self._theta["mu"]["value"]
 
         # Default inference settings.
         self.lr = 0.001
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -1845,9 +1879,42 @@ class Inverse(PsychologicalEmbedding):
         theta = dict(
             rho=dict(value=2., trainable=True, bounds=[1., None]),
             tau=dict(value=1., trainable=True, bounds=[1., None]),
-            mu=dict(value=0., trainable=True, bounds=[cap, None])
+            mu=dict(value=1e-15, trainable=True, bounds=[cap, None])
         )
         return theta
+
+    @property
+    def rho(self):
+        """Getter method for rho."""
+        return self._theta["rho"]["value"]
+
+    @rho.setter
+    def rho(self, rho):
+        """Setter method for rho."""
+        rho = self._check_theta_param('rho', rho)
+        self._theta["rho"]["value"] = rho
+
+    @property
+    def tau(self):
+        """Getter method for tau."""
+        return self._theta["tau"]["value"]
+
+    @tau.setter
+    def tau(self, tau):
+        """Setter method for tau."""
+        tau = self._check_theta_param('tau', tau)
+        self._theta["tau"]["value"] = tau
+
+    @property
+    def mu(self):
+        """Getter method for mu."""
+        return self._theta["mu"]["value"]
+
+    @mu.setter
+    def mu(self, mu):
+        """Setter method for mu."""
+        mu = self._check_theta_param('mu', mu)
+        self._theta["mu"]["value"] = mu
 
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
@@ -1861,17 +1928,17 @@ class Inverse(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.theta['rho']['trainable']:
+        if self._theta['rho']["trainable"]:
             tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
-        if self.theta['tau']['trainable']:
+        if self._theta['tau']["trainable"]:
             tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
-        if self.theta['mu']['trainable']:
+        if self._theta['mu']["trainable"]:
             tf_theta['mu'] = tf.compat.v1.get_variable(
                 "mu", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(0.0000000001, .001)
@@ -1933,9 +2000,9 @@ class Inverse(PsychologicalEmbedding):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']['value']
-        tau = theta['tau']['value']
-        mu = theta['mu']['value']
+        rho = theta['rho']["value"]
+        tau = theta['tau']["value"]
+        mu = theta['mu']["value"]
 
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
@@ -1990,11 +2057,16 @@ class Exponential(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.gamma = self._theta["gamma"]["value"]
+        # self.beta = self._theta["beta"]["value"]
 
         # Default inference settings.
         self.lr = 0.001
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2009,6 +2081,50 @@ class Exponential(PsychologicalEmbedding):
         )
         return theta
 
+    @property
+    def rho(self):
+        """Getter method for rho."""
+        return self._theta["rho"]["value"]
+
+    @rho.setter
+    def rho(self, rho):
+        """Setter method for rho."""
+        rho = self._check_theta_param('rho', rho)
+        self._theta["rho"]["value"] = rho
+
+    @property
+    def tau(self):
+        """Getter method for tau."""
+        return self._theta["tau"]["value"]
+
+    @tau.setter
+    def tau(self, tau):
+        """Setter method for tau."""
+        tau = self._check_theta_param('tau', tau)
+        self._theta["tau"]["value"] = tau
+
+    @property
+    def gamma(self):
+        """Getter method for gamma."""
+        return self._theta["gamma"]["value"]
+
+    @gamma.setter
+    def gamma(self, gamma):
+        """Setter method for gamma."""
+        gamma = self._check_theta_param('gamma', gamma)
+        self._theta["gamma"]["value"] = gamma
+
+    @property
+    def beta(self):
+        """Getter method for beta."""
+        return self._theta["beta"]["value"]
+
+    @beta.setter
+    def beta(self, beta):
+        """Setter method for beta."""
+        beta = self._check_theta_param('beta', beta)
+        self._theta["beta"]["value"] = beta
+
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
 
@@ -2021,22 +2137,22 @@ class Exponential(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.theta['rho']['trainable']:
+        if self._theta['rho']["trainable"]:
             tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
-        if self.theta['tau']['trainable']:
+        if self._theta['tau']["trainable"]:
             tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
-        if self.theta['gamma']['trainable']:
+        if self._theta['gamma']["trainable"]:
             tf_theta['gamma'] = tf.compat.v1.get_variable(
                 "gamma", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(0., .001)
             )
-        if self.theta['beta']['trainable']:
+        if self._theta['beta']["trainable"]:
             tf_theta['beta'] = tf.compat.v1.get_variable(
                 "beta", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 30.)
@@ -2099,10 +2215,10 @@ class Exponential(PsychologicalEmbedding):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']['value']
-        tau = theta['tau']['value']
-        gamma = theta['gamma']['value']
-        beta = theta['beta']['value']
+        rho = theta['rho']["value"]
+        tau = theta['tau']["value"]
+        gamma = theta['gamma']["value"]
+        beta = theta['beta']["value"]
 
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
@@ -2138,11 +2254,16 @@ class HeavyTailed(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.kappa = self._theta["kappa"]["value"]
+        # self.alpha = self._theta["alpha"]["value"]
 
         # Default inference settings.
         self.lr = 0.003
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2157,6 +2278,50 @@ class HeavyTailed(PsychologicalEmbedding):
         )
         return theta
 
+    @property
+    def rho(self):
+        """Getter method for rho."""
+        return self._theta["rho"]["value"]
+
+    @rho.setter
+    def rho(self, rho):
+        """Setter method for rho."""
+        rho = self._check_theta_param('rho', rho)
+        self._theta["rho"]["value"] = rho
+
+    @property
+    def tau(self):
+        """Getter method for tau."""
+        return self._theta["tau"]["value"]
+
+    @tau.setter
+    def tau(self, tau):
+        """Setter method for tau."""
+        tau = self._check_theta_param('tau', tau)
+        self._theta["tau"]["value"] = tau
+
+    @property
+    def kappa(self):
+        """Getter method for kappa."""
+        return self._theta["kappa"]["value"]
+
+    @kappa.setter
+    def kappa(self, kappa):
+        """Setter method for kappa."""
+        kappa = self._check_theta_param('kappa', kappa)
+        self._theta["kappa"]["value"] = kappa
+
+    @property
+    def alpha(self):
+        """Getter method for alpha."""
+        return self._theta["alpha"]["value"]
+
+    @alpha.setter
+    def alpha(self, alpha):
+        """Setter method for alpha."""
+        alpha = self._check_theta_param('alpha', alpha)
+        self._theta["alpha"]["value"] = alpha
+
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
 
@@ -2169,22 +2334,22 @@ class HeavyTailed(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.theta['rho']['trainable']:
+        if self._theta['rho']["trainable"]:
             tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
-        if self.theta['tau']['trainable']:
+        if self._theta['tau']["trainable"]:
             tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
-        if self.theta['kappa']['trainable']:
+        if self._theta['kappa']["trainable"]:
             tf_theta['kappa'] = tf.compat.v1.get_variable(
                 "kappa", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 11.)
             )
-        if self.theta['alpha']['trainable']:
+        if self._theta['alpha']["trainable"]:
             tf_theta['alpha'] = tf.compat.v1.get_variable(
                 "alpha", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(10., 60.)
@@ -2247,10 +2412,10 @@ class HeavyTailed(PsychologicalEmbedding):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']['value']
-        tau = theta['tau']['value']
-        kappa = theta['kappa']['value']
-        alpha = theta['alpha']['value']
+        rho = theta['rho']["value"]
+        tau = theta['tau']["value"]
+        kappa = theta['kappa']["value"]
+        alpha = theta['alpha']["value"]
 
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
@@ -2297,11 +2462,15 @@ class StudentsT(PsychologicalEmbedding):
                 each group.
         """
         PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
+        self._theta = self._default_theta()
+        # self.rho = self._theta["rho"]["value"]
+        # self.tau = self._theta["tau"]["value"]
+        # self.alpha = self._theta["alpha"]["value"]
 
         # Default inference settings.
         self.lr = 0.01
 
-    def _init_theta(self):
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2319,6 +2488,39 @@ class StudentsT(PsychologicalEmbedding):
         )
         return theta
 
+    @property
+    def rho(self):
+        """Getter method for rho."""
+        return self._theta["rho"]["value"]
+
+    @rho.setter
+    def rho(self, rho):
+        """Setter method for rho."""
+        rho = self._check_theta_param('rho', rho)
+        self._theta["rho"]["value"] = rho
+
+    @property
+    def tau(self):
+        """Getter method for tau."""
+        return self._theta["tau"]["value"]
+
+    @tau.setter
+    def tau(self, tau):
+        """Setter method for tau."""
+        tau = self._check_theta_param('tau', tau)
+        self._theta["tau"]["value"] = tau
+
+    @property
+    def alpha(self):
+        """Getter method for alpha."""
+        return self._theta["alpha"]["value"]
+
+    @alpha.setter
+    def alpha(self, alpha):
+        """Setter method for alpha."""
+        alpha = self._check_theta_param('alpha', alpha)
+        self._theta["alpha"]["value"] = alpha
+
     def _get_similarity_parameters_cold(self):
         """Return a dictionary of TensorFlow parameters.
 
@@ -2331,17 +2533,17 @@ class StudentsT(PsychologicalEmbedding):
 
         """
         tf_theta = {}
-        if self.theta['rho']['trainable']:
+        if self._theta['rho']["trainable"]:
             tf_theta['rho'] = tf.compat.v1.get_variable(
                 "rho", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 3.)
             )
-        if self.theta['tau']['trainable']:
+        if self._theta['tau']["trainable"]:
             tf_theta['tau'] = tf.compat.v1.get_variable(
                 "tau", [1], dtype=FLOAT_X,
                 initializer=tf.random_uniform_initializer(1., 2.)
             )
-        if self.theta['alpha']['trainable']:
+        if self._theta['alpha']["trainable"]:
             min_alpha = np.max((1, self.n_dim - 5.))
             max_alpha = self.n_dim + 5.
             tf_theta['alpha'] = tf.compat.v1.get_variable(
@@ -2408,9 +2610,9 @@ class StudentsT(PsychologicalEmbedding):
 
         """
         # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']['value']
-        tau = theta['tau']['value']
-        alpha = theta['alpha']['value']
+        rho = theta['rho']["value"]
+        tau = theta['tau']["value"]
+        alpha = theta['alpha']["value"]
 
         # Weighted Minkowski distance.
         d_qref = (np.abs(z_q - z_r))**rho
@@ -2448,8 +2650,10 @@ class RandomEmbedding(Initializer):
     Arguments:
         mean: A python scalar or a scalar tensor. Mean of the random
             values to generate.
-        minval: TODO
-        maxval: TODO
+        minval: Minimum value of a uniform random sampler for each
+            dimension.
+        maxval: Maximum value of a uniform random sampler for each
+            dimension.
         seed: A Python integer. Used to create random seeds. See
         `tf.set_random_seed` for behavior.
         dtype: The data type. Only floating point types are supported.
@@ -2561,15 +2765,15 @@ def load_embedding(filepath):
             'No class found matching the provided `embedding_type`.')
 
     for name in f['z']:
-        embedding.z[name] = f['z'][name][()]
+        embedding._z[name] = f['z'][name][()]
 
     for p_name in f['theta']:
         for name in f['theta'][p_name]:
-            embedding.theta[p_name][name] = f['theta'][p_name][name][()]
+            embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
     for p_name in f['phi']:
         for name in f['phi'][p_name]:
-            embedding.phi[p_name][name] = f['phi'][p_name][name][()]
+            embedding._phi[p_name][name] = f['phi'][p_name][name][()]
 
     f.close()
     return embedding

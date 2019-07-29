@@ -192,19 +192,12 @@ def ground_truth(n_stimuli):
         (1.9, 1., .1),
         (.1, 1., 1.9)
     ))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 1,
-            'gamma': 0
-        },
-        'phi': {
-            'phi_1': attention
-        }
-    }
-    model.freeze(freeze_options)
+    model.z = z
+    model.rho = 2
+    model.tau = 1
+    model.beta = 1
+    model.gamma = 0
+    model.w = attention
     return model
 
 
@@ -228,7 +221,7 @@ class TestSimilarityTrials:
         n_select = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
             docket = trials.Docket(stimulus_set, n_select=n_select)
-    
+
         # Above support.
         n_select = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:

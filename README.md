@@ -32,11 +32,11 @@ from psiz.models import Exponential
 # Load some observations (i.e., judged trials).
 (obs, catalog) = datasets.load_dataset('birds-16')
 # Initialize an embedding model.
-embedding = Exponential(catalog.n_stimuli)
+emb = Exponential(catalog.n_stimuli)
 # Fit the embedding model using similarity judgment observations.
-embedding.fit(obs)
+emb.fit(obs)
 # Optionally save the fitted model.
-embedding.save('my_embedding.h5')
+emb.save('my_embedding.h5')
 ```
 
 ## Trials and Observations
@@ -60,8 +60,18 @@ Optionally, you can also provide additional information.
 
 ```python
 n_stimuli = 100
-embedding = psiz.models.Exponential(n_stimuli, n_dim=4, n_group=2)
-embedding.fit(obs)
+emb = psiz.models.Exponential(n_stimuli, n_dim=4, n_group=2)
+emb.fit(obs)
+```
+
+If you know some of the free parameters already, you can set them to the desired value and then make those parametres untrainable.
+```python
+n_stimuli = 100
+emb = psiz.models.Exponential(n_stimuli, n_dim=2)
+emb.rho = 2
+emb.tau = 1
+emb.trainable({'rho': False, 'tau': False})
+emb.fit(obs)
 ```
 
 ## Modules

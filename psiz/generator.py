@@ -561,7 +561,7 @@ class ActiveShotgunGenerator(TrialGenerator):
             self, embedding, samples, query_idx, n_trial, group_id, verbose=0):
         n_query = query_idx.shape[0]
 
-        z = embedding.z['value']
+        z = embedding.z
         dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
 
         # Determine how many times each query stimulus should be used.
@@ -736,7 +736,7 @@ def query_kl_priority(embedding, samples):
 
         """
         # Unpack.
-        # z = embedding.z['value']
+        # z = embedding.z
         z = np.median(samples['z'], axis=2)
         rho = embedding.theta['rho']['value']
         z_samp = samples['z']

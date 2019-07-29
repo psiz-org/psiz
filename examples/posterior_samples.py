@@ -24,7 +24,8 @@ In this example, using the ground truth allows us to see how the
 posterior sampling algorithm works under ideal conditions.
 
 Notes:
-    This script takes awhile to execute.
+    This script takes approximately 20 minutes to execute and will
+        save the video to as a file called `posterior.mp4`.
 
 """
 
@@ -45,45 +46,33 @@ from psiz.utils import similarity_matrix, matrix_comparison
 def main():
     """Sample from posterior of pre-defined embedding model."""
     # Settings
-    n_trial = 6000
+    n_trial = 2500
     n_frame = 20
     n_sample = 1000
     n_burn = 100
     thin_step = 3
 
     # Ground truth model.
-    model_truth = ground_truth()
-    n_stimuli = model_truth.z['value'].shape[0]
-    n_dim = model_truth.z['value'].shape[1]
-    z_true = model_truth.z['value'].astype(np.float64)
-    simmat_truth = similarity_matrix(
-        model_truth.similarity, model_truth.z['value'])
+    emb_true = ground_truth()
+    n_stimuli = emb_true.z.shape[0]
+    n_dim = emb_true.z.shape[1]
+    z_true = emb_true.z.astype(np.float64)
+    simmat_true = similarity_matrix(
+        emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
     n_reference = 2
     n_select = 1
     generator = RandomGenerator(n_reference, n_select)
-    docket = generator.generate(n_trial, model_truth.n_stimuli)
+    docket = generator.generate(n_trial, emb_true.n_stimuli)
 
     # Simulate similarity judgements using ground truth model.
-    agent = Agent(model_truth)
+    agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Infer an embedding model.  # TODO
-    # model_inferred = Exponential(
-    #     model_truth.n_stimuli, model_truth.n_dim)
-    # model_inferred.freeze({'theta': {'beta': 10, 'rho': 2, 'tau': 1})
-    # model_inferred.fit(obs, 10, verbose=1)
-    model_inferred = model_truth
-    z_original = copy.copy(model_inferred.z['value'])
-
-    # z_inferred = copy.copy(model_inferred.z['value'].astype(np.float64))
-    # simmat_infer = similarity_matrix(
-    #     model_inferred.similarity, model_inferred.z['value'])
-    # r_pearson = matrix_comparison(
-    #     simmat_infer, simmat_truth, score='pearson'
-    # )
-    # print('r | {0: >6.2f}'.format(r_pearson))
+    # Use the ground-truth embedding model.
+    emb_inferred = emb_true
+    z_original = copy.copy(emb_inferred.z)
 
     z_samp_list = n_frame * [None]
     z_central_list = n_frame * [None]
@@ -91,7 +80,7 @@ def main():
     n_obs = np.floor(np.linspace(20, n_trial, n_frame)).astype(np.int64)
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
-        samples = model_inferred.posterior_samples(
+        samples = emb_inferred.posterior_samples(
             obs.subset(include_idx), n_sample, n_burn, thin_step)
         z_samp = samples['z']
         z_central = np.median(z_samp, axis=2)
@@ -100,20 +89,20 @@ def main():
             z_samp, (n_sample * n_stimuli, n_dim))
         z_central_list[i_frame] = z_central
 
-        model_inferred.z['value'] = z_central
+        emb_inferred.z = z_central
         simmat_infer = similarity_matrix(
-            model_inferred.similarity, model_inferred.z['value'])
+            emb_inferred.similarity, emb_inferred.z)
         r_pearson = matrix_comparison(
-            simmat_infer, simmat_truth, score='pearson'
+            simmat_infer, simmat_true, score='pearson'
         )
         r_pearson_list[i_frame] = r_pearson
         print('Frame: {0} | r: {1: >6.2f}'.format(i_frame, r_pearson))
-        model_inferred.z['value'] = z_original
+        emb_inferred.z = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
-    norm = matplotlib.colors.Normalize(vmin=0., vmax=model_truth.n_stimuli)
-    color_array = cmap(norm(range(model_truth.n_stimuli)))
-    color_array_samp = np.matlib.repmat(color_array, n_sample, 1)
+    norm = matplotlib.colors.Normalize(vmin=0., vmax=emb_true.n_stimuli)
+    color_array = cmap(norm(range(emb_true.n_stimuli)))
+    color_array_samp = np.tile(color_array, (n_sample, 1))
 
     # Set up formatting for the movie files
     Writer = animation.writers['ffmpeg']
@@ -183,18 +172,15 @@ def ground_truth():
     z = z + z_noise
     # Create embedding model.
     n_group = 1
-    model = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 10,
-            'gamma': 0
-        }
-    }
-    model.freeze(freeze_options)
-    return model
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    emb.z = z
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 10
+    emb.gamma = 0
+    emb.trainable("freeze")
+
+    return emb
 
 
 if __name__ == "__main__":

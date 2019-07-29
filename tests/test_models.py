@@ -17,8 +17,6 @@
 """Module for testing models.py.
 
 Todo
-    * test init
-    * freeze and thaw
     * attention
     * heavy-tailed similarity
     * Student's t similarity
@@ -31,7 +29,8 @@ import pytest
 import tensorflow as tf
 
 from psiz.trials import Docket
-from psiz.models import Exponential, HeavyTailed, StudentsT, load_embedding
+from psiz.models import Inverse, Exponential, HeavyTailed, StudentsT
+from psiz.models import load_embedding
 
 
 @pytest.fixture(scope="module")
@@ -40,28 +39,23 @@ def model_true():
     n_stimuli = 10
     n_dim = 2
 
-    model = Exponential(n_stimuli)
+    emb = Exponential(n_stimuli)
     mean = np.ones((n_dim))
     cov = np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 1,
-            'gamma': 0
-        }
-    }
-    model.freeze(freeze_options)
-    return model
+    emb.z = np.random.multivariate_normal(mean, cov, (n_stimuli))
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 1
+    emb.gamma = 0
+    emb.trainable('freeze')
+    return emb
 
 
 @pytest.fixture(scope="module")
 def model_true_det():
     """Return a ground truth embedding."""
     n_stimuli = 10
-    model = Exponential(n_stimuli)
+    emb = Exponential(n_stimuli)
     z = np.array(
         [
             [0.12737487, 1.3211997],
@@ -76,17 +70,13 @@ def model_true_det():
             [-0.04342473, 1.4128358]
         ], dtype=np.float32
     )
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 1,
-            'gamma': 0
-        }
-    }
-    model.freeze(freeze_options)
-    return model
+    emb.z = z
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 1
+    emb.gamma = 0
+    emb.trainable('freeze')
+    return emb
 
 
 @pytest.fixture(scope="module")
@@ -106,6 +96,679 @@ def docket_0():
         ), dtype=np.int32)
     docket = Docket(stimulus_set, n_select=n_select)
     return docket
+
+
+def test_inverse_get_and_set():
+    """Test Inverse getters and setters."""
+    common_parameters_set_get(Inverse)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = Inverse(n_stimuli, n_dim=n_dim)
+
+    # Check in sync following initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    mu_init = emb.mu
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert mu_init == emb._theta["mu"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    mu_new = mu_init + 1.1
+    emb.mu = mu_new
+    assert emb.mu == mu_new
+    assert emb._theta["mu"]["value"] == mu_new
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.mu = 1
+    assert isinstance(emb.mu, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.mu = 0
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.mu = 0.00001
+
+
+def test_exponential_get_and_set():
+    """Test Exponential getters and setters."""
+    common_parameters_set_get(Exponential)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = Exponential(n_stimuli, n_dim=n_dim)
+
+    # Check in sync following initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    gamma_init = emb.gamma
+    beta_init = emb.beta
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert gamma_init == emb._theta["gamma"]["value"]
+    assert beta_init == emb._theta["beta"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    gamma_new = gamma_init + .1
+    emb.gamma = gamma_new
+    assert emb.gamma == gamma_new
+    assert emb._theta["gamma"]["value"] == gamma_new
+
+    beta_new = beta_init + .1
+    emb.beta = beta_new
+    assert emb.beta == beta_new
+    assert emb._theta["beta"]["value"] == beta_new
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.gamma = 1
+    assert isinstance(emb.gamma, float)
+
+    emb.beta = 6
+    assert isinstance(emb.beta, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.gamma = -.1
+    with pytest.raises(ValueError):
+        emb.beta = .1
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.gamma = 0
+    emb.beta = 1
+
+
+def test_heavytailed_get_and_set():
+    """Test HeavyTailed getters and setters."""
+    common_parameters_set_get(HeavyTailed)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = HeavyTailed(n_stimuli, n_dim=n_dim)
+
+    # Check in sync following initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    kappa_init = emb.kappa
+    alpha_init = emb.alpha
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert kappa_init == emb._theta["kappa"]["value"]
+    assert alpha_init == emb._theta["alpha"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    kappa_new = kappa_init + 1.1
+    emb.kappa = kappa_new
+    assert emb.kappa == kappa_new
+    assert emb._theta["kappa"]["value"] == kappa_new
+
+    alpha_new = alpha_init + 1.1
+    emb.alpha = alpha_new
+    assert emb.alpha == alpha_new
+    assert emb._theta["alpha"]["value"] == alpha_new
+
+    # rho=dict(value=2., trainable=True, bounds=[1., None]),
+    # tau=dict(value=1., trainable=True, bounds=[1., None]),
+    # kappa=dict(value=2., trainable=True, bounds=[0., None]),
+    # alpha=dict(value=30., trainable=True, bounds=[0., None])
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.kappa = 1
+    assert isinstance(emb.kappa, float)
+
+    emb.alpha = 4
+    assert isinstance(emb.alpha, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.kappa = -.1
+    with pytest.raises(ValueError):
+        emb.alpha = -.1
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.kappa = 0
+    emb.alpha = 0
+
+
+def test_studentst_get_and_set():
+    """Test StudentsT getters and setters."""
+    common_parameters_set_get(StudentsT)
+
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = StudentsT(n_stimuli, n_dim=n_dim)
+
+    # Check in sync follow initialization.
+    rho_init = emb.rho
+    tau_init = emb.tau
+    alpha_init = emb.alpha
+
+    assert rho_init == emb._theta["rho"]["value"]
+    assert tau_init == emb._theta["tau"]["value"]
+    assert alpha_init == emb._theta["alpha"]["value"]
+
+    # Check setters.
+    rho_new = rho_init + 1.1
+    emb.rho = rho_new
+    assert emb.rho == rho_new
+    assert emb._theta["rho"]["value"] == rho_new
+
+    tau_new = tau_init + 1.1
+    emb.tau = tau_new
+    assert emb.tau == tau_new
+    assert emb._theta["tau"]["value"] == tau_new
+
+    alpha_new = alpha_init + 1.1
+    emb.alpha = alpha_new
+    assert emb.alpha == alpha_new
+    assert emb._theta["alpha"]["value"] == alpha_new
+
+    # rho=dict(value=2., trainable=False, bounds=[1., None]),
+    # tau=dict(value=2., trainable=False, bounds=[1., None]),
+    # alpha=dict(
+    #     value=(self.n_dim - 1.),
+    #     trainable=False,
+    #     bounds=[0.000001, None]
+    # ),
+
+    # Test integer input.
+    emb.rho = 2
+    assert isinstance(emb.rho, float)
+
+    emb.tau = 2
+    assert isinstance(emb.tau, float)
+
+    emb.alpha = 4
+    assert isinstance(emb.alpha, float)
+
+    # Test invalid support.
+    with pytest.raises(ValueError):
+        emb.rho = .1
+    with pytest.raises(ValueError):
+        emb.tau = .1
+    with pytest.raises(ValueError):
+        emb.alpha = 0
+
+    # Test edges of support.
+    emb.rho = 1
+    emb.tau = 1
+    emb.alpha = 0.001
+
+
+def common_parameters_set_get(model):
+    """Check common parameters."""
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = model(n_stimuli, n_dim=n_dim)
+
+    z_init = emb.z
+    w_init = emb.w
+
+    # Check in sync following initialization.
+    np.testing.assert_array_equal(z_init, emb._z["value"])
+    np.testing.assert_array_equal(w_init, emb._phi["w"]["value"])
+
+    set_and_check_z(emb)
+    set_and_check_w(emb)
+
+    # Two groups.
+    n_group = 2
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    set_and_check_z(emb)
+    set_and_check_w(emb)
+
+    # Three groups.
+    n_group = 3
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    set_and_check_z(emb)
+    set_and_check_w(emb)
+
+
+def set_and_check_z(emb):
+    """Set and check z."""
+    z_new = np.random.rand(emb.n_stimuli, emb.n_dim)
+    emb.z = z_new
+    np.testing.assert_array_equal(emb.z, z_new)
+    np.testing.assert_array_equal(emb._z["value"], z_new)
+
+    z_new = np.random.rand(emb.n_stimuli + 1, emb.n_dim)
+    with pytest.raises(Exception):
+        emb.z = z_new
+
+    z_new = np.random.rand(emb.n_stimuli, emb.n_dim + 1)
+    with pytest.raises(Exception):
+        emb.z = z_new
+
+
+def set_and_check_w(emb):
+    """Set and check w."""
+    w_new = random_weights(emb.n_group, emb.n_dim)
+    emb.w = w_new
+    np.testing.assert_array_equal(emb.w, w_new)
+    np.testing.assert_array_equal(emb._phi["w"]["value"], w_new)
+
+    w_new = random_weights(emb.n_group + 1, emb.n_dim)
+    with pytest.raises(Exception):
+        emb.w = w_new
+
+    w_new = random_weights(emb.n_group, emb.n_dim + 1)
+    with pytest.raises(Exception):
+        emb.w = w_new
+
+
+def test_inverse_trainable():
+    """Test Inverse trainable."""
+    # Test one group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    emb = Inverse(n_stimuli, n_dim=n_dim)
+
+    trainable_src = dict(
+        z=True,
+        w=np.array([False]),
+        rho=True,
+        tau=True,
+        mu=True
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    # Test two group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    n_group = 2
+    emb = Inverse(n_stimuli, n_dim=n_dim, n_group=n_group)
+    trainable_src = dict(
+        z=True,
+        w=np.array([True, True]),
+        rho=True,
+        tau=True,
+        mu=True
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    common_parameters_trainable(Inverse, n_group=1)
+    common_parameters_trainable(Inverse, n_group=2)
+    common_parameters_trainable(Inverse, n_group=3)
+
+    # Model specific parameters.
+    spec_trainable = dict(
+        rho=False, tau=False, mu=False
+    )
+    emb.trainable(spec_trainable)
+    assert not emb._theta["rho"]["trainable"]
+    assert not emb._theta["tau"]["trainable"]
+    assert not emb._theta["mu"]["trainable"]
+
+    # Default settings.
+    emb.trainable('default')
+    assert emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    assert emb._theta["rho"]["trainable"]
+    assert emb._theta["tau"]["trainable"]
+    assert emb._theta["mu"]["trainable"]
+
+    emb = Inverse(n_stimuli, n_dim=n_dim)
+    emb.trainable({'w': np.array([True])})
+    emb.trainable('default')
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+
+
+def test_exponential_trainable():
+    """Test Exponential trainable."""
+    # Test one group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    emb = Exponential(n_stimuli, n_dim=n_dim)
+
+    trainable_src = dict(
+        z=True,
+        w=np.array([False]),
+        rho=True,
+        tau=True,
+        gamma=True,
+        beta=True,
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    # Test two group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    n_group = 2
+    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    trainable_src = dict(
+        z=True,
+        w=np.array([True, True]),
+        rho=True,
+        tau=True,
+        gamma=True,
+        beta=True,
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    common_parameters_trainable(Exponential, n_group=1)
+    common_parameters_trainable(Exponential, n_group=2)
+    common_parameters_trainable(Exponential, n_group=3)
+
+    # Model specific parameters.
+    spec_trainable = dict(
+        rho=False, tau=False, gamma=False, beta=False
+    )
+    emb.trainable(spec_trainable)
+    assert not emb._theta["rho"]["trainable"]
+    assert not emb._theta["tau"]["trainable"]
+    assert not emb._theta["gamma"]["trainable"]
+    assert not emb._theta["beta"]["trainable"]
+
+    # Default settings.
+    emb.trainable('default')
+    assert emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    assert emb._theta["rho"]["trainable"]
+    assert emb._theta["tau"]["trainable"]
+    assert emb._theta["gamma"]["trainable"]
+    assert emb._theta["beta"]["trainable"]
+
+    emb = Exponential(n_stimuli, n_dim=n_dim)
+    emb.trainable({'w': np.array([True])})
+    emb.trainable('default')
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+
+
+def test_heavytailed_trainable():
+    """Test HeavyTailed trainable."""
+    # Test one group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    emb = HeavyTailed(n_stimuli, n_dim=n_dim)
+
+    trainable_src = dict(
+        z=True,
+        w=np.array([False]),
+        rho=True,
+        tau=True,
+        kappa=True,
+        alpha=True,
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    # Test two group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    n_group = 2
+    emb = HeavyTailed(n_stimuli, n_dim=n_dim, n_group=n_group)
+    trainable_src = dict(
+        z=True,
+        w=np.array([True, True]),
+        rho=True,
+        tau=True,
+        kappa=True,
+        alpha=True,
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    common_parameters_trainable(HeavyTailed, n_group=1)
+    common_parameters_trainable(HeavyTailed, n_group=2)
+    common_parameters_trainable(HeavyTailed, n_group=3)
+
+    # Model specific parameters.
+    spec_trainable = dict(
+        rho=False, tau=False, kappa=False, alpha=False
+    )
+    emb.trainable(spec_trainable)
+    assert not emb._theta["rho"]["trainable"]
+    assert not emb._theta["tau"]["trainable"]
+    assert not emb._theta["kappa"]["trainable"]
+    assert not emb._theta["alpha"]["trainable"]
+
+    # Default settings.
+    emb.trainable('default')
+    assert emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    assert emb._theta["rho"]["trainable"]
+    assert emb._theta["tau"]["trainable"]
+    assert emb._theta["kappa"]["trainable"]
+    assert emb._theta["alpha"]["trainable"]
+
+    emb = HeavyTailed(n_stimuli, n_dim=n_dim)
+    emb.trainable({'w': np.array([True])})
+    emb.trainable('default')
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+
+
+def test_studentst_trainable():
+    """Test StudentsT trainable."""
+    # Test one group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    emb = StudentsT(n_stimuli, n_dim=n_dim)
+
+    trainable_src = dict(
+        z=True,
+        w=np.array([False]),
+        rho=False,
+        tau=False,
+        alpha=False,
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    # Test two group initalization.
+    n_stimuli = 10
+    n_dim = 3
+    n_group = 2
+    emb = StudentsT(n_stimuli, n_dim=n_dim, n_group=n_group)
+    trainable_src = dict(
+        z=True,
+        w=np.array([True, True]),
+        rho=False,
+        tau=False,
+        alpha=False,
+    )
+    trainable_init = emb.trainable()
+    assert_equal_trainable(trainable_init, trainable_src)
+
+    common_parameters_trainable(StudentsT, n_group=1)
+    common_parameters_trainable(StudentsT, n_group=2)
+    common_parameters_trainable(StudentsT, n_group=3)
+
+    # Model specific parameters.
+    spec_trainable = dict(
+        rho=True, tau=True, alpha=True
+    )
+    emb.trainable(spec_trainable)
+    assert emb._theta["rho"]["trainable"]
+    assert emb._theta["tau"]["trainable"]
+    assert emb._theta["alpha"]["trainable"]
+
+    # Default settings.
+    emb.trainable('default')
+    assert emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    assert not emb._theta["rho"]["trainable"]
+    assert not emb._theta["tau"]["trainable"]
+    assert not emb._theta["alpha"]["trainable"]
+
+    emb = StudentsT(n_stimuli, n_dim=n_dim)
+    emb.trainable({'w': np.array([True])})
+    emb.trainable('default')
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+
+
+def common_parameters_trainable(model, n_group=1):
+    """Test trainable functionality of common model parameters."""
+    # One group.
+    n_stimuli = 10
+    n_dim = 3
+    emb = model(n_stimuli, n_dim=n_dim, n_group=n_group)
+
+    # Toggle z.
+    spec_trainable = dict(z=False)
+    emb.trainable(spec_trainable)
+    assert not emb._z["trainable"]
+
+    spec_returned = emb.trainable()
+    assert spec_returned["z"] == spec_trainable["z"]
+
+    spec_trainable = dict(z=True)
+    emb.trainable(spec_trainable)
+    assert emb._z["trainable"]
+
+    # Toggle w.
+    spec_trainable = dict(w=np.zeros([emb.n_group], dtype=bool))
+    emb.trainable(spec_trainable)
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+
+    returned_spec = emb.trainable()
+    np.testing.assert_array_equal(
+        returned_spec["w"], spec_trainable["w"]
+    )
+
+    spec_trainable = dict(w=np.ones([emb.n_group], dtype=bool))
+    emb.trainable(spec_trainable)
+    np.testing.assert_array_equal(
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+
+    # Toggle z and w.
+    spec_trainable = dict(
+        z=False,
+        w=np.zeros([emb.n_group], dtype=bool)
+    )
+    emb.trainable(spec_trainable)
+    assert not emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+
+    # Test freeze.
+    emb.trainable('freeze')
+    assert not emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.zeros([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    for param_name in emb._theta:
+        assert not emb._theta[param_name]["trainable"]
+
+    # Test thaw.
+    emb.trainable('thaw')
+    assert emb._z["trainable"]
+    np.testing.assert_array_equal(
+        np.ones([emb.n_group], dtype=bool), emb._phi["w"]["trainable"]
+    )
+    for param_name in emb._theta:
+        assert emb._theta[param_name]["trainable"]
+
+
+def assert_equal_trainable(a, b):
+    """Assert that two flat dictionaries are equal."""
+    # Check that they have the same keys.
+    assert set(a.keys()) == set(b.keys())
+
+    # Check values.
+    for param in a:
+        if type(a[param]) is np.ndarray:
+            np.testing.assert_array_equal(a[param], b[param])
+        else:
+            assert a[param] == b[param]
 
 
 def test_private_exponential_similarity():
@@ -203,12 +866,11 @@ def test_public_exponential_similarity():
     n_stimuli = 10
     n_dim = 3
     model = Exponential(n_stimuli, n_dim=n_dim)
-    freeze_options = {
-        'theta': {
-            'rho': 1.9, 'tau': 2.1, 'beta': 1.11, 'gamma': .001
-        }
-    }
-    model.freeze(freeze_options)
+    model.rho = 1.9
+    model.tau = 2.1
+    model.beta = 1.11
+    model.gamma = .001
+    model.trainable("freeze")
 
     z_q = np.array((
         (.11, -.13, .28),
@@ -232,12 +894,10 @@ def test_public_exponential_similarity_broadcast():
     n_stimuli = 10
     n_dim = 3
     model = Exponential(n_stimuli, n_dim=n_dim)
-    freeze_options = {
-        'theta': {
-            'rho': 1.9, 'tau': 2.1, 'beta': 1.11, 'gamma': .001
-        }
-    }
-    model.freeze(freeze_options)
+    model.rho = 1.9
+    model.tau = 2.1
+    model.beta = 1.11
+    model.gamma = .001
 
     z_q = np.array((
         (.11, -.13, .28),
@@ -295,26 +955,6 @@ def test_weight_projections():
     np.testing.assert_allclose(attention_actual, attention_desired)
 
 
-def test_freeze():
-    """Test freeze method."""
-    n_stimuli = 10
-    n_dim = 2
-    n_group = 2
-    model = Exponential(n_stimuli, n_dim, n_group)
-
-    model.freeze({'z': np.ones((n_stimuli, n_dim))})
-    with pytest.raises(Exception):
-        model.freeze({'z': np.ones((n_stimuli-1, n_dim))})
-    with pytest.raises(Exception):
-        model.freeze({'z': np.ones((n_stimuli, n_dim-1))})
-
-    model.freeze({'phi': {'phi_1': np.ones((n_group, n_dim))}})
-    with pytest.raises(Exception):
-        model.freeze({'phi': {'phi_1': np.ones((n_group+1, n_dim))}})
-    with pytest.raises(Exception):
-        model.freeze({'phi': {'phi_1': np.ones((n_group, n_dim-1))}})
-
-
 def test_probability(model_true, docket_0):
     """Test probability method."""
     prob = model_true.outcome_probability(docket_0)
@@ -333,7 +973,7 @@ def test_inflate_points_single_sample(
         docket_0.n_select == n_select
     )
 
-    z = model_true_det.z['value']
+    z = model_true_det.z
     (z_q, z_r) = model_true_det._inflate_points(
         docket_0.stimulus_set[trial_locs], n_reference,
         np.expand_dims(z, axis=2)
@@ -404,9 +1044,9 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
         docket.n_select == n_select
     )
 
-    z = model_true.z['value']
+    z = model_true.z
 
-    attention = model_true.phi['phi_1']['value'][0, :]
+    attention = model_true._phi["w"]["value"][0, :]
     attention = np.tile(attention, (docket_0.n_trial, 1))
 
     (z_q, z_r) = model_true._inflate_points(
@@ -616,19 +1256,35 @@ def test_save_load(model_true_det, tmpdir):
     assert loaded_embedding.n_group == model_true_det.n_group
 
     np.testing.assert_array_equal(
-        loaded_embedding.z['value'],
-        model_true_det.z['value']
+        loaded_embedding.z,
+        model_true_det.z
     )
-    assert loaded_embedding.z['trainable'] == model_true_det.z['trainable']
+    np.testing.assert_array_equal(
+        loaded_embedding._z["value"],
+        model_true_det._z["value"]
+    )
+    assert loaded_embedding._z['trainable'] == model_true_det._z['trainable']
 
-    assert loaded_embedding.theta == model_true_det.theta
+    assert loaded_embedding._theta == model_true_det._theta
 
-    for param_name in model_true_det.phi:
+    np.testing.assert_array_equal(
+        loaded_embedding.w,
+        model_true_det.w
+    )
+    for param_name in model_true_det._phi:
         np.testing.assert_array_equal(
-            loaded_embedding.phi[param_name]['value'],
-            model_true_det.phi[param_name]['value']
+            loaded_embedding._phi[param_name]['value'],
+            model_true_det._phi[param_name]['value']
         )
-        assert (
-            loaded_embedding.phi[param_name]['trainable'] ==
-            model_true_det.phi[param_name]['trainable']
+        np.testing.assert_array_equal(
+            loaded_embedding._phi[param_name]['trainable'],
+            model_true_det._phi[param_name]['trainable']
         )
+
+
+def random_weights(n_group, n_dim):
+    """Generate random attention weights."""
+    w = np.random.rand(n_group, n_dim)
+    w = w / np.sum(w, axis=1, keepdims=True)
+    w = w * n_dim
+    return w

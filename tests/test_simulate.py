@@ -42,16 +42,11 @@ def ground_truth():
     mean = np.ones((n_dim))
     cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    freeze_options = {
-        'z': z,
-        'theta': {
-            'rho': 2,
-            'tau': 1,
-            'beta': 1,
-            'gamma': 0
-        }
-    }
-    model.freeze(freeze_options)
+    model.z = z
+    model.rho = 2
+    model.tau = 1
+    model.beta = 1
+    model.gamma = 0
     return model
 
 

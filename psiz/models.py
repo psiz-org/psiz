@@ -2775,8 +2775,13 @@ def load_embedding(filepath):
             embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
     for p_name in f['phi']:
+        # Patch for older models using `phi_1` variable name.
+        if p_name == 'phi_1':
+            p_name_new = 'w'
+        else:
+            p_name_new = p_name
         for name in f['phi'][p_name]:
-            embedding._phi[p_name][name] = f['phi'][p_name][name][()]
+            embedding._phi[p_name_new][name] = f['phi'][p_name][name][()]
 
     f.close()
     return embedding

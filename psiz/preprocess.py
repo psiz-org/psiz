@@ -17,7 +17,8 @@
 """Module for preprocessing observations.
 
 Functions:
-    identify_catch_trials: Identify and grade catch trials.
+    identify_catch_trials: Identify catch trials.
+    grade_catch_trials: Identify and grade catch trials.
     quality_control: Remove observations belonging to agents that do
         not meet quality control standards.
     remove_catch_trials: Remove catch trials.
@@ -30,8 +31,34 @@ import numpy as np
 import pandas as pd
 
 
-def identify_catch_trials(obs, grade_mode='lenient'):
+def identify_catch_trials(obs):
     """Identify catch trials.
+
+    Catch trials are assumed to be any trial where at least one of the
+    references is the same stimulus as the query.
+
+    Arguments:
+        obs: A psiz.trials.Observations object.
+
+    Returns:
+        is_catch: Boolean array indicating catch trial locations.
+            shape = (n_trial,)
+
+    """
+    n_trial = obs.n_trial
+    is_catch = np.zeros([n_trial], dtype=bool)
+    for i_trial in range(n_trial):
+        # Determine which references are identical to the query.
+        is_identical = np.equal(
+            obs.stimulus_set[i_trial, 0], obs.stimulus_set[i_trial, 1:]
+        )
+        if np.sum(is_identical) > 0:
+            is_catch[i_trial] = True
+    return is_catch
+
+
+def grade_catch_trials(obs, grade_mode='lenient'):
+    """Grade catch trials.
 
     Catch trials are assumed to be any trial where at least one of the
     references is the same stimulus as the query. A catch trial is
@@ -52,23 +79,25 @@ def identify_catch_trials(obs, grade_mode='lenient'):
             first choice includes a copy of the query.
 
     Returns:
-        is_catch: Boolean array indicating catch trial locations.
-            shape = (n_trial,)
+        avg_grade: Scalar indicating average grade on all catch trials.
+            Is np.nan if there are no catch trials.
         grade: Array indicating grade of catch trial. The value can be
             between 0 and 1, where 1 is a perfect score.
+            shape = (n_catch_trial,)
+        is_catch: Boolean array indicating catch trial locations.
             shape = (n_trial,)
 
     """
     n_trial = obs.n_trial
-    is_catch = np.zeros([n_trial], dtype=bool)
+    is_catch = identify_catch_trials(obs)
     grade = np.zeros([n_trial])
+
     for i_trial in range(n_trial):
-        # Determine which references are identical to the query.
-        is_identical = np.equal(
-            obs.stimulus_set[i_trial, 0], obs.stimulus_set[i_trial, 1:]
-        )
-        if np.sum(is_identical) > 0:
-            is_catch[i_trial] = True
+        if is_catch[i_trial]:
+            # Determine which references are identical to the query.
+            is_identical = np.equal(
+                obs.stimulus_set[i_trial, 0], obs.stimulus_set[i_trial, 1:]
+            )
             # Grade response.
             if grade_mode is 'lenient':
                 is_identical_selected = is_identical[0:obs.n_select[i_trial]]
@@ -106,7 +135,15 @@ def identify_catch_trials(obs, grade_mode='lenient'):
                     " 'lenient'."
                 ))
 
-    return (is_catch, grade)
+    # Compute average grade.
+    grade = grade[is_catch]
+    if len(grade) > 0:
+        n_catch = np.sum(is_catch)
+        avg_grade = np.sum(grade) / n_catch
+    else:
+        avg_grade = np.nan
+
+    return (avg_grade, grade, is_catch)
 
 
 def quality_control(obs, grade_thresh=1.0, grade_mode='lenient'):
@@ -117,16 +154,7 @@ def quality_control(obs, grade_thresh=1.0, grade_mode='lenient'):
         grade_thresh (optional): The threshold for dropping
             an agent's data.
         grade_mode (optional): Determines the manner in which responses
-            are graded. Can be either 'strict', 'partial', or
-            'lenient'. The options 'strict' and 'partial' are only
-            relevant for trials where participants provide ranked
-            responses, otherwise they are equivalent to 'lenient'. If
-            'lenient', then one of the selected references must include
-            the copy of the query. If 'strict', then the first choice
-            must be the copy of the query. If 'partial', then full
-            credit is given if the first choice is the copy of the
-            query and half credit is given if a choice other than the
-            first choice includes a copy of the query.
+            are graded. See function grade_catch_trials.
 
     Returns:
         obs: An psiz.trials.Observations object with bad data removed.
@@ -143,21 +171,16 @@ def quality_control(obs, grade_thresh=1.0, grade_mode='lenient'):
     for idx, i_agent in enumerate(agent_list):
         agent_locs = np.equal(obs.agent_id, i_agent)
         obs_agent = obs.subset(agent_locs)
-        (is_catch, grade) = identify_catch_trials(
+        (avg_grade, _, _) = grade_catch_trials(
             obs_agent, grade_mode=grade_mode
         )
+        grade_record['grade'][idx] = avg_grade
 
-        n_catch = np.sum(is_catch)
-        if n_catch > 0:
-            # Compute proportion correct.
-            grade = grade[is_catch]
-            avg_grade = np.sum(grade) / n_catch
-            grade_record['grade'][idx] = avg_grade
-
-            # Drop agent if below required grade threshold.
-            if avg_grade < grade_thresh:
-                keep_locs[agent_locs] = False
-                grade_record['is_retained'][idx] = False
+        # Drop agent if below required grade threshold.
+        # Note that this retains observations with zero catch trials.
+        if avg_grade < grade_thresh:
+            keep_locs[agent_locs] = False
+            grade_record['is_retained'][idx] = False
 
     obs_new = obs.subset(keep_locs)
     df_grade = pd.DataFrame.from_dict(grade_record)
@@ -174,6 +197,6 @@ def remove_catch_trials(obs):
         obs: A psiz.trials.Observations object.
 
     """
-    (is_catch, _) = identify_catch_trials(obs)
+    is_catch = identify_catch_trials(obs)
     obs = obs.subset(np.logical_not(is_catch))
     return obs

@@ -293,7 +293,7 @@ class ActiveGenerator(TrialGenerator):
         # Combine new obs with old obs.
         obs = stack((obs, obs_new))
         # Set embedding to last samples.
-        embedding.z['values'] = samples['z'][:, :, -1]
+        embedding.z = samples['z'][:, :, -1]
         # Run sampler.
         samples = embedding.posterior_samples(
             obs, n_final_sample=1000, n_burn=10
@@ -381,7 +381,7 @@ class ActiveGenerator(TrialGenerator):
         # TODO convert using group_specific "view".
         # z_median = np.median(samples['z'], axis=2)
         # TODO MAYBE faiss nearest neighbors
-        # rho = embedding.theta['rho']['value']
+        # rho = embedding.rho
         # nbrs = NearestNeighbors(
         #     n_neighbors=self.n_neighbor+1, algorithm='auto', p=rho
         # ).fit(z_median)
@@ -618,7 +618,7 @@ class ActiveShotgunGenerator(TrialGenerator):
             )
             curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
             if verbose > 0:
-                print("    {0}".format(curr_best_ig))
+                print("    IG: {0}".format(curr_best_ig))
 
             ig_all.append(ig)
             # Add to dynamic list.
@@ -738,7 +738,10 @@ def query_kl_priority(embedding, samples):
         # Unpack.
         # z = embedding.z
         z = np.median(samples['z'], axis=2)
-        rho = embedding.theta['rho']['value']
+        try:
+            rho = embedding.rho
+        except AttributeError:
+            rho = 2.
         z_samp = samples['z']
         # z_median = np.median(z_samp, axis=2)
         (n_stimuli, n_dim, _) = z_samp.shape
@@ -758,7 +761,8 @@ def query_kl_priority(embedding, samples):
         # TODO maybe convert to faiss
         k = np.minimum(10, n_stimuli-1)
         nbrs = NearestNeighbors(
-            n_neighbors=k+1, algorithm='auto', p=rho).fit(z)
+            n_neighbors=k+1, algorithm='auto', p=rho
+        ).fit(z)
         (_, nn_idx) = nbrs.kneighbors(z)
         nn_idx = nn_idx[:, 1:]  # Drop self index.
 

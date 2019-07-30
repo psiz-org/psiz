@@ -134,7 +134,7 @@ def quality_control(obs, grade_thresh=1.0, grade_mode='lenient'):
     """
     agent_list = np.unique(obs.agent_id)
     grade_record = {
-        'assignment_id': agent_list,
+        'agent_id': agent_list,
         'grade': np.zeros(len(agent_list)),
         'is_retained': np.ones(len(agent_list), dtype=bool)
     }

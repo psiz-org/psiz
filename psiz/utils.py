@@ -42,7 +42,7 @@ from scipy.stats import pearsonr
 
 def assess_convergence(
         obs, model, n_stimuli, n_dim, n_partition=10, n_back=2, n_shuffle=3,
-        n_restart=50, score='pearson', verbose=0):
+        n_restart=50, score='r2', verbose=0):
     """Evaluate if a sufficient number of observations have been collected.
 
     In general, more observations improve model inference. However,
@@ -116,7 +116,6 @@ def assess_convergence(
                     ))
             else:
                 first_part = False
-    val = val[:, 1:]
 
     return {"n_trial_array": n_trial_array, "val": val, "measure": score}
 

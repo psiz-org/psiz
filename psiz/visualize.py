@@ -17,7 +17,6 @@
 """Module for visualizing embeddings.
 
 Todo:
-    class_vec -> class_id
     classes -> class_dict
 """
 
@@ -27,16 +26,17 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 
 
 def visualize_embedding_static(
-        z, class_vec=None, classes=None, fname=None):
+        z, class_id=None, classes=None, fname=None):
     """Generate a static scatter plot of the supplied embedding points.
 
     Arguments:
         z: A real-valued two-dimensional array representing the embedding.
             shape = (n_stimuli, n_dim)
-        class_vec: (optional) An integer array contianing class IDs
+        class_id: (optional) An integer array contianing class IDs
             that indicate the class membership of each stimulus.
             shape = (n_stimuli, 1)
         classes: (optional) A dictionary mapping class IDs to strings.
@@ -52,11 +52,11 @@ def visualize_embedding_static(
     [n_stimuli, n_dim] = z.shape
 
     n_class = 1
-    if class_vec is None:
+    if class_id is None:
         use_legend = False
 
-        class_vec = np.ones((n_stimuli))
-        unique_class_list = np.unique(class_vec)
+        class_id = np.ones((n_stimuli))
+        unique_class_list = np.unique(class_id)
         n_class = 1
         color_array = cmap((0, 1))
         color_array = color_array[np.newaxis, 0, :]
@@ -64,7 +64,7 @@ def visualize_embedding_static(
         class_legend = ['all']
     else:
         use_legend = True
-        unique_class_list = np.unique(class_vec)
+        unique_class_list = np.unique(class_id)
         n_class = len(unique_class_list)
         norm = matplotlib.colors.Normalize(vmin=0., vmax=n_class)
         color_array = cmap(norm(range(n_class)))
@@ -78,7 +78,7 @@ def visualize_embedding_static(
         fig, ax = plt.subplots()
         # Plot each class separately in order to use legend.
         for i_class in range(n_class):
-            locs = class_vec == unique_class_list[i_class]
+            locs = class_id == unique_class_list[i_class]
             ax.scatter(
                 z[locs, 0], z[locs, 1], c=color_array[np.newaxis, i_class, :],
                 s=dot_size, label=class_legend[i_class], edgecolors='none')
@@ -86,19 +86,9 @@ def visualize_embedding_static(
         if use_legend:
             ax.legend(bbox_to_anchor=(-.05, 1), loc=1, borderaxespad=0.)
 
-        plt.tick_params(
-            axis='x',
-            which='both',
-            bottom='off',
-            top='off',
-            labelbottom='off')
-        plt.tick_params(
-            axis='y',
-            which='both',
-            left='off',
-            right='off',
-            labelleft='off')
-        ax.xaxis.get_offset_text().set_visible(False)
+        ax.set_aspect('equal')
+        ax.set_xticks([])
+        ax.set_yticks([])
 
     if n_dim >= 3:
         fig = plt.figure()
@@ -106,11 +96,13 @@ def visualize_embedding_static(
 
         # Plot each class separately in order to use legend.
         for i_class in range(n_class):
-            locs = class_vec == unique_class_list[i_class]
+            locs = class_id == unique_class_list[i_class]
             ax.scatter(
                 z[locs, 0], z[locs, 1], z[locs, 2],
                 c=color_array[np.newaxis, i_class, :], s=dot_size,
-                label=class_legend[i_class], edgecolors='none')
+                # edgecolors='none',
+                label=class_legend[i_class]
+            )
 
         if use_legend:
             ax.legend(bbox_to_anchor=(-.05, 1), loc=1, borderaxespad=0.)
@@ -130,8 +122,95 @@ def visualize_embedding_static(
         )
 
 
+def visualize_embedding_images(
+        ax, z, class_id=None, classes=None, filepaths=None, image_size=.2,
+        dot_size=10, show_dot=True):
+    """Generate a static scatter plot of the supplied embedding points.
+
+    Arguments:
+        ax:
+        z: A real-valued two-dimensional array representing the embedding.
+            shape = (n_stimuli, n_dim)
+        class_id: (optional) An integer array contianing class IDs
+            that indicate the class membership of each stimulus.
+            shape = (n_stimuli, 1)
+        classes: (optional) A dictionary mapping class IDs to strings.
+        filename (optional): The pdf filename to save the figure,
+            otherwise the figure is displayed.
+
+    """
+    # Settings
+    cmap = matplotlib.cm.get_cmap('jet')
+
+    [n_stimuli, n_dim] = z.shape
+
+    n_class = 1
+    if class_id is None:
+        use_legend = False
+
+        class_id = np.ones((n_stimuli))
+        unique_class_list = np.unique(class_id)
+        n_class = 1
+        color_array = cmap((0, 1))
+        color_array = color_array[np.newaxis, 0, :]
+
+        class_legend = ['all']
+    else:
+        use_legend = True
+        unique_class_list = np.unique(class_id)
+        n_class = len(unique_class_list)
+        norm = matplotlib.colors.Normalize(vmin=0., vmax=n_class)
+        color_array = cmap(norm(range(n_class)))
+
+        if classes is not None:
+            class_legend = visualize.infer_legend(unique_class_list, classes)
+        else:
+            class_legend = unique_class_list
+
+    if show_dot:
+        alpha = 1.0
+    else:
+        use_legend = False
+        alpha = 0.0
+
+    # Plot each class separately in order to use legend.
+    for i_class in range(n_class):
+        locs = class_id == unique_class_list[i_class]
+        ax.scatter(
+            z[locs, 0], z[locs, 1], c=color_array[np.newaxis, i_class, :],
+            s=dot_size, label=class_legend[i_class], edgecolors='none',
+            alpha=alpha
+        )
+
+    # Plot images.
+    for idx, i_file in enumerate(filepaths):
+        img = Image.open(i_file)
+        w, h = img.size
+        ar = w/h
+        dx = ar * image_size
+        dy = image_size
+        x = z[idx, 0]
+        y = z[idx, 1]
+        ax.imshow(img, extent=(x - dx/2, x + dx/2, y - dy/2, y + dy/2))
+
+    if use_legend:
+        lgnd = ax.legend(bbox_to_anchor=(-.05, 1), loc=1, borderaxespad=0.)
+        # Hack to make dots a readable size in legend regardless of size
+        # in plot.
+        for i_handle in lgnd.legendHandles:
+            i_handle._sizes = [30]
+
+    z_max = 1.2 * np.max(np.abs(z))
+    ax.set_xlim([-z_max, z_max])
+    ax.set_ylim([-z_max, z_max])
+    ax.set_aspect('equal')
+
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
 # def visualize_embedding_movie(
-#       Z3, class_vec=None, classes=None, fname=None):
+#       Z3, class_id=None, classes=None, fname=None):
 #     """
 #     """
 # TODO
@@ -140,32 +219,34 @@ def visualize_convergence(data, fname=None):
     """Visualize convergence analysis.
 
     Arguments:
-        data: The output of calling psiz.utils.assess_convergence.
+        data: The output of calling psiz.utils.assess_convergence. A
+            dictionary having the fields, `n_trial_array`, `val`, and
+            `measure`.
         fname (optional): The pdf filename to save the figure,
             otherwise the figure is displayed. Can be either a path
             string or a pathlib Path object.
     """
-    n_trial_array = data["n_trial_array"][1:]
-    rho = data["rho"]
-    rho_mean = np.mean(rho, axis=0)
-    rho_std = np.std(rho, axis=0)
+    n_trial_array = data["n_trial_array"]
+    val = data["val"]
+    val_mean = np.mean(val, axis=0)
+    val_std = np.std(val, axis=0)
 
     _, ax = plt.subplots()
     ax.plot(
-        n_trial_array, rho_mean,
+        n_trial_array, val_mean,
         linestyle='-', marker="o"
     )
     ax.fill_between(
-        n_trial_array, rho_mean - rho_std, rho_mean + rho_std,
+        n_trial_array, val_mean - val_std, val_mean + val_std,
         alpha=.5
     )
     ax.set_xlabel('Number of Trials')
-    ax.set_ylabel('Pearson Correlation')
+    ax.set_ylabel('Convergence Measure ({0})'.format(data["measure"]))
     ax.set_ylim([0, 1])
 
-    str_rho = r"$\rho$ = {0:.2f}".format(rho_mean[-1])
+    str_rho = "{0} = {1:.2f}".format(data['measure'], val_mean[-1])
     ax.text(
-        n_trial_array[-1], rho_mean[-1] + .03, str_rho,
+        n_trial_array[-1], val_mean[-1] + .03, str_rho,
         horizontalalignment='center', verticalalignment='center'
     )
 

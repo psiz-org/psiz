@@ -27,16 +27,18 @@ Todo:
 
 """
 
-import os
+import collections
 import copy
+import os
+from pathlib import Path
 import shutil
 import sys
 import tarfile
 import time
-import zipfile
-import collections
 from urllib import request
+import zipfile
 
+import h5py
 import numpy as np
 import pandas as pd
 import six
@@ -44,7 +46,6 @@ from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.request import urlopen
 from six.moves.urllib.request import urlretrieve
-import h5py
 
 from psiz.trials import load_trials
 
@@ -60,6 +61,13 @@ class Catalog(object):
             stimuli:
             id: A unique stimulus id.
             filepath: The filepath for the corresponding stimulus.
+
+    Methods:
+        class_id:
+        file_path:
+        id:
+        save:
+        subset:
 
     """
 
@@ -79,10 +87,13 @@ class Catalog(object):
         """
         # Basic stimulus information.
         self.n_stimuli = len(stimulus_id)
-        stimulus_id = self._check_stimulus_id(stimulus_id)
-        stimulus_filepath = self._check_stimulus_path(stimulus_filepath)
+        stimulus_id = self._check_id(stimulus_id)
+        # self.common_path = os.path.commonpath(stimulus_filepath)
+        stimulus_filepath = self._check_filepath(stimulus_filepath)  # TODO modify check, move away from numpy array.
+
         if class_id is None:
             class_id = np.zeros((self.n_stimuli))
+
         stimuli = pd.DataFrame(
             data={
                 'id': stimulus_id,
@@ -92,13 +103,16 @@ class Catalog(object):
         )
         stimuli = stimuli.sort_values('id')
         self.stimuli = stimuli
+
+        # Optional information.
+        self.common_path = ''
         self.class_label = class_label
         # Optional class information. TODO MAYBE
         # self.leaf_class_id
         # self.class_id_label
         # self.class_class
 
-    def _check_stimulus_id(self, stimulus_id):
+    def _check_id(self, stimulus_id):
         """Check `stimulus_id` argument.
 
         Returns:
@@ -129,7 +143,7 @@ class Catalog(object):
                 'integers [0, n_stimuli[.'))
         return stimulus_id
 
-    def _check_stimulus_path(self, stimulus_filepath):
+    def _check_filepath(self, stimulus_filepath):
         """Check `stimulus_filepath` argument.
 
         Returns:
@@ -152,6 +166,22 @@ class Catalog(object):
                 '`stimulus_id`.'))
 
         return stimulus_filepath
+
+    def class_id(self):
+        """Return class ID."""
+        return self.stimuli.class_id.values
+
+    def file_path(self):
+        """Return filepaths."""
+        file_path_list = self.stimuli.filepath.values.tolist()
+        file_path_list = [
+            Path(self.common_path, i_file) for i_file in file_path_list
+        ]
+        return file_path_list
+
+    def id(self):
+        """Return stimulus id."""
+        return self.stimuli.id.values
 
     def save(self, filepath):
         """Save the Catalog object as an HDF5 file.

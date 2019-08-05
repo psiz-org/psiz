@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 # Copyright 2019 The PsiZ Authors. All Rights Reserved.
 #
@@ -38,11 +39,12 @@ Todo:
 
 """
 
-import sys
 from abc import ABCMeta, abstractmethod
-import warnings
 import copy
 from random import randint
+import sys
+import time
+import warnings
 
 import h5py
 import numpy as np
@@ -122,7 +124,7 @@ class PsychologicalEmbedding(object):
             to False.
         log_dir: The location of the logs. The defualt location is
             `/tmp/psiz/tensorboard_logs/`.
-        
+
     Notes:
         The setter methods as well as the methods fit, trainable, and
             set_log modify the state of the PsychologicalEmbedding
@@ -456,7 +458,9 @@ class PsychologicalEmbedding(object):
                 self._set_trainable(spec_default)
             elif spec == 'freeze':
                 self._z["trainable"] = False
-                self._phi["w"]["trainable"] = np.zeros(self.n_group, dtype=bool)
+                self._phi["w"]["trainable"] = np.zeros(
+                    self.n_group, dtype=bool
+                )
                 for param_name in self._theta:
                     self._theta[param_name]["trainable"] = False
             elif spec == 'thaw':
@@ -858,7 +862,7 @@ class PsychologicalEmbedding(object):
         """
         #  Infer embedding.
         if (verbose > 0):
-            print('Inferring embedding...')
+            print('[psiz] Inferring embedding...')
         if (verbose > 1):
             print('    Settings:')
             print(
@@ -1622,7 +1626,8 @@ class PsychologicalEmbedding(object):
             z = z_init
 
         if verbose > 0:
-            print('Sampling from posterior...')
+            print('[psiz] Sampling from posterior...')
+            time_start = time.time()
         if (verbose > 1):
             print('    Settings:')
             print('    n_total_sample: ', n_total_sample)
@@ -1702,6 +1707,11 @@ class PsychologicalEmbedding(object):
         samples_all = samples[:, :, n_burn::thin_step]
         samples_all = samples_all[:, :, 0:n_final_sample]
         samples = dict(z=samples_all)
+
+        if verbose > 0:
+            elapsed = time.time() - time_start
+            print('  Elapsed time: {0:.2f} m'.format(elapsed / 60))
+
         return samples
 
     def _make_partition(self, n_stimuli, n_partition):

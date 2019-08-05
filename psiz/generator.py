@@ -56,6 +56,7 @@ TODO additional Docs
 from abc import ABCMeta, abstractmethod
 import copy
 import itertools
+import time
 
 import numpy as np
 import numpy.ma as ma
@@ -144,7 +145,7 @@ class RandomGenerator(TrialGenerator):
                 n_stimuli, (1, n_reference + 1), False
             )
         # Sort indices corresponding to references.
-        stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
+        # stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
         return Docket(
             stimulus_set, n_select=n_select, is_ranked=is_ranked
         )
@@ -516,6 +517,10 @@ class ActiveShotgunGenerator(TrialGenerator):
                 parameters.
 
         """
+        if verbose > 0:
+            print('[psiz] Generating docket using active selection...')
+            time_start = time.time()
+
         n_stimuli = embedding.n_stimuli
 
         if group_id is None:
@@ -555,6 +560,11 @@ class ActiveShotgunGenerator(TrialGenerator):
             "ig_trial": ig_best,
             "ig_all": ig_all
         }
+
+        if verbose > 0:
+            elapsed = time.time() - time_start
+            print('  Elapsed time: {0:.2f} m'.format(elapsed / 60))
+
         return (best_docket, ig_info)
 
     def _determine_references(
@@ -601,7 +611,7 @@ class ActiveShotgunGenerator(TrialGenerator):
                     p=candidate_prob
                 )
             # Sort indices corresponding to references.
-            stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
+            # stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
             docket = Docket(
                 stimulus_set, n_select=n_select, is_ranked=is_ranked
             )

@@ -564,7 +564,7 @@ class ActiveShotgunGenerator(TrialGenerator):
 
         if verbose > 0:
             elapsed = time.time() - time_start
-            print('  Elapsed time: {0:.2f} m'.format(elapsed / 60))
+            print('    Elapsed time: {0:.2f} m'.format(elapsed / 60))
 
         return (best_docket, ig_info)
 

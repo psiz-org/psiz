@@ -1729,8 +1729,12 @@ class PsychologicalEmbedding(object):
         samples = dict(z=samples_all)
 
         if verbose > 0:
+            print_progress_bar(
+                n_total_sample, n_total_sample, prefix='    Progress:',
+                suffix='Complete', length=50
+            )
             elapsed = time.time() - time_start
-            print('  Elapsed time: {0:.2f} m'.format(elapsed / 60))
+            print('    Elapsed time: {0:.2f} m'.format(elapsed / 60))
 
         return samples
 

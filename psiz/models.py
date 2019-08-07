@@ -57,7 +57,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras.initializers import Initializer
 
-from psiz.utils import elliptical_slice, print_progress_bar
+from psiz.utils import elliptical_slice, ProgressBar
 
 FLOAT_X = tf.float32  # TODO
 
@@ -896,10 +896,10 @@ class PsychologicalEmbedding(object):
             print('')
 
         if verbose < 3:
-            print_progress_bar(
-                0, n_restart, prefix='    Progress:', suffix='Complete',
-                length=50
+            progbar = ProgressBar(
+                n_restart, prefix='Progress:', suffix='Complete', length=50
             )
+            progbar.update(0)
 
         # Initialize new model.
         (tf_loss, tf_z, tf_z_constraint, tf_attention,
@@ -937,10 +937,7 @@ class PsychologicalEmbedding(object):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
             if verbose < 3:
-                print_progress_bar(
-                    i_restart + 1, n_restart, prefix='    Progress:',
-                    suffix='Complete', length=50
-                )
+                progbar.update(i_restart + 1)
             (
                 loss_train, loss_val, epoch, z, attention, theta
             ) = self._fit_restart(
@@ -1637,11 +1634,11 @@ class PsychologicalEmbedding(object):
 
         if verbose > 0:
             print('[psiz] Sampling from posterior...')
-            print_progress_bar(
-                0, n_total_sample, prefix='    Progress:', suffix='Complete',
+            progbar = ProgressBar(
+                n_total_sample, prefix='Progress:', suffix='Complete',
                 length=50
             )
-            time_start = time.time()
+            progbar.update(0)
 
         if (verbose > 1):
             print('    Settings:')
@@ -1689,10 +1686,8 @@ class PsychologicalEmbedding(object):
             # Partition stimuli into two groups.
             if np.mod(i_round, 100) == 0:
                 if verbose > 0:
-                    print_progress_bar(
-                        i_round + 1, n_total_sample, prefix='    Progress:',
-                        suffix='Complete', length=50
-                    )
+                    progbar.update(i_round + 1)
+
                 part_idx, n_stimuli_part = self._make_partition(
                     n_stimuli, n_partition
                 )
@@ -1729,12 +1724,7 @@ class PsychologicalEmbedding(object):
         samples = dict(z=samples_all)
 
         if verbose > 0:
-            print_progress_bar(
-                n_total_sample, n_total_sample, prefix='    Progress:',
-                suffix='Complete', length=50
-            )
-            elapsed = time.time() - time_start
-            print('    Elapsed time: {0:.2f} m'.format(elapsed / 60))
+            progbar.update(n_total_sample)
 
         return samples
 

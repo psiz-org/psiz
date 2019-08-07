@@ -67,7 +67,7 @@ from sklearn.neighbors import NearestNeighbors
 from psiz.trials import Docket, stack
 from psiz.simulate import Agent
 from psiz.preprocess import remove_catch_trials
-from psiz.utils import print_progress_bar
+from psiz.utils import ProgressBar
 
 
 class TrialGenerator(object):
@@ -520,7 +520,6 @@ class ActiveShotgunGenerator(TrialGenerator):
         """
         if verbose > 0:
             print('[psiz] Generating docket using active selection...')
-            time_start = time.time()
 
         n_stimuli = embedding.n_stimuli
 
@@ -562,10 +561,6 @@ class ActiveShotgunGenerator(TrialGenerator):
             "ig_all": ig_all
         }
 
-        if verbose > 0:
-            elapsed = time.time() - time_start
-            print('    Elapsed time: {0:.2f} m'.format(elapsed / 60))
-
         return (best_docket, ig_info)
 
     def _determine_references(
@@ -573,10 +568,11 @@ class ActiveShotgunGenerator(TrialGenerator):
         n_query = query_idx.shape[0]
 
         if verbose > 0:
-            print_progress_bar(
-                0, n_query, prefix='    Progress:', suffix='Complete',
+            progbar = ProgressBar(
+                n_total_sample, prefix='Progress:', suffix='Complete',
                 length=50
             )
+            progbar.update(0)
 
         z = embedding.z
         dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
@@ -632,11 +628,7 @@ class ActiveShotgunGenerator(TrialGenerator):
             )
             curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
             if verbose > 0:
-                # print("    IG: {0}".format(curr_best_ig))
-                print_progress_bar(
-                    i_query + 1, n_query, prefix='    Progress:', suffix='Complete',
-                    length=50
-                )
+                progbar.update(i_query + 1)
 
             ig_all.append(ig)
             # Add to dynamic list.

@@ -119,7 +119,7 @@ def main():
     # Display attention weights.
     attention_weight = emb_inferred.w
     group_labels = ["Novice", "Intermediate", "Expert"]
-    print("    Attention weights:")
+    print("\n    Attention weights:")
     for i_group in range(emb_inferred.n_group):
         print("    {0:>12} | {1}".format(
             group_labels[i_group],

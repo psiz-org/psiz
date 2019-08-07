@@ -391,3 +391,30 @@ def procrustean_solution(z_a, z_b, n_restart=10):
             params_best = params_candidate
         z_c = affine_transformation(z_b, params_best)
     return (z_c, params_best)
+
+
+def print_progress_bar(
+        iteration, total, prefix='', suffix='', decimals=1, length=100,
+        fill='█'):
+    """Display a progress bar in terminal.
+
+    Arguments:
+        iteration: Integer indicating current iteration.
+        total: Integer indicating total iterations.
+        prefix (optional): String that is used as prefix.
+        suffix (optional): String that is used as suffix.
+        decimals (optional): Integer indicating a positive number of
+            decimals in percent complete.
+        length (optional): Integer indicating the character length of
+            the progress bar.
+        fill (optional): String indicating the bar fill character.
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(
+        100 * (iteration / float(total))
+    )
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+    # Print a new line on completion.
+    if iteration == total:
+        print()

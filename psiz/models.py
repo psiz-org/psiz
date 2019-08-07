@@ -57,7 +57,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras.initializers import Initializer
 
-from psiz.utils import elliptical_slice
+from psiz.utils import elliptical_slice, print_progress_bar
 
 FLOAT_X = tf.float32  # TODO
 
@@ -351,7 +351,7 @@ class PsychologicalEmbedding(object):
                     tf_theta[param_name] = tf.compat.v1.get_variable(
                         param_name, [1], dtype=FLOAT_X,
                         initializer=tf.constant_initializer(
-                            self._theta[param_name]["value"], dtype=FLOAT_X
+                            self._theta[param_name]["value"]
                         ),
                         trainable=False
                     )
@@ -371,7 +371,7 @@ class PsychologicalEmbedding(object):
                 tf_theta[param_name] = tf.compat.v1.get_variable(
                     param_name, [1], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self._theta[param_name]["value"], dtype=FLOAT_X
+                        self._theta[param_name]["value"]
                     ),
                     trainable=True
                 )
@@ -750,7 +750,7 @@ class PsychologicalEmbedding(object):
                 tf_attention = tf.compat.v1.get_variable(
                     tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                     initializer=tf.constant_initializer(
-                        self._phi['w']["value"][group_id, :], dtype=FLOAT_X
+                        self._phi['w']["value"][group_id, :]
                     )
                 )
             else:
@@ -764,7 +764,8 @@ class PsychologicalEmbedding(object):
             tf_attention = tf.compat.v1.get_variable(
                 tf_var_name, [1, self.n_dim], dtype=FLOAT_X,
                 initializer=tf.constant_initializer(
-                    self._phi['w']["value"][group_id, :], dtype=FLOAT_X),
+                    self._phi['w']["value"][group_id, :]
+                ),
                 trainable=False
             )
         return tf_attention
@@ -785,8 +786,7 @@ class PsychologicalEmbedding(object):
                 z = self._z["value"]
                 tf_z = tf.compat.v1.get_variable(
                     "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
-                    initializer=tf.constant_initializer(
-                        z, dtype=FLOAT_X)
+                    initializer=tf.constant_initializer(z)
                 )
             else:
                 tf_z = tf.compat.v1.get_variable(
@@ -802,9 +802,7 @@ class PsychologicalEmbedding(object):
         else:
             tf_z = tf.compat.v1.get_variable(
                 "z", [self.n_stimuli, self.n_dim], dtype=FLOAT_X,
-                initializer=tf.constant_initializer(
-                    self._z["value"], dtype=FLOAT_X
-                ),
+                initializer=tf.constant_initializer(self._z["value"]),
                 trainable=False
             )
         tf_z_constraint = tf_z.assign(self._center_z(tf_z))
@@ -897,6 +895,12 @@ class PsychologicalEmbedding(object):
             )
             print('')
 
+        if verbose < 3:
+            print_progress_bar(
+                0, n_restart, prefix='    Progress:', suffix='Complete',
+                length=50
+            )
+
         # Initialize new model.
         (tf_loss, tf_z, tf_z_constraint, tf_attention,
             tf_attention_constraint, tf_theta, tf_theta_bounds,
@@ -932,6 +936,11 @@ class PsychologicalEmbedding(object):
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
+            if verbose < 3:
+                print_progress_bar(
+                    i_restart + 1, n_restart, prefix='    Progress:',
+                    suffix='Complete', length=50
+                )
             (
                 loss_train, loss_val, epoch, z, attention, theta
             ) = self._fit_restart(
@@ -965,13 +974,13 @@ class PsychologicalEmbedding(object):
         if (verbose > 1):
             if beat_init:
                 print(
-                    '        Best Restart\n        n_epoch: {0} | '
+                    '    Best Restart\n        n_epoch: {0} | '
                     'loss: {1: .6f} | loss_val: {2: .6f}'.format(
                         epoch, loss_train_best, loss_val_best
                     )
                 )
             else:
-                print('        Did not beat initialization.')
+                print('    Did not beat initialization.')
 
         self._z["value"] = z_best
         self._phi['w']["value"] = attention_best
@@ -1214,10 +1223,11 @@ class PsychologicalEmbedding(object):
             def body_fn(cond_idx, prob_all):
                 n_reference = tf_n_reference[cond_idx]
                 n_select = tf_n_select[cond_idx]
-                trial_idx = tf.squeeze(tf.where(tf.logical_and(
+                locs = tf.logical_and(
                     tf.equal(tf_n_reference, n_reference),
-                    tf.equal(tf_n_select, n_select)))
+                    tf.equal(tf_n_select, n_select)
                 )
+                trial_idx = tf.squeeze(tf.compat.v1.where(locs))
                 weight_config = tf.gather(tf_weight, trial_idx)
                 sim_qr_config = tf.gather(sim_qr, trial_idx)
                 reference_idx = tf.range(
@@ -1627,7 +1637,12 @@ class PsychologicalEmbedding(object):
 
         if verbose > 0:
             print('[psiz] Sampling from posterior...')
+            print_progress_bar(
+                0, n_total_sample, prefix='    Progress:', suffix='Complete',
+                length=50
+            )
             time_start = time.time()
+
         if (verbose > 1):
             print('    Settings:')
             print('    n_total_sample: ', n_total_sample)
@@ -1673,6 +1688,11 @@ class PsychologicalEmbedding(object):
         for i_round in range(n_total_sample):
             # Partition stimuli into two groups.
             if np.mod(i_round, 100) == 0:
+                if verbose > 0:
+                    print_progress_bar(
+                        i_round + 1, n_total_sample, prefix='    Progress:',
+                        suffix='Complete', length=50
+                    )
                 part_idx, n_stimuli_part = self._make_partition(
                     n_stimuli, n_partition
                 )

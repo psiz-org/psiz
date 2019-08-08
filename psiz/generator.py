@@ -569,7 +569,7 @@ class ActiveShotgunGenerator(TrialGenerator):
 
         if verbose > 0:
             progbar = ProgressBar(
-                n_total_sample, prefix='Progress:', suffix='Complete',
+                n_query, prefix='Progress:', suffix='Complete',
                 length=50
             )
             progbar.update(0)

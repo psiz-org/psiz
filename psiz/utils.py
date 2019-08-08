@@ -466,5 +466,7 @@ class ProgressBar(object):
         if iteration == self.total:
             self._stop()
             print()
-            total_str = str(datetime.timedelta(seconds=self.total_s))
+            total_str = str(
+                datetime.timedelta(seconds=np.round(self.total_s))
+            )
             print('    Elapsed time: {0}'.format(total_str))

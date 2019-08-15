@@ -1,12 +1,15 @@
 """Setup file."""
-from setuptools import setup
+import setuptools
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
-setup(
+setuptools.setup(
     name='psiz',
-    version='0.2.1',
+    version='0.2.2',
     description='Toolbox for inferring psychological embeddings.',
-    long_description='See https://github.com/roads/psiz for more information.',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         'Programming Language :: Python :: 3',
     ],
@@ -20,5 +23,5 @@ setup(
     ],
     include_package_data=True,
     url='https://github.com/roads/psiz',
-    download_url='https://github.com/roads/psiz/archive/v0.2.1.tar.gz'
+    download_url='https://github.com/roads/psiz/archive/v0.2.2.tar.gz'
 )

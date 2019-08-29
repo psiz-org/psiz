@@ -545,7 +545,8 @@ class ActiveShotgunGenerator(TrialGenerator):
                 rel_entropy = entropy - np.min(entropy)
                 query_prob = rel_entropy / np.sum(rel_entropy)
                 query_idx = np.random.choice(
-                    query_idx, n_query, replace=False, p=query_prob)
+                    query_idx, n_query, replace=False, p=query_prob
+                )
             elif self.priority is "kl":
                 # Based on KL divergence.
                 query_priority = query_kl_priority(embedding, samples)

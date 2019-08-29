@@ -465,6 +465,11 @@ class Observations(SimilarityTrials):
             observations with the same agent ID were judged by a single
             agent.
             shape = (n_trial,)
+        session_id: An integer array indicating the session ID of a
+            trial. It is assumed that all IDs are non-negative. Trials
+            with different session IDs were obtained during different
+            sessions.
+            shape = (n_trial,)
         weight: An float array indicating the inference weight of each
             trial.
             shape = (n_trial,)
@@ -497,7 +502,8 @@ class Observations(SimilarityTrials):
     """
 
     def __init__(self, response_set, n_select=None, is_ranked=None,
-                 group_id=None, agent_id=None, weight=None, rt_ms=None):
+                 group_id=None, agent_id=None, session_id=None, weight=None,
+                 rt_ms=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -520,6 +526,11 @@ class Observations(SimilarityTrials):
                 that observations with the same agent ID were judged by
                 a single agent.
                 shape = (n_trial,)
+            session_id: An integer array indicating the session ID of a
+                trial. It is assumed that all IDs are non-negative.
+                Trials with different session IDs were obtained during
+                different sessions.
+            shape = (n_trial,)
             weight (optional): A float array indicating the inference
                 weight of each trial.
                 shape = (n_trial,1)
@@ -541,6 +552,12 @@ class Observations(SimilarityTrials):
         else:
             agent_id = self._check_agent_id(agent_id)
         self.agent_id = agent_id
+
+        if session_id is None:
+            session_id = np.zeros((self.n_trial), dtype=np.int32)
+        else:
+            session_id = self._check_session_id(session_id)
+        self.session_id = session_id
 
         if weight is None:
             weight = np.ones((self.n_trial))
@@ -592,6 +609,23 @@ class Observations(SimilarityTrials):
                 "Found {0} bad trial(s).").format(n_bad))
         return agent_id
 
+    def _check_session_id(self, session_id):
+        """Check the argument session_id."""
+        session_id = session_id.astype(np.int32)
+        # Check shape argreement.
+        if not (session_id.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'session_id' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        # Check lowerbound support limit.
+        bad_locs = session_id < 0
+        n_bad = np.sum(bad_locs)
+        if n_bad != 0:
+            raise ValueError((
+                "The parameter 'session_id' contains integers less than 0. "
+                "Found {0} bad trial(s).").format(n_bad))
+        return session_id
+
     def _check_weight(self, weight):
         """Check the argument weight."""
         weight = weight.astype(np.float)
@@ -625,8 +659,8 @@ class Observations(SimilarityTrials):
         return Observations(
             self.stimulus_set[index, :], n_select=self.n_select[index],
             is_ranked=self.is_ranked[index], group_id=self.group_id[index],
-            agent_id=self.agent_id[index], weight=self.weight[index],
-            rt_ms=self.rt_ms[index]
+            agent_id=self.agent_id[index], session_id=self.session_id[index],
+            weight=self.weight[index], rt_ms=self.rt_ms[index]
         )
 
     def _set_configuration_data(
@@ -753,6 +787,7 @@ class Observations(SimilarityTrials):
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.create_dataset("group_id", data=self.group_id)
         f.create_dataset("agent_id", data=self.agent_id)
+        f.create_dataset("session_id", data=self.session_id)
         f.create_dataset("weight", data=self.weight)
         f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
@@ -790,6 +825,7 @@ def stack(trials_list):
         try:
             group_id = trials_list[0].group_id
             agent_id = trials_list[0].agent_id
+            session_id = trials_list[0].session_id
             weight = trials_list[0].weight
             rt_ms = trials_list[0].rt_ms
         except AttributeError:
@@ -805,18 +841,20 @@ def stack(trials_list):
             if is_judged:
                 group_id = np.hstack((group_id, i_trials.group_id))
                 agent_id = np.hstack((agent_id, i_trials.agent_id))
+                session_id = np.hstack((session_id, i_trials.session_id))
                 weight = np.hstack((weight, i_trials.weight))
                 rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
 
         if is_judged:
             trials_stacked = Observations(
                 stimulus_set, n_select=n_select, is_ranked=is_ranked,
-                group_id=group_id, agent_id=agent_id, weight=weight,
-                rt_ms=rt_ms
+                group_id=group_id, agent_id=agent_id, session_id=session_id,
+                weight=weight, rt_ms=rt_ms
             )
         else:
             trials_stacked = Docket(
-                stimulus_set, n_select, is_ranked)
+                stimulus_set, n_select, is_ranked
+            )
         return trials_stacked
 
 
@@ -895,10 +933,14 @@ def load_trials(filepath, verbose=0):
             agent_id = f["agent_id"][()]
         else:
             agent_id = np.zeros((len(n_select)))
+        if "session_id" in f:
+            session_id = f["session_id"][()]
+        else:
+            session_id = np.zeros((len(n_select)))
         loaded_trials = Observations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            group_id=group_id, agent_id=agent_id, weight=weight,
-            rt_ms=rt_ms
+            group_id=group_id, agent_id=agent_id, session_id=session_id,
+            weight=weight, rt_ms=rt_ms
         )
     else:
         raise ValueError('No class found matching the provided `trial_type`.')
@@ -909,8 +951,16 @@ def load_trials(filepath, verbose=0):
         print('  trial_type: {0}'.format(trial_type))
         print('  n_trial: {0}'.format(loaded_trials.n_trial))
         if trial_type == "Observations":
-            print('  n_agent: {0}'.format(len(np.unique(loaded_trials.agent_id))))
-            print('  n_group: {0}'.format(len(np.unique(loaded_trials.group_id))))
+            print(
+                '  n_agent: {0}'.format(
+                    len(np.unique(loaded_trials.agent_id))
+                )
+            )
+            print(
+                '  n_group: {0}'.format(
+                    len(np.unique(loaded_trials.group_id))
+                )
+            )
         print('')
     return loaded_trials
 

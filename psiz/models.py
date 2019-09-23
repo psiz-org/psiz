@@ -105,7 +105,7 @@ class PsychologicalEmbedding(object):
             'value' indicates the actual value of the parameter. The
             key 'trainable' is a boolean flag indicating whether the
             variable is trainable during inferene. The key 'bounds'
-            indicates the bounds of the paramter during inference. The
+            indicates the bounds of the parameter during inference. The
             bounds are specified using a list of two items where the
             first item indicates the lower bound and the second item
             indicates the upper bound. Use None to indicate no bound.
@@ -144,7 +144,7 @@ class PsychologicalEmbedding(object):
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded. This must be equal to or
                 greater than three.
-            n_dim (optional): An integer indicating the dimensionalty
+            n_dim (optional): An integer indicating the dimensionality
                 of the embedding. Must be equal to or greater than one.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
@@ -1580,16 +1580,13 @@ class PsychologicalEmbedding(object):
         """Sample from the posterior of the embedding.
 
         Samples are drawn from the posterior holding theta constant. A
-        variant of Eliptical Slice Sampling (Murray & Adams 2010) is
+        variant of Elliptical Slice Sampling (Murray & Adams 2010) is
         used to estimate the posterior for the embedding points. Since
         the latent embedding variables are translation and rotation
-        invariant, generic sampling will artificailly inflate the
-        entropy of the samples. To compensate for this issue, N
-        embedding points are selected to serve as anchor points, where
-        N is two times the dimensionality of the embedding. Two chains
-        are run each using half of the anchor points. The samples from
-        the two chains are merged in order to get a posterior estimate
-        for all points.
+        invariant, generic sampling will artificially inflate the
+        entropy of the samples. To compensate for this issue, the
+        points are split into two groups, holding one set constant
+        while sampling the other set.
 
         Arguments:
             obs: A Observations object representing the observed data.

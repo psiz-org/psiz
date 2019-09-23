@@ -80,7 +80,7 @@ class Catalog(object):
             stimulus_id: A 1D integer array.
                 shape=(n_stimuli,)
             stimulus_filepath: A 1D list of strings.
-                len=n_stimuli
+                shape=(n_stimuli,)
             class_id (optional): A 1D integer array.
             class_label (optional): A dictionary mapping between class_id and a
                 string label.

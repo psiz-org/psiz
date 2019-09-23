@@ -50,10 +50,10 @@ Alternatively, if the agent had selected reference B, the observation would be r
 
 D_i = [Q B A]
 
-In addition to a simple \emph{triplet} trial, this package is designed to handle a number of different trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. 
+In addition to a simple *triplet* trial, this package is designed to handle a number of different trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. 
 
 ## Common Use Cases
-Optionally, you can also provide additional information.
+Optionally, you can provide additional information.
 
 1. The dimensionality of the embedding (default=2).
 2. The number of unique population groups (default=1).
@@ -64,7 +64,7 @@ emb = psiz.models.Exponential(n_stimuli, n_dim=4, n_group=2)
 emb.fit(obs)
 ```
 
-If you know some of the free parameters already, you can set them to the desired value and then make those parametres untrainable.
+If you know some of the free parameters already, you can set them to the desired value and then make those parameters untrainable.
 ```python
 n_stimuli = 100
 emb = psiz.models.Exponential(n_stimuli, n_dim=2)
@@ -91,7 +91,7 @@ emb.fit(obs)
 * See also the list of contributors who participated in this project.
 
 ## What's in a name?
-The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthard for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
+The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
 
 ## Licence
 This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file for details.

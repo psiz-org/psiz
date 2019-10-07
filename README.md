@@ -42,7 +42,7 @@ emb.save('my_embedding.h5')
 ## Trials and Observations
 Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of multiple stimuli that have been judged by an agent (human or machine) based on their similarity. 
 
-In the simplest case, an observation is obtained from a trial consisting of three stimuli: a query stimulus (Q) and two reference stimuli (A and B). An agent selects the reference stimulus that they believe is more similar to the query stimulus. For this simple trial, there are two possible outcomes. If the agent selected reference A, then the observation for the ith trial would be recorded as the vector: 
+In the simplest case, an observation is obtained from a trial consisting of three stimuli: a *query* stimulus (Q) and two *reference* stimuli (A and B). An agent selects the reference stimulus that they believe is more similar to the query stimulus. For this simple trial, there are two possible outcomes. If the agent selected reference A, then the observation for the ith trial would be recorded as the vector: 
 
 D_i = [Q A B]
 
@@ -51,6 +51,40 @@ Alternatively, if the agent had selected reference B, the observation would be r
 D_i = [Q B A]
 
 In addition to a simple *triplet* trial, this package is designed to handle a number of different trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. 
+
+## Using Your Own Data
+
+To use your own data, you should place your data in a `psiz.trials.Observations` object. Once the Observations object has been created, you can save it to disk by calling its save method. It can be loaded later using the method `psiz.trials.load_trials()`. Consider the following example that uses randomly generated data:
+
+```python
+import numpy as np
+import psiz.trials
+
+# Let's assume that we have 10 unique stimuli.
+stimuli_list = np.arange(0, 10, dtype=int)
+
+# Let's create 100 trials, where each trial is composed of a query and
+# four references. We will also assume that participants selected two
+# references (in order of their similarity to the query.)
+n_trial = 100
+n_reference = 4
+response_set = np.empty([n_trial, n_reference + 1], dtype=int)
+n_select = 2 * np.ones((n_trial), dtype=int)
+for i_trial in range(n_trial):
+    # Randomly selected stimuli and randomly simulate behavior for each
+    # trial (one query, four references).
+    response_set[i_trial, :] = np.random.choice(
+        stimuli_list, n_reference + 1, replace=False
+    )
+
+# Create the observations object and save it to disk.
+obs = psiz.trials.Observations(response_set, n_select=n_select)
+obs.save('path/to/obs.hdf5')
+
+# Load the observations from disk.
+obs = psiz.trials.load_trials('path/to/obs.hdf5')
+```
+Note that the values in `response_set` are assumed to be contiguous integers [0, N[, where N is the number of unique stimuli. Their order is also important. The query is listed in the first column, an agent's selected references are listed second (in order of selection if the trial is ranked) and then any remaining unselected references are listed (in any order).
 
 ## Common Use Cases
 Optionally, you can provide additional information.

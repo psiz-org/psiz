@@ -49,7 +49,7 @@ def dimension_search(
         obs: An Observations object representing the observed data.
             embedding_constructor: A PsychologicalEmbedding
             constructor.
-        n_stimuli:  An integer indicating the number of unqiue stimuli.
+        n_stimuli:  An integer indicating the number of unique stimuli.
         dim_list (optional): A list of integers indicating the
             dimensions to search over.
         modifier_func (optional): A function that takes an embedding
@@ -74,7 +74,7 @@ def dimension_search(
     Returns:
         summary: A dictionary.
             dim_best: An integer indicating the dimensionality
-                (from the candiate list) that minimized the loss
+                (from the candidate list) that minimized the loss
                 function.
 
     """
@@ -174,40 +174,43 @@ def dimension_search(
     return summary
 
 
-def visualize_dimension_search(summary, fp_fig=None):
-    """Visualize dimensionality search."""
+def visualize_dimension_search(ax, summary):
+    """Visualize dimensionality search.
+
+    Arguments:
+        ax: A Matplotlib axis
+
+    Example usage:
+            fig, ax = plt.subplots(figsize=(4, 3))
+            ax = plt.subplot(1, 1, 1)
+            visualize_dimension_search(ax, dim_summary)
+    """
     dim_list = summary["dim_list"]
     dim_best = summary["dim_best"]
 
     train_mean = np.mean(summary["loss_train"], axis=1)
     test_mean = np.mean(summary["loss_test"], axis=1)
 
-    plt.plot(dim_list, train_mean, 'b', label="Train")
-    plt.plot(dim_list, test_mean, 'r', label="Test")
+    ax.plot(dim_list, train_mean, 'o-b', markersize=3, label="Train")
+    ax.plot(dim_list, test_mean, 'o-r', markersize=3, label="Test")
 
     if summary["loss_train"].shape[1] > 1:
         train_sem = sem(summary["loss_train"], axis=1)
         test_sem = sem(summary["loss_test"], axis=1)
-        plt.fill_between(
+        ax.fill_between(
             dim_list, train_mean - train_sem, train_mean + train_sem,
             alpha=.5
         )
-        plt.fill_between(
+        ax.fill_between(
             dim_list, test_mean - test_sem, test_mean + test_sem,
             alpha=.5
         )
-    plt.scatter(
-        dim_best, test_mean[np.equal(dim_list, dim_best)], c="r"
+    ax.scatter(
+        dim_best, test_mean[np.equal(dim_list, dim_best)], c="r", s=50,
+        marker='x', label='Best Dimensionality'
     )
 
-    plt.xlabel("Dimensionality")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.tight_layout()
-
-    if fp_fig is None:
-        plt.show()
-    else:
-        plt.savefig(
-            os.fspath(fp_fig), format='pdf', bbox_inches="tight", dpi=300
-        )
+    ax.set_xlabel("Dimensionality")
+    ax.set_ylabel("Loss")
+    ax.legend()
+    ax.set_title('Dimensionality Search\n(Mean and SEM)')

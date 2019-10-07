@@ -673,7 +673,8 @@ def information_gain(embedding, samples, docket, group_id=None):
     z_samples = samples['z']
     # Note: prob_all has shape = (n_trial, n_outcome, n_sample)
     prob_all = embedding.outcome_probability(
-        docket, group_id=group_id, z=z_samples)
+        docket, group_id=group_id, z=z_samples
+    )
 
     # First term of mutual information.
     # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c)

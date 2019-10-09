@@ -1,7 +1,7 @@
 # PsiZ: A Psychological Embedding Package
 
 ## Purpose
-PsiZ provides the computational tools to infer a continuous, multivariate representation for a set of stimuli from ordinal similarity relations.
+PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods. The companion Open Access article is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
 
 ## Installation
 There are two ways to install PsiZ:
@@ -136,9 +136,9 @@ This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file
 * van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet
    embedding. In Machine learning for signal processing (mlsp), 2012 IEEE
    international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720
-* Roads, B. D., & Mozer, M. C. (in press). Obtaining psychological
+* Roads, B. D., & Mozer, M. C. (2019). Obtaining psychological
    embeddings through joint kernel and metric learning. Behavior Research
-   Methods.
+   Methods. doi:10.3758/s13428-019-01285-3
 * Wah, C., Branson, S., Welinder, P., Perona, P., & Belongie, S. (2011). The
    Caltech-UCSD Birds-200-2011 Dataset (Tech. Rep. No. CNS-TR-2011-001).
    California Institute of Technology.

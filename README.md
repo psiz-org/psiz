@@ -7,10 +7,12 @@ PsiZ provides the computational tools to infer a continuous, multivariate repres
 There are two ways to install PsiZ:
 
 1. Install from PyPI using pip: ``pip install psiz``
-2. Clone from Git Hub: https://github.com/roads/psiz.git
+2. Clone the repository from GitHub and install using pip: `pip install /local/path/to/psiz`. The repository can be cloned in a number of ways:
+    * Manually download the latest version at https://github.com/roads/psiz.git
+    * Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
+    * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.2.2`
 
-Note: PsiZ also requires TensorFlow, which is not installed automatically since is not included as a dependency of the PsiZ package (in setup.py). You must explicitly install the latest stable TensorFlow package (tensorflow or tensorflow-gpu). This allows users to specify whether they use a GPU enabled version of TensorFlow.
-
+**Note:** PsiZ also requires TensorFlow 1.14, which is not installed automatically since is not included as a dependency of the PsiZ package (in setup.py). You must explicitly install TensorFlow 1.14 (tensorflow or tensorflow-gpu). This allows users to specify whether they use a GPU enabled version of TensorFlow. The package will soon be updated to use TensorFlow 2.0.
 
 ## Quick Start
 There are four predefined embedding models to choose from:
@@ -54,7 +56,7 @@ In addition to a simple *triplet* trial, this package is designed to handle a nu
 
 ## Using Your Own Data
 
-To use your own data, you should place your data in a `psiz.trials.Observations` object. Once the Observations object has been created, you can save it to disk by calling its save method. It can be loaded later using the method `psiz.trials.load_trials()`. Consider the following example that uses randomly generated data:
+To use your own data, you should place your data in a `psiz.trials.Observations` object. Once the Observations object has been created, you can save it to disk by calling its `save` method. It can be loaded later using the function `psiz.trials.load_trials()`. Consider the following example that uses randomly generated data:
 
 ```python
 import numpy as np

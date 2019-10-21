@@ -127,25 +127,25 @@ def assess_convergence(
 
 
 def similarity_matrix(similarity_fn, z):
-        """Return a pairwise similarity matrix.
+    """Return a pairwise similarity matrix.
 
-        Returns:
-            A 2D array where element s_{i,j} indicates the similarity
-                between the ith and jth stimulus.
+    Returns:
+        A 2D array where element s_{i,j} indicates the similarity
+            between the ith and jth stimulus.
 
-        """
-        n_stimuli = z.shape[0]
+    """
+    n_stimuli = z.shape[0]
 
-        xg = np.arange(n_stimuli)
-        a, b = np.meshgrid(xg, xg)
-        a = a.flatten()
-        b = b.flatten()
+    xg = np.arange(n_stimuli)
+    a, b = np.meshgrid(xg, xg)
+    a = a.flatten()
+    b = b.flatten()
 
-        z_a = z[a, :]
-        z_b = z[b, :]
-        simmat = similarity_fn(z_a, z_b)
-        simmat = simmat.reshape(n_stimuli, n_stimuli)
-        return simmat
+    z_a = z[a, :]
+    z_b = z[b, :]
+    simmat = similarity_fn(z_a, z_b)
+    simmat = simmat.reshape(n_stimuli, n_stimuli)
+    return simmat
 
 
 def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
@@ -205,7 +205,9 @@ def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
     return score
 
 
-def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
+def compare_models(
+        model_a, model_b, group_id_a=0, group_id_b=0, score='r2',
+        elements='upper'):
     """Compare two psychological embeddings.
 
     Arguments:
@@ -230,7 +232,9 @@ def compare_models(model_a, model_b, group_id_a=0, group_id_b=0):
     simmat_a = similarity_matrix(sim_func_a, model_a.z)
     simmat_b = similarity_matrix(sim_func_b, model_b.z)
 
-    r_squared = matrix_comparison(simmat_a, simmat_b)
+    r_squared = matrix_comparison(
+        simmat_a, simmat_b, score=score, elements=elements
+    )
     return r_squared
 
 

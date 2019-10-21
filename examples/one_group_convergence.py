@@ -96,10 +96,6 @@ def ground_truth(n_stimuli, n_dim, n_group):
     emb.beta = 10
     emb.gamma = 0.001
     emb.trainable("freeze")
-    # sim_mat = similarity_matrix(emb.similarity, z)
-    # idx_upper = np.triu_indices(n_stimuli, 1)
-    # plt.hist(sim_mat[idx_upper])
-    # plt.show()
     return emb
 
 

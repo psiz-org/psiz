@@ -370,7 +370,8 @@ class Docket(SimilarityTrials):
         """
         return Docket(
             self.stimulus_set[index, :], self.n_select[index],
-            self.is_ranked[index])
+            self.is_ranked[index]
+        )
 
     def _set_configuration_data(self, n_reference, n_select, is_ranked):
         """Generate a unique ID for each trial configuration.
@@ -537,6 +538,7 @@ class Observations(SimilarityTrials):
             rt_ms(optional): An array indicating the response time
                 (in milliseconds) of the agent for each trial.
                 shape = (n_trial,1)
+
         """
         SimilarityTrials.__init__(self, response_set, n_select, is_ranked)
 

@@ -1218,8 +1218,8 @@ class PsychologicalEmbedding(object):
                 return tf.less(cond_idx, tf_n_config)
 
             def body_fn(cond_idx, prob_all):
-                n_reference = tf_n_reference[cond_idx]
-                n_select = tf_n_select[cond_idx]
+                n_reference = tf_config_n_reference[cond_idx]
+                n_select = tf_config_n_select[cond_idx]
                 locs = tf.logical_and(
                     tf.equal(tf_n_reference, n_reference),
                     tf.equal(tf_n_select, n_select)
@@ -1558,7 +1558,7 @@ class PsychologicalEmbedding(object):
             # Compute selection probability.
             prob = tf.divide(sim_qr[:, selected_idx], denom)
             # Update sequence probability.
-            seq_prob = np.multiply(seq_prob, prob)
+            seq_prob = tf.multiply(seq_prob, prob)
             # Update denominator in preparation for computing the
             # probability of the previous selection in the sequence.
             denom = tf.cond(

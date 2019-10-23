@@ -42,7 +42,6 @@ Example output:
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from psiz.trials import stack
 from psiz.models import Exponential
@@ -129,7 +128,7 @@ def main():
             )
         )
 
-    # Display comparison results. A good infferred model will have a high
+    # Display comparison results. A good inferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
     # values on the off-diagonal elements.
     print('\n    Model Comparison (r^2)')

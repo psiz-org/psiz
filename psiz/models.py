@@ -64,8 +64,6 @@ from tensorflow.keras.constraints import Constraint
 
 from psiz.utils import elliptical_slice, ProgressBar
 
-FLOAT_X = tf.float32  # TODO
-
 
 class PsychologicalEmbedding(object):
     """Abstract base class for psychological embedding algorithm.
@@ -714,17 +712,19 @@ class PsychologicalEmbedding(object):
         if self._phi['w']["trainable"][group_id]:
             if init_mode is 'hot':
                 tf_attention = tf.Variable(
-                    initial_value=self._phi['w']["value"][group_id, :],
+                    initial_value=np.expand_dims(
+                        self._phi['w']["value"][group_id, :], axis=0
+                    ),
                     trainable=True, name=tf_var_name, dtype=K.floatx(),
                     constraint=ProjectAttention(),
                     shape=[1, self.n_dim]
                 )
             else:
-                n_dim = tf.constant(self.n_dim, dtype=K.floatx())
+                scale = tf.constant(self.n_dim, dtype=K.floatx())
                 alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
                 tf_attention = tf.Variable(
                     initial_value=RandomAttention(
-                        n_dim, alpha, dtype=K.floatx()
+                        alpha, scale, dtype=K.floatx()
                     ),
                     trainable=True, name=tf_var_name, dtype=K.floatx(),
                     constraint=ProjectAttention(),
@@ -809,60 +809,36 @@ class PsychologicalEmbedding(object):
         tf_attention = self._get_attention(init_mode)
         tf_z = self._get_embedding(init_mode)
 
-        tf_stimulus_set = tf.keras.Input(
+        obs_stimulus_set = tf.keras.Input(
             shape=[None], name='inp_stimulus_set', dtype=tf.int32,
         )
-        tf_n_reference = tf.keras.Input(
+        obs_n_reference = tf.keras.Input(
             shape=[], name='inp_n_reference', dtype=tf.int32,
         )
-        tf_n_select = tf.keras.Input(
+        obs_n_select = tf.keras.Input(
             shape=[], name='inp_n_select', dtype=tf.int32,
         )
-        tf_is_ranked = tf.keras.Input(
+        obs_is_ranked = tf.keras.Input(
             shape=[], name='inp_is_ranked', dtype=tf.int32,
         )
-        tf_group_id = tf.keras.Input(
+        obs_group_id = tf.keras.Input(
             shape=[], name='inp_group_id', dtype=tf.int32,
         )
-        tf_weight = tf.keras.Input(
+        obs_weight = tf.keras.Input(
             shape=[], name='inp_weight', dtype=K.floatx(),
         )
-        tf_config_idx = tf.keras.Input(
+        obs_config_idx = tf.keras.Input(
             shape=[], name='inp_config_idx', dtype=tf.int32,
         )
 
-        # Configuration data.
-        # tf_n_config = tf.keras.Input(
-        #     shape=(), name='inp_n_config', dtype=tf.int32,
-        # )  # TODO this has unneeded batch size dimension
-        # tf_max_n_outcome = tf.keras.Input(
-        #     shape=(), name='inp_max_n_outcome', dtype=tf.int32,
-        # )  # TODO this has unneeded batch size dimension
-        # tf_config_n_reference = tf.keras.Input(
-        #     shape=[], name='inp_config_n_reference', dtype=tf.int32,
-        # )
-        # tf_config_n_select = tf.keras.Input(
-        #     shape=[], name='inp_config_n_select', dtype=tf.int32,
-        # )
-        # tf_config_is_ranked = tf.keras.Input(
-        #     shape=[], name='inp_config_is_ranked', dtype=tf.int32,
-        # )
-        # tf_config_n_outcome = tf.keras.Input(
-        #     shape=[], name='inp_config_n_outcome', dtype=tf.int32,
-        # )
-
-        # TODO separate out inputs versus configuration information. Make a
-        # proper layer that is initialized using configuration information.
-        # This layer will then use syntax:
-        # layer(tf_theta, tf_attention, tf_z, config)(*inputs)
         inputs = [
-            tf_stimulus_set,
-            tf_n_reference,
-            tf_n_select,
-            tf_is_ranked,
-            tf_group_id,
-            tf_weight,
-            tf_config_idx
+            obs_stimulus_set,
+            obs_n_reference,
+            obs_n_select,
+            obs_is_ranked,
+            obs_group_id,
+            obs_weight,
+            obs_config_idx
         ]
         c_layer = CoreLayer(
             tf_theta, tf_attention, tf_z, tf_config, self._tf_similarity
@@ -876,12 +852,13 @@ class PsychologicalEmbedding(object):
 
     def _model_loss(self, prob_all):
         """Compute model loss given probabilities."""
-        n_trial = tf.shape(prob_all)[0]  # TODO is the casting necessary?
+        n_trial = tf.shape(prob_all)[0]
         n_trial = tf.cast(n_trial, dtype=K.floatx())
-        # Loss function
-        loss = tf.negative(tf.reduce_sum(prob_all))
+
+        # Loss function.
         # Divide by number of trials to make train and test loss
         # comparable.
+        loss = tf.negative(tf.reduce_sum(prob_all))
         loss = tf.divide(loss, n_trial)
         return loss
 
@@ -931,7 +908,16 @@ class PsychologicalEmbedding(object):
         skf = StratifiedKFold(n_splits=10)
         (train_idx, val_idx) = list(
             skf.split(obs.stimulus_set, obs.config_idx))[0]
-        # TODO change subset so that configurations are not re-derived.
+        # TODO CRITICAL Need to re-work contract regarding
+        # obs.config_idx. The config_idx associated with the obs is
+        # always the most up to date (and is for internal use only 
+        # and should not be modified by the user?).
+        # For the fit function, we must grab config_idx and config info
+        # before splitting? Create trials method:
+        # (config_idx, config_dataframe) = trials.get_config()
+        # Contract: look at incoming obs, determine unique configurations,
+        # assign config_idx [0, n_config[, guarantee that this pairing
+        # won't change inside fit function.
         tf_config = self._peek_config(obs)
         obs_train = obs.subset(train_idx)
         obs_val = obs.subset(val_idx)
@@ -990,7 +976,8 @@ class PsychologicalEmbedding(object):
             (
                 loss_train, loss_val, epoch, z, attention, theta
             ) = self._fit_restart(
-                optimizer, tf_config, tf_obs_train, tf_obs_val, i_restart, verbose
+                optimizer, tf_config, tf_obs_train, tf_obs_val, i_restart,
+                init_mode, verbose
             )
 
             if (verbose > 2):
@@ -1029,9 +1016,9 @@ class PsychologicalEmbedding(object):
         return loss_train_best, loss_val_best
 
     def _fit_restart(
-            self, optimizer, tf_config, tf_obs_train, tf_obs_val, i_restart, verbose):
+            self, optimizer, tf_config, tf_obs_train, tf_obs_val, i_restart,
+            init_mode, verbose):
         """Embed using a TensorFlow implementation."""
-        init_mode = 'cold'  # TODO
         model = self._build_model(tf_config, init_mode=init_mode)
 
         # Write logs for TensorBoard. TODO
@@ -1058,7 +1045,8 @@ class PsychologicalEmbedding(object):
             gradients = grad_tape.gradient(
                 loss_train, model.trainable_variables
             )
-            # TODO problem with tf.IndexedSlices.
+            # TODO Problem with tf.IndexedSlices. Try tf.partition instead of
+            # tf.gather.
             gradients[4] = tf.convert_to_tensor(gradients[4])
 
             # Validation loss.
@@ -1136,7 +1124,6 @@ class PsychologicalEmbedding(object):
         tf_obs = self._prepare_obs(obs)
         tf_config = self._peek_config(obs)
 
-        # Initialize model (exposing variables). TODO
         model = self._build_model(tf_config, init_mode='hot')
 
         # Evaluate current model to obtain starting loss.
@@ -1156,12 +1143,6 @@ class PsychologicalEmbedding(object):
             tf.constant(obs.config_list.is_ranked.values),
             tf.constant(obs.config_list.n_outcome.values)
         ]
-        # tf_obs['n_config']: len(obs.config_list.n_outcome.values),
-        # tf_obs['max_n_outcome']: np.max(obs.config_list.n_outcome.values),
-        # tf_obs['config_n_reference']: obs.config_list.n_reference.values,
-        # tf_obs['config_n_select']: obs.config_list.n_select.values,
-        # tf_obs['config_is_ranked']: obs.config_list.is_ranked.values,
-        # tf_obs['config_n_outcome']: obs.config_list.n_outcome.values,
         return tf_config
 
     def _prepare_obs(self, obs):
@@ -1174,39 +1155,12 @@ class PsychologicalEmbedding(object):
             tf.constant(obs.weight, dtype=K.floatx()),
             tf.constant(obs.config_idx, dtype=tf.int32)
         ]
-        # tf_obs['stimulus_set']: obs.stimulus_set,
-        # tf_obs['n_reference']: obs.n_reference,
-        # tf_obs['n_select']: obs.n_select,
-        # tf_obs['is_ranked']: obs.is_ranked,
-        # tf_obs['group_id']: obs.group_id,
-        # tf_obs['weight']: obs.weight,
-        # tf_obs['config_idx']: obs.config_idx,
         return tf_obs
-
-    # TODO DELETE
-    def _bind_obs(self, tf_obs, obs):
-        feed_dict = {
-            tf_obs['stimulus_set']: obs.stimulus_set,
-            tf_obs['n_reference']: obs.n_reference,
-            tf_obs['n_select']: obs.n_select,
-            tf_obs['is_ranked']: obs.is_ranked,
-            tf_obs['group_id']: obs.group_id,
-            tf_obs['weight']: obs.weight,
-            tf_obs['config_idx']: obs.config_idx,
-            tf_obs['n_config']: len(obs.config_list.n_outcome.values),
-            tf_obs['max_n_outcome']: np.max(obs.config_list.n_outcome.values),
-            tf_obs['config_n_reference']: obs.config_list.n_reference.values,
-            tf_obs['config_n_select']: obs.config_list.n_select.values,
-            tf_obs['config_is_ranked']: obs.config_list.is_ranked.values,
-            tf_obs['config_n_outcome']: obs.config_list.n_outcome.values,
-            tf_obs['config_outcome_tensor']: obs.outcome_tensor()
-        }
-        return feed_dict
 
     def attention_distance(self, p, q):
         """Distance between attention weights."""
-        c = tf.cast(2.0, dtype=FLOAT_X)
-        n_dim = tf.cast(tf.shape(p)[0], dtype=FLOAT_X)
+        c = tf.cast(2.0, dtype=K.floatx())
+        n_dim = tf.cast(tf.shape(p)[0], dtype=K.floatx())
         d = tf.divide(
             tf.reduce_sum(tf.abs(p - q)), tf.multiply(c, n_dim)
         )
@@ -1731,11 +1685,11 @@ class CoreLayer(Layer):
         self.tf_z = tf_z
 
         self.tf_n_config = tf_config[0]
-        self.tf_max_n_outcome = tf_config[1]  # TODO remove?
+        # self.tf_max_n_outcome = tf_config[1]  # TODO remove?
         self.tf_config_n_reference = tf_config[2]
         self.tf_config_n_select = tf_config[3]
-        self.tf_config_is_ranked = tf_config[4]  # TODO remove?
-        self.tf_config_n_outcome = tf_config[5]  # TODO remove?
+        self.tf_config_is_ranked = tf_config[4]
+        # self.tf_config_n_outcome = tf_config[5]  # TODO remove?
 
         self._tf_similarity = tf_similarity
 
@@ -1749,59 +1703,72 @@ class CoreLayer(Layer):
             attention: shape=(batch_size, n_dim)
 
         """
-        tf_stimulus_set = inputs[0]
-        tf_n_reference = inputs[1]
-        tf_n_select = inputs[2]
-        tf_is_ranked = inputs[3]
-        tf_group_id = inputs[4]
-        tf_weight = inputs[5]
-        tf_config_idx = inputs[6]
+        # Settings.
+        cap = tf.constant(2.2204e-16, dtype=K.floatx())
 
-        n_trial = tf.shape(tf_stimulus_set)[0]
+        # Inputs.
+        obs_stimulus_set = inputs[0]
+        obs_n_reference = inputs[1]
+        obs_n_select = inputs[2]
+        obs_is_ranked = inputs[3]
+        obs_group_id = inputs[4]
+        obs_weight = inputs[5]
+        # TODO It is assumed that these indices match how the model was
+        # created and are [0, n_config[.
+        obs_config_idx = inputs[6]
+
+        n_trial = tf.shape(obs_stimulus_set)[0]
 
         # Expand attention weights.
-        tf_atten_expanded = tf.gather(self.tf_attention, tf_group_id)
+        tf_atten_expanded = tf.gather(self.tf_attention, obs_group_id)
 
-        # Compute similarity between query and references.
         (z_q, z_r) = self._tf_inflate_points(
-            tf_stimulus_set, self.max_n_reference, self.tf_z
+            obs_stimulus_set, self.max_n_reference, self.tf_z
         )
+        # Compute similarity between query and references.
+        # TODO this function has unnecessary overhead since it computes
+        # the similarity between the query and a placeholder point when
+        # there are configurations when different number of references.
+        # MAYBE move this inside configuration loop?
         sim_qr = self._tf_similarity(
             z_q, z_r, self.tf_theta, tf.expand_dims(tf_atten_expanded, axis=2)
         )
 
-        # Compute the probability of observations for the different trial
-        # configurations.
-        cap = tf.constant(2.2204e-16, dtype=FLOAT_X)
-        prob_all = tf.zeros([n_trial], dtype=FLOAT_X)
-        cond_idx = tf.constant(0, dtype=tf.int32)
+        # Compute the (weighted) log probability of observations for the
+        # different trial configurations.
+        prob_all = tf.zeros([n_trial], dtype=K.floatx())
         n_trial_start = tf.constant(0, dtype=tf.int32)
 
         for cond_idx in tf.range(self.tf_n_config):
             n_reference = self.tf_config_n_reference[cond_idx]
             n_select = self.tf_config_n_select[cond_idx]
-            locs = tf.logical_and(
-                tf.equal(tf_n_reference, n_reference),
-                tf.equal(tf_n_select, n_select)
-            )
-            n_trial_config = tf.reduce_sum(tf.dtypes.cast(locs, tf.int32))  # TODO check
-            trial_idx = tf.squeeze(tf.compat.v1.where(locs))  # TODO check
-            # trial_idx = tf.squeeze(tf.where(locs))
-            weight_config = tf.gather(tf_weight, trial_idx)
+
+            # Grab trials of current configuration.
+            locs = tf.equal(obs_config_idx, cond_idx)
+            trial_idx = tf.squeeze(tf.where(locs))
+            weight_config = tf.gather(obs_weight, trial_idx)
             sim_qr_config = tf.gather(sim_qr, trial_idx)
-            reference_idx = tf.range(
-                0, n_reference, delta=1, dtype=tf.int32)
-            sim_qr_config = tf.gather(sim_qr_config, reference_idx, axis=1)
+
+            # Drop placeholder references.
+            sim_qr_config = sim_qr_config[:, 0:n_reference]
+            # reference_idx = tf.range(0, n_reference, delta=1, dtype=tf.int32)
+            # sim_qr_config = tf.gather(sim_qr_config, reference_idx, axis=1)
             sim_qr_config.set_shape((None, None))
+
+            # Compute probability of behavior.
             prob_config = self._tf_ranked_sequence_probability(
-                sim_qr_config, n_select)
+                sim_qr_config, n_select
+            )
+
+            # Convert to log probability and weight.
             prob_config = tf.math.log(tf.maximum(prob_config, cap))
             prob_config = tf.multiply(weight_config, prob_config)
 
             # Add configuration results to master results.
+            n_trial_config = tf.reduce_sum(tf.dtypes.cast(locs, tf.int32))
             n_trial_remain = n_trial - (n_trial_start + n_trial_config)
-            pre_pad = tf.zeros([n_trial_start], dtype=FLOAT_X)
-            post_pad = tf.zeros([n_trial_remain], dtype=FLOAT_X)
+            pre_pad = tf.zeros([n_trial_start], dtype=K.floatx())
+            post_pad = tf.zeros([n_trial_remain], dtype=K.floatx())
             prob_config = tf.concat(
                 [pre_pad, prob_config, post_pad], axis=0
             )
@@ -1818,7 +1785,7 @@ class CoreLayer(Layer):
         n_dim = tf.shape(z)[1]
 
         stimulus_set_temp = stimulus_set + 1
-        z_placeholder = tf.zeros((1, n_dim), dtype=FLOAT_X)
+        z_placeholder = tf.zeros((1, n_dim), dtype=K.floatx())
         z_temp = tf.concat((z_placeholder, z), axis=0)
 
         # Inflate query stimuli.
@@ -1826,14 +1793,14 @@ class CoreLayer(Layer):
         z_q = tf.expand_dims(z_q, axis=2)
 
         # Initialize z_r.
-        z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=FLOAT_X)
+        z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
 
         for i_ref in tf.range(n_reference):
             z_r_new = tf.gather(z_temp, stimulus_set_temp[:, 1+i_ref])
             z_r_new = tf.expand_dims(z_r_new, axis=2)
-            pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=FLOAT_X)
+            pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
             post_pad = tf.zeros(
-                [n_trial, n_dim, n_reference - i_ref - 1], dtype=FLOAT_X
+                [n_trial, n_dim, n_reference - i_ref - 1], dtype=K.floatx()
             )
             z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
             z_r = z_r + z_r_new
@@ -1843,18 +1810,21 @@ class CoreLayer(Layer):
     def _tf_ranked_sequence_probability(self, sim_qr, n_select):
         """Return probability of a ranked selection sequence.
 
-        See: _ranked_sequence_probability
+        See: _ranked_sequence_probability TODO
 
         Arguments:
-            sim_qr:
-            n_select:
+            sim_qr: A tensor containing the precomputed similarities
+                between the query stimuli and corresponding reference
+                stimuli.
+                shape = (n_trial, n_reference)
+            n_select: A scalar indicating the number of selections
+                made for each trial.
 
         """
         n_trial = tf.shape(sim_qr)[0]
-        # n_trial = tf.cast(n_trial, dtype=tf.int32)
 
         # Initialize.
-        seq_prob = tf.ones([n_trial], dtype=FLOAT_X)
+        seq_prob = tf.ones([n_trial], dtype=K.floatx())
         selected_idx = n_select - 1
         denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
 
@@ -2742,7 +2712,7 @@ class RandomEmbedding(Initializer):
 
     def __init__(
             self, mean=0.0, stdev=1.0, minval=0.0, maxval=0.0, seed=None,
-            dtype=tf.float32):
+            dtype=K.floatx()):
         """Initialize."""
         self.mean = mean
         self.stdev = stdev
@@ -2750,14 +2720,14 @@ class RandomEmbedding(Initializer):
         self.maxval = maxval
         self.seed = seed
         # self.dtype = _assert_float_dtype(dtype)  # TODO
-        self.dtype = tf.float32  # TODO
+        self.dtype = dtype
 
     def __call__(self, shape, dtype=None, partition_info=None):
         """Call."""
         if dtype is None:
             dtype = self.dtype
         scale = tf.pow(
-            tf.constant(10., dtype=FLOAT_X),
+            tf.constant(10., dtype=dtype),
             tf.random.uniform(
                 [1],
                 minval=self.minval,
@@ -2787,24 +2757,27 @@ class RandomAttention(Initializer):
     """Initializer that generates tensors for attention weights.
 
     Arguments:
-        alpha: A python scalar or a scalar tensor. Alpha parameter(s)
-            governing distribution.
+        concentration: An array indicating the concentration
+            parameters (i.e., alpha values) governing a Dirichlet
+            distribution.
+        scale: Scalar indicationg how the Dirichlet sample should be scaled.
         dtype: The data type. Only floating point types are supported.
+
     """
 
-    def __init__(self, n_dim, concentration=0.0, dtype=tf.float32):
+    def __init__(self, concentration, scale=1.0, dtype=K.floatx()):
         """Initialize."""
-        self.n_dim = n_dim
         self.concentration = concentration
+        self.scale = scale
         # self.dtype = _assert_float_dtype(dtype)  # TODO
-        slef.dtype = tf.float32  # TODO
+        self.dtype = dtype
 
     def __call__(self, shape, dtype=None, partition_info=None):
         """Call."""
         if dtype is None:
             dtype = self.dtype
         dist = tfp.distributions.Dirichlet(self.concentration)
-        return self.n_dim * dist.sample([shape[0]])
+        return self.scale * dist.sample([shape[0]])
 
     def get_config(self):
         """Return configuration."""
@@ -2853,7 +2826,7 @@ class ProjectAttention(Constraint):
 
     def __call__(self, tf_attention_0):
         """Call."""
-        n_dim = tf.shape(tf_attention_0, out_type=FLOAT_X)[1]
+        n_dim = tf.shape(tf_attention_0, out_type=K.floatx())[1]
         tf_attention_1 = tf.divide(
             tf.reduce_sum(tf_attention_0, axis=1, keepdims=True), n_dim
         )

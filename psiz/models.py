@@ -812,14 +812,8 @@ class PsychologicalEmbedding(object):
         obs_stimulus_set = tf.keras.Input(
             shape=[None], name='inp_stimulus_set', dtype=tf.int32,
         )
-        obs_n_reference = tf.keras.Input(
-            shape=[], name='inp_n_reference', dtype=tf.int32,
-        )
-        obs_n_select = tf.keras.Input(
-            shape=[], name='inp_n_select', dtype=tf.int32,
-        )
-        obs_is_ranked = tf.keras.Input(
-            shape=[], name='inp_is_ranked', dtype=tf.int32,
+        obs_config_idx = tf.keras.Input(
+            shape=[], name='inp_config_idx', dtype=tf.int32,
         )
         obs_group_id = tf.keras.Input(
             shape=[], name='inp_group_id', dtype=tf.int32,
@@ -827,18 +821,12 @@ class PsychologicalEmbedding(object):
         obs_weight = tf.keras.Input(
             shape=[], name='inp_weight', dtype=K.floatx(),
         )
-        obs_config_idx = tf.keras.Input(
-            shape=[], name='inp_config_idx', dtype=tf.int32,
-        )
 
         inputs = [
             obs_stimulus_set,
-            obs_n_reference,
-            obs_n_select,
-            obs_is_ranked,
+            obs_config_idx,
             obs_group_id,
-            obs_weight,
-            obs_config_idx
+            obs_weight
         ]
         c_layer = CoreLayer(
             tf_theta, tf_attention, tf_z, tf_config, self._tf_similarity
@@ -1075,9 +1063,10 @@ class PsychologicalEmbedding(object):
                 loss_train_best = loss_train
                 loss_val_best = loss_val
                 epoch_best = epoch + 1
-                z_best = model.layers[7].tf_z.numpy()
-                attention_best = model.layers[7].tf_attention.numpy()
-                tf_theta = model.layers[7].tf_theta
+                # TODO less brittle variable access?
+                z_best = model.layers[4].tf_z.numpy()
+                attention_best = model.layers[4].tf_attention.numpy()
+                tf_theta = model.layers[4].tf_theta
                 theta_best = {}
                 for param_name in tf_theta:
                     theta_best[param_name] = {}
@@ -1148,12 +1137,9 @@ class PsychologicalEmbedding(object):
     def _prepare_obs(self, obs):
         tf_obs = [
             tf.constant(obs.stimulus_set, dtype=tf.int32),
-            tf.constant(obs.n_reference, dtype=tf.int32),
-            tf.constant(obs.n_select, dtype=tf.int32),
-            tf.constant(obs.is_ranked, dtype=tf.int32),
+            tf.constant(obs.config_idx, dtype=tf.int32),
             tf.constant(obs.group_id, dtype=tf.int32),
-            tf.constant(obs.weight, dtype=K.floatx()),
-            tf.constant(obs.config_idx, dtype=tf.int32)
+            tf.constant(obs.weight, dtype=K.floatx())
         ]
         return tf_obs
 
@@ -1699,7 +1685,7 @@ class CoreLayer(Layer):
         """Call.
 
         Arguments:
-            z_in: (batch_size, n_dim)
+            inputs: (batch_size, n_dim)
             attention: shape=(batch_size, n_dim)
 
         """
@@ -1708,72 +1694,54 @@ class CoreLayer(Layer):
 
         # Inputs.
         obs_stimulus_set = inputs[0]
-        obs_n_reference = inputs[1]
-        obs_n_select = inputs[2]
-        obs_is_ranked = inputs[3]
-        obs_group_id = inputs[4]
-        obs_weight = inputs[5]
+        obs_config_idx = inputs[1]
         # TODO It is assumed that these indices match how the model was
         # created and are [0, n_config[.
-        obs_config_idx = inputs[6]
-
-        n_trial = tf.shape(obs_stimulus_set)[0]
+        obs_group_id = inputs[2]
+        obs_weight = inputs[3]
 
         # Expand attention weights.
-        tf_atten_expanded = tf.gather(self.tf_attention, obs_group_id)
+        attention = tf.gather(self.tf_attention, obs_group_id)
+        attention = tf.expand_dims(attention, axis=2)
 
-        (z_q, z_r) = self._tf_inflate_points(
-            obs_stimulus_set, self.max_n_reference, self.tf_z
-        )
-        # Compute similarity between query and references.
-        # TODO this function has unnecessary overhead since it computes
-        # the similarity between the query and a placeholder point when
-        # there are configurations when different number of references.
-        # MAYBE move this inside configuration loop?
-        sim_qr = self._tf_similarity(
-            z_q, z_r, self.tf_theta, tf.expand_dims(tf_atten_expanded, axis=2)
-        )
-
-        # Compute the (weighted) log probability of observations for the
-        # different trial configurations.
+        # Compute the probability of observations for the different
+        # trial configurations.
+        n_trial = tf.shape(obs_stimulus_set)[0]
         prob_all = tf.zeros([n_trial], dtype=K.floatx())
-        n_trial_start = tf.constant(0, dtype=tf.int32)
 
-        for cond_idx in tf.range(self.tf_n_config):
-            n_reference = self.tf_config_n_reference[cond_idx]
-            n_select = self.tf_config_n_select[cond_idx]
+        for i_config in tf.range(self.tf_n_config):
+            n_reference = self.tf_config_n_reference[i_config]
+            n_select = self.tf_config_n_select[i_config]
+            is_ranked = self.tf_config_is_ranked[i_config]
 
             # Grab trials of current configuration.
-            locs = tf.equal(obs_config_idx, cond_idx)
+            locs = tf.equal(obs_config_idx, i_config)
             trial_idx = tf.squeeze(tf.where(locs))
-            weight_config = tf.gather(obs_weight, trial_idx)
-            sim_qr_config = tf.gather(sim_qr, trial_idx)
+            attention_config = tf.gather(attention, trial_idx)
+            stimulus_set_config = tf.gather(obs_stimulus_set, trial_idx)
 
-            # Drop placeholder references.
-            sim_qr_config = sim_qr_config[:, 0:n_reference]
-            # reference_idx = tf.range(0, n_reference, delta=1, dtype=tf.int32)
-            # sim_qr_config = tf.gather(sim_qr_config, reference_idx, axis=1)
-            sim_qr_config.set_shape((None, None))
+            # Compute similarity between query and references.
+            (z_q, z_r) = self._tf_inflate_points(
+                stimulus_set_config, n_reference, self.tf_z
+            )
+            sim_qr_config = self._tf_similarity(
+                z_q, z_r, self.tf_theta, attention_config
+            )
 
             # Compute probability of behavior.
+            sim_qr_config.set_shape([None, None])
             prob_config = self._tf_ranked_sequence_probability(
                 sim_qr_config, n_select
             )
 
-            # Convert to log probability and weight.
-            prob_config = tf.math.log(tf.maximum(prob_config, cap))
-            prob_config = tf.multiply(weight_config, prob_config)
-
-            # Add configuration results to master results.
-            n_trial_config = tf.reduce_sum(tf.dtypes.cast(locs, tf.int32))
-            n_trial_remain = n_trial - (n_trial_start + n_trial_config)
-            pre_pad = tf.zeros([n_trial_start], dtype=K.floatx())
-            post_pad = tf.zeros([n_trial_remain], dtype=K.floatx())
-            prob_config = tf.concat(
-                [pre_pad, prob_config, post_pad], axis=0
+            # Update master results.
+            prob_all = tf.tensor_scatter_nd_update(
+                prob_all, tf.expand_dims(trial_idx, axis=1), prob_config
             )
-            prob_all = prob_all + prob_config
-            n_trial_start = n_trial_start + n_trial_config
+
+        # Convert to (weighted) log probabilities.
+        prob_config = tf.math.log(tf.maximum(prob_all, cap))
+        prob_config = tf.multiply(obs_weight, prob_config)
 
         return prob_all
 
@@ -1821,36 +1789,23 @@ class CoreLayer(Layer):
                 made for each trial.
 
         """
-        n_trial = tf.shape(sim_qr)[0]
-
         # Initialize.
+        n_trial = tf.shape(sim_qr)[0]
         seq_prob = tf.ones([n_trial], dtype=K.floatx())
         selected_idx = n_select - 1
         denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
 
-        def cond_fn(selected_idx, seq_prob, denom):
-            return tf.greater_equal(
-                selected_idx, tf.constant(0, dtype=tf.int32))
-
-        def body_fn(selected_idx, seq_prob, denom):
+        for i_selected in tf.range(selected_idx, -1, -1):
             # Compute selection probability.
-            prob = tf.divide(sim_qr[:, selected_idx], denom)
+            prob = tf.divide(sim_qr[:, i_selected], denom)
             # Update sequence probability.
             seq_prob = tf.multiply(seq_prob, prob)
-            # Update denominator in preparation for computing the
-            # probability of the previous selection in the sequence.
-            denom = tf.cond(
-                selected_idx > tf.constant(0, dtype=tf.int32),
-                lambda: tf.add(denom, sim_qr[:, selected_idx - 1]),
-                lambda: denom,
-                name='increase_denom'
-            )
-            return [selected_idx - 1, seq_prob, denom]
-
-        r = tf.while_loop(
-            cond_fn, body_fn, [selected_idx, seq_prob, denom]
-        )
-        return r[1]
+            # Update denominator in preparation for computing the probability
+            # of the previous selection in the sequence.
+            if i_selected > tf.constant(0, dtype=tf.int32):
+                denom = tf.add(denom, sim_qr[:, i_selected - 1])
+            # seq_prob.set_shape([None])
+        return seq_prob
 
 
 class Inverse(PsychologicalEmbedding):

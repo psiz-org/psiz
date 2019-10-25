@@ -125,7 +125,7 @@ class PsychologicalEmbedding(object):
         do_log: A boolean variable that controls whether gradient
             decent progress is logged. By default, this is initialized
             to False.
-        log_dir: The location of the logs. The defualt location is
+        log_dir: The location of the logs. The default location is
             `/tmp/psiz/tensorboard_logs/`.
         log_freq: The number of epochs to wait between log entries.
 
@@ -300,6 +300,7 @@ class PsychologicalEmbedding(object):
         Arguments:
             theta: A dictionary of algorithm-specific parameter names
                 and corresponding values.
+
         """
         for param_name in theta:
             self._theta[param_name]["value"] = theta[param_name]["value"]
@@ -414,6 +415,7 @@ class PsychologicalEmbedding(object):
                 keys refer to the parameter names and the values
                 use boolean values to indicate if the parameters are
                 trainable.
+
         """
         if spec is None:
             trainable_spec = {
@@ -565,7 +567,7 @@ class PsychologicalEmbedding(object):
         return sim
 
     def distance(self, z_q, z_r, group_id=None, theta=None, phi=None):
-        """Return dsitance between two lists of points.
+        """Return distance between two lists of points.
 
         Distance is determined using the weighted Minkowski metric.
         This method implements the logic for handling arguments of
@@ -650,11 +652,11 @@ class PsychologicalEmbedding(object):
         rho = theta['rho']["value"]
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_r))**rho
-        d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+        d_qr = (np.abs(z_q - z_r))**rho
+        d_qr = np.multiply(d_qr, attention)
+        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
-        return d_qref
+        return d_qr
 
     @abstractmethod
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
@@ -846,12 +848,16 @@ class PsychologicalEmbedding(object):
         return model
 
     @tf.function
-    def _model_loss(self, prob_all):
-        """Compute model loss given probabilities."""
+    def _model_loss(self, prob_all, weight):
+        """Compute model loss given observation probabilities."""
         n_trial = tf.shape(prob_all)[0]
         n_trial = tf.cast(n_trial, dtype=K.floatx())
 
-        # Loss function.
+        # Convert to (weighted) log probabilities.
+        cap = tf.constant(2.2204e-16, dtype=K.floatx())
+        prob_all = tf.math.log(tf.maximum(prob_all, cap))
+        prob_all = tf.multiply(weight, prob_all)
+
         # Divide by number of trials to make train and test loss
         # comparable.
         loss = tf.negative(tf.reduce_sum(prob_all))
@@ -1045,7 +1051,7 @@ class PsychologicalEmbedding(object):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
                     prob_train = model(tf_obs_train)
-                    loss_train = self._model_loss(prob_train)
+                    loss_train = self._model_loss(prob_train, tf_obs_train[3])
                 gradients = grad_tape.gradient(
                     loss_train, model.trainable_variables
                 )
@@ -1058,7 +1064,7 @@ class PsychologicalEmbedding(object):
 
                 # Validation loss.
                 prob_val = model(tf_obs_val)
-                loss_val = self._model_loss(prob_val)
+                loss_val = self._model_loss(prob_val, tf_obs_val[3])
 
                 # Log progress.
                 if self.do_log:
@@ -1142,7 +1148,7 @@ class PsychologicalEmbedding(object):
 
         # Evaluate current model to obtain starting loss.
         prob = model(tf_obs)
-        loss = self._model_loss(prob)
+        loss = self._model_loss(prob, tf_obs[3])
 
         if tf.math.is_nan(loss):
             loss = tf.constant(np.inf, dtype=K.floatx())
@@ -1221,7 +1227,7 @@ class PsychologicalEmbedding(object):
                 object are used.
                 shape=(n_stimuli, n_dim, [n_sample])
             theta (optional): The theta parameters.
-            phi (optionsl): The phi parameters.
+            phi (optional): The phi parameters.
             unaltered_only (optional): Flag the determines whether only
                 the unaltered ordering is evaluated.
 
@@ -1299,9 +1305,9 @@ class PsychologicalEmbedding(object):
             # Compute probability of each possible outcome.
             prob = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
             for i_outcome in range(n_outcome):
-                s_qref_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
+                s_qr_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
                 prob[:, i_outcome, :] = self._ranked_sequence_probability(
-                    s_qref_perm, config['n_select'])
+                    s_qr_perm, config['n_select'])
             prob_all[trial_locs, 0:n_outcome, :] = prob
         prob_all = ma.masked_values(prob_all, -1)
 
@@ -1496,7 +1502,7 @@ class PsychologicalEmbedding(object):
             # TODO pass in theta and phi.
             return self.log_likelihood(obs, z=z_full)
 
-        # Initalize sampler.
+        # Initialize sampler.
         z_full = copy.copy(z)
         samples = np.empty((n_stimuli, n_dim, n_total_sample))
 
@@ -1667,7 +1673,7 @@ class PsychologicalEmbedding(object):
         account for the attention weights, and the attention weights
         are returned to ones. This function is useful if you would like
         to visualize and compare how group-specific embeddings differ
-        in terms of percieved similarity.
+        in terms of perceived similarity.
 
         Arguments:
             group_id: Scalar indicating the group_id.
@@ -1692,7 +1698,7 @@ class CoreLayer(Layer):
 
     def __init__(self, tf_theta, tf_attention, tf_z, tf_config, tf_similarity):
         """Initialize.
-        
+
         Arguments:
             tf_theta:
             tf_attention:
@@ -1725,23 +1731,17 @@ class CoreLayer(Layer):
                 stimulus_set: Containing the integers [0, n_stimuli[
                 config_idx: Containing the integers [0, n_config[
                 group_id: Containing the integers [0, n_group[
-                weight: 
 
         """
-        # Settings.
-        cap = tf.constant(2.2204e-16, dtype=K.floatx())
-
         # Inputs.
         obs_stimulus_set = inputs[0]
         obs_config_idx = inputs[1]
         obs_group_id = inputs[2]
-        obs_weight = inputs[3]
 
         # Compute the probability of observations for the different
         # trial configurations.
         n_trial = tf.shape(obs_stimulus_set)[0]
         prob_all = tf.zeros([n_trial], dtype=K.floatx())
-
         for i_config in tf.range(self.n_config):
             n_reference = self.config_n_reference[i_config]
             n_select = self.config_n_select[i_config]
@@ -1778,10 +1778,6 @@ class CoreLayer(Layer):
             prob_all = tf.tensor_scatter_nd_update(
                 prob_all, tf.expand_dims(trial_idx, axis=1), prob_config
             )
-
-        # Convert to (weighted) log probabilities.
-        prob_all = tf.math.log(tf.maximum(prob_all, cap))
-        prob_all = tf.multiply(obs_weight, prob_all)
 
         return prob_all
 
@@ -1874,7 +1870,7 @@ class Inverse(PsychologicalEmbedding):
         Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionalty
+            n_dim (optional): An integer indicating the dimensionality
                 of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
@@ -2002,12 +1998,12 @@ class Inverse(PsychologicalEmbedding):
         mu = tf_theta['mu']
 
         # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qref = tf.multiply(d_qref, tf_attention)
-        d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
+        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
+        d_qr = tf.multiply(d_qr, tf_attention)
+        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
 
         # Inverse distance similarity kernel.
-        sim_qr = 1 / (tf.pow(d_qref, tau) + mu)
+        sim_qr = 1 / (tf.pow(d_qr, tau) + mu)
         return sim_qr
 
     def _similarity(self, z_q, z_r, theta, attention):
@@ -2036,12 +2032,12 @@ class Inverse(PsychologicalEmbedding):
         mu = theta['mu']["value"]
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_r))**rho
-        d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+        d_qr = (np.abs(z_q - z_r))**rho
+        d_qr = np.multiply(d_qr, attention)
+        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
         # Exponential family similarity kernel.
-        sim_qr = 1 / (d_qref**tau + mu)
+        sim_qr = 1 / (d_qr**tau + mu)
         return sim_qr
 
 
@@ -2066,7 +2062,7 @@ class Exponential(PsychologicalEmbedding):
             annual meeting of the cognitive science society (pp. 405-
             410).
         [3] Nosofsky, R. M. (1986). Attention, similarity, and the
-            identication-categorization relationship. Journal of
+            identification-categorization relationship. Journal of
             Experimental Psychology: General, 115, 39-57.
         [4] Shepard, R. N. (1987). Toward a universal law of
             generalization for psychological science. Science, 237,
@@ -2080,7 +2076,7 @@ class Exponential(PsychologicalEmbedding):
         Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionalty
+            n_dim (optional): An integer indicating the dimensionality
                 of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
@@ -2168,7 +2164,7 @@ class Exponential(PsychologicalEmbedding):
         if self._theta['rho']["trainable"]:
             tf_theta['rho'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(1., 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(), 
+                trainable=True, name="rho", dtype=K.floatx(),
                 constraint=GreaterEqualThan(
                     min_value=self._theta['rho']['bounds'][0]
                 )
@@ -2176,7 +2172,7 @@ class Exponential(PsychologicalEmbedding):
         if self._theta['tau']["trainable"]:
             tf_theta['tau'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(), 
+                trainable=True, name="tau", dtype=K.floatx(),
                 constraint=GreaterEqualThan(
                     min_value=self._theta['tau']['bounds'][0]
                 )
@@ -2184,7 +2180,7 @@ class Exponential(PsychologicalEmbedding):
         if self._theta['gamma']["trainable"]:
             tf_theta['gamma'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(0., .001)(shape=[]),
-                trainable=True, name="gamma", dtype=K.floatx(), 
+                trainable=True, name="gamma", dtype=K.floatx(),
                 constraint=GreaterEqualThan(
                     min_value=self._theta['gamma']['bounds'][0]
                 )
@@ -2192,7 +2188,7 @@ class Exponential(PsychologicalEmbedding):
         if self._theta['beta']["trainable"]:
             tf_theta['beta'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(1., 30.)(shape=[]),
-                trainable=True, name="beta", dtype=K.floatx(), 
+                trainable=True, name="beta", dtype=K.floatx(),
                 constraint=GreaterEqualThan(
                     min_value=self._theta['beta']['bounds'][0]
                 )
@@ -2226,12 +2222,12 @@ class Exponential(PsychologicalEmbedding):
         beta = tf_theta['beta']
 
         # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qref = tf.multiply(d_qref, tf_attention)
-        d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
+        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
+        d_qr = tf.multiply(d_qr, tf_attention)
+        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
 
         # Exponential family similarity kernel.
-        sim_qr = tf.exp(tf.negative(beta) * tf.pow(d_qref, tau)) + gamma
+        sim_qr = tf.exp(tf.negative(beta) * tf.pow(d_qr, tau)) + gamma
         return sim_qr
 
     def _similarity(self, z_q, z_r, theta, attention):
@@ -2261,12 +2257,12 @@ class Exponential(PsychologicalEmbedding):
         beta = theta['beta']["value"]
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_r))**rho
-        d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+        d_qr = (np.abs(z_q - z_r))**rho
+        d_qr = np.multiply(d_qr, attention)
+        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
         # Exponential family similarity kernel.
-        sim_qr = np.exp(np.negative(beta) * d_qref**tau) + gamma
+        sim_qr = np.exp(np.negative(beta) * d_qr**tau) + gamma
         return sim_qr
 
 
@@ -2286,7 +2282,7 @@ class HeavyTailed(PsychologicalEmbedding):
         Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionalty
+            n_dim (optional): An integer indicating the dimensionality
                 of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
@@ -2397,9 +2393,10 @@ class HeavyTailed(PsychologicalEmbedding):
             )
         if self._theta['alpha']["trainable"]:
             tf_theta['alpha'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(10., 60.)(shape=[]),
-                trainable=True, name="alpha", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
+                initial_value=tf.random_uniform_initializer(
+                    10., 60.
+                )(shape=[]), trainable=True, name="alpha",
+                dtype=K.floatx(), constraint=GreaterEqualThan(
                     min_value=self._theta['alpha']['bounds'][0]
                 )
             )
@@ -2432,12 +2429,12 @@ class HeavyTailed(PsychologicalEmbedding):
         alpha = tf_theta['alpha']
 
         # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qref = tf.multiply(d_qref, tf_attention)
-        d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
+        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
+        d_qr = tf.multiply(d_qr, tf_attention)
+        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
 
         # Heavy-tailed family similarity kernel.
-        sim_qr = tf.pow(kappa + tf.pow(d_qref, tau), (tf.negative(alpha)))
+        sim_qr = tf.pow(kappa + tf.pow(d_qr, tau), (tf.negative(alpha)))
         return sim_qr
 
     def _similarity(self, z_q, z_r, theta, attention):
@@ -2467,19 +2464,19 @@ class HeavyTailed(PsychologicalEmbedding):
         alpha = theta['alpha']["value"]
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_r))**rho
-        d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+        d_qr = (np.abs(z_q - z_r))**rho
+        d_qr = np.multiply(d_qr, attention)
+        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
         # Heavy-tailed family similarity kernel.
-        sim_qr = (kappa + d_qref**tau)**(np.negative(alpha))
+        sim_qr = (kappa + d_qr**tau)**(np.negative(alpha))
         return sim_qr
 
 
 class StudentsT(PsychologicalEmbedding):
     """A Student's t family stochastic display embedding algorithm.
 
-    The embedding technique uses the following simialrity kernel:
+    The embedding technique uses the following similarity kernel:
         s(x,y) = (1 + (((norm(x-y, rho)^tau)/alpha))^(-(alpha + 1)/2),
     where x and y are n-dimensional vectors. The similarity kernel has
     three free parameters: rho, tau, and alpha. The original Student-t
@@ -2492,7 +2489,7 @@ class StudentsT(PsychologicalEmbedding):
     References:
     [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
         triplet embedding. In Machine learning for signal processing
-        (mlsp), 2012 IEEE international workshop on (p. 1-6).
+        (MLSP), 2012 IEEE international workshop on (p. 1-6).
         doi:10.1109/MLSP.2012.6349720
 
     """
@@ -2503,7 +2500,7 @@ class StudentsT(PsychologicalEmbedding):
         Arguments:
             n_stimuli: An integer indicating the total number of unique
                 stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionalty
+            n_dim (optional): An integer indicating the dimensionality
                 of the embedding.
             n_group (optional): An integer indicating the number of
                 different population groups in the embedding. A
@@ -2635,13 +2632,13 @@ class StudentsT(PsychologicalEmbedding):
         alpha = tf_theta['alpha']
 
         # Weighted Minkowski distance.
-        d_qref = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qref = tf.multiply(d_qref, tf_attention)
-        d_qref = tf.pow(tf.reduce_sum(d_qref, axis=1), 1. / rho)
+        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
+        d_qr = tf.multiply(d_qr, tf_attention)
+        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
 
         # Student-t family similarity kernel.
         sim_qr = tf.pow(
-            1 + (tf.pow(d_qref, tau) / alpha), tf.negative(alpha + 1)/2)
+            1 + (tf.pow(d_qr, tau) / alpha), tf.negative(alpha + 1)/2)
         return sim_qr
 
     def _similarity(self, z_q, z_r, theta, attention):
@@ -2670,12 +2667,12 @@ class StudentsT(PsychologicalEmbedding):
         alpha = theta['alpha']["value"]
 
         # Weighted Minkowski distance.
-        d_qref = (np.abs(z_q - z_r))**rho
-        d_qref = np.multiply(d_qref, attention)
-        d_qref = np.sum(d_qref, axis=1)**(1. / rho)
+        d_qr = (np.abs(z_q - z_r))**rho
+        d_qr = np.multiply(d_qr, attention)
+        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
         # Student-t family similarity kernel.
-        sim_qr = (1 + (d_qref**tau / alpha))**(np.negative(alpha + 1)/2)
+        sim_qr = (1 + (d_qr**tau / alpha))**(np.negative(alpha + 1)/2)
         return sim_qr
 
 
@@ -2764,7 +2761,7 @@ class RandomAttention(Initializer):
         concentration: An array indicating the concentration
             parameters (i.e., alpha values) governing a Dirichlet
             distribution.
-        scale: Scalar indicationg how the Dirichlet sample should be scaled.
+        scale: Scalar indicating how the Dirichlet sample should be scaled.
         dtype: The data type. Only floating point types are supported.
 
     """

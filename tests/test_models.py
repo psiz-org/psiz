@@ -21,6 +21,7 @@ Todo
     * heavy-tailed similarity
     * Student's t similarity
     * test subset method
+
 """
 
 
@@ -433,7 +434,7 @@ def set_and_check_w(emb):
 
 def test_inverse_trainable():
     """Test Inverse trainable."""
-    # Test one group initalization.
+    # Test one group initialization.
     n_stimuli = 10
     n_dim = 3
     emb = Inverse(n_stimuli, n_dim=n_dim)
@@ -448,7 +449,7 @@ def test_inverse_trainable():
     trainable_init = emb.trainable()
     assert_equal_trainable(trainable_init, trainable_src)
 
-    # Test two group initalization.
+    # Test two group initialization.
     n_stimuli = 10
     n_dim = 3
     n_group = 2
@@ -496,7 +497,7 @@ def test_inverse_trainable():
 
 def test_exponential_trainable():
     """Test Exponential trainable."""
-    # Test one group initalization.
+    # Test one group initialization.
     n_stimuli = 10
     n_dim = 3
     emb = Exponential(n_stimuli, n_dim=n_dim)
@@ -512,7 +513,7 @@ def test_exponential_trainable():
     trainable_init = emb.trainable()
     assert_equal_trainable(trainable_init, trainable_src)
 
-    # Test two group initalization.
+    # Test two group initialization.
     n_stimuli = 10
     n_dim = 3
     n_group = 2
@@ -563,7 +564,7 @@ def test_exponential_trainable():
 
 def test_heavytailed_trainable():
     """Test HeavyTailed trainable."""
-    # Test one group initalization.
+    # Test one group initialization.
     n_stimuli = 10
     n_dim = 3
     emb = HeavyTailed(n_stimuli, n_dim=n_dim)
@@ -579,7 +580,7 @@ def test_heavytailed_trainable():
     trainable_init = emb.trainable()
     assert_equal_trainable(trainable_init, trainable_src)
 
-    # Test two group initalization.
+    # Test two group initialization.
     n_stimuli = 10
     n_dim = 3
     n_group = 2
@@ -630,7 +631,7 @@ def test_heavytailed_trainable():
 
 def test_studentst_trainable():
     """Test StudentsT trainable."""
-    # Test one group initalization.
+    # Test one group initialization.
     n_stimuli = 10
     n_dim = 3
     emb = StudentsT(n_stimuli, n_dim=n_dim)
@@ -645,7 +646,7 @@ def test_studentst_trainable():
     trainable_init = emb.trainable()
     assert_equal_trainable(trainable_init, trainable_src)
 
-    # Test two group initalization.
+    # Test two group initialization.
     n_stimuli = 10
     n_dim = 3
     n_group = 2
@@ -1053,16 +1054,16 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
         docket.stimulus_set[trial_locs], n_reference,
         np.expand_dims(z, axis=2)
     )
-    s_qref = model_true.similarity(z_q, z_r, group_id=0)
-    prob_1 = model_true._ranked_sequence_probability(s_qref, n_select)
+    s_qr = model_true.similarity(z_q, z_r, group_id=0)
+    prob_1 = model_true._ranked_sequence_probability(s_qr, n_select)
     prob_1 = prob_1[:, 0]
 
     # NOTE: tf_ranked_sequence_probability is not implemented to handle
     # samples.
     tf_n_select = tf.constant(n_select, dtype=tf.int32)
-    tf_s_qref = tf.convert_to_tensor(s_qref[:, :, 0], dtype=tf.float32)
+    tf_s_qr = tf.convert_to_tensor(s_qr[:, :, 0], dtype=tf.float32)
     tf_prob_2 = model_true._tf_ranked_sequence_probability(
-        tf_s_qref, tf_n_select)
+        tf_s_qr, tf_n_select)
     sess = tf.compat.v1.Session()
     with sess.as_default():
         sess.run(tf.compat.v1.global_variables_initializer())

@@ -1054,7 +1054,7 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
         np.expand_dims(z, axis=2)
     )
     s_qref = model_true.similarity(z_q, z_r, group_id=0)
-    prob_1 = model_true._ranked_sequence_probabiltiy(s_qref, n_select)
+    prob_1 = model_true._ranked_sequence_probability(s_qref, n_select)
     prob_1 = prob_1[:, 0]
 
     # NOTE: tf_ranked_sequence_probability is not implemented to handle

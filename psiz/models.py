@@ -127,6 +127,7 @@ class PsychologicalEmbedding(object):
             to False.
         log_dir: The location of the logs. The defualt location is
             `/tmp/psiz/tensorboard_logs/`.
+        log_freq: The number of epochs to wait between log entries.
 
     Notes:
         The setter methods as well as the methods fit, trainable, and
@@ -190,6 +191,7 @@ class PsychologicalEmbedding(object):
         # Default TensorBoard log attributes.
         self.do_log = False
         self.log_dir = '/tmp/psiz/tensorboard_logs/'
+        self.log_freq = 10
 
         super().__init__()
 
@@ -782,7 +784,7 @@ class PsychologicalEmbedding(object):
             )
         return tf_z
 
-    def set_log(self, do_log, log_dir=None, delete_prev=False):
+    def set_log(self, do_log, log_dir=None, log_freq=None, delete_prev=True):
         """State changing method that sets TensorBoard logging.
 
         Arguments:
@@ -792,16 +794,21 @@ class PsychologicalEmbedding(object):
                 the logs.
             delete_prev (optional): Boolean indicating whether the
                 directory should be cleared of previous files first.
+
         """
         if do_log:
             self.do_log = True
-            if log_dir is not None:
-                self.log_dir = log_dir
+
+        if log_dir is not None:
+            self.log_dir = log_dir
+
+        if log_freq is not None:
+            self.log_freq = log_freq
 
         if delete_prev:
-            if tf.gfile.Exists(self.log_dir):
-                tf.gfile.DeleteRecursively(self.log_dir)
-        tf.gfile.MakeDirs(self.log_dir)
+            if tf.io.gfile.exists(self.log_dir):
+                tf.io.gfile.rmtree(self.log_dir)
+        tf.io.gfile.makedirs(self.log_dir)
 
     def _build_model(self, tf_config, init_mode='cold'):
         """Build TensorFlow model."""
@@ -838,6 +845,7 @@ class PsychologicalEmbedding(object):
         )
         return model
 
+    @tf.function
     def _model_loss(self, prob_all):
         """Compute model loss given probabilities."""
         n_trial = tf.shape(prob_all)[0]
@@ -898,7 +906,7 @@ class PsychologicalEmbedding(object):
             skf.split(obs.stimulus_set, obs.config_idx))[0]
         # TODO CRITICAL Need to re-work contract regarding
         # obs.config_idx. The config_idx associated with the obs is
-        # always the most up to date (and is for internal use only 
+        # always the most up to date (and is for internal use only
         # and should not be modified by the user?).
         # For the fit function, we must grab config_idx and config info
         # before splitting? Create trials method:
@@ -940,33 +948,42 @@ class PsychologicalEmbedding(object):
         # Define optimizer.
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.lr)
 
-        # Define summary op. TODO
-        # with tf.name_scope('summaries'):
-        #     # Create a summary to monitor loss.
-        #     tf.compat.v1.summary.scalar('loss_train', tf_loss)
-        #     # Create a summary of the embedding tensor.
-        #     # tf.summary.tensor_summary('z', tf_z)  # Feature not supported.
-        #     # Create a summary to monitor parameters of similarity kernel.
-        #     with tf.name_scope('similarity'):
-        #         for param_name in tf_theta:
-        #             param_mean = tf.reduce_mean(tf_theta[param_name])
-        #             tf.compat.v1.summary.scalar(
-        #                 param_name + '_mean', param_mean
-        #             )
-        #     summary_op = tf.compat.v1.summary.merge_all()
-
         # Run multiple restarts of embedding algorithm.
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
             if verbose < 3:
                 progbar.update(i_restart + 1)
-            (
-                loss_train, loss_val, epoch, z, attention, theta
-            ) = self._fit_restart(
-                optimizer, tf_config, tf_obs_train, tf_obs_val, i_restart,
-                init_mode, verbose
+
+            model = self._build_model(tf_config, init_mode=init_mode)
+            summary_writer = tf.summary.create_file_writer(
+                '{0}/{1}'.format(self.log_dir, i_restart)
             )
+
+            # During computation of gradients, IndexedSlices are created.
+            # Despite my best efforts, I cannot prevent this behavior. The
+            # following cath environment silences the offending warning.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    'ignore', category=UserWarning, module=r'.*indexed_slices'
+                )
+                with summary_writer.as_default():
+                    (
+                        loss_train, loss_val, epoch, z, attention, tf_theta
+                    ) = self._fit_restart(
+                        model, optimizer, tf_obs_train, tf_obs_val, verbose
+                    )
+
+                # Coonvert Tensors to NumPy.
+                loss_train = loss_train.numpy()
+                loss_val = loss_val.numpy()
+                epoch = epoch.numpy()
+                z = z.numpy()
+                attention = attention.numpy()
+                theta = {}
+                for param_name in tf_theta:
+                    theta[param_name] = {}
+                    theta[param_name]["value"] = tf_theta[param_name].numpy()
 
             if (verbose > 2):
                 print(
@@ -1004,100 +1021,108 @@ class PsychologicalEmbedding(object):
         return loss_train_best, loss_val_best
 
     def _fit_restart(
-            self, optimizer, tf_config, tf_obs_train, tf_obs_val, i_restart,
-            init_mode, verbose):
+            self, model, optimizer, tf_obs_train, tf_obs_val, verbose):
         """Embed using a TensorFlow implementation."""
-        model = self._build_model(tf_config, init_mode=init_mode)
-
-        # Write logs for TensorBoard. TODO
-        # if self.do_log:
-        #     summary_writer = tf.summary.FileWriter(
-        #         '%s/%s' % (self.log_dir, i_restart),
-        #         graph=tf.get_default_graph()
-        #     )
-
-        loss_train_best = np.inf
-        loss_val_best = np.inf
-
-        last_improvement_stop = 0
-        last_improvement_reduce = 0
-        z_best = None
-
-        # @tf.function
-        # def train_model():
-        for epoch in range(self.max_n_epoch):
-            # Compute training loss and gradients.
-            with tf.GradientTape() as grad_tape:
-                prob_train = model(tf_obs_train)
-                loss_train = self._model_loss(prob_train)
-            gradients = grad_tape.gradient(
-                loss_train, model.trainable_variables
+        @tf.function
+        def train(model, optimizer, tf_obs_train, tf_obs_val):
+            # Initialize best values.
+            epoch_best = tf.constant(0, dtype=tf.int64)
+            loss_train_best = tf.constant(np.inf, dtype=K.floatx())
+            loss_val_best = tf.constant(np.inf, dtype=K.floatx())
+            z_best = tf.constant(self._z["value"], dtype=K.floatx())
+            attention_best = tf.constant(
+                self._phi['w']["value"], dtype=K.floatx()
             )
-            # TODO Problem with tf.IndexedSlices. Try tf.partition instead of
-            # tf.gather.
-            gradients[4] = tf.convert_to_tensor(gradients[4])
-
-            # Validation loss.
-            prob_val = model(tf_obs_val)
-            loss_val = self._model_loss(prob_val)
-
-            # Apply gradients (subject to constraints).
-            optimizer.apply_gradients(
-                zip(gradients, model.trainable_variables)
-            )
-
-            # summary = None TODO
-
-            # Compare current loss to best loss.
-            if loss_val < loss_val_best:
-                last_improvement_stop = 0
-            else:
-                last_improvement_stop = last_improvement_stop + 1
-
-            if loss_val < loss_val_best:
-                last_improvement_reduce = 0
-            else:
-                last_improvement_reduce = last_improvement_reduce + 1
-
-            if loss_val < loss_val_best:
-                loss_train_best = loss_train
-                loss_val_best = loss_val
-                epoch_best = epoch + 1
-                # TODO less brittle variable access?
-                z_best = model.layers[4].tf_z.numpy()
-                attention_best = model.layers[4].tf_attention.numpy()
-                tf_theta = model.layers[4].tf_theta
-                theta_best = {}
-                for param_name in tf_theta:
-                    theta_best[param_name] = {}
-                    theta_best[param_name]["value"] = tf_theta[param_name].numpy()
-
-            if last_improvement_stop >= self.patience_stop:
-                break
-
-            # if not epoch % 10: TODO
-            #     Write logs at every 10th iteration.
-            #     if self.do_log:
-            #         summary_writer.add_summary(summary, epoch)
-            if verbose > 3:
-                print(
-                    "        epoch {0:5d} | ".format(epoch),
-                    "loss: {0: .6f} | ".format(loss_train),
-                    "loss_val: {0: .6f}".format(loss_val)
+            theta_best = {}
+            for param_name in self._theta:
+                theta_best[param_name] = tf.constant(
+                    self._theta[param_name]['value'], dtype=K.floatx()
                 )
 
-        # train_model()
+            last_improvement_stop = tf.constant(0, dtype=tf.int32)
+            last_improvement_reduce = tf.constant(0, dtype=tf.int32)
+            for epoch in tf.range(tf.constant(self.max_n_epoch, dtype=tf.int64)):
+                # Compute training loss and gradients.
+                with tf.GradientTape() as grad_tape:
+                    prob_train = model(tf_obs_train)
+                    loss_train = self._model_loss(prob_train)
+                gradients = grad_tape.gradient(
+                    loss_train, model.trainable_variables
+                )
+                # NOTE: There are problems using attention constraints
+                # since the d loss / d attention is returned as a
+                # tf.IndexedSlices, which in Eager Execution mode
+                # cannot be used to update a variable. To solve this
+                # problem, uncomment the following line.
+                # gradients[4] = tf.convert_to_tensor(gradients[4])
 
-        # Handle pathological case where there is no improvement.
-        if z_best is None:
-            epoch_best = epoch + 1
-            z_best = self._z["value"]
-            attention_best = self._phi['w']["value"]
-            theta_best = self._theta
+                # Validation loss.
+                prob_val = model(tf_obs_val)
+                loss_val = self._model_loss(prob_val)
+
+                # Log progress.
+                if self.do_log:
+                    if tf.equal(epoch % self.log_freq, 0):
+                        tf.summary.scalar('loss_train', loss_train, step=epoch)
+                        tf.summary.scalar('loss_val', loss_val, step=epoch)
+                        tf_theta = model.layers[4].theta
+                        for param_name in tf_theta:
+                            tf.summary.scalar(
+                                param_name, tf_theta[param_name], step=epoch
+                            )
+                if verbose > 3:
+                    if tf.equal(epoch % self.log_freq, 0):
+                        formatted_str = tf.strings.format(
+                            '        epoch {} | loss_train: {} | loss_val: {}',
+                            (epoch, loss_train, loss_val)
+                        )
+                        tf.print(formatted_str, output_stream=sys.stderr)
+
+                # Apply gradients (subject to constraints).
+                optimizer.apply_gradients(
+                    zip(gradients, model.trainable_variables)
+                )
+
+                # Compare current loss to best loss.
+                if loss_val < loss_val_best:
+                    last_improvement_stop = tf.constant(0, dtype=tf.int32)
+                else:
+                    last_improvement_stop = (
+                        last_improvement_stop + tf.constant(1, dtype=tf.int32)
+                    )
+
+                if loss_val < loss_val_best:
+                    last_improvement_reduce = tf.constant(0, dtype=tf.int32)
+                else:
+                    last_improvement_reduce = (
+                        last_improvement_reduce + tf.constant(1, dtype=tf.int32)
+                    )
+
+                if loss_val < loss_val_best:
+                    loss_train_best = loss_train
+                    loss_val_best = loss_val
+                    epoch_best = epoch + tf.constant(1, dtype=tf.int64)
+                    z_best = model.layers[4].z
+                    attention_best = model.layers[4].attention
+                    theta_best = model.layers[4].theta
+
+                if last_improvement_stop >= tf.constant(self.patience_stop, dtype=tf.int32):
+                    break
+
+            return (
+                epoch_best, loss_train_best, loss_val_best, z_best,
+                attention_best, theta_best
+            )
+
+        (
+            epoch_best, loss_train_best, loss_val_best, z_best,
+            attention_best, theta_best
+        ) = train(model, optimizer, tf_obs_train, tf_obs_val)
 
         return (
-            loss_train_best, loss_val_best, epoch_best, z_best, attention_best,
-            theta_best)
+            loss_train_best, loss_val_best, epoch_best, z_best,
+            attention_best, theta_best
+        )
 
     def evaluate(self, obs):
         """Evaluate observations using the current state of the model.
@@ -1120,26 +1145,28 @@ class PsychologicalEmbedding(object):
         loss = self._model_loss(prob)
 
         if tf.math.is_nan(loss):
-            loss = tf.constant(inf, dtype=K.floatx())
+            loss = tf.constant(np.inf, dtype=K.floatx())
         return loss
 
     def _peek_config(self, obs):
         tf_config = [
             tf.constant(len(obs.config_list.n_outcome.values)),
-            tf.constant(np.max(obs.config_list.n_outcome.values)),
             tf.constant(obs.config_list.n_reference.values),
             tf.constant(obs.config_list.n_select.values),
-            tf.constant(obs.config_list.is_ranked.values),
-            tf.constant(obs.config_list.n_outcome.values)
+            tf.constant(obs.config_list.is_ranked.values)
         ]
         return tf_config
 
     def _prepare_obs(self, obs):
         tf_obs = [
-            tf.constant(obs.stimulus_set, dtype=tf.int32),
-            tf.constant(obs.config_idx, dtype=tf.int32),
-            tf.constant(obs.group_id, dtype=tf.int32),
-            tf.constant(obs.weight, dtype=K.floatx())
+            tf.constant(
+                obs.stimulus_set, dtype=tf.int32, name='obs_stimulus_set'
+            ),
+            tf.constant(
+                obs.config_idx, dtype=tf.int32, name='obs_config_idx'
+            ),
+            tf.constant(obs.group_id, dtype=tf.int32, name='obs_group_id'),
+            tf.constant(obs.weight, dtype=K.floatx(), name='obs_weight')
         ]
         return tf_obs
 
@@ -1273,7 +1300,7 @@ class PsychologicalEmbedding(object):
             prob = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
             for i_outcome in range(n_outcome):
                 s_qref_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
-                prob[:, i_outcome, :] = self._ranked_sequence_probabiltiy(
+                prob[:, i_outcome, :] = self._ranked_sequence_probability(
                     s_qref_perm, config['n_select'])
             prob_all[trial_locs, 0:n_outcome, :] = prob
         prob_all = ma.masked_values(prob_all, -1)
@@ -1319,7 +1346,7 @@ class PsychologicalEmbedding(object):
             z_r[:, :, i_ref, :] = z_temp[stimulus_set_temp[:, 1+i_ref], :, :]
         return (z_q, z_r)
 
-    def _ranked_sequence_probabiltiy(self, sim_qr, n_select):
+    def _ranked_sequence_probability(self, sim_qr, n_select):
         """Return probability of a ranked selection sequence.
 
         Arguments:
@@ -1664,29 +1691,41 @@ class CoreLayer(Layer):
     """Core layer of model."""
 
     def __init__(self, tf_theta, tf_attention, tf_z, tf_config, tf_similarity):
-        """Initialize."""
+        """Initialize.
+        
+        Arguments:
+            tf_theta:
+            tf_attention:
+            tf_z:
+            tf_config: It is assumed that the indices that will be
+                passed in later as inputs will correspond to the
+                indices in this data structure.
+            tf_similarity:
+
+        """
         super(CoreLayer, self).__init__()
-        self.tf_theta = tf_theta
-        self.tf_attention = tf_attention
-        self.tf_z = tf_z
+        self.theta = tf_theta
+        self.attention = tf_attention
+        self.z = tf_z
 
-        self.tf_n_config = tf_config[0]
-        # self.tf_max_n_outcome = tf_config[1]  # TODO remove?
-        self.tf_config_n_reference = tf_config[2]
-        self.tf_config_n_select = tf_config[3]
-        self.tf_config_is_ranked = tf_config[4]
-        # self.tf_config_n_outcome = tf_config[5]  # TODO remove?
+        self.n_config = tf_config[0]
+        self.config_n_reference = tf_config[1]
+        self.config_n_select = tf_config[2]
+        self.config_is_ranked = tf_config[3]
 
-        self._tf_similarity = tf_similarity
+        self._similarity = tf_similarity
 
-        self.max_n_reference = tf.math.reduce_max(self.tf_config_n_reference)
+        self.max_n_reference = tf.math.reduce_max(self.config_n_reference)
 
     def call(self, inputs):
         """Call.
 
         Arguments:
-            inputs: (batch_size, n_dim)
-            attention: shape=(batch_size, n_dim)
+            inputs: A list of inputs:
+                stimulus_set: Containing the integers [0, n_stimuli[
+                config_idx: Containing the integers [0, n_config[
+                group_id: Containing the integers [0, n_group[
+                weight: 
 
         """
         # Settings.
@@ -1695,41 +1734,42 @@ class CoreLayer(Layer):
         # Inputs.
         obs_stimulus_set = inputs[0]
         obs_config_idx = inputs[1]
-        # TODO It is assumed that these indices match how the model was
-        # created and are [0, n_config[.
         obs_group_id = inputs[2]
         obs_weight = inputs[3]
-
-        # Expand attention weights.
-        attention = tf.gather(self.tf_attention, obs_group_id)
-        attention = tf.expand_dims(attention, axis=2)
 
         # Compute the probability of observations for the different
         # trial configurations.
         n_trial = tf.shape(obs_stimulus_set)[0]
         prob_all = tf.zeros([n_trial], dtype=K.floatx())
 
-        for i_config in tf.range(self.tf_n_config):
-            n_reference = self.tf_config_n_reference[i_config]
-            n_select = self.tf_config_n_select[i_config]
-            is_ranked = self.tf_config_is_ranked[i_config]
+        for i_config in tf.range(self.n_config):
+            n_reference = self.config_n_reference[i_config]
+            n_select = self.config_n_select[i_config]
+            is_ranked = self.config_is_ranked[i_config]
 
-            # Grab trials of current configuration.
+            # Grab data belonging to current trial configuration.
             locs = tf.equal(obs_config_idx, i_config)
             trial_idx = tf.squeeze(tf.where(locs))
-            attention_config = tf.gather(attention, trial_idx)
+            # idx_start = tf.math.reduce_min(trial_idx)
+            # idx_end = tf.math.reduce_max(trial_idx) + tf.constant(1, dtype=tf.int64)
+            # stimulus_set_config = obs_stimulus_set[idx_start:idx_end]
+            # group_id_config = obs_group_id[idx_start:idx_end]
             stimulus_set_config = tf.gather(obs_stimulus_set, trial_idx)
+            group_id_config = tf.gather(obs_group_id, trial_idx)
+
+            # Expand attention weights.
+            attention_config = tf.gather(self.attention, group_id_config)
+            attention_config = tf.expand_dims(attention_config, axis=2)
 
             # Compute similarity between query and references.
             (z_q, z_r) = self._tf_inflate_points(
-                stimulus_set_config, n_reference, self.tf_z
+                stimulus_set_config, n_reference, self.z
             )
-            sim_qr_config = self._tf_similarity(
-                z_q, z_r, self.tf_theta, attention_config
+            sim_qr_config = self._similarity(
+                z_q, z_r, self.theta, attention_config
             )
 
             # Compute probability of behavior.
-            sim_qr_config.set_shape([None, None])
             prob_config = self._tf_ranked_sequence_probability(
                 sim_qr_config, n_select
             )
@@ -1740,45 +1780,55 @@ class CoreLayer(Layer):
             )
 
         # Convert to (weighted) log probabilities.
-        prob_config = tf.math.log(tf.maximum(prob_all, cap))
-        prob_config = tf.multiply(obs_weight, prob_config)
+        prob_all = tf.math.log(tf.maximum(prob_all, cap))
+        prob_all = tf.multiply(obs_weight, prob_all)
 
         return prob_all
 
     def _tf_inflate_points(
             self, stimulus_set, n_reference, z):
-        """Inflate stimulus set into embedding points."""
-        n_trial = tf.shape(stimulus_set)[0]
+        """Inflate stimulus set into embedding points.
 
+        Note: This method will not gracefully handle placeholder
+        stimulus IDs.
+
+        """
+        n_trial = tf.shape(stimulus_set)[0]
         n_dim = tf.shape(z)[1]
 
-        stimulus_set_temp = stimulus_set + 1
-        z_placeholder = tf.zeros((1, n_dim), dtype=K.floatx())
-        z_temp = tf.concat((z_placeholder, z), axis=0)
-
         # Inflate query stimuli.
-        z_q = tf.gather(z_temp, stimulus_set_temp[:, 0])
+        z_q = tf.gather(z, stimulus_set[:, 0])
         z_q = tf.expand_dims(z_q, axis=2)
 
         # Initialize z_r.
-        z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
+        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
+        z_r_2 = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
 
         for i_ref in tf.range(n_reference):
-            z_r_new = tf.gather(z_temp, stimulus_set_temp[:, 1+i_ref])
-            z_r_new = tf.expand_dims(z_r_new, axis=2)
-            pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
-            post_pad = tf.zeros(
-                [n_trial, n_dim, n_reference - i_ref - 1], dtype=K.floatx()
-            )
-            z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
-            z_r = z_r + z_r_new
+            z_r_new = tf.gather(z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)])
 
-        return (z_q, z_r)
+            i_ref_expand = tf.expand_dims(i_ref, axis=0)
+            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
+            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
+            z_r_2 = tf.tensor_scatter_nd_update(
+                z_r_2, i_ref_expand, z_r_new_2
+            )
+
+            # z_r_new = tf.expand_dims(z_r_new, axis=2)
+            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
+            # post_pad = tf.zeros(
+            #     [n_trial, n_dim, n_reference - i_ref - tf.constant(1, dtype=tf.int32)], dtype=K.floatx()
+            # )
+            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
+            # z_r = z_r + z_r_new
+
+        z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
+        return (z_q, z_r_2)
 
     def _tf_ranked_sequence_probability(self, sim_qr, n_select):
         """Return probability of a ranked selection sequence.
 
-        See: _ranked_sequence_probability TODO
+        See: _ranked_sequence_probability
 
         Arguments:
             sim_qr: A tensor containing the precomputed similarities
@@ -1804,7 +1854,7 @@ class CoreLayer(Layer):
             # of the previous selection in the sequence.
             if i_selected > tf.constant(0, dtype=tf.int32):
                 denom = tf.add(denom, sim_qr[:, i_selected - 1])
-            # seq_prob.set_shape([None])
+            seq_prob.set_shape([None])
         return seq_prob
 
 
@@ -2674,7 +2724,6 @@ class RandomEmbedding(Initializer):
         self.minval = minval
         self.maxval = maxval
         self.seed = seed
-        # self.dtype = _assert_float_dtype(dtype)  # TODO
         self.dtype = dtype
 
     def __call__(self, shape, dtype=None, partition_info=None):
@@ -2724,7 +2773,6 @@ class RandomAttention(Initializer):
         """Initialize."""
         self.concentration = concentration
         self.scale = scale
-        # self.dtype = _assert_float_dtype(dtype)  # TODO
         self.dtype = dtype
 
     def __call__(self, shape, dtype=None, partition_info=None):

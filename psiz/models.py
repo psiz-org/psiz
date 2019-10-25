@@ -737,10 +737,9 @@ class PsychologicalEmbedding(object):
                 tf_attention = tf.Variable(
                     initial_value=RandomAttention(
                         alpha, scale, dtype=K.floatx()
-                    ),
+                    )(shape=[1, self.n_dim]),
                     trainable=True, name=tf_var_name, dtype=K.floatx(),
-                    constraint=ProjectAttention(),
-                    shape=[1, self.n_dim],
+                    constraint=ProjectAttention()
                 )
         else:
             tf_attention = tf.Variable(

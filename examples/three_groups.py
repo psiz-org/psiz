@@ -133,7 +133,7 @@ def main():
     # Display comparison results. A good inferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
     # values on the off-diagonal elements.
-    print('\n    Model Comparison (r^2)')
+    print('\n    Model Comparison (R^2)')
     print('    ================================')
     print('      True  |        Inferred')
     print('            | Novice  Interm  Expert')

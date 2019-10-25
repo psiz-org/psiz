@@ -19,6 +19,7 @@
 Todo:
     - test ActiveGenerator
     - more information gain tests
+
 """
 
 import numpy as np
@@ -113,7 +114,7 @@ def test_information_gain(ground_truth):
         np.array([[3, 1, 2]], dtype=np.int32),
         np.array([1], dtype=np.int32)
         )
-    # Compute expected informatin gain.
+    # Compute expected information gain.
     ig_0 = generator.information_gain(ground_truth, samples, docket_0)
     ig_1 = generator.information_gain(ground_truth, samples, docket_1)
 
@@ -146,10 +147,10 @@ def test_information_gain(ground_truth):
         )
     ig_0123 = generator.information_gain(
         ground_truth, samples, docket_0123)
-    assert ig_0123[0] == ig_0
-    assert ig_0123[1] == ig_1
-    assert ig_0123[2] == ig_23[0]
-    assert ig_0123[3] == ig_23[1]
+    np.testing.assert_almost_equal(ig_0123[0], ig_0)
+    np.testing.assert_almost_equal(ig_0123[1], ig_1)
+    np.testing.assert_almost_equal(ig_0123[2], ig_23[0])
+    np.testing.assert_almost_equal(ig_0123[3], ig_23[1])
 
 
 def test_kl_divergence():

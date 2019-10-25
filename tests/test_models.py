@@ -21,6 +21,8 @@ Todo
     * heavy-tailed similarity
     * Student's t similarity
     * test subset method
+    * test layers
+    * test inflate points
 
 """
 
@@ -28,10 +30,12 @@ Todo
 import numpy as np
 import pytest
 import tensorflow as tf
+# TODO convert to appropriate module once TF updates their docs.
+# from tensorflow.compat.v2.test import TestCase
 
 from psiz.trials import Docket
 from psiz.models import Inverse, Exponential, HeavyTailed, StudentsT
-from psiz.models import load_embedding
+from psiz.models import ProjectAttention, load_embedding
 
 
 @pytest.fixture(scope="module")
@@ -778,16 +782,6 @@ def test_private_exponential_similarity():
     n_dim = 3
     model = Exponential(n_stimuli, n_dim=n_dim)
 
-    z_q_in = np.array((
-        (.11, -.13, .28),
-        (.45, .09, -1.45)
-    ))
-
-    z_ref_in = np.array((
-        (.203, -.78, .120),
-        (-.105, -.34, -.278)
-    ))
-
     rho = tf.constant(1.9, dtype=tf.float32)
     tau = tf.constant(2.1, dtype=tf.float32)
     beta = tf.constant(1.11, dtype=tf.float32)
@@ -796,17 +790,20 @@ def test_private_exponential_similarity():
 
     attention_weights = tf.constant(1., shape=[2, 3])
 
-    z_q = tf.compat.v1.placeholder(tf.float32, [None, n_dim], name='z_q')
-    z_ref = tf.compat.v1.placeholder(tf.float32, [None, n_dim], name='z_ref')
-
-    s = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
-
-    sess = tf.compat.v1.Session()
-    s_actual = sess.run(
-        s, feed_dict={z_q: z_q_in, z_ref: z_ref_in}
+    z_q = tf.constant(
+        np.array((
+            (.11, -.13, .28),
+            (.45, .09, -1.45)
+        )), dtype=tf.float32, name='z_q'
     )
-    sess.close()
+    z_ref = tf.constant(
+        np.array((
+            (.203, -.78, .120),
+            (-.105, -.34, -.278)
+        )), dtype=tf.float32, name='z_r'
+    )
 
+    s_actual = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
     s_desired = np.array([0.60972816, 0.10853130])
     np.testing.assert_allclose(s_actual, s_desired)
 
@@ -841,23 +838,20 @@ def test_private_exponential_similarity_broadcast():
     gamma = tf.constant(.001, dtype=tf.float32)
     sim_params = {'rho': rho, 'tau': tau, 'gamma': gamma, 'beta': beta}
 
-    z_q = tf.compat.v1.placeholder(tf.float32, name='z_q')
-    z_ref = tf.compat.v1.placeholder(tf.float32, name='z_ref')
-
-    s = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
-
-    sess = tf.compat.v1.Session()
-    s_actual = sess.run(
-        s, feed_dict={z_q: z_q_in, z_ref: z_ref_in}
+    z_q = tf.constant(
+        z_q_in, dtype=tf.float32, name='z_q'
     )
-    sess.close()
+    z_ref = tf.constant(
+        z_ref_in, dtype=tf.float32, name='z_ref'
+    )
 
+    s_actual = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
     s_desired = np.array((
         [0.60972816, 0.48281544],
         [0.10853130, 0.16589911]
     ))
-    # print('s_actual:', s_actual)
-    # print('s_desired:', s_desired)
+    print('s_actual:', s_actual)
+    print('s_desired:', s_desired)
     np.testing.assert_allclose(s_actual, s_desired)
 
 
@@ -927,33 +921,51 @@ def test_public_exponential_similarity_broadcast():
     np.testing.assert_allclose(s_actual, s_desired)
 
 
-def test_weight_projections():
-    """Test projection of attention weights."""
-    # Create Exponential model.
-    n_stimuli = 10
-    n_dim = 3
-    model = Exponential(n_stimuli, n_dim=n_dim)
-    attention = np.array(
-        (
-            (1., 1., 1.),
-            (2., 1., 1.)
-        ), ndmin=2
-    )
-    # attention = np.array(((2., 1., 1.)), ndmin=2) # TODO
+# def test_weight_projections():
+#     """Test projection of attention weights."""
+#     # Create Exponential model.
+#     constraint = ProjectAttention()
+#     n_dim = 3
 
-    # Project attention weights.
-    total = np.sum(attention, axis=1, keepdims=True)
-    attention_desired = n_dim * attention / total
+#     attention = np.array(
+#         (
+#             (1., 1., 1.),
+#             (2., 1., 1.)
+#         ), ndmin=2
+#     )
+#     tf_attention = tf.constant(
+#         attention, dtype=tf.float32
+#     )
 
-    tf_attention = tf.convert_to_tensor(
-        attention, dtype=tf.float32
-    )
-    attention_actual_op = model._project_attention(tf_attention)
-    sess = tf.compat.v1.Session()
-    attention_actual = sess.run(attention_actual_op)
-    sess.close()
+#     # Project attention weights.
+#     total = np.sum(attention, axis=1, keepdims=True)
+#     attention_desired = n_dim * attention / total
 
-    np.testing.assert_allclose(attention_actual, attention_desired)
+#     attention_actual = constraint(tf_attention)
+#     np.testing.assert_allclose(attention_actual, attention_desired)
+
+
+# class ProjectAttentionTest(TestCase):
+#     """Test ProjectAttention constraint."""
+
+#     def testProjectAttention(self):
+#         """Test."""
+#         n_dim = 3
+#         attention = np.array(
+#             (
+#                 (1., 1., 1.),
+#                 (2., 1., 1.)
+#             ), ndmin=2
+#         )
+#         total = np.sum(attention, axis=1, keepdims=True)
+#         attention_desired = n_dim * attention / total
+
+#         tf_attention = tf.convert_to_tensor(
+#             attention, dtype=tf.float32
+#         )
+#         with self.session(use_gpu=False):
+#             attention_actual = ProjectAttention()(tf_attention).eval()
+#             self.assertEqual(attention_actual, attention_desired)
 
 
 def test_probability(model_true, docket_0):
@@ -1045,6 +1057,14 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
         docket.n_select == n_select
     )
 
+    tf_config = [
+        tf.constant(1),
+        tf.constant([n_reference]),
+        tf.constant([n_select]),
+        tf.constant([True])
+    ]
+    inner_model = model_true._build_model(tf_config)
+
     z = model_true.z
 
     attention = model_true._phi["w"]["value"][0, :]
@@ -1061,14 +1081,10 @@ def test_tf_ranked_sequence_probability(model_true, docket_0):
     # NOTE: tf_ranked_sequence_probability is not implemented to handle
     # samples.
     tf_n_select = tf.constant(n_select, dtype=tf.int32)
-    tf_s_qr = tf.convert_to_tensor(s_qr[:, :, 0], dtype=tf.float32)
-    tf_prob_2 = model_true._tf_ranked_sequence_probability(
-        tf_s_qr, tf_n_select)
-    sess = tf.compat.v1.Session()
-    with sess.as_default():
-        sess.run(tf.compat.v1.global_variables_initializer())
-        prob_2 = tf_prob_2.eval()
-
+    tf_s_qr = tf.constant(s_qr[:, :, 0], dtype=tf.float32)
+    prob_2 = inner_model.layers[4]._tf_ranked_sequence_probability(
+        tf_s_qr, tf_n_select
+    )
     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)
 
 

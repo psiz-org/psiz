@@ -848,7 +848,7 @@ class PsychologicalEmbedding(object):
         return model
 
     @tf.function
-    def _model_loss(self, prob_all, weight):
+    def _loss(self, prob_all, weight):
         """Compute model loss given observation probabilities."""
         n_trial = tf.shape(prob_all)[0]
         n_trial = tf.cast(n_trial, dtype=K.floatx())
@@ -1051,7 +1051,7 @@ class PsychologicalEmbedding(object):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
                     prob_train = model(tf_obs_train)
-                    loss_train = self._model_loss(prob_train, tf_obs_train[3])
+                    loss_train = self._loss(prob_train, tf_obs_train[3])
                 gradients = grad_tape.gradient(
                     loss_train, model.trainable_variables
                 )
@@ -1064,7 +1064,7 @@ class PsychologicalEmbedding(object):
 
                 # Validation loss.
                 prob_val = model(tf_obs_val)
-                loss_val = self._model_loss(prob_val, tf_obs_val[3])
+                loss_val = self._loss(prob_val, tf_obs_val[3])
 
                 # Log progress.
                 if self.do_log:
@@ -1148,7 +1148,7 @@ class PsychologicalEmbedding(object):
 
         # Evaluate current model to obtain starting loss.
         prob = model(tf_obs)
-        loss = self._model_loss(prob, tf_obs[3])
+        loss = self._loss(prob, tf_obs[3])
 
         if tf.math.is_nan(loss):
             loss = tf.constant(np.inf, dtype=K.floatx())

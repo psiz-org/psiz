@@ -52,9 +52,11 @@ from psiz.utils import similarity_matrix, matrix_comparison
 
 def main():
     """Run the simulation that infers an embedding for three groups."""
+    # Settings.
     n_stimuli = 25
     n_dim = 4
     n_group = 3
+
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.

@@ -33,9 +33,12 @@ from psiz.utils import similarity_matrix, matrix_comparison
 
 def main():
     """Run the simulation that infers an embedding for two groups."""
+    # Settings.
     n_stimuli = 25
     n_dim = 3
     n_group = 1
+    n_restart = 40
+
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
     simmat_true = similarity_matrix(emb_true.similarity, emb_true.z)
 
@@ -58,7 +61,9 @@ def main():
     for i_round in range(n_step):
         emb_inferred = Exponential(n_stimuli, n_dim, n_group)
         include_idx = np.arange(0, n_obs[i_round])
-        loss[i_round], _ = emb_inferred.fit(obs.subset(include_idx), 40, verbose=1)
+        loss[i_round], _ = emb_inferred.fit(
+            obs.subset(include_idx), n_restart=n_restart, verbose=1
+        )
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(

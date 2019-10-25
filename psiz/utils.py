@@ -56,7 +56,7 @@ def assess_convergence(
     This function determines the impact of adding a little bit more
     data. Ideally, you should have sufficient data that adding more
     does not dramatically alter the structure of the inferred
-    embedding. Structural changes are assesed by comparing the pair-
+    embedding. Structural changes are assessed by comparing the pair-
     wise similarity matrix of different embeddings.
 
     Arguments:
@@ -68,7 +68,7 @@ def assess_convergence(
         n_back (optional):  The number of partitions to evaluate. Can
             be [1, n_partition-1].
         n_shuffle (optional): The number of times to shuffle and
-            repeeat tha analysis.
+            repeat tha analysis.
         n_restart (optional): The number of restarts to use when
             fitting the embeddings.
         score (optional): Measure to use when comparing two similarity
@@ -322,6 +322,7 @@ def rotation_matrix(theta):
 
     Arguments:
         theta: Scalar value indicating radians of rotation.
+
     """
     return np.array((
         (np.cos(theta), -np.sin(theta)),
@@ -339,6 +340,7 @@ def affine_transformation(z, params):
             y translation, rotation (in radians), scaling, and flip
             factor.
             shape = (5,)
+
     """
     x = params[0]
     y = params[1]
@@ -421,6 +423,7 @@ class ProgressBar(object):
             length (optional): Integer indicating the character length
                 of the progress bar.
             fill (optional): String indicating the bar fill character.
+
         """
         self.total = total
         self.prefix = prefix

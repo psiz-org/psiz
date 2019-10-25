@@ -128,6 +128,10 @@ class PsychologicalEmbedding(object):
         log_dir: The location of the logs. The default location is
             `/tmp/psiz/tensorboard_logs/`.
         log_freq: The number of epochs to wait between log entries.
+        fit_duration: The duration (in seconds) of the last called
+            fitting procedure.
+        posterior_duration: The duration (in seconds) of the last
+            called posterior sampling procedure.
 
     Notes:
         The setter methods as well as the methods fit, trainable, and
@@ -192,6 +196,10 @@ class PsychologicalEmbedding(object):
         self.do_log = False
         self.log_dir = '/tmp/psiz/tensorboard_logs/'
         self.log_freq = 10
+
+        # Timer attributes.
+        self.fit_duration = 0.0
+        self.posterior_duration = 0.0
 
         super().__init__()
 
@@ -893,6 +901,7 @@ class PsychologicalEmbedding(object):
                 loglikelihood.
 
         """
+        start_time_s = time.time()
         #  Infer embedding.
         if (verbose > 0):
             print('[psiz] Inferring embedding...')
@@ -905,32 +914,30 @@ class PsychologicalEmbedding(object):
                     obs.n_trial, n_restart))
             print('')
 
+        # Grab configuration information. Need too grab here because
+        # configuration mapping may change when grabbing train and
+        # validation subset.
+        (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
+        tf_config = self._prepare_config(obs_config_list)
+
         # Partition observations into train and validation set to
         # control early stopping of embedding algorithm.
         skf = StratifiedKFold(n_splits=10)
         (train_idx, val_idx) = list(
-            skf.split(obs.stimulus_set, obs.config_idx))[0]
-        # TODO CRITICAL Need to re-work contract regarding
-        # obs.config_idx. The config_idx associated with the obs is
-        # always the most up to date (and is for internal use only
-        # and should not be modified by the user?).
-        # For the fit function, we must grab config_idx and config info
-        # before splitting? Create trials method:
-        # (config_idx, config_dataframe) = trials.get_config()
-        # Contract: look at incoming obs, determine unique configurations,
-        # assign config_idx [0, n_config[, guarantee that this pairing
-        # won't change inside fit function.
-        tf_config = self._peek_config(obs)
+            skf.split(obs.stimulus_set, obs_config_idx)
+        )[0]
         obs_train = obs.subset(train_idx)
+        config_idx_train = obs_config_idx[train_idx]
         obs_val = obs.subset(val_idx)
+        config_idx_val = obs_config_idx[val_idx]
 
         # Initial evaluation.
         loss_train_best = self.evaluate(obs_train)
         loss_val_best = self.evaluate(obs_val)
 
         # Prepare observations.
-        tf_obs_train = self._prepare_obs(obs_train)
-        tf_obs_val = self._prepare_obs(obs_val)
+        tf_inputs_train = self._prepare_inputs(obs_train, config_idx_train)
+        tf_inputs_val = self._prepare_inputs(obs_val, config_idx_val)
 
         z_best = self._z["value"]
         attention_best = self._phi['w']["value"]
@@ -977,7 +984,8 @@ class PsychologicalEmbedding(object):
                     (
                         loss_train, loss_val, epoch, z, attention, tf_theta
                     ) = self._fit_restart(
-                        model, optimizer, tf_obs_train, tf_obs_val, verbose
+                        model, optimizer, tf_inputs_train, tf_inputs_val,
+                        verbose
                     )
 
                 # Coonvert Tensors to NumPy.
@@ -1023,14 +1031,15 @@ class PsychologicalEmbedding(object):
         self._z["value"] = z_best
         self._phi['w']["value"] = attention_best
         self._set_theta(theta_best)
+        self.fit_duration = time.time() - start_time_s
 
         return loss_train_best, loss_val_best
 
     def _fit_restart(
-            self, model, optimizer, tf_obs_train, tf_obs_val, verbose):
+            self, model, optimizer, tf_inputs_train, tf_inputs_val, verbose):
         """Embed using a TensorFlow implementation."""
         @tf.function
-        def train(model, optimizer, tf_obs_train, tf_obs_val):
+        def train(model, optimizer, tf_inputs_train, tf_inputs_val):
             # Initialize best values.
             epoch_best = tf.constant(0, dtype=tf.int64)
             loss_train_best = tf.constant(np.inf, dtype=K.floatx())
@@ -1050,8 +1059,8 @@ class PsychologicalEmbedding(object):
             for epoch in tf.range(tf.constant(self.max_n_epoch, dtype=tf.int64)):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
-                    prob_train = model(tf_obs_train)
-                    loss_train = self._loss(prob_train, tf_obs_train[3])
+                    prob_train = model(tf_inputs_train)
+                    loss_train = self._loss(prob_train, tf_inputs_train[3])
                 gradients = grad_tape.gradient(
                     loss_train, model.trainable_variables
                 )
@@ -1063,8 +1072,8 @@ class PsychologicalEmbedding(object):
                 # gradients[4] = tf.convert_to_tensor(gradients[4])
 
                 # Validation loss.
-                prob_val = model(tf_obs_val)
-                loss_val = self._loss(prob_val, tf_obs_val[3])
+                prob_val = model(tf_inputs_val)
+                loss_val = self._loss(prob_val, tf_inputs_val[3])
 
                 # Log progress.
                 if self.do_log:
@@ -1101,7 +1110,8 @@ class PsychologicalEmbedding(object):
                     last_improvement_reduce = tf.constant(0, dtype=tf.int32)
                 else:
                     last_improvement_reduce = (
-                        last_improvement_reduce + tf.constant(1, dtype=tf.int32)
+                        last_improvement_reduce +
+                        tf.constant(1, dtype=tf.int32)
                     )
 
                 if loss_val < loss_val_best:
@@ -1123,7 +1133,7 @@ class PsychologicalEmbedding(object):
         (
             epoch_best, loss_train_best, loss_val_best, z_best,
             attention_best, theta_best
-        ) = train(model, optimizer, tf_obs_train, tf_obs_val)
+        ) = train(model, optimizer, tf_inputs_train, tf_inputs_val)
 
         return (
             loss_train_best, loss_val_best, epoch_best, z_best,
@@ -1141,35 +1151,42 @@ class PsychologicalEmbedding(object):
                 the negative loglikelihood.
 
         """
-        tf_obs = self._prepare_obs(obs)
-        tf_config = self._peek_config(obs)
+        (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
+        tf_config = self._prepare_config(obs_config_list)
+        tf_inputs = self._prepare_inputs(obs, obs_config_idx)
 
         model = self._build_model(tf_config, init_mode='hot')
 
         # Evaluate current model to obtain starting loss.
-        prob = model(tf_obs)
-        loss = self._loss(prob, tf_obs[3])
+        prob = model(tf_inputs)
+        loss = self._loss(prob, tf_inputs[3])
 
         if tf.math.is_nan(loss):
             loss = tf.constant(np.inf, dtype=K.floatx())
         return loss
 
-    def _peek_config(self, obs):
+    def _grab_config_info(self, obs):
+        """Grab configuration information."""
+        obs_config_list = copy.copy(obs.config_list)
+        obs_config_idx = copy.copy(obs.config_idx)
+        return obs_config_list, obs_config_idx
+
+    def _prepare_config(self, config_list):
         tf_config = [
-            tf.constant(len(obs.config_list.n_outcome.values)),
-            tf.constant(obs.config_list.n_reference.values),
-            tf.constant(obs.config_list.n_select.values),
-            tf.constant(obs.config_list.is_ranked.values)
+            tf.constant(len(config_list.n_outcome.values)),
+            tf.constant(config_list.n_reference.values),
+            tf.constant(config_list.n_select.values),
+            tf.constant(config_list.is_ranked.values)
         ]
         return tf_config
 
-    def _prepare_obs(self, obs):
+    def _prepare_inputs(self, obs, config_idx):
         tf_obs = [
             tf.constant(
                 obs.stimulus_set, dtype=tf.int32, name='obs_stimulus_set'
             ),
             tf.constant(
-                obs.config_idx, dtype=tf.int32, name='obs_config_idx'
+                config_idx, dtype=tf.int32, name='obs_config_idx'
             ),
             tf.constant(obs.group_id, dtype=tf.int32, name='obs_group_id'),
             tf.constant(obs.weight, dtype=K.floatx(), name='obs_weight')
@@ -1453,6 +1470,7 @@ class PsychologicalEmbedding(object):
             1732-1740).
 
         """
+        start_time_s = time.time()
         n_final_sample = int(n_final_sample)
         n_total_sample = n_burn + (n_final_sample * thin_step)
         n_stimuli = self.n_stimuli
@@ -1556,6 +1574,7 @@ class PsychologicalEmbedding(object):
         if verbose > 0:
             progbar.update(n_total_sample)
 
+        self.posterior_duration = time.time() - start_time_s
         return samples
 
     def _make_partition(self, n_stimuli, n_partition):

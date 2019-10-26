@@ -855,7 +855,7 @@ class PsychologicalEmbedding(object):
         return model
 
     @tf.function
-    def _loss(self, prob_all, weight):
+    def _loss(self, prob_all, tf_attention, weight):
         """Compute model loss given observation probabilities."""
         n_trial = tf.shape(prob_all)[0]
         n_trial = tf.cast(n_trial, dtype=K.floatx())
@@ -869,6 +869,27 @@ class PsychologicalEmbedding(object):
         # comparable.
         loss = tf.negative(tf.reduce_sum(prob_all))
         loss = tf.divide(loss, n_trial)
+
+        # TODO Is any additional pressure necessary?
+        # Between-group attention penalty. TODO note the 30 which needs to be
+        # factored into a scaling factor and the number of subterms.
+        # for i_group in tf.range(1, n_group):
+        #     for j_group in tf.range(i_group + 1, n_group):
+        # attention_penalty = (
+        #     self._between_attention_loss(tf_attention[0, :], tf_attention[1, :]) +
+        #     self._between_attention_loss(tf_attention[0, :], tf_attention[2, :]) +
+        #     self._between_attention_loss(tf_attention[1, :], tf_attention[2, :])
+        # ) / tf.constant(30.0, dtype=K.floatx())
+
+        # L1 penalty on weights (indpendently).
+        # attention_penalty = (
+        #     self._attention_sparsity_loss(tf_attention[0, :]) +
+        #     self._attention_sparsity_loss(tf_attention[1, :]) +
+        #     self._attention_sparsity_loss(tf_attention[2, :])
+        # ) / tf.constant(3.0, dtype=K.floatx())
+
+        # loss = loss + attention_penalty
+
         return loss
 
     def fit(self, obs, n_restart=50, init_mode='cold', verbose=0):
@@ -1059,7 +1080,7 @@ class PsychologicalEmbedding(object):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
                     prob_train = model(tf_inputs_train)
-                    loss_train = self._loss(prob_train, tf_inputs_train[3])
+                    loss_train = self._loss(prob_train, model.layers[4].attention, tf_inputs_train[3])
                 gradients = grad_tape.gradient(
                     loss_train, model.trainable_variables
                 )
@@ -1072,7 +1093,7 @@ class PsychologicalEmbedding(object):
 
                 # Validation loss.
                 prob_val = model(tf_inputs_val)
-                loss_val = self._loss(prob_val, tf_inputs_val[3])
+                loss_val = self._loss(prob_val, model.layers[4].attention, tf_inputs_val[3])
 
                 # Log progress.
                 if self.do_log:
@@ -1158,7 +1179,7 @@ class PsychologicalEmbedding(object):
 
         # Evaluate current model to obtain starting loss.
         prob = model(tf_inputs)
-        loss = self._loss(prob, tf_inputs[3])
+        loss = self._loss(prob, model.layers[4].attention, tf_inputs[3])
 
         if tf.math.is_nan(loss):
             loss = tf.constant(np.inf, dtype=K.floatx())
@@ -1192,13 +1213,38 @@ class PsychologicalEmbedding(object):
         ]
         return tf_obs
 
-    def attention_distance(self, p, q):
-        """Distance between attention weights."""
+    def _attention_sparsity_loss(self, w):
+        """Sparsity encouragement.
+
+        Arguments:
+            w: Attention weights assumed to be nonnegative.
+
+        """
+        # Similar to L1
+        # loss = tf.math.reduce_sum(tf.math.pow(w, .9))
+
+        # Entropy.
+        w = tf.divide(w, tf.reduce_sum(w))
+        cap = tf.constant(2.2204e-16, dtype=K.floatx())
+        loss = tf.math.negative(tf.math.reduce_sum(
+            tf.math.multiply(w, tf.math.log(w + cap))
+        ))
+        return loss
+
+    def _between_attention_loss(self, p, q):
+        """Loss between attention weights.
+
+        L1 distance divided by 2 * n_dim to yield a distance on the
+        interval [0,1]. The distance is flipped to give a loss where 0
+        indicates maximally far apart.
+
+        """
         c = tf.cast(2.0, dtype=K.floatx())
         n_dim = tf.cast(tf.shape(p)[0], dtype=K.floatx())
-        d = tf.divide(
-            tf.reduce_sum(tf.abs(p - q)), tf.multiply(c, n_dim)
+        d = tf.math.divide(
+            tf.math.reduce_sum(tf.math.abs(p - q)), tf.math.multiply(c, n_dim)
         )
+        d = tf.negative(d - tf.constant(1.0, dtype=K.floatx()))
         return d
 
     def log_likelihood(self, obs, z=None, theta=None, phi=None):

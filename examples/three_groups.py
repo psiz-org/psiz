@@ -56,6 +56,7 @@ def main():
     n_stimuli = 25
     n_dim = 4
     n_group = 3
+    n_restart = 20
 
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
@@ -76,7 +77,13 @@ def main():
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
     emb_inferred = Exponential(emb_true.n_stimuli, n_dim, n_group)
-    emb_inferred.fit(obs_all, 20, verbose=1)
+    emb_inferred.fit(obs_all, n_restart, verbose=3)
+
+    # Permute inferred dimensions to best match ground truth.
+    attention_weight_0 = emb_inferred.w[0, :]
+    idx_sorted = np.argsort(-attention_weight_0)
+    emb_inferred.w = emb_inferred.w[:, idx_sorted]
+    emb_inferred.z = emb_inferred.z[:, idx_sorted]
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.

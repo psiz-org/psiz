@@ -33,12 +33,14 @@ from psiz.utils import similarity_matrix, matrix_comparison
 
 def main():
     """Run the simulation that infers an embedding for two groups."""
+    # Settings.
     n_stimuli = 25
     n_dim = 3
     n_group = 1
+    n_restart = 20
+
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
-    simmat_true = similarity_matrix(
-        emb_true.similarity, emb_true.z)
+    simmat_true = similarity_matrix(emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
     n_trial = 1000
@@ -52,33 +54,36 @@ def main():
     obs = agent.simulate(docket)
 
     # Infer independent models with increasing amounts of data.
-    n_step = 10
-    n_obs = np.floor(np.linspace(20, n_trial, n_step)).astype(np.int64)
-    r_pearson = np.empty((n_step))
+    n_step = 8
+    n_obs = np.floor(np.linspace(15, n_trial, n_step)).astype(np.int64)
+    r2 = np.empty((n_step))
     loss = np.empty((n_step))
     for i_round in range(n_step):
         emb_inferred = Exponential(n_stimuli, n_dim, n_group)
         include_idx = np.arange(0, n_obs[i_round])
-        loss[i_round], _ = emb_inferred.fit(obs.subset(include_idx), 40)
+        loss[i_round], _ = emb_inferred.fit(
+            obs.subset(include_idx), n_restart=n_restart, verbose=1
+        )
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(
-            emb_inferred.similarity, emb_inferred.z)
-        r_pearson[i_round] = matrix_comparison(
-            simmat_infer, simmat_true, score='pearson'
+            emb_inferred.similarity, emb_inferred.z
+        )
+        r2[i_round] = matrix_comparison(
+            simmat_infer, simmat_true, score='r2'
         )
         print(
             'Round {0} ({1} trials) | Loss: {2:.2f} | '
-            'Correlation (r): {3:.2f}'.format(
-                i_round, n_obs[i_round], loss[i_round], r_pearson[i_round]
+            'Correlation (R^2): {3:.2f}'.format(
+                i_round, n_obs[i_round], loss[i_round], r2[i_round]
             )
         )
 
     # Plot comparison results.
-    plt.plot(n_obs, r_pearson, 'ro-')
+    plt.plot(n_obs, r2, 'ro-')
     plt.title('Model Convergence to Ground Truth')
     plt.xlabel('Number of Judged Trials')
-    plt.ylabel(r'Pearson Correlation ($\rho$)')
+    plt.ylabel(r'Squared Pearson Correlation ($R^2$)')
     plt.ylim(-0.05, 1.05)
     plt.show()
 

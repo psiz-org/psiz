@@ -29,14 +29,6 @@ Functions:
     load_embedding: Load a hdf5 file, that was saved with the `save`
         class method, as a PsychologicalEmbedding object.
 
-Todo:
-    - Expose optimizer
-    - Expand posterior sampler to handle theta and phi and sampling
-        from the prior.
-    - Allow different float precision.
-    - Document broadcasting in similarity function.
-    - MAYBE allow different elements of z to be trainable or not.
-
 """
 
 from abc import ABCMeta, abstractmethod

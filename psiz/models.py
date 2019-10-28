@@ -1568,7 +1568,8 @@ class PsychologicalEmbedding(object):
         # Approximate prior of z_k using all embedding points to reduce
         # computational burden.
         gmm = mixture.GaussianMixture(
-            n_components=1, covariance_type='spherical')
+            n_components=1, covariance_type='spherical'
+        )
         gmm.fit(z)
         mu = gmm.means_[0]
         sigma = gmm.covariances_[0] * np.identity(n_dim)
@@ -1583,8 +1584,8 @@ class PsychologicalEmbedding(object):
             # Assemble full z.
             n_stim_part = np.sum(part_idx)
             z_full[part_idx, :] = np.reshape(
-                z_part, (n_stim_part, n_dim), order='C')
-            # TODO pass in theta and phi.
+                z_part, (n_stim_part, n_dim), order='C'
+            )
             return self.log_likelihood(obs, z=z_full)
 
         # Initialize sampler.
@@ -1616,6 +1617,7 @@ class PsychologicalEmbedding(object):
                                 sigma, n_stimuli_part[i_part], n_dim)
                             )
                     )
+
             for i_part in range(n_partition):
                 z_part = z_full[part_idx[i_part], :]
                 z_part = z_part.flatten('C')

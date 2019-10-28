@@ -76,10 +76,8 @@ class PsychologicalEmbedding(object):
             provided points.
         view: Returns a view-specific embedding.
         trainable: Get or set which parameters are trainable.
-        probability: Return the probability of the possible outcomes
-            for each trial.
-        log_likelihood: Return the log-likelihood of a set of
-            observations.
+        outcome_probability: Return the probability of the possible
+            outcomes for each trial.
         posterior_samples: Sample from the posterior distribution.
         set_log: Adjust the TensorBoard logging behavior.
         save: Save the embedding model as an hdf5 file.
@@ -1261,33 +1259,6 @@ class PsychologicalEmbedding(object):
         d = tf.negative(d - tf.constant(1.0, dtype=K.floatx()))
         return d
 
-    def log_likelihood(self, obs, z=None, theta=None, phi=None):
-        """Return the log likelihood of a set of observations.
-
-        Arguments:
-            obs: A set of judged similarity trials. The indices
-                used must correspond to the rows of z.
-            z (optional): The z parameters.
-            theta (optional): The theta parameters.
-            phi (optional): The phi parameters.
-
-        Returns:
-            The total log-likelihood of the observations.
-
-        Notes:
-            The arguments z, theta, and phi are assigned in a lazy
-                manner. If they have a value of None when they are
-                needed, the attribute values of the object will be used.
-
-        """
-        cap = 2.2204e-16
-        prob_all = self.outcome_probability(
-            obs, group_id=obs.group_id, z=z, theta=theta, phi=phi,
-            unaltered_only=True)
-        prob = ma.maximum(cap, prob_all[:, 0])
-        ll = ma.sum(ma.log(prob))
-        return ll
-
     def outcome_probability(
             self, docket, group_id=None, z=None, theta=None, phi=None,
             unaltered_only=False):
@@ -1304,8 +1275,8 @@ class PsychologicalEmbedding(object):
                 shape=(n_stimuli, n_dim, [n_sample])
             theta (optional): The theta parameters.
             phi (optional): The phi parameters.
-            unaltered_only (optional): Flag the determines whether only
-                the unaltered ordering is evaluated.
+            unaltered_only (optional): Flag that determines whether
+                only the unaltered ordering is evaluated and returned.
 
         Returns:
             prob_all: A MaskedArray representing the probabilities
@@ -1578,7 +1549,13 @@ class PsychologicalEmbedding(object):
             z_full[part_idx, :] = np.reshape(
                 z_part, (n_stim_part, n_dim), order='C'
             )
-            return self.log_likelihood(obs, z=z_full)
+            cap = 2.2204e-16
+            prob_all = self.outcome_probability(
+                obs, group_id=obs.group_id, z=z_full, unaltered_only=True
+            )
+            prob = ma.maximum(cap, prob_all[:, 0])
+            ll = ma.sum(ma.log(prob))
+            return ll
 
         # Initialize sampler.
         z_full = copy.copy(z)

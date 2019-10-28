@@ -12,7 +12,7 @@ There are two ways to install PsiZ:
     * Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
     * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.2.2`
 
-**Note:** PsiZ also requires TensorFlow 1.14, which is not installed automatically since is not included as a dependency of the PsiZ package (in setup.py). You must explicitly install TensorFlow 1.14 (tensorflow or tensorflow-gpu). This allows users to specify whether they use a GPU enabled version of TensorFlow. The package will soon be updated to use TensorFlow 2.0.
+**Note:** PsiZ also requires TensorFlow 2.0, which is not installed automatically since it is not included as a dependency of the PsiZ package (in setup.py). You must explicitly install TensorFlow 2.0 (tensorflow or tensorflow-gpu). This allows users to specify whether they use a GPU enabled version of TensorFlow.
 
 ## Quick Start
 There are four predefined embedding models to choose from:
@@ -138,7 +138,7 @@ This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file
    international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720
 * Roads, B. D., & Mozer, M. C. (2019). Obtaining psychological
    embeddings through joint kernel and metric learning. Behavior Research
-   Methods. doi:10.3758/s13428-019-01285-3
+   Methods. 51(5), 2180-2193. doi:10.3758/s13428-019-01285-3
 * Wah, C., Branson, S., Welinder, P., Perona, P., & Belongie, S. (2011). The
    Caltech-UCSD Birds-200-2011 Dataset (Tech. Rep. No. CNS-TR-2011-001).
    California Institute of Technology.

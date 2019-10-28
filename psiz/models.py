@@ -859,6 +859,7 @@ class PsychologicalEmbedding(object):
         """Compute model loss given observation probabilities."""
         n_trial = tf.shape(prob_all)[0]
         n_trial = tf.cast(n_trial, dtype=K.floatx())
+        n_group = tf.shape(tf_attention)[0]
 
         # Convert to (weighted) log probabilities.
         cap = tf.constant(2.2204e-16, dtype=K.floatx())
@@ -870,8 +871,8 @@ class PsychologicalEmbedding(object):
         loss = tf.negative(tf.reduce_sum(prob_all))
         loss = tf.divide(loss, n_trial)
 
-        # TODO Is any additional pressure necessary?
-        # Between-group attention penalty. TODO note the 30 which needs to be
+        # Is any additional pressure necessary?
+        # Between-group attention penalty. Note the 30 which needs to be
         # factored into a scaling factor and the number of subterms.
         # for i_group in tf.range(1, n_group):
         #     for j_group in tf.range(i_group + 1, n_group):
@@ -879,16 +880,19 @@ class PsychologicalEmbedding(object):
         #     self._between_attention_loss(tf_attention[0, :], tf_attention[1, :]) +
         #     self._between_attention_loss(tf_attention[0, :], tf_attention[2, :]) +
         #     self._between_attention_loss(tf_attention[1, :], tf_attention[2, :])
-        # ) / tf.constant(30.0, dtype=K.floatx())
+        # ) / tf.constant(300.0, dtype=K.floatx())
 
-        # L1 penalty on weights (indpendently).
+        # Penalty on attention weights (independently). TODO
+        # attention_penalty = tf.constant(0, dtype=K.floatx())
+        # for i_group in tf.range(n_group):
+        #     attention_penalty = (
+        #         attention_penalty +
+        #         self._attention_sparsity_loss(tf_attention[i_group, :])
+        #     )
         # attention_penalty = (
-        #     self._attention_sparsity_loss(tf_attention[0, :]) +
-        #     self._attention_sparsity_loss(tf_attention[1, :]) +
-        #     self._attention_sparsity_loss(tf_attention[2, :])
-        # ) / tf.constant(3.0, dtype=K.floatx())
-
-        # loss = loss + attention_penalty
+        #     attention_penalty / tf.cast(n_group, dtype=K.floatx())
+        # )
+        # loss = loss + attention_penalty / tf.constant(100.0, dtype=K.floatx())
 
         return loss
 
@@ -1220,15 +1224,33 @@ class PsychologicalEmbedding(object):
             w: Attention weights assumed to be nonnegative.
 
         """
+        n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
+
+        # Complement version of L2 loss.
+        loss = tf.negative(
+            tf.math.reduce_mean(tf.math.pow(n_dim - w, 2))
+        )
+
+        # # L1 loss below 1.0 threshold.
+        # loss1 = tf.math.reduce_mean(tf.math.minimum(w, 1.0))
+        # # L2 loss above 1.0 threshold.
+        # loss2 = tf.math.reduce_mean(
+        #     tf.math.pow(tf.math.maximum(w-1, 0.0), 2)
+        # )
+        # loss = loss1 + loss2
+
         # Similar to L1
         # loss = tf.math.reduce_sum(tf.math.pow(w, .9))
 
+        # L2
+        # loss = tf.math.reduce_sum(tf.math.pow(w, 2))
+
         # Entropy.
-        w = tf.divide(w, tf.reduce_sum(w))
-        cap = tf.constant(2.2204e-16, dtype=K.floatx())
-        loss = tf.math.negative(tf.math.reduce_sum(
-            tf.math.multiply(w, tf.math.log(w + cap))
-        ))
+        # w = tf.divide(w, tf.reduce_sum(w))
+        # cap = tf.constant(2.2204e-16, dtype=K.floatx())
+        # loss = tf.math.negative(tf.math.reduce_sum(
+        #     tf.math.multiply(w, tf.math.log(w + cap))
+        # ))
         return loss
 
     def _between_attention_loss(self, p, q):

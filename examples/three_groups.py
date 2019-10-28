@@ -77,7 +77,7 @@ def main():
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
     emb_inferred = Exponential(emb_true.n_stimuli, n_dim, n_group)
-    emb_inferred.fit(obs_all, n_restart, verbose=3)
+    emb_inferred.fit(obs_all, n_restart, verbose=1)
 
     # Permute inferred dimensions to best match ground truth.
     attention_weight_0 = emb_inferred.w[0, :]

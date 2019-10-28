@@ -67,7 +67,8 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = similarity_matrix(
-            emb_inferred.similarity, emb_inferred.z)
+            emb_inferred.similarity, emb_inferred.z
+        )
         r2[i_round] = matrix_comparison(
             simmat_infer, simmat_true, score='r2'
         )

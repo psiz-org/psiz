@@ -54,7 +54,7 @@ from tensorflow.python.keras import backend as K
 from tensorflow.keras.constraints import Constraint
 
 
-from psiz.utils import elliptical_slice, ProgressBar
+from psiz.utils import elliptical_slice, ProgressBar, elliptical_slice_bespoke  # TODO
 
 
 class PsychologicalEmbedding(object):
@@ -373,6 +373,13 @@ class PsychologicalEmbedding(object):
                 tf_theta[param_name] = tf.Variable(
                     initial_value=self._theta[param_name]["value"],
                     trainable=True,
+                    dtype=K.floatx(),
+                    name=param_name
+                )
+            else:
+                tf_theta[param_name] = tf.Variable(
+                    initial_value=self._theta[param_name]["value"],
+                    trainable=False,
                     dtype=K.floatx(),
                     name=param_name
                 )
@@ -1551,7 +1558,8 @@ class PsychologicalEmbedding(object):
             )
             cap = 2.2204e-16
             prob_all = self.outcome_probability(
-                obs, group_id=obs.group_id, z=z_full, unaltered_only=True
+                obs, group_id=obs.group_id, z=z_full,
+                unaltered_only=True
             )
             prob = ma.maximum(cap, prob_all[:, 0])
             ll = ma.sum(ma.log(prob))
@@ -1583,8 +1591,9 @@ class PsychologicalEmbedding(object):
                     prior.append(
                         np.linalg.cholesky(
                             self._inflate_sigma(
-                                sigma, n_stimuli_part[i_part], n_dim)
+                                sigma, n_stimuli_part[i_part], n_dim
                             )
+                        )
                     )
 
             for i_part in range(n_partition):
@@ -1596,7 +1605,8 @@ class PsychologicalEmbedding(object):
                     pdf_params=[part_idx[i_part], copy.copy(z), obs])
 
                 z_part = np.reshape(
-                    z_part, (n_stimuli_part[i_part], n_dim), order='C')
+                    z_part, (n_stimuli_part[i_part], n_dim), order='C'
+                )
                 # Update z_full.
                 z_full[part_idx[i_part], :] = z_part
             samples[:, :, i_round] = z_full
@@ -1608,6 +1618,368 @@ class PsychologicalEmbedding(object):
         samples_all = samples[:, :, n_burn::thin_step]
         samples_all = samples_all[:, :, 0:n_final_sample]
         samples = dict(z=samples_all)
+
+        if verbose > 0:
+            progbar.update(n_total_sample)
+
+        self.posterior_duration = time.time() - start_time_s
+        return samples
+
+    def posterior_samples_special(
+            self, obs, n_final_sample=1000, n_burn=100, thin_step=5,
+            z_init=None, verbose=0):
+        """Sample from the posterior of the embedding.
+
+        Samples are drawn from the posterior holding theta constant. A
+        variant of Elliptical Slice Sampling (Murray & Adams 2010) is
+        used to estimate the posterior for the embedding points. Since
+        the latent embedding variables are translation and rotation
+        invariant, generic sampling will artificially inflate the
+        entropy of the samples. To compensate for this issue, the
+        points are split into two groups, holding one set constant
+        while sampling the other set.
+
+        Arguments:
+            obs: A Observations object representing the observed data.
+            n_final_sample (optional): The number of samples desired
+                after removing the "burn in" samples and applying
+                thinning.
+            n_burn (optional): The number of samples to remove from the
+                beginning of the sampling sequence.
+            thin_step (optional): The interval to use in order to thin
+                (i.e., de-correlate) the samples.
+            z_init (optional): Initialization of z. If not provided,
+                the current embedding values associated with the object
+                are used.
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
+
+        Returns:
+            A dictionary of posterior samples for different parameters.
+                The samples are stored as a NumPy array.
+                'z' : shape = (n_stimuli, n_dim, n_total_sample).
+
+        Notes:
+            The step_size of the Hamiltonian Monte Carlo procedure is
+                determined by the scale of the current embedding.
+
+        References:
+            Murray, I., & Adams, R. P. (2010). Slice sampling
+            covariance hyperparameters of latent Gaussian models. In
+            Advances in Neural Information Processing Systems (pp.
+            1732-1740).
+
+        """
+        start_time_s = time.time()
+        n_final_sample = int(n_final_sample)
+        n_total_sample = n_burn + (n_final_sample * thin_step)
+        n_stimuli = self.n_stimuli
+        n_dim = self.n_dim
+        if z_init is None:
+            z = copy.copy(self._z["value"])
+        else:
+            z = z_init
+
+        if verbose > 0:
+            print('[psiz] Sampling from posterior...')
+            progbar = ProgressBar(
+                n_total_sample, prefix='Progress:', suffix='Complete',
+                length=50
+            )
+            progbar.update(0)
+
+        if (verbose > 1):
+            print('    Settings:')
+            print('    n_total_sample: ', n_total_sample)
+            print('    n_burn:         ', n_burn)
+            print('    thin_step:      ', thin_step)
+            print('    --------------------------')
+            print('    n_final_sample: ', n_final_sample)
+
+        # Prior
+        # p(z_k | Z_negk, theta) ~ N(mu, sigma)
+        # Approximate prior of z_k using all embedding points to reduce
+        # computational burden.
+        gmm = mixture.GaussianMixture(
+            n_components=1, covariance_type='spherical'
+        )
+        gmm.fit(z)
+        mu = gmm.means_[0]
+        sigma = gmm.covariances_[0] * np.identity(n_dim)
+
+        # Center embedding to satisfy assumptions of elliptical slice sampling.
+        z = z - mu
+
+        n_partition = 2
+
+        # Define log-likelihood for elliptical slice sampler.
+        def log_likelihood(z_part, part_idx, z_full, obs):
+            # Assemble full z.
+            n_stim_part = np.sum(part_idx)
+            z_full[part_idx, :] = z_part
+            cap = 2.2204e-16
+            prob_all = self.outcome_probability(
+                obs, group_id=obs.group_id, z=z_full,
+                unaltered_only=True
+            )
+            prob = ma.maximum(cap, prob_all[:, 0])
+            ll = ma.sum(ma.log(prob))
+            return ll
+
+        # Initialize sampler.
+        z_full = copy.copy(z)
+        samples = np.empty((n_stimuli, n_dim, n_total_sample))
+
+        # TODO This is sloppy.
+        part_idx, n_stimuli_part = self._make_partition(
+            n_stimuli, n_partition
+        )
+        # Create a diagonally tiled covariance matrix in order to slice
+        # multiple points simultaneously.
+        prior = []
+        for i_part in range(n_partition):
+            prior.append(
+                np.linalg.cholesky(
+                    self._inflate_sigma(
+                        sigma, n_stimuli_part[i_part], n_dim
+                    )
+                )
+            )
+            
+        # # Sample from prior if there are no observations. TODO
+        # if obs.n_trial is 0:
+        #     z = np.random.multivariate_normal(
+        #         np.zeros((n_dim)), sigma, n_stimuli)
+        # else:
+
+        for i_round in range(n_total_sample):
+            # Partition stimuli into two groups.
+            if np.mod(i_round, 100) == 0:
+                if verbose > 0:
+                    progbar.update(i_round + 1)
+
+                part_idx, n_stimuli_part = self._make_partition(
+                    n_stimuli, n_partition
+                )
+
+            for i_part in range(n_partition):
+                z_part = z_full[part_idx[i_part], :]
+
+                (z_part, _) = elliptical_slice_bespoke(
+                    z_part, prior[i_part], log_likelihood,
+                    pdf_params=[part_idx[i_part], copy.copy(z), obs]
+                )
+
+                # Update z_full.
+                z_full[part_idx[i_part], :] = z_part
+            samples[:, :, i_round] = z_full
+
+        # Add back in mean.
+        mu = np.expand_dims(mu, axis=2)
+        samples = samples + mu
+
+        samples_all = samples[:, :, n_burn::thin_step]
+        samples_all = samples_all[:, :, 0:n_final_sample]
+        samples = dict(z=samples_all)
+
+        if verbose > 0:
+            progbar.update(n_total_sample)
+
+        self.posterior_duration = time.time() - start_time_s
+        return samples
+
+    def tf_posterior_samples(
+            self, obs, n_final_sample=1000, n_burn=100, thin_step=5,
+            z_init=None, verbose=0):
+        """Sample from the posterior of the embedding.
+
+        Samples are drawn from the posterior holding theta constant. A
+        variant of Elliptical Slice Sampling (Murray & Adams 2010) is
+        used to estimate the posterior for the embedding points. Since
+        the latent embedding variables are translation and rotation
+        invariant, generic sampling will artificially inflate the
+        entropy of the samples. To compensate for this issue, the
+        points are split into two groups, holding one set constant
+        while sampling the other set.
+
+        Arguments:
+            obs: A Observations object representing the observed data.
+            n_final_sample (optional): The number of samples desired
+                after removing the "burn in" samples and applying
+                thinning.
+            n_burn (optional): The number of samples to remove from the
+                beginning of the sampling sequence.
+            thin_step (optional): The interval to use in order to thin
+                (i.e., de-correlate) the samples.
+            z_init (optional): Initialization of z. If not provided,
+                the current embedding values associated with the object
+                are used.
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
+
+        Returns:
+            A dictionary of posterior samples for different parameters.
+                The samples are stored as a NumPy array.
+                'z' : shape = (n_stimuli, n_dim, n_total_sample).
+
+        Notes:
+            The step_size of the Hamiltonian Monte Carlo procedure is
+                determined by the scale of the current embedding.
+
+        References:
+            Murray, I., & Adams, R. P. (2010). Slice sampling
+            covariance hyperparameters of latent Gaussian models. In
+            Advances in Neural Information Processing Systems (pp.
+            1732-1740).
+
+        """
+        # Settings.
+        n_partition = 2
+
+        start_time_s = time.time()
+        n_final_sample = int(n_final_sample)
+        n_total_sample = n_burn + (n_final_sample * thin_step)
+        n_stimuli = self.n_stimuli
+        n_dim = self.n_dim
+        if z_init is None:
+            z = copy.copy(self._z["value"])
+        else:
+            z = z_init
+
+        if verbose > 0:
+            print('[psiz] Sampling from posterior...')
+            progbar = ProgressBar(
+                n_total_sample, prefix='Progress:', suffix='Complete',
+                length=50
+            )
+            progbar.update(0)
+
+        if (verbose > 1):
+            print('    Settings:')
+            print('    n_total_sample: ', n_total_sample)
+            print('    n_burn:         ', n_burn)
+            print('    thin_step:      ', thin_step)
+            print('    --------------------------')
+            print('    n_final_sample: ', n_final_sample)
+
+        # Prior
+        # p(z_k | Z_negk, theta) ~ N(mu, sigma)
+        # Approximate prior of z_k using all embedding points to reduce
+        # computational burden.
+        gmm = mixture.GaussianMixture(
+            n_components=1, covariance_type='spherical'
+        )
+        gmm.fit(z)
+        mu = gmm.means_[0]
+        sigma = gmm.covariances_[0] * np.identity(n_dim)
+
+        # Center embedding to satisfy assumptions of elliptical slice sampling.
+        z = z - mu
+        z_orig = tf.constant(z, dtype=K.floatx())
+        mu = tf.constant(mu, dtype=K.floatx())
+        mu = tf.expand_dims(mu, axis=0)
+        mu = tf.expand_dims(mu, axis=0)
+
+        # Prepare obs and model.
+        (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
+        tf_config = self._prepare_config(obs_config_list)
+        tf_inputs = self._prepare_inputs(obs, obs_config_idx)
+        model = self._build_model(tf_config, init_mode='hot')
+        # flat_log_likelihood overwrites model.z with new tf_z
+
+        # Pre-determine partitions. TODO?
+        part_idx, n_stimuli_part = self._make_partition(
+            n_stimuli, n_partition
+        )
+        part_idx = tf.constant(part_idx[1], dtype=tf.int32)  # NOTE that second row is what we want.
+
+        # Pre-compute prior. TODO?
+        # Can I guarantee the number of stimuli for each part doesn't change? TODO
+        # Create a diagonally tiled covariance matrix in order to slice
+        # multiple points simultaneously.
+        prior = []
+        for i_part in range(n_partition):
+            prior.append(
+                tf.constant(
+                    np.linalg.cholesky(
+                        self._inflate_sigma(
+                            sigma, n_stimuli_part[i_part], n_dim
+                        )
+                    ), dtype=K.floatx()
+                )
+            )
+
+        n_stimuli_part = tf.constant(n_stimuli_part, dtype=tf.int32)
+
+        # @tf.function
+        def flat_log_likelihood(z_part, part_idx, z_full, tf_inputs):
+            # Assemble full z. TODO
+            z_full = None
+            # Assign variable values. TODO
+            prob_all = model(tf_inputs)
+            cap = tf.constant(2.2204e-16, dtype=K.floatx())
+            prob_all = tf.math.log(tf.maximum(prob_all, cap))
+            prob_all = tf.multiply(weight, prob_all)
+            ll = tf.reduce_sum(prob_all)
+            return ll
+
+        # Initialize sampler.
+        z_full = tf.constant(z, dtype=K.floatx())
+        samples = tf.zeros([n_total_sample, n_stimuli, n_dim], dtype=K.floatx())
+
+        # Perform partition.
+        z_part = tf.dynamic_partition(
+            z_full,
+            part_idx,
+            n_partition
+        )
+        part_indices = tf.dynamic_partition(tf.range(n_stimuli), part_idx, 2)
+
+        z_part_0 = z_part[0]
+        z_part_1 = z_part[1]
+
+        z_part_0 = tf.reshape(z_part[0], [-1])
+        z_part_1 = tf.reshape(z_part[1], [-1])
+
+        # Sample from prior if there are no observations. TODO
+
+        for i_round in tf.range(n_total_sample):
+            # if tf.math.equal(tf.math.floormod(i_round, 100), 0):
+            #     # Partition stimuli into two groups. TODO
+            #     # Log progress.
+            #     if verbose > 0:
+            #         progbar.update(i_round + tf.constant(1, dtype=tf.int32))
+
+            (z_part_0, _) = tf_elliptical_slice(
+                z_part_0, prior[0], flat_log_likelihood,
+                pdf_params=[part_idx[i_part], z_orig, obs]
+            )
+
+            (z_part_1, _) = tf_elliptical_slice(
+                z_part_1, prior[1], flat_log_likelihood,
+                pdf_params=[part_idx[i_part], z_orig, obs]
+            )
+
+            # Reshape and stitch.
+            z_part_0_r = tf.reshape(z_part_0, (n_stimuli_part[0], n_dim))
+            z_part_1_r = tf.reshape(z_part_1, (n_stimuli_part[1], n_dim))
+            z_full = tf.dynamic_stitch(part_indices, [z_part_0_r, z_part_1_r])
+
+            i_round_expand = tf.expand_dims(i_round, axis=0)
+            i_round_expand = tf.expand_dims(i_round_expand, axis=0)
+            samples = tf.tensor_scatter_nd_update(
+                samples, i_round_expand, tf.expand_dims(z_full, axis=0)
+            )
+
+        # Add back in mean.
+        samples = samples + mu
+
+        samples = samples[n_burn::thin_step, :, :]
+        sample = sample[0:n_final_sample, :, :]
+        # Permute axis. TODO
+        samples = dict(z=samples)
 
         if verbose > 0:
             progbar.update(n_total_sample)
@@ -1858,7 +2230,9 @@ class CoreLayer(Layer):
         z_r_2 = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
 
         for i_ref in tf.range(n_reference):
-            z_r_new = tf.gather(z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)])
+            z_r_new = tf.gather(
+                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
+            )
 
             i_ref_expand = tf.expand_dims(i_ref, axis=0)
             i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)

@@ -376,6 +376,13 @@ class PsychologicalEmbedding(object):
                     dtype=K.floatx(),
                     name=param_name
                 )
+            else:
+                tf_theta[param_name] = tf.Variable(
+                    initial_value=self._theta[param_name]["value"],
+                    trainable=False,
+                    dtype=K.floatx(),
+                    name=param_name
+                )
         return tf_theta
 
     @abstractmethod

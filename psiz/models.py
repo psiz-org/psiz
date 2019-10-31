@@ -1753,7 +1753,7 @@ class PsychologicalEmbedding(object):
         z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
         emb._z["value"] = z_group
         emb.n_group = 1
-        emb.phi["w"]["value"] = np.ones([1, self.n_dim])
+        emb._phi["w"]["value"] = np.ones([1, self.n_dim])
         return emb
 
 

@@ -81,7 +81,7 @@ def dimension_search(
     n_group = len(np.unique(obs.group_id))
 
     if dim_list is None:
-        dim_list = range(2, 21)
+        dim_list = range(2, 51)
     else:
         # Make sure dimensions are in ascending order.
         dim_list = np.sort(dim_list)

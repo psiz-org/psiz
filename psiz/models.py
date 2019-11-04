@@ -880,16 +880,16 @@ class PsychologicalEmbedding(object):
         # ) / tf.constant(300.0, dtype=K.floatx())
 
         # Penalty on attention weights (independently). TODO
-        # attention_penalty = tf.constant(0, dtype=K.floatx())
-        # for i_group in tf.range(n_group):
-        #     attention_penalty = (
-        #         attention_penalty +
-        #         self._attention_sparsity_loss(tf_attention[i_group, :])
-        #     )
-        # attention_penalty = (
-        #     attention_penalty / tf.cast(n_group, dtype=K.floatx())
-        # )
-        # loss = loss + attention_penalty / tf.constant(100.0, dtype=K.floatx())
+        attention_penalty = tf.constant(0, dtype=K.floatx())
+        for i_group in tf.range(n_group):
+            attention_penalty = (
+                attention_penalty +
+                self._attention_sparsity_loss(tf_attention[i_group, :])
+            )
+        attention_penalty = (
+            attention_penalty / tf.cast(n_group, dtype=K.floatx())
+        )
+        loss = loss + (attention_penalty / tf.constant(100.0, dtype=K.floatx()))
 
         return loss
 
@@ -1740,7 +1740,9 @@ class PsychologicalEmbedding(object):
         in terms of perceived similarity.
 
         Arguments:
-            group_id: Scalar indicating the group_id.
+            group_id: Scalar or list. If scale, indicates the group_id
+                to use. If a list, should be a list of group_id's to
+                average.
 
         Returns:
             emb: A group-specific embedding.
@@ -1749,7 +1751,13 @@ class PsychologicalEmbedding(object):
         emb = copy.deepcopy(self)
         z = self._z["value"]
         rho = self._theta["rho"]["value"]
-        attention_weights = self._phi["w"]["value"][group_id, :]
+        if np.isscalar(group_id):
+            attention_weights = self._phi["w"]["value"][group_id, :]        
+        else:
+            group_id = np.asarray(group_id)
+            attention_weights = self._phi["w"]["value"][group_id, :]
+            attention_weights = np.mean(attention_weights, axis=0)
+
         z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
         emb._z["value"] = z_group
         emb.n_group = 1

@@ -20,6 +20,8 @@ Fake data is generated from a ground truth model.
 
 """
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
 from psiz.trials import stack
@@ -52,16 +54,55 @@ def main():
     obs = agent.simulate(docket)
 
     # Sample from embedding posterior.
-    samples = emb_true.posterior_samples_special(obs, verbose=1)
+    samples = emb_true.posterior_samples(obs, n_final_sample=1000, n_burn=2, verbose=1)
     print('{0:.0f} s'.format(emb_true.posterior_duration))
 
     # Visualize posterior.
     visualize_posterior(emb_true.z, samples)
 
 
-def visualize_posterior():
+def visualize_posterior(z_true, samples):
     """Visualize posterior."""
-    x = 0
+    z_samp = samples['z']
+    n_stimuli = z_samp.shape[0]
+    n_dim = z_samp.shape[1]
+    n_sample = z_samp.shape[2]
+
+    z_central = np.median(z_samp, axis=2)
+    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
+    z_samp = np.reshape(
+        z_samp, (n_sample * n_stimuli, n_dim)
+    )
+    cmap = matplotlib.cm.get_cmap('jet')
+    norm = matplotlib.colors.Normalize(vmin=0., vmax=emb_true.n_stimuli)
+    color_array = cmap(norm(range(emb_true.n_stimuli)))
+    color_array_samp = np.tile(color_array, (n_sample, 1))
+
+    fig = plt.figure(figsize=(5.5, 2), dpi=300)
+
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax1.scatter(
+        z_true[:, 0], z_true[:, 1], s=15, c=color_array, marker='o')
+    ax1.set_title('Ground Truth')
+    ax1.set_aspect('equal')
+    # ax1.set_xlim(-.05, .55)
+    # ax1.set_xticks([])
+    # ax1.set_ylim(-.05, .55)
+    # ax1.set_yticks([])
+
+    ax2 = fig.add_subplot(1, 2, 2)
+    scat3 = ax2.scatter(
+        z_samp_list[:, 0], z_samp_list[:, 1],
+        s=5, c=color_array_samp, alpha=.01, edgecolors='none')
+    ax2.set_title('Posterior Estimate')
+    ax2.set_aspect('equal')
+    # ax2.set_xlim(-.05, .55)
+    # ax2.set_xticks([])
+    # ax2.set_ylim(-.05, .55)
+    # ax2.set_yticks([])
+
+    plt.show()
+
 
 
 def ground_truth(n_stimuli, n_dim, n_group):

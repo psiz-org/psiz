@@ -238,7 +238,7 @@ def compare_models(
     return r_squared
 
 
-def elliptical_slice(
+def elliptical_slice_old(
         initial_theta, prior, lnpdf, pdf_params=(), cur_lnpdf=None,
         angle_range=None):
     """Return samples from elliptical slice sampler.
@@ -317,9 +317,8 @@ def elliptical_slice(
     return (xx_prop, cur_lnpdf)
 
 
-def elliptical_slice_bespoke(
-        initial_theta, prior, lnpdf, pdf_params=(),
-        angle_range=None):
+def elliptical_slice(
+        initial_theta, prior, lnpdf, pdf_params=(), angle_range=None):
     """Return samples from elliptical slice sampler.
 
     Markov chain update for a distribution with a Gaussian "prior"

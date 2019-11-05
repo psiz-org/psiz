@@ -25,7 +25,7 @@ posterior sampling algorithm works under ideal conditions.
 
 Notes:
     This script takes approximately 20 minutes to execute and will
-        save the video to as a file called `posterior.mp4`.
+        save the video as a file called `posterior.mp4`.
 
 """
 

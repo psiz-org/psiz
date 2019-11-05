@@ -163,7 +163,7 @@ def visualize_embedding_images(
         color_array = cmap(norm(range(n_class)))
 
         if classes is not None:
-            class_legend = visualize.infer_legend(unique_class_list, classes)
+            class_legend = infer_legend(unique_class_list, classes)
         else:
             class_legend = unique_class_list
 

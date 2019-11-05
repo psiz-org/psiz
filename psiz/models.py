@@ -880,16 +880,16 @@ class PsychologicalEmbedding(object):
         # ) / tf.constant(300.0, dtype=K.floatx())
 
         # Penalty on attention weights (independently). TODO
-        attention_penalty = tf.constant(0, dtype=K.floatx())
-        for i_group in tf.range(n_group):
-            attention_penalty = (
-                attention_penalty +
-                self._attention_sparsity_loss(tf_attention[i_group, :])
-            )
-        attention_penalty = (
-            attention_penalty / tf.cast(n_group, dtype=K.floatx())
-        )
-        loss = loss + (attention_penalty / tf.constant(100.0, dtype=K.floatx()))
+        # attention_penalty = tf.constant(0, dtype=K.floatx())
+        # for i_group in tf.range(n_group):
+        #     attention_penalty = (
+        #         attention_penalty +
+        #         self._attention_sparsity_loss(tf_attention[i_group, :])
+        #     )
+        # attention_penalty = (
+        #     attention_penalty / tf.cast(n_group, dtype=K.floatx())
+        # )
+        # loss = loss + (attention_penalty / tf.constant(100.0, dtype=K.floatx()))
 
         return loss
 

@@ -1181,58 +1181,6 @@ class PsychologicalEmbedding(object):
         ]
         return tf_obs
 
-    def _attention_sparsity_loss(self, w):
-        """Sparsity encouragement.
-
-        Arguments:
-            w: Attention weights assumed to be nonnegative.
-
-        """
-        n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
-
-        # Complement version of L2 loss.
-        loss = tf.negative(
-            tf.math.reduce_mean(tf.math.pow(n_dim - w, 2))
-        )
-
-        # # L1 loss below 1.0 threshold.
-        # loss1 = tf.math.reduce_mean(tf.math.minimum(w, 1.0))
-        # # L2 loss above 1.0 threshold.
-        # loss2 = tf.math.reduce_mean(
-        #     tf.math.pow(tf.math.maximum(w-1, 0.0), 2)
-        # )
-        # loss = loss1 + loss2
-
-        # Similar to L1
-        # loss = tf.math.reduce_sum(tf.math.pow(w, .9))
-
-        # L2
-        # loss = tf.math.reduce_sum(tf.math.pow(w, 2))
-
-        # Entropy.
-        # w = tf.divide(w, tf.reduce_sum(w))
-        # cap = tf.constant(2.2204e-16, dtype=K.floatx())
-        # loss = tf.math.negative(tf.math.reduce_sum(
-        #     tf.math.multiply(w, tf.math.log(w + cap))
-        # ))
-        return loss
-
-    def _between_attention_loss(self, p, q):
-        """Loss between attention weights.
-
-        L1 distance divided by 2 * n_dim to yield a distance on the
-        interval [0,1]. The distance is flipped to give a loss where 0
-        indicates maximally far apart.
-
-        """
-        c = tf.cast(2.0, dtype=K.floatx())
-        n_dim = tf.cast(tf.shape(p)[0], dtype=K.floatx())
-        d = tf.math.divide(
-            tf.math.reduce_sum(tf.math.abs(p - q)), tf.math.multiply(c, n_dim)
-        )
-        d = tf.negative(d - tf.constant(1.0, dtype=K.floatx()))
-        return d
-
     def outcome_probability(
             self, docket, group_id=None, z=None, theta=None, phi=None,
             unaltered_only=False):

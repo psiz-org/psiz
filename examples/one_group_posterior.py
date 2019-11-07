@@ -21,8 +21,11 @@ Fake data is generated from a ground truth model.
 """
 
 import matplotlib
+from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
+from pathlib import Path
 
 from psiz.trials import stack
 from psiz.models import Exponential
@@ -34,18 +37,20 @@ from psiz.utils import similarity_matrix, matrix_comparison
 def main():
     """Run the simulation."""
     # Settings.
+    n_trial = 10000
+    fp_samples = Path(
+        'examples', 'one_group_posterior_samples_new_{0}.p'.format(n_trial)
+    )
     n_stimuli = 25
     n_dim = 2
     n_group = 1
     n_restart = 20
-
-    emb_true = ground_truth(n_stimuli, n_dim, n_group)
-    simmat_true = similarity_matrix(emb_true.similarity, emb_true.z)
-
-    # Generate a random docket of trials.
-    n_trial = 1000
     n_reference = 8
     n_select = 2
+
+    emb_true = ground_truth(n_stimuli, n_dim, n_group)
+
+    # Generate a random docket of trials.
     generator = RandomGenerator(n_reference, n_select)
     docket = generator.generate(n_trial, n_stimuli)
 
@@ -54,55 +59,121 @@ def main():
     obs = agent.simulate(docket)
 
     # Sample from embedding posterior.
-    samples = emb_true.posterior_samples(obs, n_final_sample=1000, n_burn=2, verbose=1)
+    samples = emb_true.posterior_samples(obs, verbose=1)
     print('{0:.0f} s'.format(emb_true.posterior_duration))
+    pickle.dump(samples, open(fp_samples, 'wb'))
+    # orig
+    #     100: 0:00:57
+    #    1000: 0:02:00
+    #   10000: 0:11:53
+    # new
+    #     100: 0:00:56
+    #    1000: 0:02:00
+    #   10000: 0:11:37
 
+    samples = pickle.load(open(fp_samples, 'rb'))
     # Visualize posterior.
-    visualize_posterior(emb_true.z, samples)
-
-
-def visualize_posterior(z_true, samples):
-    """Visualize posterior."""
-    z_samp = samples['z']
-    n_stimuli = z_samp.shape[0]
-    n_dim = z_samp.shape[1]
-    n_sample = z_samp.shape[2]
-
-    z_central = np.median(z_samp, axis=2)
-    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
-    z_samp = np.reshape(
-        z_samp, (n_sample * n_stimuli, n_dim)
-    )
     cmap = matplotlib.cm.get_cmap('jet')
     norm = matplotlib.colors.Normalize(vmin=0., vmax=emb_true.n_stimuli)
     color_array = cmap(norm(range(emb_true.n_stimuli)))
-    color_array_samp = np.tile(color_array, (n_sample, 1))
 
     fig = plt.figure(figsize=(5.5, 2), dpi=300)
-
     ax1 = fig.add_subplot(1, 2, 1)
     ax1.scatter(
-        z_true[:, 0], z_true[:, 1], s=15, c=color_array, marker='o')
+        emb_true.z[:, 0], emb_true.z[:, 1], s=5, c=color_array, marker='o')
     ax1.set_title('Ground Truth')
     ax1.set_aspect('equal')
-    # ax1.set_xlim(-.05, .55)
-    # ax1.set_xticks([])
-    # ax1.set_ylim(-.05, .55)
-    # ax1.set_yticks([])
 
     ax2 = fig.add_subplot(1, 2, 2)
-    scat3 = ax2.scatter(
-        z_samp_list[:, 0], z_samp_list[:, 1],
-        s=5, c=color_array_samp, alpha=.01, edgecolors='none')
-    ax2.set_title('Posterior Estimate')
-    ax2.set_aspect('equal')
-    # ax2.set_xlim(-.05, .55)
-    # ax2.set_xticks([])
-    # ax2.set_ylim(-.05, .55)
-    # ax2.set_yticks([])
-
+    visualize_samples(ax2, samples, s=5, c=color_array)
     plt.show()
+    # fname = None
+    # plt.savefig(os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300)
 
+
+def visualize_samples(ax, samples, s=5, c=None):
+    """Visualize distribution of posterior using confidence ellipses.
+
+    Arguments:
+        samples:
+        fname (optional): The pdf filename to save the figure,
+            otherwise the figure is displayed. Can be either a path
+            string or a pathlib Path object.
+
+    """
+    # Settings
+    nstd = 2
+
+    z_samp = samples['z']
+    (n_stim, n_dim, _) = z_samp.shape
+    z_samp = np.transpose(z_samp, axes=[0, 2, 1])
+
+    if c is None:
+        cmap = matplotlib.cm.get_cmap('jet')
+        norm = matplotlib.colors.Normalize(vmin=0., vmax=n_stim)
+        c = cmap(norm(range(emb_true.n_stim)))
+
+    # Plot images.
+    for i_stim in range(n_stim):
+        curr_samples = z_samp[i_stim]
+        mu = np.mean(curr_samples, axis=0)
+        ax.scatter(
+            mu[0], mu[1], s=s, c=c[np.newaxis, i_stim], edgecolors='none'
+        )
+        ell = error_ellipse(curr_samples, nstd)
+        ell.set_facecolor('none')
+        ell.set_edgecolor(c[i_stim])
+        ax.add_artist(ell)
+
+    # z_max = 1.2 * np.max(np.abs(z_samp))
+    # ax.set_xlim([-z_max, z_max])
+    # ax.set_ylim([-z_max, z_max])
+    ax.set_aspect('equal')
+
+    # plt.tick_params(
+    #         axis='x',
+    #         which='both',
+    #         bottom='off',
+    #         top='off',
+    #         labelbottom='off')
+    # plt.tick_params(
+    #     axis='y',
+    #     which='both',
+    #     left='off',
+    #     right='off',
+    #     labelleft='off')
+    # ax.xaxis.get_offset_text().set_visible(False)
+
+
+def eigsorted(cov):
+    """Sort eigenvalues."""
+    vals, vecs = np.linalg.eigh(cov)
+    order = vals.argsort()[::-1]
+    return vals[order], vecs[:, order]
+
+
+def error_ellipse(samples, nstd):
+    """Return artist of error ellipse.
+
+    SEE: https://stackoverflow.com/questions/20126061/
+    creating-a-confidence-ellipses-in-a-sccatterplot-using-matplotlib
+
+    Arguments:
+        samples:
+        nstd: The number of standard deviations.
+
+    """
+    x = samples[:, 0]
+    y = samples[:, 1]
+    cov = np.cov(x, y)
+    vals, vecs = eigsorted(cov)
+    theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
+    w, h = 2 * nstd * np.sqrt(vals)
+    ell = Ellipse(
+        xy=(np.mean(x), np.mean(y)), width=w, height=h, angle=theta,
+        color='black'
+    )
+    return ell
 
 
 def ground_truth(n_stimuli, n_dim, n_group):
@@ -111,6 +182,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
         n_stimuli, n_dim=n_dim, n_group=n_group)
     mean = np.ones((n_dim))
     cov = .03 * np.identity(n_dim)
+    np.random.seed(123)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     emb.z = z
     emb.rho = 2

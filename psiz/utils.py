@@ -298,8 +298,8 @@ def elliptical_slice_old(
     while True:
         # Compute xx for proposed angle difference and check if it's on the
         # slice.
-        xx_prop = initial_theta * math.cos(phi) + nu * math.sin(phi)
-        cur_lnpdf = lnpdf(xx_prop, *pdf_params)
+        theta_prop = initial_theta * math.cos(phi) + nu * math.sin(phi)
+        cur_lnpdf = lnpdf(theta_prop, *pdf_params)
         if cur_lnpdf > hh:
             # New point is on slice, ** EXIT LOOP **
             break
@@ -314,7 +314,7 @@ def elliptical_slice_old(
                 ' acceptable.')
         # Propose new angle difference
         phi = np.random.uniform() * (phi_max - phi_min) + phi_min
-    return (xx_prop, cur_lnpdf)
+    return (theta_prop, cur_lnpdf)
 
 
 def elliptical_slice(
@@ -346,7 +346,7 @@ def elliptical_slice(
     """
     cur_lnpdf = lnpdf(initial_theta, *pdf_params)
 
-    # Set up the ellipse by first flattening input.
+    # Determine number of variables.
     theta_shape = initial_theta.shape
     D = initial_theta.size
     if not prior.shape[0] == D or not prior.shape[1] == D:
@@ -372,13 +372,12 @@ def elliptical_slice(
         phi_max = phi_min + angle_range
         phi = np.random.uniform() * (phi_max - phi_min) + phi_min
 
-    # So far, nu and prior 
-    # Slice sampling loop
+    # Slice sampling loop.
     while True:
-        # Compute xx for proposed angle difference and check if it's on the
+        # Compute theta for proposed angle difference and check if it's on the
         # slice.
-        xx_prop = initial_theta * math.cos(phi) + nu * math.sin(phi)
-        cur_lnpdf = lnpdf(xx_prop, *pdf_params)
+        theta_prop = initial_theta * math.cos(phi) + nu * math.sin(phi)
+        cur_lnpdf = lnpdf(theta_prop, *pdf_params)
         if cur_lnpdf > hh:
             # New point is on slice, ** EXIT LOOP **
             break
@@ -390,11 +389,12 @@ def elliptical_slice(
         else:
             raise RuntimeError(
                 'BUG DETECTED: Shrunk to current position and still not',
-                ' acceptable.')
-        # Propose new angle difference
+                ' acceptable.'
+            )
+        # Propose new angle difference.
         phi = np.random.uniform() * (phi_max - phi_min) + phi_min
 
-    return (xx_prop, cur_lnpdf)
+    return (theta_prop, cur_lnpdf)
 
 
 def rotation_matrix(theta):

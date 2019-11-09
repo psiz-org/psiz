@@ -1679,6 +1679,19 @@ class PsychologicalEmbedding(object):
         emb._phi["w"]["value"] = np.ones([1, self.n_dim])
         return emb
 
+    def __deepcopy__(self, memodict={}):
+        """Override deepcopy method."""
+        # Make shallow copy of whole object.
+        cpyobj = type(self)(
+            self.n_stimuli, n_dim=self.n_dim, n_group=self.n_group
+        )
+        # Make deepcopy required attributes
+        cpyobj._z = copy.deepcopy(self._z, memodict)
+        cpyobj._phi = copy.deepcopy(self._phi, memodict)
+        cpyobj._theta = copy.deepcopy(self._theta, memodict)
+        # TODO add other necessary attributes.
+        return cpyobj
+
 
 class CoreLayer(Layer):
     """Core layer of model."""

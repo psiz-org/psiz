@@ -20,12 +20,13 @@ Fake data is generated from a ground truth model.
 
 """
 
+from pathlib import Path
+
 import matplotlib
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-from pathlib import Path
 
 from psiz.trials import stack
 from psiz.models import Exponential
@@ -37,7 +38,7 @@ from psiz.utils import similarity_matrix, matrix_comparison
 def main():
     """Run the simulation."""
     # Settings.
-    n_trial = 10000
+    n_trial = 1000
     fp_samples = Path(
         'examples', 'one_group_posterior_samples_new_{0}.p'.format(n_trial)
     )
@@ -71,24 +72,56 @@ def main():
     #    1000: 0:02:00
     #   10000: 0:11:37
 
-    samples = pickle.load(open(fp_samples, 'rb'))
+    # samples = pickle.load(open(fp_samples, 'rb'))
     # Visualize posterior.
     cmap = matplotlib.cm.get_cmap('jet')
     norm = matplotlib.colors.Normalize(vmin=0., vmax=emb_true.n_stimuli)
     color_array = cmap(norm(range(emb_true.n_stimuli)))
 
     fig = plt.figure(figsize=(5.5, 2), dpi=300)
+    [lim_x, lim_y] = determine_limits(emb_true.z)
+
     ax1 = fig.add_subplot(1, 2, 1)
     ax1.scatter(
-        emb_true.z[:, 0], emb_true.z[:, 1], s=5, c=color_array, marker='o')
+        emb_true.z[:, 0], emb_true.z[:, 1], s=5, c=color_array, marker='o'
+    )
     ax1.set_title('Ground Truth')
     ax1.set_aspect('equal')
+    ax1.set_xlim(lim_x)
+    ax1.set_ylim(lim_y)
+    ax1.set_xticks([], [])
+    ax1.set_yticks([], [])
 
     ax2 = fig.add_subplot(1, 2, 2)
     visualize_samples(ax2, samples, s=5, c=color_array)
+    ax2.set_title('Posterior')
+    ax2.set_aspect('equal')
+    ax2.set_xlim(lim_x)
+    ax2.set_ylim(lim_y)
+    ax2.set_xticks([], [])
+    ax2.set_yticks([], [])
+
     plt.show()
     # fname = None
     # plt.savefig(os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300)
+
+
+def determine_limits(z, pad=.2):
+    """Determine limits of plot."""
+    x_min = np.min(z[:, 0])
+    x_max = np.max(z[:, 0])
+    y_min = np.min(z[:, 1])
+    y_max = np.max(z[:, 1])
+
+    x_pad = pad * (x_max - x_min)
+    y_pad = pad * (y_max - y_min)
+
+    x_min = x_min - x_pad
+    x_max = x_max + x_pad
+    y_min = y_min - y_pad
+    y_max = y_max + y_pad
+
+    return ([x_min, x_max], [y_min, y_max])
 
 
 def visualize_samples(ax, samples, s=5, c=None):
@@ -124,11 +157,6 @@ def visualize_samples(ax, samples, s=5, c=None):
         ell.set_facecolor('none')
         ell.set_edgecolor(c[i_stim])
         ax.add_artist(ell)
-
-    # z_max = 1.2 * np.max(np.abs(z_samp))
-    # ax.set_xlim([-z_max, z_max])
-    # ax.set_ylim([-z_max, z_max])
-    ax.set_aspect('equal')
 
     # plt.tick_params(
     #         axis='x',
@@ -180,7 +208,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     emb = Exponential(
         n_stimuli, n_dim=n_dim, n_group=n_group)
-    mean = np.ones((n_dim))
+    mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
     np.random.seed(123)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))

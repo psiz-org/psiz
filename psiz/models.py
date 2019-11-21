@@ -130,6 +130,7 @@ class PsychologicalEmbedding(object):
         The abstract methods _default_theta,
             _get_similarity_parameters_cold, and _tf_similarity must be
             implemented by each concrete class.
+        You can use a custom loss by by setting the loss attribute.
 
     """
 
@@ -190,6 +191,9 @@ class PsychologicalEmbedding(object):
         # Timer attributes.
         self.fit_duration = 0.0
         self.posterior_duration = 0.0
+
+        # Set loss function.
+        self.loss = default_loss
 
         super().__init__()
 
@@ -857,48 +861,6 @@ class PsychologicalEmbedding(object):
         )
         return model
 
-    @tf.function
-    def _loss(self, prob_all, tf_attention, weight):
-        """Compute model loss given observation probabilities."""
-        n_trial = tf.shape(prob_all)[0]
-        n_trial = tf.cast(n_trial, dtype=K.floatx())
-        n_group = tf.shape(tf_attention)[0]
-
-        # Convert to (weighted) log probabilities.
-        cap = tf.constant(2.2204e-16, dtype=K.floatx())
-        prob_all = tf.math.log(tf.maximum(prob_all, cap))
-        prob_all = tf.multiply(weight, prob_all)
-
-        # Divide by number of trials to make train and test loss
-        # comparable.
-        loss = tf.negative(tf.reduce_sum(prob_all))
-        loss = tf.divide(loss, n_trial)
-
-        # Is any additional pressure necessary?
-        # Between-group attention penalty. Note the 30 which needs to be
-        # factored into a scaling factor and the number of subterms.
-        # for i_group in tf.range(1, n_group):
-        #     for j_group in tf.range(i_group + 1, n_group):
-        # attention_penalty = (
-        #     self._between_attention_loss(tf_attention[0, :], tf_attention[1, :]) +
-        #     self._between_attention_loss(tf_attention[0, :], tf_attention[2, :]) +
-        #     self._between_attention_loss(tf_attention[1, :], tf_attention[2, :])
-        # ) / tf.constant(300.0, dtype=K.floatx())
-
-        # Penalty on attention weights (independently). TODO
-        # attention_penalty = tf.constant(0, dtype=K.floatx())
-        # for i_group in tf.range(n_group):
-        #     attention_penalty = (
-        #         attention_penalty +
-        #         self._attention_sparsity_loss(tf_attention[i_group, :])
-        #     )
-        # attention_penalty = (
-        #     attention_penalty / tf.cast(n_group, dtype=K.floatx())
-        # )
-        # loss = loss + attention_penalty / tf.constant(100.0, dtype=K.floatx())
-
-        return loss
-
     def fit(self, obs, n_restart=50, init_mode='cold', verbose=0):
         """Fit the free parameters of the embedding model.
 
@@ -1087,7 +1049,10 @@ class PsychologicalEmbedding(object):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
                     prob_train = model(tf_inputs_train)
-                    loss_train = self._loss(prob_train, model.layers[4].attention, tf_inputs_train[3])
+                    loss_train = self.loss(
+                        prob_train, tf_inputs_train[3],
+                        model.layers[4].attention
+                    )
                 gradients = grad_tape.gradient(
                     loss_train, model.trainable_variables
                 )
@@ -1100,7 +1065,9 @@ class PsychologicalEmbedding(object):
 
                 # Validation loss.
                 prob_val = model(tf_inputs_val)
-                loss_val = self._loss(prob_val, model.layers[4].attention, tf_inputs_val[3])
+                loss_val = self.loss(
+                    prob_val, tf_inputs_val[3], model.layers[4].attention
+                )
 
                 # Log progress.
                 if self.do_log:
@@ -1186,7 +1153,7 @@ class PsychologicalEmbedding(object):
 
         # Evaluate current model to obtain starting loss.
         prob = model(tf_inputs)
-        loss = self._loss(prob, model.layers[4].attention, tf_inputs[3])
+        loss = self.loss(prob, tf_inputs[3], model.layers[4].attention)
 
         if tf.math.is_nan(loss):
             loss = tf.constant(np.inf, dtype=K.floatx())
@@ -1222,58 +1189,6 @@ class PsychologicalEmbedding(object):
             tf.constant(obs.weight, dtype=K.floatx(), name='obs_weight')
         ]
         return tf_obs
-
-    def _attention_sparsity_loss(self, w):
-        """Sparsity encouragement.
-
-        Arguments:
-            w: Attention weights assumed to be nonnegative.
-
-        """
-        n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
-
-        # Complement version of L2 loss.
-        loss = tf.negative(
-            tf.math.reduce_mean(tf.math.pow(n_dim - w, 2))
-        )
-
-        # # L1 loss below 1.0 threshold.
-        # loss1 = tf.math.reduce_mean(tf.math.minimum(w, 1.0))
-        # # L2 loss above 1.0 threshold.
-        # loss2 = tf.math.reduce_mean(
-        #     tf.math.pow(tf.math.maximum(w-1, 0.0), 2)
-        # )
-        # loss = loss1 + loss2
-
-        # Similar to L1
-        # loss = tf.math.reduce_sum(tf.math.pow(w, .9))
-
-        # L2
-        # loss = tf.math.reduce_sum(tf.math.pow(w, 2))
-
-        # Entropy.
-        # w = tf.divide(w, tf.reduce_sum(w))
-        # cap = tf.constant(2.2204e-16, dtype=K.floatx())
-        # loss = tf.math.negative(tf.math.reduce_sum(
-        #     tf.math.multiply(w, tf.math.log(w + cap))
-        # ))
-        return loss
-
-    def _between_attention_loss(self, p, q):
-        """Loss between attention weights.
-
-        L1 distance divided by 2 * n_dim to yield a distance on the
-        interval [0,1]. The distance is flipped to give a loss where 0
-        indicates maximally far apart.
-
-        """
-        c = tf.cast(2.0, dtype=K.floatx())
-        n_dim = tf.cast(tf.shape(p)[0], dtype=K.floatx())
-        d = tf.math.divide(
-            tf.math.reduce_sum(tf.math.abs(p - q)), tf.math.multiply(c, n_dim)
-        )
-        d = tf.negative(d - tf.constant(1.0, dtype=K.floatx()))
-        return d
 
     def outcome_probability(
             self, docket, group_id=None, z=None, theta=None, phi=None,
@@ -1930,7 +1845,9 @@ class PsychologicalEmbedding(object):
         in terms of perceived similarity.
 
         Arguments:
-            group_id: Scalar indicating the group_id.
+            group_id: Scalar or list. If scale, indicates the group_id
+                to use. If a list, should be a list of group_id's to
+                average.
 
         Returns:
             emb: A group-specific embedding.
@@ -1939,12 +1856,31 @@ class PsychologicalEmbedding(object):
         emb = copy.deepcopy(self)
         z = self._z["value"]
         rho = self._theta["rho"]["value"]
-        attention_weights = self._phi["w"]["value"][group_id, :]
+        if np.isscalar(group_id):
+            attention_weights = self._phi["w"]["value"][group_id, :]        
+        else:
+            group_id = np.asarray(group_id)
+            attention_weights = self._phi["w"]["value"][group_id, :]
+            attention_weights = np.mean(attention_weights, axis=0)
+
         z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
         emb._z["value"] = z_group
         emb.n_group = 1
-        emb.phi["w"]["value"] = np.ones([1, self.n_dim])
+        emb._phi["w"]["value"] = np.ones([1, self.n_dim])
         return emb
+
+    def __deepcopy__(self, memodict={}):
+        """Override deepcopy method."""
+        # Make shallow copy of whole object.
+        cpyobj = type(self)(
+            self.n_stimuli, n_dim=self.n_dim, n_group=self.n_group
+        )
+        # Make deepcopy required attributes
+        cpyobj._z = copy.deepcopy(self._z, memodict)
+        cpyobj._phi = copy.deepcopy(self._phi, memodict)
+        cpyobj._theta = copy.deepcopy(self._theta, memodict)
+        # TODO add other necessary attributes.
+        return cpyobj
 
 
 class CoreLayer(Layer):
@@ -3249,3 +3185,23 @@ def _mink_distance(z_q, z_r, rho, attention):
     d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
     return d_qr
+
+ 
+@tf.function
+def default_loss(prob_all, weight, tf_attention):
+    """Compute model loss given observation probabilities."""
+    n_trial = tf.shape(prob_all)[0]
+    n_trial = tf.cast(n_trial, dtype=K.floatx())
+
+    # Convert to (weighted) log probabilities.
+    cap = tf.constant(2.2204e-16, dtype=K.floatx())
+    prob_all = tf.math.log(tf.maximum(prob_all, cap))
+    prob_all = tf.multiply(weight, prob_all)
+
+    # Divide by number of trials to make train and test loss
+    # comparable.
+    loss = tf.negative(tf.reduce_sum(prob_all))
+    loss = tf.divide(loss, n_trial)
+
+    return loss
+

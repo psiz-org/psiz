@@ -84,6 +84,7 @@ class Catalog(object):
             class_id (optional): A 1D integer array.
             class_label (optional): A dictionary mapping between class_id and a
                 string label.
+
         """
         # Basic stimulus information.
         self.n_stimuli = len(stimulus_id)
@@ -92,7 +93,7 @@ class Catalog(object):
         stimulus_filepath = self._check_filepath(stimulus_filepath)  # TODO modify check, move away from numpy array.
 
         if class_id is None:
-            class_id = np.zeros((self.n_stimuli))
+            class_id = np.zeros((self.n_stimuli), dtype=int)
 
         stimuli = pd.DataFrame(
             data={

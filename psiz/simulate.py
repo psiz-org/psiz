@@ -40,7 +40,7 @@ class Agent(object):
 
     """
 
-    def __init__(self, embedding, group_id=0):
+    def __init__(self, embedding, group_id=0, agent_id=0):
         """Initialize.
 
         Arguments:
@@ -49,17 +49,28 @@ class Agent(object):
             group_id (optional): If the provided embedding was inferred
                 for more than one group, an index can be provided to
                 indicate which set of attention weights should be used.
+            agent_id: An integer array indicating the agent ID of a
+                trial. It is assumed that all IDs are non-negative and
+                that observations with the same agent ID were judged by
+                a single agent.
+                shape = (n_trial,)
+
         """
         self.embedding = embedding
         self.group_id = group_id
+        self.agent_id = agent_id
 
-    def simulate(self, docket):
+    def simulate(self, docket, session_id=None):
         """Stochastically simulate similarity judgments.
 
         Arguments:
             docket: A Docket object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
+            session_id: An integer array indicating the session ID of a
+                trial. It is assumed that all IDs are non-negative.
+                Trials with different session IDs were obtained during
+                different sessions.
 
         Returns:
             Observations object representing the judged trials. The
@@ -68,11 +79,12 @@ class Agent(object):
         """
         group_id = self.group_id * np.ones((docket.n_trial), dtype=np.int32)
         prob_all = self.embedding.outcome_probability(
-            docket, group_id=group_id)
-        (obs, _) = self._select(docket, prob_all)
+            docket, group_id=group_id
+        )
+        (obs, _) = self._select(docket, prob_all, session_id=session_id)
         return obs
 
-    def _select(self, docket, prob_all):
+    def _select(self, docket, prob_all, session_id=None):
         """Stochastically select from possible outcomes.
 
         Arguments:
@@ -116,9 +128,11 @@ class Agent(object):
                     stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
 
         group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
+        agent_id = np.full((docket.n_trial), self.agent_id, dtype=np.int32)
         return (
             Observations(
                 stimulus_set,
                 n_select=docket.n_select,
-                is_ranked=docket.is_ranked, group_id=group_id
+                is_ranked=docket.is_ranked,
+                group_id=group_id, agent_id=agent_id, session_id=session_id
             ), chosen_outcome_idx)

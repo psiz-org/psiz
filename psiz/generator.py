@@ -179,6 +179,7 @@ class ActiveGenerator(TrialGenerator):
                 'n_stimuli' - 1. For problems with more than ~10
                 stimuli, this becomes computationally infeasible.
             priority (optional): Can be 'random', 'entropy' or kl'.
+
         """
         TrialGenerator.__init__(self)
 
@@ -611,8 +612,7 @@ class ActiveShotgunGenerator(TrialGenerator):
                     candidate_idx, (1, self.n_reference), replace=False,
                     p=candidate_prob
                 )
-            # Sort indices corresponding to references.
-            # stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
+
             docket = Docket(
                 stimulus_set, n_select=n_select, is_ranked=is_ranked
             )
@@ -730,66 +730,67 @@ def stimulus_set_combos(n_neighbor, n_reference):
 
 
 def query_kl_priority(embedding, samples):
-        """Return a priority score for every stimulus.
+    """Return a priority score for every stimulus.
 
-        The score indicates the priority each stimulus should serve as
-        a query stimulus in a trial.
+    The score indicates the priority each stimulus should serve as
+    a query stimulus in a trial.
 
-        Arguments:
-            z: TODO
-            samples: TODO
+    Arguments:
+        z: TODO
+        samples: TODO
 
-        Returns:
-            A priority score.
-                shape: (n_stimuli,)
+    Returns:
+        A priority score.
+            shape: (n_stimuli,)
 
-        Notes:
-            The priority scores are specific to a particular group.
+    Notes:
+        The priority scores are specific to a particular group.
 
-        """
-        # Unpack.
-        # z = embedding.z
-        z = np.median(samples['z'], axis=2)
-        try:
-            rho = embedding.rho
-        except AttributeError:
-            rho = 2.
-        z_samp = samples['z']
-        # z_median = np.median(z_samp, axis=2)
-        (n_stimuli, n_dim, _) = z_samp.shape
+    """
+    # Unpack.
+    # z = embedding.z
+    z = np.median(samples['z'], axis=2)
+    try:
+        rho = embedding.rho
+    except AttributeError:
+        rho = 2.
+    z_samp = samples['z']
+    # z_median = np.median(z_samp, axis=2)
+    (n_stimuli, n_dim, _) = z_samp.shape
 
-        # Fit multi-variate normal for each stimulus.
-        z_samp = np.transpose(z_samp, axes=[2, 0, 1])
-        mu = np.empty((n_stimuli, n_dim))
-        cov = np.empty((n_stimuli, n_dim, n_dim))
-        for i_stim in range(n_stimuli):
-            gmm = GaussianMixture(
-                n_components=1, covariance_type='full')
-            gmm.fit(z_samp[:, i_stim, :])
-            mu[i_stim, :] = gmm.means_[0]
-            cov[i_stim, :, :] = gmm.covariances_[0]
+    # Fit multi-variate normal for each stimulus.
+    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
+    mu = np.empty((n_stimuli, n_dim))
+    cov = np.empty((n_stimuli, n_dim, n_dim))
+    for i_stim in range(n_stimuli):
+        gmm = GaussianMixture(
+            n_components=1, covariance_type='full'
+        )
+        gmm.fit(z_samp[:, i_stim, :])
+        mu[i_stim, :] = gmm.means_[0]
+        cov[i_stim, :, :] = gmm.covariances_[0]
 
-        # Determine nearest neighbors.
-        # TODO maybe convert to faiss
-        k = np.minimum(10, n_stimuli-1)
-        nbrs = NearestNeighbors(
-            n_neighbors=k+1, algorithm='auto', p=rho
-        ).fit(z)
-        (_, nn_idx) = nbrs.kneighbors(z)
-        nn_idx = nn_idx[:, 1:]  # Drop self index.
+    # Determine nearest neighbors.
+    # TODO maybe convert to faiss
+    k = np.minimum(10, n_stimuli-1)
+    nbrs = NearestNeighbors(
+        n_neighbors=k+1, algorithm='auto', p=rho
+    ).fit(z)
+    (_, nn_idx) = nbrs.kneighbors(z)
+    nn_idx = nn_idx[:, 1:]  # Drop self index.
 
-        # Compute KL divergence for nearest neighbors.
-        kl_div = np.empty((n_stimuli, k))
-        for query_idx in range(n_stimuli):
-            for j_nn in range(k):
-                idx_j = nn_idx[query_idx, j_nn]
-                kl_div[query_idx, j_nn] = normal_kl_divergence(
-                    mu[idx_j], cov[idx_j], mu[query_idx], cov[query_idx]
-                )
-        score = np.sum(kl_div, axis=1)
-        score = 1 / score
+    # Compute KL divergence for nearest neighbors.
+    kl_div = np.empty((n_stimuli, k))
+    for query_idx in range(n_stimuli):
+        for j_nn in range(k):
+            idx_j = nn_idx[query_idx, j_nn]
+            kl_div[query_idx, j_nn] = normal_kl_divergence(
+                mu[idx_j], cov[idx_j], mu[query_idx], cov[query_idx]
+            )
+    score = np.sum(kl_div, axis=1)
+    score = 1 / score
 
-        return score
+    return score
 
 
 def normal_kl_divergence(mu_a, cov_a, mu_b, cov_b):
@@ -832,7 +833,8 @@ def stimulus_entropy(samples):
     entropy = np.empty((n_stimuli))
     for i_stim in range(n_stimuli):
         gmm = GaussianMixture(
-            n_components=1, covariance_type='full')
+            n_components=1, covariance_type='full'
+        )
         gmm.fit(z_samp[:, i_stim, :])
         entropy[i_stim] = normal_entropy(gmm.covariances_[0])
     return entropy

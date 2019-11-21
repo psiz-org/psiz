@@ -39,6 +39,7 @@ import time
 import warnings
 
 import h5py
+from numba import njit
 import numpy as np
 import numpy.ma as ma
 import pandas as pd
@@ -54,7 +55,7 @@ from tensorflow.python.keras import backend as K
 from tensorflow.keras.constraints import Constraint
 
 
-from psiz.utils import elliptical_slice, ProgressBar, elliptical_slice_old
+from psiz.utils import ProgressBar
 
 
 class PsychologicalEmbedding(object):
@@ -509,7 +510,8 @@ class PsychologicalEmbedding(object):
         """Handle model specific theta parameters."""
         self._theta[param_name]["trainable"] = param_value
 
-    def similarity(self, z_q, z_r, group_id=None, theta=None, phi=None):
+    def _broadcast_for_similarity(
+            self, z_q, z_r, group_id=None, theta=None, phi=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -567,6 +569,40 @@ class PsychologicalEmbedding(object):
                 z_q = np.expand_dims(z_q, axis=3)
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
+
+        return (z_q, z_r, theta, attention)
+
+    def similarity(self, z_q, z_r, group_id=None, theta=None, phi=None):
+        """Return similarity between two lists of points.
+
+        Similarity is determined using the similarity kernel and the
+        current similarity parameters. This method implements the
+        logic for handling arguments of different shapes.
+
+        Arguments:
+            z_q: A set of embedding points.
+                shape = (n_trial, n_dim, [1, n_sample])
+            z_r: A set of embedding points.
+                shape = (n_trial, n_dim, [n_reference, n_sample])
+            group_id (optional): The group ID for each sample. Can be a
+                scalar or an array of shape = (n_trial,).
+            theta (optional): The parameters governing the similarity
+                kernel. If not provided, the theta associated with the
+                current object is used.
+            phi (optional): The weights allocated to each
+                dimension in a weighted minkowski metric. The weights
+                should be positive and sum to the dimensionality of the
+                weight vector, although this is not enforced.
+                shape = (n_trial, n_dim)
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+
+        """
+        (z_q, z_r, theta, attention) = _broadcast_for_similarity(
+            z_q, z_r, group_id=group_id, theta=theta, phi=phi
+        )
 
         sim = self._similarity(z_q, z_r, theta, attention)
         return sim
@@ -630,38 +666,8 @@ class PsychologicalEmbedding(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d = self._distance(z_q, z_r, theta, attention)
+        d = _mink_distance(z_q, z_r, theta['rho']["value"], attention)
         return d
-
-    def _distance(self, z_q, z_r, theta, attention):
-        """Weighted minkowski distance function.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']["value"]
-
-        # Weighted Minkowski distance.
-        d_qr = (np.abs(z_q - z_r))**rho
-        d_qr = np.multiply(d_qr, attention)
-        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
-
-        return d_qr
 
     @abstractmethod
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
@@ -685,8 +691,9 @@ class PsychologicalEmbedding(object):
         """
         pass
 
+    @staticmethod
     @abstractmethod
-    def _similarity(self, z_q, z_r, theta, attention):
+    def _similarity(z_q, z_r, theta, attention):
         """Similarity kernel.
 
         Arguments:
@@ -1186,13 +1193,15 @@ class PsychologicalEmbedding(object):
             loss = tf.constant(np.inf, dtype=K.floatx())
         return loss
 
-    def _grab_config_info(self, obs):
+    @staticmethod
+    def _grab_config_info(obs):
         """Grab configuration information."""
         obs_config_list = copy.copy(obs.config_list)
         obs_config_idx = copy.copy(obs.config_idx)
         return obs_config_list, obs_config_idx
 
-    def _prepare_config(self, config_list):
+    @staticmethod
+    def _prepare_config(config_list):
         tf_config = [
             tf.constant(len(config_list.n_outcome.values)),
             tf.constant(config_list.n_reference.values),
@@ -1201,7 +1210,8 @@ class PsychologicalEmbedding(object):
         ]
         return tf_config
 
-    def _prepare_inputs(self, obs, config_idx):
+    @staticmethod
+    def _prepare_inputs(obs, config_idx):
         tf_obs = [
             tf.constant(
                 obs.stimulus_set, dtype=tf.int32, name='obs_stimulus_set'
@@ -1327,9 +1337,13 @@ class PsychologicalEmbedding(object):
         (z_q, z_r) = self._inflate_points(
             docket.stimulus_set, docket.max_n_reference, z
         )
-        sim_qr = self.similarity(
+        z_q, z_r, theta, attention = self._broadcast_for_similarity(
             z_q, z_r, group_id=group_id, theta=theta, phi=phi
         )
+        sim_qr = self._similarity(z_q, z_r, theta, attention)
+        # sim_qr = self.similarity(
+        #     z_q, z_r, group_id=group_id, theta=theta, phi=phi
+        # )
 
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
@@ -1367,7 +1381,9 @@ class PsychologicalEmbedding(object):
 
         return prob_all
 
-    def _inflate_points(self, stimulus_set, n_reference, z):
+    @staticmethod
+    # @njit
+    def _inflate_points(stimulus_set, n_reference, z):
         """Inflate stimulus set into embedding points.
 
         Arguments:
@@ -1404,7 +1420,9 @@ class PsychologicalEmbedding(object):
         z_r = z_qr[:, :, 1:, :]
         return (z_q, z_r)
 
-    def _ranked_sequence_probability(self, sim_qr, n_select):
+    @staticmethod
+    @njit
+    def _ranked_sequence_probability(sim_qr, n_select):
         """Return probability of a ranked selection sequence.
 
         Arguments:
@@ -1813,7 +1831,8 @@ class PsychologicalEmbedding(object):
         self.posterior_duration = time.time() - start_time_s
         return samples
 
-    def _make_partition(self, n_stimuli, n_partition):
+    @staticmethod
+    def _make_partition(n_stimuli, n_partition):
         """Partition stimuli.
 
         Arguments:
@@ -1850,22 +1869,8 @@ class PsychologicalEmbedding(object):
 
         return part_idx, n_stimuli_part
 
-    def _create_sample_idx(self, n_stimuli, anchor_idx):
-        """Create sampling index from anchor index."""
-        n_set = 2
-        n_anchor_point = anchor_idx.shape[0]
-        dmy_idx = np.arange(0, n_stimuli)
-
-        sample_idx = np.empty(
-            (n_stimuli - n_anchor_point, n_set), dtype=np.int32)
-        good_locs = np.ones((n_stimuli, n_set), dtype=bool)
-        for i_set in range(n_set):
-            for i_point in range(n_anchor_point):
-                good_locs[anchor_idx[i_point, i_set], i_set] = False
-            sample_idx[:, i_set] = dmy_idx[good_locs[:, i_set]]
-        return sample_idx
-
-    def _inflate_sigma(self, sigma, n_stimuli, n_dim):
+    @staticmethod
+    def _inflate_sigma(sigma, n_stimuli, n_dim):
         """Exploit covariance matrix trick."""
         sigma_inflated = np.zeros((n_stimuli * n_dim, n_stimuli * n_dim))
         for i_stimuli in range(n_stimuli):
@@ -2263,7 +2268,8 @@ class Inverse(PsychologicalEmbedding):
         sim_qr = 1 / (tf.pow(d_qr, tau) + mu)
         return sim_qr
 
-    def _similarity(self, z_q, z_r, theta, attention):
+    @staticmethod
+    def _similarity(z_q, z_r, theta, attention):
         """Exponential family similarity kernel.
 
         Arguments:
@@ -2289,9 +2295,7 @@ class Inverse(PsychologicalEmbedding):
         mu = theta['mu']["value"]
 
         # Weighted Minkowski distance.
-        d_qr = (np.abs(z_q - z_r))**rho
-        d_qr = np.multiply(d_qr, attention)
-        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
+        d_qr = _mink_distance(z_q, z_r, rho, attention)
 
         # Exponential family similarity kernel.
         sim_qr = 1 / (d_qr**tau + mu)
@@ -2487,7 +2491,8 @@ class Exponential(PsychologicalEmbedding):
         sim_qr = tf.exp(tf.negative(beta) * tf.pow(d_qr, tau)) + gamma
         return sim_qr
 
-    def _similarity(self, z_q, z_r, theta, attention):
+    @staticmethod
+    def _similarity(z_q, z_r, theta, attention):
         """Exponential family similarity kernel.
 
         Arguments:
@@ -2514,9 +2519,7 @@ class Exponential(PsychologicalEmbedding):
         beta = theta['beta']["value"]
 
         # Weighted Minkowski distance.
-        d_qr = (np.abs(z_q - z_r))**rho
-        d_qr = np.multiply(d_qr, attention)
-        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
+        d_qr = _mink_distance(z_q, z_r, rho, attention)
 
         # Exponential family similarity kernel.
         sim_qr = np.exp(np.negative(beta) * d_qr**tau) + gamma
@@ -2694,7 +2697,8 @@ class HeavyTailed(PsychologicalEmbedding):
         sim_qr = tf.pow(kappa + tf.pow(d_qr, tau), (tf.negative(alpha)))
         return sim_qr
 
-    def _similarity(self, z_q, z_r, theta, attention):
+    @staticmethod
+    def _similarity(z_q, z_r, theta, attention):
         """Heavy-tailed family similarity kernel.
 
         Arguments:
@@ -2721,9 +2725,7 @@ class HeavyTailed(PsychologicalEmbedding):
         alpha = theta['alpha']["value"]
 
         # Weighted Minkowski distance.
-        d_qr = (np.abs(z_q - z_r))**rho
-        d_qr = np.multiply(d_qr, attention)
-        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
+        d_qr = _mink_distance(z_q, z_r, rho, attention)
 
         # Heavy-tailed family similarity kernel.
         sim_qr = (kappa + d_qr**tau)**(np.negative(alpha))
@@ -2898,7 +2900,8 @@ class StudentsT(PsychologicalEmbedding):
             1 + (tf.pow(d_qr, tau) / alpha), tf.negative(alpha + 1)/2)
         return sim_qr
 
-    def _similarity(self, z_q, z_r, theta, attention):
+    @staticmethod
+    def _similarity(z_q, z_r, theta, attention):
         """Student-t family similarity kernel.
 
         Arguments:
@@ -2924,9 +2927,7 @@ class StudentsT(PsychologicalEmbedding):
         alpha = theta['alpha']["value"]
 
         # Weighted Minkowski distance.
-        d_qr = (np.abs(z_q - z_r))**rho
-        d_qr = np.multiply(d_qr, attention)
-        d_qr = np.sum(d_qr, axis=1)**(1. / rho)
+        d_qr = _mink_distance(z_q, z_r, rho, attention)
 
         # Student-t family similarity kernel.
         sim_qr = (1 + (d_qr**tau / alpha))**(np.negative(alpha + 1)/2)
@@ -3144,3 +3145,110 @@ def load_embedding(filepath):
 
     f.close()
     return embedding
+
+
+def elliptical_slice(
+        initial_theta, prior, lnpdf, pdf_params=(), angle_range=None):
+    """Return samples from elliptical slice sampler.
+
+    Markov chain update for a distribution with a Gaussian "prior"
+    factored out.
+
+    Arguments:
+        initial_theta: initial vector
+        prior: cholesky decomposition of the covariance matrix (like
+            what numpy.linalg.cholesky returns)
+        lnpdf: function evaluating the log of the pdf to be sampled
+        pdf_params: parameters to pass to the pdf
+        angle_range: Default 0: explore whole ellipse with break point
+            at first rejection. Set in (0,2*pi] to explore a bracket of
+            the specified width centred uniformly at random.
+
+    Returns:
+        new_theta, new_lnpdf
+
+    History:
+        Originally written in MATLAB by Iain Murray
+        (http://homepages.inf.ed.ac.uk/imurray2/pub/10ess/elliptical_slice.m)
+        2012-02-24 - Written - Bovy (IAS)
+
+    """
+    cur_lnpdf = lnpdf(initial_theta, *pdf_params)
+
+    # Determine number of variables.
+    theta_shape = initial_theta.shape
+    D = initial_theta.size
+    if not prior.shape[0] == D or not prior.shape[1] == D:
+        raise IOError(
+            "Prior must be given by a DxD chol(Sigma)")
+    nu = np.dot(prior, np.random.normal(size=D))
+    # Reshape nu to reflect shape of theta.
+    nu = np.reshape(nu, theta_shape, order='C')
+
+    # Set up slice threshold.
+    hh = np.log(np.random.uniform()) + cur_lnpdf
+
+    # Set up a bracket of angles and pick a first proposal.
+    # "phi = (theta'-theta)" is a change in angle.
+    if angle_range is None or angle_range == 0.:
+        # Bracket whole ellipse with both edges at first proposed point
+        phi = np.random.uniform() * 2. * np.pi
+        phi_min = phi - 2. * np.pi
+        phi_max = phi
+    else:
+        # Randomly center bracket on current point
+        phi_min = -1 * angle_range * np.random.uniform()
+        phi_max = phi_min + angle_range
+        phi = np.random.uniform() * (phi_max - phi_min) + phi_min
+
+    # Slice sampling loop.
+    while True:
+        # Compute theta for proposed angle difference and check if it's on the
+        # slice.
+        theta_prop = initial_theta * np.cos(phi) + nu * np.sin(phi)
+        cur_lnpdf = lnpdf(theta_prop, *pdf_params)
+        if cur_lnpdf > hh:
+            # New point is on slice, ** EXIT LOOP **
+            break
+        # Shrink slice to rejected point
+        if phi > 0:
+            phi_max = phi
+        elif phi < 0:
+            phi_min = phi
+        else:
+            raise RuntimeError(
+                'BUG DETECTED: Shrunk to current position and still not',
+                ' acceptable.'
+            )
+        # Propose new angle difference.
+        phi = np.random.uniform() * (phi_max - phi_min) + phi_min
+
+    return (theta_prop, cur_lnpdf)
+
+
+@njit
+def _mink_distance(z_q, z_r, rho, attention):
+    """Weighted minkowski distance function.
+
+    Arguments:
+        z_q: A set of embedding points.
+            shape = (n_trial, n_dim)
+        z_r: A set of embedding points.
+            shape = (n_trial, n_dim)
+        rho: Scalar value controlling the metric. Must be [1, inf[ to
+            be a valid metric.
+        attention: The weights allocated to each dimension
+            in a weighted minkowski metric.
+            shape = (n_trial, n_dim)
+
+    Returns:
+        The corresponding similarity between rows of embedding
+            points.
+            shape = (n_trial,)
+
+    """
+    d_qr = (np.abs(z_q - z_r))**rho
+    d_qr = np.multiply(d_qr, attention)
+    d_qr = np.sum(d_qr, axis=1)**(1. / rho)
+
+    return d_qr

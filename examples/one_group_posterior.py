@@ -60,12 +60,13 @@ def main():
     obs = agent.simulate(docket)
 
     # Sample from embedding posterior.
+    samples = emb_true.posterior_samples(obs, n_final_sample=1)
     samples = emb_true.posterior_samples(obs, verbose=1)
     print('{0:.0f} s'.format(emb_true.posterior_duration))
-    pickle.dump(samples, open(fp_samples, 'wb'))
+    # pickle.dump(samples, open(fp_samples, 'wb'))
     # orig
     #     100: 0:00:57
-    #    1000: 0:02:00
+    #    1000: 0:02:07 +/- 0:00:01
     #   10000: 0:11:53
     # new
     #     100: 0:00:56
@@ -74,34 +75,34 @@ def main():
 
     # samples = pickle.load(open(fp_samples, 'rb'))
     # Visualize posterior.
-    cmap = matplotlib.cm.get_cmap('jet')
-    norm = matplotlib.colors.Normalize(vmin=0., vmax=emb_true.n_stimuli)
-    color_array = cmap(norm(range(emb_true.n_stimuli)))
+    # cmap = matplotlib.cm.get_cmap('jet')
+    # norm = matplotlib.colors.Normalize(vmin=0., vmax=emb_true.n_stimuli)
+    # color_array = cmap(norm(range(emb_true.n_stimuli)))
 
-    fig = plt.figure(figsize=(5.5, 2), dpi=300)
-    [lim_x, lim_y] = determine_limits(emb_true.z)
+    # fig = plt.figure(figsize=(5.5, 2), dpi=300)
+    # [lim_x, lim_y] = determine_limits(emb_true.z)
 
-    ax1 = fig.add_subplot(1, 2, 1)
-    ax1.scatter(
-        emb_true.z[:, 0], emb_true.z[:, 1], s=5, c=color_array, marker='o'
-    )
-    ax1.set_title('Ground Truth')
-    ax1.set_aspect('equal')
-    ax1.set_xlim(lim_x)
-    ax1.set_ylim(lim_y)
-    ax1.set_xticks([], [])
-    ax1.set_yticks([], [])
+    # ax1 = fig.add_subplot(1, 2, 1)
+    # ax1.scatter(
+    #     emb_true.z[:, 0], emb_true.z[:, 1], s=5, c=color_array, marker='o'
+    # )
+    # ax1.set_title('Ground Truth')
+    # ax1.set_aspect('equal')
+    # ax1.set_xlim(lim_x)
+    # ax1.set_ylim(lim_y)
+    # ax1.set_xticks([], [])
+    # ax1.set_yticks([], [])
 
-    ax2 = fig.add_subplot(1, 2, 2)
-    visualize_samples(ax2, samples, s=5, c=color_array)
-    ax2.set_title('Posterior')
-    ax2.set_aspect('equal')
-    ax2.set_xlim(lim_x)
-    ax2.set_ylim(lim_y)
-    ax2.set_xticks([], [])
-    ax2.set_yticks([], [])
+    # ax2 = fig.add_subplot(1, 2, 2)
+    # visualize_samples(ax2, samples, s=5, c=color_array)
+    # ax2.set_title('Posterior')
+    # ax2.set_aspect('equal')
+    # ax2.set_xlim(lim_x)
+    # ax2.set_ylim(lim_y)
+    # ax2.set_xticks([], [])
+    # ax2.set_yticks([], [])
 
-    plt.show()
+    # plt.show()
     # fname = None
     # plt.savefig(os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300)
 

@@ -39,7 +39,6 @@ import time
 import warnings
 
 import h5py
-from numba import njit
 import numpy as np
 import numpy.ma as ma
 import pandas as pd
@@ -1341,9 +1340,6 @@ class PsychologicalEmbedding(object):
             z_q, z_r, group_id=group_id, theta=theta, phi=phi
         )
         sim_qr = self._similarity(z_q, z_r, theta, attention)
-        # sim_qr = self.similarity(
-        #     z_q, z_r, group_id=group_id, theta=theta, phi=phi
-        # )
 
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
@@ -1382,7 +1378,6 @@ class PsychologicalEmbedding(object):
         return prob_all
 
     @staticmethod
-    # @njit
     def _inflate_points(stimulus_set, n_reference, z):
         """Inflate stimulus set into embedding points.
 
@@ -1405,14 +1400,14 @@ class PsychologicalEmbedding(object):
 
         # Increment stimuli indices and add placeholder stimulus.
         stimulus_set_temp = (stimulus_set + 1).ravel()
-        z_placeholder = np.zeros((1, n_dim, n_sample), dtype=np.float32)
+        z_placeholder = np.zeros((1, n_dim, n_sample))
         z_temp = np.concatenate((z_placeholder, z), axis=0)
 
         # Inflate points.
         z_qr = z_temp[stimulus_set_temp, :, :]
         z_qr = np.transpose(
-            np.reshape(z_qr, [n_trial, n_reference + 1, n_dim, n_sample]),
-            axes=[0, 2, 1, 3]
+            np.reshape(z_qr, (n_trial, n_reference + 1, n_dim, n_sample)),
+            (0, 2, 1, 3)
         )
 
         z_q = z_qr[:, :, 0, :]
@@ -1421,7 +1416,6 @@ class PsychologicalEmbedding(object):
         return (z_q, z_r)
 
     @staticmethod
-    @njit
     def _ranked_sequence_probability(sim_qr, n_select):
         """Return probability of a ranked selection sequence.
 
@@ -2146,7 +2140,8 @@ class Inverse(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.001
 
-    def _default_theta(self):
+    @staticmethod
+    def _default_theta():
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2351,7 +2346,8 @@ class Exponential(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.001
 
-    def _default_theta(self):
+    @staticmethod
+    def _default_theta():
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2556,7 +2552,8 @@ class HeavyTailed(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.003
 
-    def _default_theta(self):
+    @staticmethod
+    def _default_theta():
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2773,7 +2770,8 @@ class StudentsT(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.01
 
-    def _default_theta(self):
+    @staticmethod
+    def _default_theta():
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -3226,7 +3224,6 @@ def elliptical_slice(
     return (theta_prop, cur_lnpdf)
 
 
-@njit
 def _mink_distance(z_q, z_r, rho, attention):
     """Weighted minkowski distance function.
 

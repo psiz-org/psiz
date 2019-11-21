@@ -40,7 +40,7 @@ def main():
     # Settings.
     n_trial = 1000
     fp_samples = Path(
-        'examples', 'one_group_posterior_samples_new_{0}.p'.format(n_trial)
+        'examples', 'one_group_posterior_samples_{0}.p'.format(n_trial)
     )
     n_stimuli = 25
     n_dim = 2
@@ -60,7 +60,6 @@ def main():
     obs = agent.simulate(docket)
 
     # Sample from embedding posterior.
-    samples = emb_true.posterior_samples(obs, n_final_sample=1)
     samples = emb_true.posterior_samples(obs, verbose=1)
     print('{0:.0f} s'.format(emb_true.posterior_duration))
     # pickle.dump(samples, open(fp_samples, 'wb'))

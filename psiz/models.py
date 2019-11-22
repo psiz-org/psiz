@@ -42,7 +42,6 @@ import h5py
 import numpy as np
 import numpy.ma as ma
 import pandas as pd
-from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import StratifiedKFold
 from sklearn import mixture
 import tensorflow as tf
@@ -603,7 +602,7 @@ class PsychologicalEmbedding(object):
                 points.
 
         """
-        (z_q, z_r, theta, attention) = _broadcast_for_similarity(
+        (z_q, z_r, theta, attention) = self._broadcast_for_similarity(
             z_q, z_r, group_id=group_id, theta=theta, phi=phi
         )
 
@@ -941,7 +940,7 @@ class PsychologicalEmbedding(object):
             )
             print('')
 
-        if verbose < 3:
+        if verbose > 0 and verbose < 3:
             progbar = ProgressBar(
                 n_restart, prefix='Progress:', suffix='Complete', length=50
             )
@@ -954,7 +953,7 @@ class PsychologicalEmbedding(object):
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
-            if verbose < 3:
+            if verbose > 0 and verbose < 3:
                 progbar.update(i_restart + 1)
 
             model = self._build_model(tf_config, init_mode=init_mode)
@@ -1680,7 +1679,9 @@ class PsychologicalEmbedding(object):
 
         # Initialize sampler.
         z_full = tf.constant(z, dtype=K.floatx())
-        samples = tf.zeros([n_total_sample, n_stimuli, n_dim], dtype=K.floatx())
+        samples = tf.zeros(
+            [n_total_sample, n_stimuli, n_dim], dtype=K.floatx()
+        )
 
         # Perform partition.
         z_part = tf.dynamic_partition(
@@ -1857,7 +1858,7 @@ class PsychologicalEmbedding(object):
         z = self._z["value"]
         rho = self._theta["rho"]["value"]
         if np.isscalar(group_id):
-            attention_weights = self._phi["w"]["value"][group_id, :]        
+            attention_weights = self._phi["w"]["value"][group_id, :]
         else:
             group_id = np.asarray(group_id)
             attention_weights = self._phi["w"]["value"][group_id, :]
@@ -3186,7 +3187,7 @@ def _mink_distance(z_q, z_r, rho, attention):
 
     return d_qr
 
- 
+
 @tf.function
 def default_loss(prob_all, weight, tf_attention):
     """Compute model loss given observation probabilities."""
@@ -3204,4 +3205,3 @@ def default_loss(prob_all, weight, tf_attention):
     loss = tf.divide(loss, n_trial)
 
     return loss
-

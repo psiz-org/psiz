@@ -20,7 +20,7 @@ Functions:
     load_dataset: Load observations for the requested dataset.
 
 Todo:
-    - create .psiz directory on installation (if it doesn' exist)
+    - create .psiz directory on installation (if it doesn't exist)
     - migrate to scalable solution described in roadmap.
     - Give credit to keras library.
     - Query public (read-only) database.
@@ -90,7 +90,8 @@ class Catalog(object):
         self.n_stimuli = len(stimulus_id)
         stimulus_id = self._check_id(stimulus_id)
         # self.common_path = os.path.commonpath(stimulus_filepath)
-        stimulus_filepath = self._check_filepath(stimulus_filepath)  # TODO modify check, move away from numpy array.
+        # TODO modify check, move away from numpy array.
+        stimulus_filepath = self._check_filepath(stimulus_filepath)
 
         if class_id is None:
             class_id = np.zeros((self.n_stimuli), dtype=int)
@@ -523,6 +524,7 @@ class Progbar(object):
             will be displayed as-is. All others will be averaged
             by the progbar before display.
         interval: Minimum visual progress update interval (in seconds).
+
     """
 
     def __init__(
@@ -557,6 +559,7 @@ class Progbar(object):
                 If `name` is in `stateful_metrics`,
                 `value_for_last_step` will be displayed as-is.
                 Else, an average of the metric over time will be displayed.
+
         """
         values = values or []
         for k, v in values:

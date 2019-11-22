@@ -44,6 +44,6 @@ def system_info():
 
 def benchmark_filename():
     """Generate a default filename for a benchmark report."""
-    s = 'mark_{0}.txt'.format(str(datetime.datetime.now()))
+    s = 'mark_{0}.json'.format(str(datetime.datetime.now()))
     s = s.replace(' ', '_')
     return s

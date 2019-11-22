@@ -14,3 +14,5 @@ TODO.md
 .vscode/*
 .cache/*
 .pytest_cache/*
+
+mark_*.json

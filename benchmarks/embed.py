@@ -40,7 +40,7 @@ def main():
     n_stimuli = 1000
     n_dim = 3
     n_group = 1
-    n_restart = 10
+    n_restart = 1
     n_trial = 100000
 
     sys_info = system_info()
@@ -58,11 +58,22 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Infer independent models with increasing amounts of data.
     emb_inferred = Exponential(n_stimuli, n_dim, n_group)
+
+    # Set parameters for consistent benchmarking.
+    np.random.seed(354)
+    emb_inferred.rho = np.random.uniform(1., 3.)
+    emb_inferred.tau = np.random.uniform(1., 2.)
+    emb_inferred.gamma = np.random.uniform(0., .001)
+    emb_inferred.beta = np.random.uniform(1., 30.)
+
+    mu = np.zeros((n_dim))
+    std = np.ones((n_dim)) * 10**np.random.uniform(-3, 0)
+    emb_inferred.z = np.random.normal(mu, std, (n_stimuli, n_dim))
+
     loss_train, loss_val = emb_inferred.fit(
-            obs, n_restart=n_restart, verbose=1
-        )
+        obs, n_restart=n_restart, init_mode='hot'
+    )
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
     simmat_infer = similarity_matrix(
@@ -75,6 +86,7 @@ def main():
             obs.n_trial, loss_train, r2, emb_inferred.fit_duration
         )
     )
+
     test_info = {}
     test_info['n_stimuli'] = n_stimuli
     test_info['n_dim'] = n_dim

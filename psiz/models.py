@@ -963,7 +963,7 @@ class PsychologicalEmbedding(object):
 
             # During computation of gradients, IndexedSlices are created.
             # Despite my best efforts, I cannot prevent this behavior. The
-            # following cath environment silences the offending warning.
+            # following catch environment silences the offending warning.
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     'ignore', category=UserWarning, module=r'.*indexed_slices'
@@ -2299,6 +2299,23 @@ class Exponential(PsychologicalEmbedding):
         )
         return theta
 
+    # TODO
+    # @staticmethod
+    # def _random_theta():
+    #     """Return a dictionary of random theta parameters.
+
+    #     Returns:
+    #         Dictionary of theta parameters.
+
+    #     """
+    #     theta = dict(
+    #         rho=dict(value=2., trainable=True, bounds=[1., None]),
+    #         tau=dict(value=1., trainable=True, bounds=[1., None]),
+    #         gamma=dict(value=0., trainable=True, bounds=[0., None]),
+    #         beta=dict(value=10., trainable=True, bounds=[1., None])
+    #     )
+    #     return theta
+
     @property
     def rho(self):
         """Getter method for rho."""
@@ -2373,7 +2390,9 @@ class Exponential(PsychologicalEmbedding):
             )
         if self._theta['gamma']["trainable"]:
             tf_theta['gamma'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(0., .001)(shape=[]),
+                initial_value=tf.random_uniform_initializer(
+                    0., .001
+                )(shape=[]),
                 trainable=True, name="gamma", dtype=K.floatx(),
                 constraint=GreaterEqualThan(
                     min_value=self._theta['gamma']['bounds'][0]

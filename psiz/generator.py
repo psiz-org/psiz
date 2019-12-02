@@ -55,7 +55,9 @@ TODO additional Docs
 
 from abc import ABCMeta, abstractmethod
 import copy
+# from functools import partial
 import itertools
+# import multiprocessing
 import time
 
 import numpy as np
@@ -471,7 +473,7 @@ class ActiveShotgunGenerator(TrialGenerator):
             n_select (optional):
             is_ranked (optional):
             n_trial_shotgun (optional):
-            priority (optional): Can be 'random', 'entropy' or kl'.
+            priority (optional): Can be 'random', 'entropy' or 'kl'.
 
         """
         TrialGenerator.__init__(self)
@@ -556,7 +558,8 @@ class ActiveShotgunGenerator(TrialGenerator):
                     query_idx, n_query, replace=False, p=query_prob)
 
         (best_docket, ig_best, ig_all) = self._determine_references(
-            embedding, samples, query_idx, n_trial, group_id, verbose=verbose
+            embedding, samples, query_idx, n_trial, group_id,
+            verbose=verbose
         )
         ig_info = {
             "ig_trial": ig_best,
@@ -566,7 +569,197 @@ class ActiveShotgunGenerator(TrialGenerator):
         return (best_docket, ig_info)
 
     def _determine_references(
-            self, embedding, samples, query_idx, n_trial, group_id, verbose=0):
+            self, embedding, samples, query_idx, n_trial, group_id,
+            verbose=0):
+        n_query = query_idx.shape[0]
+
+        # Determine how many times each query stimulus should be used.
+        n_trial_per_query = np.zeros((n_query), dtype=np.int32)
+        for i_trial in range(n_trial):
+            n_trial_per_query[np.mod(i_trial, n_query)] = (
+                n_trial_per_query[np.mod(i_trial, n_query)] + 1
+            )
+
+        # loaded_partial = partial(
+        #     determine_query_references, embedding=embedding,
+        #     samples=samples, group_id=group_id, query_idx=query_idx,
+        #     n_trial_per_query=n_trial_per_query, n_reference=self.n_reference,
+        #     n_select=self.n_select, is_ranked=self.is_ranked,
+        #     n_trial_shotgun=self.n_trial_shotgun
+        # )
+
+        # query_list = range(n_query)
+        # with multiprocessing.Pool(n_worker) as pool:
+        #     results = pool.map(loaded_partial, query_list)
+
+        # docket_list = []
+        # ig_list = []
+        # ig_all = []
+        # for i_query in query_list:
+        #     docket_list.append(results[i_query][0])
+        #     ig_list.append(results[i_query][1])
+
+        # best_docket = psiz.trials.stack(docket_list)
+        # ig_best = np.hstack(ig_list)
+
+        if verbose > 0:
+            progbar = ProgressBar(
+                n_query, prefix='Progress:', suffix='Complete',
+                length=50
+            )
+            progbar.update(0)
+
+        best_docket = None
+        ig_best = None
+        ig_all = []
+        for i_query in range(n_query):
+            top_candidate, curr_best_ig = determine_query_references(
+                i_query, embedding, samples, group_id, query_idx,
+                n_trial_per_query,
+                self.n_reference, self.n_select, self.is_ranked,
+                self.n_trial_shotgun
+            )
+
+            if verbose > 0:
+                progbar.update(i_query + 1)
+
+            # Add to dynamic list.
+            if ig_best is None:
+                ig_best = curr_best_ig
+            else:
+                ig_best = np.hstack((ig_best, curr_best_ig))
+
+            if best_docket is None:
+                best_docket = top_candidate
+            else:
+                best_docket = stack((best_docket, top_candidate))
+
+        return (best_docket, ig_best, ig_all)
+
+
+class ActiveGenerator3(TrialGenerator):
+    """A trial generator that leverages expected information gain.
+
+    Attributes:
+        config_list: TODO
+        n_neighbor: A scalar that influences the greedy behavior of the
+            active selection procedure.
+        placeholder_docket: TODO
+
+    Methods:
+        generate: TODO
+        update: TODO
+
+    """
+
+    def __init__(
+            self, n_reference=2, n_select=1, is_ranked=True,
+            n_trial_shotgun=1000):
+        """Initialize.
+
+        Arguments:
+            n_reference (optional):
+            n_select (optional):
+            is_ranked (optional):
+            n_trial_shotgun (optional):
+            priority (optional): Can be 'random', 'entropy' or 'kl'.
+
+        """
+        TrialGenerator.__init__(self)
+
+        self.n_reference = np.int32(n_reference)
+        self.n_select = np.int32(n_select)
+        self.is_ranked = bool(is_ranked)
+        self.n_trial_shotgun = n_trial_shotgun
+
+    def generate(
+            self, n_trial, embedding, samples, priority=None, group_id=None, 
+            _query=None, verbose=0):
+        """Return a docket of trials based on provided arguments.
+
+        Trials are selected in order to maximize expected information
+        gain given a specific group. Expected information gain is
+        approximated using MCMC posterior samples.
+
+        Arguments:
+            n_trial: A scalar indicating the number of trials to
+                generate.
+            embedding: A PsychologicalEmbedding object.
+            samples: A dictionary containing the posterior
+                samples of parameters from a PsychologicalEmbedding
+                object.
+            priority (optional): An array indicating the relative
+                priority of each stimulus. Stimuli with larger values
+                will be given higher priority. Priority influences both
+                query and reference selection. The incoming value for
+                priority is normalized so that total priority sums to
+                one. If no priority is provided, all stimuli are given
+                equal priority. Stimuli with zero priority will never
+                appear in trials.
+            group_id (optional): Scalar indicating which group to
+                target.
+            n_query (optional): Scalar indicating the number of unique
+                query stimuli that should be chosen. By default, this
+                is equal to n_trial or n_stimuli, whichever is smaller.
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
+
+        Returns:
+            best_docket: A Docket object.
+            ig_info: A dictionary containing information gain information.
+                ig_best: A numpy.ndarray containing the expected
+                information gain for each trial in the docket.
+                shape = (n_trial,)
+
+        Todo:
+            - Reduce uncertainty on positions AND group-specific
+                parameters.
+
+        """
+        if verbose > 0:
+            print('[psiz] Generating docket using active selection...')
+
+        n_stimuli = embedding.n_stimuli
+
+        if priority is None:
+            priority = np.ones([n_stimuli]) / n_stimuli
+        else:
+            # Convert priority to a probability
+            priority = priority - np.min(priority)
+            priority = priority / np.sum(priority)
+
+        if group_id is None:
+            group_id = 0
+
+        if n_query is None:
+            n_query = n_trial
+
+        n_query = np.minimum(n_query, n_stimuli)
+        n_query = np.minimum(n_query, n_trial)
+
+        # embdding.convert(samples, group_id) TODO
+
+        query_idx = np.arange(0, n_stimuli)
+        query_idx = np.random.choice(
+            query_idx, n_query, replace=False, p=priority
+        )
+        # TODO should I let replace be True?
+
+        (best_docket, ig_best, ig_all) = self._determine_references(
+            embedding, samples, query_idx, n_trial, priority, group_id,
+            verbose=verbose
+        )
+        ig_info = {
+            "ig_trial": ig_best,
+            "ig_all": ig_all
+        }
+
+        return (best_docket, ig_info)
+
+    def _determine_references(
+            self, embedding, samples, query_idx, n_trial, priority, group_id,
+            verbose=0):
         n_query = query_idx.shape[0]
 
         if verbose > 0:
@@ -604,7 +797,7 @@ class ActiveShotgunGenerator(TrialGenerator):
             simmat = embedding.similarity(
                 np.expand_dims(z_q, axis=0), z, group_id=group_id
             )
-            candidate_sim = simmat[candidate_locs]
+            candidate_sim = simmat[candidate_locs] * priority[candidate_locs]
             candidate_prob = candidate_sim / np.sum(candidate_sim)
 
             for i_trial in range(self.n_trial_shotgun):
@@ -644,6 +837,53 @@ class ActiveShotgunGenerator(TrialGenerator):
                 best_docket = stack((best_docket, top_candidate))
 
         return (best_docket, ig_best, ig_all)
+
+
+def determine_query_references(
+        i_query, embedding, samples, group_id, query_idx, n_trial_per_query,
+        n_reference, n_select, is_ranked, n_trial_shotgun):
+    """Determine query references."""
+    z = embedding.z  # TODO group_id view
+    dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+
+    n_select = np.repeat(n_select, n_trial_shotgun)
+    is_ranked = np.repeat(is_ranked, n_trial_shotgun)
+    stimulus_set = np.empty(
+        (n_trial_shotgun, n_reference + 1), dtype=np.int32
+    )
+    stimulus_set[:, 0] = query_idx[i_query]
+    candidate_locs = np.not_equal(dmy_idx, query_idx[i_query])
+    candidate_idx = dmy_idx[candidate_locs]
+    z_q = z[query_idx[i_query], :]
+
+    simmat = embedding.similarity(
+        np.expand_dims(z_q, axis=0), z, group_id=group_id
+    )
+    candidate_sim = simmat[candidate_locs]
+    candidate_prob = candidate_sim / np.sum(candidate_sim)
+
+    for i_trial in range(n_trial_shotgun):
+        stimulus_set[i_trial, 1:] = np.random.choice(
+            candidate_idx, (1, n_reference), replace=False,
+            p=candidate_prob
+        )
+
+    docket = Docket(
+        stimulus_set, n_select=n_select, is_ranked=is_ranked
+    )
+
+    ig = information_gain(
+        embedding, samples, docket, group_id=group_id
+    )
+
+    # Grab the top N trials as specified by 'n_trial_per_query'.
+    top_indices = np.argsort(-ig)
+    top_candidate = docket.subset(
+        top_indices[0:n_trial_per_query[i_query]]
+    )
+    curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
+
+    return top_candidate, curr_best_ig
 
 
 def information_gain(embedding, samples, docket, group_id=None):
@@ -849,3 +1089,137 @@ def normal_entropy(cov):
         (1 / 2 * np.log(np.linalg.det(cov)))
     )
     return h
+
+
+def posterior_momentum(samples, history, mode='entropy', n_back=10):
+    """Grade each stimulus based on fastest posterior improvement.
+
+    Arguments:
+        samples:
+        history: List of nested dictionaries. The top level of
+            the dictionary indicates the variable (.e.g., 'z'). The
+            next level contains the fields 'mu' and 'sigma'. For
+            example, in the case of 'z', the 'mu' field is an array
+            shape=(n_stimuli, n_dim) and the 'sigma' field is an array
+            shape=(n_stimuli, n_dim, n_dim).
+        mode (optional):
+        n_back (optional):
+
+    Returns:
+        history which includes:
+            isolated priority
+            weights
+            stimuli b-distances
+
+    """
+    # Does entropy correlate with b-dist improvement? My guess is
+    # that it loosely correlates. So we need to keep track of past 
+    # history to adjust when it does not.
+
+    # Look at:
+    #   a) past entropy-based priority
+    #   b) past b-dist improvement
+
+    # Adjust current entropy-based priority based on ROI:
+    #   Look for cases where relatively high entropy did not result in b-dist improvement.
+    #   Could sort by b-dist and then check difference between priority and b-dist rankings.
+    
+    # Corner cases:
+    #   1) high priority    &   + change b-dist   => maintain priority
+    #   2) high priority    &   0 change b-dist   => reduce priority
+    #   3) low priority     &   + change b-dist   => raise priority
+    #   4) low priority     &   0 change b-dist   => maintain priority
+
+    # MAYBE Compute change (velocity and momentum) in b-dist relative to priority.
+
+    current_priority = None
+    history = None
+    return (current_priority, history)
+
+
+def stimulus_bhattacharyya(samples):
+    """Return the standard deviation associated with every stimulus.
+
+    Arguments:
+        samples: Posterior samples.
+            shape: (n_stimuli, n_dim, n_sample)
+
+    Returns:
+        The mean pair-wise Bhattacharyya distance.
+
+    """
+    # Unpack.
+    z_samp = samples['z']
+    (n_stimuli, n_dim, _) = z_samp.shape
+
+    # Re-scale.
+    # std_re = np.zeros([n_dim])
+    # for i_dim in range(n_dim):
+    #     std_re[i_dim] = np.std(z_samp[:, i_dim, :])
+    # std_re = np.expand_dims(std_re, axis=0)
+    # std_re = np.expand_dims(std_re, axis=2)
+    # z_samp = z_samp / std_re
+
+    # Fit multi-variate normal for each stimulus.
+    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
+    mu = np.empty((n_stimuli, n_dim))
+    cov = np.empty((n_stimuli, n_dim, n_dim))
+    for i_stim in range(n_stimuli):
+        gmm = GaussianMixture(
+            n_components=1, covariance_type='full')
+        gmm.fit(z_samp[:, i_stim, :])
+        mu[i_stim, :] = gmm.means_[0]
+        cov[i_stim, :, :] = gmm.covariances_[0]
+
+    d_bhatt = np.empty((n_stimuli, n_stimuli))
+    for idx_i in range(n_stimuli):
+        for idx_j in range(idx_i, n_stimuli):
+            d_bhatt[idx_i, idx_j] = normal_bhattacharyya_distance(
+                mu[idx_i], cov[idx_i], mu[idx_j], cov[idx_j]
+            )
+
+    idx_upper = np.triu_indices(n_stimuli, 1)
+    d_bhatt_avg = d_bhatt[idx_upper]
+    d_bhatt_avg = np.mean(d_bhatt_avg)
+
+    print(d_bhatt_avg)
+    return d_bhatt_avg
+
+
+def normal_bhattacharyya_distance(mu_1, cov_1, mu_2, cov_2):
+    """Return the Bhattacharyya distance between two normals.
+
+    Arguments:
+        mu_1: Mean of first multivariate normal.
+        cov_1: Covariance matrix of first multivariate normal.
+        mu_2: Mean of second multivariate normal.
+        cov_2: Covariance matrix of second multivariate normal.
+
+    Returns:
+        d: The Bhattacharyya distance.
+
+    """
+    n_dim = len(mu_1)
+
+    mu_diff = mu_1 - mu_2
+    mu_diff = np.expand_dims(mu_diff, 1)
+    cov = (cov_1 + cov_2) / 2
+
+    det_1 = np.linalg.det(cov_1)
+    det_2 = np.linalg.det(cov_2)
+    det = np.linalg.det(cov)
+
+    n_dim = len(mu_1)
+
+    cov_inv = np.linalg.inv(cov)
+
+    d = (
+        .125 * np.matmul(
+            np.matmul(np.transpose(mu_diff), cov_inv), mu_diff
+        )
+    ) + (
+        .5 * np.log(
+            det / np.sqrt(det_1 * det_2)
+        )
+    )
+    return d

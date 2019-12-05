@@ -40,6 +40,7 @@ import warnings
 
 import h5py
 import numpy as np
+import numexpr as ne
 import numpy.ma as ma
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -2077,8 +2078,7 @@ class Inverse(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.001
 
-    @staticmethod
-    def _default_theta():
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2283,8 +2283,7 @@ class Exponential(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.001
 
-    @staticmethod
-    def _default_theta():
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2474,7 +2473,8 @@ class Exponential(PsychologicalEmbedding):
         d_qr = _mink_distance(z_q, z_r, rho, attention)
 
         # Exponential family similarity kernel.
-        sim_qr = np.exp(np.negative(beta) * d_qr**tau) + gamma
+        # sim_qr = np.exp(np.negative(beta) * d_qr**tau) + gamma  # TODO
+        sim_qr = ne.evaluate('exp(-beta * d_qr**tau) + gamma')
         return sim_qr
 
 
@@ -2508,8 +2508,7 @@ class HeavyTailed(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.003
 
-    @staticmethod
-    def _default_theta():
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -2726,8 +2725,7 @@ class StudentsT(PsychologicalEmbedding):
         # Default inference settings.
         self.lr = 0.01
 
-    @staticmethod
-    def _default_theta():
+    def _default_theta(self):
         """Return dictionary of default theta parameters.
 
         Returns:
@@ -3199,9 +3197,16 @@ def _mink_distance(z_q, z_r, rho, attention):
             points.
             shape = (n_trial,)
 
+    Note:
+        The implementation for ne.sum appears to be slower than np.sum.
+        Furthermore, since ne.sum must be the last call, it forces at
+        least two evaluate methods, reducing the benefit of use ne.
+
     """
-    d_qr = (np.abs(z_q - z_r))**rho
-    d_qr = np.multiply(d_qr, attention)
+    # d_qr = attention * ((np.abs(z_q - z_r))**rho)
+    # d_qr = np.sum(d_qr, axis=1)**(1. / rho)
+
+    d_qr = ne.evaluate("attention * ((abs(z_q - z_r))**rho)")  # TODO
     d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
     return d_qr

@@ -58,6 +58,7 @@ def simulated_samples(z):
     stim_cov = np.array((.08, .01, .01, .01, .01, .01, .01, .01, .01, .01))
     # Draw samples
     z_samples = np.empty((n_sample, n_stimuli, n_dim))
+    np.random.seed(34895)
     for i_stimulus in range(n_stimuli):
         z_samples[:, i_stimulus, :] = np.random.multivariate_normal(
             z[i_stimulus], stim_cov[i_stimulus] * np.identity(n_dim),
@@ -174,6 +175,36 @@ def test_kl_divergence():
     np.testing.assert_almost_equal(kl_sm_lg, 6.402585, decimal=5)
     np.testing.assert_almost_equal(kl_lg_sm, 56.697415, decimal=5)
     np.testing.assert_almost_equal(kl_lg_lg, 5.000000, decimal=5)
+
+
+def test_choice_wo_replace():
+    """Test choice_wo_replace."""
+    n_trial = 10000
+    n_reference = 8
+    n_option = 20
+
+    candidate_idx = np.arange(n_option)
+    candidate_prob = np.array([
+        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
+        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
+        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
+        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
+    ])
+
+    # Draw samples.
+    np.random.seed(560897)
+    drawn_idx = generator.choice_wo_replace(
+        candidate_idx, (n_trial, n_reference), candidate_prob
+    )
+    bin_counts, bin_edges = np.histogram(drawn_idx.flatten(), bins=n_option)
+    drawn_prob = bin_counts / np.sum(bin_counts)
+
+    # Check that sampling was done without replacement for all trials.
+    for i_trial in range(n_trial):
+        assert len(np.unique(drawn_idx[i_trial])) == n_reference
+
+    # Check that sampling distribution matches original probabilites.
+    np.testing.assert_array_almost_equal(candidate_prob, drawn_prob, decimal=2)
 
 # @pytest.fixture(scope="module")
 # def unbalanced_trials():

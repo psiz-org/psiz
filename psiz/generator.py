@@ -153,6 +153,7 @@ class ActiveGenerator(DocketGenerator):
     and narrow the search space.
 
     Attributes:
+        n_stimuli:
         max_query:
         max_neighbor:
         max_candidate:
@@ -280,7 +281,7 @@ class ActiveGenerator(DocketGenerator):
 
         return (docket, info)
 
-    def _select_query(priority, n_query):
+    def _select_query(self, priority, n_query):
         """Select which stimuli should by queries and how often.
 
         Arguments:

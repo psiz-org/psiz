@@ -111,6 +111,8 @@ class RandomGenerator(DocketGenerator):
         """
         DocketGenerator.__init__(self)
 
+        self.n_stimuli = n_stimuli
+
         # Sanitize inputs.
         # TODO re-use sanitize methods from elsewhere
         self.n_reference = np.int32(n_reference)
@@ -194,6 +196,8 @@ class ActiveGenerator(DocketGenerator):
 
         """
         DocketGenerator.__init__(self)
+
+        self.n_stimuli = n_stimuli
 
         # Set trial configuration parameters.
         self.n_reference = np.int32(n_reference)

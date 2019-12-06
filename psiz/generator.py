@@ -111,7 +111,8 @@ class RandomGenerator(DocketGenerator):
         """
         DocketGenerator.__init__(self)
 
-        # TODO sanitize (re-use methods from elsewhere)
+        # Sanitize inputs.
+        # TODO re-use sanitize methods from elsewhere
         self.n_reference = np.int32(n_reference)
         self.n_select = np.int32(n_select)
         self.is_ranked = bool(is_ranked)
@@ -201,9 +202,9 @@ class ActiveGenerator(DocketGenerator):
 
         # Set heuristic parameters.
         if max_query is None:
-            max_query = n_stimuli  # TODO check to make sure copy by value and not by ref
+            max_query = n_stimuli
         self.max_query = max_query
-        self.max_neighbor = max_neighbor
+        self.max_neighbor = np.min(n_stimuli, max_neighbor)
         self.max_candidate = max_candidate
 
     def generate(self, n_trial, embedding, samples, priority, verbose=0):
@@ -375,7 +376,7 @@ class ActiveGenerator(DocketGenerator):
 
 def select_query_references(
         i_query, embedding, samples, query_idx, n_trial_per_query,
-        n_reference, n_select, is_ranked, n_trial_shotgun, max_neighbor):
+        n_reference, n_select, is_ranked, max_candidate, max_neighbor):
     """Determine query references.
 
     Arguments:
@@ -389,52 +390,43 @@ def select_query_references(
             should be used.
 
     """
+    n_stimuli = embedding.n_stimuli
     z = embedding.z
     z_q = z[query_idx[i_query], :]
+    s_qr = embedding.similarity(np.expand_dims(z_q, axis=0), z)
+    s_qr[i_query] = 0  # Set self-similarity to zero.
 
-    dmy_idx = np.arange(embedding.n_stimuli, dtype=np.int)
+    # Determine eligable reference stimuli and their draw probability
+    # based on similarity.
+    idx_eligable = np.argsort(-s_qr)
+    idx_eligable = idx_eligable[0:max_neighbor]
+    eligable_prob = s_qr[idx_eligable] / np.sum(s_qr[idx_eligable])
 
-    n_select = np.repeat(n_select, n_trial_shotgun)
-    is_ranked = np.repeat(is_ranked, n_trial_shotgun)
+    # Create a docket full of candidate trials.
+    n_select = np.repeat(n_select, max_candidate)
+    is_ranked = np.repeat(is_ranked, max_candidate)
     stimulus_set = np.empty(
-        (n_trial_shotgun, n_reference + 1), dtype=np.int32
+        (max_candidate, n_reference + 1), dtype=np.int32
     )
     stimulus_set[:, 0] = query_idx[i_query]
-    candidate_locs = np.not_equal(dmy_idx, query_idx[i_query])
-    # TODO Limit candidates to max_neighbor neighbors of query
-    # candidate_locs = 
-
-    candidate_idx = dmy_idx[candidate_locs]
-
-    candidate_simmat = embedding.similarity(
-        np.expand_dims(z_q, axis=0), z[candidate_locs, :]
-    )
-    candidate_prob = candidate_simmat / np.sum(candidate_simmat)
-
-    # Create a docket full of a bunch of candidate trials.
-    # for i_trial in range(n_trial_shotgun): TODO TEST REMOVE
-    #     stimulus_set[i_trial, 1:] = np.random.choice(
-    #         candidate_idx, (1, n_reference), replace=False,
-    #         p=candidate_prob
-    #     )
     stimulus_set[:, 1:] = choice_wo_replace(
-        candidate_idx, (n_trial_shotgun, n_reference), candidate_prob
+        idx_eligable, (max_candidate, n_reference), eligable_prob
     )
     docket = Docket(
         stimulus_set, n_select=n_select, is_ranked=is_ranked
     )
 
-    # Compute information gain of docket full of candidate trials.
+    # Compute information gain of candidate trials.
     ig = information_gain(embedding, samples, docket)
 
-    # Grab the top trials as specified by 'n_trial_per_query'.
+    # Grab the top trials as specified by `n_trial_per_query`.
     top_indices = np.argsort(-ig)
-    top_candidate = docket.subset(
+    docket_top = docket.subset(
         top_indices[0:n_trial_per_query[i_query]]
     )
-    curr_best_ig = ig[top_indices[0:n_trial_per_query[i_query]]]
+    ig_top = ig[top_indices[0:n_trial_per_query[i_query]]]
 
-    return top_candidate, curr_best_ig
+    return docket_top, ig_top
 
 
 def information_gain(embedding, samples, docket, group_id=None):
@@ -509,8 +501,8 @@ def query_kl_priority(embedding, samples):
     a query stimulus in a trial.
 
     Arguments:
-        z: TODO
-        samples: TODO
+        embedding:
+        samples:
 
     Returns:
         A priority score.

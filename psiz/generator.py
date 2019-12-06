@@ -262,7 +262,8 @@ class ActiveGenerator(DocketGenerator):
         n_stimuli = embedding.n_stimuli
 
         # Ensure priorities sum to one.
-        priority = priority - np.min(priority)
+        # priority = priority - np.min(priority)
+        priority -= np.min(priority)
         priority = priority / np.sum(priority)
 
         # Determine number of unique query stimuli in docket.
@@ -270,7 +271,7 @@ class ActiveGenerator(DocketGenerator):
 
         # Assemble docket in two stages.
         (query_idx, n_trial_per_query) = self._select_query(
-            priority, n_query
+            n_trial, priority, n_query
         )
         (docket, ig) = self._select_references(
             embedding, samples, query_idx, n_trial_per_query, verbose=verbose
@@ -281,7 +282,7 @@ class ActiveGenerator(DocketGenerator):
 
         return (docket, info)
 
-    def _select_query(self, priority, n_query):
+    def _select_query(self, n_trial, priority, n_query):
         """Select which stimuli should by queries and how often.
 
         Arguments:

@@ -1379,11 +1379,13 @@ class PsychologicalEmbedding(object):
             # Compute selection probability.
             prob = np.divide(sim_qr[:, i_selected], denom)
             # Update sequence probability.
-            seq_prob = np.multiply(seq_prob, prob)
+            # seq_prob = np.multiply(seq_prob, prob)
+            seq_prob *= prob
             # Update denominator in preparation for computing the probability
             # of the previous selection in the sequence.
             if i_selected > 0:
-                denom = denom + sim_qr[:, i_selected-1, :]
+                # denom = denom + sim_qr[:, i_selected-1, :]
+                denom += sim_qr[:, i_selected-1, :]
         return seq_prob
 
     def posterior_samples(
@@ -3131,8 +3133,7 @@ def elliptical_slice(
     theta_shape = initial_theta.shape
     D = initial_theta.size
     if not prior.shape[0] == D or not prior.shape[1] == D:
-        raise IOError(
-            "Prior must be given by a DxD chol(Sigma)")
+        raise IOError("Prior must be given by a DxD chol(Sigma)")
     nu = np.dot(prior, np.random.normal(size=D))
     # Reshape nu to reflect shape of theta.
     nu = np.reshape(nu, theta_shape, order='C')

@@ -208,7 +208,7 @@ class ActiveGenerator(DocketGenerator):
         if max_query is None:
             max_query = n_stimuli
         self.max_query = max_query
-        self.max_neighbor = np.min(n_stimuli, max_neighbor)
+        self.max_neighbor = np.minimum(n_stimuli, max_neighbor)
         self.max_candidate = max_candidate
 
     def generate(self, n_trial, embedding, samples, priority, verbose=0):

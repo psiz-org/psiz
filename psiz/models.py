@@ -1045,7 +1045,9 @@ class PsychologicalEmbedding(object):
 
             last_improvement_stop = tf.constant(0, dtype=tf.int32)
             last_improvement_reduce = tf.constant(0, dtype=tf.int32)
-            for epoch in tf.range(tf.constant(self.max_n_epoch, dtype=tf.int64)):
+            tf_max_n_epoch = tf.constant(self.max_n_epoch, dtype=tf.int64)
+            tf_patience_stop = tf.constant(self.patience_stop, dtype=tf.int32)
+            for epoch in tf.range(tf_max_n_epoch):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
                     prob_train = model(tf_inputs_train)
@@ -1116,7 +1118,7 @@ class PsychologicalEmbedding(object):
                     attention_best = model.layers[4].attention
                     theta_best = model.layers[4].theta
 
-                if last_improvement_stop >= tf.constant(self.patience_stop, dtype=tf.int32):
+                if last_improvement_stop >= tf_patience_stop:
                     break
 
             return (
@@ -1648,10 +1650,11 @@ class PsychologicalEmbedding(object):
         part_idx, n_stimuli_part = self._make_partition(
             n_stimuli, n_partition
         )
-        part_idx = tf.constant(part_idx[1], dtype=tf.int32)  # NOTE that second row is what we want.
+        # NOTE that second row is what we want.
+        part_idx = tf.constant(part_idx[1], dtype=tf.int32)
 
         # Pre-compute prior. TODO?
-        # Can I guarantee the number of stimuli for each part doesn't change? TODO
+        # Can I guarantee the number of stimuli for each part doesn't change?
         # Create a diagonally tiled covariance matrix in order to slice
         # multiple points simultaneously.
         prior = []
@@ -1944,10 +1947,6 @@ class CoreLayer(Layer):
             # Grab data belonging to current trial configuration.
             locs = tf.equal(obs_config_idx, i_config)
             trial_idx = tf.squeeze(tf.where(locs))
-            # idx_start = tf.math.reduce_min(trial_idx)
-            # idx_end = tf.math.reduce_max(trial_idx) + tf.constant(1, dtype=tf.int64)
-            # stimulus_set_config = obs_stimulus_set[idx_start:idx_end]
-            # group_id_config = obs_group_id[idx_start:idx_end]
             stimulus_set_config = tf.gather(obs_stimulus_set, trial_idx)
             group_id_config = tf.gather(obs_group_id, trial_idx)
 
@@ -2008,9 +2007,10 @@ class CoreLayer(Layer):
 
             # z_r_new = tf.expand_dims(z_r_new, axis=2)
             # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
-            # post_pad = tf.zeros(
-            #     [n_trial, n_dim, n_reference - i_ref - tf.constant(1, dtype=tf.int32)], dtype=K.floatx()
-            # )
+            # post_pad = tf.zeros([
+            #     n_trial, n_dim,
+            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
+            # ], dtype=K.floatx())
             # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
             # z_r = z_r + z_r_new
 

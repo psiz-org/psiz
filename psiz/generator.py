@@ -23,12 +23,12 @@ Classes:
         trials.
     ActiveGenerator: Concrete class for generating similarity trials
         using an active selection procedure that leverages expected
-        informatin gain.
+        information gain.
 
 Functions:
     information_gain: Compute expected information gain of a docket.
     query_kl_priority: Compute query stimulus priority using KL
-        divergence approach and for fitted Gaussians.
+        divergence approach for fitted Gaussian.
     normal_kl_divergence: Compute KL divergence for two multi-variate
         Gaussian distributions.
     stimulus_entropy: Compute entropy of stimulus based on Gaussian
@@ -73,10 +73,7 @@ class DocketGenerator(object):
     __metaclass__ = ABCMeta
 
     def __init__(self):
-        """Initialize.
-
-        Arguments:
-        """
+        """Initialize."""
 
     @abstractmethod
     def generate(self, args):
@@ -326,7 +323,8 @@ class ActiveGenerator(DocketGenerator):
         # loaded_partial = partial(
         #     select_query_references, embedding=embedding,
         #     samples=samples, query_idx=query_idx,
-        #     n_trial_per_query=n_trial_per_query, n_reference=self.n_reference,
+        #     n_trial_per_query=n_trial_per_query,
+        #     n_reference=self.n_reference,
         #     n_select=self.n_select, is_ranked=self.is_ranked,
         #     max_candidate=self.max_candidate,
         #     max_neighbor=self.max_neighbor
@@ -500,6 +498,122 @@ def information_gain(embedding, samples, docket, group_id=None):
     return info_gain
 
 
+def choice_wo_replace(a, size, p):
+    """Fast sampling without replacement.
+
+    Arguments:
+        a: An array indicating the eligable elements.
+        size: A tuple indicating the number of independent samples and
+            the number of draws (without replacement) for each sample.
+            The tuple is ordered such that
+            size = (n_sample, sample_size).
+        p: An array indicating the probabilites associated with drawing
+            a particular element. User provided probabilities are
+            already assumed to sum to one. Probability p[i] indicates
+            the probability of drawing index a[i].
+
+    Returns:
+        result: A 2D array containing the drawn elements.
+            shape=(n_sample, sample_size)
+
+    See: https://medium.com/ibm-watson/
+        incredibly-fast-random-sampling-in-python-baf154bd836a
+
+    """
+    n_sample = size[0]
+    sample_size = size[1]
+
+    # Replicate probabilities as many times as `n_sample`
+    replicated_probabilities = np.tile(p, (n_sample, 1))
+
+    # Get random shifting numbers & scale them correctly.
+    random_shifts = np.random.random(replicated_probabilities.shape)
+    random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
+
+    # Shift by numbers and find largest (by finding the smallest of the
+    # negative).
+    shifted_probabilities = random_shifts - replicated_probabilities
+    samples = np.argpartition(
+        shifted_probabilities, sample_size, axis=1
+    )[:, :sample_size]
+
+    return a[samples]
+
+
+def determine_stimulus_priority(embedding, samples, mode='kl'):
+    """Determine stimulus priority.
+
+    The priority of all stimuli must sum to one.
+
+    Arguments:
+        embedding:
+        samples:
+        mode (optional): Can be 'random', 'entropy' or 'kl'.
+
+    Returns:
+        priority:
+
+    """
+    n_stimuli = embedding.n_stimuli
+
+    if mode is "random":
+        # Completely random.
+        priority = np.ones([n_stimuli]) / n_stimuli
+    elif mode is "entropy":
+        # Based on entropy.
+        entropy = stimulus_entropy(samples)
+        rel_entropy = entropy - np.min(entropy)
+        priority = rel_entropy / np.sum(rel_entropy)
+    elif mode is "kl":
+        # Based on KL divergence.
+        stim_kl = query_kl_priority(embedding, samples)
+        priority = stim_kl / np.sum(stim_kl)
+
+    return priority
+
+
+def stimulus_entropy(samples):
+    """Return the approximate entropy associated with every stimulus.
+
+    Arguments:
+        samples: Posterior samples.
+            shape: (n_stimuli, n_dim, n_sample)
+
+    Returns:
+        The approximate entropy associated with each stimulus.
+            shape: (n_stimuli,)
+
+    Notes:
+        The computation is specific to a particular group.
+
+    """
+    # Unpack.
+    z_samp = samples['z']
+    n_stimuli = z_samp.shape[0]
+
+    # Fit multi-variate normal for each stimulus.
+    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
+    entropy = np.empty((n_stimuli))
+    for i_stim in range(n_stimuli):
+        gmm = GaussianMixture(
+            n_components=1, covariance_type='full'
+        )
+        gmm.fit(z_samp[:, i_stim, :])
+        entropy[i_stim] = normal_entropy(gmm.covariances_[0])
+    return entropy
+
+
+def normal_entropy(cov):
+    """Return entropy of multivariate normal distribution."""
+    n_dim = cov.shape[0]
+    h = (
+        (n_dim / 2) +
+        (n_dim / 2 * np.log(2 * np.pi)) +
+        (1 / 2 * np.log(np.linalg.det(cov)))
+    )
+    return h
+
+
 def query_kl_priority(embedding, samples):
     """Return a priority score for every stimulus.
 
@@ -565,7 +679,7 @@ def query_kl_priority(embedding, samples):
 
 
 def normal_kl_divergence(mu_a, cov_a, mu_b, cov_b):
-    """Return the Kullback-Leiler divergence between two normals."""
+    """Return the Kullback-Leibler divergence between two normals."""
     mu_diff = mu_b - mu_a
     mu_diff = np.expand_dims(mu_diff, 1)
     n_dim = len(mu_a)
@@ -578,253 +692,3 @@ def normal_kl_divergence(mu_a, cov_a, mu_b, cov_b):
         )
     )
     return kl
-
-
-def stimulus_entropy(samples):
-    """Return the approximate entropy associated with every stimulus.
-
-    Arguments:
-        samples: Posterior samples.
-            shape: (n_stimuli, n_dim, n_sample)
-
-    Returns:
-        The approximate entropy associated with each stimulus.
-            shape: (n_stimuli,)
-
-    Notes:
-        The computation is specific to a particular group.
-
-    """
-    # Unpack.
-    z_samp = samples['z']
-    n_stimuli = z_samp.shape[0]
-
-    # Fit multi-variate normal for each stimulus.
-    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
-    entropy = np.empty((n_stimuli))
-    for i_stim in range(n_stimuli):
-        gmm = GaussianMixture(
-            n_components=1, covariance_type='full'
-        )
-        gmm.fit(z_samp[:, i_stim, :])
-        entropy[i_stim] = normal_entropy(gmm.covariances_[0])
-    return entropy
-
-
-def normal_entropy(cov):
-    """Return entropy of multivariate normal distribution."""
-    n_dim = cov.shape[0]
-    h = (
-        (n_dim / 2) +
-        (n_dim / 2 * np.log(2 * np.pi)) +
-        (1 / 2 * np.log(np.linalg.det(cov)))
-    )
-    return h
-
-
-def choice_wo_replace(a, size, p):
-    """Fast sampling without replacement.
-
-    Arguments:
-        a: An array indicating the eligable elements.
-        size: A tuple indicating the number of independent samples and
-            the number of draws (without replacement) for each sample.
-            The tuple is ordered such that
-            size = (n_sample, sample_size).
-        p: An array indicating the probabilites associated with drawing
-            a particular element. User provided probabilities are
-            already assumed to sum to one. Probability p[i] indicates
-            the probability of drawing index a[i].
-
-    Returns:
-        result: A 2D array containing the drawn elements.
-            shape=(n_sample, sample_size)
-
-    See: https://medium.com/ibm-watson/
-        incredibly-fast-random-sampling-in-python-baf154bd836a
-
-    """
-    n_sample = size[0]
-    sample_size = size[1]
-
-    # Replicate probabilities as many times as `n_sample`
-    replicated_probabilities = np.tile(p, (n_sample, 1))
-
-    # Get random shifting numbers & scale them correctly.
-    random_shifts = np.random.random(replicated_probabilities.shape)
-    random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
-
-    # Shift by numbers and find largest (by finding the smallest of the
-    # negative).
-    shifted_probabilities = random_shifts - replicated_probabilities
-    samples = np.argpartition(
-        shifted_probabilities, sample_size, axis=1
-    )[:, :sample_size]
-
-    return a[samples]
-
-
-def posterior_momentum(samples, history, mode='entropy', n_back=10):
-    """Grade each stimulus based on fastest posterior improvement.
-
-    Arguments:
-        samples:
-        history: List of nested dictionaries. The top level of
-            the dictionary indicates the variable (.e.g., 'z'). The
-            next level contains the fields 'mu' and 'sigma'. For
-            example, in the case of 'z', the 'mu' field is an array
-            shape=(n_stimuli, n_dim) and the 'sigma' field is an array
-            shape=(n_stimuli, n_dim, n_dim).
-        mode (optional):
-        n_back (optional):
-
-    Returns:
-        history which includes:
-            isolated priority
-            weights
-            stimuli b-distances
-
-    """
-    # Does entropy correlate with b-dist improvement? My guess is
-    # that it loosely correlates. So we need to keep track of past 
-    # history to adjust when it does not.
-
-    # Look at:
-    #   a) past entropy-based priority
-    #   b) past b-dist improvement
-
-    # Adjust current entropy-based priority based on ROI:
-    #   Look for cases where relatively high entropy did not result in b-dist improvement.
-    #   Could sort by b-dist and then check difference between priority and b-dist rankings.
-    
-    # Corner cases:
-    #   1) high priority    &   + change b-dist   => maintain priority
-    #   2) high priority    &   0 change b-dist   => reduce priority
-    #   3) low priority     &   + change b-dist   => raise priority
-    #   4) low priority     &   0 change b-dist   => maintain priority
-
-    # MAYBE Compute change (velocity and momentum) in b-dist relative to priority.
-
-    current_priority = None
-    history = None
-    return (current_priority, history)
-
-
-def stimulus_bhattacharyya(samples):
-    """Return the standard deviation associated with every stimulus.
-
-    Arguments:
-        samples: Posterior samples.
-            shape: (n_stimuli, n_dim, n_sample)
-
-    Returns:
-        The mean pair-wise Bhattacharyya distance.
-
-    """
-    # Unpack.
-    z_samp = samples['z']
-    (n_stimuli, n_dim, _) = z_samp.shape
-
-    # Re-scale.
-    # std_re = np.zeros([n_dim])
-    # for i_dim in range(n_dim):
-    #     std_re[i_dim] = np.std(z_samp[:, i_dim, :])
-    # std_re = np.expand_dims(std_re, axis=0)
-    # std_re = np.expand_dims(std_re, axis=2)
-    # z_samp = z_samp / std_re
-
-    # Fit multi-variate normal for each stimulus.
-    z_samp = np.transpose(z_samp, axes=[2, 0, 1])
-    mu = np.empty((n_stimuli, n_dim))
-    cov = np.empty((n_stimuli, n_dim, n_dim))
-    for i_stim in range(n_stimuli):
-        gmm = GaussianMixture(
-            n_components=1, covariance_type='full')
-        gmm.fit(z_samp[:, i_stim, :])
-        mu[i_stim, :] = gmm.means_[0]
-        cov[i_stim, :, :] = gmm.covariances_[0]
-
-    d_bhatt = np.empty((n_stimuli, n_stimuli))
-    for idx_i in range(n_stimuli):
-        for idx_j in range(idx_i, n_stimuli):
-            d_bhatt[idx_i, idx_j] = normal_bhattacharyya_distance(
-                mu[idx_i], cov[idx_i], mu[idx_j], cov[idx_j]
-            )
-
-    idx_upper = np.triu_indices(n_stimuli, 1)
-    d_bhatt_avg = d_bhatt[idx_upper]
-    d_bhatt_avg = np.mean(d_bhatt_avg)
-
-    print(d_bhatt_avg)
-    return d_bhatt_avg
-
-
-def normal_bhattacharyya_distance(mu_1, cov_1, mu_2, cov_2):
-    """Return the Bhattacharyya distance between two normals.
-
-    Arguments:
-        mu_1: Mean of first multivariate normal.
-        cov_1: Covariance matrix of first multivariate normal.
-        mu_2: Mean of second multivariate normal.
-        cov_2: Covariance matrix of second multivariate normal.
-
-    Returns:
-        d: The Bhattacharyya distance.
-
-    """
-    n_dim = len(mu_1)
-
-    mu_diff = mu_1 - mu_2
-    mu_diff = np.expand_dims(mu_diff, 1)
-    cov = (cov_1 + cov_2) / 2
-
-    det_1 = np.linalg.det(cov_1)
-    det_2 = np.linalg.det(cov_2)
-    det = np.linalg.det(cov)
-
-    n_dim = len(mu_1)
-
-    cov_inv = np.linalg.inv(cov)
-
-    d = (
-        .125 * np.matmul(
-            np.matmul(np.transpose(mu_diff), cov_inv), mu_diff
-        )
-    ) + (
-        .5 * np.log(
-            det / np.sqrt(det_1 * det_2)
-        )
-    )
-    return d
-
-
-def determine_stimulus_priority(embedding, samples, mode='kl'):
-    """Determine stimulus priority.
-
-    The priority of all stimuli must sum to one.
-
-    Arguments:
-        embedding:
-        samples:
-        mode (optional): Can be 'random', 'entropy' or 'kl'.
-
-    Returns:
-        priority:
-
-    """
-    n_stimuli = embedding.n_stimuli
-
-    if mode is "random":
-        # Completely random.
-        priority = np.ones([n_stimuli]) / n_stimuli
-    elif mode is "entropy":
-        # Based on entropy.
-        entropy = stimulus_entropy(samples)
-        rel_entropy = entropy - np.min(entropy)
-        priority = rel_entropy / np.sum(rel_entropy)
-    elif mode is "kl":
-        # Based on KL divergence.
-        stim_kl = query_kl_priority(embedding, samples)
-        priority = stim_kl / np.sum(stim_kl)
-
-    return priority

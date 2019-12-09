@@ -2475,8 +2475,8 @@ class Exponential(PsychologicalEmbedding):
         d_qr = _mink_distance(z_q, z_r, rho, attention)
 
         # Exponential family similarity kernel.
-        # sim_qr = np.exp(np.negative(beta) * d_qr**tau) + gamma  # TODO
-        sim_qr = ne.evaluate('exp(-beta * d_qr**tau) + gamma')
+        sim_qr = np.exp(np.negative(beta) * d_qr**tau) + gamma  # TODO
+        # sim_qr = ne.evaluate('exp(-beta * d_qr**tau) + gamma')
         return sim_qr
 
 
@@ -3204,11 +3204,11 @@ def _mink_distance(z_q, z_r, rho, attention):
         least two evaluate methods, reducing the benefit of use ne.
 
     """
-    # d_qr = attention * ((np.abs(z_q - z_r))**rho)
-    # d_qr = np.sum(d_qr, axis=1)**(1. / rho)
-
-    d_qr = ne.evaluate("attention * ((abs(z_q - z_r))**rho)")  # TODO
+    d_qr = attention * ((np.abs(z_q - z_r))**rho)
     d_qr = np.sum(d_qr, axis=1)**(1. / rho)
+
+    # d_qr = ne.evaluate("attention * ((abs(z_q - z_r))**rho)")  # TODO
+    # d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
     return d_qr
 

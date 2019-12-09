@@ -258,9 +258,11 @@ class ActiveGenerator(DocketGenerator):
 
         n_stimuli = embedding.n_stimuli
 
-        # Ensure priorities sum to one.
+        # Ensure priorities sum to one. TODO
+        # if np.sum(np.less(priority, 0)) > 0:
+        #     raise('ValueError')
         # priority = priority - np.min(priority)
-        priority -= np.min(priority)
+        # priority -= np.min(priority)
         priority = priority / np.sum(priority)
 
         # Determine number of unique query stimuli in docket.
@@ -320,6 +322,8 @@ class ActiveGenerator(DocketGenerator):
         n_query = query_idx.shape[0]
 
         # TODO Parallelize.
+        # n_worker = 4
+
         # loaded_partial = partial(
         #     select_query_references, embedding=embedding,
         #     samples=samples, query_idx=query_idx,
@@ -331,8 +335,10 @@ class ActiveGenerator(DocketGenerator):
         # )
 
         # query_list = range(n_query)
-        # with multiprocessing.Pool(n_worker) as pool:
-        #     results = pool.map(loaded_partial, query_list)
+        # pool = multiprocessing.Pool(n_worker)
+        # results = pool.map(loaded_partial, query_list)
+        # # with multiprocessing.Pool(n_worker) as pool:
+        # #     results = pool.map(loaded_partial, query_list)
 
         # docket_list = []
         # ig_list = []

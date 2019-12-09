@@ -40,7 +40,7 @@ import warnings
 
 import h5py
 import numpy as np
-import numexpr as ne
+# import numexpr as ne
 import numpy.ma as ma
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold

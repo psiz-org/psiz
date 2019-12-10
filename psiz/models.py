@@ -543,6 +543,7 @@ class PsychologicalEmbedding(object):
 
         """
         n_trial = z_q.shape[0]
+
         # Handle group_id.
         if group_id is None:
             group_id = np.zeros((n_trial), dtype=np.int32)
@@ -1250,7 +1251,7 @@ class PsychologicalEmbedding(object):
         n_sample = z.shape[2]
 
         # Compute similarity between query and references.
-        (z_q, z_r) = self._inflate_points(
+        (z_q, z_r) = _inflate_points(
             docket.stimulus_set, docket.max_n_reference, z
         )
         z_q, z_r, theta, attention = self._broadcast_for_similarity(
@@ -1277,7 +1278,7 @@ class PsychologicalEmbedding(object):
             prob = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
             for i_outcome in range(n_outcome):
                 s_qr_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
-                prob[:, i_outcome, :] = self._ranked_sequence_probability(
+                prob[:, i_outcome, :] = _ranked_sequence_probability(
                     s_qr_perm, config['n_select']
                 )
             prob_all[trial_locs, 0:n_outcome, :] = prob
@@ -1293,102 +1294,6 @@ class PsychologicalEmbedding(object):
             prob_all = prob_all[:, :, 0]
 
         return prob_all
-
-    @staticmethod
-    def _inflate_points(stimulus_set, n_reference, z):
-        """Inflate stimulus set into embedding points.
-
-        Arguments:
-            stimulus_set: Array of integers indicating the stimuli used
-                in each trial.
-                shape = (n_trial, >= (n_reference + 1))
-            n_reference: A scalar indicating the number of references
-                in each trial.
-            z: shape = (n_stimuli, n_dim, n_sample)
-
-        Returns:
-            z_q: shape = (n_trial, n_dim, 1, n_sample)
-            z_r: shape = (n_trial, n_dim, n_reference, n_sample)
-
-        """
-        n_trial = stimulus_set.shape[0]
-        n_dim = z.shape[1]
-        n_sample = z.shape[2]
-
-        # Increment stimuli indices and add placeholder stimulus.
-        stimulus_set_temp = (stimulus_set + 1).ravel()
-        z_placeholder = np.zeros((1, n_dim, n_sample))
-        z_temp = np.concatenate((z_placeholder, z), axis=0)
-
-        # Inflate points.
-        z_qr = z_temp[stimulus_set_temp, :, :]
-        z_qr = np.transpose(
-            np.reshape(z_qr, (n_trial, n_reference + 1, n_dim, n_sample)),
-            (0, 2, 1, 3)
-        )
-
-        z_q = z_qr[:, :, 0, :]
-        z_q = np.expand_dims(z_q, axis=2)
-        z_r = z_qr[:, :, 1:, :]
-        return (z_q, z_r)
-
-    @staticmethod
-    def _ranked_sequence_probability(sim_qr, n_select):
-        """Return probability of a ranked selection sequence.
-
-        Arguments:
-            sim_qr: A 3D tensor containing pairwise similarity values.
-                Each row (dimension 0) contains the similarity between
-                a trial's query stimulus and reference stimuli. The
-                tensor is arranged such that the first column
-                corresponds to the first selection in a sequence, and
-                the last column corresponds to the last selection
-                (dimension 1). The third dimension indicates
-                different samples.
-                shape = (n_trial, n_reference, n_sample)
-            n_select: Scalar indicating the number of selections made
-                by an agent.
-
-        Returns:
-            A 2D tensor of probabilities.
-            shape = (n_trial, n_sample)
-
-        Notes:
-            For example, given query Q, the probability of selecting
-            the references A, B, and C (in that order) would be:
-
-            P(A,B,C) = s_QA/(s_QA + s_QB + s_QC) * s_QB/(s_QB + s_QC)
-
-            where s_QA denotes the similarity between the query and
-            reference A.
-
-            The probability is computed by starting with the last
-            selection for efficiency and numerical stability. In the
-            provided example, this corresponds to first computing the
-            probability of selecting B second, given that A was
-            selected first.
-
-        """
-        n_trial = sim_qr.shape[0]
-        n_sample = sim_qr.shape[2]
-
-        # Initialize.
-        seq_prob = np.ones((n_trial, n_sample), dtype=np.float64)
-        selected_idx = n_select - 1
-        denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)
-
-        for i_selected in range(selected_idx, -1, -1):
-            # Compute selection probability.
-            prob = np.divide(sim_qr[:, i_selected], denom)
-            # Update sequence probability.
-            # seq_prob = np.multiply(seq_prob, prob)
-            seq_prob *= prob
-            # Update denominator in preparation for computing the probability
-            # of the previous selection in the sequence.
-            if i_selected > 0:
-                # denom = denom + sim_qr[:, i_selected-1, :]
-                denom += sim_qr[:, i_selected-1, :]
-        return seq_prob
 
     def posterior_samples(
             self, obs, n_final_sample=1000, n_burn=100, thin_step=5,
@@ -1523,7 +1428,7 @@ class PsychologicalEmbedding(object):
             for i_part in range(n_partition):
                 z_part = z_full[part_idx[i_part], :]
                 # Sample.
-                (z_part, _) = elliptical_slice(
+                (z_part, _) = _elliptical_slice(
                     z_part, prior[i_part], log_likelihood,
                     pdf_params=[part_idx[i_part], copy.copy(z), obs]
                 )
@@ -1963,7 +1868,7 @@ class CoreLayer(Layer):
             )
 
             # Compute probability of behavior.
-            prob_config = self._tf_ranked_sequence_probability(
+            prob_config = _tf_ranked_sequence_probability(
                 sim_qr_config, n_select
             )
 
@@ -2016,38 +1921,6 @@ class CoreLayer(Layer):
 
         z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
         return (z_q, z_r_2)
-
-    def _tf_ranked_sequence_probability(self, sim_qr, n_select):
-        """Return probability of a ranked selection sequence.
-
-        See: _ranked_sequence_probability
-
-        Arguments:
-            sim_qr: A tensor containing the precomputed similarities
-                between the query stimuli and corresponding reference
-                stimuli.
-                shape = (n_trial, n_reference)
-            n_select: A scalar indicating the number of selections
-                made for each trial.
-
-        """
-        # Initialize.
-        n_trial = tf.shape(sim_qr)[0]
-        seq_prob = tf.ones([n_trial], dtype=K.floatx())
-        selected_idx = n_select - 1
-        denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
-
-        for i_selected in tf.range(selected_idx, -1, -1):
-            # Compute selection probability.
-            prob = tf.divide(sim_qr[:, i_selected], denom)
-            # Update sequence probability.
-            seq_prob = tf.multiply(seq_prob, prob)
-            # Update denominator in preparation for computing the probability
-            # of the previous selection in the sequence.
-            if i_selected > tf.constant(0, dtype=tf.int32):
-                denom = tf.add(denom, sim_qr[:, i_selected - 1])
-            seq_prob.set_shape([None])
-        return seq_prob
 
 
 class Inverse(PsychologicalEmbedding):
@@ -3101,7 +2974,7 @@ def load_embedding(filepath):
     return embedding
 
 
-def elliptical_slice(
+def _elliptical_slice(
         initial_theta, prior, lnpdf, pdf_params=(), angle_range=None):
     """Return samples from elliptical slice sampler.
 
@@ -3179,6 +3052,44 @@ def elliptical_slice(
     return (theta_prop, cur_lnpdf)
 
 
+def _inflate_points(stimulus_set, n_reference, z):
+    """Inflate stimulus set into embedding points.
+
+    Arguments:
+        stimulus_set: Array of integers indicating the stimuli used
+            in each trial.
+            shape = (n_trial, >= (n_reference + 1))
+        n_reference: A scalar indicating the number of references
+            in each trial.
+        z: shape = (n_stimuli, n_dim, n_sample)
+
+    Returns:
+        z_q: shape = (n_trial, n_dim, 1, n_sample)
+        z_r: shape = (n_trial, n_dim, n_reference, n_sample)
+
+    """
+    n_trial = stimulus_set.shape[0]
+    n_dim = z.shape[1]
+    n_sample = z.shape[2]
+
+    # Increment stimuli indices and add placeholder stimulus.
+    stimulus_set_temp = (stimulus_set + 1).ravel()
+    z_placeholder = np.zeros((1, n_dim, n_sample))
+    z_temp = np.concatenate((z_placeholder, z), axis=0)
+
+    # Inflate points.
+    z_qr = z_temp[stimulus_set_temp, :, :]
+    z_qr = np.transpose(
+        np.reshape(z_qr, (n_trial, n_reference + 1, n_dim, n_sample)),
+        (0, 2, 1, 3)
+    )
+
+    z_q = z_qr[:, :, 0, :]
+    z_q = np.expand_dims(z_q, axis=2)
+    z_r = z_qr[:, :, 1:, :]
+    return (z_q, z_r)
+
+
 def _mink_distance(z_q, z_r, rho, attention):
     """Weighted minkowski distance function.
 
@@ -3211,6 +3122,97 @@ def _mink_distance(z_q, z_r, rho, attention):
     # d_qr = np.sum(d_qr, axis=1)**(1. / rho)
 
     return d_qr
+
+
+def _ranked_sequence_probability(sim_qr, n_select):
+    """Return probability of a ranked selection sequence.
+
+    Arguments:
+        sim_qr: A 3D tensor containing pairwise similarity values.
+            Each row (dimension 0) contains the similarity between
+            a trial's query stimulus and reference stimuli. The
+            tensor is arranged such that the first column
+            corresponds to the first selection in a sequence, and
+            the last column corresponds to the last selection
+            (dimension 1). The third dimension indicates
+            different samples.
+            shape = (n_trial, n_reference, n_sample)
+        n_select: Scalar indicating the number of selections made
+            by an agent.
+
+    Returns:
+        A 2D tensor of probabilities.
+        shape = (n_trial, n_sample)
+
+    Notes:
+        For example, given query Q, the probability of selecting
+        the references A, B, and C (in that order) would be:
+
+        P(A,B,C) = s_QA/(s_QA + s_QB + s_QC) * s_QB/(s_QB + s_QC)
+
+        where s_QA denotes the similarity between the query and
+        reference A.
+
+        The probability is computed by starting with the last
+        selection for efficiency and numerical stability. In the
+        provided example, this corresponds to first computing the
+        probability of selecting B second, given that A was
+        selected first.
+
+    """
+    n_trial = sim_qr.shape[0]
+    n_sample = sim_qr.shape[2]
+
+    # Initialize.
+    seq_prob = np.ones((n_trial, n_sample), dtype=np.float64)
+    selected_idx = n_select - 1
+    denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)
+
+    for i_selected in range(selected_idx, -1, -1):
+        # Compute selection probability.
+        prob = np.divide(sim_qr[:, i_selected], denom)
+        # Update sequence probability.
+        # seq_prob = np.multiply(seq_prob, prob)
+        seq_prob *= prob
+        # Update denominator in preparation for computing the probability
+        # of the previous selection in the sequence.
+        if i_selected > 0:
+            # denom = denom + sim_qr[:, i_selected-1, :]
+            denom += sim_qr[:, i_selected-1, :]
+    return seq_prob
+
+
+def _tf_ranked_sequence_probability(sim_qr, n_select):
+    """Return probability of a ranked selection sequence.
+
+    See: _ranked_sequence_probability
+
+    Arguments:
+        sim_qr: A tensor containing the precomputed similarities
+            between the query stimuli and corresponding reference
+            stimuli.
+            shape = (n_trial, n_reference)
+        n_select: A scalar indicating the number of selections
+            made for each trial.
+
+    """
+    # Initialize.
+    n_trial = tf.shape(sim_qr)[0]
+    seq_prob = tf.ones([n_trial], dtype=K.floatx())
+    selected_idx = n_select - 1
+    denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
+
+    for i_selected in tf.range(selected_idx, -1, -1):
+        # Compute selection probability.
+        prob = tf.divide(sim_qr[:, i_selected], denom)
+        # Update sequence probability.
+        seq_prob = tf.multiply(seq_prob, prob)
+        # Update denominator in preparation for computing the probability
+        # of the previous selection in the sequence.
+        if i_selected > tf.constant(0, dtype=tf.int32):
+            denom = tf.add(denom, sim_qr[:, i_selected - 1])
+        seq_prob.set_shape([None])
+    return seq_prob
 
 
 @tf.function

@@ -17,7 +17,7 @@
 """Module for testing generator.py.
 
 Todo:
-    - test ActiveGenerator
+    - more tests for ActiveGenerator
     - more information gain tests
 
 """
@@ -44,6 +44,34 @@ def ground_truth():
     emb.rho = 2
     emb.tau = 1
     emb.beta = 10
+    emb.gamma = 0
+    emb.trainable('freeze')
+    return emb
+
+
+@pytest.fixture(scope="module")
+def model_true_det():
+    """Return a ground truth embedding."""
+    n_stimuli = 10
+    emb = Exponential(n_stimuli)
+    z = np.array(
+        [
+            [0.12737487, 1.3211997],
+            [0.8335809, 1.5255479],
+            [0.8801151, 0.6451549],
+            [0.55950886, 1.8086979],
+            [1.9089336, -0.15246096],
+            [2.8184545, 2.6377177],
+            [0.00032808, 0.94420123],
+            [0.21504205, 0.92544436],
+            [2.0352089, 0.84319389],
+            [-0.04342473, 1.4128358]
+        ], dtype=np.float32
+    )
+    emb.z = z
+    emb.rho = 2
+    emb.tau = 1
+    emb.beta = 1
     emb.gamma = 0
     emb.trainable('freeze')
     return emb
@@ -206,6 +234,43 @@ def test_choice_wo_replace():
 
     # Check that sampling distribution matches original probabilites.
     np.testing.assert_array_almost_equal(candidate_prob, drawn_prob, decimal=2)
+
+
+def test_select_query_references(model_true_det):
+    """Test select_query_references."""
+    max_candidate = 2000
+    max_neighbor = model_true_det.n_stimuli
+
+    query_idx_list = np.array([7, 1])
+    n_trial_per_query_list = np.array([max_candidate, max_candidate])
+
+    samples = simulated_samples(model_true_det.z)
+
+    n_reference = 8
+    n_select = 2
+    is_ranked = True
+
+    i_query = 0
+    docket, ig_top = generator._select_query_references(
+        i_query, model_true_det, samples, query_idx_list,
+        n_trial_per_query_list, n_reference, n_select, is_ranked,
+        max_candidate, max_neighbor
+    )
+
+    # Check query indices in assembled docket.
+    n_mismatch = np.sum(
+        np.not_equal(
+            docket.stimulus_set[0:max_candidate, 0], query_idx_list[0]
+        )
+    )
+    assert n_mismatch == 0
+
+    # Check that all stimuli used in a trial are unique. For example check
+    # that they query stimulus is not also used as a reference.
+    for i_trial in range(docket.n_trial):
+        n_unique = len(np.unique(docket.stimulus_set[i_trial]))
+        assert n_unique == (n_reference + 1)
+
 
 # @pytest.fixture(scope="module")
 # def unbalanced_trials():

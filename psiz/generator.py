@@ -190,7 +190,8 @@ class ActiveGenerator(DocketGenerator):
                 governs heuristic behavior. Given a query stimulus,
                 this parameter determines how many candidate trials
                 will be considered. In general, more is better, but
-                you may be limited by time and RAM.
+                you may be limited by time and RAM. Must be greater
+                than zero.
 
         """
         DocketGenerator.__init__(self)
@@ -205,8 +206,8 @@ class ActiveGenerator(DocketGenerator):
         # Set heuristic parameters.
         if max_query is None:
             max_query = n_stimuli
-        self.max_query = max_query
-        self.max_neighbor = np.minimum(n_stimuli, max_neighbor)
+        self.max_query = np.minimum(max_query, n_stimuli)
+        self.max_neighbor = np.minimum(n_stimuli - 1, max_neighbor)
         self.max_candidate = max_candidate
 
     def generate(self, n_trial, embedding, samples, priority, verbose=0):
@@ -256,7 +257,6 @@ class ActiveGenerator(DocketGenerator):
         if verbose > 0:
             print('[psiz] Generating docket using active selection...')
 
-        n_stimuli = embedding.n_stimuli
 
         # Ensure priorities sum to one. TODO
         # if np.sum(np.less(priority, 0)) > 0:
@@ -269,11 +269,12 @@ class ActiveGenerator(DocketGenerator):
         n_query = np.minimum(n_trial, self.max_query)
 
         # Assemble docket in two stages.
-        (query_idx, n_trial_per_query) = self._select_query(
+        (query_idx_list, n_trial_per_query_list) = self._select_query(
             n_trial, priority, n_query
         )
         (docket, ig) = self._select_references(
-            embedding, samples, query_idx, n_trial_per_query, verbose=verbose
+            embedding, samples, query_idx_list, n_trial_per_query_list,
+            verbose=verbose
         )
         info = {
             "ig_trial": ig
@@ -288,30 +289,36 @@ class ActiveGenerator(DocketGenerator):
             priority:
             n_query: Scalar indicating the number of unique queries.
 
+        Returns:
+            query_idx_list: An array of selected query indices.
+            n_trial_per_query_list: An array indicating the corresponding
+                number of times a query should be shown in a trial.
+
         """
         n_stimuli = len(priority)
 
         # Create an index list for all selected query stimuli.
         # Initialize index with all stimuli.
-        query_idx = np.arange(0, n_stimuli)
+        query_idx_list = np.arange(0, n_stimuli)
 
         # If necessary, stochastically select subset of query stimuli.
         if n_query < n_stimuli:
-            query_idx = np.random.choice(
-                query_idx, n_query, replace=False, p=priority
+            query_idx_list = np.random.choice(
+                query_idx_list, n_query, replace=False, p=priority
             )
 
         # Determine how many times each query stimulus should be used.
-        n_trial_per_query = np.zeros((n_query), dtype=np.int32)
+        n_trial_per_query_list = np.zeros((n_query), dtype=np.int32)
         for i_trial in range(n_trial):
-            n_trial_per_query[np.mod(i_trial, n_query)] = (
-                n_trial_per_query[np.mod(i_trial, n_query)] + 1
+            n_trial_per_query_list[np.mod(i_trial, n_query)] = (
+                n_trial_per_query_list[np.mod(i_trial, n_query)] + 1
             )
 
-        return query_idx, n_trial_per_query
+        return query_idx_list, n_trial_per_query_list
 
     def _select_references(
-            self, embedding, samples, query_idx, n_trial_per_query, verbose=0):
+            self, embedding, samples, query_idx_list, n_trial_per_query_list,
+            verbose=0):
         """Determine references for all requested query stimuli.
 
         Notes:
@@ -319,36 +326,7 @@ class ActiveGenerator(DocketGenerator):
                 should be used.
 
         """
-        n_query = query_idx.shape[0]
-
-        # TODO Parallelize.
-        # n_worker = 4
-
-        # loaded_partial = partial(
-        #     select_query_references, embedding=embedding,
-        #     samples=samples, query_idx=query_idx,
-        #     n_trial_per_query=n_trial_per_query,
-        #     n_reference=self.n_reference,
-        #     n_select=self.n_select, is_ranked=self.is_ranked,
-        #     max_candidate=self.max_candidate,
-        #     max_neighbor=self.max_neighbor
-        # )
-
-        # query_list = range(n_query)
-        # pool = multiprocessing.Pool(n_worker)
-        # results = pool.map(loaded_partial, query_list)
-        # # with multiprocessing.Pool(n_worker) as pool:
-        # #     results = pool.map(loaded_partial, query_list)
-
-        # docket_list = []
-        # ig_list = []
-        # ig_all = []
-        # for i_query in query_list:
-        #     docket_list.append(results[i_query][0])
-        #     ig_list.append(results[i_query][1])
-
-        # best_docket = psiz.trials.stack(docket_list)
-        # ig_best = np.hstack(ig_list)
+        n_query = query_idx_list.shape[0]
 
         if verbose > 0:
             progbar = ProgressBar(
@@ -360,9 +338,9 @@ class ActiveGenerator(DocketGenerator):
         best_docket = None
         ig_best = None
         for i_query in range(n_query):
-            top_candidate, curr_best_ig = select_query_references(
-                i_query, embedding, samples, query_idx,
-                n_trial_per_query,
+            top_candidate, curr_best_ig = _select_query_references(
+                i_query, embedding, samples, query_idx_list,
+                n_trial_per_query_list,
                 self.n_reference, self.n_select, self.is_ranked,
                 self.max_candidate, self.max_neighbor
             )
@@ -384,8 +362,8 @@ class ActiveGenerator(DocketGenerator):
         return (best_docket, ig_best)
 
 
-def select_query_references(
-        i_query, embedding, samples, query_idx, n_trial_per_query,
+def _select_query_references(
+        i_query, embedding, samples, query_idx_list, n_trial_per_query_list,
         n_reference, n_select, is_ranked, max_candidate, max_neighbor):
     """Determine query references.
 
@@ -400,17 +378,28 @@ def select_query_references(
             should be used.
 
     """
+    query_idx = query_idx_list[i_query]
+    n_trial_q = n_trial_per_query_list[i_query]
+
     n_stimuli = embedding.n_stimuli
     z = embedding.z
-    z_q = z[query_idx[i_query], :]
+    z_q = z[query_idx, :]
     s_qr = embedding.similarity(np.expand_dims(z_q, axis=0), z)
-    s_qr[i_query] = 0  # Set self-similarity to zero.
 
     # Determine eligable reference stimuli and their draw probability
-    # based on similarity.
-    idx_eligable = np.argsort(-s_qr)
-    idx_eligable = idx_eligable[0:max_neighbor]
-    eligable_prob = s_qr[idx_eligable] / np.sum(s_qr[idx_eligable])
+    # based on similarity. TODO remove self
+    ref_idx_eligable = np.argsort(-s_qr)
+    # Remove query from eligable list. Note that we don't just pop the
+    # first element since the user may be using an exotic similarity
+    # function.
+    ref_idx_eligable = ref_idx_eligable[
+        np.not_equal(ref_idx_eligable, query_idx)
+    ]
+    # Limit eligable references to nearest neighbors.
+    ref_idx_eligable = ref_idx_eligable[0:max_neighbor]
+    # Renormalize probability of drawing a reference based on similarity
+    # of the eligable options.
+    ref_prob = s_qr[ref_idx_eligable] / np.sum(s_qr[ref_idx_eligable])
 
     # Create a docket full of candidate trials.
     n_select = np.repeat(n_select, max_candidate)
@@ -418,9 +407,9 @@ def select_query_references(
     stimulus_set = np.empty(
         (max_candidate, n_reference + 1), dtype=np.int32
     )
-    stimulus_set[:, 0] = query_idx[i_query]
+    stimulus_set[:, 0] = query_idx
     stimulus_set[:, 1:] = choice_wo_replace(
-        idx_eligable, (max_candidate, n_reference), eligable_prob
+        ref_idx_eligable, (max_candidate, n_reference), ref_prob
     )
     docket = Docket(
         stimulus_set, n_select=n_select, is_ranked=is_ranked
@@ -429,12 +418,12 @@ def select_query_references(
     # Compute information gain of candidate trials.
     ig = information_gain(embedding, samples, docket)
 
-    # Grab the top trials as specified by `n_trial_per_query`.
+    # Grab the top trials as requested.
     top_indices = np.argsort(-ig)
     docket_top = docket.subset(
-        top_indices[0:n_trial_per_query[i_query]]
+        top_indices[0:n_trial_q]
     )
-    ig_top = ig[top_indices[0:n_trial_per_query[i_query]]]
+    ig_top = ig[top_indices[0:n_trial_q]]
 
     return docket_top, ig_top
 

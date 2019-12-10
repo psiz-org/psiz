@@ -130,13 +130,12 @@ class RandomGenerator(DocketGenerator):
         n_reference = self.n_reference
         n_select = np.repeat(self.n_select, n_trial)
         is_ranked = np.repeat(self.is_ranked, n_trial)
-        stimulus_set = np.empty((n_trial, n_reference + 1), dtype=np.int32)
-        for i_trial in range(n_trial):
-            stimulus_set[i_trial, :] = np.random.choice(
-                self.n_stimuli, (1, n_reference + 1), False
-            )
-        # Sort indices corresponding to references.
-        # stimulus_set[:, 1:] = np.sort(stimulus_set[:, 1:])
+        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
+        prob = np.ones([self.n_stimuli]) / self.n_stimuli
+        stimulus_set = choice_wo_replace(
+            idx_eligable, (n_trial, n_reference + 1), prob
+        )
+
         return Docket(
             stimulus_set, n_select=n_select, is_ranked=is_ranked
         )

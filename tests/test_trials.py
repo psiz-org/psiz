@@ -24,9 +24,9 @@ Notes:
 Todo:
     * Test _possible_outcomes attribute on instantiation and loading from
         saved file.
-    * Test weights initialization, subset, stacking, saving, loading
-    * Test rt_ms initialization, subset, stacking, saving, loading
-    * Test agent_id initialization, subset, stacking, saving, loading
+    * Test `weights` initialization, subset, stacking, saving, loading
+    * Test `rt_ms` initialization, subset, stacking, saving, loading
+    * Test `agent_id` initialization, subset, stacking, saving, loading
 
 """
 
@@ -178,7 +178,6 @@ def setup_obs_1():
         }
 
 
-# @pytest.fixture(scope="module")
 def ground_truth(n_stimuli):
     """Return a ground truth model."""
     n_dim = 3
@@ -638,6 +637,7 @@ class TestStack:
     """Test stack static method."""
 
     def test_stack_same_config(self):
+        """Test stack method with same configuration."""
         n_stimuli = 10
         model_truth = ground_truth(n_stimuli)
 

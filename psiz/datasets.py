@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for loading datasets.
+"""Module for loading internally pre-defined datasets.
 
 Functions:
     load_dataset: Load observations for the requested dataset.

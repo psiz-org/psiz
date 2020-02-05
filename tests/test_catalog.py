@@ -25,7 +25,7 @@ Todo:
 import pytest
 import numpy as np
 
-from psiz import catalog
+import psiz.catalog
 
 
 class TestCatalog:
@@ -37,7 +37,7 @@ class TestCatalog:
         stimulus_id = np.array([0, 1, 2, 3, 4, 5])
         stimulus_filepath = [
             'r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg', 'r/f.jpg']
-        catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+        catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         np.testing.assert_array_equal(catalog.stimuli.id.values, stimulus_id)
         np.testing.assert_array_equal(
             catalog.stimuli.filepath.values, stimulus_filepath)
@@ -48,7 +48,7 @@ class TestCatalog:
         stimulus_filepath = [
             'r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg', 'r/f.jpg']
         with pytest.raises(Exception) as e_info:
-            catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         assert str(e_info.value) == (
             'The argument `stimulus_id` must be a 1D array of integers.')
 
@@ -57,7 +57,7 @@ class TestCatalog:
         stimulus_filepath = [
             'r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg', 'r/f.jpg']
         with pytest.raises(Exception) as e_info:
-            catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         assert str(e_info.value) == (
             'The argument `stimulus_id` must be a 1D array of integers.')
 
@@ -66,7 +66,7 @@ class TestCatalog:
         stimulus_filepath = [
             'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg', 'r/f.jpg']
         with pytest.raises(Exception) as e_info:
-            catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         assert str(e_info.value) == (
             'The argument `stimulus_id` must contain a contiguous set of '
             'integers [0, n_stimuli[.')
@@ -75,7 +75,7 @@ class TestCatalog:
         stimulus_id = np.array([0, 1, 2, 5])
         stimulus_filepath = ['r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/f.jpg']
         with pytest.raises(Exception) as e_info:
-            catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         assert str(e_info.value) == (
             'The argument `stimulus_id` must contain a contiguous set of '
             'integers [0, n_stimuli[.')
@@ -86,7 +86,7 @@ class TestCatalog:
             ['r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg'],
             ['r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg']]
         with pytest.raises(Exception) as e_info:
-            catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         assert str(e_info.value) == (
             'The argument `stimulus_filepath` must have the same shape as '
             '`stimulus_id`.')
@@ -96,7 +96,7 @@ class TestCatalog:
         stimulus_filepath = [
             'r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg']
         with pytest.raises(Exception) as e_info:
-            catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         assert str(e_info.value) == (
             'The argument `stimulus_filepath` must have the same shape as '
             '`stimulus_id`.')
@@ -107,7 +107,7 @@ class TestCatalog:
             'r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg', 'r/f.jpg',
             'f/g.jpg']
         with pytest.raises(Exception) as e_info:
-            catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         assert str(e_info.value) == (
             'The argument `stimulus_filepath` must have the same shape as '
             '`stimulus_id`.')
@@ -122,7 +122,7 @@ class TestCatalog:
         # stimulus_id = np.array([0, 1, 2, 3, 4, 5])
         # stimulus_filepath = np.array([0, 1, 2, 3, 4, 5])
         # with pytest.raises(Exception) as e_info:
-        #     catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+        #     catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
 
     def test_persistence(self, tmpdir):
         """Test object persistence."""
@@ -130,12 +130,12 @@ class TestCatalog:
         stimulus_id = np.array([0, 1, 2, 3, 4, 5])
         stimulus_filepath = np.array(
             ['r/a', 'r/b12', 'r/c', 'r/d', 'r/e', 'r/f'], dtype='O')
-        catalog = catalog.Catalog(stimulus_id, stimulus_filepath)
+        catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
         # Save Catalog.
         fn = tmpdir.join('catalog_test.hdf5')
         catalog.save(fn)
         # Load the saved catalog.
-        loaded_catalog = catalog.load_catalog(fn)
+        loaded_catalog = psiz.catalog.load_catalog(fn)
         # Check that the loaded Docket object is correct.
         assert catalog.n_stimuli == loaded_catalog.n_stimuli
         np.testing.assert_array_equal(

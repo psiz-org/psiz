@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The PsiZ Authors. All Rights Reserved.
+# Copyright 2020 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,14 @@ has a different set of attention weights. An embedding model is
 inferred from the simulated data and compared to the ground truth
 model.
 
+A custom loss is used that (independently) encourages the
+attention weights associated with each group to be sparse, better
+dividing up the inferred dimensions into 'novice' and 'expert'
+dimensions. The line of code assigning the custom loss can be commented
+out to demonstrate the effect of the sparsity regularization. In
+general, a omitting regularization leads to dimensions that are less
+group specific.
+
 Example output:
 
     Attention weights:
@@ -42,6 +50,8 @@ Example output:
 """
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.python.keras import backend as K
 
 from psiz.trials import stack
 from psiz.models import Exponential
@@ -56,28 +66,32 @@ def main():
     n_stimuli = 25
     n_dim = 4
     n_group = 3
-    n_restart = 20
+    n_restart = 30
 
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
-    n_trial = 3000
+    n_trial = 5000
     n_reference = 8
     n_select = 2
     generator = RandomGenerator(n_reference, n_select)
     docket = generator.generate(n_trial, n_stimuli)
 
-    # Simulate similarity judgments for the three groups.
+    # Create virtual agents for each group.
     agent_novice = Agent(emb_true, group_id=0)
     agent_interm = Agent(emb_true, group_id=1)
     agent_expert = Agent(emb_true, group_id=2)
+
+    # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
     obs_interm = agent_interm.simulate(docket)
     obs_expert = agent_expert.simulate(docket)
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
+    # Infer a shared embedding with group-specific attention weights.
     emb_inferred = Exponential(emb_true.n_stimuli, n_dim, n_group)
-    emb_inferred.fit(obs_all, n_restart, verbose=1)
+    # emb_inferred.loss = custom_loss
+    emb_inferred.fit(obs_all, n_restart, verbose=0)  # TODO
 
     # Permute inferred dimensions to best match ground truth.
     attention_weight_0 = emb_inferred.w[0, :]
@@ -152,6 +166,60 @@ def main():
     print('     Expert | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
         r_squared[2, 0], r_squared[2, 1], r_squared[2, 2]))
     print('\n')
+
+
+@tf.function
+def custom_loss(prob, weight, tf_attention):
+    """Compute model loss given observation probabilities."""
+    n_trial = tf.shape(prob)[0]
+    n_trial = tf.cast(n_trial, dtype=K.floatx())
+    n_group = tf.shape(tf_attention)[0]
+
+    # Convert to (weighted) log probabilities.
+    cap = tf.constant(2.2204e-16, dtype=K.floatx())
+    logprob = tf.math.log(tf.maximum(prob, cap))
+    logprob = tf.multiply(weight, logprob)
+
+    # Divide by number of trials to make train and test loss
+    # comparable.
+    loss = tf.negative(tf.reduce_sum(logprob))
+    loss = tf.divide(loss, n_trial)
+
+    # Penalty on attention weights (independently).
+    attention_penalty = tf.constant(0, dtype=K.floatx())
+    for i_group in tf.range(n_group):
+        attention_penalty = (
+            attention_penalty +
+            attention_sparsity_loss(tf_attention[i_group, :])
+        )
+    attention_penalty = (
+        attention_penalty / tf.cast(n_group, dtype=K.floatx())
+    )
+    loss = loss + (attention_penalty / tf.constant(1000.0, dtype=K.floatx()))
+
+    return loss
+
+
+def attention_sparsity_loss(w):
+    """Sparsity encouragement.
+
+    The traditional regularizer to encourage sparsity is L1.
+    Unfortunately, L1 regularization does not work for the attention
+    weights since they are all constrained to sum to the same value
+    (i.e., the number of dimensions). Instead, we achieve sparsity
+    pressure by using a complement version of L2 loss. It tries to make
+    each attention weight as close to zero as possible, putting
+    pressure on the model to only use the dimensions it really needs.
+
+    Arguments:
+        w: Attention weights assumed to be nonnegative.
+
+    """
+    n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
+    loss = tf.negative(
+        tf.math.reduce_mean(tf.math.pow(n_dim - w, 2))
+    )
+    return loss
 
 
 def ground_truth(n_stimuli, n_dim, n_group):

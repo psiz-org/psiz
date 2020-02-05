@@ -28,13 +28,12 @@ Once you have selected an embedding model, you must provide two pieces of inform
 2. The number of unique stimuli that will be in your embedding.
 
 ```python
-from psiz import datasets
-from psiz.models import Exponential
+import psiz
 
 # Load some observations (i.e., judged trials).
-(obs, catalog) = datasets.load_dataset('birds-16')
+(obs, catalog) = psiz.datasets.load('birds-16')
 # Initialize an embedding model.
-emb = Exponential(catalog.n_stimuli)
+emb = psiz.models.Exponential(catalog.n_stimuli)
 # Fit the embedding model using similarity judgment observations.
 emb.fit(obs)
 # Optionally save the fitted model.

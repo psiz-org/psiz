@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The PsiZ Authors. All Rights Reserved.
+# Copyright 2020 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 Synthetic observations are generated using a ground truth model.
 """
 
+import json
 import os
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"]= "2"
@@ -35,16 +36,16 @@ from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
 from psiz.utils import similarity_matrix, matrix_comparison
+from psiz.benchmark import system_info, benchmark_filename
 
 
 def main():
     """Run the simulation."""
     # Settings.
-    n_trial = 1000
-    n_stimuli = 25
-    n_dim = 2
+    n_dim = 3
+    n_stimuli = 1000
+    n_trial = 10000
     n_group = 1
-    n_restart = 20
     n_reference = 8
     n_select = 2
 
@@ -63,7 +64,25 @@ def main():
     samples = emb_true.posterior_samples(obs, verbose=1, n_final_sample=10)
     # Do actual test.
     samples = emb_true.posterior_samples(obs, verbose=1)
-    print('{0:.0f} s'.format(emb_true.posterior_duration))
+    best_time = emb_true.posterior_duration
+    print('{0:.0f} s'.format(best_time))
+
+    test_info = {}
+    test_info['n_dim'] = n_dim
+    test_info['n_trial'] = n_trial
+    test_info['n_reference'] = n_reference
+    test_info['n_select'] = n_select
+    test_info['duration'] = best_time
+
+    sys_info = system_info()
+
+    report = {
+        'test': test_info,
+        'system': sys_info
+    }
+    fp_report = benchmark_filename()
+    with open(fp_report, 'w') as outfile:
+        json.dump(report, outfile)
 
 
 def ground_truth(n_stimuli, n_dim, n_group):

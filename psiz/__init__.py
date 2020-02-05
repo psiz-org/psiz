@@ -15,4 +15,6 @@ Modules:
 """
 
 import psiz.catalog
+import psiz.datasets
+import psiz.models
 import psiz.trials

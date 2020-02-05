@@ -18,6 +18,7 @@
 
 Functions:
     load_dataset: Load observations for the requested dataset.
+    load: An alias for load_dataset.
 
 Todo:
     - create .psiz directory on installation (if it doesn't exist)
@@ -51,6 +52,46 @@ from psiz.catalog import load_catalog
 from psiz.trials import load_trials
 
 HOST_URL = "https://www.psiz.org/datasets/"
+
+
+def load_dataset(
+        fp_dataset, cache_subdir='datasets', cache_dir=None,
+        verbose=0):
+    """Load observations and catalog for the requested hosted dataset.
+
+    Arguments:
+        fp_dataset: The filepath to the dataset. If loading a hosted
+            dataset, just provide the name of the dataset.
+        cache_subdir (optional): The subdirectory where downloaded
+            datasets are cached.
+        cache_dir (optional): The cache directory for PsiZ.
+        verbose (optional): Controls the verbosity of printed dataset summary.
+
+    Returns:
+        obs: An Observations object.
+        catalog: A catalog object containing information regarding the
+            stimuli used to collect observations.
+
+    """
+    # Load from download cache.
+    if cache_dir is None:
+        cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
+    dataset_path = os.path.join(cache_dir, cache_subdir, fp_dataset)
+    if not os.path.exists(dataset_path):
+        os.makedirs(dataset_path)
+
+    obs = _fetch_obs(fp_dataset, cache_subdir, cache_dir)
+    catalog = _fetch_catalog(fp_dataset, cache_subdir, cache_dir)
+
+    if verbose > 0:
+        print("Dataset Summary")
+        print('  n_stimuli: {0}'.format(catalog.n_stimuli))
+        print('  n_trial: {0}'.format(obs.n_trial))
+
+    return (obs, catalog)
+
+
+load = load_dataset
 
 
 def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
@@ -132,43 +173,6 @@ def _fetch_obs(dataset_name, cache_subdir='datasets', cache_dir=None):
         )
 
     return obs
-
-
-def load_dataset(
-        fp_dataset, cache_subdir='datasets', cache_dir=None,
-        verbose=0):
-    """Load observations and catalog for the requested hosted dataset.
-
-    Arguments:
-        fp_dataset: The filepath to the dataset. If loading a hosted
-            dataset, just provide the name of the dataset.
-        cache_subdir (optional): The subdirectory where downloaded
-            datasets are cached.
-        cache_dir (optional): The cache directory for PsiZ.
-        verbose (optional): Controls the verbosity of printed dataset summary.
-
-    Returns:
-        obs: An Observations object.
-        catalog: A catalog object containing information regarding the
-            stimuli used to collect observations.
-
-    """
-    # Load from download cache.
-    if cache_dir is None:
-        cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
-    dataset_path = os.path.join(cache_dir, cache_subdir, fp_dataset)
-    if not os.path.exists(dataset_path):
-        os.makedirs(dataset_path)
-
-    obs = _fetch_obs(fp_dataset, cache_subdir, cache_dir)
-    catalog = _fetch_catalog(fp_dataset, cache_subdir, cache_dir)
-
-    if verbose > 0:
-        print("Dataset Summary")
-        print('  n_stimuli: {0}'.format(catalog.n_stimuli))
-        print('  n_trial: {0}'.format(obs.n_trial))
-
-    return (obs, catalog)
 
 
 def _extract_archive(file_path, path='.', archive_format='auto'):

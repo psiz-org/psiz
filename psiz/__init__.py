@@ -18,3 +18,5 @@ __all__ = [
     'benchmark', 'catalog', 'datasets', 'dimensionality', 'generator',
     'models', 'preprocess', 'simulate', 'trials', 'utils', 'visualize'
 ]
+
+import psiz.catalog

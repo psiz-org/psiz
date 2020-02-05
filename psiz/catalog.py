@@ -21,6 +21,7 @@ Classes:
 
 Functions:
     load_catalog: Load a catalog.
+    load: Alias for load_catalog.
 
 """
 
@@ -256,3 +257,6 @@ def load_catalog(filepath, verbose=0):
         print('  n_stimuli: {0}'.format(catalog.n_stimuli))
         print('')
     return catalog
+
+
+load = load_catalog

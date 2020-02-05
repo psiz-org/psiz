@@ -27,6 +27,7 @@ Functions:
     squeeze: Squeeze indices to be small and consecutive.
     load_trials: Load a hdf5 file, saved using the `save` class method,
         as a SimilarityTrial object.
+    load: Alias for load_trials.
 
 Notes:
     On each similarity judgment trial, an agent judges the similarity
@@ -965,6 +966,9 @@ def load_trials(filepath, verbose=0):
             )
         print('')
     return loaded_trials
+
+
+load = load_trials
 
 
 def _pad_stimulus_set(stimulus_set, max_n_reference):

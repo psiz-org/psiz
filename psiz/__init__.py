@@ -1,5 +1,7 @@
 """
 Modules:
+    benchmark
+    catalog
     datasets
     dimensionality
     generator
@@ -12,6 +14,6 @@ Modules:
 """
 
 __all__ = [
-    'datasets', 'dimensionality', 'generator', 'models', 'preprocess',
-    'simulate', 'trials', 'utils', 'visualize'
+    'benchmark', 'catalog', 'datasets', 'dimensionality', 'generator',
+    'models', 'preprocess', 'simulate', 'trials', 'utils', 'visualize'
 ]

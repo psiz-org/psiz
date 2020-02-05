@@ -28,6 +28,7 @@ Classes:
 Functions:
     load_embedding: Load a hdf5 file, that was saved with the `save`
         class method, as a PsychologicalEmbedding object.
+    load: An alias for load_embedding.
 
 """
 
@@ -2972,6 +2973,9 @@ def load_embedding(filepath):
 
     f.close()
     return embedding
+
+
+load = load_embedding
 
 
 def _elliptical_slice(

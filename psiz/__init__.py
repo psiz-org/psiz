@@ -1,4 +1,5 @@
-"""
+"""Package initialization file.
+
 Modules:
     benchmark
     catalog

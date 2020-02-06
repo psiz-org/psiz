@@ -998,6 +998,8 @@ class PsychologicalEmbedding(object):
                 )
                 print('')
 
+            # NOTE: The combined loss is based on the fact that there are 
+            # 10 splits.
             loss_combined = .9 * loss_train + .1 * loss_val
             loss_combined_best = .9 * loss_train_best + .1 * loss_val_best
             if loss_combined < loss_combined_best:
@@ -1024,6 +1026,7 @@ class PsychologicalEmbedding(object):
         self._set_theta(theta_best)
         self.fit_duration = time.time() - start_time_s
 
+        # TODO also return loss_combined_best
         return loss_train_best, loss_val_best
 
     def _fit_restart(

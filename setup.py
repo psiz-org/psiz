@@ -17,7 +17,7 @@ setuptools.setup(
     author_email='brett.roads@gmail.com',
     license='Apache Licence 2.0',
     packages=['psiz'],
-    python_requires='>=3',
+    python_requires='>=3, 3.8',
     install_requires=[
         'tensorflow>=2', 'scipy', 'pandas', 'scikit-learn',
         'matplotlib', 'tensorflow-probability', 'numexpr'

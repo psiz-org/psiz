@@ -12,7 +12,7 @@ There are two ways to install PsiZ:
     * Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
     * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.2.2`
 
-**Note:** PsiZ also requires TensorFlow 2.0, which is not installed automatically since it is not included as a dependency of the PsiZ package (in setup.py). You must explicitly install TensorFlow 2.0 (tensorflow or tensorflow-gpu). This allows users to specify whether they use a GPU enabled version of TensorFlow.
+**Note:** PsiZ also requires TensorFlow. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
 
 ## Quick Start
 There are four predefined embedding models to choose from:

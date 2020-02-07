@@ -109,7 +109,7 @@ def search(obs, model_spec, search_spec=None, verbose=0):
     # if search_spec['n_fold'] > search_spec['n_split']: TODO issue error
 
     if (verbose > 0):
-        print('Searching dimensionality ...')
+        print('[psiz] Searching dimensionality ...')
         print('  Settings:')
         print('    Dimensionality search list: ', dim_list)
         print('    Splits: ', n_split)

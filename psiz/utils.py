@@ -378,14 +378,18 @@ class ProgressBar(object):
             time_per_iter = 0.0
         else:
             time_per_iter = elapsed_time / iteration
+
         eta_s = np.round((self.total - iteration) * time_per_iter)
+        ett_s = np.round(self.total * time_per_iter)
+
         eta_str = str(datetime.timedelta(seconds=eta_s))
+        ett_str = str(datetime.timedelta(seconds=ett_s))
 
         filledLength = int(self.length * iteration // self.total)
         bar = self.fill * filledLength + '-' * (self.length - filledLength)
         print(
-            '\r    {0} |{1}| {2}%% {3} | ETA: {4}'.format(
-                self.prefix, bar, percent, self.suffix, eta_str
+            '\r    {0} |{1}| {2}% {3} | ETA: {4} | ETT: {5}'.format(
+                self.prefix, bar, percent, self.suffix, eta_str, ett_str
             ), end='\r'
         )
         # Print a new line on completion.

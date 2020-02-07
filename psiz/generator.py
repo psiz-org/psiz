@@ -329,8 +329,7 @@ class ActiveGenerator(DocketGenerator):
 
         if verbose > 0:
             progbar = ProgressBar(
-                n_query, prefix='Progress:', suffix='Complete',
-                length=50
+                n_query, prefix='Progress:', length=50
             )
             progbar.update(0)
 

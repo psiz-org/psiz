@@ -945,7 +945,7 @@ class PsychologicalEmbedding(object):
 
         if verbose > 0 and verbose < 3:
             progbar = ProgressBar(
-                n_restart, prefix='Progress:', suffix='Complete', length=50
+                n_restart, prefix='Progress:', length=50
             )
             progbar.update(0)
 
@@ -1360,8 +1360,7 @@ class PsychologicalEmbedding(object):
         if verbose > 0:
             print('[psiz] Sampling from posterior...')
             progbar = ProgressBar(
-                n_total_sample, prefix='Progress:', suffix='Complete',
-                length=50
+                n_total_sample, prefix='Progress:', length=50
             )
             progbar.update(0)
 
@@ -1517,8 +1516,7 @@ class PsychologicalEmbedding(object):
         if verbose > 0:
             print('[psiz] Sampling from posterior...')
             progbar = ProgressBar(
-                n_total_sample, prefix='Progress:', suffix='Complete',
-                length=50
+                n_total_sample, prefix='Progress:', length=50
             )
             progbar.update(0)
 

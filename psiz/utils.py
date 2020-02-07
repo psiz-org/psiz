@@ -328,7 +328,7 @@ class ProgressBar(object):
     """Display a progress bar in terminal."""
 
     def __init__(
-            self, total, prefix='', suffix='', decimals=1, length=100,
+            self, total, prefix='', decimals=1, length=100,
             fill='█'):
         """Initialize.
 
@@ -346,7 +346,6 @@ class ProgressBar(object):
         """
         self.total = total
         self.prefix = prefix
-        self.suffix = suffix
         self.decimals = decimals
         self.length = length
         self.fill = fill
@@ -388,8 +387,8 @@ class ProgressBar(object):
         filledLength = int(self.length * iteration // self.total)
         bar = self.fill * filledLength + '-' * (self.length - filledLength)
         print(
-            '\r    {0} |{1}| {2}% {3} | ETA: {4} | ETT: {5}'.format(
-                self.prefix, bar, percent, self.suffix, eta_str, ett_str
+            '\r    {0} |{1}| {2}% | ETA: {3} | ETT: {4}'.format(
+                self.prefix, bar, percent, eta_str, ett_str
             ), end='\r'
         )
         # Print a new line on completion.

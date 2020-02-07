@@ -19,8 +19,8 @@ setuptools.setup(
     packages=['psiz'],
     python_requires='>=3',
     install_requires=[
-        'numpy', 'scipy', 'pandas', 'scikit-learn', 'h5py', 'matplotlib',
-        'tensorflow', 'tensorflow-probability', 'numexpr'
+        'tensorflow>=2', 'scipy', 'pandas', 'scikit-learn',
+        'matplotlib', 'tensorflow-probability', 'numexpr'
     ],
     include_package_data=True,
     url='https://github.com/roads/psiz',

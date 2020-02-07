@@ -32,14 +32,13 @@ from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
-    """Run the simulation that infers an embedding for two groups."""
+    """Run the simulation that infers an embedding for one groups."""
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_group = 1
     n_restart = 20
 
-    emb_true = ground_truth(n_stimuli, n_dim, n_group)
+    emb_true = ground_truth(n_stimuli, n_dim)
     simmat_true = similarity_matrix(emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
@@ -59,7 +58,7 @@ def main():
     r2 = np.empty((n_step))
     loss = np.empty((n_step))
     for i_round in range(n_step):
-        emb_inferred = Exponential(n_stimuli, n_dim, n_group)
+        emb_inferred = Exponential(n_stimuli, n_dim)
         include_idx = np.arange(0, n_obs[i_round])
         loss[i_round], _ = emb_inferred.fit(
             obs.subset(include_idx), n_restart=n_restart, verbose=1
@@ -88,10 +87,9 @@ def main():
     plt.show()
 
 
-def ground_truth(n_stimuli, n_dim, n_group):
+def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    emb = Exponential(
-        n_stimuli, n_dim=n_dim, n_group=n_group)
+    emb = Exponential(n_stimuli, n_dim=n_dim)
     mean = np.ones((n_dim))
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))

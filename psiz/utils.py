@@ -285,7 +285,7 @@ def procrustean_solution(z_a, z_b, n_restart=10):
             restarts for the optimization routine.
 
     Returns:
-        z_c: An affine transformation of z_b that is maximally alligned
+        z_c: An affine transformation of z_b that is maximally aligned
             with z_a.
         params: The affine transformation parameters.
 

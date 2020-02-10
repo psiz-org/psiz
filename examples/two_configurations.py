@@ -46,15 +46,19 @@ def main():
     # Generate 1000 2-choose-1 trials.
     n_reference = 2
     n_select = 1
-    gen_2c1 = RandomGenerator(n_reference, n_select)
+    gen_2c1 = RandomGenerator(
+        n_stimuli, n_reference=n_reference, n_select=n_select
+    )
     n_trial = 1000
-    docket_2c1 = gen_2c1.generate(n_trial, n_stimuli)
+    docket_2c1 = gen_2c1.generate(n_trial)
     # Generate 1000 8-choose-2 trials.
     n_reference = 8
     n_select = 2
-    gen_8c2 = RandomGenerator(n_reference, n_select)
+    gen_8c2 = RandomGenerator(
+        n_stimuli, n_reference=n_reference, n_select=n_select
+    )
     n_trial = 1000
-    docket_8c2 = gen_8c2.generate(n_trial, n_stimuli)
+    docket_8c2 = gen_8c2.generate(n_trial)
     # Merge both sets of trials into a single docket.
     docket = stack([docket_2c1, docket_8c2])
 

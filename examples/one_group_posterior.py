@@ -52,8 +52,10 @@ def main():
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials.
-    generator = RandomGenerator(n_reference, n_select)
-    docket = generator.generate(n_trial, n_stimuli)
+    generator = RandomGenerator(
+        n_stimuli, n_reference=n_reference, n_select=n_select
+    )
+    docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
     agent = Agent(emb_true)

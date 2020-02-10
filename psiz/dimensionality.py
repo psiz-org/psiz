@@ -147,7 +147,7 @@ def search(obs, model_spec, search_spec=None, verbose=0):
                 print('    Fold: ', i_fold)
             # Train
             obs_train = obs.subset(train_index)
-            loss_train[idx_dim, i_fold], _ = emb.fit(
+            loss_train[idx_dim, i_fold], loss_val[idx_dim, i_fold] = emb.fit(
                 obs_train, n_restart=n_restart, verbose=verbose-1
             )
             # Test

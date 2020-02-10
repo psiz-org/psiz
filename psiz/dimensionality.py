@@ -70,7 +70,7 @@ def search(obs, model_spec, search_spec=None, verbose=0):
 
         search_spec: TODO
         dim_list (optional): A list of integers indicating the
-            dimensions to search over.        
+            dimensions to search over.
         n_split (optional): Integer specifying how many splits to
             create from the data. This defines the proportion of
             train and test data.
@@ -347,9 +347,10 @@ def visualize_dimension_search(ax, summary):
         ax: A Matplotlib axis
 
     Example usage:
-            fig, ax = plt.subplots(figsize=(4, 3))
-            ax = plt.subplot(1, 1, 1)
-            visualize_dimension_search(ax, dim_summary)
+        fig, ax = plt.subplots(figsize=(4, 3))
+        ax = plt.subplot(1, 1, 1)
+        visualize_dimension_search(ax, dim_summary)
+
     """
     dim_list = summary["dim_list"]
     dim_best = summary["dim_best"]

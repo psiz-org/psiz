@@ -3220,9 +3220,14 @@ def _tf_ranked_sequence_probability(sim_qr, n_select):
     return seq_prob
 
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def default_loss(prob_all, weight, tf_attention):
     """Compute model loss given observation probabilities."""
+    # print(
+    #     "Tracing loss\n    prob_all:{0}\n    weight:{1}\n    tf_attention:{2}".format(
+    #         prob_all, weight, tf_attention
+    #     )
+    # )
     n_trial = tf.shape(prob_all)[0]
     n_trial = tf.cast(n_trial, dtype=K.floatx())
 

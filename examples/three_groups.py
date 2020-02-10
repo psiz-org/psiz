@@ -93,7 +93,7 @@ def main():
     # Infer a shared embedding with group-specific attention weights.
     emb_inferred = Exponential(emb_true.n_stimuli, n_dim, n_group)
     # emb_inferred.loss = custom_loss
-    emb_inferred.fit(obs_all, n_restart, verbose=0)  # TODO
+    emb_inferred.fit(obs_all, n_restart, verbose=0)
 
     # Permute inferred dimensions to best match ground truth.
     attention_weight_0 = emb_inferred.w[0, :]
@@ -170,7 +170,7 @@ def main():
     print('\n')
 
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def custom_loss(prob, weight, tf_attention):
     """Compute model loss given observation probabilities."""
     n_trial = tf.shape(prob)[0]

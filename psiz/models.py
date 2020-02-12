@@ -873,11 +873,12 @@ class PsychologicalEmbedding(object):
             ValueError
 
         """
-        n_group_obs = len(np.unique(obs.group_id))
+        n_group_obs = np.max(obs.group_id) + 1
         if n_group_obs > self.n_group:
             raise ValueError(
-                "The provided observations contain data from {0} groups."
-                " The present model only supports {1} group(s).".format(
+                "The provided observations contain data from at least {0}"
+                " groups. The present model only supports {1}"
+                " group(s).".format(
                     n_group_obs, self.n_group
                 )
             )

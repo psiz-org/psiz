@@ -124,19 +124,18 @@ def visualize_embedding_static(
 
 def visualize_embedding_images(
         ax, z, class_id=None, classes=None, filepaths=None, image_size=.2,
-        dot_size=10, show_dot=True):
+        dot_size=10, show_dot=False):
     """Generate a static scatter plot of the supplied embedding points.
 
     Arguments:
-        ax:
+        ax: TODO
         z: A real-valued two-dimensional array representing the embedding.
             shape = (n_stimuli, n_dim)
         class_id: (optional) An integer array contianing class IDs
             that indicate the class membership of each stimulus.
             shape = (n_stimuli, 1)
         classes: (optional) A dictionary mapping class IDs to strings.
-        filename (optional): The pdf filename to save the figure,
-            otherwise the figure is displayed.
+        filepaths: TODO should not be optional
 
     """
     # Settings
@@ -215,6 +214,7 @@ def visualize_embedding_images(
 #     """
 # TODO
 
+
 def visualize_convergence(data, fname=None):
     """Visualize convergence analysis.
 
@@ -225,6 +225,7 @@ def visualize_convergence(data, fname=None):
         fname (optional): The pdf filename to save the figure,
             otherwise the figure is displayed. Can be either a path
             string or a pathlib Path object.
+
     """
     n_trial_array = data["n_trial_array"]
     val = data["val"]

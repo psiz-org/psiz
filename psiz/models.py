@@ -863,6 +863,25 @@ class PsychologicalEmbedding(object):
         )
         return model
 
+    def _check_obs(self, obs):
+        """Check observerations.
+
+        Arguments:
+            obs: A psiz.trials.Observations object.
+
+        Raises:
+            ValueError
+
+        """
+        n_group_obs = len(np.unique(obs.group_id))
+        if n_group_obs > self.n_group:
+            raise ValueError(
+                "The provided observations contain data from {0} groups."
+                " The present model only supports {1} group(s).".format(
+                    n_group_obs, self.n_group
+                )
+            )
+
     def fit(self, obs, n_restart=50, init_mode='cold', verbose=0):
         """Fit the free parameters of the embedding model.
 
@@ -893,6 +912,9 @@ class PsychologicalEmbedding(object):
 
         """
         start_time_s = time.time()
+
+        self._check_obs(obs)
+
         #  Infer embedding.
         if (verbose > 0):
             print('[psiz] Inferring embedding...')
@@ -1152,6 +1174,8 @@ class PsychologicalEmbedding(object):
                 the negative loglikelihood.
 
         """
+        self._check_obs(obs)
+
         (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
         tf_config = self._prepare_config(obs_config_list)
         tf_inputs = self._prepare_inputs(obs, obs_config_idx)

@@ -158,7 +158,7 @@ class Catalog(object):
         """Return filepaths."""
         file_path_list = self.stimuli.filepath.values.tolist()
         file_path_list = [
-            Path(self.common_path, i_file) for i_file in file_path_list
+            Path(self.common_path) / Path(i_file) for i_file in file_path_list
         ]
         return file_path_list
 

@@ -18,3 +18,4 @@ TODO.md
 mark_*.json
 
 sparsity_loss.py
+/examples/one_group_dimensionality.py

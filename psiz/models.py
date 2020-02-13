@@ -189,11 +189,11 @@ class PsychologicalEmbedding(object):
         self.log_dir = '/tmp/psiz/tensorboard_logs/'
         self.log_freq = 10
 
-        # Timer attributes.
+        # Timer attributes. TODO handle save and load
         self.fit_duration = 0.0
         self.posterior_duration = 0.0
 
-        # Set loss function.
+        # Set loss function. TODO handle save and load
         self.loss = default_loss
 
         super().__init__()

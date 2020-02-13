@@ -16,3 +16,5 @@ TODO.md
 .pytest_cache/*
 
 mark_*.json
+
+sparsity_loss.py

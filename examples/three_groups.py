@@ -92,8 +92,8 @@ def main():
 
     # Infer a shared embedding with group-specific attention weights.
     emb_inferred = Exponential(emb_true.n_stimuli, n_dim, n_group)
-    # emb_inferred.loss = custom_loss
-    emb_inferred.fit(obs_all, n_restart, verbose=0)
+    emb_inferred.loss = custom_loss
+    emb_inferred.fit(obs_all, n_restart, verbose=1)
 
     # Permute inferred dimensions to best match ground truth.
     attention_weight_0 = emb_inferred.w[0, :]
@@ -192,12 +192,12 @@ def custom_loss(prob, weight, tf_attention):
     for i_group in tf.range(n_group):
         attention_penalty = (
             attention_penalty +
-            attention_sparsity_loss(tf_attention[i_group, :])
+            entropy_loss(tf_attention[i_group, :])
         )
     attention_penalty = (
         attention_penalty / tf.cast(n_group, dtype=K.floatx())
     )
-    loss = loss + (attention_penalty / tf.constant(1000.0, dtype=K.floatx()))
+    loss = loss + (attention_penalty / tf.constant(10.0, dtype=K.floatx()))
 
     return loss
 
@@ -220,6 +220,21 @@ def attention_sparsity_loss(w):
     n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
     loss = tf.negative(
         tf.math.reduce_mean(tf.math.pow(n_dim - w, 2))
+    )
+    return loss
+
+
+def entropy_loss(w):
+    """Loss term based on entropy that encourages sparsity.
+
+    Arguments:
+        w: Attention weights assumed to be nonnegative.
+
+    """
+    n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
+    w_1 = w / n_dim + tf.keras.backend.epsilon()
+    loss = tf.negative(
+        tf.math.reduce_sum(w_1 * tf.math.log(w_1))
     )
     return loss
 

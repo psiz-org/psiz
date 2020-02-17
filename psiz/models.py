@@ -54,7 +54,6 @@ import tensorflow.keras.optimizers
 from tensorflow.python.keras import backend as K
 from tensorflow.keras.constraints import Constraint
 
-
 from psiz.utils import ProgressBar
 
 

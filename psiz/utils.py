@@ -21,8 +21,10 @@ Classes:
     ProgressBar: A progress bar displayed in the terminal.
 
 Functions:
-    similarity_matrix: Return the similarity matrix characterizing
+    pairwise_matrix: Return the similarity matrix characterizing
         the embedding.
+    similarity_matrix: Return the similarity matrix characterizing
+        the embedding. Deprecated use pairwise_matrix.
     matrix_comparison: Compute correlation between two matrices.
     compare_models: Compare the similarity structure between two
         embedding models.
@@ -144,6 +146,9 @@ def similarity_matrix(similarity_fn, z):
     simmat = similarity_fn(z_a, z_b)
     simmat = simmat.reshape(n_stimuli, n_stimuli)
     return simmat
+
+
+pairwise_matrix = similarity_matrix
 
 
 def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):

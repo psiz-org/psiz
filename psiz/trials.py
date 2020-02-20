@@ -752,6 +752,7 @@ class Observations(SimilarityTrials):
         Arguments:
             group_id: The new group IDs. Can be an integer or an array
                 of integers with shape=(self.n_trial,).
+
         """
         if np.isscalar(group_id):
             group_id = group_id * np.ones((self.n_trial), dtype=np.int32)

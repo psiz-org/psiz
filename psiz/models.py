@@ -1406,6 +1406,8 @@ class PsychologicalEmbedding(object):
         gmm.fit(z)
         mu = gmm.means_[0]
         sigma = gmm.covariances_[0] * np.identity(n_dim)
+        # NOTE: Since the covariance is spherical, we just need one element.
+        chol_element = np.linalg.cholesky(sigma)[0, 0]
 
         # Center embedding to satisfy assumptions of elliptical slice sampling.
         z = z - mu
@@ -1425,7 +1427,7 @@ class PsychologicalEmbedding(object):
 
         # Initialize sampler.
         z_full = copy.copy(z)
-        samples = np.empty((n_stimuli, n_dim, n_total_sample))
+        samples = np.empty((n_stimuli, n_dim, n_total_sample))  # TODO reduce memory footprint using n_final_samples?
 
         # Make first partition.
         n_partition = 2
@@ -1433,14 +1435,14 @@ class PsychologicalEmbedding(object):
             n_stimuli, n_partition
         )
         # Create a diagonally tiled covariance matrix in order to slice
-        # multiple points simultaneously.
-        prior = []
-        for i_part in range(n_partition):
-            prior.append(
-                np.linalg.cholesky(
-                    self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim)
-                )
-            )
+        # multiple points simultaneously. TODO
+        # prior = []
+        # for i_part in range(n_partition):
+        #     prior.append(
+        #         np.linalg.cholesky(
+        #             self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim)
+        #         )
+        #     )
 
         for i_round in range(n_total_sample):
             # Partition stimuli into two groups.
@@ -1456,7 +1458,7 @@ class PsychologicalEmbedding(object):
                 z_part = z_full[part_idx[i_part], :]
                 # Sample.
                 (z_part, _) = _elliptical_slice(
-                    z_part, prior[i_part], log_likelihood,
+                    z_part, chol_element, log_likelihood,
                     pdf_params=[part_idx[i_part], copy.copy(z), obs]
                 )
                 # Update.
@@ -3004,16 +3006,18 @@ load = load_embedding
 
 
 def _elliptical_slice(
-        initial_theta, prior, lnpdf, pdf_params=(), angle_range=None):
+        initial_theta, chol_element, lnpdf, pdf_params=(), angle_range=None):
     """Return samples from elliptical slice sampler.
 
     Markov chain update for a distribution with a Gaussian "prior"
-    factored out.
+    factored out. This slice function assumes a spherical Gaussian and
+    takes advantage of the simplified math in order to compute `nu`.
 
     Arguments:
         initial_theta: initial vector
-        prior: cholesky decomposition of the covariance matrix (like
-            what numpy.linalg.cholesky returns)
+        chol_element: The diagonal element of the cholesky decomposition of
+            the covariance matrix (like what numpy.linalg.cholesky
+            returns). 
         lnpdf: function evaluating the log of the pdf to be sampled
         pdf_params: parameters to pass to the pdf
         angle_range: Default 0: explore whole ellipse with break point
@@ -3031,14 +3035,9 @@ def _elliptical_slice(
     """
     cur_lnpdf = lnpdf(initial_theta, *pdf_params)
 
-    # Determine number of variables.
+    # Compute nu.
     theta_shape = initial_theta.shape
-    D = initial_theta.size
-    if not prior.shape[0] == D or not prior.shape[1] == D:
-        raise IOError("Prior must be given by a DxD chol(Sigma)")
-    nu = np.dot(prior, np.random.normal(size=D))
-    # Reshape nu to reflect shape of theta.
-    nu = np.reshape(nu, theta_shape, order='C')
+    nu = chol_element * np.random.normal(size=theta_shape)
 
     # Set up slice threshold.
     hh = np.log(np.random.uniform()) + cur_lnpdf

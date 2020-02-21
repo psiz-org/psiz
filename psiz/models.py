@@ -1404,7 +1404,7 @@ class PsychologicalEmbedding(object):
             n_components=1, covariance_type='spherical'
         )
         gmm.fit(z)
-        mu = gmm.means_[0]
+        mu = np.expand_dims(gmm.means_[0], axis=0)
         sigma = gmm.covariances_[0] * np.identity(n_dim)
         # NOTE: Since the covariance is spherical, we just need one element.
         chol_element = np.linalg.cholesky(sigma)[0, 0]
@@ -1427,29 +1427,22 @@ class PsychologicalEmbedding(object):
 
         # Initialize sampler.
         z_full = copy.copy(z)
-        samples = np.empty((n_stimuli, n_dim, n_total_sample))  # TODO reduce memory footprint using n_final_samples?
+        samples = np.empty((n_stimuli, n_dim, n_total_sample))
 
         # Make first partition.
         n_partition = 2
         part_idx, n_stimuli_part = self._make_partition(
             n_stimuli, n_partition
         )
-        # Create a diagonally tiled covariance matrix in order to slice
-        # multiple points simultaneously. TODO
-        # prior = []
-        # for i_part in range(n_partition):
-        #     prior.append(
-        #         np.linalg.cholesky(
-        #             self._inflate_sigma(sigma, n_stimuli_part[i_part], n_dim)
-        #         )
-        #     )
 
         for i_round in range(n_total_sample):
-            # Partition stimuli into two groups.
+
             if np.mod(i_round, 100) == 0:
                 if verbose > 0:
                     progbar.update(i_round + 1)
 
+            # Partition stimuli into two groups to fix rotation invariance.
+            if np.mod(i_round, 10) == 0:
                 part_idx, n_stimuli_part = self._make_partition(
                     n_stimuli, n_partition
                 )

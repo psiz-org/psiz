@@ -14,18 +14,21 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Example that samples from the posterior of an embedding model.
+"""Example script that samples from the posterior of an embedding.
 
 Synthetic data is generated from a ground truth embedding model. For
 simplicity, the ground truth model is also used as the inferred
 model in this example. In practice, the judged trials would be used to
 infer a separate embedding model since the ground truth is not known.
 In this example, using the ground truth allows us to see how the
-posterior sampling algorithm works under ideal conditions.
+posterior sampling algorithm works under ideal conditions. Posterior
+samples are drawn with increasing amounts of data, allowing one to see
+how the posterior changes as the amount of data increases.
 
 Notes:
-    This script takes approximately 20 minutes to execute and will
-        save the video as a file called `posterior.mp4`.
+    This script takes approximately 20 minutes to execute on a modern
+        machine and will save the video as a file called
+        `posterior_evolution.mp4`.
 
 """
 
@@ -68,7 +71,7 @@ def main():
     )
     docket = generator.generate(n_trial)
 
-    # Simulate similarity judgements using ground truth model.
+    # Simulate similarity judgments using ground truth model.
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
@@ -78,7 +81,7 @@ def main():
 
     z_samp_list = n_frame * [None]
     z_central_list = n_frame * [None]
-    r_pearson_list = n_frame * [None]
+    r2_list = n_frame * [None]
     n_obs = np.floor(np.linspace(20, n_trial, n_frame)).astype(np.int64)
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
@@ -94,11 +97,11 @@ def main():
         emb_inferred.z = z_central
         simmat_infer = similarity_matrix(
             emb_inferred.similarity, emb_inferred.z)
-        r_pearson = matrix_comparison(
-            simmat_infer, simmat_true, score='pearson'
+        r2 = matrix_comparison(
+            simmat_infer, simmat_true, score='r2'
         )
-        r_pearson_list[i_frame] = r_pearson
-        print('Frame: {0} | r: {1: >6.2f}'.format(i_frame, r_pearson))
+        r2_list[i_frame] = r2
+        print('Frame: {0} | r^2: {1: >6.2f}'.format(i_frame, r2))
         emb_inferred.z = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
@@ -155,7 +158,7 @@ def main():
         scat3.set_offsets(
             z_samp_list[frame_number])
     ani = animation.FuncAnimation(fig, update, frames=n_frame)
-    ani.save('posterior_samples.mp4', writer=writer)
+    ani.save('posterior_evolution.mp4', writer=writer)
 
 
 def ground_truth():

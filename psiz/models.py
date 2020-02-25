@@ -1024,11 +1024,11 @@ class PsychologicalEmbedding(object):
         config_idx_val = obs_config_idx[val_idx]
 
         # Initial evaluation.
-        loss_train_best = self.evaluate(obs_train)
-        loss_val_best = self.evaluate(obs_val)
+        loss_train_init = self.evaluate(obs_train)
+        loss_val_init = self.evaluate(obs_val)
         # NOTE: The combined loss is based on the fact that there are
         # 10 splits.
-        loss_combined_best = .9 * loss_train_best + .1 * loss_val_best
+        loss_combined_init = .9 * loss_train_init + .1 * loss_val_init
 
         # Prepare observations.
         tf_inputs_train = self._prepare_inputs(obs_train, config_idx_train)
@@ -1036,8 +1036,8 @@ class PsychologicalEmbedding(object):
 
         # Update record with initialization values.
         fit_record.update(
-            loss_train_best.numpy(), loss_val_best.numpy(),
-            loss_combined_best.numpy(), self._z["value"],
+            loss_train_init.numpy(), loss_val_init.numpy(),
+            loss_combined_init.numpy(), self._z["value"],
             self._phi['w']["value"], self._theta, is_init=True
         )
 
@@ -1047,7 +1047,7 @@ class PsychologicalEmbedding(object):
                 '        '
                 '     --     | '
                 'loss_train: {0: .6f} | loss_val: {1: .6f}'.format(
-                    loss_train_best, loss_val_best)
+                    loss_train_init, loss_val_best)
             )
             print('')
 
@@ -1112,6 +1112,16 @@ class PsychologicalEmbedding(object):
                 loss_train, loss_val, loss_combined, z, attention, theta
             )
 
+        # Sort records from best to worst and grab best.
+        fit_record.sort()
+        loss_train_best = fit_record.record['loss_train'][0]
+        loss_val_best = fit_record.record['loss_val'][0]
+        self._z["value"] = fit_record.record['z'][0]
+        self._phi['w']["value"] = fit_record.record['attention'][0]
+        self._set_theta(fit_record.record['theta'][0])
+        self.fit_duration = time.time() - start_time_s  # TODO
+        self.fit_record = fit_record
+
         if (verbose > 1):
             if fit_record.beat_init:
                 print(
@@ -1122,13 +1132,6 @@ class PsychologicalEmbedding(object):
                 )
             else:
                 print('    Did not beat initialization.')
-
-        fit_record.sort()
-        self._z["value"] = fit_record.record['z'][0]
-        self._phi['w']["value"] = fit_record.record['attention'][0]
-        self._set_theta(fit_record.record['theta'][0])
-        self.fit_duration = time.time() - start_time_s  # TODO
-        self.fit_record = fit_record
 
         # TODO only return loss_combined_best
         return loss_train_best, loss_val_best

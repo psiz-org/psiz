@@ -1887,6 +1887,18 @@ class PsychologicalEmbedding(object):
         emb._phi["w"]["value"] = np.ones([1, self.n_dim])
         return emb
 
+    def from_record(self, fit_record, idx):
+        """Set embedding parameters using a record.
+
+        Arguments:
+            fit_record: An appropriate psiz.models.FitRecord object.
+            idx: An integer indicating which record to use.
+
+        """
+        self._z["value"] = fit_record.record['z'][idx]
+        self._phi['w']["value"] = fit_record.record['attention'][idx]
+        self._set_theta(fit_record.record['theta'][idx])
+
     def __deepcopy__(self, memodict={}):
         """Override deepcopy method."""
         # Make shallow copy of whole object.

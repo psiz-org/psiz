@@ -997,13 +997,14 @@ class PsychologicalEmbedding(object):
         if (verbose > 0):
             print('[psiz] Inferring embedding...')
         if (verbose > 1):
-            print('    Settings:')
             print(
-                '    n_stimuli: {0} | n_dim: {1} | n_group: {2}'
+                '    Settings:'
+                ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
                 ' | n_obs: {3} | n_restart: {4}'.format(
                     self.n_stimuli, self.n_dim, self.n_group,
-                    obs.n_trial, n_restart))
-            print('')
+                    obs.n_trial, n_restart
+                )
+            )
 
         # Grab configuration information. Need too grab here because
         # configuration mapping may change when grabbing train and
@@ -3091,7 +3092,7 @@ def _elliptical_slice(
         initial_theta: initial vector
         chol_element: The diagonal element of the cholesky decomposition of
             the covariance matrix (like what numpy.linalg.cholesky
-            returns). 
+            returns).
         lnpdf: function evaluating the log of the pdf to be sampled
         pdf_params: parameters to pass to the pdf
         angle_range: Default 0: explore whole ellipse with break point

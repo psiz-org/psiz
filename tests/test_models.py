@@ -23,6 +23,7 @@ Todo
     * test subset method
     * test layers
     * test inflate points
+    * test FitRecord sort
 
 """
 

@@ -57,6 +57,77 @@ from tensorflow.keras.constraints import Constraint
 from psiz.utils import ProgressBar
 
 
+class FitRecord(object):
+    """Class for keeping track of multiple restarts."""
+
+    def __init__(self, emb, n_record):
+        """Initialize.
+
+        Arguments:
+            n_restart: TODO
+            n_keep: TODO
+
+        """
+        self.n_record = n_record
+        self.record = {
+            'loss_train': np.inf * np.ones([n_record]),
+            'loss_val': np.inf * np.ones([n_record]),
+            'loss_combined': np.inf * np.ones([n_record]),
+            'z': np.zeros([n_record, emb.n_stimuli, emb.n_dim]),
+            'attention': np.zeros([n_record, emb.n_group, emb.n_dim]),
+            'theta': [None] * n_record
+        }
+        self.beat_init = None
+        self._init_loss_combined = np.inf
+        super().__init__()
+
+    def update(
+            self, loss_train, loss_val, loss_combined, z, attention, theta,
+            is_init=False):
+        """Update record with incoming data.
+
+        Arguments:
+            loss_train: TODO
+
+        Notes:
+            The update method does not worry about keeping the
+            records sorted. If the records need to be sorted, use the
+            sort method.
+
+        """
+        locs_worse = np.greater(self.record['loss_combined'], loss_combined)
+
+        if np.sum(locs_worse) > 0:
+            # Identify worst restart in record.
+            idx_worst = np.argmax(self.record['loss_combined'][locs_worse])
+
+            # Replace worst restart with incoming restart.
+            self.record['loss_train'][idx_worst] = loss_train
+            self.record['loss_val'][idx_worst] = loss_val
+            self.record['loss_combined'][idx_worst] = loss_combined
+            self.record['z'][idx_worst] = z
+            self.record['attention'][idx_worst] = attention
+            self.record['theta'][idx_worst] = theta
+
+            if is_init:
+                self._init_loss_combined = loss_combined
+                self.beat_init = False
+            else:
+                if loss_combined < self._init_loss_combined:
+                    self.beat_init = True
+
+    def sort(self):
+        """Sort the records from best to worst."""
+        idx_sort = np.argsort(self.record['loss_combined'])
+
+        self.record['loss_train'] = self.record['loss_train'][idx_sort]
+        self.record['loss_val'] = self.record['loss_val'][idx_sort]
+        self.record['loss_combined'] = self.record['loss_combined'][idx_sort]
+        self.record['z'] = self.record['z'][idx_sort]
+        self.record['attention'] = self.record['attention'][idx_sort]
+        self.record['theta'] = [self.record['theta'][i] for i in idx_sort]
+
+
 class PsychologicalEmbedding(object):
     """Abstract base class for psychological embedding algorithm.
 
@@ -188,7 +259,9 @@ class PsychologicalEmbedding(object):
         self.log_dir = '/tmp/psiz/tensorboard_logs/'
         self.log_freq = 10
 
+        # The following attributes that are NOT saved. TODO
         # Timer attributes. TODO handle save and load
+        self.fit_record = None
         self.fit_duration = 0.0
         self.posterior_duration = 0.0
 
@@ -882,7 +955,7 @@ class PsychologicalEmbedding(object):
                 )
             )
 
-    def fit(self, obs, n_restart=50, init_mode='cold', verbose=0):
+    def fit(self, obs, n_restart=50, init_mode='cold', n_record=1, verbose=0):
         """Fit the free parameters of the embedding model.
 
         Arguments:
@@ -898,6 +971,7 @@ class PsychologicalEmbedding(object):
                 their defined support. When fitting using a `hot`
                 initialization, trainable parameters will continue from
                 their current value.
+            n_record (optional): TODO
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
@@ -914,6 +988,10 @@ class PsychologicalEmbedding(object):
         start_time_s = time.time()
 
         self._check_obs(obs)
+
+        # Make sure n_record is not greater than n_restart.
+        n_record = np.minimum(n_record, n_restart)
+        fit_record = FitRecord(self, n_record)
 
         #  Infer embedding.
         if (verbose > 0):
@@ -947,20 +1025,27 @@ class PsychologicalEmbedding(object):
         # Initial evaluation.
         loss_train_best = self.evaluate(obs_train)
         loss_val_best = self.evaluate(obs_val)
+        # NOTE: The combined loss is based on the fact that there are
+        # 10 splits.
+        loss_combined_best = .9 * loss_train_best + .1 * loss_val_best
 
         # Prepare observations.
         tf_inputs_train = self._prepare_inputs(obs_train, config_idx_train)
         tf_inputs_val = self._prepare_inputs(obs_val, config_idx_val)
 
-        z_best = self._z["value"]
-        attention_best = self._phi['w']["value"]
-        theta_best = self._theta
-        beat_init = False
+        # Update record with initialization values.
+        fit_record.update(
+            loss_train_best.numpy(), loss_val_best.numpy(),
+            loss_combined_best.numpy(), self._z["value"],
+            self._phi['w']["value"], self._theta, is_init=True
+        )
+
         if (verbose > 2):
             print('        Initialization')
             print(
                 '        '
-                '     --     | loss: {0: .6f} | loss_val: {1: .6f}'.format(
+                '     --     | '
+                'loss_train: {0: .6f} | loss_val: {1: .6f}'.format(
                     loss_train_best, loss_val_best)
             )
             print('')
@@ -1004,6 +1089,7 @@ class PsychologicalEmbedding(object):
                 # Coonvert Tensors to NumPy.
                 loss_train = loss_train.numpy()
                 loss_val = loss_val.numpy()
+                loss_combined = .9 * loss_train + .1 * loss_val
                 epoch = epoch.numpy()
                 z = z.numpy()
                 attention = attention.numpy()
@@ -1020,20 +1106,13 @@ class PsychologicalEmbedding(object):
                 )
                 print('')
 
-            # NOTE: The combined loss is based on the fact that there are
-            # 10 splits.
-            loss_combined = .9 * loss_train + .1 * loss_val
-            loss_combined_best = .9 * loss_train_best + .1 * loss_val_best
-            if loss_combined < loss_combined_best:
-                loss_val_best = loss_val
-                loss_train_best = loss_train
-                z_best = z
-                attention_best = attention
-                theta_best = theta
-                beat_init = True
+            # Update fit record with latest restart.
+            fit_record.update(
+                loss_train, loss_val, loss_combined, z, attention, theta
+            )
 
         if (verbose > 1):
-            if beat_init:
+            if fit_record.beat_init:
                 print(
                     '    Best Restart\n        n_epoch: {0} | '
                     'loss: {1: .6f} | loss_val: {2: .6f}'.format(
@@ -1043,12 +1122,14 @@ class PsychologicalEmbedding(object):
             else:
                 print('    Did not beat initialization.')
 
-        self._z["value"] = z_best
-        self._phi['w']["value"] = attention_best
-        self._set_theta(theta_best)
-        self.fit_duration = time.time() - start_time_s
+        fit_record.sort()
+        self._z["value"] = fit_record.record['z'][0]
+        self._phi['w']["value"] = fit_record.record['attention'][0]
+        self._set_theta(fit_record.record['theta'][0])
+        self.fit_duration = time.time() - start_time_s  # TODO
+        self.fit_record = fit_record
 
-        # TODO also return loss_combined_best
+        # TODO only return loss_combined_best
         return loss_train_best, loss_val_best
 
     def _fit_restart(

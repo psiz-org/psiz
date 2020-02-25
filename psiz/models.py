@@ -95,11 +95,17 @@ class FitRecord(object):
             sort method.
 
         """
-        locs_worse = np.greater(self.record['loss_combined'], loss_combined)
+        dmy_idx = np.arange(self.n_record)
+        locs_is_worse = np.greater(self.record['loss_combined'], loss_combined)
 
-        if np.sum(locs_worse) > 0:
+        if np.sum(locs_is_worse) != 50:  # TODO
+            temp = 0
+
+        if np.sum(locs_is_worse) > 0:
             # Identify worst restart in record.
-            idx_worst = np.argmax(self.record['loss_combined'][locs_worse])
+            idx_eligable_as_worst = dmy_idx[locs_is_worse]
+            idx_idx_worst = np.argmax(self.record['loss_combined'][locs_is_worse])
+            idx_worst = idx_eligable_as_worst[idx_idx_worst]
 
             # Replace worst restart with incoming restart.
             self.record['loss_train'][idx_worst] = loss_train

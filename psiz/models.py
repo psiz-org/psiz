@@ -98,9 +98,6 @@ class FitRecord(object):
         dmy_idx = np.arange(self.n_record)
         locs_is_worse = np.greater(self.record['loss_combined'], loss_combined)
 
-        # if np.sum(locs_is_worse) != 50:  # TODO
-        #     temp = 0
-
         if np.sum(locs_is_worse) > 0:
             # Identify worst restart in record.
             idx_eligable_as_worst = dmy_idx[locs_is_worse]
@@ -115,12 +112,12 @@ class FitRecord(object):
             self.record['attention'][idx_worst] = attention
             self.record['theta'][idx_worst] = theta
 
-            if is_init:
-                self._init_loss_combined = loss_combined
-                self.beat_init = False
-            else:
-                if loss_combined < self._init_loss_combined:
-                    self.beat_init = True
+        if is_init:
+            self._init_loss_combined = loss_combined
+            self.beat_init = False
+        else:
+            if loss_combined < self._init_loss_combined:
+                self.beat_init = True
 
     def sort(self):
         """Sort the records from best to worst."""
@@ -1030,22 +1027,22 @@ class PsychologicalEmbedding(object):
         config_idx_val = obs_config_idx[val_idx]
 
         # Initial evaluation.
-        loss_train_init = self.evaluate(obs_train)
-        loss_val_init = self.evaluate(obs_val)
+        loss_train_init = self.evaluate(obs_train).numpy()
+        loss_val_init = self.evaluate(obs_val).numpy()
         # NOTE: The combined loss is based on the fact that there are
         # 10 splits.
         loss_combined_init = .9 * loss_train_init + .1 * loss_val_init
 
+        # Update record with initialization values.
+        fit_record.update(
+            loss_train_init, loss_val_init, loss_combined_init,
+            self._z["value"], self._phi['w']["value"], self._theta,
+            is_init=True
+        )
+
         # Prepare observations.
         tf_inputs_train = self._prepare_inputs(obs_train, config_idx_train)
         tf_inputs_val = self._prepare_inputs(obs_val, config_idx_val)
-
-        # Update record with initialization values.
-        fit_record.update(
-            loss_train_init.numpy(), loss_val_init.numpy(),
-            loss_combined_init.numpy(), self._z["value"],
-            self._phi['w']["value"], self._theta, is_init=True
-        )
 
         if (verbose > 2):
             print('        Initialization')

@@ -98,8 +98,8 @@ class FitRecord(object):
         dmy_idx = np.arange(self.n_record)
         locs_is_worse = np.greater(self.record['loss_combined'], loss_combined)
 
-        if np.sum(locs_is_worse) != 50:  # TODO
-            temp = 0
+        # if np.sum(locs_is_worse) != 50:  # TODO
+        #     temp = 0
 
         if np.sum(locs_is_worse) > 0:
             # Identify worst restart in record.
@@ -1006,9 +1006,9 @@ class PsychologicalEmbedding(object):
             print(
                 '    Settings:'
                 ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
-                ' | n_obs: {3} | n_restart: {4}'.format(
+                ' | n_obs: {3} | n_restart: {4} | n_record: {5} '.format(
                     self.n_stimuli, self.n_dim, self.n_group,
-                    obs.n_trial, n_restart
+                    obs.n_trial, n_restart, n_record
                 )
             )
 

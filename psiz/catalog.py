@@ -211,7 +211,19 @@ class Catalog(object):
         f.close()
 
     def subset(self, idx, squeeze=False):
-        """Return a subset of catalog with new stimulus IDs."""
+        """Return a subset of the catalog.
+
+        Arguments:
+            idx: An integer of boolean array indicating which stimuli
+                to retain.
+            squeeze (optional): A boolean indicating if IDs should be
+                reassigned in order to create a contiguous set of IDs
+                from [0, N[.
+
+        Returns:
+            catalog: A new catalog containing the requested subset.
+
+        """
         catalog = copy.deepcopy(self)
         catalog.stimuli = catalog.stimuli.iloc[idx]
         catalog.n_stimuli = len(catalog.stimuli)

@@ -24,7 +24,7 @@ There are four predefined embedding models to choose from:
 
 Once you have selected an embedding model, you must provide two pieces of information in order to infer an embedding.
 
-1. The similarity judgment observations (abbreviated as obs).
+1. The similarity judgment observations (often abbreviated as *obs*).
 2. The number of unique stimuli that will be in your embedding.
 
 ```python
@@ -41,7 +41,7 @@ emb.save('my_embedding.h5')
 ```
 
 ## Trials and Observations
-Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of multiple stimuli that have been judged by an agent (human or machine) based on their similarity. 
+Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. 
 
 In the simplest case, an observation is obtained from a trial consisting of three stimuli: a *query* stimulus (Q) and two *reference* stimuli (A and B). An agent selects the reference stimulus that they believe is more similar to the query stimulus. For this simple trial, there are two possible outcomes. If the agent selected reference A, then the observation for the ith trial would be recorded as the vector: 
 
@@ -55,7 +55,7 @@ In addition to a simple *triplet* trial, this package is designed to handle a nu
 
 ## Using Your Own Data
 
-To use your own data, you should place your data in a `psiz.trials.Observations` object. Once the Observations object has been created, you can save it to disk by calling its `save` method. It can be loaded later using the function `psiz.trials.load_trials()`. Consider the following example that uses randomly generated data:
+To use your own data, you should place your data in a `psiz.trials.Observations` object. Once the Observations object has been created, you can save it to disk by calling its `save` method. It can be loaded later using the function `psiz.trials.load(filepath)`. Consider the following example that uses randomly generated data:
 
 ```python
 import numpy as np
@@ -83,42 +83,82 @@ obs = psiz.trials.Observations(response_set, n_select=n_select)
 obs.save('path/to/obs.hdf5')
 
 # Load the observations from disk.
-obs = psiz.trials.load_trials('path/to/obs.hdf5')
+obs = psiz.trials.load('path/to/obs.hdf5')
 ```
 Note that the values in `response_set` are assumed to be contiguous integers [0, N[, where N is the number of unique stimuli. Their order is also important. The query is listed in the first column, an agent's selected references are listed second (in order of selection if the trial is ranked) and then any remaining unselected references are listed (in any order).
 
 ## Common Use Cases
-Optionally, you can provide additional information.
 
-1. The dimensionality of the embedding (default=2).
-2. The number of unique population groups (default=1).
+### Selecting the Dimensionality.
+By default, an embedding will be inferred using two dimensions. Typically you will want to set the dimensionality to something else. This can easily be done using the keyword `n_dim` during embedding initialization. The dimensionality can also be determined using a cross-validation procedure `psiz.dimensionality.search`.
+```python
+n_stimuli = 100
 
+model_spec = {
+    'model': psiz.models.Exponential,
+    'n_stimuli': n_stimuli,
+    'n_group': 1,
+    'modifier': None
+}
+
+search_summary = psiz.dimensionality.search(obs, model_spec)
+n_dim = search_summary['dim_best']
+
+emb = psiz.models.Exponential(n_stimuli, n_dim=4)
+emb.fit(obs)
+```
+
+### Multiple Groups
+By default, the embedding will be inferred assuming that all observations were obtained from a single population or group. If you would like to infer an embedding with multiple group-level parameters, use the `n_group` keyword during embedding initialization. When you create your `psiz.trials.observations` object you will also need to set the `group_id` attribute to indicate the group-membership of each trial.
 ```python
 n_stimuli = 100
 emb = psiz.models.Exponential(n_stimuli, n_dim=4, n_group=2)
 emb.fit(obs)
 ```
 
+### Fixing Free Parameters
 If you know some of the free parameters already, you can set them to the desired value and then make those parameters untrainable.
 ```python
 n_stimuli = 100
 emb = psiz.models.Exponential(n_stimuli, n_dim=2)
-emb.rho = 2
-emb.tau = 1
+emb.rho = 2.0
+emb.tau = 1.0
 emb.trainable({'rho': False, 'tau': False})
 emb.fit(obs)
 ```
 
+If you are also performing a dimensionality search, these constraints can be passed in using a post-initialization `modifier` function.
+```python
+n_stimuli = 100
+
+def modifier_func(emb):
+    emb.rho = 2.0
+    emb.tau = 1.0
+    emb.trainable({'rho': False, 'tau': False})
+    return emb
+
+model_spec = {
+    'model': psiz.models.Exponential,
+    'n_stimuli': n_stimuli,
+    'n_group': 1,
+    'modifier': modifier_func
+}
+
+search_summary = psiz.dimensionality.search(obs, model_spec)
+n_dim = search_summary['dim_best']
+```
+
 ## Modules
-* `dimensionality` - Function for selecting the dimensionality of the embedding.
+* `catalog` - Class for storing stimulus information.
+* `datasets` - Functions for loading some pre-defined catalogs and observations.
+* `dimensionality` - Routine for selecting the dimensionality of the embedding.
 * `generator` - Generate new trials randomly or using active selection.
 * `models` - A set of pre-defined pscyhological embedding models.
 * `preprocess` - Functions for preprocessing observations.
-* `simulate` - Simulate an agent making similarity judgements.
-* `trials` - Data structure used for trials and observations.
+* `simulate` - Simulate an agent making similarity judgments.
+* `trials` - Classes and functions for creating and managing observations.
 * `utils` - Utility functions.
 * `visualize` - Functions for visualizing embeddings.
-* `datasets` - Functions for loading pre-collecgted datasets.
 
 ## Authors
 * Brett D. Roads

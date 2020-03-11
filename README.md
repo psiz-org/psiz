@@ -43,13 +43,13 @@ emb.save('my_embedding.h5')
 ## Trials and Observations
 Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. 
 
-In the simplest case, an observation is obtained from a trial consisting of three stimuli: a *query* stimulus (Q) and two *reference* stimuli (A and B). An agent selects the reference stimulus that they believe is more similar to the query stimulus. For this simple trial, there are two possible outcomes. If the agent selected reference A, then the observation for the ith trial would be recorded as the vector: 
+In the simplest case, an observation is obtained from a trial consisting of three stimuli: a *query* stimulus (*q*) and two *reference* stimuli (*a* and *b*). An agent selects the reference stimulus that they believe is more similar to the query stimulus. For this simple trial, there are two possible outcomes. If the agent selected reference *a*, then the observation for the *i*th trial would be recorded as the vector: 
 
-D_i = [Q A B]
+D<sub>*i*</sub> = [*q* *a* *b*]
 
-Alternatively, if the agent had selected reference B, the observation would be recorded as:
+Alternatively, if the agent had selected reference *b*, the observation would be recorded as:
 
-D_i = [Q B A]
+D<sub>*i*</sub> = [*q* *b* *a*]
 
 In addition to a simple *triplet* trial, this package is designed to handle a number of different trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. 
 

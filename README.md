@@ -4,13 +4,14 @@
 PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods. The companion Open Access article is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
 
 ## Installation
-There are two ways to install PsiZ:
+The best way to install PsiZ is by cloning from GitHub and installing the local repo using pip.
+1. Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
+2. Install the cloned repo using pip: `pip install /local/path/to/psiz`
 
-1. Install from PyPI using pip: ``pip install psiz``
-2. Clone the repository from GitHub and install using pip: `pip install /local/path/to/psiz`. The repository can be cloned in a number of ways:
+The repository can also be cloned by:
     * Manually download the latest version at https://github.com/roads/psiz.git
-    * Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
     * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.2.2`
+Alternatively, but not recommended, you can install from PyPI using ``pip install psiz``. The versions available through PyPI lag behind the GitHub version.
 
 **Note:** PsiZ also requires TensorFlow. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
 

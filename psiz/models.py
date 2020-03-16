@@ -101,7 +101,9 @@ class FitRecord(object):
         if np.sum(locs_is_worse) > 0:
             # Identify worst restart in record.
             idx_eligable_as_worst = dmy_idx[locs_is_worse]
-            idx_idx_worst = np.argmax(self.record['loss_combined'][locs_is_worse])
+            idx_idx_worst = np.argmax(
+                self.record['loss_combined'][locs_is_worse]
+            )
             idx_worst = idx_eligable_as_worst[idx_idx_worst]
 
             # Replace worst restart with incoming restart.

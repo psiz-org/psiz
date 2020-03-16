@@ -25,9 +25,9 @@ Classes:
 Functions:
     stack: Combine a list of multiple SimilarityTrial objects into one.
     squeeze: Squeeze indices to be small and consecutive.
-    load_trials: Load a hdf5 file, saved using the `save` class method,
+    load: Load a hdf5 file, saved using the `save` class method,
         as a SimilarityTrial object.
-    load: Alias for load_trials.
+    load_trials: DEPRECATED Alias for load.
 
 Notes:
     On each similarity judgment trial, an agent judges the similarity
@@ -324,9 +324,37 @@ class Docket(SimilarityTrials):
     from SimilarityTrials.
 
     Attributes:
+        n_trial: An integer indicating the number of trials.
+        stimulus_set: An integer matrix containing indices that
+            indicate the set of stimuli used in each trial. Each row
+            indicates the stimuli used in one trial. The first column
+            is the query stimulus. The remaining, columns indicate
+            reference stimuli. Negative integers are used as
+            placeholders to indicate non-existent references.
+            shape = (n_trial, max(n_reference) + 1)
+        n_reference: An integer array indicating the number of
+            references in each trial.
+            shape = (n_trial,)
+        n_select: An integer array indicating the number of references
+            selected in each trial.
+            shape = (n_trial,)
+        is_ranked: A Boolean array indicating which trials require
+            reference selections to be ranked.
+            shape = (n_trial,)
+        config_idx: An integer array indicating the
+            configuration of each trial. The integer is an index
+            referencing the row of config_list and the element of
+            outcome_idx_list.
+            shape = (n_trial,)
         config_list: A DataFrame object describing the unique trial
             configurations. The columns are 'n_reference',
             'n_select', 'is_ranked'. and 'n_outcome'.
+        outcome_idx_list: A list of 2D arrays indicating all possible
+            outcomes for a trial configuration. Each element in the
+            list corresponds to a trial configuration in config_list.
+            Each row of the 2D array indicates one potential outcome.
+            The values in the rows are the indices of the the reference
+            stimuli (as specified in the attribute `stimulus_set`.
 
     Notes:
         stimulus_set: The order of the reference stimuli is
@@ -338,6 +366,7 @@ class Docket(SimilarityTrials):
             'n_reference', 'n_select', and 'is_ranked'.
 
     Methods:
+        save: Save the Docket object to disk.
         subset: Return a subset of unjudged trials given an index.
 
     """
@@ -457,6 +486,36 @@ class Observations(SimilarityTrials):
     from SimilarityTrials.
 
     Attributes:
+        n_trial: An integer indicating the number of trials.
+        stimulus_set: An integer matrix containing indices that
+            indicate the set of stimuli used in each trial. Each row
+            indicates the stimuli used in one trial. The first column
+            is the query stimulus. The remaining, columns indicate
+            reference stimuli. Negative integers are used as
+            placeholders to indicate non-existent references.
+            shape = (n_trial, max(n_reference) + 1)
+        n_reference: An integer array indicating the number of
+            references in each trial.
+            shape = (n_trial,)
+        n_select: An integer array indicating the number of references
+            selected in each trial.
+            shape = (n_trial,)
+        is_ranked: A Boolean array indicating which trials require
+            reference selections to be ranked.
+            shape = (n_trial,)
+        config_idx: An integer array indicating the
+            configuration of each trial. The integer is an index
+            referencing the row of config_list and the element of
+            outcome_idx_list.
+            shape = (n_trial,)
+        config_list: A DataFrame object describing the unique trial
+            configurations.
+        outcome_idx_list: A list of 2D arrays indicating all possible
+            outcomes for a trial configuration. Each element in the
+            list corresponds to a trial configuration in config_list.
+            Each row of the 2D array indicates one potential outcome.
+            The values in the rows are the indices of the the reference
+            stimuli (as specified in the attribute `stimulus_set`.
         group_id: An integer array indicating the group membership of
             each trial. It is assumed that group_id is composed of
             integers from [0, M-1] where M is the total number of
@@ -484,7 +543,7 @@ class Observations(SimilarityTrials):
             shape = (n_trial,) TODO MAYBE
 
     Notes:
-        response_set: The order of the reference stimuli is important.
+        stimulus_set: The order of the reference stimuli is important.
             As usual, the the first column contains indices indicating
             query stimulus. The remaining columns contain indices
             indicating the reference stimuli. An agent's selected
@@ -503,7 +562,7 @@ class Observations(SimilarityTrials):
 
     """
 
-    def __init__(self, response_set, n_select=None, is_ranked=None,
+    def __init__(self, stimulus_set, n_select=None, is_ranked=None,
                  group_id=None, agent_id=None, session_id=None, weight=None,
                  rt_ms=None):
         """Initialize.
@@ -511,7 +570,7 @@ class Observations(SimilarityTrials):
         Extends initialization of SimilarityTrials.
 
         Arguments:
-            response_set: The order of reference indices is important.
+            stimulus_set: The order of reference indices is important.
                 An agent's selected references are listed first (in
                 order of selection if the trial is ranked) and
                 remaining unselected references are listed in any
@@ -541,7 +600,7 @@ class Observations(SimilarityTrials):
                 shape = (n_trial,1)
 
         """
-        SimilarityTrials.__init__(self, response_set, n_select, is_ranked)
+        SimilarityTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Handle default settings.
         if group_id is None:
@@ -892,7 +951,7 @@ def squeeze(sim_trials, mode="sg"):
     return sim_trials_sq, unique_stimuli
 
 
-def load_trials(filepath, verbose=0):
+def load(filepath, verbose=0):
     """Load data saved via the save method.
 
     The loaded data is instantiated as a concrete class of
@@ -969,7 +1028,7 @@ def load_trials(filepath, verbose=0):
     return loaded_trials
 
 
-load = load_trials
+load_trials = load
 
 
 def _pad_stimulus_set(stimulus_set, max_n_reference):

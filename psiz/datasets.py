@@ -19,6 +19,12 @@
 Functions:
     load: Load observations for the requested dataset.
 
+Notes:
+    The dataset will only be downloaded from the server if it does not
+    exist locally. If it it already exists locally, no download will
+    take place. If you would like to force a download, delete the
+    existing local copy.
+
 """
 
 import collections
@@ -67,13 +73,15 @@ def load(
     """
     # Load from download cache.
     if cache_dir is None:
-        cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
-    dataset_path = os.path.join(cache_dir, cache_subdir, dataset_name)
-    if not os.path.exists(dataset_path):
-        os.makedirs(dataset_path)
+        cache_dir = Path.home() / Path('.psiz')
+    else:
+        cache_dir = Path(cache_dir)
+    dataset_path = cache_dir / Path(cache_subdir, dataset_name)
+    if not dataset_path.exists():
+        dataset_path.mkdir(parents=True)
 
-    obs = _fetch_obs(dataset_name, cache_subdir, cache_dir)
-    catalog = _fetch_catalog(dataset_name, cache_subdir, cache_dir)
+    obs = _fetch_obs(dataset_name, cache_dir, cache_subdir)
+    catalog = _fetch_catalog(dataset_name, cache_dir, cache_subdir)
 
     if verbose > 0:
         print("Dataset Summary")
@@ -83,11 +91,14 @@ def load(
     return (obs, catalog)
 
 
-def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
+def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
     """Fetch catalog for the requested dataset.
 
     Arguments:
         dataset_name: The name of the dataset to load.
+        cache_dir: The cache directory for PsiZ.
+        cache_subdir: The subdirectory where downloaded datasets are
+            cached.
 
     Returns:
         catalog: A Catalog object.
@@ -108,7 +119,7 @@ def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
         dataset_exists = False
 
     if dataset_exists:
-        path = get_file(
+        path = _get_file(
             os.path.join(dataset_name, fname), origin,
             cache_subdir=cache_subdir, extract=True,
             cache_dir=cache_dir
@@ -124,11 +135,14 @@ def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
     return catalog
 
 
-def _fetch_obs(dataset_name, cache_subdir='datasets', cache_dir=None):
+def _fetch_obs(dataset_name, cache_dir, cache_subdir):
     """Fetch observations for the requested dataset.
 
     Arguments:
         dataset_name: The name of the dataset to load.
+        cache_dir: The cache directory for PsiZ.
+        cache_subdir: The subdirectory where downloaded datasets are
+            cached.
 
     Returns:
         obs: An Observations object.
@@ -149,7 +163,7 @@ def _fetch_obs(dataset_name, cache_subdir='datasets', cache_dir=None):
         dataset_exists = False
 
     if dataset_exists:
-        path = get_file(
+        path = _get_file(
             os.path.join(dataset_name, fname), origin,
             cache_subdir=cache_subdir, extract=True, cache_dir=cache_dir
         )
@@ -212,7 +226,7 @@ def _extract_archive(file_path, path='.', archive_format='auto'):
     return False
 
 
-def get_file(
+def _get_file(
         fname, origin, untar=False, cache_subdir='datasets', extract=False,
         archive_format='auto', cache_dir=None):
     """Download a file from a URL if it not already in the cache."""
@@ -234,7 +248,6 @@ def get_file(
 
     download = False
     if os.path.exists(fpath):
-        # TODO
         download = False
     else:
         download = True

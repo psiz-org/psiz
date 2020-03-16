@@ -17,14 +17,7 @@
 """Module for loading internally pre-defined datasets.
 
 Functions:
-    load_dataset: Load observations for the requested dataset.
-    load: An alias for load_dataset.
-
-Todo:
-    - create .psiz directory on installation (if it doesn't exist)
-    - migrate to scalable solution described in roadmap.
-    - Give credit to keras library.
-    - Query public (read-only) database.
+    load: Load observations for the requested dataset.
 
 """
 
@@ -48,20 +41,19 @@ from six.moves.urllib.error import URLError
 from six.moves.urllib.request import urlopen
 from six.moves.urllib.request import urlretrieve
 
-from psiz.catalog import load_catalog
-from psiz.trials import load_trials
+import psiz.catalog
+import psiz.trials
 
 HOST_URL = "https://www.psiz.org/datasets/"
 
 
-def load_dataset(
-        fp_dataset, cache_subdir='datasets', cache_dir=None,
+def load(
+        dataset_name, cache_subdir='datasets', cache_dir=None,
         verbose=0):
     """Load observations and catalog for the requested hosted dataset.
 
     Arguments:
-        fp_dataset: The filepath to the dataset. If loading a hosted
-            dataset, just provide the name of the dataset.
+        dataset_name: The name of the hosted dataset.
         cache_subdir (optional): The subdirectory where downloaded
             datasets are cached.
         cache_dir (optional): The cache directory for PsiZ.
@@ -76,12 +68,12 @@ def load_dataset(
     # Load from download cache.
     if cache_dir is None:
         cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
-    dataset_path = os.path.join(cache_dir, cache_subdir, fp_dataset)
+    dataset_path = os.path.join(cache_dir, cache_subdir, dataset_name)
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
 
-    obs = _fetch_obs(fp_dataset, cache_subdir, cache_dir)
-    catalog = _fetch_catalog(fp_dataset, cache_subdir, cache_dir)
+    obs = _fetch_obs(dataset_name, cache_subdir, cache_dir)
+    catalog = _fetch_catalog(dataset_name, cache_subdir, cache_dir)
 
     if verbose > 0:
         print("Dataset Summary")
@@ -89,9 +81,6 @@ def load_dataset(
         print('  n_trial: {0}'.format(obs.n_trial))
 
     return (obs, catalog)
-
-
-load = load_dataset
 
 
 def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
@@ -124,7 +113,7 @@ def _fetch_catalog(dataset_name, cache_subdir='datasets', cache_dir=None):
             cache_subdir=cache_subdir, extract=True,
             cache_dir=cache_dir
         )
-        catalog = load_catalog(path)
+        catalog = psiz.catalog.load(path)
     else:
         raise ValueError(
             'The requested dataset `{0}` may not exist since the '
@@ -164,7 +153,7 @@ def _fetch_obs(dataset_name, cache_subdir='datasets', cache_dir=None):
             os.path.join(dataset_name, fname), origin,
             cache_subdir=cache_subdir, extract=True, cache_dir=cache_dir
         )
-        obs = load_trials(path)
+        obs = psiz.trials.load(path)
     else:
         raise ValueError(
             'The requested dataset `{0}` may not exist since the '

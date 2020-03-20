@@ -260,8 +260,8 @@ class PsychologicalEmbedding(object):
         self.fit_duration = 0.0
         self.posterior_duration = 0.0
 
-        # Set optimizer parameters. TODO handle save and load
-        self.optimizer = None  # TODO Is this the best strategy? Forcing the user to call compile?
+        # Optimizer attributes. TODO handle save and load
+        self.optimizer = None
         self.loss = None
         self.regularizer = None
 

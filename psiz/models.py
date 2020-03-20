@@ -250,7 +250,6 @@ class PsychologicalEmbedding(object):
         self.reinitialize()  # TODO CRITICAL
 
         # Default inference settings.
-        self.lr = 0.001
         self.max_n_epoch = 5000
         self.patience_stop = 10
         self.patience_reduce = 2
@@ -2129,9 +2128,6 @@ class Inverse(PsychologicalEmbedding):
         )
         self._theta = self._default_theta()  # TODO
 
-        # Default inference settings.
-        self.lr = 0.001
-
     def _default_theta(self):
         """Return dictionary of default theta parameters.
 
@@ -2335,9 +2331,6 @@ class Exponential(PsychologicalEmbedding):
             self, n_stimuli, n_dim, n_group, nonneg
         )
         self._theta = self._default_theta()  # TODO
-
-        # Default inference settings.
-        self.lr = 0.001
 
     def _default_theta(self):
         """Return dictionary of default theta parameters.
@@ -2563,9 +2556,6 @@ class HeavyTailed(PsychologicalEmbedding):
         )
         self._theta = self._default_theta()  # TODO
 
-        # Default inference settings.
-        self.lr = 0.003
-
     def _default_theta(self):
         """Return dictionary of default theta parameters.
 
@@ -2781,9 +2771,6 @@ class StudentsT(PsychologicalEmbedding):
             self, n_stimuli, n_dim, n_group, nonneg
         )
         self._theta = self._default_theta()  # TODO
-
-        # Default inference settings.
-        self.lr = 0.01
 
     def _default_theta(self):
         """Return dictionary of default theta parameters.

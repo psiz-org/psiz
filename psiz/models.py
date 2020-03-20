@@ -249,11 +249,6 @@ class PsychologicalEmbedding(object):
         # Initialize model components.
         self.reinitialize()  # TODO CRITICAL
 
-        # Default inference settings.
-        self.max_n_epoch = 5000
-        self.patience_stop = 10
-        self.patience_reduce = 2
-
         # Default TensorBoard log attributes.
         self.do_log = False
         self.log_dir = '/tmp/psiz/tensorboard_logs/'
@@ -1002,7 +997,8 @@ class PsychologicalEmbedding(object):
         self.regularizer = regularizer
 
     def fit(
-            self, obs, n_restart=50, init_mode='cold', n_record=1, verbose=0):
+            self, obs, n_restart=50, max_epoch=5000, patience=10,
+            init_mode='cold', n_record=1, verbose=0):
         """Fit the free parameters of the embedding model.
 
         Arguments:
@@ -1011,6 +1007,11 @@ class PsychologicalEmbedding(object):
                 restarts to use for the inference procedure. Since the
                 embedding procedure can get stuck in local optima,
                 multiple restarts help find the global optimum.
+            max_epoch (optional): The maximum number of epochs for
+                each restart. This is primarily a means of limiting
+                computational time.
+            patience (optional): How many epochs to wait without
+                an improvement in validation loss.
             init_mode (optional): A string indicating the
                 initialization mode. Valid options are 'cold' and
                 'hot'. When fitting using a `cold` initialization, all
@@ -1114,6 +1115,8 @@ class PsychologicalEmbedding(object):
             progbar.update(0)
 
         # Run multiple restarts of embedding algorithm.
+        tf_max_epoch = tf.constant(max_epoch, dtype=tf.int64)
+        tf_patience = tf.constant(patience, dtype=tf.int32)
         for i_restart in range(n_restart):
             if (verbose > 2):
                 print('        Restart {0}'.format(i_restart))
@@ -1137,7 +1140,7 @@ class PsychologicalEmbedding(object):
                         loss_train, loss_val, epoch, z, attention, tf_theta
                     ) = self._fit_restart(
                         model, self.optimizer, tf_inputs_train, tf_inputs_val,
-                        verbose
+                        tf_max_epoch, tf_patience, verbose
                     )
 
                 # Coonvert Tensors to NumPy.
@@ -1190,7 +1193,8 @@ class PsychologicalEmbedding(object):
         return loss_train_best, loss_val_best
 
     def _fit_restart(
-            self, model, optimizer, tf_inputs_train, tf_inputs_val, verbose):
+            self, model, optimizer, tf_inputs_train, tf_inputs_val,
+            tf_max_epoch, tf_patience, verbose):
         """Embed using a TensorFlow implementation."""
         @tf.function
         def train(model, optimizer, tf_inputs_train, tf_inputs_val):
@@ -1210,9 +1214,8 @@ class PsychologicalEmbedding(object):
 
             last_improvement_stop = tf.constant(0, dtype=tf.int32)
             last_improvement_reduce = tf.constant(0, dtype=tf.int32)
-            tf_max_n_epoch = tf.constant(self.max_n_epoch, dtype=tf.int64)
-            tf_patience_stop = tf.constant(self.patience_stop, dtype=tf.int32)
-            for epoch in tf.range(tf_max_n_epoch):
+
+            for epoch in tf.range(tf_max_epoch):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
                     prob_train = model(tf_inputs_train)
@@ -1284,7 +1287,7 @@ class PsychologicalEmbedding(object):
                     attention_best = model.layers[4].attention
                     theta_best = model.layers[4].theta
 
-                if last_improvement_stop >= tf_patience_stop:
+                if last_improvement_stop >= tf_patience:
                     break
 
             return (

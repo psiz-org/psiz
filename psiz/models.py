@@ -142,6 +142,8 @@ class PsychologicalEmbedding(object):
     a set of attention weights if there is more than one group.
 
     Methods:
+        reinitialize: TODO
+        compile: TODO
         fit: Fit the embedding model using the provided observations.
         evaluate: Evaluate the embedding model using the provided
             observations.
@@ -210,7 +212,7 @@ class PsychologicalEmbedding(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, nonneg=False):
         """Initialize.
 
         Arguments:
@@ -242,19 +244,15 @@ class PsychologicalEmbedding(object):
             n_group = 1
         self.n_group = n_group
 
+        self._is_nonneg = nonneg  # TODO CRITICAL add to save/load
+
         # Initialize model components.
-        self._z = self._init_z()
-        self.z = self._z["value"]
-
-        self._phi = self._init_phi()
-        self.w = self._phi["w"]["value"]
-
-        self._theta = {}
+        self.reinitialize()  # TODO CRITICAL
 
         # Default inference settings.
         self.lr = 0.001
         self.max_n_epoch = 5000
-        self.patience_stop = 10  # 5
+        self.patience_stop = 10
         self.patience_reduce = 2
 
         # Default TensorBoard log attributes.
@@ -268,10 +266,23 @@ class PsychologicalEmbedding(object):
         self.fit_duration = 0.0
         self.posterior_duration = 0.0
 
-        # Set loss function. TODO handle save and load
-        self.loss = default_loss
+        # Set optimizer parameters. TODO handle save and load
+        self.optimizer = None  # TODO Is this the best strategy? Forcing the user to call compile?
+        self.loss = None
+        self.regularizer = None
 
         super().__init__()
+
+    def reinitialize(self):
+        """Reinitialize model parameters."""
+        self._z = self._init_z()
+        self.z = self._z["value"]
+
+        self._phi = self._init_phi()
+        self.w = self._phi["w"]["value"]
+
+        self._theta = {}  # TODO pass in current value?
+        # self._default_theta()
 
     def _init_z(self):
         """Return initialized embedding points.
@@ -285,6 +296,8 @@ class PsychologicalEmbedding(object):
         z["value"] = np.random.multivariate_normal(
             mean, cov, (self.n_stimuli)
         )
+        if self._is_nonneg:
+            z["value"] = np.abs(z["value"])
         z["trainable"] = True
         return z
 
@@ -836,7 +849,7 @@ class PsychologicalEmbedding(object):
             )
         return tf_attention
 
-    def _get_embedding(self, init_mode):
+    def _get_embedding(self, init_mode, is_nonneg):
         """Return embedding of model as TensorFlow variable.
 
         Arguments:
@@ -847,16 +860,23 @@ class PsychologicalEmbedding(object):
             TensorFlow variable representing the embedding points.
 
         """
+        # Handle constraint. TODO
+        if is_nonneg:
+            z_constraint = tf.keras.constraints.NonNeg()
+        else:
+            z_constraint = ProjectZ()
+
         if self._z["trainable"]:
             if init_mode is 'hot':
                 z = self._z["value"]
                 tf_z = tf.Variable(
                     initial_value=z,
                     trainable=True, name="z", dtype=K.floatx(),
-                    constraint=ProjectZ(),
+                    constraint=z_constraint,
                     shape=[self.n_stimuli, self.n_dim]
                 )
             else:
+                # TODO do I need to do anything special to handle nonnegativitiy here?
                 tf_z = tf.Variable(
                     initial_value=RandomEmbedding(
                         mean=tf.zeros([self.n_dim], dtype=K.floatx()),
@@ -866,13 +886,13 @@ class PsychologicalEmbedding(object):
                         dtype=K.floatx()
                     )(shape=[self.n_stimuli, self.n_dim]), trainable=True,
                     name="z", dtype=K.floatx(),
-                    constraint=ProjectZ()
+                    constraint=z_constraint
                 )
         else:
             tf_z = tf.Variable(
                 initial_value=self._z["value"],
                 trainable=False, name="z", dtype=K.floatx(),
-                constraint=ProjectZ(),
+                constraint=z_constraint,
                 shape=[self.n_stimuli, self.n_dim]
             )
         return tf_z
@@ -907,7 +927,7 @@ class PsychologicalEmbedding(object):
         """Build TensorFlow model."""
         tf_theta = self._get_similarity_parameters(init_mode)
         tf_attention = self._get_attention(init_mode)
-        tf_z = self._get_embedding(init_mode)
+        tf_z = self._get_embedding(init_mode, self._is_nonneg)
 
         obs_stimulus_set = tf.keras.Input(
             shape=[None], name='inp_stimulus_set', dtype=tf.int32,
@@ -958,7 +978,32 @@ class PsychologicalEmbedding(object):
                 )
             )
 
-    def fit(self, obs, n_restart=50, init_mode='cold', n_record=1, verbose=0):
+    def compile(self, optimizer=None, loss=None, regularizer=None):
+        """Configure the model for training.
+
+        Arguments:
+            optimizer: TODO
+            loss: TODO
+            regularizer: TODO
+
+        Raises:
+            ValueError: If arguments are invalid.
+
+        """
+        if optimizer is None:
+            optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
+        self.optimizer = optimizer
+
+        if loss is None:
+            loss = observation_loss
+        self.loss = loss
+
+        if regularizer is None:
+            regularizer = no_regularization
+        self.regularizer = regularizer
+
+    def fit(
+            self, obs, n_restart=50, init_mode='cold', n_record=1, verbose=0):
         """Fit the free parameters of the embedding model.
 
         Arguments:
@@ -1026,9 +1071,22 @@ class PsychologicalEmbedding(object):
         obs_val = obs.subset(val_idx)
         config_idx_val = obs_config_idx[val_idx]
 
+        # Prepare observations.
+        tf_inputs_train = self._prepare_inputs(obs_train, config_idx_train)
+        tf_inputs_val = self._prepare_inputs(obs_val, config_idx_val)
+
         # Initial evaluation.
-        loss_train_init = self.evaluate(obs_train).numpy()
-        loss_val_init = self.evaluate(obs_val).numpy()
+        model = self._build_model(tf_config, init_mode=init_mode)
+        prob_train_init = model(tf_inputs_train)
+        loss_train_init = (
+            self.loss(prob_train_init, tf_inputs_train[3]) +
+            self.regularizer(model)
+        ).numpy()
+        prob_val_init = model(tf_inputs_val)
+        loss_val_init = (
+            self.loss(prob_val_init, tf_inputs_val[3]) +
+            self.regularizer(model)
+        ).numpy()
         # NOTE: The combined loss is based on the fact that there are
         # 10 splits.
         loss_combined_init = .9 * loss_train_init + .1 * loss_val_init
@@ -1040,17 +1098,13 @@ class PsychologicalEmbedding(object):
             is_init=True
         )
 
-        # Prepare observations.
-        tf_inputs_train = self._prepare_inputs(obs_train, config_idx_train)
-        tf_inputs_val = self._prepare_inputs(obs_val, config_idx_val)
-
         if (verbose > 2):
             print('        Initialization')
             print(
                 '        '
                 '     --     | '
                 'loss_train: {0: .6f} | loss_val: {1: .6f}'.format(
-                    loss_train_init, loss_val_best)
+                    loss_train_init, loss_val_init)
             )
             print('')
 
@@ -1059,9 +1113,6 @@ class PsychologicalEmbedding(object):
                 n_restart, prefix='Progress:', length=50
             )
             progbar.update(0)
-
-        # Define optimizer.
-        optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.lr)
 
         # Run multiple restarts of embedding algorithm.
         for i_restart in range(n_restart):
@@ -1086,7 +1137,7 @@ class PsychologicalEmbedding(object):
                     (
                         loss_train, loss_val, epoch, z, attention, tf_theta
                     ) = self._fit_restart(
-                        model, optimizer, tf_inputs_train, tf_inputs_val,
+                        model, self.optimizer, tf_inputs_train, tf_inputs_val,
                         verbose
                     )
 
@@ -1166,9 +1217,9 @@ class PsychologicalEmbedding(object):
                 # Compute training loss and gradients.
                 with tf.GradientTape() as grad_tape:
                     prob_train = model(tf_inputs_train)
-                    loss_train = self.loss(
-                        prob_train, tf_inputs_train[3],
-                        model.layers[4].attention
+                    loss_train = (
+                        self.loss(prob_train, tf_inputs_train[3]) +
+                        self.regularizer(model)
                     )
                 gradients = grad_tape.gradient(
                     loss_train, model.trainable_variables
@@ -1182,8 +1233,9 @@ class PsychologicalEmbedding(object):
 
                 # Validation loss.
                 prob_val = model(tf_inputs_val)
-                loss_val = self.loss(
-                    prob_val, tf_inputs_val[3], model.layers[4].attention
+                loss_val = (
+                    self.loss(prob_val, tf_inputs_val[3]) +
+                    self.regularizer(model)
                 )
 
                 # Log progress.
@@ -1254,6 +1306,10 @@ class PsychologicalEmbedding(object):
     def evaluate(self, obs):
         """Evaluate observations using the current state of the model.
 
+        Notes:
+            Observations are evaluated in test mode. This means that
+            regularization terms are not included in the loss.
+
         Arguments:
             obs: A Observations object representing the observed data.
 
@@ -1270,9 +1326,9 @@ class PsychologicalEmbedding(object):
 
         model = self._build_model(tf_config, init_mode='hot')
 
-        # Evaluate current model to obtain starting loss.
+        # Evaluate current model.
         prob = model(tf_inputs)
-        loss = self.loss(prob, tf_inputs[3], model.layers[4].attention)
+        loss = self.loss(prob, tf_inputs[3])
 
         if tf.math.is_nan(loss):
             loss = tf.constant(np.inf, dtype=K.floatx())
@@ -2054,7 +2110,7 @@ class Inverse(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, nonneg=False):
         """Initialize.
 
         Arguments:
@@ -2068,8 +2124,10 @@ class Inverse(PsychologicalEmbedding):
                 each group.
 
         """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._default_theta()
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, nonneg
+        )
+        self._theta = self._default_theta()  # TODO
 
         # Default inference settings.
         self.lr = 0.001
@@ -2259,7 +2317,7 @@ class Exponential(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, nonneg=False):
         """Initialize.
 
         Arguments:
@@ -2273,8 +2331,10 @@ class Exponential(PsychologicalEmbedding):
                 each group.
 
         """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._default_theta()
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, nonneg
+        )
+        self._theta = self._default_theta()  # TODO
 
         # Default inference settings.
         self.lr = 0.001
@@ -2484,7 +2544,7 @@ class HeavyTailed(PsychologicalEmbedding):
     heavy-tailed family is a generalization of the Student-t family.
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, nonneg=False):
         """Initialize.
 
         Arguments:
@@ -2498,8 +2558,10 @@ class HeavyTailed(PsychologicalEmbedding):
                 each group.
 
         """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._default_theta()
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, nonneg
+        )
+        self._theta = self._default_theta()  # TODO
 
         # Default inference settings.
         self.lr = 0.003
@@ -2701,7 +2763,7 @@ class StudentsT(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, nonneg=False):
         """Initialize.
 
         Arguments:
@@ -2715,8 +2777,10 @@ class StudentsT(PsychologicalEmbedding):
                 each group.
 
         """
-        PsychologicalEmbedding.__init__(self, n_stimuli, n_dim, n_group)
-        self._theta = self._default_theta()
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, nonneg
+        )
+        self._theta = self._default_theta()  # TODO
 
         # Default inference settings.
         self.lr = 0.01
@@ -3071,6 +3135,8 @@ def load_embedding(filepath):
         embedding = HeavyTailed(n_stimuli, n_dim=n_dim, n_group=n_group)
     elif embedding_type == 'StudentsT':
         embedding = StudentsT(n_stimuli, n_dim=n_dim, n_group=n_group)
+    elif embedding_type == 'Inverse':
+        embedding = Inverse(n_stimuli, n_dim=n_dim, n_group=n_group)
     else:
         raise ValueError(
             'No class found matching the provided `embedding_type`.')
@@ -3337,16 +3403,8 @@ def _tf_ranked_sequence_probability(sim_qr, n_select):
 
 
 @tf.function(experimental_relax_shapes=True)
-def default_loss(prob_all, weight, tf_attention):
+def observation_loss(prob_all, weight):
     """Compute model loss given observation probabilities."""
-    # print(
-    #     (
-    #         "Tracing loss\n    prob_all:{0}\n    weight:{1}\n",
-    #         "    tf_attention:{2}"
-    #     ).format(
-    #         prob_all, weight, tf_attention
-    #     )
-    # )
     n_trial = tf.shape(prob_all)[0]
     n_trial = tf.cast(n_trial, dtype=K.floatx())
 
@@ -3361,3 +3419,9 @@ def default_loss(prob_all, weight, tf_attention):
     loss = tf.divide(loss, n_trial)
 
     return loss
+
+
+@tf.function(experimental_relax_shapes=True)
+def no_regularization(model):
+    """No regularization."""
+    return tf.constant(0.0, dtype=K.floatx())

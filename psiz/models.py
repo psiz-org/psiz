@@ -1052,7 +1052,8 @@ class PsychologicalEmbedding(object):
                 '        '
                 '     --     | '
                 'loss_train: {0: .6f} | loss_val: {1: .6f}'.format(
-                    loss_train_init, loss_val_best)
+                    loss_train_init, loss_val_init
+                )
             )
             print('')
 
@@ -3073,6 +3074,8 @@ def load_embedding(filepath):
         embedding = HeavyTailed(n_stimuli, n_dim=n_dim, n_group=n_group)
     elif embedding_type == 'StudentsT':
         embedding = StudentsT(n_stimuli, n_dim=n_dim, n_group=n_group)
+    elif embedding_type == "Inverse":
+        embedding = Inverse(n_stimuli, n_dim=n_dim, n_group=n_group)
     else:
         raise ValueError(
             'No class found matching the provided `embedding_type`.')

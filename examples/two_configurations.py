@@ -29,6 +29,8 @@ from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
 from psiz.utils import similarity_matrix, matrix_comparison
+from sklearn.model_selection import StratifiedKFold
+from tensorflow.keras.callbacks import EarlyStopping
 
 
 def main():
@@ -66,9 +68,24 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
+    # Partition observations into train and validation set.
+    skf = StratifiedKFold(n_splits=10)
+    (train_idx, val_idx) = list(
+        skf.split(obs.stimulus_set, obs.config_idx)
+    )[0]
+    obs_train = obs.subset(train_idx)
+    obs_val = obs.subset(val_idx)
+
+    # Use early stopping.
+    early_stop = EarlyStopping('val_loss', patience=10, mode='min')
+
     # Infer embedding.
     emb_inferred = Exponential(n_stimuli, n_dim)
-    emb_inferred.fit(obs, n_restart, verbose=1)
+    emb_inferred.compile()
+    emb_inferred.fit(
+        obs_train, obs_val=obs_val, epochs=1000, verbose=4,
+        callbacks=[early_stop]
+    )
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
@@ -96,8 +113,91 @@ def ground_truth(n_stimuli, n_dim):
     emb.tau = 1
     emb.beta = 10
     emb.gamma = 0.001
-    emb.trainable("freeze")
+    # emb.trainable("freeze") TODO
     return emb
+
+
+# class EarlyStopping(object):
+#     """Early Stopping."""
+
+#     def __init__(
+#             self, monitor='val_loss', min_delta=0, patience=0, verbose=0,
+#             mode='auto', baseline=None, restore_best_weights=False):
+#         """Initialize."""
+#         self.monitor = monitor
+#         self.patience = patience
+#         self.verbose = verbose
+#         self.baseline = baseline
+#         self.min_delta = abs(min_delta)
+#         self.wait = 0
+#         self.stopped_epoch = 0
+#         self.restore_best_weights = restore_best_weights
+#         self.best_weights = None
+#         self.model = None  # TODO
+
+#         if mode not in ['auto', 'min', 'max']:
+#             print(
+#                 'WARNING: EarlyStopping mode %s is unknown, '
+#                 'fallback to auto mode.', mode
+#             )
+#             mode = 'auto'
+
+#         if mode == 'min':
+#             self.monitor_op = np.less
+#         elif mode == 'max':
+#             self.monitor_op = np.greater
+#         else:
+#             if 'acc' in self.monitor:
+#                 self.monitor_op = np.greater
+#             else:
+#                 self.monitor_op = np.less
+
+#         if self.monitor_op == np.greater:
+#             self.min_delta *= 1
+#         else:
+#             self.min_delta *= -1
+
+#     def on_train_begin(self, logs=None):
+#         """On train begin."""
+#         # Allow instances to be re-used
+#         self.wait = 0
+#         self.stopped_epoch = 0
+#         if self.baseline is not None:
+#             self.best = self.baseline
+#         else:
+#             self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+
+#     def on_epoch_end(self, epoch, logs=None):
+#         """On epoch end."""
+#         current = self.get_monitor_value(logs)
+#         if current is None:
+#             return
+#         if self.monitor_op(current - self.min_delta, self.best):
+#             self.best = current
+#             self.wait = 0
+#             if self.restore_best_weights:
+#                 self.best_weights = self.model.get_weights()
+#         else:
+#             self.wait += 1
+#             if self.wait >= self.patience:
+#                 self.stopped_epoch = epoch
+#                 self.model.stop_training = True
+#                 if self.restore_best_weights:
+#                     if self.verbose > 0:
+#                         print('Restoring model weights from the end of the best epoch.')
+#                     self.model.set_weights(self.best_weights)
+
+#     def get_monitor_value(self, logs):
+#         """Get monitor value."""
+#         logs = logs or {}
+#         monitor_value = logs.get(self.monitor)
+#         if monitor_value is None:
+#             logging.warning(
+#                 'Early stopping conditioned on metric `%s` '
+#                 'which is not available. Available metrics are: %s',
+#                 self.monitor, ','.join(list(logs.keys()))
+#             )
+#         return monitor_value
 
 
 if __name__ == "__main__":

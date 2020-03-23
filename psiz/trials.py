@@ -126,6 +126,7 @@ class SimilarityTrials(object):
             is_ranked (optional): A Boolean array indicating which
                 trials require reference selections to be ranked.
                 shape = (n_trial,)
+
         """
         stimulus_set = self._check_stimulus_set(stimulus_set)
 
@@ -352,12 +353,14 @@ class Docket(SimilarityTrials):
                 important. See SimilarityTrials.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
+
         """
         SimilarityTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Determine unique display configurations.
         self._set_configuration_data(
-            self.n_reference, self.n_select, self.is_ranked)
+            self.n_reference, self.n_select, self.is_ranked
+        )
 
     def subset(self, index):
         """Return subset of trials as a new Docket object.

@@ -99,6 +99,7 @@ class SimilarityTrials(object):
 
     Methods:
         subset: Return a subset of similarity trials given an index.
+        is_present: Indicate if a stimulus is present.
 
     """
 
@@ -316,6 +317,11 @@ class SimilarityTrials(object):
 
         """
         pass
+
+    def is_present(self):
+        """Return a 2D boolean array indicating a present stimulus."""
+        is_present = np.not_equal(self.stimulus_set, -1)
+        return is_present
 
 
 class Docket(SimilarityTrials):
@@ -798,6 +804,21 @@ class Observations(SimilarityTrials):
         f.create_dataset("weight", data=self.weight)
         f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
+
+    def is_select(self):
+        """Indicate if a stimulus was selected.
+
+        Returns:
+            is_select: A 2D boolean array indicating the stimuli that
+                were selected.
+
+        """
+        is_select = np.zeros(self.stimulus_set.shape, dtype=bool)
+        max_n_select = np.max(self.n_select)
+        for n_select in range(1, max_n_select + 1):
+            locs = np.less_equal(n_select, self.n_select)
+            is_select[locs, n_select] = True
+        return is_select
 
 
 def stack(trials_list):

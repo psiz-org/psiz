@@ -125,7 +125,7 @@ class PsychologicalEmbedding(object):
         posterior_duration: The duration (in seconds) of the last
             called posterior sampling procedure.
 
-    Notes:
+    Notes: TODO
         The setter methods as well as the methods fit, trainable, and
             set_log modify the state of the PsychologicalEmbedding
             object.
@@ -351,6 +351,14 @@ class PsychologicalEmbedding(object):
 
         """
         pass
+
+    def _do_init_theta_param(self, param_name):
+        """Return conditional for initialization."""
+        cond = (
+            param_name not in self.vars['theta'] or
+            self.vars['theta'][param_name].trainable
+        )
+        return cond
 
     @property
     def theta(self):
@@ -1087,6 +1095,8 @@ class PsychologicalEmbedding(object):
 
             # Compute probability of each possible outcome.
             prob = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
+            # TODO (maybe faster) stack permutations, run
+            # _ranked_sequence_probability once and then reshape.
             for i_outcome in range(n_outcome):
                 s_qr_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
                 prob[:, i_outcome, :] = _ranked_sequence_probability(
@@ -1405,139 +1415,6 @@ class PsychologicalEmbedding(object):
         return cpyobj
 
 
-class CoreLayerOld(Layer):
-    """Core layer of model."""
-
-    def __init__(self, tf_theta, tf_phi, tf_z, tf_similarity, config_list):
-        """Initialize.
-
-        Arguments:
-            tf_theta:
-            tf_phi:
-            tf_z:
-            tf_config: It is assumed that the indices that will be
-                passed in later as inputs will correspond to the
-                indices in this data structure.
-            tf_similarity:
-
-        """
-        super(CoreLayerOld, self).__init__()
-        self.z = tf_z
-        self.theta = tf_theta
-
-        w_list = []
-        for group, v in tf_phi['w'].items():
-            w_list.append(v)
-        self.attention = tf.concat(w_list, axis=0)
-
-        self._similarity = tf_similarity
-
-        self.n_config = tf.constant(len(config_list))
-        self.config_n_reference = tf.constant(config_list.n_reference.values)
-        self.config_n_select = tf.constant(config_list.n_select.values)
-        self.config_is_ranked = tf.constant(config_list.is_ranked.values)
-        self.max_n_reference = tf.constant(
-            np.max(config_list.n_reference.values)
-        )
-
-    def call(self, inputs):
-        """Call.
-
-        Arguments:
-            inputs: A list of inputs:
-                stimulus_set: Containing the integers [0, n_stimuli[
-                config_idx: Containing the integers [0, n_config[
-                group_id: Containing the integers [0, n_group[
-
-        """
-        # Inputs.
-        obs_stimulus_set = inputs[0]
-        obs_config_idx = inputs[1]
-        obs_group_id = inputs[2]
-
-        # Compute the probability of observations for the different
-        # trial configurations.
-        n_trial = tf.shape(obs_stimulus_set)[0]
-        likelihood = tf.zeros([n_trial], dtype=K.floatx())
-        for i_config in tf.range(self.n_config):
-            n_reference = self.config_n_reference[i_config]
-            n_select = self.config_n_select[i_config]
-            is_ranked = self.config_is_ranked[i_config]
-
-            # Grab data belonging to current trial configuration.
-            locs = tf.equal(obs_config_idx, i_config)
-            trial_idx = tf.squeeze(tf.where(locs))
-            stimulus_set_config = tf.gather(obs_stimulus_set, trial_idx)
-            group_id_config = tf.gather(obs_group_id, trial_idx)
-
-            # Expand attention weights.
-            attention_config = tf.gather(self.attention, group_id_config)
-            attention_config = tf.expand_dims(attention_config, axis=2)
-
-            # Compute similarity between query and references.
-            (z_q, z_r) = self._tf_inflate_points(
-                stimulus_set_config, n_reference, self.z
-            )
-            sim_qr_config = self._similarity(
-                z_q, z_r, self.theta, attention_config
-            )
-
-            # Compute probability of behavior.
-            prob_config = _tf_ranked_sequence_probability(
-                sim_qr_config, n_select
-            )
-
-            # Update master results.
-            likelihood = tf.tensor_scatter_nd_update(
-                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
-            )
-
-        return likelihood
-
-    def _tf_inflate_points(
-            self, stimulus_set, n_reference, z):
-        """Inflate stimulus set into embedding points.
-
-        Note: This method will not gracefully handle placeholder
-        stimulus IDs.
-
-        """
-        n_trial = tf.shape(stimulus_set)[0]
-        n_dim = tf.shape(z)[1]
-
-        # Inflate query stimuli.
-        z_q = tf.gather(z, stimulus_set[:, 0])
-        z_q = tf.expand_dims(z_q, axis=2)
-
-        # Initialize z_r.
-        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
-        z_r_2 = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
-
-        for i_ref in tf.range(n_reference):
-            z_r_new = tf.gather(
-                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
-            )
-
-            i_ref_expand = tf.expand_dims(i_ref, axis=0)
-            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
-            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
-            z_r_2 = tf.tensor_scatter_nd_update(
-                z_r_2, i_ref_expand, z_r_new_2
-            )
-
-            # z_r_new = tf.expand_dims(z_r_new, axis=2)
-            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
-            # post_pad = tf.zeros([
-            #     n_trial, n_dim,
-            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
-            # ], dtype=K.floatx())
-            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
-            # z_r = z_r + z_r_new
-
-        z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
-        return (z_q, z_r_2)
-
-
 class CoreLayer(Layer):
     """Core layer of model."""
 
@@ -1566,7 +1443,7 @@ class CoreLayer(Layer):
             w_list.append(v)
         self.attention = tf.concat(w_list, axis=0)
 
-        self._similarity = tf_similarity
+        self.similarity = tf_similarity
 
         self.n_config = tf.constant(len(config_list))
         # self.config_n_reference = tf.constant(config_list.n_reference.values)  # TODO delete
@@ -1607,7 +1484,7 @@ class CoreLayer(Layer):
         (z_q, z_r) = self._tf_inflate_points(
             obs_stimulus_set, self.max_n_reference, z_pad
         )
-        sim_qr = self._similarity(
+        sim_qr = self.similarity(
             z_q, z_r, self.theta, attention
         )
 
@@ -1693,7 +1570,7 @@ class Inverse(PsychologicalEmbedding):
     This embedding technique uses the following similarity kernel:
         s(x,y) = 1 / norm(x - y, rho)**tau,
     where x and y are n-dimensional vectors. The similarity kernel has
-    two free parameters: rho, tau.
+    three free parameters: rho, tau, and mu.
 
     """
 
@@ -1716,20 +1593,41 @@ class Inverse(PsychologicalEmbedding):
         )
         self._init_theta()
 
-    def _default_theta(self):
-        """Return dictionary of default theta parameters.
+    def _init_theta(self):
+        """Initialize `theta` TensorFlow variables.
 
-        Returns:
-            Dictionary of theta parameters.
+        Only initialize variable if it doesn't exist or existing
+        variable is trainable.
 
         """
-        cap = 2.2204e-16
-        theta = dict(
-            rho=dict(value=2., trainable=True, bounds=[1., None]),
-            tau=dict(value=1., trainable=True, bounds=[1., None]),
-            mu=dict(value=1e-15, trainable=True, bounds=[cap, None])
-        )
-        return theta
+        if self._do_init_theta_param('rho'):
+            self.vars['theta']['rho'] = tf.Variable(
+                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
+                trainable=True, name="rho", dtype=K.floatx(),
+                constraint=GreaterThan(
+                    min_value=1.0
+                )
+            )
+
+        if self._do_init_theta_param('tau'):
+            self.vars['theta']['tau'] = tf.Variable(
+                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+                trainable=True, name="tau", dtype=K.floatx(),
+                constraint=GreaterEqualThan(
+                    min_value=1.0
+                )
+            )
+
+        if self._do_init_theta_param('mu'):
+            self.vars['theta']['mu'] = tf.Variable(
+                initial_value=tf.random_uniform_initializer(
+                    0.0000000001, .001
+                )(shape=[]),
+                trainable=True, name="mu", dtype=K.floatx(),
+                constraint=GreaterEqualThan(
+                    min_value=2.2204e-16
+                )
+            )
 
     @property
     def rho(self):
@@ -1764,48 +1662,8 @@ class Inverse(PsychologicalEmbedding):
         mu = self._check_theta_param('mu', mu)
         self._theta["mu"]["value"] = mu
 
-    def _get_similarity_parameters_cold(self):
-        """Return a dictionary of TensorFlow parameters.
-
-        Parameters are initialized by sampling from a relatively large
-        set.
-
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
-
-        """
-        tf_theta = {}
-        if self._theta['rho']["trainable"]:
-            tf_theta['rho'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(),
-                constraint=GreaterThan(
-                    min_value=self._theta['rho']['bounds'][0]
-                )
-            )
-        if self._theta['tau']["trainable"]:
-            tf_theta['tau'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['tau']['bounds'][0]
-                )
-            )
-        if self._theta['mu']["trainable"]:
-            tf_theta['mu'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(
-                    0.0000000001, .001
-                )(shape=[]),
-                trainable=True, name="mu", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['mu']['bounds'][0]
-                )
-            )
-        return tf_theta
-
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
-        """Exponential family similarity kernel.
+        """Inverse similarity kernel.
 
         Arguments:
             z_q: A set of embedding points.
@@ -1921,13 +1779,13 @@ class Exponential(PsychologicalEmbedding):
         self._init_theta()
 
     def _init_theta(self):
-        """Return a dictionary of TensorFlow parameters.
+        """Initialize `theta` TensorFlow variables.
 
         Only initialize variable if it doesn't exist or existing
         variable is trainable.
 
         """
-        if 'rho' not in self.vars['theta'] or self.vars['theta']['rho'].trainable:
+        if self._do_init_theta_param('rho'):
             self.vars['theta']['rho'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
                 trainable=True, name="rho", dtype=K.floatx(),
@@ -1936,7 +1794,7 @@ class Exponential(PsychologicalEmbedding):
                 )
             )
 
-        if 'tau' not in self.vars['theta'] or self.vars['theta']['tau'].trainable:
+        if self._do_init_theta_param('tau'):
             self.vars['theta']['tau'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
                 trainable=True, name="tau", dtype=K.floatx(),
@@ -1945,7 +1803,7 @@ class Exponential(PsychologicalEmbedding):
                 )
             )
 
-        if 'gamma' not in self.vars['theta'] or self.vars['theta']['gamma'].trainable:
+        if self._do_init_theta_param('gamma'):
             self.vars['theta']['gamma'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(
                     0., .001
@@ -1956,7 +1814,7 @@ class Exponential(PsychologicalEmbedding):
                 )
             )
 
-        if 'beta' not in self.vars['theta'] or self.vars['theta']['beta'].trainable:
+        if self._do_init_theta_param('beta'):
             self.vars['theta']['beta'] = tf.Variable(
                 initial_value=tf.random_uniform_initializer(1., 30.)(shape=[]),
                 trainable=True, name="beta", dtype=K.floatx(),
@@ -2109,20 +1967,48 @@ class HeavyTailed(PsychologicalEmbedding):
         )
         self._init_theta()
 
-    def _default_theta(self):
-        """Return dictionary of default theta parameters.
+    def _init_theta(self):
+        """Initialize `theta` TensorFlow variables.
 
-        Returns:
-            Dictionary of theta parameters.
+        Only initialize variable if it doesn't exist or existing
+        variable is trainable.
 
         """
-        theta = dict(
-            rho=dict(value=2., trainable=True, bounds=[1., None]),
-            tau=dict(value=1., trainable=True, bounds=[1., None]),
-            kappa=dict(value=2., trainable=True, bounds=[0., None]),
-            alpha=dict(value=30., trainable=True, bounds=[0., None])
-        )
-        return theta
+        if self._do_init_theta_param('rho'):
+            self.vars['theta']['rho'] = tf.Variable(
+                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
+                trainable=True, name="rho", dtype=K.floatx(),
+                constraint=GreaterThan(
+                    min_value=1.0
+                )
+            )
+
+        if self._do_init_theta_param('tau'):
+            self.vars['theta']['tau'] = tf.Variable(
+                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+                trainable=True, name="tau", dtype=K.floatx(),
+                constraint=GreaterEqualThan(
+                    min_value=1.0
+                )
+            )
+
+        if self._do_init_theta_param('kappa'):
+            self.vars['theta']['kappa'] = tf.Variable(
+                initial_value=tf.random_uniform_initializer(1., 11.)(shape=[]),
+                trainable=True, name="kappa", dtype=K.floatx(),
+                constraint=GreaterEqualThan(
+                    min_value=0.0
+                )
+            )
+
+        if self._do_init_theta_param('alpha'):
+            self.vars['theta']['alpha'] = tf.Variable(
+                initial_value=tf.random_uniform_initializer(10., 60.)(shape=[]),
+                trainable=True, name="alpha", dtype=K.floatx(),
+                constraint=GreaterEqualThan(
+                    min_value=0.0
+                )
+            )
 
     @property
     def rho(self):
@@ -2167,53 +2053,6 @@ class HeavyTailed(PsychologicalEmbedding):
         """Setter method for alpha."""
         alpha = self._check_theta_param('alpha', alpha)
         self._theta["alpha"]["value"] = alpha
-
-    def _get_similarity_parameters_cold(self):
-        """Return a dictionary of TensorFlow parameters.
-
-        Parameters are initialized by sampling from a relatively large
-        set.
-
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
-
-        """
-        tf_theta = {}
-        if self._theta['rho']["trainable"]:
-            tf_theta['rho'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(),
-                constraint=GreaterThan(
-                    min_value=self._theta['rho']['bounds'][0]
-                )
-            )
-        if self._theta['tau']["trainable"]:
-            tf_theta['tau'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['tau']['bounds'][0]
-                )
-            )
-        if self._theta['kappa']["trainable"]:
-            tf_theta['kappa'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 11.)(shape=[]),
-                trainable=True, name="kappa", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['kappa']['bounds'][0]
-                )
-            )
-        if self._theta['alpha']["trainable"]:
-            tf_theta['alpha'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(
-                    10., 60.
-                )(shape=[]), trainable=True, name="alpha",
-                dtype=K.floatx(), constraint=GreaterEqualThan(
-                    min_value=self._theta['alpha']['bounds'][0]
-                )
-            )
-        return tf_theta
 
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Heavy-tailed family similarity kernel.
@@ -2295,8 +2134,8 @@ class StudentsT(PsychologicalEmbedding):
     kernel proposed by van der Maaten [1] uses the parameter settings
     rho=2, tau=2, and alpha=n_dim-1. By default, this embedding
     algorithm will only infer the embedding and not the free parameters
-    associated with the similarity kernel. This behavior can be changed
-    by setting the inference flags (e.g.,infer_alpha = True).
+    associated with the similarity kernel. This behavior can be
+    changed by setting trainable=True.
 
     References:
     [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
@@ -2325,23 +2164,40 @@ class StudentsT(PsychologicalEmbedding):
         )
         self._init_theta()
 
-    def _default_theta(self):
-        """Return dictionary of default theta parameters.
+    def _init_theta(self):
+        """Initialize `theta` TensorFlow variables.
 
-        Returns:
-            Dictionary of theta parameters.
+        Only initialize variable if it doesn't exist or existing
+        variable is trainable.
 
         """
-        theta = dict(
-            rho=dict(value=2., trainable=False, bounds=[1., None]),
-            tau=dict(value=2., trainable=False, bounds=[1., None]),
-            alpha=dict(
-                value=(self.n_dim - 1.),
-                trainable=False,
-                bounds=[0.000001, None]
-            ),
-        )
-        return theta
+        if self._do_init_theta_param('rho'):
+            self.vars['theta']['rho'] = tf.Variable(
+                initial_value=tf.constant(2., dtype=K.floatx()),
+                trainable=False, name="rho", dtype=K.floatx(),
+                constraint=GreaterThan(
+                    min_value=1.0
+                )
+            )
+
+        if self._do_init_theta_param('tau'):
+            self.vars['theta']['tau'] = tf.Variable(
+                initial_value=tf.constant(2., dtype=K.floatx()),
+                trainable=False, name="tau", dtype=K.floatx(),
+                constraint=GreaterEqualThan(
+                    min_value=1.0
+                )
+            )
+
+        if self._do_init_theta_param('alpha'):
+            n_dim = np.max((1, self.n_dim - 1.))
+            self.vars['theta']['alpha'] = tf.Variable(
+                initial_value=tf.constant(n_dim, dtype=K.floatx()),
+                trainable=False, name="alpha", dtype=K.floatx(),
+                constraint=GreaterEqualThan(
+                    min_value=0.000001
+                )
+            )
 
     @property
     def rho(self):
@@ -2375,47 +2231,6 @@ class StudentsT(PsychologicalEmbedding):
         """Setter method for alpha."""
         alpha = self._check_theta_param('alpha', alpha)
         self._theta["alpha"]["value"] = alpha
-
-    def _get_similarity_parameters_cold(self):
-        """Return a dictionary of TensorFlow parameters.
-
-        Parameters are initialized by sampling from a relatively large
-        set.
-
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
-
-        """
-        tf_theta = {}
-        if self._theta['rho']["trainable"]:
-            tf_theta['rho'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(),
-                constraint=GreaterThan(
-                    min_value=self._theta['rho']['bounds'][0]
-                )
-            )
-        if self._theta['tau']["trainable"]:
-            tf_theta['tau'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['tau']['bounds'][0]
-                )
-            )
-        if self._theta['alpha']["trainable"]:
-            min_alpha = np.max((1, self.n_dim - 5.))
-            max_alpha = self.n_dim + 5.
-            tf_theta['alpha'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(
-                    min_alpha, max_alpha
-                )(shape=[]), trainable=True, name="alpha", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['alpha']['bounds'][0]
-                )
-            )
-        return tf_theta
 
     def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
         """Student-t family similarity kernel.

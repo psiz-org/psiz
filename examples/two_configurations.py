@@ -29,7 +29,7 @@ from psiz.models import Exponential
 from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
 from psiz.utils import similarity_matrix, matrix_comparison
-from sklearn.model_selection import StratifiedKFold
+import sklearn.model_selection
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping
 
@@ -69,8 +69,11 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Partition observations into train and validation set.
-    skf = StratifiedKFold(n_splits=10)
+    # Partition observations into train and validation set. TODO
+    # sklearn.model_selection.train_test_split(
+
+    # )
+    skf = sklearn.model_selection.StratifiedKFold(n_splits=10)
     (train_idx, val_idx) = list(
         skf.split(obs.stimulus_set, obs.config_idx)
     )[0]

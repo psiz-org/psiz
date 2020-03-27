@@ -30,6 +30,7 @@ from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
 from psiz.utils import similarity_matrix, matrix_comparison
 from sklearn.model_selection import StratifiedKFold
+import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping
 
 
@@ -77,13 +78,16 @@ def main():
     obs_val = obs.subset(val_idx)
 
     # Use early stopping.
-    early_stop = EarlyStopping('val_loss', patience=10, mode='min')
+    early_stop = EarlyStopping(
+        'val_loss', patience=10, mode='min', restore_best_weights=True
+    )
 
     # Infer embedding.
     emb_inferred = Exponential(n_stimuli, n_dim)
+    emb_inferred.log_freq = 10
     emb_inferred.compile()
     emb_inferred.fit(
-        obs_train, obs_val=obs_val, epochs=1000, verbose=4,
+        obs_train, obs_val=obs_val, epochs=1000, verbose=3,
         callbacks=[early_stop]
     )
 
@@ -115,6 +119,16 @@ def ground_truth(n_stimuli, n_dim):
     emb.gamma = 0.001
     # emb.trainable("freeze") TODO
     return emb
+
+
+# TODO
+def custom_regularizer(model):
+    """Compute regularization penalty of model."""
+    tf_z = model.get_layer(name='core_layer').z
+
+    # L1 penalty on coordinates (adjusted for n_stimuli).
+    l1_penalty = tf.reduce_sum(tf.abs(tf_z)) / tf_z.shape[0]
+    return tf.constant(0.1, dtype=tf.keras.backend.floatx()) * l1_penalty
 
 
 # class EarlyStopping(object):

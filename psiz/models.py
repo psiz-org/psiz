@@ -33,6 +33,7 @@ Functions:
 
 from abc import ABCMeta, abstractmethod
 import copy
+import datetime
 from random import randint
 import sys
 import time
@@ -216,7 +217,7 @@ class PsychologicalEmbedding(object):
         else:
             z_constraint = ProjectZ()
 
-        # TODO RandomEmbedding should take nonneg/minval argument.
+        # TODO RandomEmbedding should take z_min argument.
         if 'z' not in self.vars or self.vars['z'].trainable:
             self.vars['z'] = tf.Variable(
                 initial_value=RandomEmbedding(
@@ -620,45 +621,63 @@ class PsychologicalEmbedding(object):
                 tf.io.gfile.rmtree(self.log_dir)
         tf.io.gfile.makedirs(self.log_dir)
 
-    def _build_model(self, tf_config):
-        """Build TensorFlow model."""
-        obs_stimulus_set = tf.keras.Input(
-            shape=[None], name='inp_stimulus_set', dtype=tf.int32,
-        )
-        obs_config_idx = tf.keras.Input(
-            shape=[], name='inp_config_idx', dtype=tf.int32,
-        )
-        obs_group_id = tf.keras.Input(
-            shape=[], name='inp_group_id', dtype=tf.int32,
-        )
-        obs_weight = tf.keras.Input(
-            shape=[], name='inp_weight', dtype=K.floatx(),
-        )
+    def _prepare_and_build(self, obs):
+        """Prepare inputs and build TensorFlow model.
 
-        inputs = [
-            obs_stimulus_set,
-            obs_config_idx,
-            obs_group_id,
-            obs_weight
-        ]
+        Arguments:
+            obs: A psiz.trials.Observations object.
+
+        Returns:
+            ds_obs: The observations formatted as a tf.data.Dataset
+                object.
+            model: A tf.Model object.
+
+        Notes:
+            Ideally preparing the inputs and building a model would
+            be decoupled. However, construction of the static graph
+            requires knowledge of the different trial configurations
+            present in the data.
+
+        """
+        # Create dataset.
+        # NOTE: The stimulus_set is incremented by one in preparation
+        # for using a placeholder stimulus.
+        ds_obs = tf.data.Dataset.from_tensor_slices({
+            'stimulus_set': obs.stimulus_set + 1,
+            'config_idx': obs.config_idx,
+            'group_id': obs.group_id,
+            'weight': tf.constant(obs.weight, dtype=K.floatx()),
+            'is_present': obs.is_present()
+        })
+
+        # Initialize core layer.
         c_layer = CoreLayer(
             self.vars['theta'], self.vars['phi'], self.vars['z'],
-            tf_config, self._tf_similarity
+            self._tf_similarity, obs.config_list
         )
+
+        # Define model.
+        inputs = [
+            tf.keras.Input(
+                shape=[None], name='stimulus_set', dtype=tf.int32,
+            ),
+            tf.keras.Input(
+                shape=[], name='config_idx', dtype=tf.int32,
+            ),
+            tf.keras.Input(
+                shape=[], name='group_id', dtype=tf.int32,
+            ),
+            tf.keras.Input(
+                shape=[], name='weight', dtype=K.floatx(),
+            ),
+            tf.keras.Input(
+                shape=[None], name='is_present', dtype=tf.bool
+            )
+        ]
         output = c_layer(inputs)
-        model = tf.keras.models.Model(
-            inputs,
-            output
-        )
+        model = tf.keras.models.Model(inputs, output)
 
-        # TODO 
-        # tf_z = model.layers[4].z
-        # # L1 penalty on coordinates (adjust for n_stimuli).
-        # l1_penalty = tf.reduce_sum(tf.abs(tf_z)) / tf_z.shape[0]
-        # reg = lambda: tf.constant(0.1, dtype=K.floatx()) * l1_penalty
-        # model.add_loss(reg)
-
-        return model
+        return ds_obs, model
 
     def _check_obs(self, obs):
         """Check observerations.
@@ -705,8 +724,8 @@ class PsychologicalEmbedding(object):
         self.regularizer = regularizer
 
     def fit(
-            self, obs_train, obs_val=None, epochs=5000, initial_epoch=0,
-            callbacks=None, seed=None, verbose=0):
+            self, obs_train, batch_size=None, obs_val=None, epochs=5000,
+            initial_epoch=0, callbacks=None, seed=None, verbose=0):
         """Fit the free parameters of the embedding model.
 
         Arguments:
@@ -736,11 +755,19 @@ class PsychologicalEmbedding(object):
         start_time_s = time.time()
 
         self._check_obs(obs_train)
+        n_obs_train = obs_train.n_trial
         if obs_val is not None:
             self._check_obs(obs_val)
             n_obs_val = obs_val.n_trial
         else:
             n_obs_val = 0
+
+        if batch_size is None:
+            batch_size_train = n_obs_train
+            batch_size_val = n_obs_val
+        else:
+            batch_size_train = batch_size
+            batch_size_val = batch_size
 
         #  Infer embedding.
         if (verbose > 0):
@@ -751,134 +778,188 @@ class PsychologicalEmbedding(object):
                 ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
                 ' | n_obs_train: {3} | n_obs_val: {4}'.format(
                     self.n_stimuli, self.n_dim, self.n_group,
-                    obs_train.n_trial, n_obs_val
+                    n_obs_train, n_obs_val
                 )
             )
 
-        # TODO write new code to resolve config indices and create locally
-        # controlled IDs?
+        # NOTE: The stack operation is used to make sure that a consistent
+        # trial configuration list is used across train and validation.
         obs = psiz.trials.stack([obs_train, obs_val])
-        (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
-        tf_config = self._prepare_config(obs_config_list)
-        locs_train = np.hstack((
-            np.ones(obs_train.n_trial, dtype=bool),
-            np.zeros(obs_val.n_trial, dtype=bool)
-        ))
-        config_idx_train = obs_config_idx[locs_train]
-        config_idx_val = obs_config_idx[np.logical_not(locs_train)]
 
-        # Prepare observations.
-        tf_inputs_train = self._prepare_inputs(obs_train, config_idx_train)
-        tf_inputs_val = self._prepare_inputs(obs_val, config_idx_val)
+        # Create dataset and build compatible model by examining the
+        # different trial configurations used in `obs`.
+        ds_obs, model = self._prepare_and_build(obs)
 
-        model = self._build_model(tf_config)
+        # Split dataset back into train and validation.
+        ds_obs_train = ds_obs.take(n_obs_train)
+        ds_obs_train = ds_obs_train.shuffle(
+            buffer_size=n_obs_train, reshuffle_each_iteration=True
+        )
+        ds_obs_train = ds_obs_train.batch(
+            batch_size_train, drop_remainder=False
+        )
+        if obs_val is not None:
+            ds_obs_val = ds_obs.skip(n_obs_train)
+            ds_obs_val = ds_obs_val.batch(
+                batch_size_val, drop_remainder=False
+            )
+
+        model.stop_training = False  # TODO hack
+
         logs = {}
+        metric_train_loss = tf.keras.metrics.Mean(name='train_loss')
+        metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
+        summary_writer = tf.summary.create_file_writer(self.log_dir)
 
-        # @tf.function
-        def train(model, optimizer, tf_inputs_train, tf_inputs_val):
+        @tf.function  # TODO
+        def train_step(inputs):
+            # Compute training loss and gradients.
+            with tf.GradientTape() as grad_tape:
+                prob = model(inputs)
+                loss = (
+                    self.loss(prob, inputs['weight']) +
+                    self.regularizer(model)
+                )
+            gradients = grad_tape.gradient(
+                loss, model.trainable_variables
+            )
+            metric_train_loss(loss)
 
-            if callbacks is not None:
-                for callback in callbacks:
-                    callback.on_train_begin()
-                    callback.model = model  # TODO hack
+            # NOTE: There are problems using constraints with
+            # Eager Execution since gradients are returned as
+            # tf.IndexedSlices, which in Eager Execution mode
+            # cannot be used to update a variable. To solve this
+            # problem, uncomment the following line(s).
+            # gradients[0] = tf.convert_to_tensor(gradients[0])  # TODO
+            # gradients[4] = tf.convert_to_tensor(gradients[4])
 
-            model.stop_training = False  # TODO hack
-            epoch = tf.constant(0)
-            loss_train = tf.constant(0.0, dtype=K.floatx())
-            loss_val = tf.constant(0.0, dtype=K.floatx())
-            for epoch in tf.range(initial_epoch, epochs):
+            # Apply gradients (subject to constraints).
+            # TODO is it ideal to call optimizer from self?
+            self.optimizer.apply_gradients(
+                zip(gradients, model.trainable_variables)
+            )
+
+        @tf.function  # TODO
+        def validation_step(inputs):
+            # Compute validation loss.
+            prob = model(inputs)
+            loss = (
+                self.loss(prob, inputs['weight']) +
+                self.regularizer(model)
+            )
+            metric_val_loss(loss)
+
+        @tf.function  # TODO
+        def final_step(inputs, metric):
+            prob = model(inputs)
+            loss = (
+                self.loss(prob, inputs['weight']) +
+                self.regularizer(model)
+            )
+            metric(loss)
+
+        if callbacks is not None:
+            for callback in callbacks:
+                callback.on_train_begin()
+                callback.model = model  # TODO hack
+
+        with summary_writer.as_default():
+            epoch_start_time_s = time.time()
+            for epoch in range(initial_epoch, epochs):
                 if model.stop_training:
+                    epoch = epoch - 1
                     break
                 else:
-                    # Compute training loss and gradients.
-                    with tf.GradientTape() as grad_tape:
-                        prob_train = model(tf_inputs_train)
-                        loss_train = (
-                            self.loss(prob_train, tf_inputs_train[3]) +
-                            self.regularizer(model)
+                    logs['epoch'] = epoch
+                    # Reset metrics at the start of each epoch.
+                    metric_train_loss.reset_states()
+                    metric_val_loss.reset_states()
+
+                    # Compute training loss and update variables.
+                    # NOTE: During computation of gradients, IndexedSlices are
+                    # created which generates a TensorFlow warning. I cannot
+                    # find an implementation that avoids IndexedSlices. The
+                    # following catch environment silences the offending
+                    # warning.
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            'ignore', category=UserWarning,
+                            module=r'.*indexed_slices'
                         )
-                    gradients = grad_tape.gradient(
-                        loss_train, model.trainable_variables
-                    )
-                    # NOTE: There are problems using constraints with
-                    # Eager Execution since gradients are returned as
-                    # tf.IndexedSlices, which in Eager Execution mode
-                    # cannot be used to update a variable. To solve this
-                    # problem, uncomment the following line(s).
-                    gradients[0] = tf.convert_to_tensor(gradients[0])  # TODO
-                    # gradients[4] = tf.convert_to_tensor(gradients[4])
+                        for batch_train in ds_obs_train:
+                            train_step(batch_train)
+                    train_loss = metric_train_loss.result()
+                    logs['train_loss'] = train_loss
 
-                    # Validation loss.
-                    prob_val = model(tf_inputs_val)
-                    loss_val = (
-                        self.loss(prob_val, tf_inputs_val[3]) +
-                        self.regularizer(model)
-                    )
+                    # Compute validation loss.
+                    if obs_val is not None:
+                        for batch_val in ds_obs_val:
+                            validation_step(batch_val)
+                        val_loss = metric_val_loss.result()
+                        logs['val_loss'] = val_loss
 
-                    logs['epoch'] = epoch.numpy()
-                    logs['loss'] = loss_train.numpy()
-                    logs['val_loss'] = loss_val.numpy()
+                    # TODO conditional for printing out val_loss
+                    if verbose > 3:
+                        if epoch % self.log_freq == 0:
+                            print(
+                                '        epoch {0:5d} | loss_train: {1: .6f} '
+                                '| loss_val: {2: .6f}'.format(
+                                    epoch, train_loss, val_loss
+                                )
+                            )
 
-                    # Log progress.
+                    # Record progress for TensorBoard.
                     if self.do_log:
-                        if tf.equal(epoch % self.log_freq, 0):
-                            tf.summary.scalar('loss_train', loss_train, step=epoch)
-                            tf.summary.scalar('val_loss', loss_val, step=epoch)
-                            tf_theta = model.layers[4].theta
+                        if epoch % self.log_freq == 0:
+                            tf.summary.scalar(
+                                'train_loss', train_loss, step=epoch
+                            )
+                            tf.summary.scalar(
+                                'val_loss', val_loss, step=epoch
+                            )
+                            tf_theta = model.get_layer(name='core_layer').theta
                             for param_name in tf_theta:
                                 tf.summary.scalar(
-                                    param_name, tf_theta[param_name], step=epoch
+                                    param_name, tf_theta[param_name],
+                                    step=epoch
                                 )
-                    if verbose > 3:
-                        if tf.equal(epoch % self.log_freq, 0):
-                            formatted_str = tf.strings.format(
-                                '        epoch {} | loss_train: {} | loss_val: {}',
-                                (epoch, loss_train, loss_val)
-                            )
-                            tf.print(formatted_str, output_stream=sys.stderr)
-
-                    # Apply gradients (subject to constraints).
-                    optimizer.apply_gradients(
-                        zip(gradients, model.trainable_variables)
-                    )
 
                     if callbacks is not None:
                         for callback in callbacks:
                             callback.on_epoch_end(epoch, logs=logs)
+                summary_writer.flush()
+            epoch_stop_time_s = time.time() - epoch_start_time_s
 
-            return (epoch, loss_train, loss_val)
+        # Determine time per epoch.
+        ms_per_epoch = 1000 * epoch_stop_time_s / epoch
+        # TODO Smarter string generation.
+        time_per_epoch_str = '{0:.0f} ms/epoch'.format(ms_per_epoch)
 
-        summary_writer = tf.summary.create_file_writer(self.log_dir)
-
-        # During computation of gradients, IndexedSlices are created.
-        # Despite my best efforts, I cannot prevent this behavior. The
-        # following catch environment silences the offending warning.
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                'ignore', category=UserWarning, module=r'.*indexed_slices'
-            )
-            with summary_writer.as_default():
-                (epoch, loss_train, loss_val) = train(
-                    model, self.optimizer, tf_inputs_train, tf_inputs_val
-                )
-
-            # Coonvert Tensors to NumPy.
-            epoch = epoch.numpy()
-            loss_train = loss_train.numpy()
-            loss_val = loss_val.numpy()
-            loss_combined = .9 * loss_train + .1 * loss_val
+        # NOTE: If there is an early stopping callback with
+        # restore_best_weights, then the final evaluation will use
+        # those weights.
+        metric_train_loss.reset_states()
+        metric_val_loss.reset_states()
+        for batch_train in ds_obs_train:
+            final_step(batch_train, metric_train_loss)
+        for batch_val in ds_obs_val:
+            validation_step(batch_val)
+        train_loss = metric_train_loss.result()
+        val_loss = metric_val_loss.result()
 
         if (verbose > 2):
             print(
                 '        final {0:5d} | loss_train: {1: .6f} | '
-                'loss_val: {2: .6f}'.format(
-                    epoch, loss_train, loss_val)
+                'loss_val: {2: .6f} | {3}'.format(
+                    epoch, train_loss, val_loss,
+                    time_per_epoch_str
+                )
             )
             print('')
 
-        return loss_train, loss_val
+        return train_loss, val_loss
 
-    def evaluate(self, obs):
+    def evaluate(self, obs, batch_size=None):
         """Evaluate observations using the current state of the model.
 
         Notes:
@@ -887,6 +968,7 @@ class PsychologicalEmbedding(object):
 
         Arguments:
             obs: A Observations object representing the observed data.
+            batch_size (optional): Integer indicating the batch size.
 
         Returns:
             loss: The average loss per observation. Loss is defined as
@@ -894,51 +976,33 @@ class PsychologicalEmbedding(object):
 
         """
         self._check_obs(obs)
+        ds_obs, model = self._prepare_and_build(obs)
 
-        (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
-        tf_config = self._prepare_config(obs_config_list)
-        tf_inputs = self._prepare_inputs(obs, obs_config_idx)
+        if batch_size is None:
+            batch_size = obs.n_trial
 
-        model = self._build_model(tf_config)
+        ds_obs = ds_obs.batch(
+            batch_size, drop_remainder=False
+        )
 
-        # Evaluate current model.
-        prob = model(tf_inputs)
-        loss = self.loss(prob, tf_inputs[3])
+        metric_loss = tf.keras.metrics.Mean(name='eval_loss')
 
-        if tf.math.is_nan(loss):
-            loss = tf.constant(np.inf, dtype=K.floatx())
+        @tf.function  # TODO
+        def eval_step(inputs):
+            # Compute validation loss.
+            prob = model(inputs)
+            loss = self.loss(prob, inputs['weight'])
+            metric_loss(loss)
+
+        for batch in ds_obs:
+            validation_step(batch)
+        loss = metric_loss.result()
+
+        # TODO
+        # if tf.math.is_nan(loss):
+        #     loss = tf.constant(np.inf, dtype=K.floatx())
+
         return loss
-
-    @staticmethod
-    def _grab_config_info(obs):
-        """Grab configuration information."""
-        obs_config_list = copy.copy(obs.config_list)
-        obs_config_idx = copy.copy(obs.config_idx)
-        return obs_config_list, obs_config_idx
-
-    @staticmethod
-    def _prepare_config(config_list):
-        tf_config = [
-            tf.constant(len(config_list.n_outcome.values)),
-            tf.constant(config_list.n_reference.values),
-            tf.constant(config_list.n_select.values),
-            tf.constant(config_list.is_ranked.values)
-        ]
-        return tf_config
-
-    @staticmethod
-    def _prepare_inputs(obs, config_idx):
-        tf_obs = [
-            tf.constant(
-                obs.stimulus_set, dtype=tf.int32, name='obs_stimulus_set'
-            ),
-            tf.constant(
-                config_idx, dtype=tf.int32, name='obs_config_idx'
-            ),
-            tf.constant(obs.group_id, dtype=tf.int32, name='obs_group_id'),
-            tf.constant(obs.weight, dtype=K.floatx(), name='obs_weight')
-        ]
-        return tf_obs
 
     def outcome_probability(
             self, docket, group_id=None, z=None, theta=None, phi=None,
@@ -1192,206 +1256,6 @@ class PsychologicalEmbedding(object):
         self.posterior_duration = time.time() - start_time_s
         return samples
 
-    def tf_posterior_samples(
-            self, obs, n_final_sample=1000, n_burn=100, thin_step=5,
-            z_init=None, verbose=0):
-        """Sample from the posterior of the embedding.
-
-        Samples are drawn from the posterior holding theta constant. A
-        variant of Elliptical Slice Sampling (Murray & Adams 2010) is
-        used to estimate the posterior for the embedding points. Since
-        the latent embedding variables are translation and rotation
-        invariant, generic sampling will artificially inflate the
-        entropy of the samples. To compensate for this issue, the
-        points are split into two groups, holding one set constant
-        while sampling the other set.
-
-        Arguments:
-            obs: A Observations object representing the observed data.
-            n_final_sample (optional): The number of samples desired
-                after removing the "burn in" samples and applying
-                thinning.
-            n_burn (optional): The number of samples to remove from the
-                beginning of the sampling sequence.
-            thin_step (optional): The interval to use in order to thin
-                (i.e., de-correlate) the samples.
-            z_init (optional): Initialization of z. If not provided,
-                the current embedding values associated with the object
-                are used.
-            verbose (optional): An integer specifying the verbosity of
-                printed output. If zero, nothing is printed. Increasing
-                integers display an increasing amount of information.
-
-        Returns:
-            A dictionary of posterior samples for different parameters.
-                The samples are stored as a NumPy array.
-                'z' : shape = (n_stimuli, n_dim, n_total_sample).
-
-        Notes:
-            The step_size of the Hamiltonian Monte Carlo procedure is
-                determined by the scale of the current embedding.
-
-        References:
-            Murray, I., & Adams, R. P. (2010). Slice sampling
-            covariance hyperparameters of latent Gaussian models. In
-            Advances in Neural Information Processing Systems (pp.
-            1732-1740).
-
-        """
-        # Settings.
-        n_partition = 2
-
-        start_time_s = time.time()
-        n_final_sample = int(n_final_sample)
-        n_total_sample = n_burn + (n_final_sample * thin_step)
-        n_stimuli = self.n_stimuli
-        n_dim = self.n_dim
-        if z_init is None:
-            z = copy.copy(self.z)
-        else:
-            z = z_init
-
-        if verbose > 0:
-            print('[psiz] Sampling from posterior...')
-            progbar = psiz.utils.ProgressBar(
-                n_total_sample, prefix='Progress:', length=50
-            )
-            progbar.update(0)
-
-        if (verbose > 1):
-            print('    Settings:')
-            print('    n_total_sample: ', n_total_sample)
-            print('    n_burn:         ', n_burn)
-            print('    thin_step:      ', thin_step)
-            print('    --------------------------')
-            print('    n_final_sample: ', n_final_sample)
-
-        # Prior
-        # p(z_k | Z_negk, theta) ~ N(mu, sigma)
-        # Approximate prior of z_k using all embedding points to reduce
-        # computational burden.
-        gmm = mixture.GaussianMixture(
-            n_components=1, covariance_type='spherical'
-        )
-        gmm.fit(z)
-        mu = gmm.means_[0]
-        sigma = gmm.covariances_[0] * np.identity(n_dim)
-
-        # Center embedding to satisfy assumptions of elliptical slice sampling.
-        z = z - mu
-        z_orig = tf.constant(z, dtype=K.floatx())
-        mu = tf.constant(mu, dtype=K.floatx())
-        mu = tf.expand_dims(mu, axis=0)
-        mu = tf.expand_dims(mu, axis=0)
-
-        # Prepare obs and model.
-        (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
-        tf_config = self._prepare_config(obs_config_list)
-        tf_inputs = self._prepare_inputs(obs, obs_config_idx)
-        model = self._build_model(tf_config)
-        # flat_log_likelihood overwrites model.z with new tf_z
-
-        # Pre-determine partitions. TODO?
-        part_idx, n_stimuli_part = self._make_partition(
-            n_stimuli, n_partition
-        )
-        # NOTE that second row is what we want.
-        part_idx = tf.constant(part_idx[1], dtype=tf.int32)
-
-        # Pre-compute prior. TODO?
-        # Can I guarantee the number of stimuli for each part doesn't change?
-        # Create a diagonally tiled covariance matrix in order to slice
-        # multiple points simultaneously.
-        prior = []
-        for i_part in range(n_partition):
-            prior.append(
-                tf.constant(
-                    np.linalg.cholesky(
-                        self._inflate_sigma(
-                            sigma, n_stimuli_part[i_part], n_dim
-                        )
-                    ), dtype=K.floatx()
-                )
-            )
-
-        n_stimuli_part = tf.constant(n_stimuli_part, dtype=tf.int32)
-
-        # @tf.function
-        def flat_log_likelihood(z_part, part_idx, z_full, tf_inputs):
-            # Assemble full z. TODO
-            z_full = None
-            # Assign variable values. TODO
-            prob_all = model(tf_inputs)
-            cap = tf.constant(2.2204e-16, dtype=K.floatx())
-            prob_all = tf.math.log(tf.maximum(prob_all, cap))
-            prob_all = tf.multiply(weight, prob_all)
-            ll = tf.reduce_sum(prob_all)
-            return ll
-
-        # Initialize sampler.
-        z_full = tf.constant(z, dtype=K.floatx())
-        samples = tf.zeros(
-            [n_total_sample, n_stimuli, n_dim], dtype=K.floatx()
-        )
-
-        # Perform partition.
-        z_part = tf.dynamic_partition(
-            z_full,
-            part_idx,
-            n_partition
-        )
-        part_indices = tf.dynamic_partition(tf.range(n_stimuli), part_idx, 2)
-
-        z_part_0 = z_part[0]
-        z_part_1 = z_part[1]
-
-        z_part_0 = tf.reshape(z_part[0], [-1])
-        z_part_1 = tf.reshape(z_part[1], [-1])
-
-        # Sample from prior if there are no observations. TODO
-
-        for i_round in tf.range(n_total_sample):
-            # if tf.math.equal(tf.math.floormod(i_round, 100), 0):
-            #     # Partition stimuli into two groups. TODO
-            #     # Log progress.
-            #     if verbose > 0:
-            #         progbar.update(i_round + tf.constant(1, dtype=tf.int32))
-
-            (z_part_0, _) = tf_elliptical_slice(
-                z_part_0, prior[0], flat_log_likelihood,
-                pdf_params=[part_idx[i_part], z_orig, obs]
-            )
-
-            (z_part_1, _) = tf_elliptical_slice(
-                z_part_1, prior[1], flat_log_likelihood,
-                pdf_params=[part_idx[i_part], z_orig, obs]
-            )
-
-            # Reshape and stitch.
-            z_part_0_r = tf.reshape(z_part_0, (n_stimuli_part[0], n_dim))
-            z_part_1_r = tf.reshape(z_part_1, (n_stimuli_part[1], n_dim))
-            z_full = tf.dynamic_stitch(part_indices, [z_part_0_r, z_part_1_r])
-
-            i_round_expand = tf.expand_dims(i_round, axis=0)
-            i_round_expand = tf.expand_dims(i_round_expand, axis=0)
-            samples = tf.tensor_scatter_nd_update(
-                samples, i_round_expand, tf.expand_dims(z_full, axis=0)
-            )
-
-        # Add back in mean.
-        samples = samples + mu
-
-        samples = samples[n_burn::thin_step, :, :]
-        sample = sample[0:n_final_sample, :, :]
-        # Permute axis. TODO
-        samples = dict(z=samples)
-
-        if verbose > 0:
-            progbar.update(n_total_sample)
-
-        self.posterior_duration = time.time() - start_time_s
-        return samples
-
     @staticmethod
     def _make_partition(n_stimuli, n_partition):
         """Partition stimuli.
@@ -1541,15 +1405,15 @@ class PsychologicalEmbedding(object):
         return cpyobj
 
 
-class CoreLayer(Layer):
+class CoreLayerOld(Layer):
     """Core layer of model."""
 
-    def __init__(self, tf_theta, tf_phi, tf_z, tf_config, tf_similarity):
+    def __init__(self, tf_theta, tf_phi, tf_z, tf_similarity, config_list):
         """Initialize.
 
         Arguments:
             tf_theta:
-            tf_attention:
+            tf_phi:
             tf_z:
             tf_config: It is assumed that the indices that will be
                 passed in later as inputs will correspond to the
@@ -1557,7 +1421,7 @@ class CoreLayer(Layer):
             tf_similarity:
 
         """
-        super(CoreLayer, self).__init__()
+        super(CoreLayerOld, self).__init__()
         self.z = tf_z
         self.theta = tf_theta
 
@@ -1566,14 +1430,15 @@ class CoreLayer(Layer):
             w_list.append(v)
         self.attention = tf.concat(w_list, axis=0)
 
-        self.n_config = tf_config[0]
-        self.config_n_reference = tf_config[1]
-        self.config_n_select = tf_config[2]
-        self.config_is_ranked = tf_config[3]
-
         self._similarity = tf_similarity
 
-        self.max_n_reference = tf.math.reduce_max(self.config_n_reference)
+        self.n_config = tf.constant(len(config_list))
+        self.config_n_reference = tf.constant(config_list.n_reference.values)
+        self.config_n_select = tf.constant(config_list.n_select.values)
+        self.config_is_ranked = tf.constant(config_list.is_ranked.values)
+        self.max_n_reference = tf.constant(
+            np.max(config_list.n_reference.values)
+        )
 
     def call(self, inputs):
         """Call.
@@ -1593,7 +1458,7 @@ class CoreLayer(Layer):
         # Compute the probability of observations for the different
         # trial configurations.
         n_trial = tf.shape(obs_stimulus_set)[0]
-        prob_all = tf.zeros([n_trial], dtype=K.floatx())
+        likelihood = tf.zeros([n_trial], dtype=K.floatx())
         for i_config in tf.range(self.n_config):
             n_reference = self.config_n_reference[i_config]
             n_select = self.config_n_select[i_config]
@@ -1623,11 +1488,160 @@ class CoreLayer(Layer):
             )
 
             # Update master results.
-            prob_all = tf.tensor_scatter_nd_update(
-                prob_all, tf.expand_dims(trial_idx, axis=1), prob_config
+            likelihood = tf.tensor_scatter_nd_update(
+                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
             )
 
-        return prob_all
+        return likelihood
+
+    def _tf_inflate_points(
+            self, stimulus_set, n_reference, z):
+        """Inflate stimulus set into embedding points.
+
+        Note: This method will not gracefully handle placeholder
+        stimulus IDs.
+
+        """
+        n_trial = tf.shape(stimulus_set)[0]
+        n_dim = tf.shape(z)[1]
+
+        # Inflate query stimuli.
+        z_q = tf.gather(z, stimulus_set[:, 0])
+        z_q = tf.expand_dims(z_q, axis=2)
+
+        # Initialize z_r.
+        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
+        z_r_2 = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
+
+        for i_ref in tf.range(n_reference):
+            z_r_new = tf.gather(
+                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
+            )
+
+            i_ref_expand = tf.expand_dims(i_ref, axis=0)
+            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
+            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
+            z_r_2 = tf.tensor_scatter_nd_update(
+                z_r_2, i_ref_expand, z_r_new_2
+            )
+
+            # z_r_new = tf.expand_dims(z_r_new, axis=2)
+            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
+            # post_pad = tf.zeros([
+            #     n_trial, n_dim,
+            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
+            # ], dtype=K.floatx())
+            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
+            # z_r = z_r + z_r_new
+
+        z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
+        return (z_q, z_r_2)
+
+
+class CoreLayer(Layer):
+    """Core layer of model."""
+
+    def __init__(self, tf_theta, tf_phi, tf_z, tf_similarity, config_list):
+        """Initialize.
+
+        Arguments:
+            tf_theta:
+            tf_phi:
+            tf_z:
+            tf_similarity:
+            config_list: It is assumed that the indices that will be
+                passed in later as inputs will correspond to the
+                indices in this data structure.
+
+        """
+        super(CoreLayer, self).__init__()
+
+        # Pad with placeholder stimulus (assumes incoming stimulus set
+        # has also been incremented by +1).
+        self.z = tf_z
+        self.theta = tf_theta
+
+        w_list = []
+        for group, v in tf_phi['w'].items():
+            w_list.append(v)
+        self.attention = tf.concat(w_list, axis=0)
+
+        self._similarity = tf_similarity
+
+        self.n_config = tf.constant(len(config_list))
+        # self.config_n_reference = tf.constant(config_list.n_reference.values)  # TODO delete
+        self.config_n_select = tf.constant(config_list.n_select.values)
+        self.config_is_ranked = tf.constant(config_list.is_ranked.values)
+        self.max_n_reference = tf.constant(
+            np.max(config_list.n_reference.values)
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs: A list of inputs:
+                stimulus_set: Containing the integers [0, n_stimuli[
+                config_idx: Containing the integers [0, n_config[
+                group_id: Containing the integers [0, n_group[
+
+        """
+        # Inputs.
+        obs_stimulus_set = inputs[0]
+        obs_config_idx = inputs[1]
+        obs_group_id = inputs[2]
+        is_present = inputs[4]
+
+        z_pad = tf.concat(
+            [
+                tf.zeros([1, self.z.shape[1]], dtype=K.floatx()),
+                self.z
+            ], axis=0
+        )
+
+        # Expand attention weights.
+        attention = tf.gather(self.attention, obs_group_id)
+        attention = tf.expand_dims(attention, axis=2)
+
+        # Compute similarity between query and references.
+        (z_q, z_r) = self._tf_inflate_points(
+            obs_stimulus_set, self.max_n_reference, z_pad
+        )
+        sim_qr = self._similarity(
+            z_q, z_r, self.theta, attention
+        )
+
+        # Zero out similarities involving placeholder.
+        sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
+
+        # Pre-allocate likelihood tensor.
+        n_trial = tf.shape(obs_stimulus_set)[0]
+        likelihood = tf.zeros([n_trial], dtype=K.floatx())
+
+        # Compute the probability of observations for different trial
+        # configurations.
+        for i_config in tf.range(self.n_config):
+            n_select = self.config_n_select[i_config]
+            is_ranked = self.config_is_ranked[i_config]
+
+            # Identify trials belonging to current trial configuration.
+            locs = tf.equal(obs_config_idx, i_config)
+            trial_idx = tf.squeeze(tf.where(locs))
+
+            # Grab similarities belonging to current trial configuration.
+            sim_qr_config = tf.gather(sim_qr, trial_idx)
+
+            # Compute probability of behavior.
+            prob_config = _tf_ranked_sequence_probability(
+                sim_qr_config, n_select
+            )
+
+            # Update master results.
+            likelihood = tf.tensor_scatter_nd_update(
+                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
+            )
+
+        return likelihood
 
     def _tf_inflate_points(
             self, stimulus_set, n_reference, z):
@@ -2944,7 +2958,7 @@ def _tf_ranked_sequence_probability(sim_qr, n_select):
     return seq_prob
 
 
-@tf.function(experimental_relax_shapes=True)
+@tf.function(experimental_relax_shapes=True)  # TODO
 def observation_loss(prob_all, weight):
     """Compute model loss given observation probabilities."""
     n_trial = tf.shape(prob_all)[0]
@@ -2963,7 +2977,7 @@ def observation_loss(prob_all, weight):
     return loss
 
 
-@tf.function(experimental_relax_shapes=True)
+@tf.function(experimental_relax_shapes=True)  # TODO
 def no_regularization(model):
     """No regularization."""
     return tf.constant(0.0, dtype=K.floatx())

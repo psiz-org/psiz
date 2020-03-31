@@ -392,3 +392,253 @@ class CoreLayer(Layer):
             self.vars['theta'][param_name].trainable
         )
         return cond
+
+class Inverse(PsychologicalEmbedding):
+    """An inverse-distance model."""
+
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
+        """Initialize.
+
+        Arguments:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded.
+            n_dim (optional): An integer indicating the dimensionality
+                of the embedding.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group.
+
+        """
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, z_min, z_max
+        )
+        self.kernel_layer = InverseKernel()
+
+    # @property
+    # def rho(self):
+    #     """Getter method for rho."""
+    #     return self.kernel_layer.distance_layer.rho.numpy()
+
+    # @rho.setter
+    # def rho(self, rho):
+    #     """Setter method for rho."""
+    #     self.kernel_layer.distance_layer.rho.assign(rho)
+
+    # @property
+    # def tau(self):
+    #     """Getter method for tau."""
+    #     return self.kernel_layer.tau.numpy()
+
+    # @tau.setter
+    # def tau(self, tau):
+    #     """Setter method for tau."""
+    #     self.kernel_layer.tau.assign(tau)
+
+    # @property
+    # def mu(self):
+    #     """Getter method for mu."""
+    #     return self.kernel_layer.mu.numpy()
+
+    # @mu.setter
+    # def mu(self, mu):
+    #     """Setter method for mu."""
+    #     self.kernel_layer.mu.assign(mu)
+
+
+class Exponential(PsychologicalEmbedding):
+    """An exponential family stochastic display embedding algorithm."""
+
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
+        """Initialize.
+
+        Arguments:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded.
+            n_dim (optional): An integer indicating the dimensionality
+                of the embedding.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group.
+
+        """
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, z_min, z_max
+        )
+        self.kernel_layer = ExponentialKernel()  # TODO how to pass in trainable settings?
+
+    # @property
+    # def rho(self):
+    #     """Getter method for rho."""
+    #     return self.kernel_layer.distance_layer.rho.numpy()
+
+    # @rho.setter
+    # def rho(self, rho):
+    #     """Setter method for rho."""
+    #     self.kernel_layer.distance_layer.rho.assign(rho)
+
+    # @property
+    # def tau(self):
+    #     """Getter method for tau."""
+    #     return self.kernel_layer.tau.numpy()
+
+    # @tau.setter
+    # def tau(self, tau):
+    #     """Setter method for tau."""
+    #     self.kernel_layer.tau.assign(tau)
+
+    # @property
+    # def gamma(self):
+    #     """Getter method for gamma."""
+    #     return self.kernel_layer.gamma.numpy()
+
+    # @gamma.setter
+    # def gamma(self, gamma):
+    #     """Setter method for gamma."""
+    #     self.kernel_layer.gamma.assign(gamma)
+
+    # @property
+    # def beta(self):
+    #     """Getter method for beta."""
+    #     return self.kernel_layer.beta.numpy()
+
+    # @beta.setter
+    # def beta(self, beta):
+    #     """Setter method for beta."""
+    #     self.kernel_layer.beta.assign(beta)
+
+    # @property
+    # def theta(self):
+    #     """Getter method for theta."""
+    #     d = {
+    #         'rho': self.rho,
+    #         'tau': self.tau,
+    #         'beta': self.beta,
+    #         'gamma': self.gamma
+    #     }
+    #     return d
+
+    # @theta.setter
+    # def theta(self, theta):
+    #     """Setter method for w."""
+    #     for k, v in theta.items():
+    #         var = getattr(self.kernel_layer, k)
+    #         var.assign(v)
+
+
+class HeavyTailed(PsychologicalEmbedding):
+    """A heavy-tailed family stochastic display embedding algorithm."""
+
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
+        """Initialize.
+
+        Arguments:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded.
+            n_dim (optional): An integer indicating the dimensionality
+                of the embedding.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group.
+
+        """
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, z_min, z_max
+        )
+        self.kernel_layer = HeavyTailedKernel()
+
+    # @property
+    # def rho(self):
+    #     """Getter method for rho."""
+    #     return self.kernel_layer.distance_layer.rho.numpy()
+
+    # @rho.setter
+    # def rho(self, rho):
+    #     """Setter method for rho."""
+    #     self.kernel_layer.distance_layer.rho.assign(rho)
+
+    # @property
+    # def tau(self):
+    #     """Getter method for tau."""
+    #     return self.kernel_layer.tau.numpy()
+
+    # @tau.setter
+    # def tau(self, tau):
+    #     """Setter method for tau."""
+    #     self.kernel_layer.tau.assign(tau)
+
+    # @property
+    # def kappa(self):
+    #     """Getter method for kappa."""
+    #     return self.kernel_layer.kappa.numpy()
+
+    # @kappa.setter
+    # def kappa(self, kappa):
+    #     """Setter method for kappa."""
+    #     self.kernel_layer.kappa.assign(kappa)
+
+    # @property
+    # def alpha(self):
+    #     """Getter method for alpha."""
+    #     return self.kernel_layer.alpha.numpy()
+
+    # @alpha.setter
+    # def alpha(self, alpha):
+    #     """Setter method for alpha."""
+    #     self.kernel_layer.alpha.assign(alpha)
+
+
+class StudentsT(PsychologicalEmbedding):
+    """A Student's t family stochastic display embedding algorithm."""
+
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
+        """Initialize.
+
+        Arguments:
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded.
+            n_dim (optional): An integer indicating the dimensionality
+                of the embedding.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group.
+
+        """
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim, n_group, z_min, z_max
+        )
+        self.kernel_layer = StudentsTKernel()
+
+    # @property
+    # def rho(self):
+    #     """Getter method for rho."""
+    #     return self.kernel_layer.rho.numpy()
+
+    # @rho.setter
+    # def rho(self, rho):
+    #     """Setter method for rho."""
+    #     self.kernel_layer.rho.assign(rho)
+
+    # @property
+    # def tau(self):
+    #     """Getter method for tau."""
+    #     return self.kernel_layer.tau.numpy()
+
+    # @tau.setter
+    # def tau(self, tau):
+    #     """Setter method for tau."""
+    #     self.kernel_layer.tau.assign(tau)
+
+    # @property
+    # def alpha(self):
+    #     """Getter method for alpha."""
+    #     return self.kernel_layer.alpha.numpy()
+
+    # @alpha.setter
+    # def alpha(self, alpha):
+    #     """Setter method for alpha."""
+    #     self.kernel_layer.alpha.assign(alpha)
+

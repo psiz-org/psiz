@@ -58,7 +58,7 @@ import psiz.utils
 
 
 class PsychologicalEmbedding(object):
-    """Abstract base class for psychological embedding algorithm.
+    """Container class for psychological embedding algorithm.
 
     The embedding procedure jointly infers three components. First, the
     embedding algorithm infers a stimulus representation denoted z.
@@ -125,19 +125,11 @@ class PsychologicalEmbedding(object):
         posterior_duration: The duration (in seconds) of the last
             called posterior sampling procedure.
 
-    Notes: TODO
-        The setter methods as well as the methods fit, trainable, and
-            set_log modify the state of the PsychologicalEmbedding
-            object.
-        The abstract methods TODO must be
-            implemented by each concrete class.
-        You can use a custom loss by by setting the loss attribute.
-
     """
 
-    __metaclass__ = ABCMeta
-
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
+    def __init__(
+            self, n_stimuli, kernel_layer, n_dim=2, n_group=1, z_min=None,
+            z_max=None):
         """Initialize.
 
         Arguments:
@@ -155,6 +147,8 @@ class PsychologicalEmbedding(object):
             ValueError: If arguments are invalid.
 
         """
+        super().__init__()
+
         if (n_stimuli < 3):
             raise ValueError("There must be at least three stimuli.")
         self.n_stimuli = n_stimuli
@@ -177,7 +171,11 @@ class PsychologicalEmbedding(object):
         self.z_max = z_max
 
         # Initialize model components.
-        self.reset()
+        self.coordinate_layer = Coordinate(
+            self.n_stimuli, self.n_dim, self.z_min, self.z_max
+        )
+        self.attention_layer = Attention(self.n_dim, self.n_group)
+        self.kernel_layer = kernel_layer
 
         # Default TensorBoard log attributes.
         self.do_log = False
@@ -194,17 +192,11 @@ class PsychologicalEmbedding(object):
         self.loss = None
         self.regularizer = None
 
-        super().__init__()
-
     def reset(self):
-        """Reinitialize model parameters."""
-        # TODO implement
-        # TODO critical, when calling reset, only reset trainable parameters
-        # if self._do_init_theta_param('rho'):
-        self.coordinate_layer = Coordinate(
-            self.n_stimuli, self.n_dim, self.z_min, self.z_max
-        )
-        self.attention_layer = Attention(self.n_dim, self.n_group)
+        """Reinitialize trainable model parameters."""
+        self.coordinate_layer.reset()
+        self.attention_layer.reset()
+        self.kernel_layer.reset()
 
     @property
     def z(self):
@@ -244,8 +236,22 @@ class PsychologicalEmbedding(object):
         for k, v in phi.items():
             self.vars['phi'][k] = assign(v)
 
+    @property
+    def theta(self):
+        """Getter method for theta."""
+        d = {}
+        for k, v in self.kernel_layer.theta.items():
+            d[k] = v.numpy()
+        return d
+
+    @theta.setter
+    def theta(self, theta):
+        """Setter method for w."""
+        for k, v in theta.items():
+            self.kernel_layer.theta[k].assign(v)
+
     def _broadcast_for_similarity(
-            self, z_q, z_r, group_id=None, theta=None, phi=None):
+            self, z_q, z_r, group_id=None, phi=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -259,9 +265,6 @@ class PsychologicalEmbedding(object):
                 shape = (n_trial, n_dim, [n_reference, n_sample])
             group_id (optional): The group ID for each sample. Can be a
                 scalar or an array of shape = (n_trial,).
-            theta (optional): The parameters governing the similarity
-                kernel. If not provided, the theta associated with the
-                current object is used.
             phi (optional): The weights allocated to each
                 dimension in a weighted minkowski metric. The weights
                 should be positive and sum to the dimensionality of the
@@ -284,8 +287,6 @@ class PsychologicalEmbedding(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
 
-        if theta is None:
-            theta = self.theta
         if phi is None:
             phi = self.phi
 
@@ -305,9 +306,9 @@ class PsychologicalEmbedding(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        return (z_q, z_r, theta, attention)
+        return (z_q, z_r, attention)
 
-    def similarity(self, z_q, z_r, group_id=None, theta=None, phi=None):
+    def similarity(self, z_q, z_r, group_id=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -321,28 +322,23 @@ class PsychologicalEmbedding(object):
                 shape = (n_trial, n_dim, [n_reference, n_sample])
             group_id (optional): The group ID for each sample. Can be a
                 scalar or an array of shape = (n_trial,).
-            theta (optional): The parameters governing the similarity
-                kernel. If not provided, the theta associated with the
-                current object is used.
-            phi (optional): The weights allocated to each
-                dimension in a weighted minkowski metric. The weights
-                should be positive and sum to the dimensionality of the
-                weight vector, although this is not enforced.
-                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
 
         """
-        (z_q, z_r, theta, attention) = self._broadcast_for_similarity(
-            z_q, z_r, group_id=group_id, theta=theta, phi=phi
+        (z_q, z_r, attention) = self._broadcast_for_similarity(
+            z_q, z_r, group_id=group_id, phi=None
         )
+        sim_qr = self.kernel_layer([
+            tf.constant(z_q, dtype=K.floatx()),
+            tf.constant(z_r, dtype=K.floatx()),
+            tf.constant(attention, dtype=K.floatx())
+        ]).numpy()
+        return sim_qr
 
-        sim = self._similarity(z_q, z_r, theta, attention)
-        return sim
-
-    def distance(self, z_q, z_r, group_id=None, theta=None, phi=None):
+    def distance(self, z_q, z_r, group_id=None):
         """Return distance between two lists of points.
 
         Distance is determined using the weighted Minkowski metric.
@@ -356,14 +352,6 @@ class PsychologicalEmbedding(object):
                 shape = (n_trial, n_dim, [n_reference, n_sample])
             group_id (optional): The group ID for each sample. Can be a
                 scalar or an array of shape = (n_trial,).
-            theta (optional): The parameters governing the similarity
-                kernel. If not provided, the theta associated with the
-                current object is used.
-            phi (optional): The weights allocated to each
-                dimension in a weighted minkowski metric. The weights
-                should be positive and sum to the dimensionality of the
-                weight vector, although this is not enforced.
-                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
@@ -380,12 +368,10 @@ class PsychologicalEmbedding(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
 
-        if theta is None:
-            theta = self.theta
-        if phi is None:
-            phi = self.phi
+        theta = self.theta
+        phi = self.phi
 
-        attention = phi['w'][group_id, :]
+        attention = phi['w'][group_id, :]  # TODO
 
         # Make sure z_q and attention have an appropriate singleton
         # dimensions.
@@ -401,31 +387,8 @@ class PsychologicalEmbedding(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d = _mink_distance(z_q, z_r, theta['rho']["value"], attention)
+        d = _mink_distance(z_q, z_r, theta['rho']["value"], attention)  # TODO use TF layer
         return d
-
-    @staticmethod
-    @abstractmethod
-    def _similarity(z_q, z_r, theta, attention):
-        """Similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension in a
-                weighted minkowski metric.
-                shape = (n_trial, n_dim)
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        pass
 
     def set_log(self, do_log, log_dir=None, log_freq=None, delete_prev=True):
         """State changing method that sets TensorBoard logging.
@@ -641,7 +604,7 @@ class PsychologicalEmbedding(object):
         metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
         summary_writer = tf.summary.create_file_writer(self.log_dir)
 
-        # @tf.function  # TODO
+        @tf.function  # TODO
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
@@ -835,8 +798,7 @@ class PsychologicalEmbedding(object):
         return loss
 
     def outcome_probability(
-            self, docket, group_id=None, z=None, theta=None, phi=None,
-            unaltered_only=False):
+            self, docket, group_id=None, z=None, unaltered_only=False):
         """Return probability of each outcome for each trial.
 
         Arguments:
@@ -848,8 +810,6 @@ class PsychologicalEmbedding(object):
                 points are provided, the points associated with the
                 object are used.
                 shape=(n_stimuli, n_dim, [n_sample])
-            theta (optional): The theta parameters.
-            phi (optional): The phi parameters.
             unaltered_only (optional): Flag that determines whether
                 only the unaltered ordering is evaluated and returned.
 
@@ -866,9 +826,6 @@ class PsychologicalEmbedding(object):
         Notes:
             The first outcome corresponds to the original order of the
                 trial data.
-            The arguments theta and phi are assigned in a lazy
-                manner. If they have a value of None when they are
-                needed, the attribute values of the object will be used.
 
         """
         n_trial_all = docket.n_trial
@@ -895,10 +852,15 @@ class PsychologicalEmbedding(object):
         (z_q, z_r) = _inflate_points(
             docket.stimulus_set, docket.max_n_reference, z
         )
-        z_q, z_r, theta, attention = self._broadcast_for_similarity(
-            z_q, z_r, group_id=group_id, theta=theta, phi=phi
+        z_q, z_r, attention = self._broadcast_for_similarity(
+            z_q, z_r, group_id=group_id, phi=None
         )
-        sim_qr = self._similarity(z_q, z_r, theta, attention)
+
+        sim_qr = self.kernel_layer([
+            tf.constant(z_q, dtype=K.floatx()),
+            tf.constant(z_r, dtype=K.floatx()),
+            tf.constant(attention, dtype=K.floatx())
+        ]).numpy()
 
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
@@ -1227,449 +1189,6 @@ class PsychologicalEmbedding(object):
         return cpyobj
 
 
-class Inverse(PsychologicalEmbedding):
-    """An inverse-distance model.
-
-    This embedding technique uses the following similarity kernel:
-        s(x,y) = 1 / norm(x - y, rho)**tau,
-    where x and y are n-dimensional vectors. The similarity kernel has
-    three free parameters: rho, tau, and mu.
-
-    """
-
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionality
-                of the embedding.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group.
-
-        """
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, z_min, z_max
-        )
-        self.kernel_layer = InverseKernel()
-
-    @property
-    def rho(self):
-        """Getter method for rho."""
-        return self.kernel_layer.distance_layer.rho.numpy()
-
-    @rho.setter
-    def rho(self, rho):
-        """Setter method for rho."""
-        self.kernel_layer.distance_layer.rho.assign(rho)
-
-    @property
-    def tau(self):
-        """Getter method for tau."""
-        return self.kernel_layer.tau.numpy()
-
-    @tau.setter
-    def tau(self, tau):
-        """Setter method for tau."""
-        self.kernel_layer.tau.assign(tau)
-
-    @property
-    def mu(self):
-        """Getter method for mu."""
-        return self.kernel_layer.mu.numpy()
-
-    @mu.setter
-    def mu(self, mu):
-        """Setter method for mu."""
-        self.kernel_layer.mu.assign(mu)
-
-    @staticmethod
-    def _similarity(z_q, z_r, theta, attention):
-        """Exponential family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']["value"]
-        tau = theta['tau']["value"]
-        mu = theta['mu']["value"]
-
-        # Weighted Minkowski distance.
-        d_qr = _mink_distance(z_q, z_r, rho, attention)
-
-        # Exponential family similarity kernel.
-        sim_qr = 1 / (d_qr**tau + mu)
-        return sim_qr
-
-
-class Exponential(PsychologicalEmbedding):
-    """An exponential family stochastic display embedding algorithm.
-
-    This embedding technique uses the following similarity kernel:
-        s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma,
-    where x and y are n-dimensional vectors. The similarity kernel has
-    four free parameters: rho, tau, gamma, and beta. The exponential
-    family is obtained by integrating across various psychological
-    theories [1,2,3,4].
-
-    References:
-        [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency
-            effects as a window to generalization: Separating
-            decisional and perceptual sequential effects in category
-            learning. Journal of Experimental Psychology: Learning,
-            Memory, & Cognition, 32 , 316-332.
-        [2] Jones, M., Maddox, W. T., & Love, B. C. (2006). The role of
-            similarity in generalization. In Proceedings of the 28th
-            annual meeting of the cognitive science society (pp. 405-
-            410).
-        [3] Nosofsky, R. M. (1986). Attention, similarity, and the
-            identification-categorization relationship. Journal of
-            Experimental Psychology: General, 115, 39-57.
-        [4] Shepard, R. N. (1987). Toward a universal law of
-            generalization for psychological science. Science, 237,
-            1317-1323.
-
-    """
-
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionality
-                of the embedding.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group.
-
-        """
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, z_min, z_max
-        )
-        self.kernel_layer = ExponentialKernel()  # TODO how to pass in trainable settings?
-
-    @property
-    def rho(self):
-        """Getter method for rho."""
-        return self.kernel_layer.distance_layer.rho.numpy()
-
-    @rho.setter
-    def rho(self, rho):
-        """Setter method for rho."""
-        self.kernel_layer.distance_layer.rho.assign(rho)
-
-    @property
-    def tau(self):
-        """Getter method for tau."""
-        return self.kernel_layer.tau.numpy()
-
-    @tau.setter
-    def tau(self, tau):
-        """Setter method for tau."""
-        self.kernel_layer.tau.assign(tau)
-
-    @property
-    def gamma(self):
-        """Getter method for gamma."""
-        return self.kernel_layer.gamma.numpy()
-
-    @gamma.setter
-    def gamma(self, gamma):
-        """Setter method for gamma."""
-        self.kernel_layer.gamma.assign(gamma)
-
-    @property
-    def beta(self):
-        """Getter method for beta."""
-        return self.kernel_layer.beta.numpy()
-
-    @beta.setter
-    def beta(self, beta):
-        """Setter method for beta."""
-        self.kernel_layer.beta.assign(beta)
-
-    @property
-    def theta(self):
-        """Getter method for theta."""
-        d = {
-            'rho': self.rho,
-            'tau': self.tau,
-            'beta': self.beta,
-            'gamma': self.gamma
-        }
-        return d
-
-    @theta.setter
-    def theta(self, theta):
-        """Setter method for w."""
-        for k, v in theta.items():
-            var = getattr(self.kernel_layer, k)
-            var.assign(v)
-
-    @staticmethod
-    def _similarity(z_q, z_r, theta, attention):
-        """Exponential family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']
-        tau = theta['tau']
-        gamma = theta['gamma']
-        beta = theta['beta']
-
-        # Weighted Minkowski distance.
-        d_qr = _mink_distance(z_q, z_r, rho, attention)
-
-        # Exponential family similarity kernel.
-        # sim_qr = np.exp(np.negative(beta) * d_qr**tau) + gamma
-        sim_qr = ne.evaluate('exp(-beta * d_qr**tau) + gamma')
-        return sim_qr
-
-
-class HeavyTailed(PsychologicalEmbedding):
-    """A heavy-tailed family stochastic display embedding algorithm.
-
-    This embedding technique uses the following similarity kernel:
-        s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha),
-    where x and y are n-dimensional vectors. The similarity kernel has
-    four free parameters: rho, tau, kappa, and alpha. The
-    heavy-tailed family is a generalization of the Student-t family.
-    """
-
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionality
-                of the embedding.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group.
-
-        """
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, z_min, z_max
-        )
-        self.kernel_layer = HeavyTailedKernel()
-
-    @property
-    def rho(self):
-        """Getter method for rho."""
-        return self.kernel_layer.distance_layer.rho.numpy()
-
-    @rho.setter
-    def rho(self, rho):
-        """Setter method for rho."""
-        self.kernel_layer.distance_layer.rho.assign(rho)
-
-    @property
-    def tau(self):
-        """Getter method for tau."""
-        return self.kernel_layer.tau.numpy()
-
-    @tau.setter
-    def tau(self, tau):
-        """Setter method for tau."""
-        self.kernel_layer.tau.assign(tau)
-
-    @property
-    def kappa(self):
-        """Getter method for kappa."""
-        return self.kernel_layer.kappa.numpy()
-
-    @kappa.setter
-    def kappa(self, kappa):
-        """Setter method for kappa."""
-        self.kernel_layer.kappa.assign(kappa)
-
-    @property
-    def alpha(self):
-        """Getter method for alpha."""
-        return self.kernel_layer.alpha.numpy()
-
-    @alpha.setter
-    def alpha(self, alpha):
-        """Setter method for alpha."""
-        self.kernel_layer.alpha.assign(alpha)
-
-    @staticmethod
-    def _similarity(z_q, z_r, theta, attention):
-        """Heavy-tailed family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']["value"]
-        tau = theta['tau']["value"]
-        kappa = theta['kappa']["value"]
-        alpha = theta['alpha']["value"]
-
-        # Weighted Minkowski distance.
-        d_qr = _mink_distance(z_q, z_r, rho, attention)
-
-        # Heavy-tailed family similarity kernel.
-        sim_qr = (kappa + d_qr**tau)**(np.negative(alpha))
-        return sim_qr
-
-
-class StudentsT(PsychologicalEmbedding):
-    """A Student's t family stochastic display embedding algorithm.
-
-    The embedding technique uses the following similarity kernel:
-        s(x,y) = (1 + (((norm(x-y, rho)^tau)/alpha))^(-(alpha + 1)/2),
-    where x and y are n-dimensional vectors. The similarity kernel has
-    three free parameters: rho, tau, and alpha. The original Student-t
-    kernel proposed by van der Maaten [1] uses the parameter settings
-    rho=2, tau=2, and alpha=n_dim-1. By default, this embedding
-    algorithm will only infer the embedding and not the free parameters
-    associated with the similarity kernel. This behavior can be
-    changed by setting trainable=True.
-
-    References:
-    [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
-        triplet embedding. In Machine learning for signal processing
-        (MLSP), 2012 IEEE international workshop on (p. 1-6).
-        doi:10.1109/MLSP.2012.6349720
-
-    """
-
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded.
-            n_dim (optional): An integer indicating the dimensionality
-                of the embedding.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group.
-
-        """
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, z_min, z_max
-        )
-        self.kernel_layer = StudentsTKernel()
-
-    @property
-    def rho(self):
-        """Getter method for rho."""
-        return self.kernel_layer.rho.numpy()
-
-    @rho.setter
-    def rho(self, rho):
-        """Setter method for rho."""
-        self.kernel_layer.rho.assign(rho)
-
-    @property
-    def tau(self):
-        """Getter method for tau."""
-        return self.kernel_layer.tau.numpy()
-
-    @tau.setter
-    def tau(self, tau):
-        """Setter method for tau."""
-        self.kernel_layer.tau.assign(tau)
-
-    @property
-    def alpha(self):
-        """Getter method for alpha."""
-        return self.kernel_layer.alpha.numpy()
-
-    @alpha.setter
-    def alpha(self, alpha):
-        """Setter method for alpha."""
-        self.kernel_layer.alpha.assign(alpha)
-
-    @staticmethod
-    def _similarity(z_q, z_r, theta, attention):
-        """Student-t family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = theta['rho']["value"]
-        tau = theta['tau']["value"]
-        alpha = theta['alpha']["value"]
-
-        # Weighted Minkowski distance.
-        d_qr = _mink_distance(z_q, z_r, rho, attention)
-
-        # Student-t family similarity kernel.
-        sim_qr = (1 + (d_qr**tau / alpha))**(np.negative(alpha + 1)/2)
-        return sim_qr
-
-
 class QueryReference(Layer):
     """Model of query reference similarity judgments."""
 
@@ -1762,6 +1281,10 @@ class QueryReference(Layer):
             )
 
         return likelihood
+
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
 
 
 class Coordinate(Layer):
@@ -1874,6 +1397,10 @@ class Coordinate(Layer):
         z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
         return (z_q, z_r_2)
 
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
+
 
 class WeightedDistance(Layer):
     """Weighted Minkowski distance."""
@@ -1910,6 +1437,10 @@ class WeightedDistance(Layer):
         d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / self.rho)
 
         return d_qr
+
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
 
 
 class Attention(Layer):
@@ -1965,9 +1496,20 @@ class Attention(Layer):
         w_expand = tf.expand_dims(w_expand, axis=2)
         return w_expand
 
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
+
 
 class InverseKernel(Layer):
-    """Inverse-distance similarity kernel."""
+    """Inverse-distance similarity kernel.
+
+    This embedding technique uses the following similarity kernel:
+        s(x,y) = 1 / norm(x - y, rho)**tau,
+    where x and y are n-dimensional vectors. The similarity kernel has
+    three free parameters: rho, tau, and mu.
+
+    """
 
     def __init__(self, fit_rho=True, fit_tau=True, fit_mu=True):
         """Initialize.
@@ -1996,6 +1538,12 @@ class InverseKernel(Layer):
             constraint=GreaterEqualThan(min_value=2.2204e-16)
         )
 
+        self.theta = {
+            'rho': self.distance_layer.rho,
+            'tau': self.tau,
+            'mu': self.mu
+        }
+
     def call(self, inputs):
         """Call.
 
@@ -2018,9 +1566,39 @@ class InverseKernel(Layer):
         sim_qr = 1 / (tf.pow(d_qr, self.tau) + self.mu)
         return sim_qr
 
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
+
 
 class ExponentialKernel(Layer):
-    """Exponential family similarity kernel."""
+    """Exponential family similarity kernel.
+
+    This embedding technique uses the following similarity kernel:
+        s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma,
+    where x and y are n-dimensional vectors. The similarity kernel has
+    four free parameters: rho, tau, gamma, and beta. The exponential
+    family is obtained by integrating across various psychological
+    theories [1,2,3,4].
+
+    References:
+        [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency
+            effects as a window to generalization: Separating
+            decisional and perceptual sequential effects in category
+            learning. Journal of Experimental Psychology: Learning,
+            Memory, & Cognition, 32 , 316-332.
+        [2] Jones, M., Maddox, W. T., & Love, B. C. (2006). The role of
+            similarity in generalization. In Proceedings of the 28th
+            annual meeting of the cognitive science society (pp. 405-
+            410).
+        [3] Nosofsky, R. M. (1986). Attention, similarity, and the
+            identification-categorization relationship. Journal of
+            Experimental Psychology: General, 115, 39-57.
+        [4] Shepard, R. N. (1987). Toward a universal law of
+            generalization for psychological science. Science, 237,
+            1317-1323.
+
+    """
 
     def __init__(self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=True):
         """Initialize.
@@ -2056,11 +1634,25 @@ class ExponentialKernel(Layer):
             constraint=GreaterEqualThan(min_value=1.0)
         )
 
+        self.theta = {
+            'rho': self.distance_layer.rho,
+            'tau': self.tau,
+            'gamma': self.gamma,
+            'beta': self.beta
+        }
+
     def call(self, inputs):
         """Call.
 
         Arguments:
             inputs:
+                z_q: A set of embedding points.
+                    shape = (n_trial, n_dim [, n_sample])
+                z_r: A set of embedding points.
+                    shape = (n_trial, n_dim [, n_sample])
+                attention: The weights allocated to each dimension
+                    in a weighted minkowski metric.
+                    shape = (n_trial, n_dim [, n_sample])
 
         Returns:
             The corresponding similarity between rows of embedding
@@ -2078,9 +1670,21 @@ class ExponentialKernel(Layer):
         sim_qr = tf.exp(tf.negative(self.beta) * tf.pow(d_qr, self.tau)) + self.gamma
         return sim_qr
 
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
+
 
 class HeavyTailedKernel(Layer):
-    """Heavy-tailed family similarity kernel."""
+    """Heavy-tailed family similarity kernel.
+
+    This embedding technique uses the following similarity kernel:
+        s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha),
+    where x and y are n-dimensional vectors. The similarity kernel has
+    four free parameters: rho, tau, kappa, and alpha. The
+    heavy-tailed family is a generalization of the Student-t family.
+
+    """
 
     def __init__(
             self, fit_rho=True, fit_tau=True, fit_kappa=True, fit_alpha=True):
@@ -2115,6 +1719,13 @@ class HeavyTailedKernel(Layer):
             constraint=GreaterEqualThan(min_value=0.0)
         )
 
+        self.theta = {
+            'rho': self.distance_layer.rho,
+            'tau': self.tau,
+            'kappa': self.kappa,
+            'alpha': self.alpha
+        }
+
     def call(self, inputs):
         """Call.
 
@@ -2139,9 +1750,30 @@ class HeavyTailedKernel(Layer):
         )
         return sim_qr
 
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
+
 
 class StudentsTKernel(Layer):
-    """Student's t-distribution similarity kernel."""
+    """Student's t-distribution similarity kernel.
+
+    The embedding technique uses the following similarity kernel:
+        s(x,y) = (1 + (((norm(x-y, rho)^tau)/alpha))^(-(alpha + 1)/2),
+    where x and y are n-dimensional vectors. The similarity kernel has
+    three free parameters: rho, tau, and alpha. The original Student-t
+    kernel proposed by van der Maaten [1] uses the parameter settings
+    rho=2, tau=2, and alpha=n_dim-1. By default, all variables are fit
+    to the data. This behavior can be changed by setting the
+    appropriate fit_<var_name>=False.
+
+    References:
+    [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
+        triplet embedding. In Machine learning for signal processing
+        (MLSP), 2012 IEEE international workshop on (p. 1-6).
+        doi:10.1109/MLSP.2012.6349720
+
+    """
 
     def __init__(self, fit_rho=True, fit_tau=True, fit_alpha=True):
         """Initialize.
@@ -2169,6 +1801,12 @@ class StudentsTKernel(Layer):
             constraint=GreaterEqualThan(min_value=0.000001)
         )
 
+        self.theta = {
+            'rho': self.distance_layer.rho,
+            'tau': self.tau,
+            'alpha': self.alpha
+        }
+
     def call(self, inputs):
         """Call.
 
@@ -2192,6 +1830,10 @@ class StudentsTKernel(Layer):
             1 + (tf.pow(d_qr, tau) / alpha), tf.negative(alpha + 1)/2
         )
         return sim_qr
+
+    def reset(self):
+        """Reset variables."""
+        x = 1  # TODO
 
 
 def _assert_float_dtype(dtype):

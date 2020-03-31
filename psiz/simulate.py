@@ -33,7 +33,7 @@ class Agent(object):
     Attributes:
         embedding: A PsychologicalEmbedding object that supplies a
             similarity function and embedding points.
-        group_id: An integer idicating which set of attention weights
+        group_id: An integer indicating which set of attention weights
             to use when simulating judgments.
     Methods:
         simulate: Stochastically simulate similarity judgments.

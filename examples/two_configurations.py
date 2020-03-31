@@ -24,10 +24,10 @@ infer a single embedding.
 
 import numpy as np
 
-from psiz.trials import stack
-from psiz.models import Exponential
-from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
+import psiz.models
+from psiz.simulate import Agent
+from psiz.trials import stack
 from psiz.utils import similarity_matrix, matrix_comparison
 import sklearn.model_selection
 import tensorflow as tf
@@ -86,7 +86,10 @@ def main():
     )
 
     # Infer embedding.
-    emb_inferred = Exponential(n_stimuli, n_dim)
+    kernel_layer = psiz.models.ExponentialKernel()
+    emb_inferred = psiz.models.PsychologicalEmbedding(
+        n_stimuli, kernel_layer=kernel_layer, n_dim=n_dim
+    )
     emb_inferred.log_freq = 10
     emb_inferred.compile()
     emb_inferred.fit(
@@ -110,16 +113,20 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    emb = Exponential(
-        n_stimuli, n_dim=n_dim)
+    kernel_layer = psiz.models.ExponentialKernel()
+    kernel_layer.rho = 2.
+    kernel_layer.tau = 1.
+    kernel_layer.beta = 10.
+    kernel_layer.gamma = 0.001
+
+    emb = psiz.models.PsychologicalEmbedding(
+        n_stimuli, kernel_layer, n_dim=n_dim
+    )
     mean = np.ones((n_dim))
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     emb.z = z
-    emb.rho = 2
-    emb.tau = 1
-    emb.beta = 10
-    emb.gamma = 0.001
+
     return emb
 
 

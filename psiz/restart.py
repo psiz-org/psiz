@@ -51,7 +51,7 @@ class Restarter(object):
         self.n_record = n_record
         self.n_worker = n_worker
 
-    def fit(self, emb, obs, max_epoch=5000, patience=10):
+    def fit(self, emb, obs, max_epoch=5000):
         """Fit the embedding model to the observations using restarts.
 
         Arguments:
@@ -59,7 +59,6 @@ class Restarter(object):
             obs: A psiz.trials.Observations object.
             max_epoch (optional): The maximum number of epochs for each
                 restart.
-            patience (optional): The patience for each restart.
 
         Returns:
             emb_best: The best embedding model.

@@ -129,7 +129,7 @@ class PsychologicalEmbedding(object):
         The setter methods as well as the methods fit, trainable, and
             set_log modify the state of the PsychologicalEmbedding
             object.
-        The abstract methods _init_theta and _tf_similarity must be
+        The abstract methods TODO must be
             implemented by each concrete class.
         You can use a custom loss by by setting the loss attribute.
 
@@ -137,7 +137,7 @@ class PsychologicalEmbedding(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, is_nonneg=False):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
         """Initialize.
 
         Arguments:
@@ -172,11 +172,12 @@ class PsychologicalEmbedding(object):
             n_group = 1
         self.n_group = n_group
 
-        self.is_nonneg = is_nonneg  # TODO CRITICAL add to save/load
+        # TODO CRITICAL add to save/load
+        self.z_min = z_min
+        self.z_max = z_max
 
         # Initialize model components.
-        self.vars = {}
-        self.reset(is_nonneg)  # TODO CRITICAL
+        self.reset()
 
         # Default TensorBoard log attributes.
         self.do_log = False
@@ -195,208 +196,53 @@ class PsychologicalEmbedding(object):
 
         super().__init__()
 
-    def reset(self, is_nonneg):
+    def reset(self):
         """Reinitialize model parameters."""
+        # TODO implement
         # TODO critical, when calling reset, only reset trainable parameters
-        self._init_z(is_nonneg)
-        self._init_phi()
-        self.vars['theta'] = {}  # TODO?
-
-    def _init_z(self, is_nonneg):
-        """Return initialized embedding points.
-
-        Initialize random embedding points using a multivariate
-            Gaussian.
-
-        Arguments:
-            is_nonneg: TODO
-
-        """
-        if is_nonneg:
-            z_constraint = tf.keras.constraints.NonNeg()
-        else:
-            z_constraint = ProjectZ()
-
-        # TODO RandomEmbedding should take z_min argument.
-        if 'z' not in self.vars or self.vars['z'].trainable:
-            self.vars['z'] = tf.Variable(
-                initial_value=RandomEmbedding(
-                    mean=tf.zeros([self.n_dim], dtype=K.floatx()),
-                    stdev=tf.ones([self.n_dim], dtype=K.floatx()),
-                    minval=tf.constant(-3., dtype=K.floatx()),
-                    maxval=tf.constant(0., dtype=K.floatx()),
-                    dtype=K.floatx()
-                )(shape=[self.n_stimuli, self.n_dim]), trainable=True,
-                name="z", dtype=K.floatx(),
-                constraint=z_constraint
-            )
+        # if self._do_init_theta_param('rho'):
+        self.coordinate_layer = Coordinate(
+            self.n_stimuli, self.n_dim, self.z_min, self.z_max
+        )
+        self.attention_layer = Attention(self.n_dim, self.n_group)
 
     @property
     def z(self):
         """Getter method for z."""
-        return self.vars['z'].numpy()
+        return self.coordinate_layer.z.numpy()
 
     @z.setter
     def z(self, z):
         """Setter method for z."""
-        self._check_z(z)
-        self.vars['z'].assign(z)
+        self.coordinate_layer.z.assign(z)
 
-    def _check_z(self, z):
-        """Check argument `z`.
+    @property
+    def w(self):
+        """Getter method for phi."""
+        return self.attention_layer.w_all.numpy()
 
-        Raises:
-            ValueError
-
-        """
-        if z.shape[0] != self.n_stimuli:
-            raise ValueError(
-                "Input 'z' does not have the appropriate shape (number of \
-                stimuli)."
-            )
-        if z.shape[1] != self.n_dim:
-            raise ValueError(
-                "Input 'z' does not have the appropriate shape \
-                (dimensionality)."
-            )
-
-    def _init_phi(self):
-        """Initialize group-specific phi variables."""
-        if 'phi' not in self.vars:
-            self.vars['phi'] = {}
-
-        if 'w' not in self.vars['phi']:
-            self.vars['phi']['w'] = {}
-
-        # Create group-specific `w_i`.
-        for group_id in range(self.n_group):
-            var_name = '{0}'.format(group_id)
-            if var_name not in self.vars['phi']['w'] or self.vars['phi']['w'][var_name].trainable:
-                self.vars['phi']['w'][var_name] = self._init_w_group(group_id)
-
-    def _init_w_group(self, group_id):
-        if self.n_group == 1:
-            is_trainable = False
-        else:
-            is_trainable = True
-
-        var_name = "w_{0}".format(group_id)
-        scale = tf.constant(self.n_dim, dtype=K.floatx())
-        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
-        tf_attention = tf.Variable(
-            initial_value=RandomAttention(
-                alpha, scale, dtype=K.floatx()
-            )(shape=[1, self.n_dim]),
-            trainable=is_trainable, name=var_name, dtype=K.floatx(),
-            constraint=ProjectAttention()
-        )
-        return tf_attention
+    @w.setter
+    def w(self, w):
+        """Setter method for w."""
+        for i_group in range(self.n_group):
+            w_i = 'w_{0}'.format(i_group)
+            var = getattr(self.attention_layer, w_i)
+            var.assing(w[i_group, :])
 
     @property
     def phi(self):
         """Getter method for phi."""
-        d = {}
-        for k in self.vars['phi']:
-            if k == 'w':
-                d[k] = self.w
-            else:
-                d[k] = self.vars['phi'][k].numpy()
+        d = {
+            'w': self.w
+        }
         return d
 
     @phi.setter
     def phi(self, phi):
         """Setter method for w."""
-        # self._check_phi(phi)  # TODO
+        # TODO
         for k, v in phi.items():
             self.vars['phi'][k] = assign(v)
-
-    @property
-    def w(self):
-        """Getter method for phi."""
-        w_list = []
-        for group, v in self.vars['phi']['w'].items():
-            w_list.append(v)
-        w = tf.concat(w_list, axis=0)
-        return w.numpy()
-
-    @w.setter
-    def w(self, w):
-        """Setter method for w."""
-        self._check_w(w)
-        for i_group in range(self.n_group):
-            self.vars['phi']['w'][i_group].assign(w[i_group, :])
-
-    def _check_w(self, attention):
-        """Check argument `w`.
-
-        Raises:
-            ValueError
-
-        """
-        if attention.shape[0] != self.n_group:
-            raise ValueError(
-                "Input 'attention' does not have the appropriate shape \
-                (number of groups).")
-        if attention.shape[1] != self.n_dim:
-            raise ValueError(
-                "Input 'attention' does not have the appropriate shape \
-                (dimensionality).")
-
-    @abstractmethod
-    def _init_theta(self):
-        """Return dictionary of initialized theta variables.
-
-        Returns:
-            Dictionary of theta variables.
-
-        """
-        pass
-
-    def _do_init_theta_param(self, param_name):
-        """Return conditional for initialization."""
-        cond = (
-            param_name not in self.vars['theta'] or
-            self.vars['theta'][param_name].trainable
-        )
-        return cond
-
-    @property
-    def theta(self):
-        """Getter method for theta."""
-        d = {}
-        for k in self.vars['theta']:
-            d[k] = self.vars['theta'][k].numpy()
-        return d
-
-    @theta.setter
-    def theta(self, theta):
-        """Setter method for w."""
-        # self._check_theta(phi)  # TODO
-        for k, v in theta.items():
-            self.vars['theta'][k] = assign(v)
-
-    def _check_theta_param(self, name, val):
-        """Check if value is a numerical scalar."""
-        if not np.isscalar(val):
-            raise ValueError(
-                "The parameter `{0}` must be a numerical scalar.".format(name)
-            )
-        else:
-            val = float(val)
-
-        # Check if within bounds.
-        bnds = copy.copy(self._theta[name]["bounds"])
-        if bnds[0] is None:
-            bnds[0] = -np.inf
-        if bnds[1] is None:
-            bnds[1] = np.inf
-        if (val < bnds[0]) or (val > bnds[1]):
-            raise ValueError(
-                "The parameter `{0}` must be between {1} and {2}.".format(
-                    name, bnds[0], bnds[1]
-                )
-            )
-        return val
 
     def _broadcast_for_similarity(
             self, z_q, z_r, group_id=None, theta=None, phi=None):
@@ -558,28 +404,6 @@ class PsychologicalEmbedding(object):
         d = _mink_distance(z_q, z_r, theta['rho']["value"], attention)
         return d
 
-    @abstractmethod
-    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
-        """Similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension in a
-                weighted minkowski metric.
-                shape = (n_trial, n_dim)
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        pass
-
     @staticmethod
     @abstractmethod
     def _similarity(z_q, z_r, theta, attention):
@@ -648,20 +472,18 @@ class PsychologicalEmbedding(object):
 
         """
         # Create dataset.
-        # NOTE: The stimulus_set is incremented by one in preparation
-        # for using a placeholder stimulus.
         ds_obs = tf.data.Dataset.from_tensor_slices({
-            'stimulus_set': obs.stimulus_set + 1,
+            'stimulus_set': obs.stimulus_set,
             'config_idx': obs.config_idx,
             'group_id': obs.group_id,
             'weight': tf.constant(obs.weight, dtype=K.floatx()),
             'is_present': obs.is_present()
         })
 
-        # Initialize core layer.
-        c_layer = CoreLayer(
-            self.vars['theta'], self.vars['phi'], self.vars['z'],
-            self._tf_similarity, obs.config_list
+        # Initialize model likelihood layer.
+        likelihood_layer = QueryReference(
+            self.coordinate_layer, self.attention_layer, self.kernel_layer,
+            obs.config_list
         )
 
         # Define model.
@@ -682,7 +504,7 @@ class PsychologicalEmbedding(object):
                 shape=[None], name='is_present', dtype=tf.bool
             )
         ]
-        output = c_layer(inputs)
+        output = likelihood_layer(inputs)
         model = tf.keras.models.Model(inputs, output)
 
         return ds_obs, model
@@ -812,14 +634,14 @@ class PsychologicalEmbedding(object):
                 batch_size_val, drop_remainder=False
             )
 
-        model.stop_training = False  # TODO hack
+        model.stop_training = False  # TODO hack for callbacks
 
         logs = {}
         metric_train_loss = tf.keras.metrics.Mean(name='train_loss')
         metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
         summary_writer = tf.summary.create_file_writer(self.log_dir)
 
-        @tf.function  # TODO
+        # @tf.function  # TODO
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
@@ -838,8 +660,8 @@ class PsychologicalEmbedding(object):
             # tf.IndexedSlices, which in Eager Execution mode
             # cannot be used to update a variable. To solve this
             # problem, uncomment the following line(s).
-            # gradients[0] = tf.convert_to_tensor(gradients[0])  # TODO
-            # gradients[4] = tf.convert_to_tensor(gradients[4])
+            gradients[0] = tf.convert_to_tensor(gradients[0])  # TODO
+            # gradients[4] = tf.convert_to_tensor(gradients[4])  # TODO
 
             # Apply gradients (subject to constraints).
             # TODO is it ideal to call optimizer from self?
@@ -995,7 +817,7 @@ class PsychologicalEmbedding(object):
 
         metric_loss = tf.keras.metrics.Mean(name='eval_loss')
 
-        @tf.function  # TODO
+        @tf.function
         def eval_step(inputs):
             # Compute validation loss.
             prob = model(inputs)
@@ -1304,16 +1126,6 @@ class PsychologicalEmbedding(object):
 
         return part_idx, n_stimuli_part
 
-    @staticmethod
-    def _inflate_sigma(sigma, n_stimuli, n_dim):
-        """Exploit covariance matrix trick."""
-        sigma_inflated = np.zeros((n_stimuli * n_dim, n_stimuli * n_dim))
-        for i_stimuli in range(n_stimuli):
-            start_idx = i_stimuli * n_dim
-            end_idx = ((i_stimuli + 1) * n_dim)
-            sigma_inflated[start_idx:end_idx, start_idx:end_idx] = sigma
-        return sigma_inflated
-
     def save(self, filepath):
         """Save the PsychologialEmbedding model as an HDF5 file.
 
@@ -1384,10 +1196,10 @@ class PsychologicalEmbedding(object):
             emb: A group-specific embedding.
 
         """
-        # TODO should i access .z or vars['z']
+        # TODO should i access getter or TF variable?
         emb = copy.deepcopy(self)
         z = self.z
-        rho = self._theta["rho"]["value"]
+        rho = self.rho
         if np.isscalar(group_id):
             attention_weights = self._phi["w"]["value"][group_id, :]
         else:
@@ -1415,155 +1227,6 @@ class PsychologicalEmbedding(object):
         return cpyobj
 
 
-class CoreLayer(Layer):
-    """Core layer of model."""
-
-    def __init__(self, tf_theta, tf_phi, tf_z, tf_similarity, config_list):
-        """Initialize.
-
-        Arguments:
-            tf_theta:
-            tf_phi:
-            tf_z:
-            tf_similarity:
-            config_list: It is assumed that the indices that will be
-                passed in later as inputs will correspond to the
-                indices in this data structure.
-
-        """
-        super(CoreLayer, self).__init__()
-
-        # Pad with placeholder stimulus (assumes incoming stimulus set
-        # has also been incremented by +1).
-        self.z = tf_z
-        self.theta = tf_theta
-
-        w_list = []
-        for group, v in tf_phi['w'].items():
-            w_list.append(v)
-        self.attention = tf.concat(w_list, axis=0)
-
-        self.similarity = tf_similarity
-
-        self.n_config = tf.constant(len(config_list))
-        # self.config_n_reference = tf.constant(config_list.n_reference.values)  # TODO delete
-        self.config_n_select = tf.constant(config_list.n_select.values)
-        self.config_is_ranked = tf.constant(config_list.is_ranked.values)
-        self.max_n_reference = tf.constant(
-            np.max(config_list.n_reference.values)
-        )
-
-    def call(self, inputs):
-        """Call.
-
-        Arguments:
-            inputs: A list of inputs:
-                stimulus_set: Containing the integers [0, n_stimuli[
-                config_idx: Containing the integers [0, n_config[
-                group_id: Containing the integers [0, n_group[
-
-        """
-        # Inputs.
-        obs_stimulus_set = inputs[0]
-        obs_config_idx = inputs[1]
-        obs_group_id = inputs[2]
-        is_present = inputs[4]
-
-        z_pad = tf.concat(
-            [
-                tf.zeros([1, self.z.shape[1]], dtype=K.floatx()),
-                self.z
-            ], axis=0
-        )
-
-        # Expand attention weights.
-        attention = tf.gather(self.attention, obs_group_id)
-        attention = tf.expand_dims(attention, axis=2)
-
-        # Compute similarity between query and references.
-        (z_q, z_r) = self._tf_inflate_points(
-            obs_stimulus_set, self.max_n_reference, z_pad
-        )
-        sim_qr = self.similarity(
-            z_q, z_r, self.theta, attention
-        )
-
-        # Zero out similarities involving placeholder.
-        sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
-
-        # Pre-allocate likelihood tensor.
-        n_trial = tf.shape(obs_stimulus_set)[0]
-        likelihood = tf.zeros([n_trial], dtype=K.floatx())
-
-        # Compute the probability of observations for different trial
-        # configurations.
-        for i_config in tf.range(self.n_config):
-            n_select = self.config_n_select[i_config]
-            is_ranked = self.config_is_ranked[i_config]
-
-            # Identify trials belonging to current trial configuration.
-            locs = tf.equal(obs_config_idx, i_config)
-            trial_idx = tf.squeeze(tf.where(locs))
-
-            # Grab similarities belonging to current trial configuration.
-            sim_qr_config = tf.gather(sim_qr, trial_idx)
-
-            # Compute probability of behavior.
-            prob_config = _tf_ranked_sequence_probability(
-                sim_qr_config, n_select
-            )
-
-            # Update master results.
-            likelihood = tf.tensor_scatter_nd_update(
-                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
-            )
-
-        return likelihood
-
-    def _tf_inflate_points(
-            self, stimulus_set, n_reference, z):
-        """Inflate stimulus set into embedding points.
-
-        Note: This method will not gracefully handle placeholder
-        stimulus IDs.
-
-        """
-        n_trial = tf.shape(stimulus_set)[0]
-        n_dim = tf.shape(z)[1]
-
-        # Inflate query stimuli.
-        z_q = tf.gather(z, stimulus_set[:, 0])
-        z_q = tf.expand_dims(z_q, axis=2)
-
-        # Initialize z_r.
-        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
-        z_r_2 = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
-
-        for i_ref in tf.range(n_reference):
-            z_r_new = tf.gather(
-                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
-            )
-
-            i_ref_expand = tf.expand_dims(i_ref, axis=0)
-            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
-            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
-            z_r_2 = tf.tensor_scatter_nd_update(
-                z_r_2, i_ref_expand, z_r_new_2
-            )
-
-            # z_r_new = tf.expand_dims(z_r_new, axis=2)
-            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
-            # post_pad = tf.zeros([
-            #     n_trial, n_dim,
-            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
-            # ], dtype=K.floatx())
-            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
-            # z_r = z_r + z_r_new
-
-        z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
-        return (z_q, z_r_2)
-
-
 class Inverse(PsychologicalEmbedding):
     """An inverse-distance model.
 
@@ -1574,7 +1237,7 @@ class Inverse(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, is_nonneg=False):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
         """Initialize.
 
         Arguments:
@@ -1589,112 +1252,39 @@ class Inverse(PsychologicalEmbedding):
 
         """
         PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, is_nonneg
+            self, n_stimuli, n_dim, n_group, z_min, z_max
         )
-        self._init_theta()
-
-    def _init_theta(self):
-        """Initialize `theta` TensorFlow variables.
-
-        Only initialize variable if it doesn't exist or existing
-        variable is trainable.
-
-        """
-        if self._do_init_theta_param('rho'):
-            self.vars['theta']['rho'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(),
-                constraint=GreaterThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('tau'):
-            self.vars['theta']['tau'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('mu'):
-            self.vars['theta']['mu'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(
-                    0.0000000001, .001
-                )(shape=[]),
-                trainable=True, name="mu", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=2.2204e-16
-                )
-            )
+        self.kernel_layer = InverseKernel()
 
     @property
     def rho(self):
         """Getter method for rho."""
-        return self.vars['theta']['rho'].numpy()
+        return self.kernel_layer.distance_layer.rho.numpy()
 
     @rho.setter
     def rho(self, rho):
         """Setter method for rho."""
-        # rho = self._check_theta_param('rho', rho)  # TODO
-        self.vars['theta']['rho'].assign(rho)
+        self.kernel_layer.distance_layer.rho.assign(rho)
 
     @property
     def tau(self):
         """Getter method for tau."""
-        return self.vars['theta']['tau'].numpy()
+        return self.kernel_layer.tau.numpy()
 
     @tau.setter
     def tau(self, tau):
         """Setter method for tau."""
-        # tau = self._check_theta_param('tau', tau)  # TODO
-        self.vars['theta']['tau'].assign(tau)
+        self.kernel_layer.tau.assign(tau)
 
     @property
     def mu(self):
         """Getter method for mu."""
-        return self._theta["mu"]["value"]
+        return self.kernel_layer.mu.numpy()
 
     @mu.setter
     def mu(self, mu):
         """Setter method for mu."""
-        mu = self._check_theta_param('mu', mu)
-        self._theta["mu"]["value"] = mu
-
-    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
-        """Inverse similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = tf_theta['rho']
-        tau = tf_theta['tau']
-        mu = tf_theta['mu']
-
-        # Weighted Minkowski distance.
-        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qr = tf.multiply(d_qr, tf_attention)
-        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
-
-        # Inverse distance similarity kernel.
-        sim_qr = 1 / (tf.pow(d_qr, tau) + mu)
-        return sim_qr
+        self.kernel_layer.mu.assign(mu)
 
     @staticmethod
     def _similarity(z_q, z_r, theta, attention):
@@ -1759,7 +1349,7 @@ class Exponential(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, is_nonneg=False):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
         """Initialize.
 
         Arguments:
@@ -1774,133 +1364,67 @@ class Exponential(PsychologicalEmbedding):
 
         """
         PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, is_nonneg
+            self, n_stimuli, n_dim, n_group, z_min, z_max
         )
-        self._init_theta()
-
-    def _init_theta(self):
-        """Initialize `theta` TensorFlow variables.
-
-        Only initialize variable if it doesn't exist or existing
-        variable is trainable.
-
-        """
-        if self._do_init_theta_param('rho'):
-            self.vars['theta']['rho'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(),
-                constraint=GreaterThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('tau'):
-            self.vars['theta']['tau'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('gamma'):
-            self.vars['theta']['gamma'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(
-                    0., .001
-                )(shape=[]),
-                trainable=True, name="gamma", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=0.0
-                )
-            )
-
-        if self._do_init_theta_param('beta'):
-            self.vars['theta']['beta'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 30.)(shape=[]),
-                trainable=True, name="beta", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=1.0
-                )
-            )
+        self.kernel_layer = ExponentialKernel()  # TODO how to pass in trainable settings?
 
     @property
     def rho(self):
         """Getter method for rho."""
-        return self.vars['theta']['rho'].numpy()
+        return self.kernel_layer.distance_layer.rho.numpy()
 
     @rho.setter
     def rho(self, rho):
         """Setter method for rho."""
-        # rho = self._check_theta_param('rho', rho)  # TODO
-        self.vars['theta']['rho'].assign(rho)
+        self.kernel_layer.distance_layer.rho.assign(rho)
 
     @property
     def tau(self):
         """Getter method for tau."""
-        return self.vars['theta']['tau'].numpy()
+        return self.kernel_layer.tau.numpy()
 
     @tau.setter
     def tau(self, tau):
         """Setter method for tau."""
-        # tau = self._check_theta_param('tau', tau)  # TODO
-        self.vars['theta']['tau'].assign(tau)
+        self.kernel_layer.tau.assign(tau)
 
     @property
     def gamma(self):
         """Getter method for gamma."""
-        return self.vars['theta']['gamma'].numpy()
+        return self.kernel_layer.gamma.numpy()
 
     @gamma.setter
     def gamma(self, gamma):
         """Setter method for gamma."""
-        # gamma = self._check_theta_param('gamma', gamma)  # TODO
-        self.vars['theta']['gamma'].assign(gamma)
+        self.kernel_layer.gamma.assign(gamma)
 
     @property
     def beta(self):
         """Getter method for beta."""
-        return self.vars['theta']['beta'].numpy()
+        return self.kernel_layer.beta.numpy()
 
     @beta.setter
     def beta(self, beta):
         """Setter method for beta."""
-        # beta = self._check_theta_param('beta', beta)  # TODO
-        self.vars['theta']['beta'].assign(beta)
+        self.kernel_layer.beta.assign(beta)
 
-    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
-        """Exponential family similarity kernel.
+    @property
+    def theta(self):
+        """Getter method for theta."""
+        d = {
+            'rho': self.rho,
+            'tau': self.tau,
+            'beta': self.beta,
+            'gamma': self.gamma
+        }
+        return d
 
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = tf_theta['rho']
-        tau = tf_theta['tau']
-        gamma = tf_theta['gamma']
-        beta = tf_theta['beta']
-
-        # Weighted Minkowski distance.
-        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qr = tf.multiply(d_qr, tf_attention)
-        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
-
-        # Exponential family similarity kernel.
-        sim_qr = tf.exp(tf.negative(beta) * tf.pow(d_qr, tau)) + gamma
-        return sim_qr
+    @theta.setter
+    def theta(self, theta):
+        """Setter method for w."""
+        for k, v in theta.items():
+            var = getattr(self.kernel_layer, k)
+            var.assign(v)
 
     @staticmethod
     def _similarity(z_q, z_r, theta, attention):
@@ -1948,7 +1472,7 @@ class HeavyTailed(PsychologicalEmbedding):
     heavy-tailed family is a generalization of the Student-t family.
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, is_nonneg=False):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
         """Initialize.
 
         Arguments:
@@ -1963,131 +1487,49 @@ class HeavyTailed(PsychologicalEmbedding):
 
         """
         PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, is_nonneg
+            self, n_stimuli, n_dim, n_group, z_min, z_max
         )
-        self._init_theta()
-
-    def _init_theta(self):
-        """Initialize `theta` TensorFlow variables.
-
-        Only initialize variable if it doesn't exist or existing
-        variable is trainable.
-
-        """
-        if self._do_init_theta_param('rho'):
-            self.vars['theta']['rho'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(),
-                constraint=GreaterThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('tau'):
-            self.vars['theta']['tau'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('kappa'):
-            self.vars['theta']['kappa'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 11.)(shape=[]),
-                trainable=True, name="kappa", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=0.0
-                )
-            )
-
-        if self._do_init_theta_param('alpha'):
-            self.vars['theta']['alpha'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(10., 60.)(shape=[]),
-                trainable=True, name="alpha", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=0.0
-                )
-            )
+        self.kernel_layer = HeavyTailedKernel()
 
     @property
     def rho(self):
         """Getter method for rho."""
-        return self.vars['theta']['rho'].numpy()
+        return self.kernel_layer.distance_layer.rho.numpy()
 
     @rho.setter
     def rho(self, rho):
         """Setter method for rho."""
-        # rho = self._check_theta_param('rho', rho)  # TODO
-        self.vars['theta']['rho'].assign(rho)
+        self.kernel_layer.distance_layer.rho.assign(rho)
 
     @property
     def tau(self):
         """Getter method for tau."""
-        return self.vars['theta']['tau'].numpy()
+        return self.kernel_layer.tau.numpy()
 
     @tau.setter
     def tau(self, tau):
         """Setter method for tau."""
-        # tau = self._check_theta_param('tau', tau)  # TODO
-        self.vars['theta']['tau'].assign(tau)
+        self.kernel_layer.tau.assign(tau)
 
     @property
     def kappa(self):
         """Getter method for kappa."""
-        return self._theta["kappa"]["value"]
+        return self.kernel_layer.kappa.numpy()
 
     @kappa.setter
     def kappa(self, kappa):
         """Setter method for kappa."""
-        kappa = self._check_theta_param('kappa', kappa)
-        self._theta["kappa"]["value"] = kappa
+        self.kernel_layer.kappa.assign(kappa)
 
     @property
     def alpha(self):
         """Getter method for alpha."""
-        return self._theta["alpha"]["value"]
+        return self.kernel_layer.alpha.numpy()
 
     @alpha.setter
     def alpha(self, alpha):
         """Setter method for alpha."""
-        alpha = self._check_theta_param('alpha', alpha)
-        self._theta["alpha"]["value"] = alpha
-
-    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
-        """Heavy-tailed family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = tf_theta['rho']
-        tau = tf_theta['tau']
-        kappa = tf_theta['kappa']
-        alpha = tf_theta['alpha']
-
-        # Weighted Minkowski distance.
-        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qr = tf.multiply(d_qr, tf_attention)
-        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
-
-        # Heavy-tailed family similarity kernel.
-        sim_qr = tf.pow(kappa + tf.pow(d_qr, tau), (tf.negative(alpha)))
-        return sim_qr
+        self.kernel_layer.alpha.assign(alpha)
 
     @staticmethod
     def _similarity(z_q, z_r, theta, attention):
@@ -2145,7 +1587,7 @@ class StudentsT(PsychologicalEmbedding):
 
     """
 
-    def __init__(self, n_stimuli, n_dim=2, n_group=1, is_nonneg=False):
+    def __init__(self, n_stimuli, n_dim=2, n_group=1, z_min=None, z_max=None):
         """Initialize.
 
         Arguments:
@@ -2160,112 +1602,39 @@ class StudentsT(PsychologicalEmbedding):
 
         """
         PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim, n_group, is_nonneg
+            self, n_stimuli, n_dim, n_group, z_min, z_max
         )
-        self._init_theta()
-
-    def _init_theta(self):
-        """Initialize `theta` TensorFlow variables.
-
-        Only initialize variable if it doesn't exist or existing
-        variable is trainable.
-
-        """
-        if self._do_init_theta_param('rho'):
-            self.vars['theta']['rho'] = tf.Variable(
-                initial_value=tf.constant(2., dtype=K.floatx()),
-                trainable=False, name="rho", dtype=K.floatx(),
-                constraint=GreaterThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('tau'):
-            self.vars['theta']['tau'] = tf.Variable(
-                initial_value=tf.constant(2., dtype=K.floatx()),
-                trainable=False, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=1.0
-                )
-            )
-
-        if self._do_init_theta_param('alpha'):
-            n_dim = np.max((1, self.n_dim - 1.))
-            self.vars['theta']['alpha'] = tf.Variable(
-                initial_value=tf.constant(n_dim, dtype=K.floatx()),
-                trainable=False, name="alpha", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=0.000001
-                )
-            )
+        self.kernel_layer = StudentsTKernel()
 
     @property
     def rho(self):
         """Getter method for rho."""
-        return self._theta["rho"]["value"]
+        return self.kernel_layer.rho.numpy()
 
     @rho.setter
     def rho(self, rho):
         """Setter method for rho."""
-        rho = self._check_theta_param('rho', rho)
-        self._theta["rho"]["value"] = rho
+        self.kernel_layer.rho.assign(rho)
 
     @property
     def tau(self):
         """Getter method for tau."""
-        return self._theta["tau"]["value"]
+        return self.kernel_layer.tau.numpy()
 
     @tau.setter
     def tau(self, tau):
         """Setter method for tau."""
-        tau = self._check_theta_param('tau', tau)
-        self._theta["tau"]["value"] = tau
+        self.kernel_layer.tau.assign(tau)
 
     @property
     def alpha(self):
         """Getter method for alpha."""
-        return self._theta["alpha"]["value"]
+        return self.kernel_layer.alpha.numpy()
 
     @alpha.setter
     def alpha(self, alpha):
         """Setter method for alpha."""
-        alpha = self._check_theta_param('alpha', alpha)
-        self._theta["alpha"]["value"] = alpha
-
-    def _tf_similarity(self, z_q, z_r, tf_theta, tf_attention):
-        """Student-t family similarity kernel.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim)
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim)
-            tf_theta: A dictionary of algorithm-specific parameters
-                governing the similarity kernel.
-            tf_attention: The weights allocated to each dimension
-                in a weighted minkowski metric.
-                shape = (n_trial, n_dim)
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (n_trial,)
-
-        """
-        # Algorithm-specific parameters governing the similarity kernel.
-        rho = tf_theta['rho']
-        tau = tf_theta['tau']
-        alpha = tf_theta['alpha']
-
-        # Weighted Minkowski distance.
-        d_qr = tf.pow(tf.abs(z_q - z_r), rho)
-        d_qr = tf.multiply(d_qr, tf_attention)
-        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / rho)
-
-        # Student-t family similarity kernel.
-        sim_qr = tf.pow(
-            1 + (tf.pow(d_qr, tau) / alpha), tf.negative(alpha + 1)/2)
-        return sim_qr
+        self.kernel_layer.alpha.assign(alpha)
 
     @staticmethod
     def _similarity(z_q, z_r, theta, attention):
@@ -2298,6 +1667,530 @@ class StudentsT(PsychologicalEmbedding):
 
         # Student-t family similarity kernel.
         sim_qr = (1 + (d_qr**tau / alpha))**(np.negative(alpha + 1)/2)
+        return sim_qr
+
+
+class QueryReference(Layer):
+    """Model of query reference similarity judgments."""
+
+    def __init__(
+            self, coordinate_layer, attention_layer, kernel_layer,
+            config_list):
+        """Initialize.
+
+        Arguments:
+            tf_theta:
+            tf_phi:
+            tf_z:
+            tf_similarity:
+            config_list: It is assumed that the indices that will be
+                passed in later as inputs will correspond to the
+                indices in this data structure.
+
+        """
+        super(QueryReference, self).__init__()
+
+        self.coordinate_layer = coordinate_layer
+        self.attention_layer = attention_layer
+        self.kernel_layer = kernel_layer
+
+        self.n_config = tf.constant(len(config_list))
+        # self.config_n_reference = tf.constant(config_list.n_reference.values)  # TODO delete
+        self.config_n_select = tf.constant(config_list.n_select.values)
+        self.config_is_ranked = tf.constant(config_list.is_ranked.values)
+        self.max_n_reference = tf.constant(
+            np.max(config_list.n_reference.values)
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs: A list of inputs:
+                stimulus_set: Containing the integers [0, n_stimuli[
+                config_idx: Containing the integers [0, n_config[
+                group_id: Containing the integers [0, n_group[
+
+        """
+        # Inputs.
+        obs_stimulus_set = inputs[0]
+        obs_config_idx = inputs[1]
+        obs_group_id = inputs[2]
+        is_present = inputs[4]
+
+        # Expand attention weights.
+        attention = self.attention_layer(obs_group_id)
+
+        # Inflate cooridnates.
+        outputs = self.coordinate_layer(
+            [obs_stimulus_set, self.max_n_reference]
+        )
+        z_q = outputs[0]
+        z_r = outputs[1]
+
+        # Compute similarity between query and references.
+        sim_qr = self.kernel_layer([z_q, z_r, attention])
+
+        # Zero out similarities involving placeholder.
+        sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
+
+        # Pre-allocate likelihood tensor.
+        n_trial = tf.shape(obs_stimulus_set)[0]
+        likelihood = tf.zeros([n_trial], dtype=K.floatx())
+
+        # Compute the probability of observations for different trial
+        # configurations.
+        for i_config in tf.range(self.n_config):
+            n_select = self.config_n_select[i_config]
+            is_ranked = self.config_is_ranked[i_config]
+
+            # Identify trials belonging to current trial configuration.
+            locs = tf.equal(obs_config_idx, i_config)
+            trial_idx = tf.squeeze(tf.where(locs))
+
+            # Grab similarities belonging to current trial configuration.
+            sim_qr_config = tf.gather(sim_qr, trial_idx)
+
+            # Compute probability of behavior.
+            prob_config = _tf_ranked_sequence_probability(
+                sim_qr_config, n_select
+            )
+
+            # Update master results.
+            likelihood = tf.tensor_scatter_nd_update(
+                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
+            )
+
+        return likelihood
+
+
+class Coordinate(Layer):
+    """Embedding coordinates.
+
+    Handles a placeholder stimulus using stimulus ID -1.
+
+    """
+
+    def __init__(self, n_stimuli, n_dim, fit_z=True, z_min=None, z_max=None):
+        """Initialize a coordinate layer.
+
+        With no constraints, the coordinates are initialized using a
+            using a multivariate Gaussian.
+
+        Arguments:
+            n_stimuli:
+            n_dim:
+            fit_z (optional): Boolean
+            z_min (optional):
+            z_max (optional):
+
+        """
+        super(Coordinate, self).__init__()
+
+        self.n_stimuli = n_stimuli
+        self.n_dim = n_dim
+        self.z_min = z_min
+        self.z_max = z_max
+
+        if z_min is not None and z_max is None:
+            z_constraint = GreaterEqualThan(z_min=z_min)
+        elif z_min is None and z_max is not None:
+            z_constraint = LessEqualThan(z_max=z_max)
+        elif z_min is not None and z_max is not None:
+            z_constraint = MinMax(z_min, z_max)
+        else:
+            z_constraint = ProjectZ()
+
+        # TODO RandomEmbedding should take z_min and z_max argument.
+        self.z = tf.Variable(
+            initial_value=RandomEmbedding(
+                mean=tf.zeros([self.n_dim], dtype=K.floatx()),
+                stdev=tf.ones([self.n_dim], dtype=K.floatx()),
+                minval=tf.constant(-3., dtype=K.floatx()),
+                maxval=tf.constant(0., dtype=K.floatx()),
+                dtype=K.floatx()
+            )(shape=[self.n_stimuli, self.n_dim]), trainable=fit_z,
+            name="z", dtype=K.floatx(),
+            constraint=z_constraint
+        )
+
+    def __call__(self, inputs):
+        """Call."""
+        stimulus_set = inputs[0] + 1  # Add one for placeholder stimulus.
+        max_n_reference = inputs[1]
+
+        z_pad = tf.concat(
+            [
+                tf.zeros([1, self.z.shape[1]], dtype=K.floatx()),
+                self.z
+            ], axis=0
+        )
+        (z_q, z_r) = self._tf_inflate_points(
+            stimulus_set, max_n_reference, z_pad
+        )
+        return [z_q, z_r]
+
+    def _tf_inflate_points(
+            self, stimulus_set, n_reference, z):
+        """Inflate stimulus set into embedding points.
+
+        Note: This method will not gracefully handle placeholder
+        stimulus IDs. The stimulus IDs and coordinates must already
+        have handled the placeholder.
+
+        """
+        n_trial = tf.shape(stimulus_set)[0]
+        n_dim = tf.shape(z)[1]
+
+        # Inflate query stimuli.
+        z_q = tf.gather(z, stimulus_set[:, 0])
+        z_q = tf.expand_dims(z_q, axis=2)
+
+        # Initialize z_r.
+        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
+        z_r_2 = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
+
+        for i_ref in tf.range(n_reference):
+            z_r_new = tf.gather(
+                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
+            )
+
+            i_ref_expand = tf.expand_dims(i_ref, axis=0)
+            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
+            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
+            z_r_2 = tf.tensor_scatter_nd_update(
+                z_r_2, i_ref_expand, z_r_new_2
+            )
+
+            # z_r_new = tf.expand_dims(z_r_new, axis=2)
+            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
+            # post_pad = tf.zeros([
+            #     n_trial, n_dim,
+            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
+            # ], dtype=K.floatx())
+            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
+            # z_r = z_r + z_r_new
+
+        z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
+        return (z_q, z_r_2)
+
+
+class WeightedDistance(Layer):
+    """Weighted Minkowski distance."""
+
+    def __init__(self, fit_rho=True):
+        """Initialize.
+
+        Arguments:
+            fit_rho (optional): Boolean
+
+        """
+        super(WeightedDistance, self).__init__()
+
+        self.rho = tf.Variable(
+            initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
+            trainable=fit_rho, name="rho", dtype=K.floatx(),
+            constraint=GreaterThan(min_value=1.0)
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs: List of inputs.
+
+        """
+        z_q = inputs[0]  # Query.
+        z_r = inputs[1]  # References.
+        w = inputs[2]    # Dimension weights.
+
+        # Weighted Minkowski distance.
+        d_qr = tf.pow(tf.abs(z_q - z_r), self.rho)
+        d_qr = tf.multiply(d_qr, w)
+        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / self.rho)
+
+        return d_qr
+
+
+class Attention(Layer):
+    """Attention Layer."""
+
+    def __init__(self, n_dim, n_group, fit_group=None):
+        """Initialize.
+
+        Arguments:
+            n_dim:
+            n_group:
+            fit_group: Array of Booleans.
+                shape=(n_group,)
+
+        """
+        super(Attention, self).__init__()
+
+        self.n_dim = n_dim
+        self.n_group = n_group
+
+        if fit_group is None:
+            if self.n_group == 1:
+                fit_group = [False]
+            else:
+                fit_group = np.ones(n_group, dtype=bool)
+
+        scale = tf.constant(self.n_dim, dtype=K.floatx())
+        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
+        w_list = []
+        for i_group in range(self.n_group):
+            var_name = "w_{0}".format(i_group)
+            w_i = tf.Variable(
+                initial_value=RandomAttention(
+                    alpha, scale, dtype=K.floatx()
+                )(shape=[1, self.n_dim]),
+                trainable=fit_group[i_group], name=var_name, dtype=K.floatx(),
+                constraint=ProjectAttention()
+            )
+            setattr(self, var_name, w_i)
+            w_list.append(w_i)
+        self.w_all = tf.concat(w_list, axis=0)
+
+    def call(self, inputs):
+        """Call.
+
+        Inflate weights by `group_id`.
+
+        Arguments:
+            inputs: group_id
+
+        """
+        w_expand = tf.gather(self.w_all, inputs)
+        w_expand = tf.expand_dims(w_expand, axis=2)
+        return w_expand
+
+
+class InverseKernel(Layer):
+    """Inverse-distance similarity kernel."""
+
+    def __init__(self, fit_rho=True, fit_tau=True, fit_mu=True):
+        """Initialize.
+
+        Arguments:
+            fit_tau (optional): Boolean
+            fit_gamme (optional): Boolean
+            fit_beta (optional): Boolean
+
+        """
+        super(InverseKernel, self).__init__()
+
+        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+
+        self.tau = tf.Variable(
+            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+            trainable=fit_tau, name="tau", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=1.0)
+        )
+
+        self.mu = tf.Variable(
+            initial_value=tf.random_uniform_initializer(
+                0.0000000001, .001
+            )(shape=[]),
+            trainable=fit_mu, name="mu", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=2.2204e-16)
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs:
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        z_q = inputs[0]  # Query.
+        z_r = inputs[1]  # References.
+        w = inputs[2]    # Dimension weights.
+
+        d_qr = self.distance_layer([z_q, z_r, w])
+
+        # Exponential family similarity function.
+        sim_qr = 1 / (tf.pow(d_qr, self.tau) + self.mu)
+        return sim_qr
+
+
+class ExponentialKernel(Layer):
+    """Exponential family similarity kernel."""
+
+    def __init__(self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=True):
+        """Initialize.
+
+        Arguments:
+            fit_rho (optional): Boolean
+            fit_tau (optional): Boolean
+            fit_gamme (optional): Boolean
+            fit_beta (optional): Boolean
+
+        """
+        super(ExponentialKernel, self).__init__()
+
+        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+
+        self.tau = tf.Variable(
+            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+            trainable=fit_tau, name="tau", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=1.0)
+        )
+
+        self.gamma = tf.Variable(
+            initial_value=tf.random_uniform_initializer(
+                0., .001
+            )(shape=[]),
+            trainable=fit_gamma, name="gamma", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=0.0)
+        )
+
+        self.beta = tf.Variable(
+            initial_value=tf.random_uniform_initializer(1., 30.)(shape=[]),
+            trainable=fit_beta, name="beta", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=1.0)
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs:
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        z_q = inputs[0]  # Query.
+        z_r = inputs[1]  # References.
+        w = inputs[2]    # Dimension weights.
+
+        d_qr = self.distance_layer([z_q, z_r, w])
+
+        # Exponential family similarity function.
+        sim_qr = tf.exp(tf.negative(self.beta) * tf.pow(d_qr, self.tau)) + self.gamma
+        return sim_qr
+
+
+class HeavyTailedKernel(Layer):
+    """Heavy-tailed family similarity kernel."""
+
+    def __init__(
+            self, fit_rho=True, fit_tau=True, fit_kappa=True, fit_alpha=True):
+        """Initialize.
+
+        Arguments:
+            fit_rho (optional): Boolean
+            fit_tau (optional): Boolean
+            fit_kappa (optional): Boolean
+            fit_alpha (optional): Boolean 
+
+        """
+        super(HeavyTailedKernel, self).__init__()
+
+        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+
+        self.tau = tf.Variable(
+            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+            trainable=fit_tau, name="tau", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=1.0)
+        )
+
+        self.kappa = tf.Variable(
+            initial_value=tf.random_uniform_initializer(1., 11.)(shape=[]),
+            trainable=fit_kappa, name="kappa", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=0.0)
+        )
+
+        self.alpha = tf.Variable(
+            initial_value=tf.random_uniform_initializer(10., 60.)(shape=[]),
+            trainable=fit_alpha, name="alpha", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=0.0)
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs:
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        z_q = inputs[0]  # Query.
+        z_r = inputs[1]  # References.
+        w = inputs[2]    # Dimension weights.
+
+        d_qr = self.distance_layer([z_q, z_r, w])
+
+        # Heavy-tailed family similarity function.
+        sim_qr = tf.pow(
+            self.kappa + tf.pow(d_qr, self.tau), (tf.negative(self.alpha))
+        )
+        return sim_qr
+
+
+class StudentsTKernel(Layer):
+    """Student's t-distribution similarity kernel."""
+
+    def __init__(self, fit_rho=True, fit_tau=True, fit_alpha=True):
+        """Initialize.
+
+        Arguments:
+            fit_rho (optional): Boolean
+            fit_tau (optional): Boolean
+            fit_alpha (optional): Boolean
+
+        """
+        super(StudentsTKernel, self).__init__()
+
+        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+
+        self.tau = tf.Variable(
+            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+            trainable=fit_tau, name="tau", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=1.0)
+        )
+
+        n_dim = np.max((1, self.n_dim - 1.))
+        self.alpha = tf.Variable(
+            initial_value=tf.constant(n_dim, dtype=K.floatx()),
+            trainable=fit_alpha, name="alpha", dtype=K.floatx(),
+            constraint=GreaterEqualThan(min_value=0.000001)
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs:
+
+        Returns:
+            The corresponding similarity between rows of embedding
+                points.
+                shape = (n_trial,)
+
+        """
+        z_q = inputs[0]  # Query.
+        z_r = inputs[1]  # References.
+        w = inputs[2]    # Dimension weights.
+
+        d_qr = self.distance_layer([z_q, z_r, w])
+
+        # Student-t family similarity kernel.
+        sim_qr = tf.pow(
+            1 + (tf.pow(d_qr, tau) / alpha), tf.negative(alpha + 1)/2
+        )
         return sim_qr
 
 
@@ -2421,10 +2314,25 @@ class GreaterThan(Constraint):
 
     def __call__(self, w):
         """Call."""
-        w_adj = w - self.min_value
-        w2 = w_adj * tf.cast(tf.math.greater(w_adj, 0.), K.floatx())
-        w2 = w2 + self.min_value
-        return w2
+        w = w - self.min_value
+        w = w * tf.cast(tf.math.greater(w, 0.), K.floatx())
+        w = w + self.min_value
+        return w
+
+
+class LessThan(Constraint):
+    """Constrains the weights to be less than a value."""
+
+    def __init__(self, max_value=0.):
+        """Initialize."""
+        self.max_value = max_value
+
+    def __call__(self, w):
+        """Call."""
+        w = w - self.max_value
+        w = w * tf.cast(tf.math.greater(0., w), K.floatx())
+        w = w + self.max_value
+        return w
 
 
 class GreaterEqualThan(Constraint):
@@ -2436,10 +2344,46 @@ class GreaterEqualThan(Constraint):
 
     def __call__(self, w):
         """Call."""
-        w_adj = w - self.min_value
-        w2 = w_adj * tf.cast(tf.math.greater_equal(w_adj, 0.), K.floatx())
-        w2 = w2 + self.min_value
-        return w2
+        w = w - self.min_value
+        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
+        w = w + self.min_value
+        return w
+
+
+class LessEqualThan(Constraint):
+    """Constrains the weights to be greater/equal than a value."""
+
+    def __init__(self, max_value=0.):
+        """Initialize."""
+        self.max_value = max_value
+
+    def __call__(self, w):
+        """Call."""
+        w = w - self.max_value
+        w = w * tf.cast(tf.math.greater_equal(0., w), K.floatx())
+        w = w + self.max_value
+        return w
+
+
+class MinMax(Constraint):
+    """Constrains the weights to be between/equal values."""
+
+    def __init__(self, min_value, max_value):
+        """Initialize."""
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def __call__(self, w):
+        """Call."""
+        w = w - self.min_value
+        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
+        w = w + self.min_value
+
+        w = w - self.max_value
+        w = w * tf.cast(tf.math.greater_equal(0., w), K.floatx())
+        w = w + self.max_value
+
+        return w
 
 
 class ProjectZ(Constraint):

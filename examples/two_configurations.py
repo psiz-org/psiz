@@ -26,6 +26,7 @@ import numpy as np
 
 from psiz.generator import RandomGenerator
 import psiz.models
+import psiz.restart
 from psiz.simulate import Agent
 from psiz.trials import stack
 from psiz.utils import similarity_matrix, matrix_comparison
@@ -39,7 +40,7 @@ def main():
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 3  # 20
+    n_restart = 20
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -92,10 +93,19 @@ def main():
     )
     emb_inferred.log_freq = 10
     emb_inferred.compile()
-    emb_inferred.fit(
+
+    emb_restart = psiz.restart.Restarter(
+        emb_inferred, 'val_loss', n_restart=n_restart
+    )
+    restart_record = emb_restart.fit(
         obs_train, obs_val=obs_val, epochs=1000, verbose=3,
         callbacks=[early_stop]
     )
+
+    # emb_inferred.fit(
+    #     obs_train, obs_val=obs_val, epochs=1000, verbose=3,
+    #     callbacks=[early_stop]
+    # )
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
@@ -120,7 +130,7 @@ def ground_truth(n_stimuli, n_dim):
     kernel_layer.gamma = 0.001
 
     emb = psiz.models.PsychologicalEmbedding(
-        n_stimuli, kernel_layer, n_dim=n_dim
+        n_stimuli, kernel_layer=kernel_layer, n_dim=n_dim
     )
     mean = np.ones((n_dim))
     cov = .03 * np.identity(n_dim)

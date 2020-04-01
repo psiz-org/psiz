@@ -20,6 +20,7 @@ import psiz.dimensionality
 import psiz.generator
 import psiz.models
 import psiz.preprocess
+import psiz.restart
 import psiz.simulate
 import psiz.trials
 import psiz.utils

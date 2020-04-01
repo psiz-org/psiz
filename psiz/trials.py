@@ -56,7 +56,7 @@ import numpy as np
 import pandas as pd
 
 
-class SimilarityTrials(object):
+class SimilarityTrials(metaclass=ABCMeta):
     """Abstract base class for similarity judgment trials.
 
     This abstract base class is used to organize data associated with
@@ -102,8 +102,6 @@ class SimilarityTrials(object):
         is_present: Indicate if a stimulus is present.
 
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None):
         """Initialize.

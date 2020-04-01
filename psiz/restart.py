@@ -23,6 +23,8 @@ Classes:
 
 """
 
+import numpy as np
+
 
 class Restarter(object):
     """Object for handling restarts.
@@ -42,20 +44,31 @@ class Restarter(object):
 
     """
 
-    def __init__(self, n_restart=10, n_record=1, n_worker=1):
-        """Initialize."""
+    def __init__(
+            self, emb, monitor, n_restart=10, n_record=1, n_worker=1,
+            do_init=False):
+        """Initialize.
+
+        Arguments: TODO
+            emb: A compiled model.
+
+        """
         # Make sure n_record is not greater than n_restart.
         n_record = np.minimum(n_record, n_restart)
 
+        self.emb = emb
+        self.monitor = monitor
         self.n_restart = n_restart
         self.n_record = n_record
         self.n_worker = n_worker
+        self.do_init = do_init
 
-    def fit(self, emb, obs, max_epoch=5000):
+    def fit(
+            self, obs_train, batch_size=None, obs_val=None, epochs=5000,
+            initial_epoch=0, callbacks=None, seed=None, verbose=0):
         """Fit the embedding model to the observations using restarts.
 
-        Arguments:
-            emb: A compiled model.
+        Arguments: TODO
             obs: A psiz.trials.Observations object.
             max_epoch (optional): The maximum number of epochs for each
                 restart.
@@ -64,45 +77,25 @@ class Restarter(object):
             emb_best: The best embedding model.
 
         """
-        fit_record = FitRecord(self, n_stimuli, n_dim, n_group, n_record)
-
-        # Create train/val split
-        # =============================================================
-        # Grab configuration information. Need too grab here because
-        # configuration mapping may change when grabbing train and
-        # validation subset.
-        (obs_config_list, obs_config_idx) = self._grab_config_info(obs)
-        tf_config = self._prepare_config(obs_config_list)
-
-        # Partition observations into train and validation set to
-        # control early stopping of embedding algorithm.
-        skf = StratifiedKFold(n_splits=10)
-        (train_idx, val_idx) = list(
-            skf.split(obs.stimulus_set, obs_config_idx)
-        )[0]
-        obs_train = obs.subset(train_idx)
-        config_idx_train = obs_config_idx[train_idx]
-        obs_val = obs.subset(val_idx)
-        config_idx_val = obs_config_idx[val_idx]
-        # =============================================================
-
+        fit_record = FitRecord(self.n_record, self.monitor)
 
         # Initial evaluation.
-        if do_init:
-            model = self._build_model(tf_config, init_mode='warm')
-            prob_train_init = model(tf_inputs_train)
-            loss_train_init = (
-                self.loss(prob_train_init, tf_inputs_train[3]) +
-                self.regularizer(model)
-            ).numpy()
-            prob_val_init = model(tf_inputs_val)
-            loss_val_init = (
-                self.loss(prob_val_init, tf_inputs_val[3]) +
-                self.regularizer(model)
-            ).numpy()
-            # NOTE: The combined loss is based on the fact that there are
-            # 10 splits.
-            loss_combined_init = .9 * loss_train_init + .1 * loss_val_init
+        if self.do_init:
+            # TODO
+            # model = self._build_model(tf_config, init_mode='warm')
+            # prob_train_init = model(tf_inputs_train)
+            # loss_train_init = (
+            #     self.loss(prob_train_init, tf_inputs_train[3]) +
+            #     self.regularizer(model)
+            # ).numpy()
+            # prob_val_init = model(tf_inputs_val)
+            # loss_val_init = (
+            #     self.loss(prob_val_init, tf_inputs_val[3]) +
+            #     self.regularizer(model)
+            # ).numpy()
+            # # NOTE: The combined loss is based on the fact that there are
+            # # 10 splits.
+            # loss_combined_init = .9 * loss_train_init + .1 * loss_val_init
 
             # Update record with initialization values.
             fit_record.update(
@@ -133,86 +126,74 @@ class Restarter(object):
             if verbose > 0 and verbose < 3:
                 progbar.update(i_restart + 1)
 
-            emb.reset()  # TODO
+            self.emb.reset()
             # TODO inject restart by setting log_dir in RestartBoard
             # emb.log_dir = '{0}/{1}'.format(self.log_dir. i_restart)
-
-            emb.fit(
-                obs, max_epoch=max_epoch, patience=patience,
-                init_mode=init_mode
+            history = self.emb.fit(
+                obs_train, batch_size=batch_size, obs_val=obs_val,
+                epochs=epochs, initial_epoch=initial_epoch,
+                callbacks=callbacks, seed=seed, verbose=verbose
             )
+            weights = self.emb.weights
 
             # Update fit record with latest restart.
-            fit_record.update(
-                loss_train, loss_val, loss_combined, z, attention, theta
-            )
+            fit_record.update(history, weights)
 
         # Sort records from best to worst and grab best.
         fit_record.sort()
-        loss_train_best = fit_record.record['loss_train'][0]
-        loss_val_best = fit_record.record['loss_val'][0]
-        emb._z["value"] = fit_record.record['z'][0]
-        emb._phi['w']["value"] = fit_record.record['attention'][0]
-        emb._set_theta(fit_record.record['theta'][0])
-        emb.fit_duration = time.time() - start_time_s  # TODO
-        emb.fit_record = fit_record
+        loss_train_best = fit_record.record['train_loss'][0]
+        loss_val_best = fit_record.record['val_loss'][0]
+        epoch_best = fit_record.record['epoch'][0]
+        self.emb.set_weights(fit_record.record['weights'][0])
+
+        # TODO handle time stats
+        # emb.fit_duration = time.time() - start_time_s  # TODO
+        # emb.fit_record = fit_record
 
         if (verbose > 1):
             if fit_record.beat_init:
                 print(
                     '    Best Restart\n        n_epoch: {0} | '
                     'loss: {1: .6f} | loss_val: {2: .6f}'.format(
-                        epoch, loss_train_best, loss_val_best
+                        epoch_best, loss_train_best, loss_val_best
                     )
                 )
             else:
                 print('    Did not beat initialization.')
-        return best_emb
 
-    def from_record(self, fit_record, idx):
-        """Set embedding parameters using a record.
-
-        Arguments:
-            fit_record: An appropriate psiz.models.FitRecord object.
-            idx: An integer indicating which record to use.
-
-        """
-        self._z["value"] = fit_record.record['z'][idx]
-        self._phi['w']["value"] = fit_record.record['attention'][idx]
-        self._set_theta(fit_record.record['theta'][idx])
+        return fit_record
 
 
 class FitRecord(object):
     """Class for keeping track of multiple restarts."""
 
-    def __init__(self, n_stimuli, n_dim, n_group, n_record):
+    def __init__(self, n_record, monitor):
         """Initialize.
 
         Arguments:
             n_restart: TODO
             n_keep: TODO
+            monitor: String indicating value to monitor.
 
         """
         self.n_record = n_record
+        self.monitor = monitor
         self.record = {
-            'loss_train': np.inf * np.ones([n_record]),
-            'loss_val': np.inf * np.ones([n_record]),
-            'loss_combined': np.inf * np.ones([n_record]),
-            'z': np.zeros([n_record, n_stimuli, n_dim]),
-            'attention': np.zeros([n_record, n_group, n_dim]),
-            'theta': [None] * n_record
+            monitor: np.inf * np.ones([n_record]),
+            'weights': [None] * n_record
         }
         self.beat_init = None
-        self._init_loss_combined = np.inf
+        self.init_loss = np.inf
         super().__init__()
 
-    def update(
-            self, loss_train, loss_val, loss_combined, z, attention, theta,
-            is_init=False):
+    def update(self, history, weights, is_init=False):
         """Update record with incoming data.
 
         Arguments:
             loss_train: TODO
+            loss_val: TODO
+            weights: TODO
+            is_init: TODO
 
         Notes:
             The update method does not worry about keeping the
@@ -220,37 +201,51 @@ class FitRecord(object):
             sort method.
 
         """
+        loss_monitor = history.final[self.monitor]
         dmy_idx = np.arange(self.n_record)
-        locs_is_worse = np.greater(self.record['loss_combined'], loss_combined)
+        locs_is_worse = np.greater(
+            self.record[self.monitor], loss_monitor
+        )
 
         if np.sum(locs_is_worse) > 0:
             # Identify worst restart in record.
             idx_eligable_as_worst = dmy_idx[locs_is_worse]
-            idx_idx_worst = np.argmax(self.record['loss_combined'][locs_is_worse])
+            idx_idx_worst = np.argmax(self.record[self.monitor][locs_is_worse])
             idx_worst = idx_eligable_as_worst[idx_idx_worst]
 
             # Replace worst restart with incoming restart.
-            self.record['loss_train'][idx_worst] = loss_train
-            self.record['loss_val'][idx_worst] = loss_val
-            self.record['loss_combined'][idx_worst] = loss_combined
-            self.record['z'][idx_worst] = z
-            self.record['attention'][idx_worst] = attention
-            self.record['theta'][idx_worst] = theta
+            for k, v in history.final.items():
+                if k not in self.record:
+                    self.record[k] = np.inf * np.ones([self.n_record])
+                self.record[k][idx_worst] = v
+            self.record['weights'][idx_worst] = weights
 
         if is_init:
-            self._init_loss_combined = loss_combined
+            self.init_loss = loss_monitor
             self.beat_init = False
         else:
-            if loss_combined < self._init_loss_combined:
+            if loss_monitor < self.init_loss:
                 self.beat_init = True
 
     def sort(self):
         """Sort the records from best to worst."""
-        idx_sort = np.argsort(self.record['loss_combined'])
+        idx_sort = np.argsort(self.record[self.monitor])
+        for k, v in self.record.items():
+            if k == 'weights':
+                self.record['weights'] = [
+                    self.record['weights'][i] for i in idx_sort
+                ]
+            else:
+                self.record[k] = self.record[k][idx_sort]
 
-        self.record['loss_train'] = self.record['loss_train'][idx_sort]
-        self.record['loss_val'] = self.record['loss_val'][idx_sort]
-        self.record['loss_combined'] = self.record['loss_combined'][idx_sort]
-        self.record['z'] = self.record['z'][idx_sort]
-        self.record['attention'] = self.record['attention'][idx_sort]
-        self.record['theta'] = [self.record['theta'][i] for i in idx_sort]
+
+def set_from_record(emb, fit_record, idx):
+    """Set embedding parameters using a record.
+
+    Arguments:
+        emb: TODO
+        fit_record: An appropriate psiz.models.FitRecord object.
+        idx: An integer indicating which record to use.
+
+    """
+    emb.set_weights(fit_record.record['weights'][idx])

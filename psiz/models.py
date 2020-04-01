@@ -51,6 +51,8 @@ from tensorflow.keras.initializers import Initializer
 from tensorflow.keras.layers import Layer
 import tensorflow.keras.optimizers
 from tensorflow.python.keras import backend as K
+from tensorflow.keras.callbacks import BaseLogger, History
+from tensorflow.python.keras.callbacks import configure_callbacks
 from tensorflow.keras.constraints import Constraint
 
 import psiz.trials
@@ -128,7 +130,8 @@ class PsychologicalEmbedding(object):
     """
 
     def __init__(
-            self, n_stimuli, kernel_layer, n_dim=2, n_group=1, z_min=None,
+            self, n_stimuli, coordinate_layer=None, attention_layer=None,
+            kernel_layer=None, n_dim=2, n_group=1, z_min=None,
             z_max=None):
         """Initialize.
 
@@ -171,10 +174,18 @@ class PsychologicalEmbedding(object):
         self.z_max = z_max
 
         # Initialize model components.
-        self.coordinate_layer = Coordinate(
-            self.n_stimuli, self.n_dim, self.z_min, self.z_max
-        )
-        self.attention_layer = Attention(self.n_dim, self.n_group)
+        if coordinate_layer is None:
+            coordinate_layer = Coordinate(
+                self.n_stimuli, self.n_dim, self.z_min, self.z_max
+            )
+        self.coordinate_layer = coordinate_layer
+
+        if attention_layer is None:
+            attention_layer = Attention(self.n_dim, self.n_group)
+        self.attention_layer = attention_layer
+
+        if kernel_layer is None:
+            kernel_layer = ExponentialKernel()
         self.kernel_layer = kernel_layer
 
         # Default TensorBoard log attributes.
@@ -217,9 +228,10 @@ class PsychologicalEmbedding(object):
     def w(self, w):
         """Setter method for w."""
         for i_group in range(self.n_group):
-            w_i = 'w_{0}'.format(i_group)
-            var = getattr(self.attention_layer, w_i)
-            var.assing(w[i_group, :])
+            w_i_name = 'w_{0}'.format(i_group)
+            w_i = getattr(self.attention_layer, w_i_name)
+            w_i_new = np.expand_dims(w[i_group, :], axis=0)
+            w_i.assign(w_i_new)
 
     @property
     def phi(self):
@@ -232,9 +244,8 @@ class PsychologicalEmbedding(object):
     @phi.setter
     def phi(self, phi):
         """Setter method for w."""
-        # TODO
         for k, v in phi.items():
-            self.vars['phi'][k] = assign(v)
+            setattr(self, k, v)
 
     @property
     def theta(self):
@@ -249,6 +260,21 @@ class PsychologicalEmbedding(object):
         """Setter method for w."""
         for k, v in theta.items():
             self.kernel_layer.theta[k].assign(v)
+
+    @property
+    def weights(self):
+        """Getter method for all weights."""
+        d = {
+            'z': self.z,
+            'phi': self.phi,
+            'theta': self.theta
+        }
+        return d
+
+    def set_weights(self, w):
+        """Setter method for all weights."""
+        for k, v in w.items():
+            setattr(self, k, v)
 
     def _broadcast_for_similarity(
             self, z_q, z_r, group_id=None, phi=None):
@@ -597,14 +623,24 @@ class PsychologicalEmbedding(object):
                 batch_size_val, drop_remainder=False
             )
 
-        model.stop_training = False  # TODO hack for callbacks
+        callback_list = configure_callbacks(
+            callbacks,
+            model,
+            do_validation=False,
+            batch_size=None,
+            epochs=None,
+            steps_per_epoch=None,
+            samples=None,
+            verbose=0,
+            count_mode='steps'
+        )
 
         logs = {}
         metric_train_loss = tf.keras.metrics.Mean(name='train_loss')
         metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
         summary_writer = tf.summary.create_file_writer(self.log_dir)
 
-        @tf.function  # TODO
+        @tf.function
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
@@ -632,7 +668,7 @@ class PsychologicalEmbedding(object):
                 zip(gradients, model.trainable_variables)
             )
 
-        @tf.function  # TODO
+        @tf.function
         def validation_step(inputs):
             # Compute validation loss.
             prob = model(inputs)
@@ -642,7 +678,7 @@ class PsychologicalEmbedding(object):
             )
             metric_val_loss(loss)
 
-        @tf.function  # TODO
+        @tf.function
         def final_step(inputs, metric):
             prob = model(inputs)
             loss = (
@@ -651,19 +687,17 @@ class PsychologicalEmbedding(object):
             )
             metric(loss)
 
-        if callbacks is not None:
-            for callback in callbacks:
-                callback.on_train_begin()
-                callback.model = model  # TODO hack
+        callback_list.on_train_begin(logs=None)
 
         with summary_writer.as_default():
             epoch_start_time_s = time.time()
             for epoch in range(initial_epoch, epochs):
-                if model.stop_training:
+                if callback_list.model.stop_training:
                     epoch = epoch - 1
                     break
                 else:
-                    logs['epoch'] = epoch
+                    callback_list.on_epoch_begin(epoch, logs=None)
+
                     # Reset metrics at the start of each epoch.
                     metric_train_loss.reset_states()
                     metric_val_loss.reset_states()
@@ -679,17 +713,20 @@ class PsychologicalEmbedding(object):
                             'ignore', category=UserWarning,
                             module=r'.*indexed_slices'
                         )
-                        for batch_train in ds_obs_train:
+                        for batch_idx, batch_train in enumerate(ds_obs_train):
+                            # callback_list.on_train_batch_begin(
+                            #     batch_idx, logs=None
+                            # )
                             train_step(batch_train)
                     train_loss = metric_train_loss.result()
-                    logs['train_loss'] = train_loss
+                    logs['train_loss'] = train_loss.numpy()
 
                     # Compute validation loss.
                     if obs_val is not None:
                         for batch_val in ds_obs_val:
                             validation_step(batch_val)
                         val_loss = metric_val_loss.result()
-                        logs['val_loss'] = val_loss
+                        logs['val_loss'] = val_loss.numpy()
 
                     # TODO conditional for printing out val_loss
                     if verbose > 3:
@@ -717,28 +754,35 @@ class PsychologicalEmbedding(object):
                                     step=epoch
                                 )
 
-                    if callbacks is not None:
-                        for callback in callbacks:
-                            callback.on_epoch_end(epoch, logs=logs)
+                    callback_list.on_epoch_end(epoch, logs=logs)
                 summary_writer.flush()
             epoch_stop_time_s = time.time() - epoch_start_time_s
+            callback_list.on_train_end(logs=None)
 
         # Determine time per epoch.
         ms_per_epoch = 1000 * epoch_stop_time_s / epoch
         # TODO Smarter string generation.
         time_per_epoch_str = '{0:.0f} ms/epoch'.format(ms_per_epoch)
 
+        # TODO conditional on validation
+        # Add final model losses to history object.
         # NOTE: If there is an early stopping callback with
         # restore_best_weights, then the final evaluation will use
         # those weights.
+        final = {}
         metric_train_loss.reset_states()
         metric_val_loss.reset_states()
         for batch_train in ds_obs_train:
             final_step(batch_train, metric_train_loss)
-        for batch_val in ds_obs_val:
-            validation_step(batch_val)
         train_loss = metric_train_loss.result()
+        final['train_loss'] = train_loss.numpy()
+        final['epoch'] = epoch
+
+        for batch_val in ds_obs_val:
+            validation_step(batch_val)        
         val_loss = metric_val_loss.result()
+        final['val_loss'] = val_loss.numpy()
+        model.history.final = final
 
         if (verbose > 2):
             print(
@@ -750,7 +794,7 @@ class PsychologicalEmbedding(object):
             )
             print('')
 
-        return train_loss, val_loss
+        return model.history
 
     def evaluate(self, obs, batch_size=None):
         """Evaluate observations using the current state of the model.
@@ -1283,7 +1327,7 @@ class QueryReference(Layer):
         return likelihood
 
     def reset(self):
-        """Reset variables."""
+        """Reset trainable variables."""
         x = 1  # TODO
 
 
@@ -1325,14 +1369,9 @@ class Coordinate(Layer):
             z_constraint = ProjectZ()
 
         # TODO RandomEmbedding should take z_min and z_max argument.
+        self.fit_z = fit_z
         self.z = tf.Variable(
-            initial_value=RandomEmbedding(
-                mean=tf.zeros([self.n_dim], dtype=K.floatx()),
-                stdev=tf.ones([self.n_dim], dtype=K.floatx()),
-                minval=tf.constant(-3., dtype=K.floatx()),
-                maxval=tf.constant(0., dtype=K.floatx()),
-                dtype=K.floatx()
-            )(shape=[self.n_stimuli, self.n_dim]), trainable=fit_z,
+            initial_value=self.random_z(), trainable=fit_z,
             name="z", dtype=K.floatx(),
             constraint=z_constraint
         )
@@ -1398,8 +1437,20 @@ class Coordinate(Layer):
         return (z_q, z_r_2)
 
     def reset(self):
-        """Reset variables."""
-        x = 1  # TODO
+        """Reset trainable variables."""
+        if self.fit_z:
+            self.z.assign(self.random_z)
+
+    def random_z(self):
+        """Random z."""
+        z = RandomEmbedding(
+            mean=tf.zeros([self.n_dim], dtype=K.floatx()),
+            stdev=tf.ones([self.n_dim], dtype=K.floatx()),
+            minval=tf.constant(-3., dtype=K.floatx()),
+            maxval=tf.constant(0., dtype=K.floatx()),
+            dtype=K.floatx()
+        )(shape=[self.n_stimuli, self.n_dim])
+        return z
 
 
 class WeightedDistance(Layer):
@@ -1413,10 +1464,10 @@ class WeightedDistance(Layer):
 
         """
         super(WeightedDistance, self).__init__()
-
+        self.fit_rho = fit_rho
         self.rho = tf.Variable(
-            initial_value=tf.random_uniform_initializer(1.01, 3.)(shape=[]),
-            trainable=fit_rho, name="rho", dtype=K.floatx(),
+            initial_value=self.random_rho(),
+            trainable=self.fit_rho, name="rho", dtype=K.floatx(),
             constraint=GreaterThan(min_value=1.0)
         )
 
@@ -1439,8 +1490,13 @@ class WeightedDistance(Layer):
         return d_qr
 
     def reset(self):
-        """Reset variables."""
-        x = 1  # TODO
+        """Reset trainable variables."""
+        if self.fit_rho:
+            self.rho.assign(self.random_rho())
+
+    def random_rho(self):
+        """Random rho."""
+        return tf.random_uniform_initializer(1.01, 3.)(shape=[])
 
 
 class Attention(Layer):
@@ -1450,9 +1506,9 @@ class Attention(Layer):
         """Initialize.
 
         Arguments:
-            n_dim:
-            n_group:
-            fit_group: Array of Booleans.
+            n_dim: Integer
+            n_group: Integer
+            fit_group: Boolean Array
                 shape=(n_group,)
 
         """
@@ -1466,22 +1522,24 @@ class Attention(Layer):
                 fit_group = [False]
             else:
                 fit_group = np.ones(n_group, dtype=bool)
+        self.fit_group = fit_group
 
-        scale = tf.constant(self.n_dim, dtype=K.floatx())
-        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
         w_list = []
         for i_group in range(self.n_group):
             var_name = "w_{0}".format(i_group)
+            if self.n_group == 1:
+                initial_value = np.ones([1, self.n_dim])
+            else:
+                initial_value = self.random_w()
+
             w_i = tf.Variable(
-                initial_value=RandomAttention(
-                    alpha, scale, dtype=K.floatx()
-                )(shape=[1, self.n_dim]),
+                initial_value=initial_value,
                 trainable=fit_group[i_group], name=var_name, dtype=K.floatx(),
                 constraint=ProjectAttention()
             )
             setattr(self, var_name, w_i)
             w_list.append(w_i)
-        self.w_all = tf.concat(w_list, axis=0)
+        self.w_all = tf.concat(w_list, axis=0)  # TODO check that this updates after variable update
 
     def call(self, inputs):
         """Call.
@@ -1497,8 +1555,20 @@ class Attention(Layer):
         return w_expand
 
     def reset(self):
-        """Reset variables."""
-        x = 1  # TODO
+        """Reset trainable variables."""
+        for i_group in range(self.n_group):
+            w_i_name = "w_{0}".format(i_group)
+            if self.fit_group[i_group]:
+                w_i = getattr(self, w_i_name)
+                w_i.assign(self.random_w())
+
+    def random_w(self):
+        """Random w."""
+        scale = tf.constant(self.n_dim, dtype=K.floatx())
+        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
+        return RandomAttention(
+            alpha, scale, dtype=K.floatx()
+        )(shape=[1, self.n_dim])
 
 
 class InverseKernel(Layer):
@@ -1521,19 +1591,18 @@ class InverseKernel(Layer):
 
         """
         super(InverseKernel, self).__init__()
-
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
 
+        self.fit_tau = fit_tau
         self.tau = tf.Variable(
-            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+            initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=1.0)
         )
 
+        self.fit_mu = fit_mu
         self.mu = tf.Variable(
-            initial_value=tf.random_uniform_initializer(
-                0.0000000001, .001
-            )(shape=[]),
+            initial_value=self.random_mu(),
             trainable=fit_mu, name="mu", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=2.2204e-16)
         )
@@ -1567,8 +1636,22 @@ class InverseKernel(Layer):
         return sim_qr
 
     def reset(self):
-        """Reset variables."""
-        x = 1  # TODO
+        """Reset trainable variables."""
+        self.distance_layer.reset()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_mu:
+            self.mu.assign(self.random_mu())
+
+    def random_tau(self):
+        """Random tau."""
+        return tf.random_uniform_initializer(1., 2.)(shape=[])
+
+    def random_mu(self):
+        """Random mu."""
+        return tf.random_uniform_initializer(0.0000000001, .001)(shape=[])
 
 
 class ExponentialKernel(Layer):
@@ -1611,26 +1694,26 @@ class ExponentialKernel(Layer):
 
         """
         super(ExponentialKernel, self).__init__()
-
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
 
+        self.fit_tau = fit_tau
         self.tau = tf.Variable(
-            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-            trainable=fit_tau, name="tau", dtype=K.floatx(),
+            initial_value=self.random_tau(),
+            trainable=self.fit_tau, name="tau", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=1.0)
         )
 
+        self.fit_gamma = fit_gamma
         self.gamma = tf.Variable(
-            initial_value=tf.random_uniform_initializer(
-                0., .001
-            )(shape=[]),
-            trainable=fit_gamma, name="gamma", dtype=K.floatx(),
+            initial_value=self.random_gamma(),
+            trainable=self.fit_gamma, name="gamma", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=0.0)
         )
 
+        self.fit_beta = fit_beta
         self.beta = tf.Variable(
-            initial_value=tf.random_uniform_initializer(1., 30.)(shape=[]),
-            trainable=fit_beta, name="beta", dtype=K.floatx(),
+            initial_value=self.random_beta(),
+            trainable=self.fit_beta, name="beta", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=1.0)
         )
 
@@ -1671,8 +1754,29 @@ class ExponentialKernel(Layer):
         return sim_qr
 
     def reset(self):
-        """Reset variables."""
-        x = 1  # TODO
+        """Reset trainable variables."""
+        self.distance_layer.reset()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_gamma:
+            self.gamma.assign(self.random_gamma())
+
+        if self.fit_beta:
+            self.beta.assign(self.random_beta())
+
+    def random_tau(self):
+        """Random tau."""
+        return tf.random_uniform_initializer(1., 2.)(shape=[])
+
+    def random_gamma(self):
+        """Random gamma."""
+        return tf.random_uniform_initializer(0., .001)(shape=[])
+
+    def random_beta(self):
+        """Random beta."""
+        return tf.random_uniform_initializer(1., 30.)(shape=[])
 
 
 class HeavyTailedKernel(Layer):
@@ -1698,23 +1802,25 @@ class HeavyTailedKernel(Layer):
 
         """
         super(HeavyTailedKernel, self).__init__()
-
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
 
+        self.fit_tau = fit_tau
         self.tau = tf.Variable(
-            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+            initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=1.0)
         )
 
+        self.fit_kappa = fit_kappa
         self.kappa = tf.Variable(
-            initial_value=tf.random_uniform_initializer(1., 11.)(shape=[]),
+            initial_value=self.random_kappa(),
             trainable=fit_kappa, name="kappa", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=0.0)
         )
 
+        self.fit_alpha = fit_alpha
         self.alpha = tf.Variable(
-            initial_value=tf.random_uniform_initializer(10., 60.)(shape=[]),
+            initial_value=self.random_alpha(),
             trainable=fit_alpha, name="alpha", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=0.0)
         )
@@ -1751,8 +1857,29 @@ class HeavyTailedKernel(Layer):
         return sim_qr
 
     def reset(self):
-        """Reset variables."""
-        x = 1  # TODO
+        """Reset trainable variables."""
+        self.distance_layer.reset()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_kappa:
+            self.kappa.assign(self.random_kappa())
+
+        if self.fit_alpha:
+            self.alpha.assign(self.random_alpha())
+
+    def random_tau(self):
+        """Random tau."""
+        return tf.random_uniform_initializer(1., 2.)(shape=[])
+
+    def random_kappa(self):
+        """Random kappa."""
+        return tf.random_uniform_initializer(1., 11.)(shape=[])
+
+    def random_alpha(self):
+        """Random alpha."""
+        return tf.random_uniform_initializer(10., 60.)(shape=[])
 
 
 class StudentsTKernel(Layer):
@@ -1775,28 +1902,30 @@ class StudentsTKernel(Layer):
 
     """
 
-    def __init__(self, fit_rho=True, fit_tau=True, fit_alpha=True):
+    def __init__(self, n_dim, fit_rho=True, fit_tau=True, fit_alpha=True):
         """Initialize.
 
         Arguments:
+            n_dim: 
             fit_rho (optional): Boolean
             fit_tau (optional): Boolean
             fit_alpha (optional): Boolean
 
         """
         super(StudentsTKernel, self).__init__()
-
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+        self.n_dim = n_dim
 
+        self.fit_tau = fit_tau
         self.tau = tf.Variable(
-            initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
+            initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=1.0)
         )
 
-        n_dim = np.max((1, self.n_dim - 1.))
+        self.fit_alpha = fit_alpha
         self.alpha = tf.Variable(
-            initial_value=tf.constant(n_dim, dtype=K.floatx()),
+            initial_value=self.random_alpha(),
             trainable=fit_alpha, name="alpha", dtype=K.floatx(),
             constraint=GreaterEqualThan(min_value=0.000001)
         )
@@ -1832,8 +1961,24 @@ class StudentsTKernel(Layer):
         return sim_qr
 
     def reset(self):
-        """Reset variables."""
-        x = 1  # TODO
+        """Reset trainable variables."""
+        self.distance_layer.reset()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_alpha:
+            self.alpha.assign(self.random_alpha())
+
+    def random_tau(self):
+        """Random tau."""
+        return tf.random_uniform_initializer(1., 2.)(shape=[])
+
+    def random_alpha(self):
+        """Random alpha."""
+        alpha_min = np.max((1, self.n_dim - 2.))
+        alpha_max = self.n_dim + 2.
+        return tf.random_uniform_initializer(alpha_min, alpha_max)(shape=[])
 
 
 def _assert_float_dtype(dtype):
@@ -2359,7 +2504,7 @@ def _tf_ranked_sequence_probability(sim_qr, n_select):
     return seq_prob
 
 
-@tf.function(experimental_relax_shapes=True)  # TODO
+@tf.function(experimental_relax_shapes=True)
 def observation_loss(prob_all, weight):
     """Compute model loss given observation probabilities."""
     n_trial = tf.shape(prob_all)[0]
@@ -2378,7 +2523,7 @@ def observation_loss(prob_all, weight):
     return loss
 
 
-@tf.function(experimental_relax_shapes=True)  # TODO
+@tf.function(experimental_relax_shapes=True)
 def no_regularization(model):
     """No regularization."""
     return tf.constant(0.0, dtype=K.floatx())

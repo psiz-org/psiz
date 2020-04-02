@@ -77,18 +77,16 @@ class Restarter(object):
         self.do_init = do_init
         self.log_dir = copy.copy(emb.log_dir)
 
-    def fit(
-            self, obs_train, batch_size=None, obs_val=None, epochs=5000,
-            initial_epoch=0, callbacks=None, seed=None, verbose=0):
+    def fit(self, obs_train, verbose=0, **kwargs):
         """Fit the embedding model to the observations using restarts.
 
         Arguments: TODO
             obs: A psiz.trials.Observations object.
-            max_epoch (optional): The maximum number of epochs for each
-                restart.
+            verbose: Verbosity of output.
+            **kwargs: Any additional keyword arguments.
 
         Returns:
-            emb_best: The best embedding model.
+            fit_record: A record of the best restarts.
 
         """
         fit_record = FitRecord(self.n_record, self.monitor)
@@ -96,30 +94,12 @@ class Restarter(object):
         # Grab optimizer configuration.
         self.optimizer_config = self.emb.optimizer.get_config()
 
-        # Initial evaluation.
+        # Initial evaluation. TODO
         if self.do_init:
-            # TODO
-            # model = self._build_model(tf_config, init_mode='warm')
-            # prob_train_init = model(tf_inputs_train)
-            # loss_train_init = (
-            #     self.loss(prob_train_init, tf_inputs_train[3]) +
-            #     self.regularizer(model)
-            # ).numpy()
-            # prob_val_init = model(tf_inputs_val)
-            # loss_val_init = (
-            #     self.loss(prob_val_init, tf_inputs_val[3]) +
-            #     self.regularizer(model)
-            # ).numpy()
-            # # NOTE: The combined loss is based on the fact that there are
-            # # 10 splits.
-            # loss_combined_init = .9 * loss_train_init + .1 * loss_val_init
-
             # Update record with initialization values.
-            fit_record.update(
-                loss_train_init, loss_val_init, loss_combined_init,
-                self._z["value"], self._phi['w']["value"], self._theta,
-                is_init=True
-            )
+            history = None
+            weights = None
+            fit_record.update(history, weights, is_init=True)
             if (verbose > 2):
                 print('        Initialization')
                 print(
@@ -150,11 +130,7 @@ class Restarter(object):
 
             # Distinguish between restart by setting log_dir for TensorBoard.
             self.emb.log_dir = '{0}/{1}'.format(self.log_dir, i_restart)
-            history = self.emb.fit(
-                obs_train, batch_size=batch_size, obs_val=obs_val,
-                epochs=epochs, initial_epoch=initial_epoch,
-                callbacks=callbacks, seed=seed, verbose=verbose
-            )
+            history = self.emb.fit(obs_train, verbose=verbose, **kwargs)
             weights = self.emb.weights
 
             # Update fit record with latest restart.

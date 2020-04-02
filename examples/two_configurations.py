@@ -20,6 +20,7 @@ Fake data is generated from a ground truth model for two different
 trial configurations: 2-choose-1 and 8-choose-2. This example
 demonstrates how one can use data collected in a variety of formats to
 infer a single embedding.
+
 """
 
 import numpy as np
@@ -35,7 +36,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 
 def main():
-    """Run the simulation that infers an embedding for three groups."""
+    """Run script."""
     # Settings.
     n_stimuli = 25
     n_dim = 3
@@ -119,8 +120,9 @@ def ground_truth(n_stimuli, n_dim):
     kernel.gamma = 0.001
 
     emb = psiz.models.AnchoredOrdinal(
-        n_stimuli, kernel=kernel, n_dim=n_dim
+        n_stimuli, n_dim=n_dim, kernel=kernel
     )
+
     mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))

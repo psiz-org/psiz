@@ -810,7 +810,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             batch_size, drop_remainder=False
         )
 
-        metric_loss = tf.keras.metrics.Mean(name='eval_loss')
+        metric_loss = tf.keras.metrics.Mean(name='loss')
 
         @tf.function
         def eval_step(inputs):
@@ -820,7 +820,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             metric_loss(loss)
 
         for batch in ds_obs:
-            validation_step(batch)
+            eval_step(batch)
         loss = metric_loss.result()
 
         return loss

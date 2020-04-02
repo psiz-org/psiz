@@ -36,7 +36,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 
 def main():
-    """Run the simulation that infers an embedding for one groups."""
+    """Run script."""
     # Settings.
     n_stimuli = 25
     n_dim = 3

@@ -73,7 +73,9 @@ def main():
 
     # Infer independent models with increasing amounts of data.
     n_step = 8
-    n_obs = np.floor(np.linspace(15, obs_train.n_trial, n_step)).astype(np.int64)
+    n_obs = np.floor(
+        np.linspace(15, obs_train.n_trial, n_step)
+    ).astype(np.int64)
     r2 = np.empty((n_step))
     train_loss = np.empty((n_step))
     val_loss = np.empty((n_step))

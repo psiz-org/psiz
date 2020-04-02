@@ -29,9 +29,8 @@ import psiz.models
 import psiz.restart
 from psiz.simulate import Agent
 from psiz.trials import stack
-from psiz.utils import similarity_matrix, matrix_comparison
-import sklearn.model_selection
-import tensorflow as tf
+from psiz.utils import pairwise_matrix, matrix_comparison
+from sklearn.model_selection import StratifiedKFold
 from tensorflow.keras.callbacks import EarlyStopping
 
 
@@ -70,11 +69,8 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Partition observations into train and validation set. TODO
-    # sklearn.model_selection.train_test_split(
-
-    # )
-    skf = sklearn.model_selection.StratifiedKFold(n_splits=10)
+    # Partition observations into train and validation set.
+    skf = StratifiedKFold(n_splits=10)
     (train_idx, val_idx) = list(
         skf.split(obs.stimulus_set, obs.config_idx)
     )[0]
@@ -87,30 +83,23 @@ def main():
     )
 
     # Infer embedding.
-    kernel_layer = psiz.models.ExponentialKernel()
-    emb_inferred = psiz.models.PsychologicalEmbedding(
-        n_stimuli, kernel_layer=kernel_layer, n_dim=n_dim
+    kernel = psiz.models.ExponentialKernel()
+    emb_inferred = psiz.models.AnchoredOrdinal(
+        n_stimuli, n_dim=n_dim, kernel=kernel
     )
-    emb_inferred.log_freq = 10
     emb_inferred.compile()
-
-    emb_restart = psiz.restart.Restarter(
+    restarter = psiz.restart.Restarter(
         emb_inferred, 'val_loss', n_restart=n_restart
     )
-    restart_record = emb_restart.fit(
-        obs_train, obs_val=obs_val, epochs=1000, verbose=3,
+    restart_record = restarter.fit(
+        obs_train, obs_val=obs_val, epochs=1000, verbose=2,
         callbacks=[early_stop]
     )
 
-    # emb_inferred.fit(
-    #     obs_train, obs_val=obs_val, epochs=1000, verbose=3,
-    #     callbacks=[early_stop]
-    # )
-
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
-    simmat_truth = similarity_matrix(emb_true.similarity, emb_true.z)
-    simmat_infer = similarity_matrix(emb_inferred.similarity, emb_inferred.z)
+    simmat_truth = pairwise_matrix(emb_true.similarity, emb_true.z)
+    simmat_infer = pairwise_matrix(emb_inferred.similarity, emb_inferred.z)
     r_squared = matrix_comparison(simmat_truth, simmat_infer, score='r2')
 
     # Display comparison results. A good inferred model will have a high
@@ -123,31 +112,21 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    kernel_layer = psiz.models.ExponentialKernel()
-    kernel_layer.rho = 2.
-    kernel_layer.tau = 1.
-    kernel_layer.beta = 10.
-    kernel_layer.gamma = 0.001
+    kernel = psiz.models.ExponentialKernel()
+    kernel.rho = 2.
+    kernel.tau = 1.
+    kernel.beta = 10.
+    kernel.gamma = 0.001
 
-    emb = psiz.models.PsychologicalEmbedding(
-        n_stimuli, kernel_layer=kernel_layer, n_dim=n_dim
+    emb = psiz.models.AnchoredOrdinal(
+        n_stimuli, kernel=kernel, n_dim=n_dim
     )
-    mean = np.ones((n_dim))
+    mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     emb.z = z
 
     return emb
-
-
-# TODO
-def custom_regularizer(model):
-    """Compute regularization penalty of model."""
-    tf_z = model.get_layer(name='core_layer').z
-
-    # L1 penalty on coordinates (adjusted for n_stimuli).
-    l1_penalty = tf.reduce_sum(tf.abs(tf_z)) / tf_z.shape[0]
-    return tf.constant(0.1, dtype=tf.keras.backend.floatx()) * l1_penalty
 
 
 if __name__ == "__main__":

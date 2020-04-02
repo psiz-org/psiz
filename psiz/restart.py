@@ -14,43 +14,57 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for handling (pararallelized) model restarts.
+"""Module for handling model restarts.
 
 Classes:
     Restarter: A class for performing restarts.
     FitRecord: A class for keeping track of the best performing
         restart(s).
 
+Functions:
+    set_from_record: Set the weights of a model using the weights
+        stored in a record.
+
 """
 
+import copy
+
 import numpy as np
+
+import psiz.utils
 
 
 class Restarter(object):
     """Object for handling restarts.
 
     Attributes:
-        n_restart (optional): An integer specifying the number of
+        n_restart: An integer specifying the number of
             restarts to use for the inference procedure. Since the
             embedding procedure can get stuck in local optima,
             multiple restarts help find the global optimum.
-        n_record (optional): An integer indicating how many best-
+        n_record: An integer indicating how many best-
             performing models to track.
-        n_worker (optional): An integer indicating the number of models
-            to train in parallel.
 
     Methods:
         fit: Fit the provided model to the observations.
 
     """
 
-    def __init__(
-            self, emb, monitor, n_restart=10, n_record=1, n_worker=1,
-            do_init=False):
+    def __init__(self, emb, monitor, n_restart=10, n_record=1, do_init=False):
         """Initialize.
 
-        Arguments: TODO
+        Arguments:
             emb: A compiled model.
+            monitor: The value to monitor and use as a basis for
+                selecting the best restarts.
+            n_restart (optional): An integer indicating the number of
+                independent restarts to perform.
+            n_record (optional): An integer indicating the number of
+                best performing restarts to record.
+            do_init (optional): A Boolean variable indicating whether
+                the initial model and it's corresponding performance
+                should be included as a candidate in the set of
+                restarts.
 
         """
         # Make sure n_record is not greater than n_restart.
@@ -60,8 +74,8 @@ class Restarter(object):
         self.monitor = monitor
         self.n_restart = n_restart
         self.n_record = n_record
-        self.n_worker = n_worker
         self.do_init = do_init
+        self.log_dir = copy.copy(emb.log_dir)
 
     def fit(
             self, obs_train, batch_size=None, obs_val=None, epochs=5000,
@@ -78,6 +92,9 @@ class Restarter(object):
 
         """
         fit_record = FitRecord(self.n_record, self.monitor)
+
+        # Grab optimizer configuration.
+        self.optimizer_config = self.emb.optimizer.get_config()
 
         # Initial evaluation.
         if self.do_init:
@@ -114,8 +131,8 @@ class Restarter(object):
                 print('')
 
         if verbose > 0 and verbose < 3:
-            progbar = ProgressBar(
-                n_restart, prefix='Progress:', length=50
+            progbar = psiz.utils.ProgressBar(
+                self.n_restart, prefix='Progress:', length=50
             )
             progbar.update(0)
 
@@ -126,9 +143,13 @@ class Restarter(object):
             if verbose > 0 and verbose < 3:
                 progbar.update(i_restart + 1)
 
-            self.emb.reset()
-            # TODO inject restart by setting log_dir in RestartBoard
-            # emb.log_dir = '{0}/{1}'.format(self.log_dir. i_restart)
+            # Reset trainable weights.
+            self.emb.reset_weights()
+            # Reset optimizer.
+            self.emb.optimizer = type(self.emb.optimizer).from_config(self.optimizer_config)
+
+            # Distinguish between restart by setting log_dir for TensorBoard.
+            self.emb.log_dir = '{0}/{1}'.format(self.log_dir, i_restart)
             history = self.emb.fit(
                 obs_train, batch_size=batch_size, obs_val=obs_val,
                 epochs=epochs, initial_epoch=initial_epoch,
@@ -161,19 +182,29 @@ class Restarter(object):
             else:
                 print('    Did not beat initialization.')
 
+        # Clean up.
+        self.emb.log_dir = self.log_dir
+
         return fit_record
 
 
 class FitRecord(object):
-    """Class for keeping track of multiple restarts."""
+    """Class for keeping track of best restarts.
+
+    Methods:
+        update: Update the records with the provided restart.
+        sort: Sort the records from best to worst.
+
+    """
 
     def __init__(self, n_record, monitor):
         """Initialize.
 
         Arguments:
-            n_restart: TODO
-            n_keep: TODO
-            monitor: String indicating value to monitor.
+            n_record: Integer indicating the number of top restarts
+                to record.
+            monitor: String indicating the value to use in order to
+                select the best performing restarts.
 
         """
         self.n_record = n_record

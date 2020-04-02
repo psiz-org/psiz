@@ -41,7 +41,6 @@ import warnings
 
 import h5py
 import numpy as np
-import numexpr as ne
 import numpy.ma as ma
 import pandas as pd
 from sklearn import mixture
@@ -59,19 +58,20 @@ import psiz.trials
 import psiz.utils
 
 
-class PsychologicalEmbedding(object):
-    """Container class for psychological embedding algorithm.
+class PsychologicalEmbedding(metaclass=ABCMeta):
+    """Abstract base class for a psychological embedding.
 
     The embedding procedure jointly infers three components. First, the
-    embedding algorithm infers a stimulus representation denoted z.
-    Second, the embedding algorithm infers the similarity kernel
-    parameters of the concrete class. The set of similarity kernel
-    parameters is denoted theta. Third, the embedding algorithm infers
-    a set of attention weights if there is more than one group.
+    embedding algorithm infers a stimulus representation denoted by the
+    variable z. Second, the embedding algorithm infers the variables
+    governing the similarity kernel, denoted theta. Third, the
+    embedding algorithm infers a set of attention weights if there is
+    more than one group.
 
     Methods:
-        reset: TODO
-        compile: TODO
+        reset_weights: Reset all trainable variables.
+        compile: Assign a optimizer, loss and regularization function
+            for the optimization procedure.
         fit: Fit the embedding model using the provided observations.
         evaluate: Evaluate the embedding model using the provided
             observations.
@@ -130,9 +130,8 @@ class PsychologicalEmbedding(object):
     """
 
     def __init__(
-            self, n_stimuli, coordinate_layer=None, attention_layer=None,
-            kernel_layer=None, n_dim=2, n_group=1, z_min=None,
-            z_max=None):
+            self, n_stimuli, n_dim=2, n_group=1, coordinate=None,
+            attention=None, kernel=None):
         """Initialize.
 
         Arguments:
@@ -145,6 +144,9 @@ class PsychologicalEmbedding(object):
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
                 each group. Must be equal to or greater than one.
+            coordinate (optional): A coordinate layer.
+            attention (optional): An attention layer.
+            kernel (optional): A similarity kernel layer.
 
         Raises:
             ValueError: If arguments are invalid.
@@ -157,81 +159,72 @@ class PsychologicalEmbedding(object):
         self.n_stimuli = n_stimuli
         if (n_dim < 1):
             raise ValueError(
-                "The provided dimensionality must be an integer "
+                "The dimensionality (`n_dim`) must be an integer "
                 "greater than 0."
             )
         self.n_dim = n_dim
         if (n_group < 1):
             raise ValueError(
-                "The provided n_group must be an integer greater "
+                "The number of groups (`n_group`) must be an integer greater "
                 "than 0."
             )
             n_group = 1
         self.n_group = n_group
 
-        # TODO CRITICAL add to save/load
-        self.z_min = z_min
-        self.z_max = z_max
+        # TODO CRITICAL to save/load functionality of below.
 
         # Initialize model components.
-        if coordinate_layer is None:
-            coordinate_layer = Coordinate(
-                self.n_stimuli, self.n_dim, self.z_min, self.z_max
-            )
-        self.coordinate_layer = coordinate_layer
+        if coordinate is None:
+            coordinate = Coordinate(self.n_stimuli, self.n_dim)
+        self.coordinate = coordinate
 
-        if attention_layer is None:
-            attention_layer = Attention(self.n_dim, self.n_group)
-        self.attention_layer = attention_layer
+        if attention is None:
+            attention = Attention(self.n_dim, self.n_group)
+        self.attention = attention
 
-        if kernel_layer is None:
-            kernel_layer = ExponentialKernel()
-        self.kernel_layer = kernel_layer
+        if kernel is None:
+            kernel = ExponentialKernel()
+        self.kernel = kernel
 
         # Default TensorBoard log attributes.
         self.do_log = False
         self.log_dir = '/tmp/psiz/tensorboard_logs/'
         self.log_freq = 10
 
-        # The following attributes that are NOT saved. TODO
-        # Timer attributes. TODO handle save and load
+        # Timer attributes. TODO
         self.fit_duration = 0.0
         self.posterior_duration = 0.0
 
-        # Optimizer attributes. TODO handle save and load
+        # Optimizer attributes.
         self.optimizer = None
         self.loss = None
         self.regularizer = None
 
-    def reset(self):
+    def reset_weights(self):
         """Reinitialize trainable model parameters."""
-        self.coordinate_layer.reset()
-        self.attention_layer.reset()
-        self.kernel_layer.reset()
+        self.coordinate.reset_weights()
+        self.attention.reset_weights()
+        self.kernel.reset_weights()
 
     @property
     def z(self):
         """Getter method for z."""
-        return self.coordinate_layer.z.numpy()
+        return self.coordinate.z.numpy()
 
     @z.setter
     def z(self, z):
         """Setter method for z."""
-        self.coordinate_layer.z.assign(z)
+        self.coordinate.z.assign(z)
 
     @property
     def w(self):
         """Getter method for phi."""
-        return self.attention_layer.w_all.numpy()
+        return self.attention.w.numpy()
 
     @w.setter
     def w(self, w):
         """Setter method for w."""
-        for i_group in range(self.n_group):
-            w_i_name = 'w_{0}'.format(i_group)
-            w_i = getattr(self.attention_layer, w_i_name)
-            w_i_new = np.expand_dims(w[i_group, :], axis=0)
-            w_i.assign(w_i_new)
+        self.attention.w.assign(w)
 
     @property
     def phi(self):
@@ -251,7 +244,7 @@ class PsychologicalEmbedding(object):
     def theta(self):
         """Getter method for theta."""
         d = {}
-        for k, v in self.kernel_layer.theta.items():
+        for k, v in self.kernel.theta.items():
             d[k] = v.numpy()
         return d
 
@@ -259,7 +252,7 @@ class PsychologicalEmbedding(object):
     def theta(self, theta):
         """Setter method for w."""
         for k, v in theta.items():
-            self.kernel_layer.theta[k].assign(v)
+            self.kernel.theta[k].assign(v)
 
     @property
     def weights(self):
@@ -277,7 +270,7 @@ class PsychologicalEmbedding(object):
             setattr(self, k, v)
 
     def _broadcast_for_similarity(
-            self, z_q, z_r, group_id=None, phi=None):
+            self, z_q, z_r, group_id=None):
         """Return similarity between two lists of points.
 
         Similarity is determined using the similarity kernel and the
@@ -291,11 +284,6 @@ class PsychologicalEmbedding(object):
                 shape = (n_trial, n_dim, [n_reference, n_sample])
             group_id (optional): The group ID for each sample. Can be a
                 scalar or an array of shape = (n_trial,).
-            phi (optional): The weights allocated to each
-                dimension in a weighted minkowski metric. The weights
-                should be positive and sum to the dimensionality of the
-                weight vector, although this is not enforced.
-                shape = (n_trial, n_dim)
 
         Returns:
             The corresponding similarity between rows of embedding
@@ -313,10 +301,7 @@ class PsychologicalEmbedding(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
 
-        if phi is None:
-            phi = self.phi
-
-        attention = phi['w'][group_id, :]
+        attention = self.phi['w'][group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
         # dimensions.
@@ -355,9 +340,9 @@ class PsychologicalEmbedding(object):
 
         """
         (z_q, z_r, attention) = self._broadcast_for_similarity(
-            z_q, z_r, group_id=group_id, phi=None
+            z_q, z_r, group_id=group_id
         )
-        sim_qr = self.kernel_layer([
+        sim_qr = self.kernel([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -394,10 +379,7 @@ class PsychologicalEmbedding(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
 
-        theta = self.theta
-        phi = self.phi
-
-        attention = phi['w'][group_id, :]  # TODO
+        attention = self.w[group_id, :]
 
         # Make sure z_q and attention have an appropriate singleton
         # dimensions.
@@ -413,8 +395,12 @@ class PsychologicalEmbedding(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d = _mink_distance(z_q, z_r, theta['rho']["value"], attention)  # TODO use TF layer
-        return d
+        d_qr = self.kernel.distance_layer([
+            tf.constant(z_q, dtype=K.floatx()),
+            tf.constant(z_r, dtype=K.floatx()),
+            tf.constant(attention, dtype=K.floatx())
+        ]).numpy()
+        return d_qr
 
     def set_log(self, do_log, log_dir=None, log_freq=None, delete_prev=True):
         """State changing method that sets TensorBoard logging.
@@ -471,7 +457,7 @@ class PsychologicalEmbedding(object):
 
         # Initialize model likelihood layer.
         likelihood_layer = QueryReference(
-            self.coordinate_layer, self.attention_layer, self.kernel_layer,
+            self.coordinate, self.attention, self.kernel,
             obs.config_list
         )
 
@@ -494,7 +480,7 @@ class PsychologicalEmbedding(object):
             )
         ]
         output = likelihood_layer(inputs)
-        model = tf.keras.models.Model(inputs, output)
+        model = tf.keras.models.Model(inputs, output, name='anchored_ordinal')
 
         return ds_obs, model
 
@@ -522,9 +508,9 @@ class PsychologicalEmbedding(object):
         """Configure the model for training.
 
         Arguments:
-            optimizer: TODO
-            loss: TODO
-            regularizer: TODO
+            optimizer: A tf.keras.optimizer object.
+            loss: A loss function.
+            regularizer: A regularization function.
 
         Raises:
             ValueError: If arguments are invalid.
@@ -538,6 +524,7 @@ class PsychologicalEmbedding(object):
             loss = observation_loss
         self.loss = loss
 
+        # TODO CRITICAL
         if regularizer is None:
             regularizer = no_regularization
         self.regularizer = regularizer
@@ -557,18 +544,14 @@ class PsychologicalEmbedding(object):
                 computational time.
             patience (optional): How many epochs to wait without
                 an improvement in validation loss.
-            seed: TODO
+            seed: An integer to be used to seed the random number
+                generator.
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
 
         Returns:
-            loss_train_best: The average loss per observation on the
-                train set. Loss is defined as the negative
-                loglikelihood.
-            loss_val_best: The average loss per observation on the
-                validation set. Loss is defined as the negative
-                loglikelihood.
+            history: A tf.callbacks.History object.
 
         """
         start_time_s = time.time()
@@ -576,6 +559,7 @@ class PsychologicalEmbedding(object):
         self._check_obs(obs_train)
         n_obs_train = obs_train.n_trial
         if obs_val is not None:
+            do_validation = True
             self._check_obs(obs_val)
             n_obs_val = obs_val.n_trial
         else:
@@ -588,18 +572,18 @@ class PsychologicalEmbedding(object):
             batch_size_train = batch_size
             batch_size_val = batch_size
 
-        #  Infer embedding.
-        if (verbose > 0):
-            print('[psiz] fitting embedding...')
-        if (verbose > 1):
-            print(
-                '    Settings:'
-                ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
-                ' | n_obs_train: {3} | n_obs_val: {4}'.format(
-                    self.n_stimuli, self.n_dim, self.n_group,
-                    n_obs_train, n_obs_val
-                )
-            )
+        # TODO
+        # if (verbose > 0):
+        #     print('[psiz] fitting embedding...')
+        # if (verbose > 1):
+        #     print(
+        #         '    Settings:'
+        #         ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
+        #         ' | n_obs_train: {3} | n_obs_val: {4}'.format(
+        #             self.n_stimuli, self.n_dim, self.n_group,
+        #             n_obs_train, n_obs_val
+        #         )
+        #     )
 
         # NOTE: The stack operation is used to make sure that a consistent
         # trial configuration list is used across train and validation.
@@ -617,7 +601,7 @@ class PsychologicalEmbedding(object):
         ds_obs_train = ds_obs_train.batch(
             batch_size_train, drop_remainder=False
         )
-        if obs_val is not None:
+        if do_validation:
             ds_obs_val = ds_obs.skip(n_obs_train)
             ds_obs_val = ds_obs_val.batch(
                 batch_size_val, drop_remainder=False
@@ -640,14 +624,20 @@ class PsychologicalEmbedding(object):
         metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
         summary_writer = tf.summary.create_file_writer(self.log_dir)
 
+        # NOTE: Must bring into local scope in order for optimizer weights
+        # to update appropriately.
+        optimizer = self.optimizer
+
+        # NOTE: Trainable attention weights does not work with eager
+        # execution.
         @tf.function
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
                 prob = model(inputs)
                 loss = (
-                    self.loss(prob, inputs['weight']) +
-                    self.regularizer(model)
+                    self.loss(prob, inputs['weight'])
+                    # self.regularizer(model)  # TODO CRITICAL alternative regularization
                 )
             gradients = grad_tape.gradient(
                 loss, model.trainable_variables
@@ -658,13 +648,12 @@ class PsychologicalEmbedding(object):
             # Eager Execution since gradients are returned as
             # tf.IndexedSlices, which in Eager Execution mode
             # cannot be used to update a variable. To solve this
-            # problem, uncomment the following line(s).
-            gradients[0] = tf.convert_to_tensor(gradients[0])  # TODO
-            # gradients[4] = tf.convert_to_tensor(gradients[4])  # TODO
+            # problem, use the pattern below on any IndexedSlices.
+            # gradients[0] = tf.convert_to_tensor(gradients[0])
+            gradients[1] = tf.convert_to_tensor(gradients[1])
 
             # Apply gradients (subject to constraints).
-            # TODO is it ideal to call optimizer from self?
-            self.optimizer.apply_gradients(
+            optimizer.apply_gradients(
                 zip(gradients, model.trainable_variables)
             )
 
@@ -673,8 +662,8 @@ class PsychologicalEmbedding(object):
             # Compute validation loss.
             prob = model(inputs)
             loss = (
-                self.loss(prob, inputs['weight']) +
-                self.regularizer(model)
+                self.loss(prob, inputs['weight'])
+                # self.regularizer(model)  # TODO CRITICAL alternative regularization
             )
             metric_val_loss(loss)
 
@@ -682,8 +671,8 @@ class PsychologicalEmbedding(object):
         def final_step(inputs, metric):
             prob = model(inputs)
             loss = (
-                self.loss(prob, inputs['weight']) +
-                self.regularizer(model)
+                self.loss(prob, inputs['weight'])
+                # self.regularizer(model)  # TODO CRITICAL alternative regularization
             )
             metric(loss)
 
@@ -722,13 +711,13 @@ class PsychologicalEmbedding(object):
                     logs['train_loss'] = train_loss.numpy()
 
                     # Compute validation loss.
-                    if obs_val is not None:
+                    if do_validation:
                         for batch_val in ds_obs_val:
                             validation_step(batch_val)
                         val_loss = metric_val_loss.result()
                         logs['val_loss'] = val_loss.numpy()
 
-                    # TODO conditional for printing out val_loss
+                    # TODO conditional loss/metric print out:
                     if verbose > 3:
                         if epoch % self.log_freq == 0:
                             print(
@@ -757,14 +746,12 @@ class PsychologicalEmbedding(object):
                     callback_list.on_epoch_end(epoch, logs=logs)
                 summary_writer.flush()
             epoch_stop_time_s = time.time() - epoch_start_time_s
-            callback_list.on_train_end(logs=None)
+        callback_list.on_train_end(logs=None)
 
         # Determine time per epoch.
         ms_per_epoch = 1000 * epoch_stop_time_s / epoch
-        # TODO Smarter string generation.
         time_per_epoch_str = '{0:.0f} ms/epoch'.format(ms_per_epoch)
 
-        # TODO conditional on validation
         # Add final model losses to history object.
         # NOTE: If there is an early stopping callback with
         # restore_best_weights, then the final evaluation will use
@@ -777,13 +764,14 @@ class PsychologicalEmbedding(object):
         train_loss = metric_train_loss.result()
         final['train_loss'] = train_loss.numpy()
         final['epoch'] = epoch
-
-        for batch_val in ds_obs_val:
-            validation_step(batch_val)        
-        val_loss = metric_val_loss.result()
-        final['val_loss'] = val_loss.numpy()
+        if do_validation:
+            for batch_val in ds_obs_val:
+                validation_step(batch_val)        
+            val_loss = metric_val_loss.result()
+            final['val_loss'] = val_loss.numpy()
         model.history.final = final
 
+        # TODO conditional loss/metric print out:
         if (verbose > 2):
             print(
                 '        final {0:5d} | loss_train: {1: .6f} | '
@@ -834,10 +822,6 @@ class PsychologicalEmbedding(object):
         for batch in ds_obs:
             validation_step(batch)
         loss = metric_loss.result()
-
-        # TODO
-        # if tf.math.is_nan(loss):
-        #     loss = tf.constant(np.inf, dtype=K.floatx())
 
         return loss
 
@@ -897,10 +881,10 @@ class PsychologicalEmbedding(object):
             docket.stimulus_set, docket.max_n_reference, z
         )
         z_q, z_r, attention = self._broadcast_for_similarity(
-            z_q, z_r, group_id=group_id, phi=None
+            z_q, z_r, group_id=group_id
         )
 
-        sim_qr = self.kernel_layer([
+        sim_qr = self.kernel([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -1139,6 +1123,7 @@ class PsychologicalEmbedding(object):
             filepath: String specifying the path to save the model.
 
         """
+        # TODO CRITICAL update for new layer-based API
         f = h5py.File(filepath, "w")
         f.create_dataset("embedding_type", data=type(self).__name__)
         f.create_dataset("n_stimuli", data=self.n_stimuli)
@@ -1146,8 +1131,10 @@ class PsychologicalEmbedding(object):
         f.create_dataset("n_group", data=self.n_group)
 
         grp_z = f.create_group("z")
-        grp_z.create_dataset("value", data=self.vars['z'].numpy())
-        grp_z.create_dataset("trainable", data=self.vars['z'].trainable)
+        grp_z.create_dataset("value", data=self.z)
+        grp_z.create_dataset(
+            "trainable", data=self.coordinate.z.trainable
+        )
 
         grp_theta = f.create_group("theta")
         for theta_param_name in self.vars['theta']:
@@ -1161,7 +1148,6 @@ class PsychologicalEmbedding(object):
                 data=self.vars['theta'][theta_param_name].trainable
             )
 
-        # TODO handle phi save
         grp_phi = f.create_group("phi")
         for phi_param_name in self._phi:
             grp_phi_param = grp_phi.create_group(phi_param_name)
@@ -1202,25 +1188,26 @@ class PsychologicalEmbedding(object):
             emb: A group-specific embedding.
 
         """
-        # TODO should i access getter or TF variable?
         emb = copy.deepcopy(self)
         z = self.z
         rho = self.rho
         if np.isscalar(group_id):
-            attention_weights = self._phi["w"]["value"][group_id, :]
+            attention_weights = self.w[group_id, :]
         else:
             group_id = np.asarray(group_id)
-            attention_weights = self._phi["w"]["value"][group_id, :]
+            attention_weights = self.w[group_id, :]
             attention_weights = np.mean(attention_weights, axis=0)
 
         z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
         emb.z = z_group
         emb.n_group = 1
-        emb._phi["w"]["value"] = np.ones([1, self.n_dim])
+        emb.w = np.ones([1, self.n_dim])
         return emb
 
     def __deepcopy__(self, memodict={}):
         """Override deepcopy method."""
+        # TODO CRITICAL update and add other necessary attributes: optimizer, 
+        # etc.
         # Make shallow copy of whole object.
         cpyobj = type(self)(
             self.n_stimuli, n_dim=self.n_dim, n_group=self.n_group
@@ -1229,15 +1216,29 @@ class PsychologicalEmbedding(object):
         cpyobj.vars['z'] = copy.deepcopy(self.vars['z'], memodict)
         cpyobj.vars['phi'] = copy.deepcopy(self.vars['phi'], memodict)
         cpyobj.vars['theta'] = copy.deepcopy(self.vars['theta'], memodict)
-        # TODO CRITICAL add other necessary attributes: optimizer, etc
+
         return cpyobj
+
+
+class AnchoredOrdinal(PsychologicalEmbedding):
+    """An embedding model that uses anchored, ordinal judgments."""
+
+    def __init__(
+            self, n_stimuli, n_dim=2, n_group=1, coordinate=None,
+            attention=None, kernel=None):
+        """Initialize."""
+        PsychologicalEmbedding.__init__(
+            self, n_stimuli, n_dim=n_dim, n_group=n_group,
+            coordinate=coordinate,
+            attention=attention, kernel=kernel
+        )
 
 
 class QueryReference(Layer):
     """Model of query reference similarity judgments."""
 
     def __init__(
-            self, coordinate_layer, attention_layer, kernel_layer,
+            self, coordinate, attention, kernel,
             config_list):
         """Initialize.
 
@@ -1253,12 +1254,11 @@ class QueryReference(Layer):
         """
         super(QueryReference, self).__init__()
 
-        self.coordinate_layer = coordinate_layer
-        self.attention_layer = attention_layer
-        self.kernel_layer = kernel_layer
+        self.coordinate = coordinate
+        self.attention = attention
+        self.kernel = kernel
 
         self.n_config = tf.constant(len(config_list))
-        # self.config_n_reference = tf.constant(config_list.n_reference.values)  # TODO delete
         self.config_n_select = tf.constant(config_list.n_select.values)
         self.config_is_ranked = tf.constant(config_list.is_ranked.values)
         self.max_n_reference = tf.constant(
@@ -1282,17 +1282,17 @@ class QueryReference(Layer):
         is_present = inputs[4]
 
         # Expand attention weights.
-        attention = self.attention_layer(obs_group_id)
+        attention = self.attention(obs_group_id)
 
         # Inflate cooridnates.
-        outputs = self.coordinate_layer(
+        outputs = self.coordinate(
             [obs_stimulus_set, self.max_n_reference]
         )
         z_q = outputs[0]
         z_r = outputs[1]
 
         # Compute similarity between query and references.
-        sim_qr = self.kernel_layer([z_q, z_r, attention])
+        sim_qr = self.kernel([z_q, z_r, attention])
 
         # Zero out similarities involving placeholder.
         sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
@@ -1326,9 +1326,9 @@ class QueryReference(Layer):
 
         return likelihood
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
-        x = 1  # TODO
+        pass
 
 
 class Coordinate(Layer):
@@ -1338,7 +1338,9 @@ class Coordinate(Layer):
 
     """
 
-    def __init__(self, n_stimuli, n_dim, fit_z=True, z_min=None, z_max=None):
+    def __init__(
+            self, n_stimuli, n_dim, fit_z=True, z_min=None, z_max=None,
+            **kwargs):
         """Initialize a coordinate layer.
 
         With no constraints, the coordinates are initialized using a
@@ -1352,7 +1354,7 @@ class Coordinate(Layer):
             z_max (optional):
 
         """
-        super(Coordinate, self).__init__()
+        super(Coordinate, self).__init__(**kwargs)
 
         self.n_stimuli = n_stimuli
         self.n_dim = n_dim
@@ -1368,7 +1370,6 @@ class Coordinate(Layer):
         else:
             z_constraint = ProjectZ()
 
-        # TODO RandomEmbedding should take z_min and z_max argument.
         self.fit_z = fit_z
         self.z = tf.Variable(
             initial_value=self.random_z(), trainable=fit_z,
@@ -1436,13 +1437,14 @@ class Coordinate(Layer):
         z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
         return (z_q, z_r_2)
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
         if self.fit_z:
-            self.z.assign(self.random_z)
+            self.z.assign(self.random_z())
 
     def random_z(self):
         """Random z."""
+        # TODO RandomEmbedding should take z_min and z_max argument.
         z = RandomEmbedding(
             mean=tf.zeros([self.n_dim], dtype=K.floatx()),
             stdev=tf.ones([self.n_dim], dtype=K.floatx()),
@@ -1456,14 +1458,14 @@ class Coordinate(Layer):
 class WeightedDistance(Layer):
     """Weighted Minkowski distance."""
 
-    def __init__(self, fit_rho=True):
+    def __init__(self, fit_rho=True, **kwargs):
         """Initialize.
 
         Arguments:
             fit_rho (optional): Boolean
 
         """
-        super(WeightedDistance, self).__init__()
+        super(WeightedDistance, self).__init__(**kwargs)
         self.fit_rho = fit_rho
         self.rho = tf.Variable(
             initial_value=self.random_rho(),
@@ -1489,7 +1491,7 @@ class WeightedDistance(Layer):
 
         return d_qr
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
         if self.fit_rho:
             self.rho.assign(self.random_rho())
@@ -1499,10 +1501,10 @@ class WeightedDistance(Layer):
         return tf.random_uniform_initializer(1.01, 3.)(shape=[])
 
 
-class Attention(Layer):
+class SeparateAttention(Layer):
     """Attention Layer."""
 
-    def __init__(self, n_dim, n_group, fit_group=None):
+    def __init__(self, n_dim, n_group, fit_group=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -1512,7 +1514,7 @@ class Attention(Layer):
                 shape=(n_group,)
 
         """
-        super(Attention, self).__init__()
+        super(SeparateAttention, self).__init__(**kwargs)
 
         self.n_dim = n_dim
         self.n_group = n_group
@@ -1526,7 +1528,7 @@ class Attention(Layer):
 
         w_list = []
         for i_group in range(self.n_group):
-            var_name = "w_{0}".format(i_group)
+            w_i_name = "w_{0}".format(i_group)
             if self.n_group == 1:
                 initial_value = np.ones([1, self.n_dim])
             else:
@@ -1534,12 +1536,13 @@ class Attention(Layer):
 
             w_i = tf.Variable(
                 initial_value=initial_value,
-                trainable=fit_group[i_group], name=var_name, dtype=K.floatx(),
+                trainable=fit_group[i_group], name=w_i_name, dtype=K.floatx(),
                 constraint=ProjectAttention()
             )
-            setattr(self, var_name, w_i)
+            setattr(self, w_i_name, w_i)
             w_list.append(w_i)
-        self.w_all = tf.concat(w_list, axis=0)  # TODO check that this updates after variable update
+        self.w_list = w_list
+        self.concat_layer = tf.keras.layers.Concatenate(axis=0)
 
     def call(self, inputs):
         """Call.
@@ -1550,17 +1553,21 @@ class Attention(Layer):
             inputs: group_id
 
         """
-        w_expand = tf.gather(self.w_all, inputs)
+        w_all = self.concat_layer(self.w_list)
+        w_expand = tf.gather(w_all, inputs)
         w_expand = tf.expand_dims(w_expand, axis=2)
         return w_expand
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
+        w_list = []
         for i_group in range(self.n_group):
             w_i_name = "w_{0}".format(i_group)
+            w_i = getattr(self, w_i_name)
             if self.fit_group[i_group]:
-                w_i = getattr(self, w_i_name)
                 w_i.assign(self.random_w())
+            w_list.append(w_i)
+        self.w_list = w_list
 
     def random_w(self):
         """Random w."""
@@ -1569,6 +1576,69 @@ class Attention(Layer):
         return RandomAttention(
             alpha, scale, dtype=K.floatx()
         )(shape=[1, self.n_dim])
+
+
+class Attention(Layer):
+    """Attention Layer."""
+
+    def __init__(self, n_dim, n_group, fit_group=None, **kwargs):
+        """Initialize.
+
+        Arguments:
+            n_dim: Integer
+            n_group: Integer
+            fit_group: Boolean Array
+                shape=(n_group,)
+
+        """
+        super(Attention, self).__init__(**kwargs)
+
+        self.n_dim = n_dim
+        self.n_group = n_group
+
+        if fit_group is None:
+            if self.n_group == 1:
+                fit_group = False
+            else:
+                fit_group = True
+        self.fit_group = fit_group
+
+        if self.n_group == 1:
+            initial_value = np.ones([1, self.n_dim])
+        else:
+            initial_value = self.random_w()
+
+        self.w = tf.Variable(
+            initial_value=initial_value,
+            trainable=fit_group, name='w', dtype=K.floatx(),
+            constraint=ProjectAttention()
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Inflate weights by `group_id`.
+
+        Arguments:
+            inputs: group_id
+
+        """
+        w_expand = tf.gather(self.w, inputs)
+        w_expand = tf.expand_dims(w_expand, axis=2)
+        return w_expand
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        if self.fit_group:
+            self.w.assign(self.random_w())
+
+    def random_w(self):
+        """Random w."""
+        scale = tf.constant(self.n_dim, dtype=K.floatx())
+        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
+        return RandomAttention(
+            alpha, scale, dtype=K.floatx()
+        )(shape=[self.n_group, self.n_dim])
 
 
 class InverseKernel(Layer):
@@ -1581,7 +1651,7 @@ class InverseKernel(Layer):
 
     """
 
-    def __init__(self, fit_rho=True, fit_tau=True, fit_mu=True):
+    def __init__(self, fit_rho=True, fit_tau=True, fit_mu=True, **kwargs):
         """Initialize.
 
         Arguments:
@@ -1590,7 +1660,7 @@ class InverseKernel(Layer):
             fit_beta (optional): Boolean
 
         """
-        super(InverseKernel, self).__init__()
+        super(InverseKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
 
         self.fit_tau = fit_tau
@@ -1635,9 +1705,9 @@ class InverseKernel(Layer):
         sim_qr = 1 / (tf.pow(d_qr, self.tau) + self.mu)
         return sim_qr
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset()
+        self.distance_layer.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -1683,7 +1753,9 @@ class ExponentialKernel(Layer):
 
     """
 
-    def __init__(self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=True):
+    def __init__(
+            self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=True,
+            **kwargs):
         """Initialize.
 
         Arguments:
@@ -1693,7 +1765,7 @@ class ExponentialKernel(Layer):
             fit_beta (optional): Boolean
 
         """
-        super(ExponentialKernel, self).__init__()
+        super(ExponentialKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
 
         self.fit_tau = fit_tau
@@ -1753,9 +1825,9 @@ class ExponentialKernel(Layer):
         sim_qr = tf.exp(tf.negative(self.beta) * tf.pow(d_qr, self.tau)) + self.gamma
         return sim_qr
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset()
+        self.distance_layer.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -1791,7 +1863,8 @@ class HeavyTailedKernel(Layer):
     """
 
     def __init__(
-            self, fit_rho=True, fit_tau=True, fit_kappa=True, fit_alpha=True):
+            self, fit_rho=True, fit_tau=True, fit_kappa=True, fit_alpha=True,
+            **kwargs):
         """Initialize.
 
         Arguments:
@@ -1801,7 +1874,7 @@ class HeavyTailedKernel(Layer):
             fit_alpha (optional): Boolean 
 
         """
-        super(HeavyTailedKernel, self).__init__()
+        super(HeavyTailedKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
 
         self.fit_tau = fit_tau
@@ -1856,9 +1929,9 @@ class HeavyTailedKernel(Layer):
         )
         return sim_qr
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset()
+        self.distance_layer.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -1902,7 +1975,8 @@ class StudentsTKernel(Layer):
 
     """
 
-    def __init__(self, n_dim, fit_rho=True, fit_tau=True, fit_alpha=True):
+    def __init__(
+            self, n_dim, fit_rho=True, fit_tau=True, fit_alpha=True, **kwargs):
         """Initialize.
 
         Arguments:
@@ -1912,7 +1986,7 @@ class StudentsTKernel(Layer):
             fit_alpha (optional): Boolean
 
         """
-        super(StudentsTKernel, self).__init__()
+        super(StudentsTKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
         self.n_dim = n_dim
 
@@ -1960,9 +2034,9 @@ class StudentsTKernel(Layer):
         )
         return sim_qr
 
-    def reset(self):
+    def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset()
+        self.distance_layer.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -2223,6 +2297,7 @@ def load_embedding(filepath):
         ValueError
 
     """
+    # TODO CRITICAL Update load for new API.
     f = h5py.File(filepath, 'r')
     # Common attributes.
     embedding_type = f['embedding_type'][()]
@@ -2242,7 +2317,6 @@ def load_embedding(filepath):
         raise ValueError(
             'No class found matching the provided `embedding_type`.')
 
-    # TODO fix load.
     for name in f['z']:
         embedding._z[name] = f['z'][name][()]
 
@@ -2377,40 +2451,6 @@ def _inflate_points(stimulus_set, n_reference, z):
     z_q = np.expand_dims(z_q, axis=2)
     z_r = z_qr[:, :, 1:, :]
     return (z_q, z_r)
-
-
-def _mink_distance(z_q, z_r, rho, attention):
-    """Weighted minkowski distance function.
-
-    Arguments:
-        z_q: A set of embedding points.
-            shape = (n_trial, n_dim)
-        z_r: A set of embedding points.
-            shape = (n_trial, n_dim)
-        rho: Scalar value controlling the metric. Must be [1, inf[ to
-            be a valid metric.
-        attention: The weights allocated to each dimension
-            in a weighted minkowski metric.
-            shape = (n_trial, n_dim)
-
-    Returns:
-        The corresponding similarity between rows of embedding
-            points.
-            shape = (n_trial,)
-
-    Notes:
-        The implementation for ne.sum appears to be slower than np.sum.
-        Furthermore, since ne.sum must be the last call, it forces at
-        least two evaluate methods, reducing the benefit of use ne.
-
-    """
-    # d_qr = attention * ((np.abs(z_q - z_r))**rho)
-    # d_qr = np.sum(d_qr, axis=1)**(1. / rho)
-
-    d_qr = ne.evaluate("attention * ((abs(z_q - z_r))**rho)")  # TODO
-    d_qr = np.sum(d_qr, axis=1)**(1. / rho)
-
-    return d_qr
 
 
 def _ranked_sequence_probability(sim_qr, n_select):

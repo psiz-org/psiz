@@ -198,7 +198,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         # Optimizer attributes.
         self.optimizer = None
         self.loss = None
-        self.regularizer = None
 
     def reset_weights(self):
         """Reinitialize trainable model parameters."""
@@ -504,13 +503,12 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                 )
             )
 
-    def compile(self, optimizer=None, loss=None, regularizer=None):
+    def compile(self, optimizer=None, loss=None):
         """Configure the model for training.
 
         Arguments:
             optimizer: A tf.keras.optimizer object.
             loss: A loss function.
-            regularizer: A regularization function.
 
         Raises:
             ValueError: If arguments are invalid.
@@ -523,11 +521,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         if loss is None:
             loss = observation_loss
         self.loss = loss
-
-        # TODO CRITICAL
-        if regularizer is None:
-            regularizer = no_regularization
-        self.regularizer = regularizer
 
     def fit(
             self, obs_train, batch_size=None, obs_val=None, epochs=5000,
@@ -2562,9 +2555,3 @@ def observation_loss(prob_all, weight):
     loss = tf.divide(loss, n_trial)
 
     return loss
-
-
-@tf.function(experimental_relax_shapes=True)
-def no_regularization(model):
-    """No regularization."""
-    return tf.constant(0.0, dtype=K.floatx())

@@ -99,7 +99,7 @@ class Restarter(object):
             # Update record with initialization values.
             history = None
             weights = None
-            fit_record.update(history, weights, is_init=True)
+            fit_record.update(history.final, weights, is_init=True)
             if (verbose > 2):
                 print('        Initialization')
                 print(
@@ -136,7 +136,7 @@ class Restarter(object):
             weights = self.emb.weights
 
             # Update fit record with latest restart.
-            fit_record.update(history, weights)
+            fit_record.update(history.final, weights)
 
         # Sort records from best to worst and grab best.
         fit_record.sort()
@@ -195,14 +195,14 @@ class FitRecord(object):
         self.init_loss = np.inf
         super().__init__()
 
-    def update(self, history, weights, is_init=False):
+    def update(self, final, weights, is_init=False):
         """Update record with incoming data.
 
         Arguments:
-            loss_train: TODO
-            loss_val: TODO
-            weights: TODO
-            is_init: TODO
+            final: A dictionary of non-weight properties to track.
+            weight: A dictionary of variable weights.
+            is_init: Boolean indicating if the update is an initial
+                evaluation.
 
         Notes:
             The update method does not worry about keeping the
@@ -210,7 +210,7 @@ class FitRecord(object):
             sort method.
 
         """
-        loss_monitor = history.final[self.monitor]
+        loss_monitor = final[self.monitor]
         dmy_idx = np.arange(self.n_record)
         locs_is_worse = np.greater(
             self.record[self.monitor], loss_monitor
@@ -223,7 +223,7 @@ class FitRecord(object):
             idx_worst = idx_eligable_as_worst[idx_idx_worst]
 
             # Replace worst restart with incoming restart.
-            for k, v in history.final.items():
+            for k, v in final.items():
                 if k not in self.record:
                     self.record[k] = np.inf * np.ones([self.n_record])
                 self.record[k][idx_worst] = v

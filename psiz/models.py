@@ -122,8 +122,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         log_dir: The location of the logs. The default location is
             `/tmp/psiz/tensorboard_logs/`.
         log_freq: The number of epochs to wait between log entries.
-        fit_duration: The duration (in seconds) of the last called
-            fitting procedure.
         posterior_duration: The duration (in seconds) of the last
             called posterior sampling procedure.
 
@@ -192,7 +190,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         self.log_freq = 10
 
         # Timer attributes. TODO
-        self.fit_duration = 0.0
         self.posterior_duration = 0.0
 
         # Optimizer attributes.
@@ -547,7 +544,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             history: A tf.callbacks.History object.
 
         """
-        start_time_s = time.time()
+        fit_start_time_s = time.time()
 
         self._check_obs(obs_train)
         n_obs_train = obs_train.n_trial
@@ -746,23 +743,31 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         ms_per_epoch = 1000 * epoch_stop_time_s / epoch
         time_per_epoch_str = '{0:.0f} ms/epoch'.format(ms_per_epoch)
 
-        # Add final model losses to history object.
+        # Add final model losses to a `final` dictionary.
         # NOTE: If there is an early stopping callback with
         # restore_best_weights, then the final evaluation will use
         # those weights.
         final = {}
+        final['epoch'] = epoch
+
         metric_train_loss.reset_states()
         metric_val_loss.reset_states()
         for batch_train in ds_obs_train:
             final_step(batch_train, metric_train_loss)
         train_loss = metric_train_loss.result()
         final['train_loss'] = train_loss.numpy()
-        final['epoch'] = epoch
+
         if do_validation:
             for batch_val in ds_obs_val:
                 validation_step(batch_val)
             val_loss = metric_val_loss.result()
             final['val_loss'] = val_loss.numpy()
+
+        # Add time information.
+        final['total_duration_s'] = time.time() - fit_start_time_s
+        final['ms_per_epoch'] = ms_per_epoch
+
+        # Piggy-back on History object.
         model.history.final = final
 
         # TODO conditional loss/metric print out:

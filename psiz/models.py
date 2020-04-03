@@ -175,11 +175,11 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         # Initialize model components.
         if coordinate is None:
-            coordinate = Coordinate(self.n_stimuli, self.n_dim)
+            coordinate = Coordinate(n_stimuli=self.n_stimuli, n_dim=self.n_dim)
         self.coordinate = coordinate
 
         if attention is None:
-            attention = Attention(self.n_dim, self.n_group)
+            attention = Attention(n_dim=self.n_dim, n_group=self.n_group)
         self.attention = attention
 
         if kernel is None:
@@ -635,14 +635,15 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
                 prob = model(inputs)
-                loss = (
-                    self.loss(prob, inputs['weight'])
-                    # self.regularizer(model)  # TODO CRITICAL alternative regularization
-                )
+                # Loss value for this minibatch.
+                loss_value = self.loss(prob, inputs['weight'])
+                # Add extra losses created during this forward pass.
+                loss_value += sum(model.losses)
+
             gradients = grad_tape.gradient(
-                loss, model.trainable_variables
+                loss_value, model.trainable_variables
             )
-            metric_train_loss(loss)
+            metric_train_loss(loss_value)
 
             # NOTE: There are problems using constraints with
             # Eager Execution since gradients are returned as
@@ -661,20 +662,20 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         def validation_step(inputs):
             # Compute validation loss.
             prob = model(inputs)
-            loss = (
-                self.loss(prob, inputs['weight'])
-                # self.regularizer(model)  # TODO CRITICAL alternative regularization
-            )
-            metric_val_loss(loss)
+            # Loss value for this minibatch.
+            loss_value = self.loss(prob, inputs['weight'])
+            # Add extra losses created during this forward pass.
+            loss_value += sum(model.losses)
+            metric_val_loss(loss_value)
 
         @tf.function
         def final_step(inputs, metric):
             prob = model(inputs)
-            loss = (
-                self.loss(prob, inputs['weight'])
-                # self.regularizer(model)  # TODO CRITICAL alternative regularization
-            )
-            metric(loss)
+            # Loss value for this minibatch.
+            loss_value = self.loss(prob, inputs['weight'])
+            # Add extra losses created during this forward pass.
+            loss_value += sum(model.losses)
+            metric(loss_value)
 
         callback_list.on_train_begin(logs=None)
 
@@ -816,8 +817,8 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         def eval_step(inputs):
             # Compute validation loss.
             prob = model(inputs)
-            loss = self.loss(prob, inputs['weight'])
-            metric_loss(loss)
+            loss_value = self.loss(prob, inputs['weight'])
+            metric_loss(loss_value)
 
         for batch in ds_obs:
             eval_step(batch)
@@ -1337,7 +1338,7 @@ class Coordinate(Layer):
     """
 
     def __init__(
-            self, n_stimuli, n_dim, fit_z=True, z_min=None, z_max=None,
+            self, n_stimuli=None, n_dim=None, fit_z=True, z_min=None, z_max=None,
             **kwargs):
         """Initialize a coordinate layer.
 
@@ -1502,7 +1503,7 @@ class WeightedDistance(Layer):
 class SeparateAttention(Layer):
     """Attention Layer."""
 
-    def __init__(self, n_dim, n_group, fit_group=None, **kwargs):
+    def __init__(self, n_dim, n_group=1, fit_group=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -1579,12 +1580,12 @@ class SeparateAttention(Layer):
 class Attention(Layer):
     """Attention Layer."""
 
-    def __init__(self, n_dim, n_group, fit_group=None, **kwargs):
+    def __init__(self, n_dim=None, n_group=1, fit_group=None, **kwargs):
         """Initialize.
 
         Arguments:
             n_dim: Integer
-            n_group: Integer
+            n_group (optional): Integer
             fit_group: Boolean Array
                 shape=(n_group,)
 
@@ -1976,11 +1977,11 @@ class StudentsTKernel(Layer):
     """
 
     def __init__(
-            self, n_dim, fit_rho=True, fit_tau=True, fit_alpha=True, **kwargs):
+            self, n_dim=None, fit_rho=True, fit_tau=True, fit_alpha=True, **kwargs):
         """Initialize.
 
         Arguments:
-            n_dim:
+            n_dim:  Integer indicating the dimensionality of the embedding.
             fit_rho (optional): Boolean
             fit_tau (optional): Boolean
             fit_alpha (optional): Boolean

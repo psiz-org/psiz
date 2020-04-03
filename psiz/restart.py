@@ -126,7 +126,9 @@ class Restarter(object):
             # Reset trainable weights.
             self.emb.reset_weights()
             # Reset optimizer.
-            self.emb.optimizer = type(self.emb.optimizer).from_config(self.optimizer_config)
+            self.emb.optimizer = type(
+                self.emb.optimizer
+            ).from_config(self.optimizer_config)
 
             # Distinguish between restart by setting log_dir for TensorBoard.
             self.emb.log_dir = '{0}/{1}'.format(self.log_dir, i_restart)

@@ -766,7 +766,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         final['epoch'] = epoch
         if do_validation:
             for batch_val in ds_obs_val:
-                validation_step(batch_val)        
+                validation_step(batch_val)
             val_loss = metric_val_loss.result()
             final['val_loss'] = val_loss.numpy()
         model.history.final = final
@@ -860,8 +860,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         if z is None:
             z = self.z
-        else:
-            self._check_z(z)
 
         n_config = docket.config_list.shape[0]
 
@@ -1206,7 +1204,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
     def __deepcopy__(self, memodict={}):
         """Override deepcopy method."""
-        # TODO CRITICAL update and add other necessary attributes: optimizer, 
+        # TODO CRITICAL update and add other necessary attributes: optimizer,
         # etc.
         # Make shallow copy of whole object.
         cpyobj = type(self)(
@@ -1822,7 +1820,9 @@ class ExponentialKernel(Layer):
         d_qr = self.distance_layer([z_q, z_r, w])
 
         # Exponential family similarity function.
-        sim_qr = tf.exp(tf.negative(self.beta) * tf.pow(d_qr, self.tau)) + self.gamma
+        sim_qr = tf.exp(
+            tf.negative(self.beta) * tf.pow(d_qr, self.tau)
+        ) + self.gamma
         return sim_qr
 
     def reset_weights(self):
@@ -1871,7 +1871,7 @@ class HeavyTailedKernel(Layer):
             fit_rho (optional): Boolean
             fit_tau (optional): Boolean
             fit_kappa (optional): Boolean
-            fit_alpha (optional): Boolean 
+            fit_alpha (optional): Boolean
 
         """
         super(HeavyTailedKernel, self).__init__(**kwargs)
@@ -1980,7 +1980,7 @@ class StudentsTKernel(Layer):
         """Initialize.
 
         Arguments:
-            n_dim: 
+            n_dim:
             fit_rho (optional): Boolean
             fit_tau (optional): Boolean
             fit_alpha (optional): Boolean

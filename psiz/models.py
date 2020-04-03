@@ -614,7 +614,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
         summary_writer = tf.summary.create_file_writer(self.log_dir)
 
-        # NOTE: Must bring into local scope in order for optimizer weights
+        # NOTE: Must bring into local scope in order for optimizer state
         # to update appropriately.
         optimizer = self.optimizer
 
@@ -624,9 +624,9 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
-                prob = model(inputs)
+                probs = model(inputs)
                 # Loss value for this minibatch.
-                loss_value = self.loss(prob, inputs['weight'])
+                loss_value = self.loss(probs, inputs['weight'])
                 # Add extra losses created during this forward pass.
                 loss_value += sum(model.losses)
 
@@ -651,18 +651,18 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         @tf.function
         def validation_step(inputs):
             # Compute validation loss.
-            prob = model(inputs)
+            probs = model(inputs)
             # Loss value for this minibatch.
-            loss_value = self.loss(prob, inputs['weight'])
+            loss_value = self.loss(probs, inputs['weight'])
             # Add extra losses created during this forward pass.
             loss_value += sum(model.losses)
             metric_val_loss(loss_value)
 
         @tf.function
         def final_step(inputs, metric):
-            prob = model(inputs)
+            probs = model(inputs)
             # Loss value for this minibatch.
-            loss_value = self.loss(prob, inputs['weight'])
+            loss_value = self.loss(probs, inputs['weight'])
             # Add extra losses created during this forward pass.
             loss_value += sum(model.losses)
             metric(loss_value)
@@ -814,8 +814,8 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         @tf.function
         def eval_step(inputs):
             # Compute validation loss.
-            prob = model(inputs)
-            loss_value = self.loss(prob, inputs['weight'])
+            probs = model(inputs)
+            loss_value = self.loss(probs, inputs['weight'])
             metric_loss(loss_value)
 
         for batch in ds_obs:
@@ -903,15 +903,15 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                 n_outcome = 1
 
             # Compute probability of each possible outcome.
-            prob = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
+            probs_config = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
             # TODO (maybe faster) stack permutations, run
             # _ranked_sequence_probability once and then reshape.
             for i_outcome in range(n_outcome):
                 s_qr_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
-                prob[:, i_outcome, :] = _ranked_sequence_probability(
+                probs_config[:, i_outcome, :] = _ranked_sequence_probability(
                     s_qr_perm, config['n_select']
                 )
-            prob_all[trial_locs, 0:n_outcome, :] = prob
+            prob_all[trial_locs, 0:n_outcome, :] = probs_config
         prob_all = ma.masked_values(prob_all, -1)
 
         # Correct for any numerical inaccuracy.
@@ -1019,12 +1019,12 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             # Assemble full z.
             z_full[part_idx, :] = z_part
             cap = 2.2204e-16
-            prob_all = self.outcome_probability(
+            probs = self.outcome_probability(
                 obs, group_id=obs.group_id, z=z_full,
                 unaltered_only=True
             )
-            prob = ma.maximum(cap, prob_all[:, 0])
-            ll = ma.sum(ma.log(prob))
+            probs = ma.maximum(cap, probs[:, 0])
+            ll = ma.sum(ma.log(probs))
             return ll
 
         # Initialize sampler.
@@ -2544,19 +2544,19 @@ def _tf_ranked_sequence_probability(sim_qr, n_select):
 
 
 @tf.function(experimental_relax_shapes=True)
-def observation_loss(prob_all, weight):
+def observation_loss(y_pred, sample_weight):
     """Compute model loss given observation probabilities."""
-    n_trial = tf.shape(prob_all)[0]
+    n_trial = tf.shape(y_pred)[0]
     n_trial = tf.cast(n_trial, dtype=K.floatx())
 
     # Convert to (weighted) log probabilities.
     cap = tf.constant(2.2204e-16, dtype=K.floatx())
-    prob_all = tf.math.log(tf.maximum(prob_all, cap))
-    prob_all = tf.multiply(weight, prob_all)
+    y_pred = tf.math.log(tf.maximum(y_pred, cap))
+    y_pred = tf.multiply(sample_weight, y_pred)
 
     # Divide by number of trials to make train and test loss
     # comparable.
-    loss = tf.negative(tf.reduce_sum(prob_all))
+    loss = tf.negative(tf.reduce_sum(y_pred))
     loss = tf.divide(loss, n_trial)
 
     return loss

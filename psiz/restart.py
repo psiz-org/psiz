@@ -91,7 +91,7 @@ class Restarter(object):
         """
         fit_record = FitRecord(self.n_record, self.monitor)
 
-        # Grab optimizer configuration.
+        # Grab initial optimizer configuration for resetting state.
         self.optimizer_config = self.emb.optimizer.get_config()
 
         # Initial evaluation. TODO
@@ -125,7 +125,7 @@ class Restarter(object):
 
             # Reset trainable weights.
             self.emb.reset_weights()
-            # Reset optimizer.
+            # Reset optimizer state.
             self.emb.optimizer = type(
                 self.emb.optimizer
             ).from_config(self.optimizer_config)
@@ -191,6 +191,7 @@ class FitRecord(object):
             monitor: np.inf * np.ones([n_record]),
             'weights': [None] * n_record
         }
+        self.average = {}
         self.beat_init = None
         self.init_loss = np.inf
         super().__init__()

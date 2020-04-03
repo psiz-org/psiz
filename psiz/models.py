@@ -1336,8 +1336,8 @@ class Coordinate(Layer):
     """
 
     def __init__(
-            self, n_stimuli=None, n_dim=None, fit_z=True, z_min=None, z_max=None,
-            **kwargs):
+            self, n_stimuli=None, n_dim=None, fit_z=True, z_min=None,
+            z_max=None, **kwargs):
         """Initialize a coordinate layer.
 
         With no constraints, the coordinates are initialized using a

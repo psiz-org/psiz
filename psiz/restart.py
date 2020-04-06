@@ -152,8 +152,8 @@ class Restarter(object):
         if (verbose > 1):
             if fit_record.beat_init:
                 print(
-                    '    Best Restart\n        n_epoch: {0} | '
-                    'loss: {1: .6f} | loss_val: {2: .6f}'.format(
+                    '    Best Restart\n        n_epoch: {0:.0f} | '
+                    'loss: {1:.6f} | loss_val: {2:.6f}'.format(
                         epoch_best, loss_train_best, loss_val_best
                     )
                 )

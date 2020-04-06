@@ -764,7 +764,9 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             final['val_loss'] = val_loss.numpy()
 
         # Add time information.
-        final['total_duration_s'] = time.time() - fit_start_time_s
+        total_duration = time.time() - fit_start_time_s
+        total_duration_str = '{0:.0f} s'.format(total_duration)
+        final['total_duration_s'] = total_duration
         final['ms_per_epoch'] = ms_per_epoch
 
         # Piggy-back on History object.
@@ -774,9 +776,9 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         if (verbose > 2):
             print(
                 '        final {0:5d} | loss_train: {1: .6f} | '
-                'loss_val: {2: .6f} | {3}'.format(
+                'loss_val: {2: .6f} | {3} | {4}'.format(
                     epoch, train_loss, val_loss,
-                    time_per_epoch_str
+                    total_duration_str,  time_per_epoch_str
                 )
             )
             print('')
@@ -1359,11 +1361,11 @@ class Coordinate(Layer):
         self.z_max = z_max
 
         if z_min is not None and z_max is None:
-            z_constraint = GreaterEqualThan(z_min=z_min)
+            z_constraint = GreaterEqualThan(min_value=z_min)
         elif z_min is None and z_max is not None:
-            z_constraint = LessEqualThan(z_max=z_max)
+            z_constraint = LessEqualThan(max_value=z_max)
         elif z_min is not None and z_max is not None:
-            z_constraint = MinMax(z_min, z_max)
+            z_constraint = MinMax(min_value, max_value)
         else:
             z_constraint = ProjectZ()
 

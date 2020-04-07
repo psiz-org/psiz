@@ -122,8 +122,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         log_dir: The location of the logs. The default location is
             `/tmp/psiz/tensorboard_logs/`.
         log_freq: The number of epochs to wait between log entries.
-        posterior_duration: The duration (in seconds) of the last
-            called posterior sampling procedure.
 
     """
 
@@ -182,17 +180,12 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             kernel = ExponentialKernel()
         self.kernel = kernel
 
-        # TODO CRITICAL add attributes save/load functionality.
-
-        # Default TensorBoard log attributes.
+        # Unsaved attributes.
+        # TensorBoard log attributes.
         self.do_log = False
         self.log_dir = '/tmp/psiz/tensorboard_logs/'
         self.log_freq = 10
-
-        # Timer attributes. TODO
-        self.posterior_duration = 0.0
-
-        # Optimizer attributes.
+        # Compile attributes.
         self.optimizer = None
         self.loss = None
 
@@ -251,18 +244,26 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             self.kernel.theta[k].assign(v)
 
     def get_weights(self):
-        """Getter method for all weights."""
-        d = {
-            'z': self.z,
-            'phi': self.phi,
-            'theta': self.theta
-        }
-        return d
+        """Get weights for all layers.
 
-    def set_weights(self, w):
+        Returns all weights as a dictionary of layers with each layer's
+        weights as a single-level dictionary of weights.
+
+        """
+        weights = {
+            'coordinate': {'z': self.z},
+            'attention': self.phi,
+            'kernel': self.theta
+        }
+        return weights
+
+    def set_weights(self, weights):
         """Setter method for all weights."""
-        for k, v in w.items():
-            setattr(self, k, v)
+        for layer_name, layer_dict in weights.items():
+            layer = getattr(self, layer_name)
+            for var_name, var_value in layer_dict.items():
+                var = getattr(layer, var_name)
+                var.assign(var_value)
 
     def _broadcast_for_similarity(
             self, z_q, z_r, group_id=None):
@@ -963,6 +964,12 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             1732-1740).
 
         """
+        # Timer attributes. TODO
+        # posterior_duration: The duration (in seconds) of the last
+        #     called posterior sampling procedure.
+        # self.posterior_duration = 0.0
+        # change references to .posterior_duration
+
         start_time_s = time.time()
         n_final_sample = int(n_final_sample)
         n_total_sample = n_burn + (n_final_sample * thin_step)
@@ -1119,51 +1126,22 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         # Save model architecture.
         grp_arch = f.create_group('architecture')
         # Create group for coordinate layer.
-        grp_coord = grp_arch.create_group('coordinate_layer')
+        grp_coord = grp_arch.create_group('coordinate')
         add_layer_to_save_architecture(grp_coord, self.coordinate)
         # Create group for attention layer.
-        grp_attention = grp_arch.create_group('attention_layer')
+        grp_attention = grp_arch.create_group('attention')
         add_layer_to_save_architecture(grp_attention, self.attention)
         # Create group for kernel layer.
-        grp_kernel = grp_arch.create_group('kernel_layer')
+        grp_kernel = grp_arch.create_group('kernel')
         add_layer_to_save_architecture(grp_kernel, self.kernel)
-
-        # # Create group for coordinate layer.
-        # grp_coord = grp_arch.create_group('coordinate_layer')
-        # grp_coord.create_dataset(
-        #     'class_name', data=type(self.coordinate).__name__
-        # )
-        # grp_coord.create_dataset(
-        #     'config', data=str(self.coordinate.get_config())
-        # )
-
-        # # Create group for attention layer.
-        # grp_attention = grp_arch.create_group('attention_layer')
-        # grp_attention.create_dataset(
-        #     'class_name', data=type(self.attention).__name__
-        # )
-        # grp_attention.create_dataset(
-        #     'config', data=str(self.attention.get_config())
-        # )
-
-        # # Create group for kernel layer.
-        # grp_kernel = grp_arch.create_group('kernel_layer')
-        # grp_kernel.create_dataset(
-        #     'class_name', data=type(self.kernel).__name__
-        # )
-        # grp_kernel.create_dataset(
-        #     'config', data=str(self.kernel.get_config())
-        # )
 
         # Save weights.
         weights = self.get_weights()
         grp_weights = f.create_group("weights")
-        for k, d in weights.items():
-            if isinstance(d, dict):
-                for var_name, var_value in d.items():
-                    grp_weights.create_dataset(var_name, data=var_value)
-            else:
-                grp_weights.create_dataset(k, data=d)
+        for layer_name, layer_dict in weights.items():
+            grp_layer = grp_weights.create_group(layer_name)
+            for k, v in layer_dict.items():
+                grp_layer.create_dataset(k, data=v)
 
         f.close()
 
@@ -1798,6 +1776,7 @@ class ExponentialKernel(Layer):
         """
         super(ExponentialKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance_layer.rho  # TODO ok, if so, do for others
 
         self.fit_tau = fit_tau
         self.tau = tf.Variable(
@@ -2390,17 +2369,18 @@ def load_embedding(filepath, custom_objects={}):
     n_group = f['n_group'][()]
 
     if embedding_type == 'AnchoredOrdinal':
+        grp_architecture = f['architecture']
         # Instantiate coordinate layer.
         coordinate_layer = load_layer(
-            f['architecture']['coordinate_layer'], custom_objects
+            grp_architecture['coordinate'], custom_objects
         )
         # Instantiate attention layer.
         attention_layer = load_layer(
-            f['architecture']['attention_layer'], custom_objects
+            grp_architecture['attention'], custom_objects
         )
         # Instantiate kernel layer.
         kernel_layer = load_layer(
-            f['architecture']['kernel_layer'], custom_objects
+            grp_architecture['kernel'], custom_objects
         )
 
         emb = AnchoredOrdinal(
@@ -2411,8 +2391,14 @@ def load_embedding(filepath, custom_objects={}):
 
         # Set weights.
         grp_weights = f['weights']
-        for var_name in grp_weights:
-            setattr(emb, var_name, grp_weights[var_name][()])
+        # Assemble dictionary of weights.
+        weights = {}
+        for layer_name, grp_layer in grp_weights.items():
+            layer_weights = {}
+            for var_name in grp_layer:
+                layer_weights[var_name] = grp_weights[layer_name][var_name][()]
+            weights[layer_name] = layer_weights
+        emb.set_weights(weights)
 
     else:
         # Create coordinate layer.

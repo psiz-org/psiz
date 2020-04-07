@@ -32,6 +32,7 @@ Functions:
 """
 
 from abc import ABCMeta, abstractmethod
+import ast
 import copy
 import datetime
 from random import randint
@@ -250,8 +251,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         for k, v in theta.items():
             self.kernel.theta[k].assign(v)
 
-    @property
-    def weights(self):
+    def get_weights(self):
         """Getter method for all weights."""
         d = {
             'z': self.z,
@@ -520,21 +520,20 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         self.loss = loss
 
     def fit(
-            self, obs_train, batch_size=None, obs_val=None, epochs=5000,
+            self, obs_train, batch_size=None, obs_val=None, epochs=1000,
             initial_epoch=0, callbacks=None, seed=None, verbose=0):
         """Fit the free parameters of the embedding model.
 
         Arguments:
             obs_train: An Observations object representing the observed
                 data used to train the model.
+            batch_size: The batch size to use for the training step.
             obs_val (optional): An Observations object representing the
                 observed data used to validate the model.
-            max_epoch (optional): The maximum number of epochs for
-                each restart. This is primarily a means of limiting
-                computational time.
-            patience (optional): How many epochs to wait without
-                an improvement in validation loss.
-            seed: An integer to be used to seed the random number
+            epochs (optional): The number of epochs to perform.
+            initial_epoch (optional): The initial epoch.
+            callbacks (optional): A list of TensorFlow callbacks.
+            seed (optional): An integer to be used to seed the random number
                 generator.
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
@@ -559,25 +558,15 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             batch_size_train = n_obs_train
             batch_size_val = n_obs_val
         else:
-            batch_size_train = batch_size
-            batch_size_val = batch_size
-
-        # TODO
-        # if (verbose > 0):
-        #     print('[psiz] fitting embedding...')
-        # if (verbose > 1):
-        #     print(
-        #         '    Settings:'
-        #         ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
-        #         ' | n_obs_train: {3} | n_obs_val: {4}'.format(
-        #             self.n_stimuli, self.n_dim, self.n_group,
-        #             n_obs_train, n_obs_val
-        #         )
-        #     )
+            batch_size_train = np.minimum(batch_size, n_obs_train)
+            batch_size_val = n_obs_val  # TODO
 
         # NOTE: The stack operation is used to make sure that a consistent
         # trial configuration list is used across train and validation.
-        obs = psiz.trials.stack([obs_train, obs_val])
+        if do_validation:
+            obs = psiz.trials.stack([obs_train, obs_val])
+        else:
+            obs = obs_train
 
         # Create dataset and build compatible model by examining the
         # different trial configurations used in `obs`.
@@ -1129,33 +1118,76 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         f.create_dataset("n_dim", data=self.n_dim)
         f.create_dataset("n_group", data=self.n_group)
 
-        grp_z = f.create_group("z")
-        grp_z.create_dataset("value", data=self.z)
-        grp_z.create_dataset(
-            "trainable", data=self.coordinate.z.trainable
+        # Create group for architecture.
+        grp_arch = f.create_group('architecture')
+
+        # Create group for coordinate layer.
+        grp_coord = grp_arch.create_group('coordinate_layer')
+        grp_coord.create_dataset(
+            'class_name', data=type(self.coordinate).__name__
+        )
+        grp_coord.create_dataset(
+            'config', data=str(self.coordinate.get_config())
         )
 
-        grp_theta = f.create_group("theta")
-        for theta_param_name in self.vars['theta']:
-            grp_theta_param = grp_theta.create_group(theta_param_name)
-            grp_theta_param.create_dataset(
-                "value",
-                data=self.vars['theta'][theta_param_name].numpy()
-            )
-            grp_theta_param.create_dataset(
-                "trainable",
-                data=self.vars['theta'][theta_param_name].trainable
-            )
+        # Create group for attention layer.
+        grp_attention = grp_arch.create_group('attention_layer')
+        grp_attention.create_dataset(
+            'class_name', data=type(self.attention).__name__
+        )
+        grp_attention.create_dataset(
+            'config', data=str(self.attention.get_config())
+        )
 
-        grp_phi = f.create_group("phi")
-        for phi_param_name in self._phi:
-            grp_phi_param = grp_phi.create_group(phi_param_name)
-            grp_phi_param.create_dataset(
-                "value", data=self._phi[phi_param_name]["value"]
-            )
-            grp_phi_param.create_dataset(
-                "trainable", data=self._phi[phi_param_name]["trainable"]
-            )
+        # Create group for kernel layer.
+        grp_kernel = grp_arch.create_group('kernel_layer')
+        grp_kernel.create_dataset(
+            'class_name', data=type(self.kernel).__name__
+        )
+        grp_kernel.create_dataset(
+            'config', data=str(self.kernel.get_config())
+        )
+
+        # Save weights.
+        weights = self.get_weights()
+        grp_weights = f.create_group("weights")
+        for k, d in weights.items():
+            if isinstance(d, dict):
+                for var_name, var_value in d.items():
+                    grp_weights.create_dataset(var_name, data=var_value)
+            else:
+                grp_weights.create_dataset(k, data=d)
+
+        # TODO clean up.
+        # Save coordinate layer information.
+        # grp_z = f.create_group("z")
+        # grp_z.create_dataset("value", data=self.z)
+        # grp_z.create_dataset(
+        #     "trainable", data=self.coordinate.z.trainable
+        # )
+
+        # Save kernel variables (theta).
+        # grp_theta = f.create_group("theta")
+        # for theta_name, theta_var in self.kernel.theta.items():
+        #     grp_theta_param = grp_theta.create_group(theta_name)
+        #     grp_theta_param.create_dataset(
+        #         "value",
+        #         data=theta_var.numpy()
+        #     )
+        #     # grp_theta_param.create_dataset(
+        #     #     "trainable",
+        #     #     data=theta_var.trainable
+        #     # )
+
+        # # Save phi variables.
+        # grp_phi = f.create_group("phi")
+        # grp_phi_param = grp_phi.create_group('w')
+        # grp_phi_param.create_dataset(
+        #     "value", data=self.attention.w.numpy()
+        # )
+        # # grp_phi_param.create_dataset(
+        # #     "trainable", data=self.attention.w.trainable
+        # # )
 
         f.close()
 
@@ -1453,6 +1485,15 @@ class Coordinate(Layer):
         )(shape=[self.n_stimuli, self.n_dim])
         return z
 
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'n_stimuli': self.n_stimuli, 'n_dim': self.n_dim,
+            'fit_z': self.fit_z, 'z_min': self.z_min, 'z_max': self.z_max
+        })
+        return config
+
 
 class WeightedDistance(Layer):
     """Weighted Minkowski distance."""
@@ -1498,6 +1539,12 @@ class WeightedDistance(Layer):
     def random_rho(self):
         """Random rho."""
         return tf.random_uniform_initializer(1.01, 3.)(shape=[])
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({'fit_rho': self.fit_rho})
+        return config
 
 
 class SeparateAttention(Layer):
@@ -1638,6 +1685,15 @@ class Attention(Layer):
         return RandomAttention(
             alpha, scale, dtype=K.floatx()
         )(shape=[self.n_group, self.n_dim])
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'n_dim': self.n_dim, 'n_group': self.n_group,
+            'fit_group': self.fit_group
+        })
+        return config
 
 
 class InverseKernel(Layer):
@@ -1850,6 +1906,15 @@ class ExponentialKernel(Layer):
     def random_beta(self):
         """Random beta."""
         return tf.random_uniform_initializer(1., 30.)(shape=[])
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_gamma': self.fit_gamma, 'fit_beta': self.fit_beta
+        })
+        return config
 
 
 class HeavyTailedKernel(Layer):
@@ -2282,7 +2347,7 @@ class ProjectAttention(Constraint):
         return tf_attention_proj
 
 
-def load_embedding(filepath):
+def load_embedding(filepath, custom_objects={}):
     """Load embedding model saved via the save method.
 
     The loaded data is instantiated as a concrete class of
@@ -2290,6 +2355,8 @@ def load_embedding(filepath):
 
     Arguments:
         filepath: The location of the hdf5 file to load.
+        custom_objects (optional): A dictionary mapping the string
+            class name to the Python class
 
     Returns:
         Loaded embedding model.
@@ -2306,36 +2373,115 @@ def load_embedding(filepath):
     n_dim = f['n_dim'][()]
     n_group = f['n_group'][()]
 
-    if embedding_type == 'Exponential':
-        embedding = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
-    elif embedding_type == 'HeavyTailed':
-        embedding = HeavyTailed(n_stimuli, n_dim=n_dim, n_group=n_group)
-    elif embedding_type == 'StudentsT':
-        embedding = StudentsT(n_stimuli, n_dim=n_dim, n_group=n_group)
-    elif embedding_type == 'Inverse':
-        embedding = Inverse(n_stimuli, n_dim=n_dim, n_group=n_group)
-    else:
-        raise ValueError(
-            'No class found matching the provided `embedding_type`.')
-
-    for name in f['z']:
-        embedding._z[name] = f['z'][name][()]
-
-    for p_name in f['theta']:
-        for name in f['theta'][p_name]:
-            embedding._theta[p_name][name] = f['theta'][p_name][name][()]
-
-    for p_name in f['phi']:
-        # Patch for older models using `phi_1` variable name.
-        if p_name == 'phi_1':
-            p_name_new = 'w'
+    if embedding_type == 'AnchoredOrdinal':
+        # Instantiate coordinate layer.
+        coordinate_class = f['architecture']['coordinate_layer']['class_name'][()]
+        coordinate_config = ast.literal_eval(
+            f['architecture']['coordinate_layer']['config'][()]
+        )
+        if coordinate_class in custom_objects:
+            coordinate_class_ = custom_objects[coordinate_class]
         else:
-            p_name_new = p_name
-        for name in f['phi'][p_name]:
-            embedding._phi[p_name_new][name] = f['phi'][p_name][name][()]
+            coordinate_class_ = getattr(psiz.models, coordinate_class)
+        coordinate_layer = coordinate_class_.from_config(coordinate_config)
+
+        # Instantiate attention layer.
+        attention_class = f['architecture']['attention_layer']['class_name'][()]
+        attention_config = ast.literal_eval(
+            f['architecture']['attention_layer']['config'][()]
+        )
+        if attention_class in custom_objects:
+            attention_class_ = custom_objects[attention_class]
+        else:
+            attention_class_ = getattr(psiz.models, attention_class)
+        attention_layer = attention_class_.from_config(attention_config)
+
+        # Instantiate kernel layer.
+        kernel_class = f['architecture']['kernel_layer']['class_name'][()]
+        kernel_config = ast.literal_eval(
+            f['architecture']['kernel_layer']['config'][()]
+        )
+        if kernel_class in custom_objects:
+            kernel_class_ = custom_objects[kernel_class]
+        else:
+            kernel_class_ = getattr(psiz.models, kernel_class)
+        kernel_layer = kernel_class_.from_config(kernel_config)
+
+        emb = AnchoredOrdinal(
+            n_stimuli, n_dim=n_dim, n_group=n_group,
+            coordinate=coordinate_layer, attention=attention_layer,
+            kernel=kernel_layer
+        )
+
+        # Set weights.
+        grp_weights = f['weights']
+        for var_name in grp_weights:
+            setattr(emb, var_name, grp_weights[var_name][()])
+
+    else:
+        # Handle old models. TODO
+        # Create coordinate layer.
+        z = f['z']['value'][()]
+        fit_z = f['z']['trainable'][()]
+        coordinate_layer = Coordinate(
+            n_stimuli=n_stimuli, n_dim=n_dim, fit_z=fit_z
+        )
+
+        # Create attention layer.
+        if 'phi_1' in f['phi']:
+            fit_group = f['phi']['phi_1']['trainable']
+            w = f['phi']['phi_1']['value']
+        else:
+            fit_group = f['phi']['w']['trainable']
+            w = f['phi']['w']['value']
+        attention_layer = Attention(
+            n_dim=n_dim, n_group=n_group, fit_group=fit_group
+        )
+        # OLD code for reference.
+        # for p_name in f['phi']:
+        #     # Patch for older models using `phi_1` variable name.
+        #     if p_name == 'phi_1':
+        #         p_name_new = 'w'
+        #     else:
+        #         p_name_new = p_name
+        #     for name in f['phi'][p_name]:
+        #         embedding._phi[p_name_new][name] = f['phi'][p_name][name][()]
+
+        # Create kernel layer.
+        theta_config = {}
+        theta_value = {}
+        for p_name in f['theta']:
+            theta_config['fit_' + p_name] = f['theta'][p_name]['trainable'][()]
+            theta_value[p_name] = f['theta'][p_name]['value'][()]
+            # for name in f['theta'][p_name]:
+            #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
+
+        if embedding_type == 'Exponential':
+            kernel_layer = ExponentialKernel(**theta_config)
+        elif embedding_type == 'HeavyTailed':
+            kernel_layer = HeavyTailedKernel(**theta_config)
+        elif embedding_type == 'StudentsT':
+            kernel_layer = StudentsTKernel(**theta_config)
+        elif embedding_type == 'Inverse':
+            kernel_layer = InverseKernel(**theta_config)
+        else:
+            raise ValueError(
+                'No class found matching the provided `embedding_type`.'
+            )
+
+        emb = AnchoredOrdinal(
+            n_stimuli, n_dim=n_dim, n_group=n_group,
+            coordinate=coordinate_layer, attention=attention_layer,
+            kernel=kernel_layer
+        )
+
+        # Set weights. TODO
+        emb.z = z
+        emb.w = w
+        emb.theta = theta_value
 
     f.close()
-    return embedding
+    return emb
 
 
 load = load_embedding

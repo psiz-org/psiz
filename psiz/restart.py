@@ -78,12 +78,13 @@ class Restarter(object):
         self.do_init = do_init
         self.log_dir = copy.copy(emb.log_dir)
 
-    def fit(self, obs_train, verbose=0, **kwargs):
+    def fit(self, obs_train, verbose=0, callbacks=None, **kwargs):
         """Fit the embedding model to the observations using restarts.
 
         Arguments: TODO
             obs: A psiz.trials.Observations object.
             verbose: Verbosity of output.
+            callbacks: A list of callbacks.
             **kwargs: Any additional keyword arguments.
 
         Returns:
@@ -131,6 +132,9 @@ class Restarter(object):
             )
             progbar.update(0)
 
+        print(self.emb.z[0, 0:10])  # TODO
+        print()
+
         # Run multiple restarts of embedding algorithm.
         for i_restart in range(self.n_restart):
             if (verbose > 2):
@@ -144,14 +148,22 @@ class Restarter(object):
             self.emb.optimizer = type(
                 self.emb.optimizer
             ).from_config(self.optimizer_config)
+            # Reset callbacks
+            for callback in callbacks:
+                callback.reset()
+
+            print(self.emb.z[0, 0:10])  # TODO
+            print()
 
             # Distinguish between restart by setting log_dir for TensorBoard.
             self.emb.log_dir = '{0}/{1}'.format(self.log_dir, i_restart)
-            history = self.emb.fit(obs_train, verbose=verbose, **kwargs)
+            history = self.emb.fit(
+                obs_train, verbose=verbose, callbacks=callbacks, **kwargs
+            )
             weights = self.emb.get_weights()
 
-            # print(self.emb.z[0, 0:10])  # TODO
-            # print()
+            print(self.emb.z[0, 0:10])  # TODO
+            print()
 
             # Update fit record with latest restart.
             fit_record.update(history.final, weights)

@@ -32,7 +32,6 @@ Functions:
 """
 
 from abc import ABCMeta, abstractmethod
-import ast
 import copy
 import datetime
 from random import randint
@@ -170,8 +169,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             n_group = 1
         self.n_group = n_group
 
-        # TODO CRITICAL to save/load functionality of below.
-
         # Initialize model components.
         if coordinate is None:
             coordinate = Coordinate(n_stimuli=self.n_stimuli, n_dim=self.n_dim)
@@ -184,6 +181,8 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         if kernel is None:
             kernel = ExponentialKernel()
         self.kernel = kernel
+
+        # TODO CRITICAL add attributes save/load functionality.
 
         # Default TensorBoard log attributes.
         self.do_log = False
@@ -1111,42 +1110,50 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             filepath: String specifying the path to save the model.
 
         """
-        # TODO CRITICAL update for new layer-based API
         f = h5py.File(filepath, "w")
         f.create_dataset("embedding_type", data=type(self).__name__)
         f.create_dataset("n_stimuli", data=self.n_stimuli)
         f.create_dataset("n_dim", data=self.n_dim)
         f.create_dataset("n_group", data=self.n_group)
 
-        # Create group for architecture.
+        # Save model architecture.
         grp_arch = f.create_group('architecture')
-
         # Create group for coordinate layer.
         grp_coord = grp_arch.create_group('coordinate_layer')
-        grp_coord.create_dataset(
-            'class_name', data=type(self.coordinate).__name__
-        )
-        grp_coord.create_dataset(
-            'config', data=str(self.coordinate.get_config())
-        )
-
+        add_layer_to_save_architecture(grp_coord, self.coordinate)
         # Create group for attention layer.
         grp_attention = grp_arch.create_group('attention_layer')
-        grp_attention.create_dataset(
-            'class_name', data=type(self.attention).__name__
-        )
-        grp_attention.create_dataset(
-            'config', data=str(self.attention.get_config())
-        )
-
+        add_layer_to_save_architecture(grp_attention, self.attention)
         # Create group for kernel layer.
         grp_kernel = grp_arch.create_group('kernel_layer')
-        grp_kernel.create_dataset(
-            'class_name', data=type(self.kernel).__name__
-        )
-        grp_kernel.create_dataset(
-            'config', data=str(self.kernel.get_config())
-        )
+        add_layer_to_save_architecture(grp_kernel, self.kernel)
+
+        # # Create group for coordinate layer.
+        # grp_coord = grp_arch.create_group('coordinate_layer')
+        # grp_coord.create_dataset(
+        #     'class_name', data=type(self.coordinate).__name__
+        # )
+        # grp_coord.create_dataset(
+        #     'config', data=str(self.coordinate.get_config())
+        # )
+
+        # # Create group for attention layer.
+        # grp_attention = grp_arch.create_group('attention_layer')
+        # grp_attention.create_dataset(
+        #     'class_name', data=type(self.attention).__name__
+        # )
+        # grp_attention.create_dataset(
+        #     'config', data=str(self.attention.get_config())
+        # )
+
+        # # Create group for kernel layer.
+        # grp_kernel = grp_arch.create_group('kernel_layer')
+        # grp_kernel.create_dataset(
+        #     'class_name', data=type(self.kernel).__name__
+        # )
+        # grp_kernel.create_dataset(
+        #     'config', data=str(self.kernel.get_config())
+        # )
 
         # Save weights.
         weights = self.get_weights()
@@ -1157,37 +1164,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                     grp_weights.create_dataset(var_name, data=var_value)
             else:
                 grp_weights.create_dataset(k, data=d)
-
-        # TODO clean up.
-        # Save coordinate layer information.
-        # grp_z = f.create_group("z")
-        # grp_z.create_dataset("value", data=self.z)
-        # grp_z.create_dataset(
-        #     "trainable", data=self.coordinate.z.trainable
-        # )
-
-        # Save kernel variables (theta).
-        # grp_theta = f.create_group("theta")
-        # for theta_name, theta_var in self.kernel.theta.items():
-        #     grp_theta_param = grp_theta.create_group(theta_name)
-        #     grp_theta_param.create_dataset(
-        #         "value",
-        #         data=theta_var.numpy()
-        #     )
-        #     # grp_theta_param.create_dataset(
-        #     #     "trainable",
-        #     #     data=theta_var.trainable
-        #     # )
-
-        # # Save phi variables.
-        # grp_phi = f.create_group("phi")
-        # grp_phi_param = grp_phi.create_group('w')
-        # grp_phi_param.create_dataset(
-        #     "value", data=self.attention.w.numpy()
-        # )
-        # # grp_phi_param.create_dataset(
-        # #     "trainable", data=self.attention.w.trainable
-        # # )
 
         f.close()
 
@@ -2347,6 +2323,47 @@ class ProjectAttention(Constraint):
         return tf_attention_proj
 
 
+def add_layer_to_save_architecture(grp_layer, layer):
+    """Add layer information to layer group.
+
+    Arguments:
+        grp_layer: An HDF5 group.
+        layer: A TensorFlow layer with a `get_config` method.
+
+    """
+    grp_layer.create_dataset(
+        'class_name', data=type(layer).__name__
+    )
+    grp_config = grp_layer.create_group('config')
+    layer_config = layer.get_config()
+    for k, v in layer_config.items():
+        if v is not None:
+            grp_config.create_dataset(k, data=v)
+
+
+def load_layer(grp_layer, custom_objects):
+    """Load a configured layer.
+
+    Arguments:
+        grp_layer: An HDF5 group.
+        custom_objects: A list of custom classes.
+
+    Returns:
+        layer: An instantiated and configured TensorFlow layer.
+
+    """
+    layer_class_name = grp_layer['class_name'][()]
+    layer_config = {}
+    for k in grp_layer['config']:
+        layer_config[k] = grp_layer['config'][k][()]
+
+    if layer_class_name in custom_objects:
+        layer_class = custom_objects[layer_class_name]
+    else:
+        layer_class = getattr(psiz.models, layer_class_name)
+    return layer_class.from_config(layer_config)
+
+
 def load_embedding(filepath, custom_objects={}):
     """Load embedding model saved via the save method.
 
@@ -2365,7 +2382,6 @@ def load_embedding(filepath, custom_objects={}):
         ValueError
 
     """
-    # TODO CRITICAL Update load for new API.
     f = h5py.File(filepath, 'r')
     # Common attributes.
     embedding_type = f['embedding_type'][()]
@@ -2375,37 +2391,17 @@ def load_embedding(filepath, custom_objects={}):
 
     if embedding_type == 'AnchoredOrdinal':
         # Instantiate coordinate layer.
-        coordinate_class = f['architecture']['coordinate_layer']['class_name'][()]
-        coordinate_config = ast.literal_eval(
-            f['architecture']['coordinate_layer']['config'][()]
+        coordinate_layer = load_layer(
+            f['architecture']['coordinate_layer'], custom_objects
         )
-        if coordinate_class in custom_objects:
-            coordinate_class_ = custom_objects[coordinate_class]
-        else:
-            coordinate_class_ = getattr(psiz.models, coordinate_class)
-        coordinate_layer = coordinate_class_.from_config(coordinate_config)
-
         # Instantiate attention layer.
-        attention_class = f['architecture']['attention_layer']['class_name'][()]
-        attention_config = ast.literal_eval(
-            f['architecture']['attention_layer']['config'][()]
+        attention_layer = load_layer(
+            f['architecture']['attention_layer'], custom_objects
         )
-        if attention_class in custom_objects:
-            attention_class_ = custom_objects[attention_class]
-        else:
-            attention_class_ = getattr(psiz.models, attention_class)
-        attention_layer = attention_class_.from_config(attention_config)
-
         # Instantiate kernel layer.
-        kernel_class = f['architecture']['kernel_layer']['class_name'][()]
-        kernel_config = ast.literal_eval(
-            f['architecture']['kernel_layer']['config'][()]
+        kernel_layer = load_layer(
+            f['architecture']['kernel_layer'], custom_objects
         )
-        if kernel_class in custom_objects:
-            kernel_class_ = custom_objects[kernel_class]
-        else:
-            kernel_class_ = getattr(psiz.models, kernel_class)
-        kernel_layer = kernel_class_.from_config(kernel_config)
 
         emb = AnchoredOrdinal(
             n_stimuli, n_dim=n_dim, n_group=n_group,
@@ -2419,7 +2415,6 @@ def load_embedding(filepath, custom_objects={}):
             setattr(emb, var_name, grp_weights[var_name][()])
 
     else:
-        # Handle old models. TODO
         # Create coordinate layer.
         z = f['z']['value'][()]
         fit_z = f['z']['trainable'][()]
@@ -2475,7 +2470,7 @@ def load_embedding(filepath, custom_objects={}):
             kernel=kernel_layer
         )
 
-        # Set weights. TODO
+        # Set weights.
         emb.z = z
         emb.w = w
         emb.theta = theta_value

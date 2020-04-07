@@ -150,6 +150,9 @@ class Restarter(object):
             history = self.emb.fit(obs_train, verbose=verbose, **kwargs)
             weights = self.emb.get_weights()
 
+            # print(self.emb.z[0, 0:10])  # TODO
+            # print()
+
             # Update fit record with latest restart.
             fit_record.update(history.final, weights)
 
@@ -160,6 +163,9 @@ class Restarter(object):
         epoch_best = fit_record.record['epoch'][0]
         self.emb.set_weights(fit_record.record['weights'][0])
 
+        # print(self.emb.z[0, 0:10])  # TODO
+        # print()
+
         # TODO handle time stats
         fit_duration = time.time() - start_time_s
         summary = fit_record.result()
@@ -167,8 +173,8 @@ class Restarter(object):
         if (verbose > 1):
             print(
                 '    Restart Summary\n'
-                '    Total duration: {0:.0f} s'.format(
-                    fit_duration
+                '    n_restart {0} | total_duration: {1:.0f} s'.format(
+                    self.n_restart, fit_duration
                 )
             )
             print(

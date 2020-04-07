@@ -1,11 +1,12 @@
 """Package initialization file.
 
 Modules:
-    benchmark
+    callbacks
     catalog
     datasets
     dimensionality
     generator
+    layers
     models
     preprocess
     simulate
@@ -15,9 +16,11 @@ Modules:
 """
 
 import psiz.catalog
+import psiz.callbacks
 import psiz.datasets
 import psiz.dimensionality
 import psiz.generator
+import psiz.layers
 import psiz.models
 import psiz.preprocess
 import psiz.restart

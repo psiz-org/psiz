@@ -630,7 +630,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             # cannot be used to update a variable. To solve this
             # problem, use the pattern below on any IndexedSlices.
             # gradients[0] = tf.convert_to_tensor(gradients[0])
-            gradients[1] = tf.convert_to_tensor(gradients[1])
+            # gradients[1] = tf.convert_to_tensor(gradients[1])
 
             # Apply gradients (subject to constraints).
             optimizer.apply_gradients(
@@ -1671,6 +1671,7 @@ class InverseKernel(Layer):
         """
         super(InverseKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance_layer.rho
 
         self.fit_tau = fit_tau
         self.tau = tf.Variable(
@@ -1732,6 +1733,15 @@ class InverseKernel(Layer):
         """Random mu."""
         return tf.random_uniform_initializer(0.0000000001, .001)(shape=[])
 
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_mu': self.fit_mu
+        })
+        return config
+
 
 class ExponentialKernel(Layer):
     """Exponential family similarity kernel.
@@ -1776,7 +1786,7 @@ class ExponentialKernel(Layer):
         """
         super(ExponentialKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
-        self.rho = self.distance_layer.rho  # TODO ok, if so, do for others
+        self.rho = self.distance_layer.rho
 
         self.fit_tau = fit_tau
         self.tau = tf.Variable(
@@ -1897,6 +1907,7 @@ class HeavyTailedKernel(Layer):
         """
         super(HeavyTailedKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance_layer.rho
 
         self.fit_tau = fit_tau
         self.tau = tf.Variable(
@@ -1975,6 +1986,15 @@ class HeavyTailedKernel(Layer):
         """Random alpha."""
         return tf.random_uniform_initializer(10., 60.)(shape=[])
 
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_kappa': self.fit_kappa, 'fit_alpha': self.fit_alpha
+        })
+        return config
+
 
 class StudentsTKernel(Layer):
     """Student's t-distribution similarity kernel.
@@ -2009,6 +2029,8 @@ class StudentsTKernel(Layer):
         """
         super(StudentsTKernel, self).__init__(**kwargs)
         self.distance_layer = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance_layer.rho
+
         self.n_dim = n_dim
 
         self.fit_tau = fit_tau
@@ -2074,6 +2096,15 @@ class StudentsTKernel(Layer):
         alpha_min = np.max((1, self.n_dim - 2.))
         alpha_max = self.n_dim + 2.
         return tf.random_uniform_initializer(alpha_min, alpha_max)(shape=[])
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_alpha': self.fit_alpha
+        })
+        return config
 
 
 def _assert_float_dtype(dtype):

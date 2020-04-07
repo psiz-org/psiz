@@ -28,6 +28,7 @@ Functions:
 """
 
 import copy
+import time
 
 import numpy as np
 
@@ -89,26 +90,40 @@ class Restarter(object):
             fit_record: A record of the best restarts.
 
         """
+        start_time_s = time.time()
         fit_record = FitRecord(self.n_record, self.monitor)
 
         # Grab initial optimizer configuration for resetting state.
         self.optimizer_config = self.emb.optimizer.get_config()
 
+        # TODO
+        # if (verbose > 0):
+        #     print('[psiz] fitting embedding...')
+        # if (verbose > 1):
+        #     print(
+        #         '    Settings:'
+        #         ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
+        #         ' | n_obs_train: {3} | n_obs_val: {4}'.format(
+        #             self.n_stimuli, self.n_dim, self.n_group,
+        #             n_obs_train, n_obs_val
+        #         )
+        #     )
+
         # Initial evaluation. TODO
-        if self.do_init:
-            # Update record with initialization values.
-            history = None
-            weights = None
-            fit_record.update(history.final, weights, is_init=True)
-            if (verbose > 2):
-                print('        Initialization')
-                print(
-                    '        '
-                    '     --     | '
-                    'loss_train: {0: .6f} | loss_val: {1: .6f}'.format(
-                        loss_train_init, loss_val_init)
-                )
-                print('')
+        # if self.do_init:
+        #     # Update record with initialization values.
+        #     history = None
+        #     weights = None
+        #     fit_record.update(history.final, weights, is_init=True)
+        #     if (verbose > 2):
+        #         print('        Initialization')
+        #         print(
+        #             '        '
+        #             '     --     | '
+        #             'loss_train: {0: .6f} | loss_val: {1: .6f}'.format(
+        #                 loss_train_init, loss_val_init)
+        #         )
+        #         print('')
 
         if verbose > 0 and verbose < 3:
             progbar = psiz.utils.ProgressBar(
@@ -133,7 +148,7 @@ class Restarter(object):
             # Distinguish between restart by setting log_dir for TensorBoard.
             self.emb.log_dir = '{0}/{1}'.format(self.log_dir, i_restart)
             history = self.emb.fit(obs_train, verbose=verbose, **kwargs)
-            weights = self.emb.weights
+            weights = self.emb.get_weights()
 
             # Update fit record with latest restart.
             fit_record.update(history.final, weights)
@@ -146,19 +161,36 @@ class Restarter(object):
         self.emb.set_weights(fit_record.record['weights'][0])
 
         # TODO handle time stats
-        # emb.fit_duration = time.time() - start_time_s  # TODO
-        # emb.fit_record = fit_record
+        fit_duration = time.time() - start_time_s
+        summary = fit_record.result()
 
         if (verbose > 1):
-            if fit_record.beat_init:
-                print(
-                    '    Best Restart\n        n_epoch: {0:.0f} | '
-                    'loss: {1:.6f} | loss_val: {2:.6f}'.format(
-                        epoch_best, loss_train_best, loss_val_best
-                    )
+            print(
+                '    Restart Summary\n'
+                '    Total duration: {0:.0f} s'.format(
+                    fit_duration
                 )
-            else:
+            )
+            print(
+                '    Best | n_epoch: {0:.0f} | '
+                'loss_train: {1:.6f} | loss_val: {2:.6f}'.format(
+                    epoch_best, loss_train_best, loss_val_best
+                )
+            )
+            print(
+                '    Mean | n_epoch: {0:.0f} | loss_train: {1:.4f} | '
+                'loss_val: {2:.4f} | {3:.0f} s | {4:.0f} ms/epoch'.format(
+                    summary['epoch'],
+                    summary['train_loss'],
+                    summary['val_loss'],
+                    summary['total_duration_s'],
+                    summary['ms_per_epoch']
+                )
+            )
+
+            if not fit_record.beat_init:
                 print('    Did not beat initialization.')
+            print()
 
         # Clean up.
         self.emb.log_dir = self.log_dir
@@ -191,7 +223,8 @@ class FitRecord(object):
             monitor: np.inf * np.ones([n_record]),
             'weights': [None] * n_record
         }
-        self.average = {}
+        self.summary = {monitor: 0}
+        self.count = 0.
         self.beat_init = None
         self.init_loss = np.inf
         super().__init__()
@@ -211,6 +244,13 @@ class FitRecord(object):
             sort method.
 
         """
+        # Update mean tracker.
+        self.count = self.count + 1.
+        for k, v in final.items():
+            if k not in self.summary:
+                self.summary[k] = 0
+            self.summary[k] = self.summary[k] + v
+
         loss_monitor = final[self.monitor]
         dmy_idx = np.arange(self.n_record)
         locs_is_worse = np.greater(
@@ -247,6 +287,13 @@ class FitRecord(object):
                 ]
             else:
                 self.record[k] = self.record[k][idx_sort]
+
+    def result(self):
+        """Return mean value of all summary fields."""
+        d = {}
+        for k, v in self.summary.items():
+            d[k] = v / self.count
+        return d
 
 
 def set_from_record(emb, fit_record, idx):

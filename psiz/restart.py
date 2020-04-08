@@ -18,7 +18,7 @@
 
 Classes:
     Restarter: A class for performing restarts.
-    FitRecord: A class for keeping track of the best performing
+    FitTracker: A class for keeping track of the best performing
         restart(s).
 
 Functions:
@@ -88,11 +88,11 @@ class Restarter(object):
             **kwargs: Any additional keyword arguments.
 
         Returns:
-            fit_record: A record of the best restarts.
+            tracker: A record of the best restarts.
 
         """
         start_time_s = time.time()
-        fit_record = FitRecord(self.n_record, self.monitor)
+        tracker = FitTracker(self.n_record, self.monitor)
 
         # Grab initial optimizer configuration for resetting state.
         self.optimizer_config = self.emb.optimizer.get_config()
@@ -115,7 +115,7 @@ class Restarter(object):
         #     # Update record with initialization values.
         #     history = None
         #     weights = None
-        #     fit_record.update(history.final, weights, is_init=True)
+        #     tracker.update_state(history.final, weights, is_init=True)
         #     if (verbose > 2):
         #         print('        Initialization')
         #         print(
@@ -157,24 +157,24 @@ class Restarter(object):
             weights = self.emb.get_weights()
 
             # Update fit record with latest restart.
-            fit_record.update(history.final, weights)
+            tracker.update_state(history.final, weights)
 
         # Sort records from best to worst and grab best.
-        fit_record.sort()
-        loss_train_best = fit_record.record['train_loss'][0]
-        loss_val_best = fit_record.record['val_loss'][0]
-        epoch_best = fit_record.record['epoch'][0]
-        self.emb.set_weights(fit_record.record['weights'][0])
+        tracker.sort()
+        loss_train_best = tracker.record['loss'][0]
+        loss_val_best = tracker.record['val_loss'][0]
+        epoch_best = tracker.record['epoch'][0]
+        self.emb.set_weights(tracker.record['weights'][0])
 
         # TODO handle time stats
         fit_duration = time.time() - start_time_s
-        summary = fit_record.result()
+        summary = tracker.result()
 
         if (verbose > 1):
             print(
                 '    Restart Summary\n'
                 '    n_valid_restart {0:.0f} | total_duration: {1:.0f} s'.format(
-                    fit_record.count, fit_duration
+                    tracker.count, fit_duration
                 )
             )
             print(
@@ -187,28 +187,28 @@ class Restarter(object):
                 '    Mean | n_epoch: {0:.0f} | loss_train: {1:.4f} | '
                 'loss_val: {2:.4f} | {3:.0f} s | {4:.0f} ms/epoch'.format(
                     summary['epoch'],
-                    summary['train_loss'],
+                    summary['loss'],
                     summary['val_loss'],
                     summary['total_duration_s'],
                     summary['ms_per_epoch']
                 )
             )
 
-            if not fit_record.beat_init:
+            if not tracker.beat_init:
                 print('    Did not beat initialization.')
             print()
 
         # Clean up.
         self.emb.log_dir = self.log_dir
 
-        return fit_record
+        return tracker
 
 
-class FitRecord(object):
+class FitTracker(object):
     """Class for keeping track of best restarts.
 
     Methods:
-        update: Update the records with the provided restart.
+        update_state: Update the records with the provided restart.
         sort: Sort the records from best to worst.
 
     """
@@ -235,7 +235,7 @@ class FitRecord(object):
         self.init_loss = np.inf
         super().__init__()
 
-    def update(self, final, weights, is_init=False):
+    def update_state(self, final, weights, is_init=False):
         """Update record with incoming data.
 
         Arguments:
@@ -245,14 +245,14 @@ class FitRecord(object):
                 evaluation.
 
         Notes:
-            The update method does not worry about keeping the
+            The update_state method does not worry about keeping the
             records sorted. If the records need to be sorted, use the
             sort method.
 
         """
         loss_monitor = final[self.monitor]
 
-        # Update mean tracker if result is not nan.
+        # Update aggregate summary if result is not nan.
         if not np.isnan(loss_monitor):
             self.count = self.count + 1.
             for k, v in final.items():
@@ -304,13 +304,13 @@ class FitRecord(object):
         return d
 
 
-def set_from_record(emb, fit_record, idx):
+def set_from_record(emb, tracker, idx):
     """Set embedding parameters using a record.
 
     Arguments:
         emb: TODO
-        fit_record: An appropriate psiz.models.FitRecord object.
+        tracker: An appropriate psiz.models.FitTracker object.
         idx: An integer indicating which record to use.
 
     """
-    emb.set_weights(fit_record.record['weights'][idx])
+    emb.set_weights(tracker.record['weights'][idx])

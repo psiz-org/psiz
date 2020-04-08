@@ -634,23 +634,13 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             )
 
         @tf.function
-        def validation_step(inputs):
-            # Compute validation loss.
+        def eval_step(inputs, metric_loss):
             probs = model(inputs)
             # Loss value for this minibatch.
             loss_value = self.loss(probs, inputs['weight'])
             # Add extra losses created during this forward pass.
             loss_value += sum(model.losses)
-            metric_val_loss(loss_value)
-
-        @tf.function
-        def final_step(inputs, metric):
-            probs = model(inputs)
-            # Loss value for this minibatch.
-            loss_value = self.loss(probs, inputs['weight'])
-            # Add extra losses created during this forward pass.
-            loss_value += sum(model.losses)
-            metric(loss_value)
+            metric_loss(loss_value)
 
         callback_list.on_train_begin(logs=None)
 
@@ -689,84 +679,69 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                     # Compute validation loss.
                     if do_validation:
                         for batch_val in ds_obs_val:
-                            validation_step(batch_val)
+                            eval_step(batch_val, metric_val_loss)
                         val_loss = metric_val_loss.result()
                         logs['val_loss'] = val_loss.numpy()
 
-                    # TODO conditional loss/metric print out:
                     if verbose > 3:
                         if epoch % self.log_freq == 0:
-                            print(
-                                '        epoch {0:5d} | loss_train: {1: .6f} '
-                                '| loss_val: {2: .6f}'.format(
-                                    epoch, train_loss, val_loss
-                                )
-                            )
+                            _print_epoch_logs(epoch, logs)
 
                     # Record progress for TensorBoard.
                     if self.do_log:
                         if epoch % self.log_freq == 0:
-                            tf.summary.scalar(
-                                'train_loss', train_loss, step=epoch
-                            )
-                            tf.summary.scalar(
-                                'val_loss', val_loss, step=epoch
-                            )
-                            tf_theta = model.get_layer(name='core_layer').theta
-                            for param_name in tf_theta:
+                            for k, v in logs.items():
                                 tf.summary.scalar(
-                                    param_name, tf_theta[param_name],
-                                    step=epoch
+                                    k, v, step=epoch
                                 )
+                            # TODO finish summary
+                            # tf_theta = model.get_layer(name='core_layer').theta
+                            # for param_name in tf_theta:
+                            #     tf.summary.scalar(
+                            #         param_name, tf_theta[param_name],
+                            #         step=epoch
+                            #     )
 
                     callback_list.on_epoch_end(epoch, logs=logs)
                 summary_writer.flush()
             epoch_stop_time_s = time.time() - epoch_start_time_s
         callback_list.on_train_end(logs=None)
 
-        # Determine time per epoch.
-        ms_per_epoch = 1000 * epoch_stop_time_s / epoch
-        time_per_epoch_str = '{0:.0f} ms/epoch'.format(ms_per_epoch)
-
-        # Add final model losses to a `final` dictionary.
+        # Add final model metrics to a `final_logs` dictionary.
         # NOTE: If there is an early stopping callback with
         # restore_best_weights, then the final evaluation will use
-        # those weights.
-        final = {}
-        final['epoch'] = epoch
+        # the best weights.
+        final_logs = {}
 
+        # Reset metrics.
         metric_train_loss.reset_states()
         metric_val_loss.reset_states()
+
         for batch_train in ds_obs_train:
-            final_step(batch_train, metric_train_loss)
+            eval_step(batch_train, metric_train_loss)
         train_loss = metric_train_loss.result()
-        final['train_loss'] = train_loss.numpy()
+        final_logs['train_loss'] = train_loss.numpy()
 
         if do_validation:
             for batch_val in ds_obs_val:
-                validation_step(batch_val)
+                eval_step(batch_val, metric_val_loss)
             val_loss = metric_val_loss.result()
-            final['val_loss'] = val_loss.numpy()
+            final_logs['val_loss'] = val_loss.numpy()
 
         # Add time information.
         total_duration = time.time() - fit_start_time_s
-        total_duration_str = '{0:.0f} s'.format(total_duration)
-        final['total_duration_s'] = total_duration
-        final['ms_per_epoch'] = ms_per_epoch
+        final_logs['total_duration_s'] = int(total_duration)
+        final_logs['ms_per_epoch'] = int(1000 * epoch_stop_time_s / epoch)
+
+        if (verbose > 2):
+            _print_epoch_logs(epoch, final_logs)
+            print('')
+
+        # Add epoch after print statement.
+        final_logs['epoch'] = epoch
 
         # Piggy-back on History object.
-        model.history.final = final
-
-        # TODO conditional loss/metric print out:
-        if (verbose > 2):
-            print(
-                '        final {0:5d} | loss_train: {1: .6f} | '
-                'loss_val: {2: .6f} | {3} | {4}'.format(
-                    epoch, train_loss, val_loss,
-                    total_duration_str,  time_per_epoch_str
-                )
-            )
-            print('')
+        model.history.final = final_logs
 
         return model.history
 
@@ -1547,6 +1522,17 @@ def _ranked_sequence_probability(sim_qr, n_select):
             # denom = denom + sim_qr[:, i_selected-1, :]
             denom += sim_qr[:, i_selected-1, :]
     return seq_prob
+
+
+def _print_epoch_logs(epoch, logs):
+    """Print epoch logs."""
+    msg = (
+        '        '
+        'epoch {0:5d}'.format(epoch)
+    )
+    for k, v in logs.items():
+        msg += ' | {0}: {1}'.format(k, str(v))
+    print(msg)
 
 
 @tf.function(experimental_relax_shapes=True)

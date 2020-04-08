@@ -132,9 +132,6 @@ class Restarter(object):
             )
             progbar.update(0)
 
-        print(self.emb.z[0, 0:10])  # TODO
-        print()
-
         # Run multiple restarts of embedding algorithm.
         for i_restart in range(self.n_restart):
             if (verbose > 2):
@@ -152,18 +149,12 @@ class Restarter(object):
             for callback in callbacks:
                 callback.reset()
 
-            print(self.emb.z[0, 0:10])  # TODO
-            print()
-
             # Distinguish between restart by setting log_dir for TensorBoard.
             self.emb.log_dir = '{0}/{1}'.format(self.log_dir, i_restart)
             history = self.emb.fit(
                 obs_train, verbose=verbose, callbacks=callbacks, **kwargs
             )
             weights = self.emb.get_weights()
-
-            print(self.emb.z[0, 0:10])  # TODO
-            print()
 
             # Update fit record with latest restart.
             fit_record.update(history.final, weights)
@@ -175,9 +166,6 @@ class Restarter(object):
         epoch_best = fit_record.record['epoch'][0]
         self.emb.set_weights(fit_record.record['weights'][0])
 
-        # print(self.emb.z[0, 0:10])  # TODO
-        # print()
-
         # TODO handle time stats
         fit_duration = time.time() - start_time_s
         summary = fit_record.result()
@@ -185,8 +173,8 @@ class Restarter(object):
         if (verbose > 1):
             print(
                 '    Restart Summary\n'
-                '    n_restart {0} | total_duration: {1:.0f} s'.format(
-                    self.n_restart, fit_duration
+                '    n_valid_restart {0:.0f} | total_duration: {1:.0f} s'.format(
+                    fit_record.count, fit_duration
                 )
             )
             print(
@@ -262,14 +250,16 @@ class FitRecord(object):
             sort method.
 
         """
-        # Update mean tracker.
-        self.count = self.count + 1.
-        for k, v in final.items():
-            if k not in self.summary:
-                self.summary[k] = 0
-            self.summary[k] = self.summary[k] + v
-
         loss_monitor = final[self.monitor]
+
+        # Update mean tracker if result is not nan.
+        if not np.isnan(loss_monitor):
+            self.count = self.count + 1.
+            for k, v in final.items():
+                if k not in self.summary:
+                    self.summary[k] = 0
+                self.summary[k] = self.summary[k] + v
+
         dmy_idx = np.arange(self.n_record)
         locs_is_worse = np.greater(
             self.record[self.monitor], loss_monitor

@@ -555,7 +555,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             batch_size_val = n_obs_val
         else:
             batch_size_train = np.minimum(batch_size, n_obs_train)
-            batch_size_val = n_obs_val  # TODO
+            batch_size_val = n_obs_val
 
         # NOTE: The stack operation is used to make sure that a consistent
         # trial configuration list is used across train and validation.

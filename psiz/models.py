@@ -595,7 +595,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         )
 
         logs = {}
-        metric_train_loss = tf.keras.metrics.Mean(name='train_loss')
+        metric_train_loss = tf.keras.metrics.Mean(name='loss')
         metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
         summary_writer = tf.summary.create_file_writer(self.log_dir)
 
@@ -618,7 +618,10 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             gradients = grad_tape.gradient(
                 loss_value, model.trainable_variables
             )
-            metric_train_loss(loss_value)
+            # NOTE: This assumes equal number of samples for each
+            # minibatch. The computed mean will deviate from correct if
+            # minibatch sizes vary.
+            metric_train_loss.update_state(loss_value)
 
             # NOTE: There are problems using constraints with
             # Eager Execution since gradients are returned as
@@ -634,13 +637,20 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             )
 
         @tf.function
-        def eval_step(inputs, metric_loss):
+        def eval_val_step(inputs):
+            probs = model(inputs)
+            # Loss value for this minibatch.
+            loss_value = self.loss(probs, inputs['weight'])
+            metric_val_loss.update_state(loss_value)
+
+        @tf.function
+        def eval_train_step(inputs):
             probs = model(inputs)
             # Loss value for this minibatch.
             loss_value = self.loss(probs, inputs['weight'])
             # Add extra losses created during this forward pass.
             loss_value += sum(model.losses)
-            metric_loss(loss_value)
+            metric_train_loss.update_state(loss_value)
 
         callback_list.on_train_begin(logs=None)
 
@@ -673,34 +683,23 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                             #     batch_idx, logs=None
                             # )
                             train_step(batch_train)
-                    train_loss = metric_train_loss.result()
-                    logs['train_loss'] = train_loss.numpy()
+                    logs['loss'] = metric_train_loss.result().numpy()
 
                     # Compute validation loss.
                     if do_validation:
                         for batch_val in ds_obs_val:
-                            eval_step(batch_val, metric_val_loss)
-                        val_loss = metric_val_loss.result()
-                        logs['val_loss'] = val_loss.numpy()
+                            eval_val_step(batch_val)
+                        logs['val_loss'] = metric_val_loss.result().numpy()
 
                     if verbose > 3:
                         if epoch % self.log_freq == 0:
                             _print_epoch_logs(epoch, logs)
 
-                    # Record progress for TensorBoard.
+                    # Add logs to summary for TensorBoard.
                     if self.do_log:
                         if epoch % self.log_freq == 0:
                             for k, v in logs.items():
-                                tf.summary.scalar(
-                                    k, v, step=epoch
-                                )
-                            # TODO finish summary
-                            # tf_theta = model.get_layer(name='core_layer').theta
-                            # for param_name in tf_theta:
-                            #     tf.summary.scalar(
-                            #         param_name, tf_theta[param_name],
-                            #         step=epoch
-                            #     )
+                                tf.summary.scalar(k, v, step=epoch)
 
                     callback_list.on_epoch_end(epoch, logs=logs)
                 summary_writer.flush()
@@ -718,15 +717,13 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         metric_val_loss.reset_states()
 
         for batch_train in ds_obs_train:
-            eval_step(batch_train, metric_train_loss)
-        train_loss = metric_train_loss.result()
-        final_logs['train_loss'] = train_loss.numpy()
+            eval_train_step(batch_train)
+        final_logs['loss'] = metric_train_loss.result().numpy()
 
         if do_validation:
             for batch_val in ds_obs_val:
-                eval_step(batch_val, metric_val_loss)
-            val_loss = metric_val_loss.result()
-            final_logs['val_loss'] = val_loss.numpy()
+                eval_val_step(batch_val)
+            final_logs['val_loss'] = metric_val_loss.result().numpy()
 
         # Add time information.
         total_duration = time.time() - fit_start_time_s
@@ -778,7 +775,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             # Compute validation loss.
             probs = model(inputs)
             loss_value = self.loss(probs, inputs['weight'])
-            metric_loss(loss_value)
+            metric_loss.update_state(loss_value)
 
         for batch in ds_obs:
             eval_step(batch)
@@ -1542,8 +1539,7 @@ def _observation_loss(y_pred, sample_weight):
     n_trial = tf.cast(n_trial, dtype=K.floatx())
 
     # Convert to (weighted) log probabilities.
-    cap = tf.constant(2.2204e-16, dtype=K.floatx())
-    y_pred = tf.math.log(tf.maximum(y_pred, cap))
+    y_pred = _safe_log_prob(y_pred)
     y_pred = tf.multiply(sample_weight, y_pred)
 
     # Divide by number of trials to make train and test loss
@@ -1552,3 +1548,9 @@ def _observation_loss(y_pred, sample_weight):
     loss = tf.divide(loss, n_trial)
 
     return loss
+
+
+def _safe_log_prob(probs):
+    """Convert to safe log probabilites."""
+    cap = tf.constant(2.2204e-16, dtype=K.floatx())
+    return tf.math.log(tf.maximum(probs, cap))

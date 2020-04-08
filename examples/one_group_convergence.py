@@ -106,7 +106,7 @@ def main():
             callbacks=[early_stop]
         )
 
-        train_loss[i_round] = restart_record.record['train_loss'][0]
+        train_loss[i_round] = restart_record.record['loss'][0]
         val_loss[i_round] = restart_record.record['val_loss'][0]
         test_loss[i_round] = emb_inferred.evaluate(obs_test)
 

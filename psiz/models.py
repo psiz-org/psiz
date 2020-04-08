@@ -1535,22 +1535,16 @@ def _print_epoch_logs(epoch, logs):
 @tf.function(experimental_relax_shapes=True)
 def _observation_loss(y_pred, sample_weight):
     """Compute model loss given observation probabilities."""
-    n_trial = tf.shape(y_pred)[0]
-    n_trial = tf.cast(n_trial, dtype=K.floatx())
-
     # Convert to (weighted) log probabilities.
-    y_pred = _safe_log_prob(y_pred)
+    y_pred = _safe_neg_log_prob(y_pred)
     y_pred = tf.multiply(sample_weight, y_pred)
 
-    # Divide by number of trials to make train and test loss
-    # comparable.
-    loss = tf.negative(tf.reduce_sum(y_pred))
-    loss = tf.divide(loss, n_trial)
-
+    # Get trial mean.
+    loss = tf.reduce_mean(y_pred, axis=0)
     return loss
 
 
-def _safe_log_prob(probs):
+def _safe_neg_log_prob(probs):
     """Convert to safe log probabilites."""
     cap = tf.constant(2.2204e-16, dtype=K.floatx())
-    return tf.math.log(tf.maximum(probs, cap))
+    return tf.negative(tf.math.log(tf.maximum(probs, cap)))

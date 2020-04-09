@@ -1,9 +1,11 @@
 # PsiZ: A Psychological Embedding Package
 
 ## Purpose
+
 PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods. The companion Open Access article is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
 
 ## Installation
+
 The best way to install PsiZ is by cloning from GitHub and installing the local repo using pip.
 1. Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
 2. Install the cloned repo using pip: `pip install /local/path/to/psiz`
@@ -16,28 +18,25 @@ Alternatively, but not recommended, you can install from PyPI using ``pip instal
 **Note:** PsiZ also requires TensorFlow. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
 
 ## Quick Start
-There are four predefined embedding models to choose from:
 
-1. Inverse
-2. Exponential
-3. HeavyTailed
-4. StudentsT
-
-Once you have selected an embedding model, you must provide two pieces of information in order to infer an embedding.
+Use a default psychological embedding model (`AnchoredOrdinal`) and provide two mandatory pieces of information:
 
 1. The similarity judgment observations (often abbreviated as *obs*).
 2. The number of unique stimuli that will be in your embedding.
 
+The following example uses a predefined set of observations:
 ```python
 import psiz
 
 # Load some observations (i.e., judged trials).
 (obs, catalog) = psiz.datasets.load('birds-16')
 # Initialize an embedding model.
-emb = psiz.models.Exponential(catalog.n_stimuli)
+emb = psiz.models.AnchoredOrdinal(catalog.n_stimuli)
+# Compile the model.
+emb.compile()
 # Fit the embedding model using similarity judgment observations.
 emb.fit(obs)
-# Optionally save the fitted model.
+# Optionally save the fitted model in HDF5 format.
 emb.save('my_embedding.h5')
 ```
 
@@ -87,6 +86,38 @@ obs.save('path/to/obs.hdf5')
 obs = psiz.trials.load('path/to/obs.hdf5')
 ```
 Note that the values in `response_set` are assumed to be contiguous integers [0, N[, where N is the number of unique stimuli. Their order is also important. The query is listed in the first column, an agent's selected references are listed second (in order of selection if the trial is ranked) and then any remaining unselected references are listed (in any order).
+
+## Design Philosophy
+
+PsiZ is built around the TensorFlow library and strives to follow TensorFlow idioms as closely as possible.
+
+### Model, Layer, Variable
+
+Embedding models are built using the `tf.keras.Model` and `tf.keras.layers.Layer` API. In PsiZ, a psychological embedding is decomposed into three major components. Each component is implemented as `Layer` with its free parameters implemented using `tf.Variable`.
+
+1. A set of **coordinates** which model points in psychological space.
+2. A **similarity kernel** that defines how similarity is computed between points in psychological space.
+3. A set of **attention weights** that describe how psychological space is contorted.
+
+PsiZ includes predefined layers for each of these components. In the case of the similarity kernel, there are four predefined similarity kernel layers that a user can choose from:
+
+1. `psiz.layers.InverseKernel`
+2. `psiz.layers.ExponentialKernel`
+3. `psiz.layers.HeavyTailedKernel`
+4. `psiz.layers.StudentsTKernel`
+
+Each kernel layer has its own set of variables that govern the properties of the kernel. The `ExponentialKernel`, which is widely used in psychology, has four variables. Users can also implement there own kernel by subclassing `psiz.layers.LayersRe`.
+
+### Compile and Fit
+<!-- TODO -->
+Just like a typical TensorFlow model, all trainable variables are optimized to minimize loss. 
+
+### Deviations from TensorFlow
+<!-- TODO -->
+* restarts
+* multiple possible trial configurations
+* likelihood loss (minor deviation)
+
 
 ## Common Use Cases
 
@@ -172,7 +203,7 @@ The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthand for the te
 ## Licence
 This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file for details.
 
-### References
+## References
 * van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet
    embedding. In Machine learning for signal processing (mlsp), 2012 IEEE
    international workshop on (p. 1-6). doi:10.1109/MLSP.2012.6349720

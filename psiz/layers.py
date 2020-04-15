@@ -892,7 +892,7 @@ class StudentsTKernel(Layer):
 
         # Student-t family similarity kernel.
         sim_qr = tf.pow(
-            1 + (tf.pow(d_qr, tau) / alpha), tf.negative(alpha + 1)/2
+            1 + (tf.pow(d_qr, self.tau) / self.alpha), tf.negative(self.alpha + 1)/2
         )
         return sim_qr
 

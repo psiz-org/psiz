@@ -710,3 +710,92 @@ def entropy_loss(w):
     )
     return loss
 
+
+        (z_q, z_r) = self._tf_inflate_points_old(
+            stimulus_set, max_n_reference, z_pad
+        )
+        z_stimulus_set_0 = tf.concat([z_q, z_r], axis=2)
+        # z_stimulus_set_1 = self._tf_inflate_points_1(
+        #     stimulus_set, input_length, z_pad
+        # )
+        # np.testing.assert_array_equal(z_stimulus_set_0, z_stimulus_set_1)
+
+
+def _tf_inflate_points_1(self, stimulus_set, input_length, z):
+        """Inflate stimulus set into embedding points.
+
+        Note: This method will not gracefully handle the masking
+        placeholder stimulus ID (i.e., -1). The stimulus IDs and
+        coordinates must already have been adjusted for the masking
+        placeholder.
+
+        """
+        n_trial = tf.shape(stimulus_set)[0]
+        n_dim = tf.shape(z)[1]
+
+        # Pre-allocate for embedding points.
+        # NOTE: Dimensions are permuted to facilitate scatter update.
+        z_set = tf.zeros([input_length, n_trial, n_dim], dtype=K.floatx())
+
+        for i_input in tf.range(input_length):
+            # Grab indices.
+            z_set_update = tf.gather(z, stimulus_set[:, i_input])
+            z_set_update = tf.expand_dims(z_set_update, axis=0)
+
+            # Expand dimensions for scatter update.
+            i_input_expand = tf.expand_dims(i_input, axis=0)
+            i_input_expand = tf.expand_dims(i_input_expand, axis=0)
+
+            z_set = tf.tensor_scatter_nd_update(
+                z_set, i_input_expand, z_set_update
+            )
+
+        z_set = tf.transpose(z_set, perm=[1, 2, 0])
+        return z_set
+
+    def _tf_inflate_points_old(
+            self, stimulus_set, n_reference, z):
+        """Inflate stimulus set into embedding points.
+
+        Note: This method will not gracefully handle the masking
+        placeholder stimulus ID (i.e., -1). The stimulus IDs and
+        coordinates must already have been adjusted for the masking
+        placeholder.
+
+        """
+        n_trial = tf.shape(stimulus_set)[0]
+        n_dim = tf.shape(z)[1]
+
+        # Inflate query stimuli.
+        z_q = tf.gather(z, stimulus_set[:, 0])
+        z_q = tf.expand_dims(z_q, axis=2)
+
+        # Initialize z_r.
+        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
+        z_r = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
+
+        for i_ref in tf.range(n_reference):
+            z_r_new = tf.gather(
+                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
+            )
+
+            i_ref_expand = tf.expand_dims(i_ref, axis=0)
+            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
+            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
+            z_r = tf.tensor_scatter_nd_update(
+                z_r, i_ref_expand, z_r_new_2
+            )
+
+            # z_r_new = tf.expand_dims(z_r_new, axis=2)
+            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
+            # post_pad = tf.zeros([
+            #     n_trial, n_dim,
+            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
+            # ], dtype=K.floatx())
+            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
+            # z_r = z_r + z_r_new
+
+        z_r = tf.transpose(z_r, perm=[1, 2, 0])
+        return (z_q, z_r)
+
+    

@@ -18,7 +18,7 @@
 
 Classes:
     QueryReference:
-    Coordinate:
+    Embedding:
     WeightedDistance:
     SeparateAttention:
     Attention:
@@ -65,9 +65,10 @@ class QueryReference(Layer):
         self.n_config = tf.constant(len(config_list))
         self.config_n_select = tf.constant(config_list.n_select.values)
         self.config_is_ranked = tf.constant(config_list.is_ranked.values)
-        self.max_n_reference = tf.constant(
-            np.max(config_list.n_reference.values)
-        )
+        # TODO REMOVE
+        # self.max_n_reference = tf.constant(
+        #     np.max(config_list.n_reference.values)
+        # )
 
     def call(self, inputs):
         """Call.
@@ -89,11 +90,9 @@ class QueryReference(Layer):
         attention = self.attention(obs_group_id)
 
         # Inflate cooridnates.
-        outputs = self.coordinate(
-            [obs_stimulus_set, self.max_n_reference]
-        )
-        z_q = outputs[0]
-        z_r = outputs[1]
+        z_stimulus_set = self.coordinate(obs_stimulus_set)
+        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
 
         # Compute similarity between query and references.
         sim_qr = self.kernel([z_q, z_r, attention])
@@ -135,7 +134,7 @@ class QueryReference(Layer):
         pass
 
 
-class Coordinate(Layer):
+class Embedding(Layer):
     """Embedding coordinates.
 
     Handles a placeholder stimulus using stimulus ID -1.
@@ -158,7 +157,7 @@ class Coordinate(Layer):
             z_max (optional):
 
         """
-        super(Coordinate, self).__init__(**kwargs)
+        super(Embedding, self).__init__(**kwargs)
 
         self.n_stimuli = n_stimuli
         self.n_dim = n_dim
@@ -183,63 +182,37 @@ class Coordinate(Layer):
 
     def __call__(self, inputs):
         """Call."""
-        stimulus_set = inputs[0] + 1  # Add one for placeholder stimulus.
-        max_n_reference = inputs[1]
-
+        stimulus_set = inputs + 1  # Add one for placeholder stimulus.  TODO tf.constant(1, dtype=tf.int32)
         z_pad = tf.concat(
             [
                 tf.zeros([1, self.z.shape[1]], dtype=K.floatx()),
                 self.z
             ], axis=0
         )
-        (z_q, z_r) = self._tf_inflate_points(
-            stimulus_set, max_n_reference, z_pad
-        )
-        return [z_q, z_r]
+        z_stimulus_set = self._tf_inflate_points(stimulus_set, z_pad)
+        return z_stimulus_set
 
-    def _tf_inflate_points(
-            self, stimulus_set, n_reference, z):
+    def _tf_inflate_points(self, stimulus_set, z):
         """Inflate stimulus set into embedding points.
 
-        Note: This method will not gracefully handle placeholder
-        stimulus IDs. The stimulus IDs and coordinates must already
-        have handled the placeholder.
+        Note: This method will not gracefully handle the masking
+        placeholder stimulus ID (i.e., -1). The stimulus IDs and
+        coordinates must already have been adjusted for the masking
+        placeholder.
 
         """
         n_trial = tf.shape(stimulus_set)[0]
+        input_length = tf.shape(stimulus_set)[1]
         n_dim = tf.shape(z)[1]
 
-        # Inflate query stimuli.
-        z_q = tf.gather(z, stimulus_set[:, 0])
-        z_q = tf.expand_dims(z_q, axis=2)
+        # Flatten stimulus_set and inflate all indices at once.
+        flat_idx = tf.reshape(stimulus_set, [-1])
+        z_set = tf.gather(z, flat_idx)
 
-        # Initialize z_r.
-        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
-        z_r_2 = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
-
-        for i_ref in tf.range(n_reference):
-            z_r_new = tf.gather(
-                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
-            )
-
-            i_ref_expand = tf.expand_dims(i_ref, axis=0)
-            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
-            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
-            z_r_2 = tf.tensor_scatter_nd_update(
-                z_r_2, i_ref_expand, z_r_new_2
-            )
-
-            # z_r_new = tf.expand_dims(z_r_new, axis=2)
-            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
-            # post_pad = tf.zeros([
-            #     n_trial, n_dim,
-            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
-            # ], dtype=K.floatx())
-            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
-            # z_r = z_r + z_r_new
-
-        z_r_2 = tf.transpose(z_r_2, perm=[1, 2, 0])
-        return (z_q, z_r_2)
+        # Reshape and permute dimensions.
+        z_set = tf.reshape(z_set, [n_trial, input_length, n_dim])
+        z_set = tf.transpose(z_set, perm=[0, 2, 1])
+        return z_set
 
     def reset_weights(self):
         """Reset trainable variables."""

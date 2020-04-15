@@ -173,11 +173,15 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         # Initialize model components.
         if coordinate is None:
-            coordinate = psiz.layers.Coordinate(n_stimuli=self.n_stimuli, n_dim=self.n_dim)
+            coordinate = psiz.layers.Embedding(
+                n_stimuli=self.n_stimuli, n_dim=self.n_dim
+            )
         self.coordinate = coordinate
 
         if attention is None:
-            attention = psiz.layers.Attention(n_dim=self.n_dim, n_group=self.n_group)
+            attention = psiz.layers.Attention(
+                n_dim=self.n_dim, n_group=self.n_group
+            )
         self.attention = attention
 
         if kernel is None:
@@ -613,7 +617,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         # NOTE: Trainable attention weights does not work with eager
         # execution.
-        @tf.function
+        # @tf.function TODO
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
@@ -1262,7 +1266,7 @@ def load_model(filepath, custom_objects={}):
         # Create coordinate layer.
         z = f['z']['value'][()]
         fit_z = f['z']['trainable'][()]
-        coordinate_layer = Coordinate(
+        coordinate_layer = Embedding(
             n_stimuli=n_stimuli, n_dim=n_dim, fit_z=fit_z
         )
 

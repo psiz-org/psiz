@@ -19,15 +19,14 @@
 Classes:
     Trials: Abstract class for similarity judgment trials.
     RankTrials: Abstract class for 'Rank' trials.
-    RankDocket: Unjudged similarity judgment trials.
-    RankObservations: Similarity judgment trials that have been judged and
-        will serve as observed data during inference.
+    RankDocket: Unjudged 'Rank' trials.
+    RankObservations: Judged 'Rank' trials.
 
 Functions:
     stack: Combine a list of multiple SimilarityTrial objects into one.
     squeeze: Squeeze indices to be small and consecutive.
-    load_trials: Load a hdf5 file, saved using the `save` class method,
-        as a SimilarityTrial object.
+    load_trials: Load a hdf5 file that was saved using the `save` class
+        method.
     load: Alias for load_trials.
 
 Notes:
@@ -39,11 +38,14 @@ Notes:
         information can be used to infer a separate set of attention
         weights for each group while sharing all other parameters.
 
-Todo:
-    - MAYBE restructure group_id and agent_id. If we wanted to allow
+TODO:
+    * Add RateDocket class
+    * Add RateObservations class
+    * Add SortDocket class
+    * Add SortObservations class
+    * MAYBE restructure group_id and agent_id. If we wanted to allow
     for arbitrary hierarchical models, maybe better off making
     group_id a 2D array of shape=(n_trial, n_group_level)
-    - MAYBE make config_list a custom object
 
 """
 
@@ -811,6 +813,19 @@ class RankObservations(RankTrials):
         return is_select
 
 
+# class RateDocket():
+
+
+# class RateObservations():
+
+
+# class SortDocket():
+
+
+# class SortObservations():
+
+
+# TODO handle other trial types.
 def stack(trials_list):
     """Return a RankTrials object containing all trials.
 
@@ -874,6 +889,7 @@ def stack(trials_list):
     return trials_stacked
 
 
+# TODO handle other trial types.
 def squeeze(sim_trials, mode="sg"):
     """Squeeze indices in trials to be small and consecutive.
 
@@ -935,7 +951,7 @@ def load_trials(filepath, verbose=0):
         loaded_trials = RankDocket(
             stimulus_set, n_select=n_select, is_ranked=is_ranked
         )
-    elif trial_type == "Observations" or trial_type = "RankObservations":
+    elif trial_type == "Observations" or trial_type == "RankObservations":
         # Observations specific attributes.
         n_select = f["n_select"][()]
         is_ranked = f["is_ranked"][()]
@@ -963,6 +979,18 @@ def load_trials(filepath, verbose=0):
             group_id=group_id, agent_id=agent_id, session_id=session_id,
             weight=weight, rt_ms=rt_ms
         )
+    elif trial_type == "RateDocket":
+        # TODO
+        raise ValueError('Not implemented yet.')
+    elif trial_type == "RateObservations":
+        # TODO
+        raise ValueError('Not implemented yet.')
+    elif trial_type == "SortDocket":
+        # TODO
+        raise ValueError('Not implemented yet.')
+    elif trial_type == "SortObservations":
+        # TODO
+        raise ValueError('Not implemented yet.')
     else:
         raise ValueError('No class found matching the provided `trial_type`.')
     f.close()
@@ -971,7 +999,7 @@ def load_trials(filepath, verbose=0):
         print("Trial Summary")
         print('  trial_type: {0}'.format(trial_type))
         print('  n_trial: {0}'.format(loaded_trials.n_trial))
-        # TODO will all Observations have this info? 
+        # TODO will all Observations have this info?
         # if trial_type == "Observations":
         #     print(
         #         '  n_agent: {0}'.format(
@@ -990,6 +1018,7 @@ def load_trials(filepath, verbose=0):
 load = load_trials
 
 
+# TODO handle other trial types.
 def _pad_stimulus_set(stimulus_set, max_n_reference):
     """Pad 2D array with columns composed of -1."""
     n_trial = stimulus_set.shape[0]
@@ -1000,8 +1029,9 @@ def _pad_stimulus_set(stimulus_set, max_n_reference):
     return stimulus_set
 
 
+# TODO handle other trial types.
 def _possible_outcomes(trial_configuration):
-    """Return the possible outcomes of a trial configuration.
+    """Return the possible outcomes of a ranked trial configuration.
 
     Arguments:
         trial_configuration: A trial configuration Pandas Series.

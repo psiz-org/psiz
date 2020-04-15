@@ -19,7 +19,7 @@ Alternatively, but not recommended, you can install from PyPI using ``pip instal
 
 ## Quick Start
 
-Use a default psychological embedding model (`AnchoredOrdinal`) and provide two mandatory pieces of information:
+Use a default psychological embedding model (`Rank`) and provide two mandatory pieces of information:
 
 1. The similarity judgment observations (often abbreviated as *obs*).
 2. The number of unique stimuli that will be in your embedding.
@@ -31,7 +31,7 @@ import psiz
 # Load some observations (i.e., judged trials).
 (obs, catalog) = psiz.datasets.load('birds-16')
 # Initialize an embedding model.
-emb = psiz.models.AnchoredOrdinal(catalog.n_stimuli)
+emb = psiz.models.Rank(catalog.n_stimuli)
 # Compile the model.
 emb.compile()
 # Fit the embedding model using similarity judgment observations.

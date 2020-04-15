@@ -184,7 +184,7 @@ def ground_truth():
     z_noise = .1 * np.random.multivariate_normal(mean, cov, (n_stimuli))
     z = z + z_noise
 
-    emb = psiz.models.AnchoredOrdinal(
+    emb = psiz.models.Rank(
         n_stimuli, n_dim=n_dim, kernel=kernel
     )
     emb.z = z

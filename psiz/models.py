@@ -18,12 +18,20 @@
 
 Classes:
     PsychologicalEmbedding: Abstract base class for embedding model.
-    AnchoredOrdinal: Class that uses anchored-ordinal observations for
-        inference.
+    Rate: Class that uses ratio observations between unanchored sets
+        of stimulus (typically two stimuli).
+    Rank: Class that uses ordinal observations that are anchored by a
+        designated query stimulus.
+    Sort: Class that uses ordinal observations that are unanchored by
+        a designated query stimulus.
 
 Functions:
-    load: Load a hdf5 file, that was saved with the `save`
+    load_model: Load a hdf5 file, that was saved with the `save`
         class method, as a PsychologicalEmbedding object.
+
+TODO:
+    * Implement Rate class.
+    * Implement Sort class.
 
 """
 
@@ -1173,7 +1181,10 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         return cpyobj
 
 
-class AnchoredOrdinal(PsychologicalEmbedding):
+# class Rate(PsychologicalEmbedding):
+
+
+class Rank(PsychologicalEmbedding):
     """An embedding model that uses anchored, ordinal judgments."""
 
     def __init__(
@@ -1187,7 +1198,10 @@ class AnchoredOrdinal(PsychologicalEmbedding):
         )
 
 
-def load(filepath, custom_objects={}):
+# class Sort(PsychologicalEmbedding):
+
+
+def load_model(filepath, custom_objects={}):
     """Load embedding model saved via the save method.
 
     The loaded data is instantiated as a concrete class of
@@ -1212,7 +1226,7 @@ def load(filepath, custom_objects={}):
     n_dim = f['n_dim'][()]
     n_group = f['n_group'][()]
 
-    if embedding_type == 'AnchoredOrdinal':
+    if embedding_type == 'Rank':
         grp_architecture = f['architecture']
         # Instantiate coordinate layer.
         coordinate_layer = _load_layer(
@@ -1227,7 +1241,7 @@ def load(filepath, custom_objects={}):
             grp_architecture['kernel'], custom_objects
         )
 
-        emb = AnchoredOrdinal(
+        emb = Rank(
             n_stimuli, n_dim=n_dim, n_group=n_group,
             coordinate=coordinate_layer, attention=attention_layer,
             kernel=kernel_layer
@@ -1294,7 +1308,7 @@ def load(filepath, custom_objects={}):
                 'No class found matching the provided `embedding_type`.'
             )
 
-        emb = AnchoredOrdinal(
+        emb = Rank(
             n_stimuli, n_dim=n_dim, n_group=n_group,
             coordinate=coordinate_layer, attention=attention_layer,
             kernel=kernel_layer

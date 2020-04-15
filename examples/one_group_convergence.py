@@ -94,7 +94,7 @@ def main():
 
         # Infer embedding.
         kernel = psiz.models.ExponentialKernel()
-        emb_inferred = psiz.models.AnchoredOrdinal(
+        emb_inferred = psiz.models.Rank(
             n_stimuli, n_dim=n_dim, kernel=kernel
         )
         emb_inferred.compile()
@@ -156,7 +156,7 @@ def ground_truth(n_stimuli, n_dim):
     kernel.beta = 10.
     kernel.gamma = 0.001
 
-    emb = psiz.models.AnchoredOrdinal(
+    emb = psiz.models.Rank(
         n_stimuli, n_dim=n_dim, kernel=kernel
     )
 

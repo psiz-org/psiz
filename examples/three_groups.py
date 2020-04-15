@@ -108,7 +108,7 @@ def main():
 
     # Infer a shared embedding with group-specific attention weights.
     kernel = psiz.models.ExponentialKernel()
-    emb_inferred = psiz.models.AnchoredOrdinal(
+    emb_inferred = psiz.models.Rank(
         n_stimuli, n_dim=n_dim, n_group=n_group, kernel=kernel
     )
     emb_inferred.compile()
@@ -203,7 +203,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
     kernel.beta = 10.
     kernel.gamma = 0.001
 
-    emb = psiz.models.AnchoredOrdinal(
+    emb = psiz.models.Rank(
         n_stimuli, kernel=kernel, n_dim=n_dim, n_group=3
     )
 

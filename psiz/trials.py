@@ -820,68 +820,66 @@ class Observations(SimilarityTrials):
 
 
 def stack(trials_list):
-        """Return a SimilarityTrials object containing all trials.
+    """Return a SimilarityTrials object containing all trials.
 
-        The stimulus_set of each SimilarityTrials object is padded
-        first to match the maximum number of references of all the
-        objects.
+    The stimulus_set of each SimilarityTrials object is padded first to
+    match the maximum number of references of all the objects.
 
-        Arguments:
-            trials_list: A tuple of SimilarityTrials objects to be
-                stacked.
+    Arguments:
+        trials_list: A tuple of SimilarityTrials objects to be stacked.
 
-        Returns:
-            A new SimilarityTrials object.
+    Returns:
+        A new SimilarityTrials object.
 
-        """
-        # Determine the maximum number of references.
-        max_n_reference = 0
-        for i_trials in trials_list:
-            if i_trials.max_n_reference > max_n_reference:
-                max_n_reference = i_trials.max_n_reference
+    """
+    # Determine the maximum number of references.
+    max_n_reference = 0
+    for i_trials in trials_list:
+        if i_trials.max_n_reference > max_n_reference:
+            max_n_reference = i_trials.max_n_reference
 
-        # Grab relevant information from first entry in list.
-        stimulus_set = _pad_stimulus_set(
-            trials_list[0].stimulus_set,
-            max_n_reference
-        )
-        n_select = trials_list[0].n_select
-        is_ranked = trials_list[0].is_ranked
-        is_judged = True
-        try:
-            group_id = trials_list[0].group_id
-            agent_id = trials_list[0].agent_id
-            session_id = trials_list[0].session_id
-            weight = trials_list[0].weight
-            rt_ms = trials_list[0].rt_ms
-        except AttributeError:
-            is_judged = False
+    # Grab relevant information from first entry in list.
+    stimulus_set = _pad_stimulus_set(
+        trials_list[0].stimulus_set,
+        max_n_reference
+    )
+    n_select = trials_list[0].n_select
+    is_ranked = trials_list[0].is_ranked
+    is_judged = True
+    try:
+        group_id = trials_list[0].group_id
+        agent_id = trials_list[0].agent_id
+        session_id = trials_list[0].session_id
+        weight = trials_list[0].weight
+        rt_ms = trials_list[0].rt_ms
+    except AttributeError:
+        is_judged = False
 
-        for i_trials in trials_list[1:]:
-            stimulus_set = np.vstack((
-                stimulus_set,
-                _pad_stimulus_set(i_trials.stimulus_set, max_n_reference)
-            ))
-            n_select = np.hstack((n_select, i_trials.n_select))
-            is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
-            if is_judged:
-                group_id = np.hstack((group_id, i_trials.group_id))
-                agent_id = np.hstack((agent_id, i_trials.agent_id))
-                session_id = np.hstack((session_id, i_trials.session_id))
-                weight = np.hstack((weight, i_trials.weight))
-                rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
-
+    for i_trials in trials_list[1:]:
+        stimulus_set = np.vstack((
+            stimulus_set,
+            _pad_stimulus_set(i_trials.stimulus_set, max_n_reference)
+        ))
+        n_select = np.hstack((n_select, i_trials.n_select))
+        is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
         if is_judged:
-            trials_stacked = Observations(
-                stimulus_set, n_select=n_select, is_ranked=is_ranked,
-                group_id=group_id, agent_id=agent_id, session_id=session_id,
-                weight=weight, rt_ms=rt_ms
-            )
-        else:
-            trials_stacked = Docket(
-                stimulus_set, n_select, is_ranked
-            )
-        return trials_stacked
+            group_id = np.hstack((group_id, i_trials.group_id))
+            agent_id = np.hstack((agent_id, i_trials.agent_id))
+            session_id = np.hstack((session_id, i_trials.session_id))
+            weight = np.hstack((weight, i_trials.weight))
+            rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
+
+    if is_judged:
+        trials_stacked = Observations(
+            stimulus_set, n_select=n_select, is_ranked=is_ranked,
+            group_id=group_id, agent_id=agent_id, session_id=session_id,
+            weight=weight, rt_ms=rt_ms
+        )
+    else:
+        trials_stacked = Docket(
+            stimulus_set, n_select, is_ranked
+        )
+    return trials_stacked
 
 
 def squeeze(sim_trials, mode="sg"):

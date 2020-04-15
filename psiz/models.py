@@ -1205,7 +1205,7 @@ def load_model(filepath, custom_objects={}):
     """Load embedding model saved via the save method.
 
     The loaded data is instantiated as a concrete class of
-    SimilarityTrials.
+    psiz.trials.Trials.
 
     Arguments:
         filepath: The location of the hdf5 file to load.

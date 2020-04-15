@@ -17,7 +17,7 @@
 """Module for similarity judgment trials.
 
 Classes:
-    SimilarityTrials: Abstract class for similarity judgment trials.
+    Trials: Abstract class for similarity judgment trials.
     Docket: Unjudged similarity judgment trials.
     Observations: Similarity judgment trials that have been judged and
         will serve as observed data during inference.
@@ -56,14 +56,14 @@ import numpy as np
 import pandas as pd
 
 
-class SimilarityTrials(metaclass=ABCMeta):
+class Trials(metaclass=ABCMeta):
     """Abstract base class for similarity judgment trials.
 
     This abstract base class is used to organize data associated with
     similarity judgment trials. As the class name suggests, this object
     handles data associated with multiple trials. Depending on the
-    concrete subclass, the similarity trials represent unjudged trials
-    or judged trials.
+    concrete subclass, the similarity trials represent to-be-shown
+    trials (i.e., a docket) or judged trials (i.e., observations).
 
     Attributes:
         n_trial: An integer indicating the number of trials.
@@ -275,13 +275,13 @@ class SimilarityTrials(metaclass=ABCMeta):
 
     @abstractmethod
     def subset(self, index):
-        """Return subset of trials as new SimilarityTrials object.
+        """Return subset of trials as new Trials object.
 
         Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
-            A new SimilarityTrials object.
+            A new Trials object.
 
         """
         pass
@@ -308,7 +308,7 @@ class SimilarityTrials(metaclass=ABCMeta):
 
     @abstractmethod
     def save(self, filepath):
-        """Save the SimilarityTrials object as an HDF5 file.
+        """Save the Trials object as an HDF5 file.
 
         Arguments:
             filepath: String specifying the path to save the data.
@@ -322,11 +322,11 @@ class SimilarityTrials(metaclass=ABCMeta):
         return is_present
 
 
-class Docket(SimilarityTrials):
-    """Object that encapsulates unjudged similarity trials.
+class Docket(Trials):
+    """Object that encapsulates unseen trials.
 
     The attributes and behavior of Docket is largely inherited
-    from SimilarityTrials.
+    from Trials.
 
     Attributes:
         config_list: A DataFrame object describing the unique trial
@@ -350,16 +350,16 @@ class Docket(SimilarityTrials):
     def __init__(self, stimulus_set, n_select=None, is_ranked=None):
         """Initialize.
 
-        Extends initialization of SimilarityTrials.
+        Extends initialization of Trials.
 
         Arguments:
             stimulus_set: The order of the reference indices is not
-                important. See SimilarityTrials.
-            n_select (optional): See SimilarityTrials.
-            is_ranked (optional): See SimilarityTrials.
+                important. See Trials.
+            n_select (optional): See Trials.
+            is_ranked (optional): See Trials.
 
         """
-        SimilarityTrials.__init__(self, stimulus_set, n_select, is_ranked)
+        Trials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Determine unique display configurations.
         self._set_configuration_data(
@@ -457,11 +457,11 @@ class Docket(SimilarityTrials):
         f.close()
 
 
-class Observations(SimilarityTrials):
-    """Object that encapsulates judged similarity trials.
+class Observations(Trials):
+    """Object that encapsulates seen trials.
 
     The attributes and behavior of Observations are largely inherited
-    from SimilarityTrials.
+    from Trials.
 
     Attributes:
         group_id: An integer array indicating the group membership of
@@ -515,16 +515,16 @@ class Observations(SimilarityTrials):
                  rt_ms=None):
         """Initialize.
 
-        Extends initialization of SimilarityTrials.
+        Extends initialization of Trials.
 
         Arguments:
             response_set: The order of reference indices is important.
                 An agent's selected references are listed first (in
                 order of selection if the trial is ranked) and
                 remaining unselected references are listed in any
-                order. See SimilarityTrials.
-            n_select (optional): See SimilarityTrials.
-            is_ranked (optional): See SimilarityTrials.
+                order. See Trials.
+            n_select (optional): See Trials.
+            is_ranked (optional): See Trials.
             group_id (optional): An integer array indicating the group
                 membership of each trial. It is assumed that group_id
                 is composed of integers from [0, M-1] where M is the
@@ -548,7 +548,7 @@ class Observations(SimilarityTrials):
                 shape = (n_trial,1)
 
         """
-        SimilarityTrials.__init__(self, response_set, n_select, is_ranked)
+        Trials.__init__(self, response_set, n_select, is_ranked)
 
         # Handle default settings.
         if group_id is None:
@@ -820,16 +820,16 @@ class Observations(SimilarityTrials):
 
 
 def stack(trials_list):
-    """Return a SimilarityTrials object containing all trials.
+    """Return a Trials object containing all trials.
 
-    The stimulus_set of each SimilarityTrials object is padded first to
+    The stimulus_set of each Trials object is padded first to
     match the maximum number of references of all the objects.
 
     Arguments:
-        trials_list: A tuple of SimilarityTrials objects to be stacked.
+        trials_list: A tuple of Trials objects to be stacked.
 
     Returns:
-        A new SimilarityTrials object.
+        A new Trials object.
 
     """
     # Determine the maximum number of references.
@@ -889,11 +889,11 @@ def squeeze(sim_trials, mode="sg"):
     unique stimuli used in sim_trials.
 
     Arguments:
-        sim_trials: A SimilarityTrials object.
-        mode (optional): The mode in which to squueze the indices.
+        sim_trials: A Trials object.
+        mode (optional): The mode in which to squeeze the indices.
 
     Returns:
-        sim_trials_sq: A SimilarityTrials object.
+        sim_trials_sq: A Trials object.
 
     """
     unique_stimuli = np.unique(sim_trials.stimulus_set)
@@ -916,7 +916,7 @@ def load_trials(filepath, verbose=0):
     """Load data saved via the save method.
 
     The loaded data is instantiated as a concrete class of
-    SimilarityTrials.
+    psiz.trials.Trials.
 
     Arguments:
         filepath: The location of the hdf5 file to load.

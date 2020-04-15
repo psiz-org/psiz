@@ -18,8 +18,9 @@
 
 Classes:
     Trials: Abstract class for similarity judgment trials.
-    Docket: Unjudged similarity judgment trials.
-    Observations: Similarity judgment trials that have been judged and
+    RankTrials: Abstract class for 'Rank' trials.
+    RankDocket: Unjudged similarity judgment trials.
+    RankObservations: Similarity judgment trials that have been judged and
         will serve as observed data during inference.
 
 Functions:
@@ -69,20 +70,7 @@ class Trials(metaclass=ABCMeta):
         n_trial: An integer indicating the number of trials.
         stimulus_set: An integer matrix containing indices that
             indicate the set of stimuli used in each trial. Each row
-            indicates the stimuli used in one trial. The first column
-            is the query stimulus. The remaining, columns indicate
-            reference stimuli. Negative integers are used as
-            placeholders to indicate non-existent references.
-            shape = (n_trial, max(n_reference) + 1)
-        n_reference: An integer array indicating the number of
-            references in each trial.
-            shape = (n_trial,)
-        n_select: An integer array indicating the number of references
-            selected in each trial.
-            shape = (n_trial,)
-        is_ranked: A Boolean array indicating which trials require
-            reference selections to be ranked.
-            shape = (n_trial,)
+            indicates the stimuli used in one trial.
         config_idx: An integer array indicating the
             configuration of each trial. The integer is an index
             referencing the row of config_list and the element of
@@ -94,14 +82,109 @@ class Trials(metaclass=ABCMeta):
             outcomes for a trial configuration. Each element in the
             list corresponds to a trial configuration in config_list.
             Each row of the 2D array indicates one potential outcome.
-            The values in the rows are the indices of the the reference
-            stimuli (as specified in the attribute `stimulus_set`.
 
     Methods:
         subset: Return a subset of similarity trials given an index.
+        save: Save the object to disk.
         is_present: Indicate if a stimulus is present.
 
     """
+
+    def __init__(self, stimulus_set):
+        """Initialize.
+
+        Arguments:
+            stimulus_set: An integer matrix containing indices that
+                indicate the set of stimuli used in each trial. Each
+                row indicates the stimuli used in one trial. The value
+                '-1' can be used as a masking placeholder to indicate
+                non-existent stimuli if each trial has a different
+                number of stimuli.
+                shape = (n_trial, max_n_stimuli_per_trial)
+
+        """
+        stimulus_set = self._check_stimulus_set(stimulus_set)
+        self.stimulus_set = stimulus_set
+        self.n_trial = stimulus_set.shape[0]
+
+        # Attributes determined by concrete class.
+        self.config_idx = None
+        self.config_list = None
+        self.outcome_idx_list = None
+
+    def _check_stimulus_set(self, stimulus_set):
+        """Check the argument `stimulus_set`.
+
+        Raises:
+            ValueError
+
+        """
+        # Check that provided values are integers.
+        if not issubclass(stimulus_set.dtype.type, np.integer):
+            raise ValueError((
+                "The argument `stimulus_set` must be a 2D array of "
+                "integers."
+            ))
+
+        # Check that all values are greater than or equal to -1.
+        # NOTE: The value '-1' is used as a masking placeholder.
+        if np.sum(np.less(stimulus_set, -1)) > 0:
+            raise ValueError((
+                "The argument `stimulus_set` must only contain integers "
+                "greater than or equal to -1."
+        ))
+        return stimulus_set
+
+    @abstractmethod
+    def _set_configuration_data(self, *args):
+        """Generate a unique ID for each trial configuration.
+
+        Helper function that generates a unique ID for each of the
+        unique trial configurations in the provided data set.
+
+        Notes:
+            Sets three attributes of object.
+            config_idx: A unique index for each type of trial
+                configuration.
+            config_list: A DataFrame containing all the unique
+                trial configurations.
+            outcome_idx_list: A list of the possible outcomes for each
+                trial configuration.
+
+        """
+        pass
+
+    @abstractmethod
+    def subset(self, index):
+        """Return subset of trials as new Trials object.
+
+        Arguments:
+            index: The indices corresponding to the subset.
+
+        Returns:
+            A new Trials object.
+
+        """
+        pass
+
+    @abstractmethod
+    def save(self, filepath):
+        """Save the Trials object as an HDF5 file.
+
+        Arguments:
+            filepath: String specifying the path to save the data.
+
+        """
+        pass
+
+    def is_present(self):
+        """Return a 2D boolean array indicating a present stimulus."""
+        is_present = np.not_equal(self.stimulus_set, -1)
+        return is_present
+
+
+class RankTrials(Trials, metaclass=ABCMeta):
+    """Abstract base class for rank-type trials."""
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None):
         """Initialize.
@@ -113,9 +196,8 @@ class Trials(metaclass=ABCMeta):
                 column is the query stimulus. The remaining, columns
                 indicate reference stimuli. It is assumed that stimuli
                 indices are composed of integers from [0, N-1], where N
-                is the number of unique stimuli. Negative integers are
-                used as placeholders to indicate non-existent
-                references.
+                is the number of unique stimuli. The value -1 can be
+                used as a placeholder for non-existent references.
                 shape = (n_trial, max(n_reference) + 1)
             n_select (optional): An integer array indicating the number
                 of references selected in each trial. Values must be
@@ -127,9 +209,8 @@ class Trials(metaclass=ABCMeta):
                 shape = (n_trial,)
 
         """
-        stimulus_set = self._check_stimulus_set(stimulus_set)
+        Trials.__init__(self, stimulus_set)
 
-        self.n_trial = stimulus_set.shape[0]
         n_reference = self._infer_n_reference(stimulus_set)
         self.n_reference = self._check_n_reference(n_reference)
 
@@ -148,28 +229,6 @@ class Trials(metaclass=ABCMeta):
         else:
             is_ranked = self._check_is_ranked(is_ranked)
         self.is_ranked = is_ranked
-
-        # Attributes determined by concrete class.
-        self.config_idx = None
-        self.config_list = None
-        self.outcome_idx_list = None
-
-    def _check_stimulus_set(self, stimulus_set):
-        """Check the argument `stimulus_set`.
-
-        Raises:
-            ValueError
-
-        """
-        if not issubclass(stimulus_set.dtype.type, np.integer):
-            raise ValueError((
-                "The argument `stimulus_set` must be a 2D array of "
-                "integers."))
-        if np.sum(np.less(stimulus_set, -1)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must only contain integers "
-                "greater than or equal to -1."))
-        return stimulus_set
 
     def _infer_n_reference(self, stimulus_set):
         """Return the number of references in each trial.
@@ -254,79 +313,12 @@ class Trials(metaclass=ABCMeta):
                 "trial(s).").format(n_bad))
         return is_ranked
 
-    @abstractmethod
-    def _set_configuration_data(self, *args):
-        """Generate a unique ID for each trial configuration.
 
-        Helper function that generates a unique ID for each of the
-        unique trial configurations in the provided data set.
-
-        Notes:
-            Sets three attributes of object.
-            config_idx: A unique index for each type of trial
-                configuration.
-            config_list: A DataFrame containing all the unique
-                trial configurations.
-            outcome_idx_list: A list of the possible outcomes for each
-                trial configuration.
-
-        """
-        pass
-
-    @abstractmethod
-    def subset(self, index):
-        """Return subset of trials as new Trials object.
-
-        Arguments:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new Trials object.
-
-        """
-        pass
-
-    def outcome_tensor(self):
-        """Return outcome tensor."""
-        # TODO better doc, test
-        n_config = self.config_list.shape[0]
-
-        n_outcome_list = self.config_list['n_outcome'].values
-        max_n_outcome = np.max(n_outcome_list)
-
-        n_reference_list = self.config_list['n_reference'].values
-        max_n_reference = np.max(n_reference_list)
-
-        outcome_tensor = -1 * np.ones(
-            (n_config, max_n_outcome, max_n_reference), dtype=np.int32)
-        for i_config in range(n_config):
-            outcome_tensor[
-                i_config,
-                0:n_outcome_list[i_config],
-                0:n_reference_list[i_config]] = self.outcome_idx_list[i_config]
-        return outcome_tensor
-
-    @abstractmethod
-    def save(self, filepath):
-        """Save the Trials object as an HDF5 file.
-
-        Arguments:
-            filepath: String specifying the path to save the data.
-
-        """
-        pass
-
-    def is_present(self):
-        """Return a 2D boolean array indicating a present stimulus."""
-        is_present = np.not_equal(self.stimulus_set, -1)
-        return is_present
-
-
-class Docket(Trials):
+class RankDocket(RankTrials):
     """Object that encapsulates unseen trials.
 
-    The attributes and behavior of Docket is largely inherited
-    from Trials.
+    The attributes and behavior of RankDocket is largely inherited
+    from RankTrials.
 
     Attributes:
         config_list: A DataFrame object describing the unique trial
@@ -350,7 +342,7 @@ class Docket(Trials):
     def __init__(self, stimulus_set, n_select=None, is_ranked=None):
         """Initialize.
 
-        Extends initialization of Trials.
+        Extends initialization of RankTrials.
 
         Arguments:
             stimulus_set: The order of the reference indices is not
@@ -359,7 +351,7 @@ class Docket(Trials):
             is_ranked (optional): See Trials.
 
         """
-        Trials.__init__(self, stimulus_set, n_select, is_ranked)
+        RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Determine unique display configurations.
         self._set_configuration_data(
@@ -367,16 +359,16 @@ class Docket(Trials):
         )
 
     def subset(self, index):
-        """Return subset of trials as a new Docket object.
+        """Return subset of trials as a new RankDocket object.
 
         Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
-            A new Docket object.
+            A new RankDocket object.
 
         """
-        return Docket(
+        return RankDocket(
             self.stimulus_set[index, :], self.n_select[index],
             self.is_ranked[index]
         )
@@ -443,25 +435,25 @@ class Docket(Trials):
         self.outcome_idx_list = outcome_idx_list
 
     def save(self, filepath):
-        """Save the Docket object as an HDF5 file.
+        """Save the RankDocket object as an HDF5 file.
 
         Arguments:
             filepath: String specifying the path to save the data.
 
         """
         f = h5py.File(filepath, "w")
-        f.create_dataset("trial_type", data="Docket")
+        f.create_dataset("trial_type", data="RankDocket")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
 
-class Observations(Trials):
+class RankObservations(RankTrials):
     """Object that encapsulates seen trials.
 
-    The attributes and behavior of Observations are largely inherited
-    from Trials.
+    The attributes and behavior of RankObservations are largely inherited
+    from RankTrials.
 
     Attributes:
         group_id: An integer array indicating the group membership of
@@ -548,7 +540,7 @@ class Observations(Trials):
                 shape = (n_trial,1)
 
         """
-        Trials.__init__(self, response_set, n_select, is_ranked)
+        RankTrials.__init__(self, response_set, n_select, is_ranked)
 
         # Handle default settings.
         if group_id is None:
@@ -657,16 +649,16 @@ class Observations(Trials):
         return rt_ms
 
     def subset(self, index):
-        """Return subset of trials as a new Observations object.
+        """Return subset of trials as a new RankObservations object.
 
         Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
-            A new Observations object.
+            A new RankObservations object.
 
         """
-        return Observations(
+        return RankObservations(
             self.stimulus_set[index, :], n_select=self.n_select[index],
             is_ranked=self.is_ranked[index], group_id=self.group_id[index],
             agent_id=self.agent_id[index], session_id=self.session_id[index],
@@ -785,14 +777,14 @@ class Observations(Trials):
         self.weight = copy.copy(weight)
 
     def save(self, filepath):
-        """Save the Docket object as an HDF5 file.
+        """Save the RankObservations object as an HDF5 file.
 
         Arguments:
             filepath: String specifying the path to save the data.
 
         """
         f = h5py.File(filepath, "w")
-        f.create_dataset("trial_type", data="Observations")
+        f.create_dataset("trial_type", data="RankObservations")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)
@@ -820,7 +812,7 @@ class Observations(Trials):
 
 
 def stack(trials_list):
-    """Return a Trials object containing all trials.
+    """Return a RankTrials object containing all trials.
 
     The stimulus_set of each Trials object is padded first to
     match the maximum number of references of all the objects.
@@ -870,13 +862,13 @@ def stack(trials_list):
             rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
 
     if is_judged:
-        trials_stacked = Observations(
+        trials_stacked = RankObservations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
             group_id=group_id, agent_id=agent_id, session_id=session_id,
             weight=weight, rt_ms=rt_ms
         )
     else:
-        trials_stacked = Docket(
+        trials_stacked = RankDocket(
             stimulus_set, n_select, is_ranked
         )
     return trials_stacked
@@ -930,18 +922,23 @@ def load_trials(filepath, verbose=0):
 
     """
     f = h5py.File(filepath, "r")
-    # Common attributes.
+
+    # Common trial attributes.
     trial_type = f["trial_type"][()]
     stimulus_set = f["stimulus_set"][()]
-    n_select = f["n_select"][()]
-    is_ranked = f["is_ranked"][()]
 
-    if trial_type == "Docket":
-        loaded_trials = Docket(
+    # Handle old API where Docket meant RandDocket and Observations meant
+    # RankObservations.
+    if trial_type == "Docket" or trial_type == "RankDocket":
+        n_select = f["n_select"][()]
+        is_ranked = f["is_ranked"][()]
+        loaded_trials = RankDocket(
             stimulus_set, n_select=n_select, is_ranked=is_ranked
         )
-    elif trial_type == "Observations":
+    elif trial_type == "Observations" or trial_type = "RankObservations":
         # Observations specific attributes.
+        n_select = f["n_select"][()]
+        is_ranked = f["is_ranked"][()]
         group_id = f["group_id"][()]
 
         # For backwards compatability.
@@ -961,7 +958,7 @@ def load_trials(filepath, verbose=0):
             session_id = f["session_id"][()]
         else:
             session_id = np.zeros((len(n_select)))
-        loaded_trials = Observations(
+        loaded_trials = RankObservations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
             group_id=group_id, agent_id=agent_id, session_id=session_id,
             weight=weight, rt_ms=rt_ms
@@ -974,18 +971,19 @@ def load_trials(filepath, verbose=0):
         print("Trial Summary")
         print('  trial_type: {0}'.format(trial_type))
         print('  n_trial: {0}'.format(loaded_trials.n_trial))
-        if trial_type == "Observations":
-            print(
-                '  n_agent: {0}'.format(
-                    len(np.unique(loaded_trials.agent_id))
-                )
-            )
-            print(
-                '  n_group: {0}'.format(
-                    len(np.unique(loaded_trials.group_id))
-                )
-            )
-        print('')
+        # TODO will all Observations have this info? 
+        # if trial_type == "Observations":
+        #     print(
+        #         '  n_agent: {0}'.format(
+        #             len(np.unique(loaded_trials.agent_id))
+        #         )
+        #     )
+        #     print(
+        #         '  n_group: {0}'.format(
+        #             len(np.unique(loaded_trials.group_id))
+        #         )
+        #     )
+        # print('')
     return loaded_trials
 
 

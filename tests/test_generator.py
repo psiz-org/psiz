@@ -27,7 +27,7 @@ import pytest
 
 from psiz import generator
 from psiz.models import Exponential
-from psiz.trials import stack, Docket
+from psiz.trials import stack, RankDocket
 from psiz.simulate import Agent
 
 
@@ -136,11 +136,11 @@ def test_information_gain(ground_truth):
     samples = simulated_samples(z)
 
     gen = generator.ActiveGenerator(ground_truth.n_stimuli)
-    docket_0 = Docket(
+    docket_0 = RankDocket(
         np.array([[0, 1, 2]], dtype=np.int32),
         np.array([1], dtype=np.int32)
         )
-    docket_1 = Docket(
+    docket_1 = RankDocket(
         np.array([[3, 1, 2]], dtype=np.int32),
         np.array([1], dtype=np.int32)
         )
@@ -151,7 +151,7 @@ def test_information_gain(ground_truth):
     assert ig_0 > ig_1
 
     # Check case for multiple candidate trials.
-    docket_01 = Docket(
+    docket_01 = RankDocket(
         np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
         np.array([1, 1], dtype=np.int32)
         )
@@ -160,13 +160,13 @@ def test_information_gain(ground_truth):
     assert ig_01[1] == ig_1
 
     # Check case for multiple candidate trials with different configurations.
-    docket_23 = Docket(
+    docket_23 = RankDocket(
         np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
         np.array([2, 2], dtype=np.int32)
         )
     ig_23 = generator.information_gain(ground_truth, samples, docket_23)
 
-    docket_0123 = Docket(
+    docket_0123 = RankDocket(
         np.array([
             [0, 1, 2, -1, -1],
             [3, 1, 2, -1, -1],

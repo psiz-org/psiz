@@ -82,7 +82,7 @@ class Restarter(object):
         """Fit the embedding model to the observations using restarts.
 
         Arguments: TODO
-            obs: A psiz.trials.Observations object.
+            obs: A psiz.trials.RankObservations object.
             verbose: Verbosity of output.
             callbacks: A list of callbacks.
             **kwargs: Any additional keyword arguments.

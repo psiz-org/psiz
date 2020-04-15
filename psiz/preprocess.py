@@ -38,7 +38,7 @@ def identify_catch_trials(obs):
     references is the same stimulus as the query.
 
     Arguments:
-        obs: A psiz.trials.Observations object.
+        obs: A psiz.trials.RankObservations object.
 
     Returns:
         is_catch: Boolean array indicating catch trial locations.
@@ -65,7 +65,7 @@ def grade_catch_trials(obs, grade_mode='lenient'):
     graded as correct depending on the grade_mode.
 
     Arguments:
-        obs: A psiz.trials.Observations object.
+        obs: A psiz.trials.RankObservations object.
         grade_mode (optional): Determines the manner in which responses
             are graded. Can be either 'strict', 'partial', or
             'lenient'. The options 'strict' and 'partial' are only
@@ -150,14 +150,14 @@ def quality_control(obs, grade_thresh=1.0, grade_mode='lenient'):
     """Remove agents that do not meet quality control standards.
 
     Arguments:
-        obs: A psiz.trials.Observations object.
+        obs: A psiz.trials.RankObservations object.
         grade_thresh (optional): The threshold for dropping
             an agent's data.
         grade_mode (optional): Determines the manner in which responses
             are graded. See function grade_catch_trials.
 
     Returns:
-        obs: An psiz.trials.Observations object with bad data removed.
+        obs: An psiz.trials.RankObservations object with bad data removed.
 
     """
     agent_list = np.unique(obs.agent_id)
@@ -191,10 +191,10 @@ def remove_catch_trials(obs):
     """Remove all catch trials.
 
     Arguments:
-        obs: A psiz.trials.Observations object.
+        obs: A psiz.trials.RankObservations object.
 
     Returns:
-        obs: A psiz.trials.Observations object.
+        obs: A psiz.trials.RankObservations object.
 
     """
     is_catch = identify_catch_trials(obs)

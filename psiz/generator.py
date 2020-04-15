@@ -56,7 +56,7 @@ import pandas as pd
 from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import NearestNeighbors
 
-from psiz.trials import Docket, stack
+from psiz.trials import RankDocket, stack
 from psiz.simulate import Agent
 from psiz.preprocess import remove_catch_trials
 from psiz.utils import ProgressBar
@@ -83,7 +83,7 @@ class DocketGenerator(object):
             n_stimuli
 
         Returns:
-            A Docket object.
+            A RankDocket object.
 
         """
         pass
@@ -124,7 +124,7 @@ class RandomGenerator(DocketGenerator):
                 generate.
 
         Returns:
-            A Docket object.
+            A RankDocket object.
 
         """
         n_reference = self.n_reference
@@ -136,7 +136,7 @@ class RandomGenerator(DocketGenerator):
             idx_eligable, (n_trial, n_reference + 1), prob
         )
 
-        return Docket(
+        return RankDocket(
             stimulus_set, n_select=n_select, is_ranked=is_ranked
         )
 
@@ -239,7 +239,7 @@ class ActiveGenerator(DocketGenerator):
                 integers display an increasing amount of information.
 
         Returns:
-            docket: A Docket object with trials that maximize expected
+            docket: A RankDocket object with trials that maximize expected
                 information gain.
             info: A dictionary containing additional information about
                 the docket.
@@ -409,7 +409,7 @@ def _select_query_references(
     stimulus_set[:, 1:] = choice_wo_replace(
         ref_idx_eligable, (max_candidate, n_reference), ref_prob
     )
-    docket = Docket(
+    docket = RankDocket(
         stimulus_set, n_select=n_select, is_ranked=is_ranked
     )
 
@@ -437,7 +437,7 @@ def information_gain(embedding, samples, docket, group_id=None):
         embedding: A PsychologicalEmbedding object.
         samples: Dictionary of sampled parameters.
             'z': shape = (n_stimuli, n_dim, n_sample)
-        docket: A Docket object.
+        docket: A RankDocket object.
         group_id (optional): A scalar or an array with
             shape = (n_trial,).
 

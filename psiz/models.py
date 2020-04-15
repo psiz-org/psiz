@@ -432,7 +432,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         """Prepare inputs and build TensorFlow model.
 
         Arguments:
-            obs: A psiz.trials.Observations object.
+            obs: A psiz.trials.RankObservations object.
 
         Returns:
             ds_obs: The observations formatted as a tf.data.Dataset
@@ -488,7 +488,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         """Check observerations.
 
         Arguments:
-            obs: A psiz.trials.Observations object.
+            obs: A psiz.trials.RankObservations object.
 
         Raises:
             ValueError
@@ -529,10 +529,10 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         """Fit the free parameters of the embedding model.
 
         Arguments:
-            obs_train: An Observations object representing the observed
+            obs_train: An RankObservations object representing the observed
                 data used to train the model.
             batch_size: The batch size to use for the training step.
-            obs_val (optional): An Observations object representing the
+            obs_val (optional): An RankObservations object representing the
                 observed data used to validate the model.
             epochs (optional): The number of epochs to perform.
             initial_epoch (optional): The initial epoch.
@@ -758,7 +758,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             regularization terms are not included in the loss.
 
         Arguments:
-            obs: A Observations object representing the observed data.
+            obs: A RankObservations object representing the observed data.
             batch_size (optional): Integer indicating the batch size.
 
         Returns:
@@ -907,7 +907,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         while sampling the other set.
 
         Arguments:
-            obs: A Observations object representing the observed data.
+            obs: A RankObservations object representing the observed data.
                 There must be at least one observation in order to
                 sample from the posterior distribution.
             n_final_sample (optional): The number of samples desired

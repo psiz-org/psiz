@@ -28,7 +28,7 @@ import numpy.ma as ma
 import pytest
 
 from psiz import simulate
-from psiz.trials import Docket
+from psiz.trials import RankDocket
 from psiz.models import Exponential
 
 
@@ -65,7 +65,7 @@ def docket_0():
     n_select = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    docket = Docket(stimulus_set, n_select=n_select)
+    docket = RankDocket(stimulus_set, n_select=n_select)
     return docket
 
 
@@ -100,7 +100,7 @@ def test_select(ground_truth):
     ))
     stimulus_set = np.tile(stimulus_set, (int(n_trial/2), 1))
     n_select = 2 * np.ones(n_trial, dtype=np.int32)
-    docket = Docket(stimulus_set, n_select=n_select)
+    docket = RankDocket(stimulus_set, n_select=n_select)
 
     agent = simulate.Agent(ground_truth)
     prob_all = np.array((

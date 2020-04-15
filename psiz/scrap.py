@@ -283,7 +283,7 @@
         while sampling the other set.
 
         Arguments:
-            obs: A Observations object representing the observed data.
+            obs: A RankObservations object representing the observed data.
             n_final_sample (optional): The number of samples desired
                 after removing the "burn in" samples and applying
                 thinning.

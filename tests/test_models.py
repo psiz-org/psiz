@@ -34,7 +34,7 @@ import tensorflow as tf
 # TODO convert to appropriate module once TF updates their docs.
 # from tensorflow.compat.v2.test import TestCase
 
-from psiz.trials import Docket
+from psiz.trials import RankDocket
 import psiz.models
 from psiz.models import Inverse, Exponential, HeavyTailed, StudentsT
 from psiz.models import ProjectAttention, load_embedding
@@ -101,7 +101,7 @@ def docket_0():
     n_select = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    docket = Docket(stimulus_set, n_select=n_select)
+    docket = RankDocket(stimulus_set, n_select=n_select)
     return docket
 
 

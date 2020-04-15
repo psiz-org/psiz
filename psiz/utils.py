@@ -60,7 +60,7 @@ def assess_convergence(
     wise similarity matrix of different embeddings.
 
     Arguments:
-        obs: An Observations object.
+        obs: A RankObservations object.
         model: A PsychologicalEmbedding object.
         n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.

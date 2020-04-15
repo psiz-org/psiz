@@ -50,7 +50,7 @@ def crossvalidate(
         split.
 
     Arguments:
-        obs: An Observations object representing the observed data.
+        obs: An RankObservations object representing the observed data.
             embedding_constructor: A PsychologicalEmbedding
             constructor.
         emb: A psiz.PsychologicalEmbedding object that is ready to be fit.

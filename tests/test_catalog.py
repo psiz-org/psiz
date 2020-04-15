@@ -136,7 +136,7 @@ class TestCatalog:
         catalog.save(fn)
         # Load the saved catalog.
         loaded_catalog = psiz.catalog.load_catalog(fn)
-        # Check that the loaded Docket object is correct.
+        # Check that the loaded Catalog object is correct.
         assert catalog.n_stimuli == loaded_catalog.n_stimuli
         np.testing.assert_array_equal(
             catalog.stimuli.id.values,

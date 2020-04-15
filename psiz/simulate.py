@@ -24,7 +24,7 @@ Classes:
 import numpy as np
 import tensorflow as tf
 
-from psiz.trials import Observations
+from psiz.trials import RankObservations
 
 
 class Agent(object):
@@ -64,7 +64,7 @@ class Agent(object):
         """Stochastically simulate similarity judgments.
 
         Arguments:
-            docket: A Docket object representing the
+            docket: A RankDocket object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
             session_id: An integer array indicating the session ID of a
@@ -73,7 +73,7 @@ class Agent(object):
                 different sessions.
 
         Returns:
-            Observations object representing the judged trials. The
+            RankObservations object representing the judged trials. The
                 order of the stimuli is now informative.
 
         """
@@ -88,12 +88,12 @@ class Agent(object):
         """Stochastically select from possible outcomes.
 
         Arguments:
-            docket: An Docket object.
+            docket: An RankDocket object.
             prob_all: A MaskedArray object.
 
 
         Returns:
-            An Observations object.
+            A RankObservations object.
 
         """
         outcome_idx_list = docket.outcome_idx_list
@@ -130,7 +130,7 @@ class Agent(object):
         group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
         agent_id = np.full((docket.n_trial), self.agent_id, dtype=np.int32)
         return (
-            Observations(
+            RankObservations(
                 stimulus_set,
                 n_select=docket.n_select,
                 is_ranked=docket.is_ranked,

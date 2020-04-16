@@ -140,9 +140,12 @@ class Embedding(Layer):
     Handles a placeholder stimulus using stimulus ID -1.
 
     """
-
+    # TODO
+    # embeddings_initializer='uniform',
+    # embeddings_regularizer=None,
+    # embeddings_constraint=None,
     def __init__(
-            self, n_stimuli=None, n_dim=None, fit_z=True, z_min=None,
+            self, n_stimuli, n_dim, fit_z=True, z_min=None,
             z_max=None, **kwargs):
         """Initialize a coordinate layer.
 
@@ -153,6 +156,12 @@ class Embedding(Layer):
             n_stimuli:
             n_dim:
             fit_z (optional): Boolean
+            embeddings_initializer (optional): Initializer for the
+                `z` matrix.
+            embeddings_regularizer: Regularizer function applied to
+                the `z` matrix.
+            embeddings_constraint: Constraint function applied to
+                the `z` matrix.
             z_min (optional):
             z_max (optional):
 
@@ -161,6 +170,10 @@ class Embedding(Layer):
 
         self.n_stimuli = n_stimuli
         self.n_dim = n_dim
+
+        # self.embeddings_initializer = initializers.get(embeddings_initializer)
+        # self.embeddings_regularizer = regularizers.get(embeddings_regularizer)
+        # self.embeddings_constraint = constraints.get(embeddings_constraint)
         self.z_min = z_min
         self.z_max = z_max
 
@@ -180,7 +193,10 @@ class Embedding(Layer):
             constraint=z_constraint
         )
 
-    def __call__(self, inputs):
+    # TODO
+    # def build(self, input_shape):
+
+    def call(self, inputs):
         """Call."""
         stimulus_set = inputs + 1  # Add one for placeholder stimulus.  TODO tf.constant(1, dtype=tf.int32)
         z_pad = tf.concat(
@@ -221,7 +237,7 @@ class Embedding(Layer):
 
     def random_z(self):
         """Random z."""
-        # TODO RandomEmbedding should take z_min and z_max argument.
+        # TODO Factor out as initializer
         z = RandomEmbedding(
             mean=tf.zeros([self.n_dim], dtype=K.floatx()),
             stdev=tf.ones([self.n_dim], dtype=K.floatx()),
@@ -237,6 +253,69 @@ class Embedding(Layer):
         config.update({
             'n_stimuli': self.n_stimuli, 'n_dim': self.n_dim,
             'fit_z': self.fit_z, 'z_min': self.z_min, 'z_max': self.z_max
+        })
+        return config
+
+
+# TODO call or __call__ for Initializer
+class RandomEmbedding(Initializer):
+    """Initializer that generates tensors with a normal distribution.
+
+    Arguments:
+        mean: A python scalar or a scalar tensor. Mean of the random
+            values to generate.
+        minval: Minimum value of a uniform random sampler for each
+            dimension.
+        maxval: Maximum value of a uniform random sampler for each
+            dimension.
+        seed: A Python integer. Used to create random seeds. See
+        `tf.set_random_seed` for behavior.
+        dtype: The data type. Only floating point types are supported.
+
+    """
+
+    def __init__(
+            self, mean=0.0, stdev=1.0, minval=-3.0, maxval=0.0, seed=None,
+            dtype=K.floatx()):
+        """Initialize."""
+        self.mean = mean
+        self.stdev = stdev
+        self.minval = minval
+        self.maxval = maxval
+        self.seed = seed
+        self.dtype = dtype
+
+    def __call__(self, shape, dtype=None, partition_info=None):
+        """Call."""
+        # TODO is partition info necessary?
+        if dtype is None:
+            dtype = self.dtype
+        scale = tf.pow(
+            tf.constant(10., dtype=dtype),
+            tf.random.uniform(
+                [1],
+                minval=self.minval,
+                maxval=self.maxval,
+                dtype=dtype,
+                seed=self.seed,
+                name=None
+            )
+        )
+        stdev = scale * self.stdev
+        return tf.random.normal(
+            shape, self.mean, stdev, dtype, seed=self.seed)
+
+    def get_config(self):
+        """Return configuration."""
+        # TODO is this the correct pattern for initializers?
+        config = super().get_config()
+        config.update({
+            "mean": self.mean,
+            "stdev": self.stdev,
+            "min": self.minval,
+            "max": self.maxval,
+            "seed": self.seed,
+            "dtype": self.dtype.name
         })
         return config
 
@@ -899,64 +978,6 @@ class StudentsTKernel(Layer):
         return config
 
 
-class RandomEmbedding(Initializer):
-    """Initializer that generates tensors with a normal distribution.
-
-    Arguments:
-        mean: A python scalar or a scalar tensor. Mean of the random
-            values to generate.
-        minval: Minimum value of a uniform random sampler for each
-            dimension.
-        maxval: Maximum value of a uniform random sampler for each
-            dimension.
-        seed: A Python integer. Used to create random seeds. See
-        `tf.set_random_seed` for behavior.
-        dtype: The data type. Only floating point types are supported.
-
-    """
-
-    def __init__(
-            self, mean=0.0, stdev=1.0, minval=0.0, maxval=0.0, seed=None,
-            dtype=K.floatx()):
-        """Initialize."""
-        self.mean = mean
-        self.stdev = stdev
-        self.minval = minval
-        self.maxval = maxval
-        self.seed = seed
-        self.dtype = dtype
-
-    def __call__(self, shape, dtype=None, partition_info=None):
-        """Call."""
-        if dtype is None:
-            dtype = self.dtype
-        scale = tf.pow(
-            tf.constant(10., dtype=dtype),
-            tf.random.uniform(
-                [1],
-                minval=self.minval,
-                maxval=self.maxval,
-                dtype=dtype,
-                seed=self.seed,
-                name=None
-            )
-        )
-        stdev = scale * self.stdev
-        return tf.random.normal(
-            shape, self.mean, stdev, dtype, seed=self.seed)
-
-    def get_config(self):
-        """Return configuration."""
-        return {
-            "mean": self.mean,
-            "stdev": self.stdev,
-            "min": self.minval,
-            "max": self.maxval,
-            "seed": self.seed,
-            "dtype": self.dtype.name
-        }
-
-
 class RandomAttention(Initializer):
     """Initializer that generates tensors for attention weights.
 
@@ -990,6 +1011,7 @@ class RandomAttention(Initializer):
         }
 
 
+# TODO call or __call__ for constraint
 class GreaterThan(Constraint):
     """Constrains the weights to be greater than a value."""
 

@@ -617,7 +617,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         # NOTE: Trainable attention weights does not work with eager
         # execution.
-        # @tf.function TODO
+        @tf.function
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
@@ -874,7 +874,9 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                 n_outcome = 1
 
             # Compute probability of each possible outcome.
-            probs_config = np.ones((n_trial, n_outcome, n_sample), dtype=np.float64)
+            probs_config = np.ones(
+                (n_trial, n_outcome, n_sample), dtype=np.float64
+            )
             # TODO (maybe faster) stack permutations, run
             # _ranked_sequence_probability once and then reshape.
             for i_outcome in range(n_outcome):

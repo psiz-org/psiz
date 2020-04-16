@@ -32,13 +32,13 @@ Classes:
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-from tensorflow.python.keras import backend as K
-from tensorflow.keras.constraints import Constraint
-from tensorflow.keras.initializers import Initializer
-from tensorflow.keras.layers import Layer
+from tensorflow.keras import backend as K
+from tensorflow.keras import constraints
+from tensorflow.keras import initializers
+from tensorflow.keras import layers
 
 
-class QueryReference(Layer):
+class QueryReference(layers.Layer):
     """Model of query reference similarity judgments."""
 
     def __init__(
@@ -134,12 +134,13 @@ class QueryReference(Layer):
         pass
 
 
-class Embedding(Layer):
+class Embedding(layers.Layer):
     """Embedding coordinates.
 
     Handles a placeholder stimulus using stimulus ID -1.
 
     """
+
     # TODO
     # embeddings_initializer='uniform',
     # embeddings_regularizer=None,
@@ -258,7 +259,7 @@ class Embedding(Layer):
 
 
 # TODO call or __call__ for Initializer
-class RandomEmbedding(Initializer):
+class RandomEmbedding(initializers.Initializer):
     """Initializer that generates tensors with a normal distribution.
 
     Arguments:
@@ -320,7 +321,7 @@ class RandomEmbedding(Initializer):
         return config
 
 
-class WeightedDistance(Layer):
+class WeightedDistance(layers.Layer):
     """Weighted Minkowski distance."""
 
     def __init__(self, fit_rho=True, **kwargs):
@@ -372,7 +373,7 @@ class WeightedDistance(Layer):
         return config
 
 
-class SeparateAttention(Layer):
+class SeparateAttention(layers.Layer):
     """Attention Layer."""
 
     def __init__(self, n_dim, n_group=1, fit_group=None, **kwargs):
@@ -449,7 +450,7 @@ class SeparateAttention(Layer):
         )(shape=[1, self.n_dim])
 
 
-class Attention(Layer):
+class Attention(layers.Layer):
     """Attention Layer."""
 
     def __init__(self, n_dim=None, n_group=1, fit_group=None, **kwargs):
@@ -521,7 +522,7 @@ class Attention(Layer):
         return config
 
 
-class InverseKernel(Layer):
+class InverseKernel(layers.Layer):
     """Inverse-distance similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -614,7 +615,7 @@ class InverseKernel(Layer):
         return config
 
 
-class ExponentialKernel(Layer):
+class ExponentialKernel(layers.Layer):
     """Exponential family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -753,7 +754,7 @@ class ExponentialKernel(Layer):
         return config
 
 
-class HeavyTailedKernel(Layer):
+class HeavyTailedKernel(layers.Layer):
     """Heavy-tailed family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -867,7 +868,7 @@ class HeavyTailedKernel(Layer):
         return config
 
 
-class StudentsTKernel(Layer):
+class StudentsTKernel(layers.Layer):
     """Student's t-distribution similarity kernel.
 
     The embedding technique uses the following similarity kernel:
@@ -978,7 +979,7 @@ class StudentsTKernel(Layer):
         return config
 
 
-class RandomAttention(Initializer):
+class RandomAttention(initializers.Initializer):
     """Initializer that generates tensors for attention weights.
 
     Arguments:
@@ -1012,7 +1013,7 @@ class RandomAttention(Initializer):
 
 
 # TODO call or __call__ for constraint
-class GreaterThan(Constraint):
+class GreaterThan(constraints.Constraint):
     """Constrains the weights to be greater than a value."""
 
     def __init__(self, min_value=0.):
@@ -1027,7 +1028,7 @@ class GreaterThan(Constraint):
         return w
 
 
-class LessThan(Constraint):
+class LessThan(constraints.Constraint):
     """Constrains the weights to be less than a value."""
 
     def __init__(self, max_value=0.):
@@ -1042,7 +1043,7 @@ class LessThan(Constraint):
         return w
 
 
-class GreaterEqualThan(Constraint):
+class GreaterEqualThan(constraints.Constraint):
     """Constrains the weights to be greater/equal than a value."""
 
     def __init__(self, min_value=0.):
@@ -1057,7 +1058,7 @@ class GreaterEqualThan(Constraint):
         return w
 
 
-class LessEqualThan(Constraint):
+class LessEqualThan(constraints.Constraint):
     """Constrains the weights to be greater/equal than a value."""
 
     def __init__(self, max_value=0.):
@@ -1072,7 +1073,7 @@ class LessEqualThan(Constraint):
         return w
 
 
-class MinMax(Constraint):
+class MinMax(constraints.Constraint):
     """Constrains the weights to be between/equal values."""
 
     def __init__(self, min_value, max_value):
@@ -1093,7 +1094,7 @@ class MinMax(Constraint):
         return w
 
 
-class ProjectZ(Constraint):
+class ProjectZ(constraints.Constraint):
     """Constrains the embedding to be zero-centered.
 
     Constraint is used to improve numerical stability.
@@ -1109,7 +1110,7 @@ class ProjectZ(Constraint):
         return tf_z_centered
 
 
-class ProjectAttention(Constraint):
+class ProjectAttention(constraints.Constraint):
     """Return projection of attention weights."""
 
     def __init__(self):

@@ -40,20 +40,20 @@ import psiz.keras.initializers
 class QueryReference(tf.keras.Model):
     """Model of query reference similarity judgments."""
 
-    def __init__(self, embedding, attention, kernel, config_list):
+    def __init__(self, embedding, attention, kernel, config_list, **kwargs):
         """Initialize.
 
         Arguments:
-            tf_theta:
-            tf_phi:
-            tf_z:
-            tf_similarity:
-            config_list: It is assumed that the indices that will be
-                passed in later as inputs will correspond to the
+            embedding: An embedding layer.
+            attention: An attention layer.
+            kernel: A kernel layer.
+            config_list: A Pandas DataFrame with trial configuration
+                information. It is assumed that the indices that will
+                be passed in later as inputs will correspond to the
                 indices in this data structure.
 
         """
-        super(QueryReference, self).__init__()
+        super().__init__(**kwargs)
 
         self.embedding = embedding
         self.attention = attention
@@ -68,13 +68,17 @@ class QueryReference(tf.keras.Model):
         """Call.
 
         Arguments:
-            inputs: A list of inputs:
-                stimulus_set: Containing the integers [0, n_stimuli[
-                config_idx: Containing the integers [0, n_config[
-                group_id: Containing the integers [0, n_group[
+            inputs: A dictionary of inputs:
+                stimulus_set: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_stimuli[
+                config_idx: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_config[
+                group_id: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_group[
+                is_present: dtype=tf.bool
 
         """
-        # Inputs.
+        # Grab inputs.
         obs_stimulus_set = inputs['stimulus_set']
         obs_config_idx = inputs['config_idx']
         obs_group_id = inputs['group_id']
@@ -125,7 +129,9 @@ class QueryReference(tf.keras.Model):
 
     def reset_weights(self):
         """Reset trainable variables."""
-        pass
+        self.embedding.reset_weights()
+        self.attention.reset_weights()
+        self.kernel.reset_weights()
 
 
 class Embedding(tf.keras.layers.Layer):
@@ -190,13 +196,6 @@ class Embedding(tf.keras.layers.Layer):
             regularizer=self.embeddings_regularizer,
             constraint=embeddings_constraint
         )
-        # TODO
-        # self.z = tf.Variable(
-        #     initial_value=self.embeddings_initializer(
-        #         shape=(self.n_stimuli, self.n_dim)
-        #     ), trainable=fit_z, name="z", dtype=K.floatx(),
-        #     constraint=embeddings_constraint
-        # )
 
     def call(self, inputs):
         """Call."""

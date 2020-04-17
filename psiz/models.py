@@ -459,34 +459,10 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             'is_present': obs.is_present()
         })
 
-        # # Initialize model likelihood layer.
-        # likelihood_layer = psiz.keras.layers.QueryReference(
-        #     self.embedding, self.attention, self.kernel,
-        #     obs.config_list
-        # )
-
-        # # Define model.
-        # inputs = [
-        #     tf.keras.Input(
-        #         shape=[None], name='stimulus_set', dtype=tf.int32,
-        #     ),
-        #     tf.keras.Input(
-        #         shape=[], name='config_idx', dtype=tf.int32,
-        #     ),
-        #     tf.keras.Input(
-        #         shape=[], name='group_id', dtype=tf.int32,
-        #     ),
-        #     tf.keras.Input(
-        #         shape=[], name='weight', dtype=K.floatx(),
-        #     ),
-        #     tf.keras.Input(
-        #         shape=[None], name='is_present', dtype=tf.bool
-        #     )
-        # ]
-        # output = likelihood_layer(inputs)
-        # model = tf.keras.models.Model(inputs, output, name='anchored_ordinal')
+        # Define model.
         model = psiz.keras.layers.QueryReference(
-            self.embedding, self.attention, self.kernel, obs.config_list
+            self.embedding, self.attention, self.kernel, obs.config_list,
+            name='rank_model'
         )
         return ds_obs, model
 

@@ -35,11 +35,23 @@ Guidance for other Keras objects is listed below.
     * include `**kwargs` argument and pass to `super().__init__(**kwargs)`
 * implement `call` not `__call__` method
 * `get_config()`
-    * Must implement, call `super(_).get_config()` first and then update the dictionary with the custom layer's attributes.
+    * If custom layer requires initialization arguments, then implement by first calling `super(_).get_config()` and then update the dictionary with the custom layer's attributes.
+* `reset_weights()`
+    * Must implement.
+
+### Custom `Model`
+* `init()`
+    * use `**kwargs` in arguments and call `super().__init__(**kwargs)`
+* implement `call` method
+    * decorate `call` method with `@tf.function` to enable graph execution.
+* `get_config()`
+    * TODO
+* `reset_weights()`
+    * Must implement.
 
 ### Custom `Regularizer`
 * implement `__call__` method
-* get_config()
+* `get_config()`
     * Do not need to implement get_config if no class attributes
     * If implementing, do not need to call `super(_).get_config()`
 

@@ -53,17 +53,17 @@ import tensorflow_probability as tfp
 from tensorflow.keras.initializers import Initializer
 import tensorflow.keras.optimizers
 from tensorflow.python.keras import backend as K
-from tensorflow.keras.callbacks import BaseLogger, History
+from tensorflow.keras.callbacks import History
 from tensorflow.python.keras.callbacks import configure_callbacks
 from tensorflow.keras.constraints import Constraint
 
-import psiz.layers
+import psiz.keras.layers
 import psiz.trials
 import psiz.utils
 
 
 class PsychologicalEmbedding(metaclass=ABCMeta):
-    """Abstract base class for a psychological embedding.
+    """Abstract base class for a psychological embedding model.
 
     The embedding procedure jointly infers three components. First, the
     embedding algorithm infers a stimulus representation denoted by the
@@ -130,7 +130,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
     """
 
     def __init__(
-            self, n_stimuli, n_dim=2, n_group=1, coordinate=None,
+            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
             attention=None, kernel=None):
         """Initialize.
 
@@ -144,7 +144,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                 different population groups in the embedding. A
                 separate set of attention weights will be inferred for
                 each group. Must be equal to or greater than one.
-            coordinate (optional): A coordinate layer.
+            embedding (optional): An embedding layer.
             attention (optional): An attention layer.
             kernel (optional): A similarity kernel layer.
 
@@ -172,20 +172,20 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         self.n_group = n_group
 
         # Initialize model components.
-        if coordinate is None:
-            coordinate = psiz.layers.Embedding(
+        if embedding is None:
+            embedding = psiz.keras.layers.Embedding(
                 n_stimuli=self.n_stimuli, n_dim=self.n_dim
             )
-        self.coordinate = coordinate
+        self.embedding = embedding
 
         if attention is None:
-            attention = psiz.layers.Attention(
+            attention = psiz.keras.layers.Attention(
                 n_dim=self.n_dim, n_group=self.n_group
             )
         self.attention = attention
 
         if kernel is None:
-            kernel = psiz.layers.ExponentialKernel()
+            kernel = psiz.keras.layers.ExponentialKernel()
         self.kernel = kernel
 
         # Unsaved attributes.
@@ -199,19 +199,19 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
     def reset_weights(self):
         """Reinitialize trainable model parameters."""
-        self.coordinate.reset_weights()
+        self.embedding.reset_weights()
         self.attention.reset_weights()
         self.kernel.reset_weights()
 
     @property
     def z(self):
         """Getter method for z."""
-        return self.coordinate.z.numpy()
+        return self.embedding.z.numpy()
 
     @z.setter
     def z(self, z):
         """Setter method for z."""
-        self.coordinate.z.assign(z)
+        self.embedding.z.assign(z)
 
     @property
     def w(self):
@@ -259,7 +259,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         """
         weights = {
-            'coordinate': {'z': self.z},
+            'embedding': {'z': self.z},
             'attention': self.phi,
             'kernel': self.theta
         }
@@ -459,33 +459,35 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             'is_present': obs.is_present()
         })
 
-        # Initialize model likelihood layer.
-        likelihood_layer = psiz.layers.QueryReference(
-            self.coordinate, self.attention, self.kernel,
-            obs.config_list
+        # # Initialize model likelihood layer.
+        # likelihood_layer = psiz.keras.layers.QueryReference(
+        #     self.embedding, self.attention, self.kernel,
+        #     obs.config_list
+        # )
+
+        # # Define model.
+        # inputs = [
+        #     tf.keras.Input(
+        #         shape=[None], name='stimulus_set', dtype=tf.int32,
+        #     ),
+        #     tf.keras.Input(
+        #         shape=[], name='config_idx', dtype=tf.int32,
+        #     ),
+        #     tf.keras.Input(
+        #         shape=[], name='group_id', dtype=tf.int32,
+        #     ),
+        #     tf.keras.Input(
+        #         shape=[], name='weight', dtype=K.floatx(),
+        #     ),
+        #     tf.keras.Input(
+        #         shape=[None], name='is_present', dtype=tf.bool
+        #     )
+        # ]
+        # output = likelihood_layer(inputs)
+        # model = tf.keras.models.Model(inputs, output, name='anchored_ordinal')
+        model = psiz.keras.layers.QueryReference(
+            self.embedding, self.attention, self.kernel, obs.config_list
         )
-
-        # Define model.
-        inputs = [
-            tf.keras.Input(
-                shape=[None], name='stimulus_set', dtype=tf.int32,
-            ),
-            tf.keras.Input(
-                shape=[], name='config_idx', dtype=tf.int32,
-            ),
-            tf.keras.Input(
-                shape=[], name='group_id', dtype=tf.int32,
-            ),
-            tf.keras.Input(
-                shape=[], name='weight', dtype=K.floatx(),
-            ),
-            tf.keras.Input(
-                shape=[None], name='is_present', dtype=tf.bool
-            )
-        ]
-        output = likelihood_layer(inputs)
-        model = tf.keras.models.Model(inputs, output, name='anchored_ordinal')
-
         return ds_obs, model
 
     def _check_obs(self, obs):
@@ -630,18 +632,22 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             gradients = grad_tape.gradient(
                 loss_value, model.trainable_variables
             )
-            # NOTE: This assumes equal number of samples for each
-            # minibatch. The computed mean will deviate from correct if
-            # minibatch sizes vary.
+            # NOTE: This assumes equal number of samples for each minibatch.
+            # The computed mean will deviate from correct if minibatch sizes
+            # vary.
             metric_train_loss.update_state(loss_value)
 
-            # NOTE: There are problems using constraints with
-            # Eager Execution since gradients are returned as
-            # tf.IndexedSlices, which in Eager Execution mode
-            # cannot be used to update a variable. To solve this
-            # problem, use the pattern below on any IndexedSlices.
-            # gradients[0] = tf.convert_to_tensor(gradients[0])
-            # gradients[1] = tf.convert_to_tensor(gradients[1])
+            # NOTE: There is an open issue for using constraints with
+            # tf.keras.layers.Embedding and psiz.keras.layers.Embedding (see:
+            # https://github.com/tensorflow/tensorflow/issues/33755). There
+            # are also issues when using Eager Execution. A work-around is
+            # to convert the problematic gradients, which are returned as
+            # tf.IndexedSlices, into dense tensors.
+            for var_idx, var in enumerate(model.trainable_variables):
+                if var.name == 'z:0':
+                    gradients[var_idx] = tf.convert_to_tensor(
+                        gradients[var_idx]
+                    )
 
             # Apply gradients (subject to constraints).
             optimizer.apply_gradients(
@@ -1107,9 +1113,9 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         # Save model architecture.
         grp_arch = f.create_group('architecture')
-        # Create group for coordinate layer.
-        grp_coord = grp_arch.create_group('coordinate')
-        _add_layer_to_save_architecture(grp_coord, self.coordinate)
+        # Create group for embedding layer.
+        grp_coord = grp_arch.create_group('embedding')
+        _add_layer_to_save_architecture(grp_coord, self.embedding)
         # Create group for attention layer.
         grp_attention = grp_arch.create_group('attention')
         _add_layer_to_save_architecture(grp_attention, self.attention)
@@ -1173,16 +1179,17 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
     def __deepcopy__(self, memodict={}):
         """Override deepcopy method."""
-        # TODO CRITICAL update and add other necessary attributes: optimizer,
-        # etc.
-        # Make shallow copy of whole object.
+        # TODO CRITICAL test
+        # embedding = copy.deepcopy(self.embedding, memodict)
         cpyobj = type(self)(
-            self.n_stimuli, n_dim=self.n_dim, n_group=self.n_group
+            self.n_stimuli, n_dim=self.n_dim, n_group=self.n_group,
+            embedding=self.embedding, attention=self.attention,
+            kernel=self.kernel
         )
-        # Make deepcopy required attributes
-        cpyobj.vars['z'] = copy.deepcopy(self.vars['z'], memodict)
-        cpyobj.vars['phi'] = copy.deepcopy(self.vars['phi'], memodict)
-        cpyobj.vars['theta'] = copy.deepcopy(self.vars['theta'], memodict)
+
+        cpyobj.do_log = self.do_log
+        cpyobj.log_dir = self.log_dir
+        cpyobj.log_freq = self.log_freq
 
         return cpyobj
 
@@ -1194,12 +1201,12 @@ class Rank(PsychologicalEmbedding):
     """An embedding model that uses anchored, ordinal judgments."""
 
     def __init__(
-            self, n_stimuli, n_dim=2, n_group=1, coordinate=None,
+            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
             attention=None, kernel=None):
         """Initialize."""
         PsychologicalEmbedding.__init__(
             self, n_stimuli, n_dim=n_dim, n_group=n_group,
-            coordinate=coordinate,
+            embedding=embedding,
             attention=attention, kernel=kernel
         )
 
@@ -1234,23 +1241,23 @@ def load_model(filepath, custom_objects={}):
 
     if embedding_type == 'Rank':
         grp_architecture = f['architecture']
-        # Instantiate coordinate layer.
-        coordinate_layer = _load_layer(
-            grp_architecture['coordinate'], custom_objects
+        # Instantiate embedding layer.
+        embedding = _load_layer(
+            grp_architecture['embedding'], custom_objects
         )
         # Instantiate attention layer.
-        attention_layer = _load_layer(
+        attention = _load_layer(
             grp_architecture['attention'], custom_objects
         )
         # Instantiate kernel layer.
-        kernel_layer = _load_layer(
+        kernel = _load_layer(
             grp_architecture['kernel'], custom_objects
         )
 
         emb = Rank(
             n_stimuli, n_dim=n_dim, n_group=n_group,
-            coordinate=coordinate_layer, attention=attention_layer,
-            kernel=kernel_layer
+            embedding=embedding, attention=attention,
+            kernel=kernel
         )
 
         # Set weights.
@@ -1265,10 +1272,10 @@ def load_model(filepath, custom_objects={}):
         emb.set_weights(weights)
 
     else:
-        # Create coordinate layer.
+        # Create embedding layer.
         z = f['z']['value'][()]
         fit_z = f['z']['trainable'][()]
-        coordinate_layer = Embedding(
+        embedding = Embedding(
             n_stimuli=n_stimuli, n_dim=n_dim, fit_z=fit_z
         )
 
@@ -1279,7 +1286,7 @@ def load_model(filepath, custom_objects={}):
         else:
             fit_group = f['phi']['w']['trainable']
             w = f['phi']['w']['value']
-        attention_layer = Attention(
+        attention = Attention(
             n_dim=n_dim, n_group=n_group, fit_group=fit_group
         )
         # OLD code for reference.
@@ -1302,13 +1309,13 @@ def load_model(filepath, custom_objects={}):
             #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
         if embedding_type == 'Exponential':
-            kernel_layer = ExponentialKernel(**theta_config)
+            kernel = ExponentialKernel(**theta_config)
         elif embedding_type == 'HeavyTailed':
-            kernel_layer = HeavyTailedKernel(**theta_config)
+            kernel = HeavyTailedKernel(**theta_config)
         elif embedding_type == 'StudentsT':
-            kernel_layer = StudentsTKernel(**theta_config)
+            kernel = StudentsTKernel(**theta_config)
         elif embedding_type == 'Inverse':
-            kernel_layer = InverseKernel(**theta_config)
+            kernel = InverseKernel(**theta_config)
         else:
             raise ValueError(
                 'No class found matching the provided `embedding_type`.'
@@ -1316,8 +1323,8 @@ def load_model(filepath, custom_objects={}):
 
         emb = Rank(
             n_stimuli, n_dim=n_dim, n_group=n_group,
-            coordinate=coordinate_layer, attention=attention_layer,
-            kernel=kernel_layer
+            embedding=embedding, attention=attention,
+            kernel=kernel
         )
 
         # Set weights.
@@ -1366,7 +1373,7 @@ def _load_layer(grp_layer, custom_objects):
     if layer_class_name in custom_objects:
         layer_class = custom_objects[layer_class_name]
     else:
-        layer_class = getattr(psiz.layers, layer_class_name)
+        layer_class = getattr(psiz.keras.layers, layer_class_name)
     return layer_class.from_config(layer_config)
 
 

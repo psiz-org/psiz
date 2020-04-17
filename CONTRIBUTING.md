@@ -18,28 +18,30 @@ Since the models used in this package are prone to find sub-optimal solutions, m
 Guidance for other Keras objects is listed below.
 
 ### Custom `Constraint`
-* implement __call__()
+* implement `__call__` method
 * get_config()
     * Do not need to implement get_config if no class attributes
-    * If implementing, do not need to call super(_).get_config
+    * If implementing, do not need to call `super(_).get_config()`
     * don't need to always return dtype
 
 ### Custom `Initializers`
-* implement __call__()
+* implement `call` method, not `__call__` method
 * get_config()
     * Do not need to implement get_config if no class attributes
-    * If implementing, do not need to call super(_).get_config
+    * If implementing, do not need to call `super(_).get_config()`
 
 ### Custom `Layer`
-* implement call() not __call__()
-* get_config()
-    * Must implement, call super(_).get_config and update the dictionary with the layer's attributes.
+* `__init__`
+    * include `**kwargs` argument and pass to `super().__init__(**kwargs)`
+* implement `call` not `__call__` method
+* `get_config()`
+    * Must implement, call `super(_).get_config()` first and then update the dictionary with the custom layer's attributes.
 
 ### Custom `Regularizer`
-* implement __call__()
+* implement `__call__` method
 * get_config()
     * Do not need to implement get_config if no class attributes
-    * If implementing, do not need to call super(_).get_config
+    * If implementing, do not need to call `super(_).get_config()`
 
 ## Code of Conduct
 

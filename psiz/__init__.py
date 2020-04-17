@@ -1,12 +1,11 @@
-"""Package initialization file.
+"""Top-level package initialization file.
 
 Modules:
-    callbacks
     catalog
     datasets
     dimensionality
     generator
-    layers
+    keras
     models
     preprocess
     simulate
@@ -16,11 +15,10 @@ Modules:
 """
 
 import psiz.catalog
-import psiz.callbacks
 import psiz.datasets
 import psiz.dimensionality
 import psiz.generator
-import psiz.layers
+import psiz.keras
 import psiz.models
 import psiz.preprocess
 import psiz.restart

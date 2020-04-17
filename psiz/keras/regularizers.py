@@ -14,27 +14,29 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module of custom TensorFlow Callbacks.
+"""Module of custom TensorFlow regularizers.
 
 Classes:
-    ReEarlyStopping:
+    StimulusNormedL1:
+
 
 """
 
-from tensorflow.keras.callbacks import EarlyStopping
+import tensorflow as tf
 
 
-class ReEarlyStopping(EarlyStopping):
-    """Early stopping."""
+@tf.keras.utils.register_keras_serializable(package='Custom', name='stimnormedl1') 
+class StimulusNormedL1(tf.keras.regularizers.Regularizer):
+    """Stimulus-normed L1 regularization."""
 
-    def on_train_begin(self, logs=None):
-        """Overload."""
-        super().on_train_begin(logs=logs)
+    def __init__(self, l1=0.):
+        """Initialize."""
+        self.l1 = l1
 
-        # Add initial set of weights to best weights.
-        if self.restore_best_weights:
-            self.best_weights = self.model.get_weights()
+    def __call__(self, z):
+        """Call."""
+        return self.l1 * (tf.reduce_sum(tf.abs(z)) / z.shape[0])
 
-    def reset(self):
-        """Reset best weights."""
-        self.best_weights = None
+    def get_config(self):
+        """Return config."""
+        return {'l1': float(self.l1)}

@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module of custom TensorFlow Layers.
+"""Module of custom TensorFlow layers.
 
 Classes:
     QueryReference:
@@ -31,19 +31,16 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 from tensorflow.keras import backend as K
-from tensorflow.keras import constraints
-from tensorflow.keras import initializers
-from tensorflow.keras import layers
+
+import psiz.keras.constraints
+import psiz.keras.initializers
 
 
-class QueryReference(layers.Layer):
+class QueryReference(tf.keras.Model):
     """Model of query reference similarity judgments."""
 
-    def __init__(
-            self, coordinate, attention, kernel,
-            config_list):
+    def __init__(self, embedding, attention, kernel, config_list):
         """Initialize.
 
         Arguments:
@@ -58,18 +55,15 @@ class QueryReference(layers.Layer):
         """
         super(QueryReference, self).__init__()
 
-        self.coordinate = coordinate
+        self.embedding = embedding
         self.attention = attention
         self.kernel = kernel
 
         self.n_config = tf.constant(len(config_list))
         self.config_n_select = tf.constant(config_list.n_select.values)
         self.config_is_ranked = tf.constant(config_list.is_ranked.values)
-        # TODO REMOVE
-        # self.max_n_reference = tf.constant(
-        #     np.max(config_list.n_reference.values)
-        # )
 
+    @tf.function
     def call(self, inputs):
         """Call.
 
@@ -81,16 +75,16 @@ class QueryReference(layers.Layer):
 
         """
         # Inputs.
-        obs_stimulus_set = inputs[0]
-        obs_config_idx = inputs[1]
-        obs_group_id = inputs[2]
-        is_present = inputs[4]
+        obs_stimulus_set = inputs['stimulus_set']
+        obs_config_idx = inputs['config_idx']
+        obs_group_id = inputs['group_id']
+        is_present = inputs['is_present']
 
         # Expand attention weights.
         attention = self.attention(obs_group_id)
 
         # Inflate cooridnates.
-        z_stimulus_set = self.coordinate(obs_stimulus_set)
+        z_stimulus_set = self.embedding(obs_stimulus_set)
         max_n_reference = tf.shape(z_stimulus_set)[2] - 1
         z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
 
@@ -134,37 +128,37 @@ class QueryReference(layers.Layer):
         pass
 
 
-class Embedding(layers.Layer):
+class Embedding(tf.keras.layers.Layer):
     """Embedding coordinates.
 
     Handles a placeholder stimulus using stimulus ID -1.
 
     """
 
-    # TODO
-    # embeddings_initializer='uniform',
-    # embeddings_regularizer=None,
-    # embeddings_constraint=None,
     def __init__(
-            self, n_stimuli, n_dim, fit_z=True, z_min=None,
-            z_max=None, **kwargs):
-        """Initialize a coordinate layer.
+            self, n_stimuli, n_dim, fit_z=True, embeddings_initializer=None,
+            embeddings_regularizer=None, embeddings_constraint=None,
+            **kwargs):
+        """Initialize an embedding layer.
 
-        With no constraints, the coordinates are initialized using a
-            using a multivariate Gaussian.
+        The embeddings are stored in the variable `z` that has
+        shape=(n_stimuli, n_dim).
 
         Arguments:
-            n_stimuli:
-            n_dim:
-            fit_z (optional): Boolean
+            n_stimuli: The number of stimuli in the embedding.
+            n_dim: The dimensionality of each embedding point.
+            fit_z (optional): Boolean indicating whether the embeddings
+                are trainable.
             embeddings_initializer (optional): Initializer for the
-                `z` matrix.
-            embeddings_regularizer: Regularizer function applied to
-                the `z` matrix.
-            embeddings_constraint: Constraint function applied to
-                the `z` matrix.
-            z_min (optional):
-            z_max (optional):
+                `z` matrix. By default, the coordinates are
+                intialized using a multivariate Gaussian at various
+                scales.
+            embeddings_regularizer (optional): Regularizer function
+                applied to the `z` matrix.
+            embeddings_constraint (optional): Constraint function
+                applied to the `z` matrix. By default, a constraint
+                will be used that zero-centers the centroid of the
+                embedding to promote numerical stability.
 
         """
         super(Embedding, self).__init__(**kwargs)
@@ -172,40 +166,49 @@ class Embedding(layers.Layer):
         self.n_stimuli = n_stimuli
         self.n_dim = n_dim
 
-        # self.embeddings_initializer = initializers.get(embeddings_initializer)
-        # self.embeddings_regularizer = regularizers.get(embeddings_regularizer)
-        # self.embeddings_constraint = constraints.get(embeddings_constraint)
-        self.z_min = z_min
-        self.z_max = z_max
-
-        if z_min is not None and z_max is None:
-            z_constraint = GreaterEqualThan(min_value=z_min)
-        elif z_min is None and z_max is not None:
-            z_constraint = LessEqualThan(max_value=z_max)
-        elif z_min is not None and z_max is not None:
-            z_constraint = MinMax(min_value, max_value)
-        else:
-            z_constraint = ProjectZ()
+        # Default initializer.
+        if embeddings_initializer is None:
+            embeddings_initializer = psiz.keras.initializers.RandomScaleMVN(
+                minval=tf.constant(-3., dtype=K.floatx()),
+                maxval=tf.constant(0., dtype=K.floatx())
+            )
+        self.embeddings_initializer = tf.keras.initializers.get(
+            embeddings_initializer
+        )
+        self.embeddings_regularizer = tf.keras.regularizers.get(
+            embeddings_regularizer
+        )
+        if embeddings_constraint is None:
+            embeddings_constraint = psiz.keras.constraints.ZeroCenterZ()
+        self.embeddings_constraint = tf.keras.constraints.get(embeddings_constraint)
 
         self.fit_z = fit_z
-        self.z = tf.Variable(
-            initial_value=self.random_z(), trainable=fit_z,
-            name="z", dtype=K.floatx(),
-            constraint=z_constraint
+        self.z = self.add_weight(
+            shape=(self.n_stimuli, self.n_dim),
+            initializer=self.embeddings_initializer,
+            trainable=fit_z, name='z', dtype=K.floatx(),
+            regularizer=self.embeddings_regularizer,
+            constraint=embeddings_constraint
         )
-
-    # TODO
-    # def build(self, input_shape):
+        # TODO
+        # self.z = tf.Variable(
+        #     initial_value=self.embeddings_initializer(
+        #         shape=(self.n_stimuli, self.n_dim)
+        #     ), trainable=fit_z, name="z", dtype=K.floatx(),
+        #     constraint=embeddings_constraint
+        # )
 
     def call(self, inputs):
         """Call."""
-        stimulus_set = inputs + 1  # Add one for placeholder stimulus.  TODO tf.constant(1, dtype=tf.int32)
+        # Add one for placeholder stimulus.
+        stimulus_set = inputs + tf.constant(1, dtype=inputs.dtype)
         z_pad = tf.concat(
             [
                 tf.zeros([1, self.z.shape[1]], dtype=K.floatx()),
                 self.z
             ], axis=0
         )
+
         z_stimulus_set = self._tf_inflate_points(stimulus_set, z_pad)
         return z_stimulus_set
 
@@ -234,94 +237,31 @@ class Embedding(layers.Layer):
     def reset_weights(self):
         """Reset trainable variables."""
         if self.fit_z:
-            self.z.assign(self.random_z())
-
-    def random_z(self):
-        """Random z."""
-        # TODO Factor out as initializer
-        z = RandomEmbedding(
-            mean=tf.zeros([self.n_dim], dtype=K.floatx()),
-            stdev=tf.ones([self.n_dim], dtype=K.floatx()),
-            minval=tf.constant(-3., dtype=K.floatx()),
-            maxval=tf.constant(0., dtype=K.floatx()),
-            dtype=K.floatx()
-        )(shape=[self.n_stimuli, self.n_dim])
-        return z
+            self.z.assign(
+                self.embeddings_initializer(
+                    shape=[self.n_stimuli, self.n_dim]
+                )
+            )
 
     def get_config(self):
         """Return layer configuration."""
+        # TODO check
         config = super().get_config()
         config.update({
-            'n_stimuli': self.n_stimuli, 'n_dim': self.n_dim,
-            'fit_z': self.fit_z, 'z_min': self.z_min, 'z_max': self.z_max
+            'n_stimuli': self.n_stimuli,
+            'n_dim': self.n_dim,
+            'fit_z': self.fit_z,
+            'embeddings_initializer':
+                tf.keras.initializers.serialize(self.embeddings_initializer),
+            'embeddings_regularizer':
+                tf.keras.regularizers.serialize(self.embeddings_regularizer),
+            'embeddings_constraint':
+                tf.keras.constraints.serialize(self.embeddings_constraint)
         })
         return config
 
 
-# TODO call or __call__ for Initializer
-class RandomEmbedding(initializers.Initializer):
-    """Initializer that generates tensors with a normal distribution.
-
-    Arguments:
-        mean: A python scalar or a scalar tensor. Mean of the random
-            values to generate.
-        minval: Minimum value of a uniform random sampler for each
-            dimension.
-        maxval: Maximum value of a uniform random sampler for each
-            dimension.
-        seed: A Python integer. Used to create random seeds. See
-        `tf.set_random_seed` for behavior.
-        dtype: The data type. Only floating point types are supported.
-
-    """
-
-    def __init__(
-            self, mean=0.0, stdev=1.0, minval=-3.0, maxval=0.0, seed=None,
-            dtype=K.floatx()):
-        """Initialize."""
-        self.mean = mean
-        self.stdev = stdev
-        self.minval = minval
-        self.maxval = maxval
-        self.seed = seed
-        self.dtype = dtype
-
-    def __call__(self, shape, dtype=None, partition_info=None):
-        """Call."""
-        # TODO is partition info necessary?
-        if dtype is None:
-            dtype = self.dtype
-        scale = tf.pow(
-            tf.constant(10., dtype=dtype),
-            tf.random.uniform(
-                [1],
-                minval=self.minval,
-                maxval=self.maxval,
-                dtype=dtype,
-                seed=self.seed,
-                name=None
-            )
-        )
-        stdev = scale * self.stdev
-        return tf.random.normal(
-            shape, self.mean, stdev, dtype, seed=self.seed)
-
-    def get_config(self):
-        """Return configuration."""
-        # TODO is this the correct pattern for initializers?
-        config = super().get_config()
-        config.update({
-            "mean": self.mean,
-            "stdev": self.stdev,
-            "min": self.minval,
-            "max": self.maxval,
-            "seed": self.seed,
-            "dtype": self.dtype.name
-        })
-        return config
-
-
-class WeightedDistance(layers.Layer):
+class WeightedDistance(tf.keras.layers.Layer):
     """Weighted Minkowski distance."""
 
     def __init__(self, fit_rho=True, **kwargs):
@@ -336,7 +276,7 @@ class WeightedDistance(layers.Layer):
         self.rho = tf.Variable(
             initial_value=self.random_rho(),
             trainable=self.fit_rho, name="rho", dtype=K.floatx(),
-            constraint=GreaterThan(min_value=1.0)
+            constraint=psiz.keras.constraints.GreaterThan(min_value=1.0)
         )
 
     def call(self, inputs):
@@ -373,7 +313,7 @@ class WeightedDistance(layers.Layer):
         return config
 
 
-class SeparateAttention(layers.Layer):
+class SeparateAttention(tf.keras.layers.Layer):
     """Attention Layer."""
 
     def __init__(self, n_dim, n_group=1, fit_group=None, **kwargs):
@@ -409,7 +349,7 @@ class SeparateAttention(layers.Layer):
             w_i = tf.Variable(
                 initial_value=initial_value,
                 trainable=fit_group[i_group], name=w_i_name, dtype=K.floatx(),
-                constraint=ProjectAttention()
+                constraint=psiz.keras.constraints.ProjectAttention()
             )
             setattr(self, w_i_name, w_i)
             w_list.append(w_i)
@@ -450,7 +390,7 @@ class SeparateAttention(layers.Layer):
         )(shape=[1, self.n_dim])
 
 
-class Attention(layers.Layer):
+class Attention(tf.keras.layers.Layer):
     """Attention Layer."""
 
     def __init__(self, n_dim=None, n_group=1, fit_group=None, **kwargs):
@@ -483,7 +423,7 @@ class Attention(layers.Layer):
         self.w = tf.Variable(
             initial_value=initial_value,
             trainable=fit_group, name='w', dtype=K.floatx(),
-            constraint=ProjectAttention()
+            constraint=psiz.keras.constraints.ProjectAttention()
         )
 
     def call(self, inputs):
@@ -522,7 +462,7 @@ class Attention(layers.Layer):
         return config
 
 
-class InverseKernel(layers.Layer):
+class InverseKernel(tf.keras.layers.Layer):
     """Inverse-distance similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -549,14 +489,14 @@ class InverseKernel(layers.Layer):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=1.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_mu = fit_mu
         self.mu = tf.Variable(
             initial_value=self.random_mu(),
             trainable=fit_mu, name="mu", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=2.2204e-16)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=2.2204e-16)
         )
 
         self.theta = {
@@ -615,7 +555,7 @@ class InverseKernel(layers.Layer):
         return config
 
 
-class ExponentialKernel(layers.Layer):
+class ExponentialKernel(tf.keras.layers.Layer):
     """Exponential family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -664,21 +604,21 @@ class ExponentialKernel(layers.Layer):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=self.fit_tau, name="tau", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=1.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_gamma = fit_gamma
         self.gamma = tf.Variable(
             initial_value=self.random_gamma(),
             trainable=self.fit_gamma, name="gamma", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=0.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_beta = fit_beta
         self.beta = tf.Variable(
             initial_value=self.random_beta(),
             trainable=self.fit_beta, name="beta", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=1.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.theta = {
@@ -754,7 +694,7 @@ class ExponentialKernel(layers.Layer):
         return config
 
 
-class HeavyTailedKernel(layers.Layer):
+class HeavyTailedKernel(tf.keras.layers.Layer):
     """Heavy-tailed family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -785,21 +725,21 @@ class HeavyTailedKernel(layers.Layer):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=1.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_kappa = fit_kappa
         self.kappa = tf.Variable(
             initial_value=self.random_kappa(),
             trainable=fit_kappa, name="kappa", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=0.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_alpha = fit_alpha
         self.alpha = tf.Variable(
             initial_value=self.random_alpha(),
             trainable=fit_alpha, name="alpha", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=0.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.theta = {
@@ -868,7 +808,7 @@ class HeavyTailedKernel(layers.Layer):
         return config
 
 
-class StudentsTKernel(layers.Layer):
+class StudentsTKernel(tf.keras.layers.Layer):
     """Student's t-distribution similarity kernel.
 
     The embedding technique uses the following similarity kernel:
@@ -909,14 +849,14 @@ class StudentsTKernel(layers.Layer):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=1.0)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_alpha = fit_alpha
         self.alpha = tf.Variable(
             initial_value=self.random_alpha(),
             trainable=fit_alpha, name="alpha", dtype=K.floatx(),
-            constraint=GreaterEqualThan(min_value=0.000001)
+            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.000001)
         )
 
         self.theta = {
@@ -977,155 +917,6 @@ class StudentsTKernel(layers.Layer):
             'fit_alpha': self.fit_alpha
         })
         return config
-
-
-class RandomAttention(initializers.Initializer):
-    """Initializer that generates tensors for attention weights.
-
-    Arguments:
-        concentration: An array indicating the concentration
-            parameters (i.e., alpha values) governing a Dirichlet
-            distribution.
-        scale: Scalar indicating how the Dirichlet sample should be scaled.
-        dtype: The data type. Only floating point types are supported.
-
-    """
-
-    def __init__(self, concentration, scale=1.0, dtype=K.floatx()):
-        """Initialize."""
-        self.concentration = concentration
-        self.scale = scale
-        self.dtype = dtype
-
-    def __call__(self, shape, dtype=None, partition_info=None):
-        """Call."""
-        if dtype is None:
-            dtype = self.dtype
-        dist = tfp.distributions.Dirichlet(self.concentration)
-        return self.scale * dist.sample([shape[0]])
-
-    def get_config(self):
-        """Return configuration."""
-        return {
-            "concentration": self.concentration,
-            "dtype": self.dtype.name
-        }
-
-
-# TODO call or __call__ for constraint
-class GreaterThan(constraints.Constraint):
-    """Constrains the weights to be greater than a value."""
-
-    def __init__(self, min_value=0.):
-        """Initialize."""
-        self.min_value = min_value
-
-    def __call__(self, w):
-        """Call."""
-        w = w - self.min_value
-        w = w * tf.cast(tf.math.greater(w, 0.), K.floatx())
-        w = w + self.min_value
-        return w
-
-
-class LessThan(constraints.Constraint):
-    """Constrains the weights to be less than a value."""
-
-    def __init__(self, max_value=0.):
-        """Initialize."""
-        self.max_value = max_value
-
-    def __call__(self, w):
-        """Call."""
-        w = w - self.max_value
-        w = w * tf.cast(tf.math.greater(0., w), K.floatx())
-        w = w + self.max_value
-        return w
-
-
-class GreaterEqualThan(constraints.Constraint):
-    """Constrains the weights to be greater/equal than a value."""
-
-    def __init__(self, min_value=0.):
-        """Initialize."""
-        self.min_value = min_value
-
-    def __call__(self, w):
-        """Call."""
-        w = w - self.min_value
-        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
-        w = w + self.min_value
-        return w
-
-
-class LessEqualThan(constraints.Constraint):
-    """Constrains the weights to be greater/equal than a value."""
-
-    def __init__(self, max_value=0.):
-        """Initialize."""
-        self.max_value = max_value
-
-    def __call__(self, w):
-        """Call."""
-        w = w - self.max_value
-        w = w * tf.cast(tf.math.greater_equal(0., w), K.floatx())
-        w = w + self.max_value
-        return w
-
-
-class MinMax(constraints.Constraint):
-    """Constrains the weights to be between/equal values."""
-
-    def __init__(self, min_value, max_value):
-        """Initialize."""
-        self.min_value = min_value
-        self.max_value = max_value
-
-    def __call__(self, w):
-        """Call."""
-        w = w - self.min_value
-        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
-        w = w + self.min_value
-
-        w = w - self.max_value
-        w = w * tf.cast(tf.math.greater_equal(0., w), K.floatx())
-        w = w + self.max_value
-
-        return w
-
-
-class ProjectZ(constraints.Constraint):
-    """Constrains the embedding to be zero-centered.
-
-    Constraint is used to improve numerical stability.
-    """
-
-    def __init__(self):
-        """Initialize."""
-
-    def __call__(self, tf_z):
-        """Call."""
-        tf_mean = tf.reduce_mean(tf_z, axis=0, keepdims=True)
-        tf_z_centered = tf_z - tf_mean
-        return tf_z_centered
-
-
-class ProjectAttention(constraints.Constraint):
-    """Return projection of attention weights."""
-
-    def __init__(self):
-        """Initialize."""
-
-    def __call__(self, tf_attention_0):
-        """Call."""
-        n_dim = tf.shape(tf_attention_0, out_type=K.floatx())[1]
-        tf_attention_1 = tf.divide(
-            tf.reduce_sum(tf_attention_0, axis=1, keepdims=True), n_dim
-        )
-        tf_attention_proj = tf.divide(
-            tf_attention_0, tf_attention_1
-        )
-        return tf_attention_proj
 
 
 def _tf_ranked_sequence_probability(sim_qr, n_select):

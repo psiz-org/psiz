@@ -63,11 +63,15 @@ class QueryReference(tf.keras.Model):
             inputs: A dictionary of inputs:
                 stimulus_set: dtype=tf.int32, consisting of the
                     integers on the interval [0, n_stimuli[
-                config_idx: dtype=tf.int32, consisting of the
-                    integers on the interval [0, n_config[
+                    shape=(batch_size, n_max_reference + 1)
                 group_id: dtype=tf.int32, consisting of the
                     integers on the interval [0, n_group[
+                    shape=(batch_size,)
                 is_present: dtype=tf.bool
+                    shape=(batch_size, n_max_reference + 1)
+                is_select: dtype=tf.bool, the shape implies the
+                    maximum number of selected stimuli in the data
+                    shape=(batch_size, n_max_select)
 
         """
         # Grab inputs.
@@ -187,7 +191,7 @@ class Embedding(tf.keras.layers.Layer):
         placeholder.
 
         """
-        n_trial = tf.shape(stimulus_set)[0]
+        batch_size = tf.shape(stimulus_set)[0]
         input_length = tf.shape(stimulus_set)[1]
         n_dim = tf.shape(z)[1]
 
@@ -196,7 +200,7 @@ class Embedding(tf.keras.layers.Layer):
         z_set = tf.gather(z, flat_idx)
 
         # Reshape and permute dimensions.
-        z_set = tf.reshape(z_set, [n_trial, input_length, n_dim])
+        z_set = tf.reshape(z_set, [batch_size, input_length, n_dim])
         z_set = tf.transpose(z_set, perm=[0, 2, 1])
         return z_set
 
@@ -480,7 +484,7 @@ class InverseKernel(tf.keras.layers.Layer):
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_trial,)
+                shape = (batch_size,)
 
         """
         z_q = inputs[0]  # Query.
@@ -600,17 +604,17 @@ class ExponentialKernel(tf.keras.layers.Layer):
         Arguments:
             inputs:
                 z_q: A set of embedding points.
-                    shape = (n_trial, n_dim [, n_sample])
+                    shape = (batch_size, n_dim [, n_sample])
                 z_r: A set of embedding points.
-                    shape = (n_trial, n_dim [, n_sample])
+                    shape = (batch_size, n_dim [, n_sample])
                 attention: The weights allocated to each dimension
                     in a weighted minkowski metric.
-                    shape = (n_trial, n_dim [, n_sample])
+                    shape = (batch_size, n_dim [, n_sample])
 
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_trial,)
+                shape = (batch_size,)
 
         """
         z_q = inputs[0]  # Query.
@@ -724,7 +728,7 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_trial,)
+                shape = (batch_size,)
 
         """
         z_q = inputs[0]  # Query.
@@ -840,7 +844,7 @@ class StudentsTKernel(tf.keras.layers.Layer):
         Returns:
             The corresponding similarity between rows of embedding
                 points.
-                shape = (n_trial,)
+                shape = (batch_size,)
 
         """
         z_q = inputs[0]  # Query.
@@ -894,34 +898,30 @@ def _tf_ranked_sequence_probability(sim_qr, is_select):
         sim_qr: A tensor containing the precomputed similarities
             between the query stimuli and corresponding reference
             stimuli.
-            shape = (n_trial, n_max_reference)
+            shape = (batch_size, n_max_reference)
         is_select: A Boolean tensor indicating if a reference was
             selected.
-            shape = (n_trial, n_max_select)
+            shape = (batch_size, n_max_select)
 
     """
-    n_trial = tf.shape(sim_qr)[0]
+    # Determine batch_size.
+    batch_size = tf.shape(sim_qr)[0]
+    # Determine max_select_idx (i.e, max_n_select - 1).
+    max_select_idx = tf.shape(is_select)[1] - 1
 
     # Pre-allocate
-    seq_prob = tf.ones([n_trial], dtype=K.floatx())
-
-    # Determine max_n_select
-    is_select = is_select[:, 1:]
-    select_idxs = tf.range(is_select.shape[1])
-    is_any_select = tf.reduce_any(is_select, axis=0)
-    select_idxs = select_idxs * tf.cast(is_any_select, dtype=select_idxs.dtype)
-    max_select_idx = tf.reduce_max(select_idxs)
-    is_select = is_select[:, :max_select_idx + 1]
+    seq_prob = tf.ones([batch_size], dtype=K.floatx())
 
     # Compute denominator of Luce's choice rule.
     # Start by computing denominator of last selection
     denom = tf.reduce_sum(sim_qr[:, max_select_idx:], axis=1)
 
-    # Precompute masks for handling non-existent selections.
+    # Pre-compute masks for handling non-existent selections.
     does_exist = tf.cast(is_select, dtype=K.floatx())
     does_not_exist = tf.cast(tf.math.logical_not(is_select), dtype=K.floatx())
 
-    # Compute remaining denominators in reverse order.
+    # Compute remaining denominators in reverse order for numerical
+    # stability.
     for select_idx in tf.range(max_select_idx, -1, -1):
         # Compute selection probability.
         # Use safe divide since some denominators may be zero.
@@ -933,7 +933,7 @@ def _tf_ranked_sequence_probability(sim_qr, is_select):
 
         # Update sequence probability.
         # NOTE: Non-existent selections will have a probability of 1, which
-        # results in idempotent operation.
+        # results in an idempotent multiplication operation.
         seq_prob = tf.multiply(seq_prob, prob)
 
         # Update denominator in preparation for computing the probability

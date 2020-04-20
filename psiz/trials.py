@@ -180,7 +180,7 @@ class Trials(metaclass=ABCMeta):
         pass
 
     def is_present(self):
-        """Return a 2D boolean array indicating a present stimulus."""
+        """Return a 2D Boolean array indicating a present stimulus."""
         is_present = np.not_equal(self.stimulus_set, -1)
         return is_present
 
@@ -797,12 +797,25 @@ class RankObservations(RankTrials):
         f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
 
-    def is_select(self):
+    def is_select(self, compress=False):
         """Indicate if a stimulus was selected.
 
+        This method has two modes that return 2D arrays of different
+        shapes.
+
         Returns:
-            is_select: A 2D boolean array indicating the stimuli that
-                were selected.
+            is_select: A 2D Boolean array indicating the stimuli that
+                were selected. By default, this will be a 2D array that
+                has the same shape as `stimulus_set`. See the
+                `compress` option for non-default behavior.
+                shape=(n_trial, n_max_reference + 1) if compress=False
+                shape=(n_trial, n_max_select) if compress=True
+            compress (optional): A Boolean indicating if the returned
+                2D array should be compressed such that the first
+                column corresponding to the query is removed, and any
+                trailing columns with no selected stimuli are also
+                removed. This results in a 2D array with a shape that
+                implies the maximum number of selected references.
 
         """
         is_select = np.zeros(self.stimulus_set.shape, dtype=bool)
@@ -810,6 +823,10 @@ class RankObservations(RankTrials):
         for n_select in range(1, max_n_select + 1):
             locs = np.less_equal(n_select, self.n_select)
             is_select[locs, n_select] = True
+
+        if compress:
+            is_select = is_select[:, 1:max_n_select + 1]
+
         return is_select
 
 

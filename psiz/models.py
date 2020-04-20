@@ -453,11 +453,10 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         # Create dataset.
         ds_obs = tf.data.Dataset.from_tensor_slices({
             'stimulus_set': obs.stimulus_set,
-            'config_idx': obs.config_idx,
             'group_id': obs.group_id,
             'weight': tf.constant(obs.weight, dtype=K.floatx()),
             'is_present': obs.is_present(),
-            'is_select': obs.is_select()
+            'is_select': obs.is_select(compress=True)
         })
 
         # Define model.

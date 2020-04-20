@@ -798,4 +798,106 @@ def _tf_inflate_points_1(self, stimulus_set, input_length, z):
         z_r = tf.transpose(z_r, perm=[1, 2, 0])
         return (z_q, z_r)
 
-    
+    # Alternative call and _tf_ranked_sequence that can't handle different
+    # n_select.
+    @tf.function
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs: A dictionary of inputs:
+                stimulus_set: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_stimuli[
+                config_idx: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_config[
+                group_id: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_group[
+                is_present: dtype=tf.bool
+
+        """
+        # Grab inputs.
+        obs_stimulus_set = inputs['stimulus_set']
+        obs_config_idx = inputs['config_idx']
+        obs_group_id = inputs['group_id']
+        is_present = inputs['is_present']
+        is_select = inputs['is_select']
+
+        # Expand attention weights.
+        attention = self.attention(obs_group_id)
+
+        # Inflate cooridnates.
+        z_stimulus_set = self.embedding(obs_stimulus_set)
+        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
+
+        # Compute similarity between query and references.
+        sim_qr = self.kernel([z_q, z_r, attention])
+
+        # Zero out similarities involving placeholder.
+        sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
+
+        # Pre-allocate likelihood tensor.
+        n_trial = tf.shape(obs_stimulus_set)[0]
+        likelihood = tf.zeros([n_trial], dtype=K.floatx())
+
+        # Compute the probability of observations for different trial
+        # configurations.
+        for i_config in tf.range(self.n_config):
+            n_select = self.config_n_select[i_config]
+            is_ranked = self.config_is_ranked[i_config]
+
+            # Identify trials belonging to current trial configuration.
+            locs = tf.equal(obs_config_idx, i_config)
+            trial_idx = tf.squeeze(tf.where(locs))
+
+            # Grab similarities belonging to current trial configuration.
+            sim_qr_config = tf.gather(sim_qr, trial_idx)
+
+            # Compute probability of behavior.
+            prob_config = _tf_ranked_sequence_probability(
+                sim_qr_config, n_select
+            )
+
+            # Update master results.
+            likelihood = tf.tensor_scatter_nd_update(
+                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
+            )
+
+        # TODO
+        likelihood_alt = _tf_ranked_sequence_probability_alt(
+            sim_qr, is_select
+        )
+        return likelihood
+
+
+def _tf_ranked_sequence_probability(sim_qr, n_select):
+    """Return probability of a ranked selection sequence.
+
+    See: _ranked_sequence_probability
+
+    Arguments:
+        sim_qr: A tensor containing the precomputed similarities
+            between the query stimuli and corresponding reference
+            stimuli.
+            shape = (n_trial, n_reference)
+        n_select: A scalar indicating the number of selections
+            made for each trial.
+
+    """
+    # Initialize.
+    n_trial = tf.shape(sim_qr)[0]
+    seq_prob = tf.ones([n_trial], dtype=K.floatx())
+    selected_idx = n_select - 1
+    denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
+
+    for i_selected in tf.range(selected_idx, -1, -1):
+        # Compute selection probability.
+        prob = tf.divide(sim_qr[:, i_selected], denom)
+        # Update sequence probability.
+        seq_prob = tf.multiply(seq_prob, prob)
+        # Update denominator in preparation for computing the probability
+        # of the previous selection in the sequence.
+        if i_selected > tf.constant(0, dtype=tf.int32):
+            denom = tf.add(denom, sim_qr[:, i_selected - 1])
+        seq_prob.set_shape([None])
+    return seq_prob

@@ -24,15 +24,16 @@ infer a single embedding.
 """
 
 import numpy as np
+from sklearn.model_selection import StratifiedKFold
 
+import psiz.keras.callbacks
+import psiz.keras.layers
 from psiz.generator import RandomGenerator
 import psiz.models
 import psiz.restart
 from psiz.simulate import Agent
 from psiz.trials import stack
 from psiz.utils import pairwise_matrix, matrix_comparison
-from sklearn.model_selection import StratifiedKFold
-from tensorflow.keras.callbacks import EarlyStopping
 
 
 def main():
@@ -79,14 +80,13 @@ def main():
     obs_val = obs.subset(val_idx)
 
     # Use early stopping.
-    early_stop = EarlyStopping(
+    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
         'val_loss', patience=10, mode='min', restore_best_weights=True
     )
 
     # Infer embedding.
-    kernel = psiz.models.ExponentialKernel()
-    emb_inferred = psiz.models.Rank(
-        n_stimuli, n_dim=n_dim, kernel=kernel
+    kernel = psiz.keras.layers.ExponentialKernel()
+    emb_inferred = psiz.models.Rank(n_stimuli, n_dim=n_dim, kernel=kernel
     )
     emb_inferred.compile()
     restarter = psiz.restart.Restarter(
@@ -113,7 +113,7 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    kernel = psiz.models.ExponentialKernel()
+    kernel = psiz.keras.layers.ExponentialKernel()
     kernel.rho = 2.
     kernel.tau = 1.
     kernel.beta = 10.

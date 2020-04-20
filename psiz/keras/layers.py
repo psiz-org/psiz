@@ -40,17 +40,13 @@ import psiz.keras.initializers
 class QueryReference(tf.keras.Model):
     """Model of query reference similarity judgments."""
 
-    def __init__(self, embedding, attention, kernel, config_list, **kwargs):
+    def __init__(self, embedding, attention, kernel, **kwargs):
         """Initialize.
 
         Arguments:
             embedding: An embedding layer.
             attention: An attention layer.
             kernel: A kernel layer.
-            config_list: A Pandas DataFrame with trial configuration
-                information. It is assumed that the indices that will
-                be passed in later as inputs will correspond to the
-                indices in this data structure.
 
         """
         super().__init__(**kwargs)
@@ -58,10 +54,6 @@ class QueryReference(tf.keras.Model):
         self.embedding = embedding
         self.attention = attention
         self.kernel = kernel
-
-        self.n_config = tf.constant(len(config_list))
-        self.config_n_select = tf.constant(config_list.n_select.values)
-        self.config_is_ranked = tf.constant(config_list.is_ranked.values)
 
     @tf.function
     def call(self, inputs):
@@ -80,9 +72,9 @@ class QueryReference(tf.keras.Model):
         """
         # Grab inputs.
         obs_stimulus_set = inputs['stimulus_set']
-        obs_config_idx = inputs['config_idx']
         obs_group_id = inputs['group_id']
         is_present = inputs['is_present']
+        is_select = inputs['is_select']
 
         # Expand attention weights.
         attention = self.attention(obs_group_id)
@@ -98,33 +90,8 @@ class QueryReference(tf.keras.Model):
         # Zero out similarities involving placeholder.
         sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
 
-        # Pre-allocate likelihood tensor.
-        n_trial = tf.shape(obs_stimulus_set)[0]
-        likelihood = tf.zeros([n_trial], dtype=K.floatx())
-
-        # Compute the probability of observations for different trial
-        # configurations.
-        for i_config in tf.range(self.n_config):
-            n_select = self.config_n_select[i_config]
-            is_ranked = self.config_is_ranked[i_config]
-
-            # Identify trials belonging to current trial configuration.
-            locs = tf.equal(obs_config_idx, i_config)
-            trial_idx = tf.squeeze(tf.where(locs))
-
-            # Grab similarities belonging to current trial configuration.
-            sim_qr_config = tf.gather(sim_qr, trial_idx)
-
-            # Compute probability of behavior.
-            prob_config = _tf_ranked_sequence_probability(
-                sim_qr_config, n_select
-            )
-
-            # Update master results.
-            likelihood = tf.tensor_scatter_nd_update(
-                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
-            )
-
+        # Compute the observation likelihood.
+        likelihood = _tf_ranked_sequence_probability(sim_qr, is_select)
         return likelihood
 
     def reset_weights(self):
@@ -918,7 +885,7 @@ class StudentsTKernel(tf.keras.layers.Layer):
         return config
 
 
-def _tf_ranked_sequence_probability(sim_qr, n_select):
+def _tf_ranked_sequence_probability(sim_qr, is_select):
     """Return probability of a ranked selection sequence.
 
     See: _ranked_sequence_probability
@@ -927,25 +894,52 @@ def _tf_ranked_sequence_probability(sim_qr, n_select):
         sim_qr: A tensor containing the precomputed similarities
             between the query stimuli and corresponding reference
             stimuli.
-            shape = (n_trial, n_reference)
-        n_select: A scalar indicating the number of selections
-            made for each trial.
+            shape = (n_trial, n_max_reference)
+        is_select: A Boolean tensor indicating if a reference was
+            selected.
+            shape = (n_trial, n_max_select)
 
     """
-    # Initialize.
     n_trial = tf.shape(sim_qr)[0]
-    seq_prob = tf.ones([n_trial], dtype=K.floatx())
-    selected_idx = n_select - 1
-    denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
 
-    for i_selected in tf.range(selected_idx, -1, -1):
+    # Pre-allocate
+    seq_prob = tf.ones([n_trial], dtype=K.floatx())
+
+    # Determine max_n_select
+    is_select = is_select[:, 1:]
+    select_idxs = tf.range(is_select.shape[1])
+    is_any_select = tf.reduce_any(is_select, axis=0)
+    select_idxs = select_idxs * tf.cast(is_any_select, dtype=select_idxs.dtype)
+    max_select_idx = tf.reduce_max(select_idxs)
+    is_select = is_select[:, :max_select_idx + 1]
+
+    # Compute denominator of Luce's choice rule.
+    # Start by computing denominator of last selection
+    denom = tf.reduce_sum(sim_qr[:, max_select_idx:], axis=1)
+
+    # Precompute masks for handling non-existent selections.
+    does_exist = tf.cast(is_select, dtype=K.floatx())
+    does_not_exist = tf.cast(tf.math.logical_not(is_select), dtype=K.floatx())
+
+    # Compute remaining denominators in reverse order.
+    for select_idx in tf.range(max_select_idx, -1, -1):
         # Compute selection probability.
-        prob = tf.divide(sim_qr[:, i_selected], denom)
+        # Use safe divide since some denominators may be zero.
+        prob = tf.math.divide_no_nan(sim_qr[:, select_idx], denom)
+        # Zero out non-existent selections.
+        prob = prob * does_exist[:, select_idx]
+        # Add one to non-existent selections.
+        prob = prob + does_not_exist[:, select_idx]
+
         # Update sequence probability.
+        # NOTE: Non-existent selections will have a probability of 1, which
+        # results in idempotent operation.
         seq_prob = tf.multiply(seq_prob, prob)
+
         # Update denominator in preparation for computing the probability
         # of the previous selection in the sequence.
-        if i_selected > tf.constant(0, dtype=tf.int32):
-            denom = tf.add(denom, sim_qr[:, i_selected - 1])
-        seq_prob.set_shape([None])
+        if select_idx > tf.constant(0, dtype=tf.int32):
+            denom = tf.add(denom, sim_qr[:, select_idx - 1])
+        # seq_prob.set_shape([None])  # Not necessary any more?
+
     return seq_prob

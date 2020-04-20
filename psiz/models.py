@@ -456,13 +456,13 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             'config_idx': obs.config_idx,
             'group_id': obs.group_id,
             'weight': tf.constant(obs.weight, dtype=K.floatx()),
-            'is_present': obs.is_present()
+            'is_present': obs.is_present(),
+            'is_select': obs.is_select()
         })
 
         # Define model.
         model = psiz.keras.layers.QueryReference(
-            self.embedding, self.attention, self.kernel, obs.config_list,
-            name='rank_model'
+            self.embedding, self.attention, self.kernel, name='rank_model'
         )
         return ds_obs, model
 
@@ -1487,10 +1487,11 @@ def _ranked_sequence_probability(sim_qr, n_select):
         shape = (n_trial, n_sample)
 
     Notes:
-        For example, given query Q, the probability of selecting
-        the references A, B, and C (in that order) would be:
+        For example, given query Q and references A, B, and C, the
+        probability of selecting reference A then B (in that order)
+        would be:
 
-        P(A,B,C) = s_QA/(s_QA + s_QB + s_QC) * s_QB/(s_QB + s_QC)
+        P(A)P(B|A) = s_QA/(s_QA + s_QB + s_QC) * s_QB/(s_QB + s_QC)
 
         where s_QA denotes the similarity between the query and
         reference A.

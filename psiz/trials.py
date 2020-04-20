@@ -43,6 +43,8 @@ TODO:
     * Add RateObservations class
     * Add SortDocket class
     * Add SortObservations class
+    * Add Observations "interface" which requires `as_dataset()` method
+        which returns a tf.data.Dataset object.
     * MAYBE restructure group_id and agent_id. If we wanted to allow
     for arbitrary hierarchical models, maybe better off making
     group_id a 2D array of shape=(n_trial, n_group_level)
@@ -57,6 +59,8 @@ import warnings
 import h5py
 import numpy as np
 import pandas as pd
+import tensorflow as tf
+from tensorflow.keras import backend as K
 
 
 class Trials(metaclass=ABCMeta):
@@ -828,6 +832,24 @@ class RankObservations(RankTrials):
             is_select = is_select[:, 1:max_n_select + 1]
 
         return is_select
+
+    def as_dataset(self):
+        """Format necessary data as Tensorflow.data.Dataset object.
+
+        Returns:
+            ds_obs: The data necessary for inference, formatted as a
+            tf.data.Dataset object.
+
+        """
+        # Create dataset.
+        ds_obs = tf.data.Dataset.from_tensor_slices({
+            'stimulus_set': self.stimulus_set,
+            'group_id': self.group_id,
+            'weight': tf.constant(self.weight, dtype=K.floatx()),
+            'is_present': self.is_present(),
+            'is_select': self.is_select(compress=True)
+        })
+        return ds_obs
 
 
 # class RateDocket():

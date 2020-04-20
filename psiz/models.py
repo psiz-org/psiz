@@ -52,7 +52,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras.initializers import Initializer
 import tensorflow.keras.optimizers
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import History
 from tensorflow.python.keras.callbacks import configure_callbacks
 from tensorflow.keras.constraints import Constraint
@@ -432,38 +432,18 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                 tf.io.gfile.rmtree(self.log_dir)
         tf.io.gfile.makedirs(self.log_dir)
 
-    def _prepare_and_build(self, obs):
-        """Prepare inputs and build TensorFlow model.
-
-        Arguments:
-            obs: A psiz.trials.RankObservations object.
+    def _build_model(self):
+        """Build TensorFlow model.
 
         Returns:
-            ds_obs: The observations formatted as a tf.data.Dataset
-                object.
             model: A tf.Model object.
 
-        Notes:
-            Ideally preparing the inputs and building a model would
-            be decoupled. However, construction of the static graph
-            requires knowledge of the different trial configurations
-            present in the data.
-
         """
-        # Create dataset.
-        ds_obs = tf.data.Dataset.from_tensor_slices({
-            'stimulus_set': obs.stimulus_set,
-            'group_id': obs.group_id,
-            'weight': tf.constant(obs.weight, dtype=K.floatx()),
-            'is_present': obs.is_present(),
-            'is_select': obs.is_select(compress=True)
-        })
-
         # Define model.
         model = psiz.keras.layers.QueryReference(
             self.embedding, self.attention, self.kernel, name='rank_model'
         )
-        return ds_obs, model
+        return model
 
     def _check_obs(self, obs):
         """Check observerations.
@@ -530,46 +510,37 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         """
         fit_start_time_s = time.time()
 
-        self._check_obs(obs_train)
+        # Determine batch size.
         n_obs_train = obs_train.n_trial
-        if obs_val is not None:
-            do_validation = True
-            self._check_obs(obs_val)
-            n_obs_val = obs_val.n_trial
-        else:
-            n_obs_val = 0
-
         if batch_size is None:
             batch_size_train = n_obs_train
-            batch_size_val = n_obs_val
         else:
             batch_size_train = np.minimum(batch_size, n_obs_train)
-            batch_size_val = n_obs_val
 
-        # NOTE: The stack operation is used to make sure that a consistent
-        # trial configuration list is used across train and validation.
-        if do_validation:
-            obs = psiz.trials.stack([obs_train, obs_val])
-        else:
-            obs = obs_train
-
-        # Create dataset and build compatible model by examining the
-        # different trial configurations used in `obs`.
-        ds_obs, model = self._prepare_and_build(obs)
-
-        # Split dataset back into train and validation.
-        ds_obs_train = ds_obs.take(n_obs_train)
+        # Create TensorFlow training Dataset.
+        self._check_obs(obs_train)
+        # Format as TensorFlow dataset.
+        ds_obs_train = obs_train.as_dataset()
         ds_obs_train = ds_obs_train.shuffle(
             buffer_size=n_obs_train, reshuffle_each_iteration=True
         )
         ds_obs_train = ds_obs_train.batch(
             batch_size_train, drop_remainder=False
         )
-        if do_validation:
-            ds_obs_val = ds_obs.skip(n_obs_train)
+
+        # Create TensorFlow validation Dataset (if necessary).
+        if obs_val is not None:
+            do_validation = True
+            self._check_obs(obs_val)
+            ds_obs_val = obs_val.as_dataset()
+            n_obs_val = obs_val.n_trial
+            # Format as TensorFlow dataset.
             ds_obs_val = ds_obs_val.batch(
-                batch_size_val, drop_remainder=False
+                n_obs_val, drop_remainder=False
             )
+
+        # Build TensorFlow model.
+        model = self._build_model()
 
         callback_list = configure_callbacks(
             callbacks,
@@ -752,7 +723,9 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         """
         self._check_obs(obs)
-        ds_obs, model = self._prepare_and_build(obs)
+        ds_obs = obs.as_dataset()
+
+        model = self._build_model()
 
         if batch_size is None:
             batch_size = obs.n_trial

@@ -17,7 +17,6 @@
 """Module of custom TensorFlow layers.
 
 Classes:
-    QueryReference:
     Embedding:
     WeightedDistance:
     SeparateAttention:
@@ -27,6 +26,10 @@ Classes:
     HeavyTailedKernel:
     StudentsTKernel:
 
+TODO:
+    * Add interface for custom layers that requires `reset_weights()`
+    method.
+
 """
 
 import numpy as np
@@ -35,74 +38,6 @@ from tensorflow.keras import backend as K
 
 import psiz.keras.constraints
 import psiz.keras.initializers
-
-
-class QueryReference(tf.keras.Model):
-    """Model of query reference similarity judgments."""
-
-    def __init__(self, embedding, attention, kernel, **kwargs):
-        """Initialize.
-
-        Arguments:
-            embedding: An embedding layer.
-            attention: An attention layer.
-            kernel: A kernel layer.
-
-        """
-        super().__init__(**kwargs)
-
-        self.embedding = embedding
-        self.attention = attention
-        self.kernel = kernel
-
-    @tf.function
-    def call(self, inputs):
-        """Call.
-
-        Arguments:
-            inputs: A dictionary of inputs:
-                stimulus_set: dtype=tf.int32, consisting of the
-                    integers on the interval [0, n_stimuli[
-                    shape=(batch_size, n_max_reference + 1)
-                group_id: dtype=tf.int32, consisting of the
-                    integers on the interval [0, n_group[
-                    shape=(batch_size,)
-                is_present: dtype=tf.bool
-                    shape=(batch_size, n_max_reference + 1)
-                is_select: dtype=tf.bool, the shape implies the
-                    maximum number of selected stimuli in the data
-                    shape=(batch_size, n_max_select)
-
-        """
-        # Grab inputs.
-        obs_stimulus_set = inputs['stimulus_set']
-        obs_group_id = inputs['group_id']
-        is_present = inputs['is_present']
-        is_select = inputs['is_select']
-
-        # Expand attention weights.
-        attention = self.attention(obs_group_id)
-
-        # Inflate cooridnates.
-        z_stimulus_set = self.embedding(obs_stimulus_set)
-        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
-        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
-
-        # Compute similarity between query and references.
-        sim_qr = self.kernel([z_q, z_r, attention])
-
-        # Zero out similarities involving placeholder.
-        sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
-
-        # Compute the observation likelihood.
-        likelihood = _tf_ranked_sequence_probability(sim_qr, is_select)
-        return likelihood
-
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.embedding.reset_weights()
-        self.attention.reset_weights()
-        self.kernel.reset_weights()
 
 
 class Embedding(tf.keras.layers.Layer):
@@ -887,59 +822,3 @@ class StudentsTKernel(tf.keras.layers.Layer):
             'fit_alpha': self.fit_alpha
         })
         return config
-
-
-def _tf_ranked_sequence_probability(sim_qr, is_select):
-    """Return probability of a ranked selection sequence.
-
-    See: _ranked_sequence_probability
-
-    Arguments:
-        sim_qr: A tensor containing the precomputed similarities
-            between the query stimuli and corresponding reference
-            stimuli.
-            shape = (batch_size, n_max_reference)
-        is_select: A Boolean tensor indicating if a reference was
-            selected.
-            shape = (batch_size, n_max_select)
-
-    """
-    # Determine batch_size.
-    batch_size = tf.shape(sim_qr)[0]
-    # Determine max_select_idx (i.e, max_n_select - 1).
-    max_select_idx = tf.shape(is_select)[1] - 1
-
-    # Pre-allocate
-    seq_prob = tf.ones([batch_size], dtype=K.floatx())
-
-    # Compute denominator of Luce's choice rule.
-    # Start by computing denominator of last selection
-    denom = tf.reduce_sum(sim_qr[:, max_select_idx:], axis=1)
-
-    # Pre-compute masks for handling non-existent selections.
-    does_exist = tf.cast(is_select, dtype=K.floatx())
-    does_not_exist = tf.cast(tf.math.logical_not(is_select), dtype=K.floatx())
-
-    # Compute remaining denominators in reverse order for numerical
-    # stability.
-    for select_idx in tf.range(max_select_idx, -1, -1):
-        # Compute selection probability.
-        # Use safe divide since some denominators may be zero.
-        prob = tf.math.divide_no_nan(sim_qr[:, select_idx], denom)
-        # Zero out non-existent selections.
-        prob = prob * does_exist[:, select_idx]
-        # Add one to non-existent selections.
-        prob = prob + does_not_exist[:, select_idx]
-
-        # Update sequence probability.
-        # NOTE: Non-existent selections will have a probability of 1, which
-        # results in an idempotent multiplication operation.
-        seq_prob = tf.multiply(seq_prob, prob)
-
-        # Update denominator in preparation for computing the probability
-        # of the previous selection in the sequence.
-        if select_idx > tf.constant(0, dtype=tf.int32):
-            denom = tf.add(denom, sim_qr[:, select_idx - 1])
-        # seq_prob.set_shape([None])  # Not necessary any more?
-
-    return seq_prob

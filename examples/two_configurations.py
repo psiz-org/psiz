@@ -48,7 +48,7 @@ def main():
 
     # Generate a random docket of trials using two different trial
     # configurations.
-    # Generate 1000 2-choose-1 trials.
+    # Generate 1500 2-choose-1 trials.
     n_reference = 2
     n_select = 1
     gen_2c1 = RandomGenerator(
@@ -56,7 +56,7 @@ def main():
     )
     n_trial = 1500
     docket_2c1 = gen_2c1.generate(n_trial)
-    # Generate 1000 8-choose-2 trials.
+    # Generate 1500 8-choose-2 trials.
     n_reference = 8
     n_select = 2
     gen_8c2 = RandomGenerator(

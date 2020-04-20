@@ -44,7 +44,8 @@ TODO:
     * Add SortDocket class
     * Add SortObservations class
     * Add Observations "interface" which requires `as_dataset()` method
-        which returns a tf.data.Dataset object.
+        which returns a tf.data.Dataset object, agent_id, group_id, and
+        session_id.
     * MAYBE restructure group_id and agent_id. If we wanted to allow
     for arbitrary hierarchical models, maybe better off making
     group_id a 2D array of shape=(n_trial, n_group_level)

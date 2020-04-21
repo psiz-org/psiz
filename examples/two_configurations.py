@@ -41,7 +41,7 @@ def main():
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 20
+    n_restart = 5  # 20 TODO
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -80,21 +80,26 @@ def main():
     obs_val = obs.subset(val_idx)
 
     # Use early stopping.
-    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
+    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
         'val_loss', patience=10, mode='min', restore_best_weights=True
+    )
+    # Visualize using TensorBoard.
+    cb_board = psiz.keras.callbacks.TensorBoardRe(
+        log_dir='/tmp/psiz/tensorboard_logs_2', histogram_freq=0,
+        write_graph=False, write_images=False, update_freq='epoch',
+        profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
 
     # Infer embedding.
     kernel = psiz.keras.layers.ExponentialKernel()
-    emb_inferred = psiz.models.Rank(n_stimuli, n_dim=n_dim, kernel=kernel
-    )
+    emb_inferred = psiz.models.Rank(n_stimuli, n_dim=n_dim, kernel=kernel)
     emb_inferred.compile()
     restarter = psiz.restart.Restarter(
         emb_inferred, 'val_loss', n_restart=n_restart
     )
     restart_record = restarter.fit(
         obs_train, obs_val=obs_val, epochs=1000, verbose=2,
-        callbacks=[early_stop]
+        callbacks=[cb_early, cb_board]
     )
 
     # Compare the inferred model with ground truth by comparing the

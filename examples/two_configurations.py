@@ -41,7 +41,7 @@ def main():
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 5  # 20 TODO
+    n_restart = 20
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -85,7 +85,7 @@ def main():
     )
     # Visualize using TensorBoard.
     cb_board = psiz.keras.callbacks.TensorBoardRe(
-        log_dir='/tmp/psiz/tensorboard_logs_2', histogram_freq=0,
+        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )

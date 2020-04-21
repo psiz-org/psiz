@@ -92,7 +92,10 @@ def main():
 
     # Infer embedding.
     kernel = psiz.keras.layers.ExponentialKernel()
-    emb_inferred = psiz.models.Rank(n_stimuli, n_dim=n_dim, kernel=kernel)
+    rankModel = psiz.models.Rank(
+        n_stimuli, n_dim=n_dim, kernel=kernel
+    )
+    emb_inferred = psiz.models.Proxy(rankModel)
     emb_inferred.compile()
     restarter = psiz.restart.Restarter(
         emb_inferred, 'val_loss', n_restart=n_restart
@@ -124,9 +127,11 @@ def ground_truth(n_stimuli, n_dim):
     kernel.beta = 10.
     kernel.gamma = 0.001
 
-    emb = psiz.models.Rank(
+    rankModel = psiz.models.Rank(
         n_stimuli, n_dim=n_dim, kernel=kernel
     )
+
+    emb = psiz.models.Proxy(rankModel)
 
     mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)

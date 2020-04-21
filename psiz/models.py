@@ -17,7 +17,7 @@
 """Module of psychological embedding models.
 
 Classes:
-    PsychologicalEmbedding: Abstract base class for embedding model.
+    Proxy: Proxy class for embedding model.
     Rate: Class that uses ratio observations between unanchored sets
         of stimulus (typically two stimuli).
     Rank: Class that uses ordinal observations that are anchored by a
@@ -30,12 +30,11 @@ Functions:
         class method, as a PsychologicalEmbedding object.
 
 TODO:
-    * Implement RateModel class.
-    * Implement SortModel class.
+    * Implement Rate class.
+    * Implement Sort class.
 
 """
 
-from abc import ABCMeta, abstractmethod
 import copy
 import datetime
 from random import randint
@@ -62,8 +61,8 @@ import psiz.trials
 import psiz.utils
 
 
-class PsychologicalEmbedding(metaclass=ABCMeta):
-    """Abstract base class for a psychological embedding model.
+class Proxy(object):
+    """Convenient proxy class for a psychological embedding model.
 
     The embedding procedure jointly infers three components. First, the
     embedding algorithm infers a stimulus representation denoted by the
@@ -124,96 +123,57 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
     """
 
-    def __init__(
-            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
-            attention=None, kernel=None):
+    def __init__(self, model):
         """Initialize.
 
         Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded. This must be equal to or
-                greater than three.
-            n_dim (optional): An integer indicating the dimensionality
-                of the embedding. Must be equal to or greater than one.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group. Must be equal to or greater than one.
-            embedding (optional): An embedding layer.
-            attention (optional): An attention layer.
-            kernel (optional): A similarity kernel layer.
-
-        Raises:
-            ValueError: If arguments are invalid.
+            model: A TensorFlow model.
 
         """
         super().__init__()
-
-        if (n_stimuli < 3):
-            raise ValueError("There must be at least three stimuli.")
-        self.n_stimuli = n_stimuli
-        if (n_dim < 1):
-            raise ValueError(
-                "The dimensionality (`n_dim`) must be an integer "
-                "greater than 0."
-            )
-        self.n_dim = n_dim
-        if (n_group < 1):
-            raise ValueError(
-                "The number of groups (`n_group`) must be an integer greater "
-                "than 0."
-            )
-            n_group = 1
-        self.n_group = n_group
-
-        # Initialize model components.
-        if embedding is None:
-            embedding = psiz.keras.layers.Embedding(
-                n_stimuli=self.n_stimuli, n_dim=self.n_dim
-            )
-        self.embedding = embedding
-
-        if attention is None:
-            attention = psiz.keras.layers.Attention(
-                n_dim=self.n_dim, n_group=self.n_group
-            )
-        self.attention = attention
-
-        if kernel is None:
-            kernel = psiz.keras.layers.ExponentialKernel()
-        self.kernel = kernel
+        self.model = model
 
         # Unsaved attributes.
         self.log_freq = 10
-        # Compile attributes.
-        self.optimizer = None
-        self.loss = None
 
     def reset_weights(self):
         """Reinitialize trainable model parameters."""
-        self.embedding.reset_weights()
-        self.attention.reset_weights()
-        self.kernel.reset_weights()
+        self.model.reset_weights()
+
+    @property
+    def n_stimuli(self):
+        """Getter method for n_stimuli."""
+        return self.model.n_stimuli
+
+    @property
+    def n_dim(self):
+        """Getter method for n_dim."""
+        return self.model.n_dim
+
+    @property
+    def n_group(self):
+        """Getter method for n_group."""
+        return self.model.n_group
 
     @property
     def z(self):
         """Getter method for z."""
-        return self.embedding.z.numpy()
+        return self.model.embedding.z.numpy()
 
     @z.setter
     def z(self, z):
         """Setter method for z."""
-        self.embedding.z.assign(z)
+        self.model.embedding.z.assign(z)
 
     @property
     def w(self):
         """Getter method for phi."""
-        return self.attention.w.numpy()
+        return self.model.attention.w.numpy()
 
     @w.setter
     def w(self, w):
         """Setter method for w."""
-        self.attention.w.assign(w)
+        self.model.attention.w.assign(w)
 
     @property
     def phi(self):
@@ -233,7 +193,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
     def theta(self):
         """Getter method for theta."""
         d = {}
-        for k, v in self.kernel.theta.items():
+        for k, v in self.model.kernel.theta.items():
             d[k] = v.numpy()
         return d
 
@@ -241,7 +201,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
     def theta(self, theta):
         """Setter method for w."""
         for k, v in theta.items():
-            self.kernel.theta[k].assign(v)
+            self.model.kernel.theta[k].assign(v)
 
     def get_weights(self):
         """Get weights for all layers.
@@ -250,6 +210,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         weights as a single-level dictionary of weights.
 
         """
+        # TODO, self.model or self.<var>?
         weights = {
             'embedding': {'z': self.z},
             'attention': self.phi,
@@ -257,10 +218,11 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         }
         return weights
 
+    # TODO may not need this.
     def set_weights(self, weights):
         """Setter method for all weights."""
         for layer_name, layer_dict in weights.items():
-            layer = getattr(self, layer_name)
+            layer = getattr(self.model, layer_name)
             for var_name, var_value in layer_dict.items():
                 var = getattr(layer, var_name)
                 var.assign(var_value)
@@ -338,7 +300,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         (z_q, z_r, attention) = self._broadcast_for_similarity(
             z_q, z_r, group_id=group_id
         )
-        sim_qr = self.kernel([
+        sim_qr = self.model.kernel([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -391,22 +353,12 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d_qr = self.kernel.distance_layer([
+        d_qr = self.model.kernel.distance_layer([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ]).numpy()
         return d_qr
-
-    @abstractmethod
-    def _build_model(self):
-        """Build TensorFlow model.
-
-        Returns:
-            model: A tf.Model object.
-
-        """
-        pass
 
     def _check_obs(self, obs):
         """Check observerations.
@@ -428,51 +380,45 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
                 )
             )
 
-    def compile(self, optimizer=None, loss=None):
+    def compile(self, **kwargs):
         """Configure the model for training.
 
         Arguments:
-            optimizer: A tf.keras.optimizer object.
-            loss: A loss function.
-
-        Raises:
-            ValueError: If arguments are invalid.
+            **kwargs (optional): Key-word arguments passed to the
+                model's `compile` method.
 
         """
-        if optimizer is None:
-            optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
-        self.optimizer = optimizer
-
-        if loss is None:
-            loss = _observation_loss
-        self.loss = loss
+        self.model.compile(**kwargs)
 
     def fit(
-            self, obs_train, batch_size=None, obs_val=None, epochs=1000,
-            initial_epoch=0, callbacks=None, seed=None, verbose=0):
+            self, obs_train, batch_size=None, obs_val=None, n_restart=3,
+            n_record=1, monitor='loss', **kwargs):
         """Fit the free parameters of the embedding model.
 
+        This convenience function formats the observations as
+        appropriate Dataset(s) and sets up a Restarter object to track
+        restarts.
+
         Arguments:
-            obs_train: An RankObservations object representing the observed
-                data used to train the model.
-            batch_size: The batch size to use for the training step.
-            obs_val (optional): An RankObservations object representing the
-                observed data used to validate the model.
-            epochs (optional): The number of epochs to perform.
-            initial_epoch (optional): The initial epoch.
-            callbacks (optional): A list of TensorFlow callbacks.
-            seed (optional): An integer to be used to seed the random number
-                generator.
-            verbose (optional): An integer specifying the verbosity of
-                printed output. If zero, nothing is printed. Increasing
-                integers display an increasing amount of information.
+            obs_train: An RankObservations object representing the
+                observed data used to train the model.
+            batch_size (optional): The batch size to use for the
+                training step.
+            obs_val (optional): An RankObservations object representing
+                the observed data used to validate the model.
+            n_restart (optional): The number of independent restarts to
+                perform.
+            n_record (optional): The number of top-performing restarts
+                to record.
+            monitor (optional): The value to monitor and select
+                restarts.
+            kwargs (optional): Additional key-word arguments to be
+                passed to the model's `fit` method.
 
         Returns:
-            history: A tf.callbacks.History object.
+            history: A tf.callbacks.History object. TODO
 
         """
-        fit_start_time_s = time.time()
-
         # Determine batch size.
         n_obs_train = obs_train.n_trial
         if batch_size is None:
@@ -493,7 +439,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         # Create TensorFlow validation Dataset (if necessary).
         if obs_val is not None:
-            do_validation = True
             self._check_obs(obs_val)
             ds_obs_val = obs_val.as_dataset()
             n_obs_val = obs_val.n_trial
@@ -501,179 +446,26 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             ds_obs_val = ds_obs_val.batch(
                 n_obs_val, drop_remainder=False
             )
+        else:
+            ds_obs_val = None
 
-        # Build TensorFlow model.
-        model = self._build_model()
-
-        callback_list = configure_callbacks(
-            callbacks,
-            model,
-            do_validation=False,
-            batch_size=None,
-            epochs=None,
-            steps_per_epoch=None,
-            samples=None,
-            verbose=0,
-            count_mode='steps'
+        # Handle restarts.
+        restarter = psiz.restart.Restarter(
+            self.model, 'val_loss', n_restart=n_restart
+        )
+        restart_record = restarter.fit(
+            ds_obs_train, obs_val=ds_obs_val, **kwargs
         )
 
-        logs = {}
-        metric_train_loss = tf.keras.metrics.Mean(name='loss')
-        metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
-
-        # NOTE: Must bring into local scope in order for optimizer state
-        # to update appropriately.
-        optimizer = self.optimizer
-
-        # NOTE: Trainable attention weights does not work with eager
-        # execution.
-        @tf.function
-        def train_step(inputs):
-            # Compute training loss and gradients.
-            with tf.GradientTape() as grad_tape:
-                probs = model(inputs)
-                # Loss value for this minibatch.
-                loss_value = self.loss(probs, inputs['weight'])
-                # Add extra losses created during this forward pass.
-                loss_value += sum(model.losses)
-
-            gradients = grad_tape.gradient(
-                loss_value, model.trainable_variables
-            )
-            # NOTE: This assumes equal number of samples for each minibatch.
-            # The computed mean will deviate from correct if minibatch sizes
-            # vary.
-            metric_train_loss.update_state(loss_value)
-
-            # NOTE: There is an open issue for using constraints with
-            # tf.keras.layers.Embedding and psiz.keras.layers.Embedding (see:
-            # https://github.com/tensorflow/tensorflow/issues/33755). There
-            # are also issues when using Eager Execution. A work-around is
-            # to convert the problematic gradients, which are returned as
-            # tf.IndexedSlices, into dense tensors.
-            for var_idx, var in enumerate(model.trainable_variables):
-                if var.name == 'z:0':
-                    gradients[var_idx] = tf.convert_to_tensor(
-                        gradients[var_idx]
-                    )
-
-            # Apply gradients (subject to constraints).
-            optimizer.apply_gradients(
-                zip(gradients, model.trainable_variables)
-            )
-
-        @tf.function
-        def eval_val_step(inputs):
-            probs = model(inputs)
-            # Loss value for this minibatch.
-            loss_value = self.loss(probs, inputs['weight'])
-            metric_val_loss.update_state(loss_value)
-
-        @tf.function
-        def eval_train_step(inputs):
-            probs = model(inputs)
-            # Loss value for this minibatch.
-            loss_value = self.loss(probs, inputs['weight'])
-            # Add extra losses created during this forward pass.
-            loss_value += sum(model.losses)
-            metric_train_loss.update_state(loss_value)
-
-        callback_list.on_train_begin(logs=None)
-
-        epoch_start_time_s = time.time()
-        for epoch in range(initial_epoch, epochs):
-            if callback_list.model.stop_training:
-                epoch = epoch - 1
-                break
-            else:
-                callback_list.on_epoch_begin(epoch, logs=None)
-
-                # Reset metrics at the start of each epoch.
-                metric_train_loss.reset_states()
-                metric_val_loss.reset_states()
-
-                # Compute training loss and update variables.
-                # NOTE: During computation of gradients, IndexedSlices are
-                # created which generates a TensorFlow warning. I cannot
-                # find an implementation that avoids IndexedSlices. The
-                # following catch environment silences the offending
-                # warning.
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        'ignore', category=UserWarning,
-                        module=r'.*indexed_slices'
-                    )
-                    for batch_idx, batch_train in enumerate(ds_obs_train):
-                        logs['size'] = batch_train['stimulus_set'].shape[0]
-                        logs['num_steps'] = 1
-                        callback_list.on_train_batch_begin(
-                            batch_idx, logs=logs
-                        )
-                        train_step(batch_train)
-                        logs['loss'] = metric_train_loss.result().numpy()
-                        callback_list.on_train_batch_end(
-                            batch_idx, logs=logs
-                        )
-
-                # Compute validation loss.
-                # NOTE: The method `on_test_batch_begin` and
-                # `on_test_batch_end` are not called because these are
-                # intended to be used inside the `predict` method.
-                if do_validation:
-                    for batch_idx, batch_val in enumerate(ds_obs_val):
-                        eval_val_step(batch_val)
-                        logs['val_loss'] = metric_val_loss.result().numpy()
-
-                if verbose > 3:
-                    if epoch % self.log_freq == 0:
-                        _print_epoch_logs(epoch, logs)
-
-                callback_list.on_epoch_end(epoch, logs=logs)
-        epoch_stop_time_s = time.time() - epoch_start_time_s
-        callback_list.on_train_end(logs=None)
-
-        # Add final model metrics to a `final_logs` dictionary.
-        # NOTE: If there is an early stopping callback with
-        # restore_best_weights, then the final evaluation will use
-        # the best weights.
-        final_logs = {}
-
-        # Reset metrics.
-        metric_train_loss.reset_states()
-        metric_val_loss.reset_states()
-
-        for batch_train in ds_obs_train:
-            eval_train_step(batch_train)
-        final_logs['loss'] = metric_train_loss.result().numpy()
-
-        if do_validation:
-            for batch_val in ds_obs_val:
-                eval_val_step(batch_val)
-            final_logs['val_loss'] = metric_val_loss.result().numpy()
-
-        # Add time information.
-        total_duration = time.time() - fit_start_time_s
-        final_logs['total_duration_s'] = int(total_duration)
-        final_logs['ms_per_epoch'] = int(1000 * epoch_stop_time_s / epoch)
-
-        if (verbose > 2):
-            _print_epoch_logs(epoch, final_logs)
-            print('')
-
-        # Add epoch after print statement.
-        final_logs['epoch'] = epoch
-
-        # Piggy-back on History object.
-        model.history.final = final_logs
-
-        return model.history
+        return restart_record
 
     def evaluate(self, obs, batch_size=None):
         """Evaluate observations using the current state of the model.
 
-        Notes:
-            Observations are evaluated in test mode. This means that
-            regularization terms are not included in the loss.
+        This convenience function formats the observations as
+        an appropriate Dataset. Observations are evaluated in "test"
+        mode. This means that regularization terms are not included in
+        the loss.
 
         Arguments:
             obs: A RankObservations object representing the observed data.
@@ -687,29 +479,11 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         self._check_obs(obs)
         ds_obs = obs.as_dataset()
 
-        model = self._build_model()
-
         if batch_size is None:
             batch_size = obs.n_trial
 
-        ds_obs = ds_obs.batch(
-            batch_size, drop_remainder=False
-        )
-
-        metric_loss = tf.keras.metrics.Mean(name='loss')
-
-        @tf.function
-        def eval_step(inputs):
-            # Compute validation loss.
-            probs = model(inputs)
-            loss_value = self.loss(probs, inputs['weight'])
-            metric_loss.update_state(loss_value)
-
-        for batch in ds_obs:
-            eval_step(batch)
-        loss = metric_loss.result()
-
-        return loss
+        ds_obs = ds_obs.batch(batch_size, drop_remainder=False)
+        return self.model.evaluate(ds_obs)
 
     def outcome_probability(
             self, docket, group_id=None, z=None, unaltered_only=False):
@@ -769,7 +543,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             z_q, z_r, group_id=group_id
         )
 
-        sim_qr = self.kernel([
+        sim_qr = self.model.kernel([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -1101,103 +875,72 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         return cpyobj
 
 
-class Rank(PsychologicalEmbedding):
-    """An embedding model that uses anchored, ordinal judgments."""
-
-    def __init__(
-            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
-            attention=None, kernel=None):
-        """Initialize."""
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim=n_dim, n_group=n_group,
-            embedding=embedding,
-            attention=attention, kernel=kernel
-        )
-
-    def _build_model(self):
-        """Build TensorFlow model.
-
-        Returns:
-            model: A tf.Model object.
-
-        """
-        model = RankModel(
-            self.embedding, self.attention, self.kernel, name='rank_model'
-        )
-        return model
-
-
-class Rate(PsychologicalEmbedding):
-    """An embedding model that uses pair-wise ratings."""
-
-    def __init__(
-            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
-            attention=None, kernel=None):
-        """Initialize."""
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim=n_dim, n_group=n_group,
-            embedding=embedding,
-            attention=attention, kernel=kernel
-        )
-
-    def _build_model(self):
-        """Build TensorFlow model.
-
-        Returns:
-            model: A tf.Model object.
-
-        """
-        model = RateModel(
-            self.embedding, self.attention, self.kernel, name='rank_model'
-        )
-        return model
-
-
-class Sort(PsychologicalEmbedding):
-    """An embedding model that sorted similarity judgments."""
-
-    def __init__(
-            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
-            attention=None, kernel=None):
-        """Initialize."""
-        PsychologicalEmbedding.__init__(
-            self, n_stimuli, n_dim=n_dim, n_group=n_group,
-            embedding=embedding,
-            attention=attention, kernel=kernel
-        )
-
-    def _build_model(self):
-        """Build TensorFlow model.
-
-        Returns:
-            model: A tf.Model object.
-
-        """
-        model = SortModel(
-            self.embedding, self.attention, self.kernel, name='rank_model'
-        )
-        return model
-
-
-class RankModel(tf.keras.Model):
+class Rank(tf.keras.Model):
     """Model based on ranked similarity judgments."""
 
-    def __init__(self, embedding, attention, kernel, **kwargs):
+    def __init__(
+            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
+            attention=None, kernel=None, **kwargs):
         """Initialize.
 
         Arguments:
-            embedding: An embedding layer.
-            attention: An attention layer.
-            kernel: A kernel layer.
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded. This must be equal to or
+                greater than three.
+            n_dim (optional): An integer indicating the dimensionality
+                of the embedding. Must be equal to or greater than one.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group. Must be equal to or greater than one.
+            embedding (optional): An embedding layer. Must agree with
+                n_stimuli, n_dim, n_group.
+            attention (optional): An attention layer. Must agree with
+                n_stimuli, n_dim, n_group.
+            kernel (optional): A similarity kernel layer. Must agree
+                with n_stimuli, n_dim, n_group.
+
+        Raises:
+            ValueError: If arguments are invalid.
 
         """
         super().__init__(**kwargs)
 
+        if (n_stimuli < 3):
+            raise ValueError("There must be at least three stimuli.")
+        self.n_stimuli = n_stimuli
+        if (n_dim < 1):
+            raise ValueError(
+                "The dimensionality (`n_dim`) must be an integer "
+                "greater than 0."
+            )
+        self.n_dim = n_dim
+        if (n_group < 1):
+            raise ValueError(
+                "The number of groups (`n_group`) must be an integer greater "
+                "than 0."
+            )
+            n_group = 1
+        self.n_group = n_group
+
+        # Initialize model components.
+        if embedding is None:
+            embedding = psiz.keras.layers.Embedding(
+                n_stimuli=self.n_stimuli, n_dim=self.n_dim
+            )
         self.embedding = embedding
+
+        if attention is None:
+            attention = psiz.keras.layers.Attention(
+                n_dim=self.n_dim, n_group=self.n_group
+            )
         self.attention = attention
+
+        if kernel is None:
+            kernel = psiz.keras.layers.ExponentialKernel()
         self.kernel = kernel
 
-    @tf.function
+    # @tf.function
     def call(self, inputs):
         """Call.
 
@@ -1246,11 +989,254 @@ class RankModel(tf.keras.Model):
         self.attention.reset_weights()
         self.kernel.reset_weights()
 
+    def compile(self, optimizer=None, loss=None):
+        """Overide compile.
 
-# class RateModel(tf.keras.Model):
+        Arguments:
+            optimizer: A tf.keras.optimizer object.
+            loss: A loss function.
+
+        Raises:
+            ValueError: If arguments are invalid.
+
+        """
+        if optimizer is None:
+            optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
+
+        if loss is None:
+            loss = _nll_loss
+
+        self.optimizer = optimizer  # TODO
+        self.loss = loss  # TODO
+
+    def fit(
+            self, obs_train, obs_val=None, epochs=1000,
+            initial_epoch=0, callbacks=None, seed=None, verbose=0):
+        """Override fit.
+
+        Arguments:
+            obs_train: A tf.data.Dataset formatting of a
+                RankObservations object representing the observed data
+                used to train the model.
+            obs_val (optional): A tf.data.Dataset formmating of a
+                RankObservations object representing the observed data
+                used to validate the model.
+            epochs (optional): The number of epochs to perform.
+            initial_epoch (optional): The initial epoch.
+            callbacks (optional): A list of TensorFlow callbacks.
+            seed (optional): An integer to be used to seed the random number
+                generator. TODO
+            verbose (optional): An integer specifying the verbosity of
+                printed output. If zero, nothing is printed. Increasing
+                integers display an increasing amount of information.
+
+        Returns:
+            history: A tf.callbacks.History object.
+
+        """
+        fit_start_time_s = time.time()
+
+        if obs_val is not None:
+            do_validation = True
+        else:
+            do_validation = False
+
+        model = self
+
+        callback_list = configure_callbacks(
+            callbacks,
+            model,
+            do_validation=False,
+            batch_size=None,
+            epochs=None,
+            steps_per_epoch=None,
+            samples=None,
+            verbose=0,
+            count_mode='steps'
+        )
+
+        logs = {}
+        metric_train_loss = tf.keras.metrics.Mean(name='loss')
+        metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
+
+        # NOTE: Must bring into local scope in order for optimizer state
+        # to update appropriately.
+        optimizer = self.optimizer
+
+        # NOTE: Trainable attention weights does not work with eager
+        # execution.
+        # @tf.function
+        def train_step(inputs):
+            # Compute training loss and gradients.
+            with tf.GradientTape() as grad_tape:
+                probs = model(inputs)
+                # Loss value for this minibatch.
+                loss_value = self.loss(probs, inputs['weight'])
+                # Add extra losses created during this forward pass.
+                loss_value += sum(model.losses)
+
+            gradients = grad_tape.gradient(
+                loss_value, model.trainable_variables
+            )
+            # NOTE: This assumes equal number of samples for each minibatch.
+            # The computed mean will deviate from correct if minibatch sizes
+            # vary.
+            metric_train_loss.update_state(loss_value)
+
+            # NOTE: There is an open issue for using constraints with
+            # tf.keras.layers.Embedding and psiz.keras.layers.Embedding (see:
+            # https://github.com/tensorflow/tensorflow/issues/33755). There
+            # are also issues when using Eager Execution. A work-around is
+            # to convert the problematic gradients, which are returned as
+            # tf.IndexedSlices, into dense tensors.
+            for var_idx, var in enumerate(model.trainable_variables):
+                if var.name == 'z:0':
+                    gradients[var_idx] = tf.convert_to_tensor(
+                        gradients[var_idx]
+                    )
+
+            # Apply gradients (subject to constraints).
+            optimizer.apply_gradients(
+                zip(gradients, model.trainable_variables)
+            )
+
+        # @tf.function
+        def eval_val_step(inputs):
+            probs = model(inputs)
+            # Loss value for this minibatch.
+            loss_value = self.loss(probs, inputs['weight'])
+            metric_val_loss.update_state(loss_value)
+
+        # @tf.function
+        def eval_train_step(inputs):
+            probs = model(inputs)
+            # Loss value for this minibatch.
+            loss_value = self.loss(probs, inputs['weight'])
+            # Add extra losses created during this forward pass.
+            loss_value += sum(model.losses)
+            metric_train_loss.update_state(loss_value)
+
+        callback_list.on_train_begin(logs=None)
+
+        epoch_start_time_s = time.time()
+        for epoch in range(initial_epoch, epochs):
+            if callback_list.model.stop_training:
+                epoch = epoch - 1
+                break
+            else:
+                callback_list.on_epoch_begin(epoch, logs=None)
+
+                # Reset metrics at the start of each epoch.
+                metric_train_loss.reset_states()
+                metric_val_loss.reset_states()
+
+                # Compute training loss and update variables.
+                # NOTE: During computation of gradients, IndexedSlices are
+                # created which generates a TensorFlow warning. I cannot
+                # find an implementation that avoids IndexedSlices. The
+                # following catch environment silences the offending
+                # warning.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        'ignore', category=UserWarning,
+                        module=r'.*indexed_slices'
+                    )
+                    for batch_idx, batch_train in enumerate(obs_train):
+                        logs['size'] = batch_train['stimulus_set'].shape[0]
+                        logs['num_steps'] = 1
+                        callback_list.on_train_batch_begin(
+                            batch_idx, logs=logs
+                        )
+                        train_step(batch_train)
+                        logs['loss'] = metric_train_loss.result().numpy()
+                        callback_list.on_train_batch_end(
+                            batch_idx, logs=logs
+                        )
+
+                # Compute validation loss.
+                # NOTE: The method `on_test_batch_begin` and
+                # `on_test_batch_end` are not called because these are
+                # intended to be used inside the `predict` method.
+                if do_validation:
+                    for batch_idx, batch_val in enumerate(obs_val):
+                        eval_val_step(batch_val)
+                        logs['val_loss'] = metric_val_loss.result().numpy()
+
+                # TODO
+                # if verbose > 3:
+                #     if epoch % self.log_freq == 0:
+                #         _print_epoch_logs(epoch, logs)
+
+                callback_list.on_epoch_end(epoch, logs=logs)
+        epoch_stop_time_s = time.time() - epoch_start_time_s
+        callback_list.on_train_end(logs=logs)
+
+        # Add final model metrics to a `final_logs` dictionary.
+        # NOTE: If there is an early stopping callback with
+        # restore_best_weights, then the final evaluation will use
+        # the best weights.
+        final_logs = {}
+
+        # Reset metrics.
+        metric_train_loss.reset_states()
+        metric_val_loss.reset_states()
+
+        for batch_train in obs_train:
+            eval_train_step(batch_train)
+        final_logs['loss'] = metric_train_loss.result().numpy()
+
+        if do_validation:
+            for batch_val in obs_val:
+                eval_val_step(batch_val)
+            final_logs['val_loss'] = metric_val_loss.result().numpy()
+
+        # Add time information.
+        total_duration = time.time() - fit_start_time_s
+        final_logs['total_duration_s'] = int(total_duration)
+        final_logs['ms_per_epoch'] = int(1000 * epoch_stop_time_s / epoch)
+
+        if (verbose > 2):
+            _print_epoch_logs(epoch, final_logs)
+            print('')
+
+        # Add epoch after print statement.
+        final_logs['epoch'] = epoch
+
+        # Piggy-back on History object.
+        model.history.final = final_logs
+
+        return model.history
+
+    def evaluate(self, obs):
+        """Overide evaluate.
+
+        Arguments:
+            obs: A tf.data.Dataset formatting of a
+                RankObservations object representing the observed data
+                used to evaluate the model.
+
+        """
+        model = self
+        metric_loss = tf.keras.metrics.Mean(name='loss')
+
+        # @tf.function
+        def eval_step(inputs):
+            # Compute validation loss.
+            probs = model(inputs)
+            loss_value = self.loss(probs, inputs['weight'])
+            metric_loss.update_state(loss_value)
+
+        for batch in obs:
+            eval_step(batch)
+        loss = metric_loss.result()
+
+        return loss
 
 
-# class SortModel(tf.keras.Model):
+# class Rate(tf.keras.Model):
+
+
+# class Sort(tf.keras.Model):
 
 
 def load_model(filepath, custom_objects={}):
@@ -1595,8 +1581,7 @@ def _print_epoch_logs(epoch, logs):
     print(msg)
 
 
-@tf.function(experimental_relax_shapes=True)
-def _observation_loss(y_pred, sample_weight):
+def _nll_loss(y_pred, sample_weight):
     """Compute model loss given observation probabilities."""
     # Convert to (weighted) log probabilities.
     y_pred = _safe_neg_log_prob(y_pred)

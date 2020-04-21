@@ -51,11 +51,11 @@ class Restarter(object):
 
     """
 
-    def __init__(self, emb, monitor, n_restart=10, n_record=1, do_init=False):
+    def __init__(self, model, monitor, n_restart=10, n_record=1, do_init=False):
         """Initialize.
 
         Arguments:
-            emb: A compiled model.
+            model: A compiled TensorFlow model.
             monitor: The value to monitor and use as a basis for
                 selecting the best restarts.
             n_restart (optional): An integer indicating the number of
@@ -71,7 +71,7 @@ class Restarter(object):
         # Make sure n_record is not greater than n_restart.
         n_record = np.minimum(n_record, n_restart)
 
-        self.emb = emb
+        self.model = model
         self.monitor = monitor
         self.n_restart = n_restart
         self.n_record = n_record
@@ -94,7 +94,7 @@ class Restarter(object):
         tracker = FitTracker(self.n_record, self.monitor)
 
         # Grab initial optimizer configuration for resetting state.
-        self.optimizer_config = self.emb.optimizer.get_config()
+        self.optimizer_config = self.model.optimizer.get_config()
 
         # TODO
         # if (verbose > 0):
@@ -138,20 +138,22 @@ class Restarter(object):
             if verbose > 0 and verbose < 3:
                 progbar.update(i_restart + 1)
 
+            # TODO should datasets be shuffled?
+
             # Reset trainable weights.
-            self.emb.reset_weights()
+            self.model.reset_weights()
             # Reset optimizer state.
-            self.emb.optimizer = type(
-                self.emb.optimizer
+            self.model.optimizer = type(
+                self.model.optimizer
             ).from_config(self.optimizer_config)
             # Reset callbacks
             for callback in callbacks:
                 callback.reset(i_restart)
 
-            history = self.emb.fit(
-                obs_train, verbose=verbose, callbacks=callbacks, **kwargs
+            history = self.model.fit(
+                obs_train, callbacks=callbacks, verbose=verbose, **kwargs
             )
-            weights = self.emb.get_weights()
+            weights = self.model.get_weights()  # TODO check
 
             # Update fit record with latest restart.
             tracker.update_state(history.final, weights)
@@ -161,7 +163,7 @@ class Restarter(object):
         loss_train_best = tracker.record['loss'][0]
         loss_val_best = tracker.record['val_loss'][0]
         epoch_best = tracker.record['epoch'][0]
-        self.emb.set_weights(tracker.record['weights'][0])
+        self.model.set_weights(tracker.record['weights'][0])  # TODO check
 
         # TODO handle time stats
         fit_duration = time.time() - start_time_s

@@ -76,7 +76,6 @@ class Restarter(object):
         self.n_restart = n_restart
         self.n_record = n_record
         self.do_init = do_init
-        self.log_dir = copy.copy(emb.log_dir)
 
     def fit(self, obs_train, verbose=0, callbacks=None, **kwargs):
         """Fit the embedding model to the observations using restarts.
@@ -147,10 +146,8 @@ class Restarter(object):
             ).from_config(self.optimizer_config)
             # Reset callbacks
             for callback in callbacks:
-                callback.reset()
+                callback.reset(i_restart)
 
-            # Distinguish between restart by setting log_dir for TensorBoard.
-            self.emb.log_dir = '{0}/{1}'.format(self.log_dir, i_restart)
             history = self.emb.fit(
                 obs_train, verbose=verbose, callbacks=callbacks, **kwargs
             )
@@ -197,9 +194,6 @@ class Restarter(object):
             if not tracker.beat_init:
                 print('    Did not beat initialization.')
             print()
-
-        # Clean up.
-        self.emb.log_dir = self.log_dir
 
         return tracker
 

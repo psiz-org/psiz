@@ -120,11 +120,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             key 'trainable' is a boolean flag indicating whether the
             variable is trainable during inference. The free parameter
             `w` governs dimension-wide weights.
-        do_log: A boolean variable that controls whether gradient
-            decent progress is logged. By default, this is initialized
-            to False.
-        log_dir: The location of the logs. The default location is
-            `/tmp/psiz/tensorboard_logs/`.
         log_freq: The number of epochs to wait between log entries.
 
     """
@@ -189,9 +184,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         self.kernel = kernel
 
         # Unsaved attributes.
-        # TensorBoard log attributes.
-        self.do_log = False
-        self.log_dir = '/tmp/psiz/tensorboard_logs/'
         self.log_freq = 10
         # Compile attributes.
         self.optimizer = None
@@ -406,32 +398,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         ]).numpy()
         return d_qr
 
-    def set_log(self, do_log, log_dir=None, log_freq=None, delete_prev=True):
-        """State changing method that sets TensorBoard logging.
-
-        Arguments:
-            do_log: Boolean that indicates whether logs should be
-                recorded.
-            log_dir (optional): A string indicating the file path for
-                the logs.
-            delete_prev (optional): Boolean indicating whether the
-                directory should be cleared of previous files first.
-
-        """
-        if do_log:
-            self.do_log = True
-
-        if log_dir is not None:
-            self.log_dir = log_dir
-
-        if log_freq is not None:
-            self.log_freq = log_freq
-
-        if delete_prev:
-            if tf.io.gfile.exists(self.log_dir):
-                tf.io.gfile.rmtree(self.log_dir)
-        tf.io.gfile.makedirs(self.log_dir)
-
     @abstractmethod
     def _build_model(self):
         """Build TensorFlow model.
@@ -554,7 +520,6 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
         logs = {}
         metric_train_loss = tf.keras.metrics.Mean(name='loss')
         metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
-        summary_writer = tf.summary.create_file_writer(self.log_dir)
 
         # NOTE: Must bring into local scope in order for optimizer state
         # to update appropriately.
@@ -615,56 +580,56 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
 
         callback_list.on_train_begin(logs=None)
 
-        with summary_writer.as_default():
-            epoch_start_time_s = time.time()
-            for epoch in range(initial_epoch, epochs):
-                if callback_list.model.stop_training:
-                    epoch = epoch - 1
-                    break
-                else:
-                    callback_list.on_epoch_begin(epoch, logs=None)
+        epoch_start_time_s = time.time()
+        for epoch in range(initial_epoch, epochs):
+            if callback_list.model.stop_training:
+                epoch = epoch - 1
+                break
+            else:
+                callback_list.on_epoch_begin(epoch, logs=None)
 
-                    # Reset metrics at the start of each epoch.
-                    metric_train_loss.reset_states()
-                    metric_val_loss.reset_states()
+                # Reset metrics at the start of each epoch.
+                metric_train_loss.reset_states()
+                metric_val_loss.reset_states()
 
-                    # Compute training loss and update variables.
-                    # NOTE: During computation of gradients, IndexedSlices are
-                    # created which generates a TensorFlow warning. I cannot
-                    # find an implementation that avoids IndexedSlices. The
-                    # following catch environment silences the offending
-                    # warning.
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings(
-                            'ignore', category=UserWarning,
-                            module=r'.*indexed_slices'
+                # Compute training loss and update variables.
+                # NOTE: During computation of gradients, IndexedSlices are
+                # created which generates a TensorFlow warning. I cannot
+                # find an implementation that avoids IndexedSlices. The
+                # following catch environment silences the offending
+                # warning.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        'ignore', category=UserWarning,
+                        module=r'.*indexed_slices'
+                    )
+                    for batch_idx, batch_train in enumerate(ds_obs_train):
+                        logs['size'] = batch_train['stimulus_set'].shape[0]
+                        logs['num_steps'] = 1
+                        callback_list.on_train_batch_begin(
+                            batch_idx, logs=logs
                         )
-                        for batch_idx, batch_train in enumerate(ds_obs_train):
-                            # callback_list.on_train_batch_begin(
-                            #     batch_idx, logs=None
-                            # )
-                            train_step(batch_train)
-                    logs['loss'] = metric_train_loss.result().numpy()
+                        train_step(batch_train)
+                        logs['loss'] = metric_train_loss.result().numpy()
+                        callback_list.on_train_batch_end(
+                            batch_idx, logs=logs
+                        )
 
-                    # Compute validation loss.
-                    if do_validation:
-                        for batch_val in ds_obs_val:
-                            eval_val_step(batch_val)
+                # Compute validation loss.
+                # NOTE: The method `on_test_batch_begin` and
+                # `on_test_batch_end` are not called because these are
+                # intended to be used inside the `predict` method.
+                if do_validation:
+                    for batch_idx, batch_val in enumerate(ds_obs_val):
+                        eval_val_step(batch_val)
                         logs['val_loss'] = metric_val_loss.result().numpy()
 
-                    if verbose > 3:
-                        if epoch % self.log_freq == 0:
-                            _print_epoch_logs(epoch, logs)
+                if verbose > 3:
+                    if epoch % self.log_freq == 0:
+                        _print_epoch_logs(epoch, logs)
 
-                    # Add logs to summary for TensorBoard.
-                    if self.do_log:
-                        if epoch % self.log_freq == 0:
-                            for k, v in logs.items():
-                                tf.summary.scalar(k, v, step=epoch)
-
-                    callback_list.on_epoch_end(epoch, logs=logs)
-                summary_writer.flush()
-            epoch_stop_time_s = time.time() - epoch_start_time_s
+                callback_list.on_epoch_end(epoch, logs=logs)
+        epoch_stop_time_s = time.time() - epoch_start_time_s
         callback_list.on_train_end(logs=None)
 
         # Add final model metrics to a `final_logs` dictionary.
@@ -1132,11 +1097,7 @@ class PsychologicalEmbedding(metaclass=ABCMeta):
             embedding=self.embedding, attention=self.attention,
             kernel=self.kernel
         )
-
-        cpyobj.do_log = self.do_log
-        cpyobj.log_dir = self.log_dir
         cpyobj.log_freq = self.log_freq
-
         return cpyobj
 
 

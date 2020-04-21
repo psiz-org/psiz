@@ -18,14 +18,20 @@
 
 Classes:
     EarlyStoppingRe:
+    TensorBoardRe:
+
+TODO:
+    * Define interface with reset() method
 
 """
+
+import os
 
 from tensorflow.keras import callbacks
 
 
 class EarlyStoppingRe(callbacks.EarlyStopping):
-    """Early stopping."""
+    """Custom early stopping."""
 
     def on_train_begin(self, logs=None):
         """Overload."""
@@ -35,6 +41,46 @@ class EarlyStoppingRe(callbacks.EarlyStopping):
         if self.restore_best_weights:
             self.best_weights = self.model.get_weights()
 
-    def reset(self):
-        """Reset best weights."""
+    def reset(self, restart=None):
+        """Reset best weights.
+
+        Arguments:
+            restart (optional): An integer indicating the restart
+                number. This argument is not currently used, but
+                that may change in later versions.
+
+        """
         self.best_weights = None
+
+
+class TensorBoardRe(callbacks.TensorBoard):
+    """Custom TensorBoard callback.
+
+    TODO:
+    log_dir: The location of the logs. The default location is
+            `/tmp/psiz/tensorboard_logs/`.
+
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize."""
+        super().__init__(**kwargs)
+        self.log_dir_init = self.log_dir
+
+    def reset(self, restart=None):
+        """Reset callback.
+
+        Arguments:
+            restart (optional): An integer indicating the restart
+                number. If provided, results for each restart will be
+                saved separately to allow joint viewing on TensorBoard.
+
+        """
+        # if retart == 0:
+        #     self.write_graph = True
+        # else:
+        #     self.write_graph = False
+
+        if restart is not None:
+            # Distinguish between restart by setting log_dir for TensorBoard.
+            self.log_dir = os.path.join(self.log_dir_init, str(restart))

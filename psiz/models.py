@@ -37,6 +37,7 @@ TODO:
 
 import copy
 import datetime
+import os
 from random import randint
 import sys
 import time
@@ -203,6 +204,7 @@ class Proxy(object):
         for k, v in theta.items():
             self.model.kernel.theta[k].assign(v)
 
+    # TODO may not need this
     def get_weights(self):
         """Get weights for all layers.
 
@@ -380,6 +382,7 @@ class Proxy(object):
                 )
             )
 
+    # TODO
     def compile(self, **kwargs):
         """Configure the model for training.
 
@@ -783,40 +786,25 @@ class Proxy(object):
 
         return part_idx, n_stimuli_part
 
-    def save(self, filepath):
+    def save(
+            self, filepath, overwrite=True, include_optimizer=False,
+            save_format='tf', signatures=None, options=None):
         """Save the PsychologialEmbedding model as an HDF5 file.
 
         Arguments:
             filepath: String specifying the path to save the model.
+            overwrite (optional): 
+            include_optimizer (optional): TODO change default to True
+            save_format (optional):
+            signatures (optional):
+            options (optional):
 
         """
-        f = h5py.File(filepath, "w")
-        f.create_dataset("embedding_type", data=type(self).__name__)
-        f.create_dataset("n_stimuli", data=self.n_stimuli)
-        f.create_dataset("n_dim", data=self.n_dim)
-        f.create_dataset("n_group", data=self.n_group)
-
-        # Save model architecture.
-        grp_arch = f.create_group('architecture')
-        # Create group for embedding layer.
-        grp_coord = grp_arch.create_group('embedding')
-        _add_layer_to_save_architecture(grp_coord, self.embedding)
-        # Create group for attention layer.
-        grp_attention = grp_arch.create_group('attention')
-        _add_layer_to_save_architecture(grp_attention, self.attention)
-        # Create group for kernel layer.
-        grp_kernel = grp_arch.create_group('kernel')
-        _add_layer_to_save_architecture(grp_kernel, self.kernel)
-
-        # Save weights.
-        weights = self.get_weights()
-        grp_weights = f.create_group("weights")
-        for layer_name, layer_dict in weights.items():
-            grp_layer = grp_weights.create_group(layer_name)
-            for k, v in layer_dict.items():
-                grp_layer.create_dataset(k, data=v)
-
-        f.close()
+        self.model.save(
+            os.fspath(filepath), overwrite=overwrite,
+            include_optimizer=include_optimizer, save_format=save_format,
+            signatures=signatures, options=options
+        )
 
     def subset(self, idx):
         """Return subset of embedding."""
@@ -940,7 +928,7 @@ class Rank(tf.keras.Model):
             kernel = psiz.keras.layers.ExponentialKernel()
         self.kernel = kernel
 
-    # @tf.function
+    @tf.function
     def call(self, inputs):
         """Call.
 
@@ -989,6 +977,7 @@ class Rank(tf.keras.Model):
         self.attention.reset_weights()
         self.kernel.reset_weights()
 
+    # TODO
     def compile(self, optimizer=None, loss=None):
         """Overide compile.
 
@@ -1065,7 +1054,7 @@ class Rank(tf.keras.Model):
 
         # NOTE: Trainable attention weights does not work with eager
         # execution.
-        # @tf.function
+        @tf.function
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
@@ -1100,14 +1089,14 @@ class Rank(tf.keras.Model):
                 zip(gradients, model.trainable_variables)
             )
 
-        # @tf.function
+        @tf.function
         def eval_val_step(inputs):
             probs = model(inputs)
             # Loss value for this minibatch.
             loss_value = self.loss(probs, inputs['weight'])
             metric_val_loss.update_state(loss_value)
 
-        # @tf.function
+        @tf.function
         def eval_train_step(inputs):
             probs = model(inputs)
             # Loss value for this minibatch.
@@ -1219,7 +1208,7 @@ class Rank(tf.keras.Model):
         model = self
         metric_loss = tf.keras.metrics.Mean(name='loss')
 
-        # @tf.function
+        @tf.function
         def eval_step(inputs):
             # Compute validation loss.
             probs = model(inputs)
@@ -1232,6 +1221,8 @@ class Rank(tf.keras.Model):
 
         return loss
 
+    # def predict(self, docket): TODO
+
 
 # class Rate(tf.keras.Model):
 
@@ -1239,6 +1230,7 @@ class Rank(tf.keras.Model):
 # class Sort(tf.keras.Model):
 
 
+# TODO
 def load_model(filepath, custom_objects={}):
     """Load embedding model saved via the save method.
 
@@ -1361,24 +1353,7 @@ def load_model(filepath, custom_objects={}):
     return emb
 
 
-def _add_layer_to_save_architecture(grp_layer, layer):
-    """Add layer information to layer group.
-
-    Arguments:
-        grp_layer: An HDF5 group.
-        layer: A TensorFlow layer with a `get_config` method.
-
-    """
-    grp_layer.create_dataset(
-        'class_name', data=type(layer).__name__
-    )
-    grp_config = grp_layer.create_group('config')
-    layer_config = layer.get_config()
-    for k, v in layer_config.items():
-        if v is not None:
-            grp_config.create_dataset(k, data=v)
-
-
+# TODO remove?
 def _load_layer(grp_layer, custom_objects):
     """Load a configured layer.
 

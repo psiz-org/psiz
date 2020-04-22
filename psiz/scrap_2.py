@@ -901,3 +901,53 @@ def _tf_ranked_sequence_probability(sim_qr, n_select):
             denom = tf.add(denom, sim_qr[:, i_selected - 1])
         seq_prob.set_shape([None])
     return seq_prob
+
+
+# OLD intermediate save
+def save(filepath):
+    f = h5py.File(filepath, "w")
+    f.create_dataset("embedding_type", data=type(self).__name__)
+    f.create_dataset("n_stimuli", data=self.n_stimuli)
+    f.create_dataset("n_dim", data=self.n_dim)
+    f.create_dataset("n_group", data=self.n_group)
+
+    # Save model architecture.
+    grp_arch = f.create_group('architecture')
+    # Create group for embedding layer.
+    grp_coord = grp_arch.create_group('embedding')
+    _add_layer_to_save_architecture(grp_coord, self.embedding)
+    # Create group for attention layer.
+    grp_attention = grp_arch.create_group('attention')
+    _add_layer_to_save_architecture(grp_attention, self.attention)
+    # Create group for kernel layer.
+    grp_kernel = grp_arch.create_group('kernel')
+    _add_layer_to_save_architecture(grp_kernel, self.kernel)
+
+    # Save weights.
+    weights = self.get_weights()
+    grp_weights = f.create_group("weights")
+    for layer_name, layer_dict in weights.items():
+        grp_layer = grp_weights.create_group(layer_name)
+        for k, v in layer_dict.items():
+            grp_layer.create_dataset(k, data=v)
+
+    f.close()
+
+
+def _add_layer_to_save_architecture(grp_layer, layer):
+    """Add layer information to layer group.
+
+    Arguments:
+        grp_layer: An HDF5 group.
+        layer: A TensorFlow layer with a `get_config` method.
+
+    """
+    grp_layer.create_dataset(
+        'class_name', data=type(layer).__name__
+    )
+    grp_config = grp_layer.create_group('config')
+    layer_config = layer.get_config()
+    for k, v in layer_config.items():
+        if v is not None:
+            grp_config.create_dataset(k, data=v)
+

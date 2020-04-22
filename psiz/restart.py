@@ -51,7 +51,8 @@ class Restarter(object):
 
     """
 
-    def __init__(self, model, monitor, n_restart=10, n_record=1, do_init=False):
+    def __init__(
+            self, model, monitor, n_restart=10, n_record=1, do_init=False):
         """Initialize.
 
         Arguments:
@@ -77,13 +78,13 @@ class Restarter(object):
         self.n_record = n_record
         self.do_init = do_init
 
-    def fit(self, obs_train, verbose=0, callbacks=None, **kwargs):
+    def fit(self, x, callbacks=None,  verbose=0, **kwargs):
         """Fit the embedding model to the observations using restarts.
 
-        Arguments: TODO
-            obs: A psiz.trials.RankObservations object.
-            verbose: Verbosity of output.
+        Arguments:
+            x: A a tf.data.Dataset object.
             callbacks: A list of callbacks.
+            verbose: Verbosity of output.
             **kwargs: Any additional keyword arguments.
 
         Returns:
@@ -95,6 +96,7 @@ class Restarter(object):
 
         # Grab initial optimizer configuration for resetting state.
         self.optimizer_config = self.model.optimizer.get_config()
+        # TODO instead call reset states?
 
         # TODO
         # if (verbose > 0):
@@ -151,7 +153,7 @@ class Restarter(object):
                 callback.reset(i_restart)
 
             history = self.model.fit(
-                obs_train, callbacks=callbacks, verbose=verbose, **kwargs
+                x, callbacks=callbacks, verbose=verbose, **kwargs
             )
             weights = self.model.get_weights()  # TODO check
 
@@ -300,13 +302,13 @@ class FitTracker(object):
         return d
 
 
-def set_from_record(emb, tracker, idx):
+def set_from_record(model, tracker, idx):
     """Set embedding parameters using a record.
 
     Arguments:
-        emb: TODO
+        model: An appropriate TensorFlow model.
         tracker: An appropriate psiz.models.FitTracker object.
         idx: An integer indicating which record to use.
 
     """
-    emb.set_weights(tracker.record['weights'][idx])
+    model.set_weights(tracker.record['weights'][idx])

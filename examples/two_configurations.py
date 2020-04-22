@@ -95,14 +95,12 @@ def main():
     rankModel = psiz.models.Rank(
         n_stimuli, n_dim=n_dim, kernel=kernel
     )
-    emb_inferred = psiz.models.Proxy(rankModel)
+    emb_inferred = psiz.models.Proxy(model=rankModel)
     emb_inferred.compile()
-    restarter = psiz.restart.Restarter(
-        emb_inferred, 'val_loss', n_restart=n_restart
-    )
-    restart_record = restarter.fit(
+    restart_record = emb_inferred.fit(
         obs_train, obs_val=obs_val, epochs=1000, verbose=2,
-        callbacks=[cb_early, cb_board]
+        callbacks=[cb_early, cb_board], n_restart=n_restart,
+        monitor='val_loss'
     )
 
     # Compare the inferred model with ground truth by comparing the

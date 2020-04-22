@@ -382,16 +382,24 @@ class Proxy(object):
                 )
             )
 
-    # TODO
-    def compile(self, **kwargs):
+    def compile(self, loss=None, **kwargs):
         """Configure the model for training.
 
+        Compile defines the loss function, the optimizer and the
+        metrics. Sets:
+
+        - self.loss
+        - self.optimizer
+        - self.?
+
         Arguments:
-            **kwargs (optional): Key-word arguments passed to the
-                model's `compile` method.
+            **kwargs: Key-word arguments passed to the TensorFlow
+            model's `compile` method.
 
         """
-        self.model.compile(**kwargs)
+        if loss is None:
+            loss = _nll_loss
+        self.model.compile(loss=loss, **kwargs)
 
     def fit(
             self, obs_train, batch_size=None, obs_val=None, n_restart=3,
@@ -976,27 +984,6 @@ class Rank(tf.keras.Model):
         self.embedding.reset_weights()
         self.attention.reset_weights()
         self.kernel.reset_weights()
-
-    # TODO
-    def compile(self, optimizer=None, loss=None):
-        """Overide compile.
-
-        Arguments:
-            optimizer: A tf.keras.optimizer object.
-            loss: A loss function.
-
-        Raises:
-            ValueError: If arguments are invalid.
-
-        """
-        if optimizer is None:
-            optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
-
-        if loss is None:
-            loss = _nll_loss
-
-        self.optimizer = optimizer  # TODO
-        self.loss = loss  # TODO
 
     def fit(
             self, obs_train, obs_val=None, epochs=1000,

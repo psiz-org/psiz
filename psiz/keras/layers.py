@@ -81,8 +81,7 @@ class Embedding(tf.keras.layers.Layer):
         # Default initializer.
         if embeddings_initializer is None:
             embeddings_initializer = psiz.keras.initializers.RandomScaleMVN(
-                minval=tf.constant(-3., dtype=K.floatx()),
-                maxval=tf.constant(0., dtype=K.floatx())
+                minval=-3., maxval=0.
             )
         self.embeddings_initializer = tf.keras.initializers.get(
             embeddings_initializer

@@ -931,10 +931,18 @@ class Rank(tf.keras.Model):
         self.kernel = kernel
 
     @tf.function(input_signature=[{
-        'membership': tf.TensorSpec(shape=[None, 2], dtype=tf.int32, name='membership'),
-        'is_select': tf.TensorSpec(shape=[None, None], dtype=tf.bool, name='is_select'),
-        'is_present': tf.TensorSpec(shape=[None, None], dtype=tf.bool, name='is_present'),
-        'stimulus_set': tf.TensorSpec(shape=[None, None], dtype=tf.int64, name='stimulus_set')
+        'membership': tf.TensorSpec(
+            shape=[None, 2], dtype=tf.int32, name='membership'
+        ),
+        'is_select': tf.TensorSpec(
+            shape=[None, None], dtype=tf.bool, name='is_select'
+        ),
+        'is_present': tf.TensorSpec(
+            shape=[None, None], dtype=tf.bool, name='is_present'
+        ),
+        'stimulus_set': tf.TensorSpec(
+            shape=[None, None], dtype=tf.int64, name='stimulus_set'
+        )
     }])
     def call(self, inputs):
         """Call.
@@ -985,6 +993,7 @@ class Rank(tf.keras.Model):
         self.kernel.reset_weights()
 
     def compile(self, loss=None, optimizer=None):
+        """Override compile."""
         self.loss = loss
         self.optimizer = optimizer
 

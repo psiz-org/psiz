@@ -139,7 +139,7 @@ class Trials(metaclass=ABCMeta):
             raise ValueError((
                 "The argument `stimulus_set` must only contain integers "
                 "greater than or equal to -1."
-        ))
+            ))
         return stimulus_set
 
     @abstractmethod
@@ -279,7 +279,7 @@ class RankTrials(Trials, metaclass=ABCMeta):
 
         """
         n_select = n_select.astype(np.int32)
-        # Check shape argreement.
+        # Check shape agreement.
         if not (n_select.shape[0] == self.n_trial):
             raise ValueError((
                 "The argument `n_select` must have the same length as the "
@@ -587,7 +587,7 @@ class RankObservations(RankTrials):
     def _check_group_id(self, group_id):
         """Check the argument group_id."""
         group_id = group_id.astype(np.int32)
-        # Check shape argreement.
+        # Check shape agreement.
         if not (group_id.shape[0] == self.n_trial):
             raise ValueError((
                 "The argument 'group_id' must have the same length as the "
@@ -604,7 +604,7 @@ class RankObservations(RankTrials):
     def _check_agent_id(self, agent_id):
         """Check the argument agent_id."""
         agent_id = agent_id.astype(np.int32)
-        # Check shape argreement.
+        # Check shape agreement.
         if not (agent_id.shape[0] == self.n_trial):
             raise ValueError((
                 "The argument 'agent_id' must have the same length as the "
@@ -621,7 +621,7 @@ class RankObservations(RankTrials):
     def _check_session_id(self, session_id):
         """Check the argument session_id."""
         session_id = session_id.astype(np.int32)
-        # Check shape argreement.
+        # Check shape agreement.
         if not (session_id.shape[0] == self.n_trial):
             raise ValueError((
                 "The argument 'session_id' must have the same length as the "
@@ -638,7 +638,7 @@ class RankObservations(RankTrials):
     def _check_weight(self, weight):
         """Check the argument weight."""
         weight = weight.astype(np.float)
-        # Check shape argreement.
+        # Check shape agreement.
         if not (weight.shape[0] == self.n_trial):
             raise ValueError((
                 "The argument 'weight' must have the same length as the "
@@ -648,7 +648,7 @@ class RankObservations(RankTrials):
     def _check_rt(self, rt_ms):
         """Check the argument rt_ms."""
         rt_ms = rt_ms.astype(np.float)
-        # Check shape argreement.
+        # Check shape agreement.
         if not (rt_ms.shape[0] == self.n_trial):
             raise ValueError((
                 "The argument 'rt_ms' must have the same length as the "
@@ -776,6 +776,7 @@ class RankObservations(RankTrials):
         Arguments:
             weight: The new weight. Can be an float or an array
                 of floats with shape=(self.n_trial,).
+
         """
         if np.isscalar(weight):
             weight = weight * np.ones((self.n_trial), dtype=np.int32)

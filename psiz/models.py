@@ -37,6 +37,7 @@ TODO:
 
 import copy
 import datetime
+import json
 import os
 from random import randint
 import sys
@@ -56,6 +57,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import History
 from tensorflow.python.keras.callbacks import configure_callbacks
 from tensorflow.keras.constraints import Constraint
+from tensorflow.python.keras.saving import hdf5_format
 
 import psiz.keras.layers
 import psiz.trials
@@ -204,7 +206,6 @@ class Proxy(object):
         for k, v in theta.items():
             self.model.kernel.theta[k].assign(v)
 
-    # TODO may not need this
     def get_weights(self):
         """Get weights for all layers.
 
@@ -212,7 +213,6 @@ class Proxy(object):
         weights as a single-level dictionary of weights.
 
         """
-        # TODO, self.model or self.<var>?
         weights = {
             'embedding': {'z': self.z},
             'attention': self.phi,
@@ -220,7 +220,6 @@ class Proxy(object):
         }
         return weights
 
-    # TODO may not need this.
     def set_weights(self, weights):
         """Setter method for all weights."""
         for layer_name, layer_dict in weights.items():
@@ -427,7 +426,7 @@ class Proxy(object):
                 passed to the model's `fit` method.
 
         Returns:
-            history: A tf.callbacks.History object. TODO
+            restart_record: A psiz.restart.FitTracker object.
 
         """
         # Determine batch size.
@@ -794,25 +793,25 @@ class Proxy(object):
 
         return part_idx, n_stimuli_part
 
-    def save(
-            self, filepath, overwrite=True, include_optimizer=False,
-            save_format='tf', signatures=None, options=None):
+    def save(self, filepath):
         """Save the PsychologialEmbedding model as an HDF5 file.
 
         Arguments:
             filepath: String specifying the path to save the model.
-            overwrite (optional): 
-            include_optimizer (optional): TODO change default to True
-            save_format (optional):
-            signatures (optional):
-            options (optional):
 
         """
-        self.model.save(
-            os.fspath(filepath), overwrite=overwrite,
-            include_optimizer=include_optimizer, save_format=save_format,
-            signatures=signatures, options=options
+        config = self.model.get_config()
+        json_config = json.dumps(config)
+
+        f = h5py.File(filepath, "w")
+        f.create_dataset('model_type', data='psiz')
+        f.create_dataset('psiz_version', data='0.4.0')
+        f.create_dataset('config', data=json_config)
+        grp_weights = f.create_group('weights')
+        hdf5_format.save_weights_to_hdf5_group(
+            grp_weights, self.model.layers
         )
+        f.close()
 
     def subset(self, idx):
         """Return subset of embedding."""
@@ -858,38 +857,47 @@ class Proxy(object):
         emb.w = np.ones([1, self.n_dim])
         return emb
 
-    def __deepcopy__(self, memodict={}):
-        """Override deepcopy method."""
-        # TODO CRITICAL test
-        # embedding = copy.deepcopy(self.embedding, memodict)
-        cpyobj = type(self)(
-            self.n_stimuli, n_dim=self.n_dim, n_group=self.n_group,
-            embedding=self.embedding, attention=self.attention,
-            kernel=self.kernel
+    def clone(self, custom_objects={}):
+        """Clone model."""
+        model_class_name = self.model.__class__.__name__
+        model_class = getattr(psiz.models, model_class_name)
+
+        # Create topology.
+        config = self.model.get_config()
+        model = _model_from_config(config, custom_objects=custom_objects)
+        proxy_model = Proxy(model=model)
+
+        # Set weights.
+        model_weights = self.get_weights()
+        proxy_model.set_weights(model_weights)
+
+        # Compile.
+        proxy_model.compile(
+            loss=self.model.loss, optimizer=self.model.optimizer
         )
-        cpyobj.log_freq = self.log_freq
-        return cpyobj
+
+        # Other attributes.
+        proxy_model.log_freq = self.log_freq
+
+        return proxy_model
 
 
 class Rank(tf.keras.Model):
-    """Model based on ranked similarity judgments."""
+    """Model based on ranked similarity judgments.
+
+    Attributes:
+        n_stimuli: See EmbeddingRe.
+        n_dim: See EmbeddingRe.
+        n_group: See Attention.
+
+    """
 
     def __init__(
-            self, n_stimuli, n_dim=2, n_group=1, embedding=None,
-            attention=None, kernel=None, **kwargs):
+            self, embedding=None, attention=None, kernel=None, **kwargs):
         """Initialize.
 
         Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded. This must be equal to or
-                greater than three.
-            n_dim (optional): An integer indicating the dimensionality
-                of the embedding. Must be equal to or greater than one.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group. Must be equal to or greater than one.
-            embedding (optional): An embedding layer. Must agree with
+            embedding: An embedding layer. Must agree with
                 n_stimuli, n_dim, n_group.
             attention (optional): An attention layer. Must agree with
                 n_stimuli, n_dim, n_group.
@@ -902,41 +910,33 @@ class Rank(tf.keras.Model):
         """
         super().__init__(**kwargs)
 
-        if (n_stimuli < 3):
-            raise ValueError("There must be at least three stimuli.")
-        self.n_stimuli = n_stimuli
-        if (n_dim < 1):
-            raise ValueError(
-                "The dimensionality (`n_dim`) must be an integer "
-                "greater than 0."
-            )
-        self.n_dim = n_dim
-        if (n_group < 1):
-            raise ValueError(
-                "The number of groups (`n_group`) must be an integer greater "
-                "than 0."
-            )
-            n_group = 1
-        self.n_group = n_group
-
         # Initialize model components.
-        if embedding is None:
-            embedding = psiz.keras.layers.Embedding(
-                n_stimuli=self.n_stimuli, n_dim=self.n_dim
-            )
         self.embedding = embedding
 
         if attention is None:
             attention = psiz.keras.layers.Attention(
-                n_dim=self.n_dim, n_group=self.n_group
+                n_dim=self.n_dim, n_group=1
             )
+        else:
+            if attention.n_dim != self.n_dim:
+                raise ValueError(
+                    "The dimensionality (`n_dim`) of the attention layer"
+                    " must agree with the embeding dimensionality of the"
+                    " embedding layer."
+                )
         self.attention = attention
 
         if kernel is None:
             kernel = psiz.keras.layers.ExponentialKernel()
         self.kernel = kernel
 
-    @tf.function
+    @tf.function(input_signature=[{
+        'group_id': tf.TensorSpec(shape=[None, 1], dtype=tf.int32, name='group_id'),
+        'is_select': tf.TensorSpec(shape=[None, None], dtype=tf.bool, name='is_select'),
+        'weight': tf.TensorSpec(shape=[None, 1], dtype=tf.float32, name='weight'),
+        'is_present': tf.TensorSpec(shape=[None, None], dtype=tf.bool, name='is_present'),
+        'stimulus_set': tf.TensorSpec(shape=[None, None], dtype=tf.int64, name='stimulus_set')
+    }])
     def call(self, inputs):
         """Call.
 
@@ -957,12 +957,12 @@ class Rank(tf.keras.Model):
         """
         # Grab inputs.
         obs_stimulus_set = inputs['stimulus_set']
-        obs_group_id = inputs['group_id']
+        group_id = inputs['group_id']
         is_present = inputs['is_present']
         is_select = inputs['is_select']
 
         # Expand attention weights.
-        attention = self.attention(obs_group_id)
+        attention = self.attention(group_id[:, 0])
 
         # Inflate cooridnates.
         z_stimulus_set = self.embedding(obs_stimulus_set)
@@ -985,9 +985,13 @@ class Rank(tf.keras.Model):
         self.attention.reset_weights()
         self.kernel.reset_weights()
 
+    def compile(self, loss=None, optimizer=None):
+        self.loss = loss
+        self.optimizer = optimizer
+
     def fit(
             self, obs_train, obs_val=None, epochs=1000,
-            initial_epoch=0, callbacks=None, seed=None, verbose=0):
+            initial_epoch=0, callbacks=None, verbose=0):
         """Override fit.
 
         Arguments:
@@ -1000,8 +1004,6 @@ class Rank(tf.keras.Model):
             epochs (optional): The number of epochs to perform.
             initial_epoch (optional): The initial epoch.
             callbacks (optional): A list of TensorFlow callbacks.
-            seed (optional): An integer to be used to seed the random number
-                generator. TODO
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
@@ -1047,7 +1049,7 @@ class Rank(tf.keras.Model):
             with tf.GradientTape() as grad_tape:
                 probs = model(inputs)
                 # Loss value for this minibatch.
-                loss_value = self.loss(probs, inputs['weight'])
+                loss_value = self.loss(probs, inputs['weight'][:, 0])
                 # Add extra losses created during this forward pass.
                 loss_value += sum(model.losses)
 
@@ -1060,7 +1062,7 @@ class Rank(tf.keras.Model):
             metric_train_loss.update_state(loss_value)
 
             # NOTE: There is an open issue for using constraints with
-            # tf.keras.layers.Embedding and psiz.keras.layers.Embedding (see:
+            # tf.keras.layers.Embedding and psiz.keras.layers.EmbeddingRe (see:
             # https://github.com/tensorflow/tensorflow/issues/33755). There
             # are also issues when using Eager Execution. A work-around is
             # to convert the problematic gradients, which are returned as
@@ -1138,10 +1140,9 @@ class Rank(tf.keras.Model):
                         eval_val_step(batch_val)
                         logs['val_loss'] = metric_val_loss.result().numpy()
 
-                # TODO
-                # if verbose > 3:
-                #     if epoch % self.log_freq == 0:
-                #         _print_epoch_logs(epoch, logs)
+                if verbose > 3:
+                    if epoch % self.log_freq == 0:
+                        _print_epoch_logs(epoch, logs)
 
                 callback_list.on_epoch_end(epoch, logs=logs)
         epoch_stop_time_s = time.time() - epoch_start_time_s
@@ -1208,7 +1209,34 @@ class Rank(tf.keras.Model):
 
         return loss
 
-    # def predict(self, docket): TODO
+    def get_config(self):
+        """Return model configuration."""
+        config = {
+            'class_name': self.__class__.__name__,
+            'config': {
+                'layers': {
+                    'embedding': self.embedding.get_config(),
+                    'attention': self.attention.get_config(),
+                    'kernel': self.kernel.get_config()
+                }
+            }
+        }
+        return config
+
+    @property
+    def n_stimuli(self):
+        """Getter method for n_stimuli."""
+        return self.embedding.n_stimuli
+
+    @property
+    def n_dim(self):
+        """Getter method for n_dim."""
+        return self.embedding.n_dim
+
+    @property
+    def n_group(self):
+        """Getter method for n_group."""
+        return self.attention.n_group
 
 
 # class Rate(tf.keras.Model):
@@ -1217,17 +1245,14 @@ class Rank(tf.keras.Model):
 # class Sort(tf.keras.Model):
 
 
-# TODO
-def load_model(filepath, custom_objects={}):
+def load_model(filepath, custom_objects={}, compile=False):
     """Load embedding model saved via the save method.
-
-    The loaded data is instantiated as a concrete class of
-    psiz.trials.Trials.
 
     Arguments:
         filepath: The location of the hdf5 file to load.
         custom_objects (optional): A dictionary mapping the string
             class name to the Python class
+        compile: Boolean indicating if model should be compiled.
 
     Returns:
         Loaded embedding model.
@@ -1236,50 +1261,30 @@ def load_model(filepath, custom_objects={}):
         ValueError
 
     """
+    extension = os.fspath(filepath).split('.')[-1]
     f = h5py.File(filepath, 'r')
-    # Common attributes.
-    embedding_type = f['embedding_type'][()]
-    n_stimuli = f['n_stimuli'][()]
-    n_dim = f['n_dim'][()]
-    n_group = f['n_group'][()]
-
-    if embedding_type == 'Rank':
-        grp_architecture = f['architecture']
-        # Instantiate embedding layer.
-        embedding = _load_layer(
-            grp_architecture['embedding'], custom_objects
-        )
-        # Instantiate attention layer.
-        attention = _load_layer(
-            grp_architecture['attention'], custom_objects
-        )
-        # Instantiate kernel layer.
-        kernel = _load_layer(
-            grp_architecture['kernel'], custom_objects
-        )
-
-        emb = Rank(
-            n_stimuli, n_dim=n_dim, n_group=n_group,
-            embedding=embedding, attention=attention,
-            kernel=kernel
-        )
-
-        # Set weights.
+    if 'psiz_version' in f.keys():
+        # Storage format for psiz_version >= 0.4.0
+        psiz_version = f['psiz_version'][()]
+        config = json.loads(f['config'][()])
+        model = _model_from_config(config, custom_objects)
         grp_weights = f['weights']
-        # Assemble dictionary of weights.
-        weights = {}
-        for layer_name, grp_layer in grp_weights.items():
-            layer_weights = {}
-            for var_name in grp_layer:
-                layer_weights[var_name] = grp_weights[layer_name][var_name][()]
-            weights[layer_name] = layer_weights
-        emb.set_weights(weights)
-
+        hdf5_format.load_weights_from_hdf5_group_by_name(
+            grp_weights, model.layers
+        )
+        emb = Proxy(model=model)
     else:
+        # Storage format for psiz_version < 0.4.0.
+        # Common attributes.
+        embedding_type = f['embedding_type'][()]
+        n_stimuli = f['n_stimuli'][()]
+        n_dim = f['n_dim'][()]
+        n_group = f['n_group'][()]
+
         # Create embedding layer.
         z = f['z']['value'][()]
         fit_z = f['z']['trainable'][()]
-        embedding = Embedding(
+        embedding = EmbeddingRe(
             n_stimuli=n_stimuli, n_dim=n_dim, fit_z=fit_z
         )
 
@@ -1336,32 +1341,57 @@ def load_model(filepath, custom_objects={}):
         emb.w = w
         emb.theta = theta_value
 
-    f.close()
+        f.close()
     return emb
 
 
-# TODO remove?
-def _load_layer(grp_layer, custom_objects):
-    """Load a configured layer.
+def _model_from_config(config, custom_objects={}):
+    """Load a configured model.
 
     Arguments:
-        grp_layer: An HDF5 group.
-        custom_objects: A list of custom classes.
+        config: A hierarchical configuration dictionary.
+        custom_objects: A dictionary of custom classes.
 
     Returns:
-        layer: An instantiated and configured TensorFlow layer.
+        layer: An instantiated and configured TensorFlow model.
 
     """
-    layer_class_name = grp_layer['class_name'][()]
-    layer_config = {}
-    for k in grp_layer['config']:
-        layer_config[k] = grp_layer['config'][k][()]
+    # Add Psiz layer classes.
+    custom_objects.update({
+        'Rank': psiz.models.Rank,
+        'EmbeddingRe': psiz.keras.layers.EmbeddingRe,
+        'WeightedDistance': psiz.keras.layers.WeightedDistance,
+        'SeparateAttention': psiz.keras.layers.SeparateAttention,
+        'Attention': psiz.keras.layers.Attention,
+        'InverseKernel': psiz.keras.layers.InverseKernel,
+        'ExponentialKernel': psiz.keras.layers.ExponentialKernel,
+        'HeavyTailedKernel': psiz.keras.layers.HeavyTailedKernel,
+        'StudentsTKernel': psiz.keras.layers.StudentsTKernel
+    })
 
-    if layer_class_name in custom_objects:
-        layer_class = custom_objects[layer_class_name]
+    # model_0 = tf.keras.layers.deserialize(
+    #     config, custom_objects=custom_objects
+    # )
+    model_class_name = config.get('class_name')
+    model_config = config.get('config')
+    layers = model_config.pop('layers')
+
+    # Load model.
+    if model_class_name in custom_objects:
+        model_class = custom_objects[model_class_name]
     else:
-        layer_class = getattr(psiz.keras.layers, layer_class_name)
-    return layer_class.from_config(layer_config)
+        model_class = getattr(psiz.models, model_class_name)
+
+    # Deserialize layers.
+    built_layers = {}
+    for layer_name, layer_config in layers.items():
+        layer = tf.keras.layers.deserialize(
+            layer_config, custom_objects=custom_objects
+        )
+        built_layers[layer_name] = layer
+
+    model = model_class(**built_layers)
+    return model
 
 
 def _elliptical_slice(

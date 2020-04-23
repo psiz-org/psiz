@@ -951,3 +951,95 @@ def _add_layer_to_save_architecture(grp_layer, layer):
         if v is not None:
             grp_config.create_dataset(k, data=v)
 
+
+# Old load
+    if embedding_type == 'Rank':
+        grp_architecture = f['architecture']
+        # Instantiate embedding layer.
+        embedding = _load_layer(
+            grp_architecture['embedding'], custom_objects
+        )
+        # Instantiate attention layer.
+        attention = _load_layer(
+            grp_architecture['attention'], custom_objects
+        )
+        # Instantiate kernel layer.
+        kernel = _load_layer(
+            grp_architecture['kernel'], custom_objects
+        )
+
+        emb = Rank(
+            n_stimuli, n_dim=n_dim, n_group=n_group,
+            embedding=embedding, attention=attention,
+            kernel=kernel
+        )
+
+        # Set weights.
+        grp_weights = f['weights']
+        # Assemble dictionary of weights.
+        weights = {}
+        for layer_name, grp_layer in grp_weights.items():
+            layer_weights = {}
+            for var_name in grp_layer:
+                layer_weights[var_name] = grp_weights[layer_name][var_name][()]
+            weights[layer_name] = layer_weights
+        emb.set_weights(weights)
+
+def _load_layer(grp_layer, custom_objects):
+    """Load a configured layer.
+
+    Arguments:
+        grp_layer: An HDF5 group.
+        custom_objects: A list of custom classes.
+
+    Returns:
+        layer: An instantiated and configured TensorFlow layer.
+
+    """
+    layer_class_name = grp_layer['class_name'][()]
+    layer_config = {}
+    for k in grp_layer['config']:
+        layer_config[k] = grp_layer['config'][k][()]
+
+    if layer_class_name in custom_objects:
+        layer_class = custom_objects[layer_class_name]
+    else:
+        layer_class = getattr(psiz.keras.layers, layer_class_name)
+    return layer_class.from_config(layer_config)
+
+
+# SavedModel format code
+# Save.
+self.model.save(
+    os.fspath(filepath), overwrite=overwrite,
+    include_optimizer=include_optimizer, save_format=save_format,
+    signatures=signatures, options=options
+)
+
+# Load.
+model = tf.keras.models.load_model(
+    os.fspath(filepath), custom_objects=custom_objects, compile=compile
+)
+emb = Proxy(model=model)
+
+
+def _load_layer(config, custom_objects={}):
+    """Load a configured layer.
+
+    Arguments:
+        config: A configuration dictionary.
+        custom_objects: A dictionary of custom classes.
+
+    Returns:
+        layer: An instantiated and configured TensorFlow layer.
+
+    """
+    layer_class_name = config.get('class_name')
+    layer_config = config.get('config')
+
+    if layer_class_name in custom_objects:
+        layer_class = custom_objects[layer_class_name]
+    else:
+        layer_class = getattr(psiz.keras.layers, layer_class_name)
+
+    return layer_class.from_config(layer_config)

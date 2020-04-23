@@ -1,273 +1,3 @@
-# mean = np.zeros((self.n_dim))
-        # cov = .03 * np.identity(self.n_dim)
-        # z = {}
-        # z["value"] = np.random.multivariate_normal(
-        #     mean, cov, (self.n_stimuli)
-        # )
-        # if self._is_nonneg:
-        #     z["value"] = np.abs(z["value"])
-        # z["trainable"] = True
-        
-    # def _get_embedding(self, init_mode, is_nonneg):
-    #     """Return embedding of model as TensorFlow variable.
-
-    #     Arguments:
-    #         init_mode: A string indicating the initialization mode.
-    #             valid options are 'cold' and 'hot'.
-
-    #     Returns:
-    #         TensorFlow variable representing the embedding points.
-
-    #     """
-    #     # Handle constraint. TODO
-    #     if is_nonneg:
-    #         z_constraint = tf.keras.constraints.NonNeg()
-    #     else:
-    #         z_constraint = ProjectZ()
-
-    #     if self._z["trainable"]:
-    #         if init_mode is 'hot':
-    #             z = self._z["value"]
-    #             tf_z = tf.Variable(
-    #                 initial_value=z,
-    #                 trainable=True, name="z", dtype=K.floatx(),
-    #                 constraint=z_constraint,
-    #                 shape=[self.n_stimuli, self.n_dim]
-    #             )
-    #         else:
-    #             # TODO do I need to do anything special to handle nonnegativitiy here?
-    #             tf_z = tf.Variable(
-    #                 initial_value=RandomEmbedding(
-    #                     mean=tf.zeros([self.n_dim], dtype=K.floatx()),
-    #                     stdev=tf.ones([self.n_dim], dtype=K.floatx()),
-    #                     minval=tf.constant(-3., dtype=K.floatx()),
-    #                     maxval=tf.constant(0., dtype=K.floatx()),
-    #                     dtype=K.floatx()
-    #                 )(shape=[self.n_stimuli, self.n_dim]), trainable=True,
-    #                 name="z", dtype=K.floatx(),
-    #                 constraint=z_constraint
-    #             )
-    #     else:
-    #         tf_z = tf.Variable(
-    #             initial_value=self._z["value"],
-    #             trainable=False, name="z", dtype=K.floatx(),
-    #             constraint=z_constraint,
-    #             shape=[self.n_stimuli, self.n_dim]
-    #         )
-    #     return tf_z
-
-    def _init_phi(self):
-        """Return initialized phi.
-
-        Initialize group-specific free parameters.
-        """
-        w = np.ones((self.n_group, self.n_dim), dtype=np.float32)
-        if self.n_group is 1:
-            is_trainable = np.zeros([1], dtype=bool)
-        else:
-            is_trainable = np.ones([self.n_group], dtype=bool)
-        phi = dict(
-            w=dict(value=w, trainable=is_trainable)
-        )
-        return phi
-    
-    def _get_attention(self, init_mode):
-        """Return attention weights of model as TensorFlow variable."""
-        attention_list = []
-        for group_id in range(self.n_group):
-            tf_attention = self._get_group_attention(init_mode, group_id)
-            attention_list.append(tf_attention)
-        tf_attention = tf.concat(attention_list, axis=0)
-        return tf_attention
-    
-    def _set_theta(self, theta):
-        """State changing method sets algorithm-specific parameters.
-
-        This method encapsulates the setting of algorithm-specific free
-        parameters governing the similarity kernel.
-
-        Arguments:
-            theta: A dictionary of algorithm-specific parameter names
-                and corresponding values.
-
-        """
-        for param_name in theta:
-            self._theta[param_name]["value"] = theta[param_name]["value"]
-    
-    def _get_similarity_parameters_cold(self):
-        """Return a dictionary of TensorFlow parameters.
-
-        Parameters are initialized by sampling from a relatively large
-        set.
-
-        Returns:
-            tf_theta: A dictionary of algorithm-specific TensorFlow
-                variables.
-
-        """
-        tf_theta = {}
-        if self._theta['rho']["trainable"]:
-            tf_theta['rho'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 3.)(shape=[]),
-                trainable=True, name="rho", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['rho']['bounds'][0]
-                )
-            )
-        if self._theta['tau']["trainable"]:
-            tf_theta['tau'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 2.)(shape=[]),
-                trainable=True, name="tau", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['tau']['bounds'][0]
-                )
-            )
-        if self._theta['gamma']["trainable"]:
-            tf_theta['gamma'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(
-                    0., .001
-                )(shape=[]),
-                trainable=True, name="gamma", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['gamma']['bounds'][0]
-                )
-            )
-        if self._theta['beta']["trainable"]:
-            tf_theta['beta'] = tf.Variable(
-                initial_value=tf.random_uniform_initializer(1., 30.)(shape=[]),
-                trainable=True, name="beta", dtype=K.floatx(),
-                constraint=GreaterEqualThan(
-                    min_value=self._theta['beta']['bounds'][0]
-                )
-            )
-        return tf_theta
-    
-
-    def _default_theta(self):
-        """Return dictionary of default theta parameters.
-
-        Returns:
-            Dictionary of theta parameters.
-
-        """
-        theta = dict(
-            rho=dict(value=2., trainable=True, bounds=[1., None]),
-            tau=dict(value=1., trainable=True, bounds=[1., None]),
-            gamma=dict(value=0., trainable=True, bounds=[0., None]),
-            beta=dict(value=10., trainable=True, bounds=[1., None])
-        )
-        return theta
-
-    def trainable(self, spec=None):
-        """Specify which parameters are trainable.
-
-        During inference, you may want to fix some free parameters or
-        allow non-default parameters to be trained. Pass in a
-        dictionary specifying how you would like to update the
-        trainability of the parameters.
-
-        In addition to a dictionary, you can pass in three different
-        strings: `default`, `freeze`, and `thaw`. The `default` option
-        restores the defaults, `freeze` makes all parameters
-        untrainable, and `thaw` makes all parameters trainable.
-
-        Arguments:
-            spec (optional): If no arguments are provided, the current
-                settings are returned as a dictionary. Otherwise a
-                string (see above) or a dictionary must be passed as
-                an argument. The dictionary is organized such that the
-                keys refer to the parameter names and the values
-                use boolean values to indicate if the parameters are
-                trainable.
-
-        """
-        if spec is None:
-            trainable_spec = {
-                'z': self._z["trainable"],
-                'w': self._phi["w"]["trainable"]
-            }
-            trainable_spec_theta = self._theta_trainable()
-            trainable_spec = {**trainable_spec, **trainable_spec_theta}
-            return trainable_spec
-        elif isinstance(spec, str):
-            if spec == 'default':
-                spec_default = self._trainable_default()
-                self._set_trainable(spec_default)
-            elif spec == 'freeze':
-                self._z.trainable = False
-                self._phi["w"]["trainable"] = np.zeros(
-                    self.n_group, dtype=bool
-                )
-                for param_name in self._theta:
-                    self._theta[param_name]["trainable"] = False
-            elif spec == 'thaw':
-                self._z.trainable = True
-                self._phi["w"]["trainable"] = np.ones(self.n_group, dtype=bool)
-                for param_name in self._theta:
-                    self._theta[param_name]["trainable"] = True
-        else:
-            # Assume spec is a dictionary.
-            self._set_trainable(spec)
-
-    def _set_trainable(self, spec):
-        """Set trainable variables using dictionary."""
-        for param_name in spec:
-            if param_name is 'z':
-                self._z["trainable"] = self._check_z_trainable(spec["z"])
-            elif param_name is 'w':
-                self._phi["w"]["trainable"] = self._check_w_trainable(
-                    spec["w"]
-                )
-            else:
-                self._set_theta_parameter_trainable(
-                    param_name, spec[param_name]
-                )
-
-    def _theta_trainable(self):
-        """Return trainable status of theta parameters."""
-        trainable_spec = {}
-        for param_name in self._theta:
-            trainable_spec[param_name] = self._theta[param_name]["trainable"]
-        return trainable_spec
-
-    def _check_z_trainable(self, val):
-        """Validate the provided trainable settings."""
-        if not np.isscalar(val):
-            raise ValueError(
-                "The parameter `z` requires a boolean value to set it's "
-                "`trainable` property."
-            )
-        return val
-
-    def _check_w_trainable(self, val):
-        """Validate the provided trainable settings."""
-        if val.shape[0] != self.n_group:
-            raise ValueError(
-                "The parameter `phi` requires a boolean array that has the "
-                "same length as the number of groups in order to set it's "
-                "`trainable` property."
-            )
-        return val
-
-    def _trainable_default(self):
-        """Set the free parameters to the default trainable settings."""
-        if self.n_group == 1:
-            w_trainable = np.zeros([1], dtype=bool)
-        else:
-            w_trainable = np.ones([self.n_group], dtype=bool)
-        trainable_spec = {
-            'z': True,
-            'w': w_trainable
-        }
-        theta_default = self._default_theta()
-        for param_name in theta_default:
-            trainable_spec[param_name] = theta_default[param_name]["trainable"]
-        return trainable_spec
-
-    def _set_theta_parameter_trainable(self, param_name, param_value):
-        """Handle model specific theta parameters."""
-        self._theta[param_name]["trainable"] = param_value
-
     def tf_posterior_samples(
             self, obs, n_final_sample=1000, n_burn=100, thin_step=5,
             z_init=None, verbose=0):
@@ -467,84 +197,443 @@
         self.posterior_duration = time.time() - start_time_s
         return samples
 
-# class EarlyStopping(object):
-#     """Early Stopping."""
+def _build_model(self, obs):
+        """Build TensorFlow model."""
+        tf_config = [
+            tf.constant(len(config_list.n_outcome.values)),
+            tf.constant(config_list.n_reference.values),
+            tf.constant(config_list.n_select.values),
+            tf.constant(config_list.is_ranked.values)
+        ]
 
-#     def __init__(
-#             self, monitor='val_loss', min_delta=0, patience=0, verbose=0,
-#             mode='auto', baseline=None, restore_best_weights=False):
-#         """Initialize."""
-#         self.monitor = monitor
-#         self.patience = patience
-#         self.verbose = verbose
-#         self.baseline = baseline
-#         self.min_delta = abs(min_delta)
-#         self.wait = 0
-#         self.stopped_epoch = 0
-#         self.restore_best_weights = restore_best_weights
-#         self.best_weights = None
-#         self.model = None  # TODO
+        obs_stimulus_set = tf.keras.Input(
+            shape=[None], name='inp_stimulus_set', dtype=tf.int32,
+        )
+        obs_config_idx = tf.keras.Input(
+            shape=[], name='inp_config_idx', dtype=tf.int32,
+        )
+        obs_group_id = tf.keras.Input(
+            shape=[], name='inp_group_id', dtype=tf.int32,
+        )
+        obs_weight = tf.keras.Input(
+            shape=[], name='inp_weight', dtype=K.floatx(),
+        )
 
-#         if mode not in ['auto', 'min', 'max']:
-#             print(
-#                 'WARNING: EarlyStopping mode %s is unknown, '
-#                 'fallback to auto mode.', mode
-#             )
-#             mode = 'auto'
+        # TODO don't pass in config ID, pass in boolean arrays
+        # is_reference
+        # is_select
+        # is_ranked
+        obs_is_reference = tf.keras.Input(
+            shape=[None], name='inp_is_reference', dtype=tf.bool
+        )
+        obs_is_select = tf.keras.Input(
+            shape=[None], name='inp_is_select', dtype=tf.bool
+        )
 
-#         if mode == 'min':
-#             self.monitor_op = np.less
-#         elif mode == 'max':
-#             self.monitor_op = np.greater
-#         else:
-#             if 'acc' in self.monitor:
-#                 self.monitor_op = np.greater
-#             else:
-#                 self.monitor_op = np.less
+        inputs = [
+            obs_stimulus_set,
+            obs_config_idx,
+            obs_group_id,
+            obs_weight,  # TODO
+            obs_is_reference,
+            obs_is_select
+        ]
+        c_layer = CoreLayer(
+            self.vars['theta'], self.vars['phi'], self.vars['z'],
+            tf_config, self._tf_similarity
+        )
+        output = c_layer(inputs)
+        model = tf.keras.models.Model(inputs, output)
 
-#         if self.monitor_op == np.greater:
-#             self.min_delta *= 1
-#         else:
-#             self.min_delta *= -1
+        return model
 
-#     def on_train_begin(self, logs=None):
-#         """On train begin."""
-#         # Allow instances to be re-used
-#         self.wait = 0
-#         self.stopped_epoch = 0
-#         if self.baseline is not None:
-#             self.best = self.baseline
-#         else:
-#             self.best = np.Inf if self.monitor_op == np.less else -np.Inf
 
-#     def on_epoch_end(self, epoch, logs=None):
-#         """On epoch end."""
-#         current = self.get_monitor_value(logs)
-#         if current is None:
-#             return
-#         if self.monitor_op(current - self.min_delta, self.best):
-#             self.best = current
-#             self.wait = 0
-#             if self.restore_best_weights:
-#                 self.best_weights = self.model.get_weights()
-#         else:
-#             self.wait += 1
-#             if self.wait >= self.patience:
-#                 self.stopped_epoch = epoch
-#                 self.model.stop_training = True
-#                 if self.restore_best_weights:
-#                     if self.verbose > 0:
-#                         print('Restoring model weights from the end of the best epoch.')
-#                     self.model.set_weights(self.best_weights)
+@tf.function(experimental_relax_shapes=True)
+def custom_loss(prob, weight, tf_attention):
+    """Compute model loss given observation probabilities."""
+    n_group = tf.shape(tf_attention)[0]
 
-#     def get_monitor_value(self, logs):
-#         """Get monitor value."""
-#         logs = logs or {}
-#         monitor_value = logs.get(self.monitor)
-#         if monitor_value is None:
-#             logging.warning(
-#                 'Early stopping conditioned on metric `%s` '
-#                 'which is not available. Available metrics are: %s',
-#                 self.monitor, ','.join(list(logs.keys()))
-#             )
-#         return monitor_value
+    # Penalty on attention weights (independently).
+    attention_penalty = tf.constant(0, dtype=K.floatx())
+    for i_group in tf.range(n_group):
+        attention_penalty = (
+            attention_penalty +
+            entropy_loss(tf_attention[i_group, :])
+        )
+    attention_penalty = (
+        attention_penalty / tf.cast(n_group, dtype=K.floatx())
+    )
+    loss = loss + (attention_penalty / tf.constant(10.0, dtype=K.floatx()))
+
+    return loss
+
+
+def attention_sparsity_loss(w):
+    """Sparsity encouragement.
+
+    The traditional regularizer to encourage sparsity is L1.
+    Unfortunately, L1 regularization does not work for the attention
+    weights since they are all constrained to sum to the same value
+    (i.e., the number of dimensions). Instead, we achieve sparsity
+    pressure by using a complement version of L2 loss. It tries to make
+    each attention weight as close to zero as possible, putting
+    pressure on the model to only use the dimensions it really needs.
+
+    Arguments:
+        w: Attention weights assumed to be nonnegative.
+
+    """
+    n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
+    loss = tf.negative(
+        tf.math.reduce_mean(tf.math.pow(n_dim - w, 2))
+    )
+    return loss
+
+
+def entropy_loss(w):
+    """Loss term based on entropy that encourages sparsity.
+
+    Arguments:
+        w: Attention weights assumed to be nonnegative.
+
+    """
+    n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
+    w_1 = w / n_dim + tf.keras.backend.epsilon()
+    loss = tf.negative(
+        tf.math.reduce_sum(w_1 * tf.math.log(w_1))
+    )
+    return loss
+
+
+        (z_q, z_r) = self._tf_inflate_points_old(
+            stimulus_set, max_n_reference, z_pad
+        )
+        z_stimulus_set_0 = tf.concat([z_q, z_r], axis=2)
+        # z_stimulus_set_1 = self._tf_inflate_points_1(
+        #     stimulus_set, input_length, z_pad
+        # )
+        # np.testing.assert_array_equal(z_stimulus_set_0, z_stimulus_set_1)
+
+
+def _tf_inflate_points_1(self, stimulus_set, input_length, z):
+        """Inflate stimulus set into embedding points.
+
+        Note: This method will not gracefully handle the masking
+        placeholder stimulus ID (i.e., -1). The stimulus IDs and
+        coordinates must already have been adjusted for the masking
+        placeholder.
+
+        """
+        n_trial = tf.shape(stimulus_set)[0]
+        n_dim = tf.shape(z)[1]
+
+        # Pre-allocate for embedding points.
+        # NOTE: Dimensions are permuted to facilitate scatter update.
+        z_set = tf.zeros([input_length, n_trial, n_dim], dtype=K.floatx())
+
+        for i_input in tf.range(input_length):
+            # Grab indices.
+            z_set_update = tf.gather(z, stimulus_set[:, i_input])
+            z_set_update = tf.expand_dims(z_set_update, axis=0)
+
+            # Expand dimensions for scatter update.
+            i_input_expand = tf.expand_dims(i_input, axis=0)
+            i_input_expand = tf.expand_dims(i_input_expand, axis=0)
+
+            z_set = tf.tensor_scatter_nd_update(
+                z_set, i_input_expand, z_set_update
+            )
+
+        z_set = tf.transpose(z_set, perm=[1, 2, 0])
+        return z_set
+
+    def _tf_inflate_points_old(
+            self, stimulus_set, n_reference, z):
+        """Inflate stimulus set into embedding points.
+
+        Note: This method will not gracefully handle the masking
+        placeholder stimulus ID (i.e., -1). The stimulus IDs and
+        coordinates must already have been adjusted for the masking
+        placeholder.
+
+        """
+        n_trial = tf.shape(stimulus_set)[0]
+        n_dim = tf.shape(z)[1]
+
+        # Inflate query stimuli.
+        z_q = tf.gather(z, stimulus_set[:, 0])
+        z_q = tf.expand_dims(z_q, axis=2)
+
+        # Initialize z_r.
+        # z_r = tf.zeros([n_trial, n_dim, n_reference], dtype=K.floatx())
+        z_r = tf.zeros([n_reference, n_trial, n_dim], dtype=K.floatx())
+
+        for i_ref in tf.range(n_reference):
+            z_r_new = tf.gather(
+                z, stimulus_set[:, i_ref + tf.constant(1, dtype=tf.int32)]
+            )
+
+            i_ref_expand = tf.expand_dims(i_ref, axis=0)
+            i_ref_expand = tf.expand_dims(i_ref_expand, axis=0)
+            z_r_new_2 = tf.expand_dims(z_r_new, axis=0)
+            z_r = tf.tensor_scatter_nd_update(
+                z_r, i_ref_expand, z_r_new_2
+            )
+
+            # z_r_new = tf.expand_dims(z_r_new, axis=2)
+            # pre_pad = tf.zeros([n_trial, n_dim, i_ref], dtype=K.floatx())
+            # post_pad = tf.zeros([
+            #     n_trial, n_dim,
+            #     n_reference - i_ref - tf.constant(1, dtype=tf.int32)
+            # ], dtype=K.floatx())
+            # z_r_new = tf.concat([pre_pad, z_r_new, post_pad], axis=2)
+            # z_r = z_r + z_r_new
+
+        z_r = tf.transpose(z_r, perm=[1, 2, 0])
+        return (z_q, z_r)
+
+    # Alternative call and _tf_ranked_sequence that can't handle different
+    # n_select.
+    @tf.function
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs: A dictionary of inputs:
+                stimulus_set: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_stimuli[
+                config_idx: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_config[
+                group_id: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_group[
+                is_present: dtype=tf.bool
+
+        """
+        # Grab inputs.
+        obs_stimulus_set = inputs['stimulus_set']
+        obs_config_idx = inputs['config_idx']
+        obs_group_id = inputs['group_id']
+        is_present = inputs['is_present']
+        is_select = inputs['is_select']
+
+        # Expand attention weights.
+        attention = self.attention(obs_group_id)
+
+        # Inflate cooridnates.
+        z_stimulus_set = self.embedding(obs_stimulus_set)
+        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
+
+        # Compute similarity between query and references.
+        sim_qr = self.kernel([z_q, z_r, attention])
+
+        # Zero out similarities involving placeholder.
+        sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
+
+        # Pre-allocate likelihood tensor.
+        n_trial = tf.shape(obs_stimulus_set)[0]
+        likelihood = tf.zeros([n_trial], dtype=K.floatx())
+
+        # Compute the probability of observations for different trial
+        # configurations.
+        for i_config in tf.range(self.n_config):
+            n_select = self.config_n_select[i_config]
+            is_ranked = self.config_is_ranked[i_config]
+
+            # Identify trials belonging to current trial configuration.
+            locs = tf.equal(obs_config_idx, i_config)
+            trial_idx = tf.squeeze(tf.where(locs))
+
+            # Grab similarities belonging to current trial configuration.
+            sim_qr_config = tf.gather(sim_qr, trial_idx)
+
+            # Compute probability of behavior.
+            prob_config = _tf_ranked_sequence_probability(
+                sim_qr_config, n_select
+            )
+
+            # Update master results.
+            likelihood = tf.tensor_scatter_nd_update(
+                likelihood, tf.expand_dims(trial_idx, axis=1), prob_config
+            )
+
+        # TODO
+        likelihood_alt = _tf_ranked_sequence_probability_alt(
+            sim_qr, is_select
+        )
+        return likelihood
+
+
+def _tf_ranked_sequence_probability(sim_qr, n_select):
+    """Return probability of a ranked selection sequence.
+
+    See: _ranked_sequence_probability
+
+    Arguments:
+        sim_qr: A tensor containing the precomputed similarities
+            between the query stimuli and corresponding reference
+            stimuli.
+            shape = (n_trial, n_reference)
+        n_select: A scalar indicating the number of selections
+            made for each trial.
+
+    """
+    # Initialize.
+    n_trial = tf.shape(sim_qr)[0]
+    seq_prob = tf.ones([n_trial], dtype=K.floatx())
+    selected_idx = n_select - 1
+    denom = tf.reduce_sum(sim_qr[:, selected_idx:], axis=1)
+
+    for i_selected in tf.range(selected_idx, -1, -1):
+        # Compute selection probability.
+        prob = tf.divide(sim_qr[:, i_selected], denom)
+        # Update sequence probability.
+        seq_prob = tf.multiply(seq_prob, prob)
+        # Update denominator in preparation for computing the probability
+        # of the previous selection in the sequence.
+        if i_selected > tf.constant(0, dtype=tf.int32):
+            denom = tf.add(denom, sim_qr[:, i_selected - 1])
+        seq_prob.set_shape([None])
+    return seq_prob
+
+
+# OLD intermediate save
+def save(filepath):
+    f = h5py.File(filepath, "w")
+    f.create_dataset("embedding_type", data=type(self).__name__)
+    f.create_dataset("n_stimuli", data=self.n_stimuli)
+    f.create_dataset("n_dim", data=self.n_dim)
+    f.create_dataset("n_group", data=self.n_group)
+
+    # Save model architecture.
+    grp_arch = f.create_group('architecture')
+    # Create group for embedding layer.
+    grp_coord = grp_arch.create_group('embedding')
+    _add_layer_to_save_architecture(grp_coord, self.embedding)
+    # Create group for attention layer.
+    grp_attention = grp_arch.create_group('attention')
+    _add_layer_to_save_architecture(grp_attention, self.attention)
+    # Create group for kernel layer.
+    grp_kernel = grp_arch.create_group('kernel')
+    _add_layer_to_save_architecture(grp_kernel, self.kernel)
+
+    # Save weights.
+    weights = self.get_weights()
+    grp_weights = f.create_group("weights")
+    for layer_name, layer_dict in weights.items():
+        grp_layer = grp_weights.create_group(layer_name)
+        for k, v in layer_dict.items():
+            grp_layer.create_dataset(k, data=v)
+
+    f.close()
+
+
+def _add_layer_to_save_architecture(grp_layer, layer):
+    """Add layer information to layer group.
+
+    Arguments:
+        grp_layer: An HDF5 group.
+        layer: A TensorFlow layer with a `get_config` method.
+
+    """
+    grp_layer.create_dataset(
+        'class_name', data=type(layer).__name__
+    )
+    grp_config = grp_layer.create_group('config')
+    layer_config = layer.get_config()
+    for k, v in layer_config.items():
+        if v is not None:
+            grp_config.create_dataset(k, data=v)
+
+
+# Old load
+    if embedding_type == 'Rank':
+        grp_architecture = f['architecture']
+        # Instantiate embedding layer.
+        embedding = _load_layer(
+            grp_architecture['embedding'], custom_objects
+        )
+        # Instantiate attention layer.
+        attention = _load_layer(
+            grp_architecture['attention'], custom_objects
+        )
+        # Instantiate kernel layer.
+        kernel = _load_layer(
+            grp_architecture['kernel'], custom_objects
+        )
+
+        emb = Rank(
+            n_stimuli, n_dim=n_dim, n_group=n_group,
+            embedding=embedding, attention=attention,
+            kernel=kernel
+        )
+
+        # Set weights.
+        grp_weights = f['weights']
+        # Assemble dictionary of weights.
+        weights = {}
+        for layer_name, grp_layer in grp_weights.items():
+            layer_weights = {}
+            for var_name in grp_layer:
+                layer_weights[var_name] = grp_weights[layer_name][var_name][()]
+            weights[layer_name] = layer_weights
+        emb.set_weights(weights)
+
+def _load_layer(grp_layer, custom_objects):
+    """Load a configured layer.
+
+    Arguments:
+        grp_layer: An HDF5 group.
+        custom_objects: A list of custom classes.
+
+    Returns:
+        layer: An instantiated and configured TensorFlow layer.
+
+    """
+    layer_class_name = grp_layer['class_name'][()]
+    layer_config = {}
+    for k in grp_layer['config']:
+        layer_config[k] = grp_layer['config'][k][()]
+
+    if layer_class_name in custom_objects:
+        layer_class = custom_objects[layer_class_name]
+    else:
+        layer_class = getattr(psiz.keras.layers, layer_class_name)
+    return layer_class.from_config(layer_config)
+
+
+# SavedModel format code
+# Save.
+self.model.save(
+    os.fspath(filepath), overwrite=overwrite,
+    include_optimizer=include_optimizer, save_format=save_format,
+    signatures=signatures, options=options
+)
+
+# Load.
+model = tf.keras.models.load_model(
+    os.fspath(filepath), custom_objects=custom_objects, compile=compile
+)
+emb = Proxy(model=model)
+
+
+def _load_layer(config, custom_objects={}):
+    """Load a configured layer.
+
+    Arguments:
+        config: A configuration dictionary.
+        custom_objects: A dictionary of custom classes.
+
+    Returns:
+        layer: An instantiated and configured TensorFlow layer.
+
+    """
+    layer_class_name = config.get('class_name')
+    layer_config = config.get('config')
+
+    if layer_class_name in custom_objects:
+        layer_class = custom_objects[layer_class_name]
+    else:
+        layer_class = getattr(psiz.keras.layers, layer_class_name)
+
+    return layer_class.from_config(layer_config)

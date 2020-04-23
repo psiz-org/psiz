@@ -843,10 +843,11 @@ class RankObservations(RankTrials):
 
         """
         # Create dataset.
+        # TODO NOTE: Need to use singleton dimensions because ...
         ds_obs = tf.data.Dataset.from_tensor_slices({
             'stimulus_set': self.stimulus_set,
-            'group_id': self.group_id,
-            'weight': tf.constant(self.weight, dtype=K.floatx()),
+            'group_id': np.expand_dims(self.group_id, axis=1),  # TODO concatenate agent and group
+            'weight': tf.constant(np.expand_dims(self.weight, axis=1), dtype=K.floatx()), # TODO better way to handle casting?
             'is_present': self.is_present(),
             'is_select': self.is_select(compress=True)
         })

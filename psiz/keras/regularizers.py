@@ -24,8 +24,7 @@ Classes:
 
 import tensorflow as tf
 
-
-@tf.keras.utils.register_keras_serializable(package='Custom', name='stimnormedl1') 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class StimulusNormedL1(tf.keras.regularizers.Regularizer):
     """Stimulus-normed L1 regularization."""
 

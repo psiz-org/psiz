@@ -30,6 +30,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomScaleMVN(initializers.Initializer):
     """Initializer that generates tensors with a normal distribution.
 
@@ -85,6 +86,7 @@ class RandomScaleMVN(initializers.Initializer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomAttention(initializers.Initializer):
     """Initializer that generates tensors for attention weights.
 

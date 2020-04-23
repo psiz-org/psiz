@@ -30,6 +30,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import constraints
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class GreaterThan(constraints.Constraint):
     """Constrains the weights to be greater than a value."""
 
@@ -45,6 +46,7 @@ class GreaterThan(constraints.Constraint):
         return w
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessThan(constraints.Constraint):
     """Constrains the weights to be less than a value."""
 
@@ -60,6 +62,7 @@ class LessThan(constraints.Constraint):
         return w
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class GreaterEqualThan(constraints.Constraint):
     """Constrains the weights to be greater/equal than a value."""
 
@@ -75,6 +78,7 @@ class GreaterEqualThan(constraints.Constraint):
         return w
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessEqualThan(constraints.Constraint):
     """Constrains the weights to be greater/equal than a value."""
 
@@ -90,6 +94,7 @@ class LessEqualThan(constraints.Constraint):
         return w
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class MinMax(constraints.Constraint):
     """Constrains the weights to be between/equal values."""
 
@@ -111,6 +116,7 @@ class MinMax(constraints.Constraint):
         return w
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class ZeroCenterZ(constraints.Constraint):
     """Constrains the embedding to be zero-centered.
 
@@ -126,6 +132,7 @@ class ZeroCenterZ(constraints.Constraint):
         return z - tf.reduce_mean(z, axis=0, keepdims=True)
 
 
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class ProjectAttention(constraints.Constraint):
     """Return projection of attention weights."""
 
@@ -142,4 +149,3 @@ class ProjectAttention(constraints.Constraint):
             tf_attention_0, tf_attention_1
         )
         return tf_attention_proj
-

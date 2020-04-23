@@ -17,18 +17,14 @@
 """Module of custom TensorFlow layers.
 
 Classes:
-    Embedding:
-    WeightedDistance:
-    SeparateAttention:
-    Attention:
-    InverseKernel:
-    ExponentialKernel:
-    HeavyTailedKernel:
-    StudentsTKernel:
-
-TODO:
-    * Add interface for custom layers that requires `reset_weights()`
-    method.
+    LayerRe: A Layer with a reset_weights() method.
+    EmbeddingRe: An Embedding layer.
+    WeightedDistance: A weighted distance layer.
+    Attention: A simple attention layer.
+    InverseKernel: An inverse kernel layer.
+    ExponentialKernel: An exponential-family kernel layer.
+    HeavyTailedKernel: A heavy-tailed family kernel layer.
+    StudentsTKernel: A Students t-distribution kernel layer.
 
 """
 
@@ -40,10 +36,26 @@ import psiz.keras.constraints
 import psiz.keras.initializers
 
 
-class Embedding(tf.keras.layers.Layer):
+class LayerRe(tf.keras.layers.Layer):
+    """Base layer class capable of weight resets.
+
+    In addition to the usual tensorflow.keras.layers Layer
+    reconmendations, descendants of `LayerRe` should also implement the
+    following methods:
+
+    * reset_weights(): Re-initializes the layer weights.
+
+    """
+
+    def reset_weights(self ):
+        """Handle weight resetting."""
+        pass
+
+
+class EmbeddingRe(LayerRe):
     """Embedding coordinates.
 
-    Handles a placeholder stimulus using stimulus ID -1.
+    Handles a placeholder stimulus using stimulus ID "-1".
 
     """
 
@@ -57,8 +69,12 @@ class Embedding(tf.keras.layers.Layer):
         shape=(n_stimuli, n_dim).
 
         Arguments:
-            n_stimuli: The number of stimuli in the embedding.
-            n_dim: The dimensionality of each embedding point.
+            n_stimuli: An integer indicating the total number of unique
+                stimuli that will be embedded. This must be equal to or
+                greater than three.
+            n_dim: An integer indicating the dimensionality
+                of the embeddings. Must be equal to or greater than
+                one.
             fit_z (optional): Boolean indicating whether the embeddings
                 are trainable.
             embeddings_initializer (optional): Initializer for the
@@ -72,10 +88,22 @@ class Embedding(tf.keras.layers.Layer):
                 will be used that zero-centers the centroid of the
                 embedding to promote numerical stability.
 
-        """
-        super(Embedding, self).__init__(**kwargs)
+        Raises:
+            ValueError: If `n_stimuli` or `n_dim` arguments are
+                invalid.
 
+        """
+        super(EmbeddingRe, self).__init__(**kwargs)
+
+        if (n_stimuli < 3):
+            raise ValueError("There must be at least three stimuli.")
         self.n_stimuli = n_stimuli
+
+        if (n_dim < 1):
+            raise ValueError(
+                "The dimensionality (`n_dim`) must be an integer "
+                "greater than 0."
+            )
         self.n_dim = n_dim
 
         # Default initializer.
@@ -91,7 +119,9 @@ class Embedding(tf.keras.layers.Layer):
         )
         if embeddings_constraint is None:
             embeddings_constraint = psiz.keras.constraints.ZeroCenterZ()
-        self.embeddings_constraint = tf.keras.constraints.get(embeddings_constraint)
+        self.embeddings_constraint = tf.keras.constraints.get(
+            embeddings_constraint
+        )
 
         self.fit_z = fit_z
         self.z = self.add_weight(
@@ -149,7 +179,6 @@ class Embedding(tf.keras.layers.Layer):
 
     def get_config(self):
         """Return layer configuration."""
-        # TODO check
         config = super().get_config()
         config.update({
             'n_stimuli': self.n_stimuli,
@@ -162,10 +191,11 @@ class Embedding(tf.keras.layers.Layer):
             'embeddings_constraint':
                 tf.keras.constraints.serialize(self.embeddings_constraint)
         })
+        config = _updated_config(self, config)
         return config
 
 
-class WeightedDistance(tf.keras.layers.Layer):
+class WeightedDistance(LayerRe):
     """Weighted Minkowski distance."""
 
     def __init__(self, fit_rho=True, **kwargs):
@@ -214,10 +244,11 @@ class WeightedDistance(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({'fit_rho': self.fit_rho})
+        config = _updated_config(self, config)
         return config
 
 
-class SeparateAttention(tf.keras.layers.Layer):
+class SeparateAttention(LayerRe):
     """Attention Layer."""
 
     def __init__(self, n_dim, n_group=1, fit_group=None, **kwargs):
@@ -294,22 +325,42 @@ class SeparateAttention(tf.keras.layers.Layer):
         )(shape=[1, self.n_dim])
 
 
-class Attention(tf.keras.layers.Layer):
+class Attention(LayerRe):
     """Attention Layer."""
 
     def __init__(self, n_dim=None, n_group=1, fit_group=None, **kwargs):
         """Initialize.
 
         Arguments:
-            n_dim: Integer
-            n_group (optional): Integer
+            n_dim: An integer indicating the dimensionality
+                of the embeddings. Must be equal to or greater than
+                one.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group. Must be equal to or greater than one.
             fit_group: Boolean Array
                 shape=(n_group,)
+
+        Raises:
+            ValueError: If `n_dim` or `n_group` arguments are invalid.
 
         """
         super(Attention, self).__init__(**kwargs)
 
+        if (n_dim < 1):
+            raise ValueError(
+                "The dimensionality (`n_dim`) must be an integer "
+                "greater than 0."
+            )
+        
         self.n_dim = n_dim
+
+        if (n_group < 1):
+            raise ValueError(
+                "The number of groups (`n_group`) must be an integer greater "
+                "than 0."
+            )
         self.n_group = n_group
 
         if fit_group is None:
@@ -363,10 +414,11 @@ class Attention(tf.keras.layers.Layer):
             'n_dim': self.n_dim, 'n_group': self.n_group,
             'fit_group': self.fit_group
         })
+        config = _updated_config(self, config)
         return config
 
 
-class InverseKernel(tf.keras.layers.Layer):
+class InverseKernel(LayerRe):
     """Inverse-distance similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -456,10 +508,11 @@ class InverseKernel(tf.keras.layers.Layer):
             'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
             'fit_mu': self.fit_mu
         })
+        config = _updated_config(self, config)
         return config
 
 
-class ExponentialKernel(tf.keras.layers.Layer):
+class ExponentialKernel(LayerRe):
     """Exponential family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -595,10 +648,11 @@ class ExponentialKernel(tf.keras.layers.Layer):
             'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
             'fit_gamma': self.fit_gamma, 'fit_beta': self.fit_beta
         })
+        config = _updated_config(self, config)
         return config
 
 
-class HeavyTailedKernel(tf.keras.layers.Layer):
+class HeavyTailedKernel(LayerRe):
     """Heavy-tailed family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -709,10 +763,11 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
             'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
             'fit_kappa': self.fit_kappa, 'fit_alpha': self.fit_alpha
         })
+        config = _updated_config(self, config)
         return config
 
 
-class StudentsTKernel(tf.keras.layers.Layer):
+class StudentsTKernel(LayerRe):
     """Student's t-distribution similarity kernel.
 
     The embedding technique uses the following similarity kernel:
@@ -820,4 +875,13 @@ class StudentsTKernel(tf.keras.layers.Layer):
             'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
             'fit_alpha': self.fit_alpha
         })
+        config = _updated_config(self, config)
         return config
+
+
+def _updated_config(self, config):
+    """Return updated config."""
+    return {
+        'class_name': self.__class__.__name__,
+        'config': config
+    }

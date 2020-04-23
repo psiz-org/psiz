@@ -842,15 +842,28 @@ class RankObservations(RankTrials):
             tf.data.Dataset object.
 
         """
-        # Create dataset.
-        # TODO NOTE: Need to use singleton dimensions because ...
-        ds_obs = tf.data.Dataset.from_tensor_slices({
+        # NOTE: Adding singleton dimensions because restoring a SavedModel
+        # adds singleton dimensions on the call signautre for inputs that
+        # only have one dimension. Add the singleton dimensions here solves
+        # the problem.
+        x = {
             'stimulus_set': self.stimulus_set,
-            'group_id': np.expand_dims(self.group_id, axis=1),  # TODO concatenate agent and group
-            'weight': tf.constant(np.expand_dims(self.weight, axis=1), dtype=K.floatx()), # TODO better way to handle casting?
+            'membership': np.stack((self.group_id, self.agent_id), axis=-1),
             'is_present': self.is_present(),
             'is_select': self.is_select(compress=True)
-        })
+        }
+        # Create categorical outputs for each trial. For a Rank trial, the
+        # output indicated which outcome among a set of possible outcomes
+        # actually occurred. Rank observations are assumed to be structured
+        # such that the ording denotes the actual outcome, making the zeroth
+        # outcome the correct output.
+        y = tf.constant(np.zeros([self.n_trial]), dtype=K.floatx())
+
+        # Observation weight.
+        w = tf.constant(self.weight, dtype=K.floatx())
+
+        # Create dataset.
+        ds_obs = tf.data.Dataset.from_tensor_slices((x, y, w))
         return ds_obs
 
 

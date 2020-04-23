@@ -931,9 +931,8 @@ class Rank(tf.keras.Model):
         self.kernel = kernel
 
     @tf.function(input_signature=[{
-        'group_id': tf.TensorSpec(shape=[None, 1], dtype=tf.int32, name='group_id'),
+        'membership': tf.TensorSpec(shape=[None, 2], dtype=tf.int32, name='membership'),
         'is_select': tf.TensorSpec(shape=[None, None], dtype=tf.bool, name='is_select'),
-        'weight': tf.TensorSpec(shape=[None, 1], dtype=tf.float32, name='weight'),
         'is_present': tf.TensorSpec(shape=[None, None], dtype=tf.bool, name='is_present'),
         'stimulus_set': tf.TensorSpec(shape=[None, None], dtype=tf.int64, name='stimulus_set')
     }])
@@ -945,9 +944,9 @@ class Rank(tf.keras.Model):
                 stimulus_set: dtype=tf.int32, consisting of the
                     integers on the interval [0, n_stimuli[
                     shape=(batch_size, n_max_reference + 1)
-                group_id: dtype=tf.int32, consisting of the
-                    integers on the interval [0, n_group[
-                    shape=(batch_size,)
+                membership: dtype=tf.int32, Integers indicating the
+                    group and agent membership of a trial.
+                    shape=(batch_size, 2)
                 is_present: dtype=tf.bool
                     shape=(batch_size, n_max_reference + 1)
                 is_select: dtype=tf.bool, the shape implies the
@@ -957,12 +956,12 @@ class Rank(tf.keras.Model):
         """
         # Grab inputs.
         obs_stimulus_set = inputs['stimulus_set']
-        group_id = inputs['group_id']
+        group_id = inputs['membership'][:, 0]
         is_present = inputs['is_present']
         is_select = inputs['is_select']
 
         # Expand attention weights.
-        attention = self.attention(group_id[:, 0])
+        attention = self.attention(group_id)
 
         # Inflate cooridnates.
         z_stimulus_set = self.embedding(obs_stimulus_set)
@@ -1047,9 +1046,9 @@ class Rank(tf.keras.Model):
         def train_step(inputs):
             # Compute training loss and gradients.
             with tf.GradientTape() as grad_tape:
-                probs = model(inputs)
+                probs = model(inputs[0])
                 # Loss value for this minibatch.
-                loss_value = self.loss(probs, inputs['weight'][:, 0])
+                loss_value = self.loss(probs, inputs[2])
                 # Add extra losses created during this forward pass.
                 loss_value += sum(model.losses)
 
@@ -1080,16 +1079,16 @@ class Rank(tf.keras.Model):
 
         @tf.function
         def eval_val_step(inputs):
-            probs = model(inputs)
+            probs = model(inputs[0])
             # Loss value for this minibatch.
-            loss_value = self.loss(probs, inputs['weight'])
+            loss_value = self.loss(probs, inputs[2])
             metric_val_loss.update_state(loss_value)
 
         @tf.function
         def eval_train_step(inputs):
-            probs = model(inputs)
+            probs = model(inputs[0])
             # Loss value for this minibatch.
-            loss_value = self.loss(probs, inputs['weight'])
+            loss_value = self.loss(probs, inputs[2])
             # Add extra losses created during this forward pass.
             loss_value += sum(model.losses)
             metric_train_loss.update_state(loss_value)
@@ -1120,7 +1119,7 @@ class Rank(tf.keras.Model):
                         module=r'.*indexed_slices'
                     )
                     for batch_idx, batch_train in enumerate(obs_train):
-                        logs['size'] = batch_train['stimulus_set'].shape[0]
+                        logs['size'] = batch_train[0]['stimulus_set'].shape[0]
                         logs['num_steps'] = 1
                         callback_list.on_train_batch_begin(
                             batch_idx, logs=logs
@@ -1199,8 +1198,8 @@ class Rank(tf.keras.Model):
         @tf.function
         def eval_step(inputs):
             # Compute validation loss.
-            probs = model(inputs)
-            loss_value = self.loss(probs, inputs['weight'])
+            probs = model(inputs[0])
+            loss_value = self.loss(probs, inputs[2])
             metric_loss.update_state(loss_value)
 
         for batch in obs:

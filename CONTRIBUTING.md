@@ -11,9 +11,26 @@ PsiZ attempts to closely adhere to TensorFlow and Keras idioms. Model components
 ## Pull Request Process
 * TODO
 
+## Module: trials
+* Code to the appropriate interface.
+
+### Trials
+* All trial objects have a n_trial attribute.
+* All trial objects have a stimulus_set attribute.
+
+### Observations
+* requires as_datatset() method
+
+
+## Module: models
+* take an appropriate Dataset as an argument
+* for get_config(): follow the {'class_name': str, 'config': dict} pattern
+
 ## Contributing to psiz.keras
 
 Since the models used in this package are prone to find sub-optimal solutions, multiple restarts are necessary. This results in a point of divergence from typical TensorFlow projects. TensorFlow does not provide a great strategy 'resetting' a model. To accommodate this need, developers should implement custom Layers with a `reset_weights()` method.
+
+Register the class via the decorator @tf.keras.utils.register_keras_serializable in order to facilitate model loading.
 
 Guidance for other Keras objects is listed below.
 
@@ -31,13 +48,15 @@ Guidance for other Keras objects is listed below.
     * If implementing, do not need to call `super(_).get_config()`
 
 ### Custom `Layer`
+* Subclass `LayerRe` which assumes a `reset_weights()` method.
 * `__init__`
     * include `**kwargs` argument and pass to `super().__init__(**kwargs)`
 * implement `call` not `__call__` method
 * `get_config()`
     * If custom layer requires initialization arguments, then implement by first calling `super(_).get_config()` and then update the dictionary with the custom layer's attributes.
+    * Following TensorFlow convention, the returned configuration should be a dictionary of the form: {'class_name': str, 'config': dict}.
 * `reset_weights()`
-    * Must implement.
+    * Implement.
 
 ### Custom `Model`
 * `init()`

@@ -17,12 +17,12 @@
 """Module for testing `trials.py`.
 
 Notes:
-    It is critical that the function `_possible_outcomes` returns the
+    It is critical that the function `_possible_rank_outcomes` returns the
         unaltered index first (as the test cases are written). Many
         downstream applications make this assumption.
 
 Todo:
-    * Test _possible_outcomes attribute on instantiation and loading from
+    * Test _possible_rank_outcomes attribute on instantiation and loading from
         saved file.
     * Test `weights` initialization, subset, stacking, saving, loading
     * Test `rt_ms` initialization, subset, stacking, saving, loading
@@ -425,7 +425,7 @@ class TestDocket:
         np.testing.assert_array_equal(
             setup_docket_0['configuration_id'],
             loaded_docket.config_idx)
-        # TODO test _possible_outcomes
+        # TODO test _possible_rank_outcomes
 
 
 class TestObservations:
@@ -630,7 +630,7 @@ class TestObservations:
         np.testing.assert_array_equal(
             setup_obs_0['configuration_id'],
             loaded_obs.config_idx)
-        # TODO test _possible_outcomes
+        # TODO test _possible_rank_outcomes
 
 
 class TestStack:
@@ -802,7 +802,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array(((0, 1), (1, 0)))
         np.testing.assert_array_equal(po, correct)
@@ -813,7 +813,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
@@ -826,7 +826,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
@@ -843,7 +843,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3, 4, 5, 6, 7),

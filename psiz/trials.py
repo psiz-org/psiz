@@ -425,7 +425,7 @@ class RankDocket(RankTrials):
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
-            outcome_idx = _possible_outcomes(df_config.iloc[i_config])
+            outcome_idx = _possible_rank_outcomes(df_config.iloc[i_config])
             outcome_idx_list.append(outcome_idx)
             n_outcome = outcome_idx.shape[0]
             df_config.iloc[i_config, n_out_idx] = n_outcome
@@ -734,7 +734,7 @@ class RankObservations(RankTrials):
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
-            outcome_idx = _possible_outcomes(df_config.iloc[i_config])
+            outcome_idx = _possible_rank_outcomes(df_config.iloc[i_config])
             outcome_idx_list.append(outcome_idx)
             n_outcome = outcome_idx.shape[0]
             df_config.iloc[i_config, n_out_idx] = n_outcome
@@ -901,9 +901,8 @@ def stack(trials_list):
             max_n_reference = i_trials.max_n_reference
 
     # Grab relevant information from first entry in list.
-    stimulus_set = _pad_stimulus_set(
-        trials_list[0].stimulus_set,
-        max_n_reference
+    stimulus_set = _pad_2d_array(
+        trials_list[0].stimulus_set, max_n_reference + 1
     )
     n_select = trials_list[0].n_select
     is_ranked = trials_list[0].is_ranked
@@ -920,7 +919,7 @@ def stack(trials_list):
     for i_trials in trials_list[1:]:
         stimulus_set = np.vstack((
             stimulus_set,
-            _pad_stimulus_set(i_trials.stimulus_set, max_n_reference)
+            _pad_2d_array(i_trials.stimulus_set, max_n_reference + 1)
         ))
         n_select = np.hstack((n_select, i_trials.n_select))
         is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
@@ -1073,19 +1072,28 @@ def load_trials(filepath, verbose=0):
 load = load_trials
 
 
-# TODO handle other trial types.
-def _pad_stimulus_set(stimulus_set, max_n_reference):
-    """Pad 2D array with columns composed of -1."""
-    n_trial = stimulus_set.shape[0]
-    n_pad = max_n_reference - (stimulus_set.shape[1] - 1)
+def _pad_2d_array(arr, n_column, value=-1):
+    """Pad 2D array with columns composed of -1.
+
+    Argument:
+        arr: A 2D array denoting the stimulus set.
+        n_column: The total number of columns that the array should
+            have.
+        value (optional): The value to use to pad the array.
+
+    Returns:
+        Padded array.
+
+    """
+    n_trial = arr.shape[0]
+    n_pad = n_column - arr.shape[1]
     if n_pad > 0:
-        pad_mat = -1 * np.ones((n_trial, n_pad), dtype=np.int32)
-        stimulus_set = np.hstack((stimulus_set, pad_mat))
-    return stimulus_set
+        pad_mat = value * np.ones((n_trial, n_pad), dtype=np.int32)
+        arr = np.hstack((arr, pad_mat))
+    return arr
 
 
-# TODO handle other trial types.
-def _possible_outcomes(trial_configuration):
+def _possible_rank_outcomes(trial_configuration):
     """Return the possible outcomes of a ranked trial configuration.
 
     Arguments:

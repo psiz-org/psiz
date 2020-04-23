@@ -17,9 +17,13 @@
 """Module of custom TensorFlow constraints.
 
 Classes:
-    RandomScaleMVN:
-    RandomAttention:
-
+    GreaterThan:
+    LessThan:
+    GreaterEqualThan:
+    LessEqualThan:
+    MinMax:
+    ZeroCenterZ:
+    ProjectAttention:
 
 """
 

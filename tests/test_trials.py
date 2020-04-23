@@ -37,7 +37,8 @@ import pandas as pd
 from psiz import trials
 from psiz.generator import RandomGenerator
 from psiz.simulate import Agent
-from psiz.models import Exponential
+import psiz.models
+import psiz.keras.layers
 
 
 @pytest.fixture(scope="module")
@@ -183,7 +184,12 @@ def ground_truth(n_stimuli):
     n_dim = 3
     n_group = 2
 
-    model = Exponential(n_stimuli, n_dim, n_group)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
+    kernel = psiz.keras.layers.ExponentialKernel()
+    model = psiz.models.Rank(embedding=embedding, attention=attention, kernel=kernel)
+    proxy = psiz.models.Proxy(model=model)
+
     mean = np.ones((n_dim))
     cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
@@ -191,13 +197,17 @@ def ground_truth(n_stimuli):
         (1.9, 1., .1),
         (.1, 1., 1.9)
     ))
-    model.z = z
-    model.rho = 2
-    model.tau = 1
-    model.beta = 1
-    model.gamma = 0
-    model.w = attention
-    return model
+
+    proxy.z = z
+    proxy.theta = {
+        'rho': 2,
+        'tau': 1,
+        'beta': 1,
+        'gamma': 0
+    }
+    proxy.w = attention
+
+    return proxy
 
 
 class TestSimilarityTrials:

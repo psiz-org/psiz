@@ -320,7 +320,7 @@ class SeparateAttention(LayerRe):
         """Random w."""
         scale = tf.constant(self.n_dim, dtype=K.floatx())
         alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
-        return RandomAttention(
+        return psiz.keras.initializers.RandomAttention(
             alpha, scale, dtype=K.floatx()
         )(shape=[1, self.n_dim])
 
@@ -353,7 +353,7 @@ class Attention(LayerRe):
                 "The dimensionality (`n_dim`) must be an integer "
                 "greater than 0."
             )
-        
+
         self.n_dim = n_dim
 
         if (n_group < 1):
@@ -403,7 +403,7 @@ class Attention(LayerRe):
         """Random w."""
         scale = tf.constant(self.n_dim, dtype=K.floatx())
         alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
-        return RandomAttention(
+        return psiz.keras.initializers.RandomAttention(
             alpha, scale, dtype=K.floatx()
         )(shape=[self.n_group, self.n_dim])
 

@@ -1292,18 +1292,18 @@ def load_model(filepath, custom_objects={}, compile=False):
         # Create embedding layer.
         z = f['z']['value'][()]
         fit_z = f['z']['trainable'][()]
-        embedding = EmbeddingRe(
+        embedding = psiz.keras.layers.EmbeddingRe(
             n_stimuli=n_stimuli, n_dim=n_dim, fit_z=fit_z
         )
 
         # Create attention layer.
         if 'phi_1' in f['phi']:
-            fit_group = f['phi']['phi_1']['trainable']
-            w = f['phi']['phi_1']['value']
+            fit_group = f['phi']['phi_1']['trainable'][()]
+            w = f['phi']['phi_1']['value'][()]
         else:
-            fit_group = f['phi']['w']['trainable']
-            w = f['phi']['w']['value']
-        attention = Attention(
+            fit_group = f['phi']['w']['trainable'][()]
+            w = f['phi']['w']['value'][()]
+        attention = psiz.keras.layers.Attention(
             n_dim=n_dim, n_group=n_group, fit_group=fit_group
         )
         # OLD code for reference.
@@ -1326,23 +1326,22 @@ def load_model(filepath, custom_objects={}, compile=False):
             #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
         if embedding_type == 'Exponential':
-            kernel = ExponentialKernel(**theta_config)
+            kernel = psiz.keras.layers.ExponentialKernel(**theta_config)
         elif embedding_type == 'HeavyTailed':
-            kernel = HeavyTailedKernel(**theta_config)
+            kernel = psiz.keras.layers.HeavyTailedKernel(**theta_config)
         elif embedding_type == 'StudentsT':
-            kernel = StudentsTKernel(**theta_config)
+            kernel = psiz.keras.layers.StudentsTKernel(**theta_config)
         elif embedding_type == 'Inverse':
-            kernel = InverseKernel(**theta_config)
+            kernel = psiz.keras.layers.InverseKernel(**theta_config)
         else:
             raise ValueError(
                 'No class found matching the provided `embedding_type`.'
             )
 
-        emb = Rank(
-            n_stimuli, n_dim=n_dim, n_group=n_group,
-            embedding=embedding, attention=attention,
-            kernel=kernel
+        model = Rank(
+            embedding=embedding, attention=attention, kernel=kernel
         )
+        emb = Proxy(model=model)
 
         # Set weights.
         emb.z = z

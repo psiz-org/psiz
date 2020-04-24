@@ -25,14 +25,15 @@ data is added.
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import StratifiedKFold
 
 from psiz.generator import RandomGenerator
 import psiz.models
-import psiz.restart
+import psiz.keras.layers
 from psiz.simulate import Agent
 from psiz.utils import pairwise_matrix, matrix_comparison
-from sklearn.model_selection import StratifiedKFold
-from tensorflow.keras.callbacks import EarlyStopping
+
+from psiz.keras.callbacks import EarlyStoppingRe
 
 
 def main():
@@ -58,16 +59,22 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Partition observations into train and test set.
-    skf = StratifiedKFold(n_splits=10)
-    (train_idx, test_idx) = list(
+    # Partition observations into train, validation and test set.
+    skf = StratifiedKFold(n_splits=5)
+    (train_idx, holdout_idx) = list(
         skf.split(obs.stimulus_set, obs.config_idx)
     )[0]
     obs_train = obs.subset(train_idx)
-    obs_test = obs.subset(test_idx)
+    obs_holdout = obs.subset(holdout_idx)
+    skf = StratifiedKFold(n_splits=2)
+    (val_idx, test_idx) = list(
+        skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
+    )[0]
+    obs_val = obs_holdout.subset(val_idx)
+    obs_test = obs_holdout.subset(test_idx)
 
     # Use early stopping.
-    early_stop = EarlyStopping(
+    early_stop = EarlyStoppingRe(
         'val_loss', patience=10, mode='min', restore_best_weights=True
     )
 
@@ -81,29 +88,21 @@ def main():
     val_loss = np.empty((n_step))
     test_loss = np.empty((n_step))
     for i_round in range(n_step):
+        print('  Round {0}'.format(i_round))
         include_idx = np.arange(0, n_obs[i_round])
-        obs_round = obs_train.subset(include_idx)
-
-        # Partition training observations into train and validation set.
-        skf = StratifiedKFold(n_splits=10)
-        (train_idx, val_idx) = list(
-            skf.split(obs_round.stimulus_set, obs_round.config_idx)
-        )[0]
-        obs_round_train = obs_round.subset(train_idx)
-        obs_round_val = obs_round.subset(val_idx)
+        obs_round_train = obs_train.subset(include_idx)
 
         # Infer embedding.
-        kernel = psiz.models.ExponentialKernel()
-        emb_inferred = psiz.models.Rank(
-            n_stimuli, n_dim=n_dim, kernel=kernel
+        embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+        kernel = psiz.keras.layers.ExponentialKernel()
+        model = psiz.models.Rank(
+            embedding=embedding, kernel=kernel
         )
+        emb_inferred = psiz.models.Proxy(model=model)
         emb_inferred.compile()
-        restarter = psiz.restart.Restarter(
-            emb_inferred, 'val_loss', n_restart=n_restart
-        )
-        restart_record = restarter.fit(
-            obs_round_train, obs_val=obs_round_val, epochs=1000, verbose=1,
-            callbacks=[early_stop]
+        restart_record = emb_inferred.fit(
+            obs_round_train, obs_val=obs_val, epochs=1000, verbose=1,
+            callbacks=[early_stop], n_restart=n_restart, monitor='val_loss'
         )
 
         train_loss[i_round] = restart_record.record['loss'][0]
@@ -119,10 +118,10 @@ def main():
             simmat_infer, simmat_true, score='r2'
         )
         print(
-            '  Round {0} | n_obs: {1:4d} | train_loss: {2:.2f} | '
-            'val_loss: {3:.2f} | test_loss: {4:.2f} | '
-            'Correlation (R^2): {5:.2f}'.format(
-                i_round, n_obs[i_round], train_loss[i_round],
+            '    n_obs: {0:4d} | train_loss: {1:.2f} | '
+            'val_loss: {2:.2f} | test_loss: {3:.2f} | '
+            'Correlation (R^2): {4:.2f}'.format(
+                n_obs[i_round], train_loss[i_round],
                 val_loss[i_round], test_loss[i_round], r2[i_round]
             )
         )
@@ -150,15 +149,18 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    kernel = psiz.models.ExponentialKernel()
-    kernel.rho = 2.
-    kernel.tau = 1.
-    kernel.beta = 10.
-    kernel.gamma = 0.001
+    kernel = psiz.keras.layers.ExponentialKernel()
 
-    emb = psiz.models.Rank(
-        n_stimuli, n_dim=n_dim, kernel=kernel
-    )
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
+
+    emb = psiz.models.Proxy(model=rankModel)
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
 
     mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)

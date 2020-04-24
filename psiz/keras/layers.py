@@ -109,7 +109,7 @@ class EmbeddingRe(LayerRe):
         # Default initializer.
         if embeddings_initializer is None:
             embeddings_initializer = psiz.keras.initializers.RandomScaleMVN(
-                minval=-3., maxval=0.
+                minval=-4., maxval=-2.
             )
         self.embeddings_initializer = tf.keras.initializers.get(
             embeddings_initializer
@@ -522,6 +522,10 @@ class ExponentialKernel(LayerRe):
     family is obtained by integrating across various psychological
     theories [1,2,3,4].
 
+    By default beta=10. and is not trainable to prevent redundancy with
+    trainable embeddings and to prevent short-circuiting any
+    regularizers placed on the embeddings.
+
     References:
         [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency
             effects as a window to generalization: Separating
@@ -542,7 +546,7 @@ class ExponentialKernel(LayerRe):
     """
 
     def __init__(
-            self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=True,
+            self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=False,
             **kwargs):
         """Initialize.
 
@@ -572,8 +576,12 @@ class ExponentialKernel(LayerRe):
         )
 
         self.fit_beta = fit_beta
+        if fit_beta:
+            beta_value = self.random_beta()
+        else:
+            beta_value = 10.
         self.beta = tf.Variable(
-            initial_value=self.random_beta(),
+            initial_value=beta_value,
             trainable=self.fit_beta, name="beta", dtype=K.floatx(),
             constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
         )

@@ -48,7 +48,7 @@ class RandomScaleMVN(initializers.Initializer):
     """
 
     def __init__(
-            self, mean=0.0, stdev=1.0, minval=-3.0, maxval=0.0, seed=None):
+            self, mean=0.0, stdev=1.0, minval=-4.0, maxval=-1.0, seed=None):
         """Initialize."""
         self.mean = mean
         self.stdev = stdev
@@ -58,17 +58,18 @@ class RandomScaleMVN(initializers.Initializer):
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
-        scale = tf.pow(
-            tf.constant(10., dtype=dtype),
-            tf.random.uniform(
-                [1],
-                minval=self.minval,
-                maxval=self.maxval,
-                dtype=dtype,
-                seed=self.seed,
-                name=None
-            )
+        p = tf.random.uniform(
+            [1],
+            minval=self.minval,
+            maxval=self.maxval,
+            dtype=dtype,
+            seed=self.seed,
+            name=None
         )
+        scale = tf.pow(
+            tf.constant(10., dtype=dtype), p
+        )
+
         stdev = scale * self.stdev
         return tf.random.normal(
             shape, mean=self.mean, stddev=stdev, dtype=dtype, seed=self.seed

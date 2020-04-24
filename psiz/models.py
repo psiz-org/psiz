@@ -396,9 +396,7 @@ class Proxy(object):
             model's `compile` method.
 
         """
-        if loss is None:
-            loss = _nll_loss
-        self.model.compile(loss=loss, **kwargs)
+        self.model.compile(**kwargs)
 
     def fit(
             self, obs_train, batch_size=None, obs_val=None, n_restart=3,
@@ -941,7 +939,7 @@ class Rank(tf.keras.Model):
             shape=[None, None], dtype=tf.bool, name='is_present'
         ),
         'stimulus_set': tf.TensorSpec(
-            shape=[None, None], dtype=tf.int64, name='stimulus_set'
+            shape=[None, None], dtype=tf.int32, name='stimulus_set'
         )
     }])
     def call(self, inputs):
@@ -992,9 +990,14 @@ class Rank(tf.keras.Model):
         self.attention.reset_weights()
         self.kernel.reset_weights()
 
-    def compile(self, loss=None, optimizer=None):
+    def compile(self, optimizer=None, loss=None):
         """Override compile."""
+        if loss is None:
+            loss = _nll_loss
         self.loss = loss
+
+        if optimizer is None:
+            optimizer = tf.optimizers.RMSprop()
         self.optimizer = optimizer
 
     def fit(

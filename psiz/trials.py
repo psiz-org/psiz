@@ -140,7 +140,15 @@ class Trials(metaclass=ABCMeta):
                 "The argument `stimulus_set` must only contain integers "
                 "greater than or equal to -1."
             ))
-        return stimulus_set
+
+        # NOTE: ii32.max -1 since we will perform a +1 operation.
+        ii32 = np.iinfo(np.int32)
+        if np.sum(np.greater(stimulus_set, ii32.max - 1)) > 0:
+            raise ValueError((
+                "The argument `stimulus_set` must only contain integers "
+                "in the int32 range."
+            ))
+        return stimulus_set.astype(np.int32)
 
     @abstractmethod
     def _set_configuration_data(self, *args):
@@ -223,7 +231,7 @@ class RankTrials(Trials, metaclass=ABCMeta):
 
         # Format stimulus set.
         self.max_n_reference = np.amax(self.n_reference)
-        self.stimulus_set = stimulus_set[:, 0:self.max_n_reference+1]
+        self.stimulus_set = self.stimulus_set[:, 0:self.max_n_reference+1]
 
         if n_select is None:
             n_select = np.ones((self.n_trial), dtype=np.int32)

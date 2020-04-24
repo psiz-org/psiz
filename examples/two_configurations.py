@@ -91,9 +91,10 @@ def main():
     )
 
     # Infer embedding.
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
     kernel = psiz.keras.layers.ExponentialKernel()
     rankModel = psiz.models.Rank(
-        n_stimuli, n_dim=n_dim, kernel=kernel
+        embedding=embedding, kernel=kernel
     )
     emb_inferred = psiz.models.Proxy(model=rankModel)
     emb_inferred.compile()
@@ -125,9 +126,8 @@ def ground_truth(n_stimuli, n_dim):
     kernel.beta = 10.
     kernel.gamma = 0.001
 
-    rankModel = psiz.models.Rank(
-        n_stimuli, n_dim=n_dim, kernel=kernel
-    )
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
 
     emb = psiz.models.Proxy(rankModel)
 

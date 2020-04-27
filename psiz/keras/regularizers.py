@@ -39,3 +39,27 @@ class StimulusNormedL1(tf.keras.regularizers.Regularizer):
     def get_config(self):
         """Return config."""
         return {'l1': float(self.l1)}
+
+
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
+class AttentionEntropy(tf.keras.regularizers.Regularizer):
+    """Entropy-based regularization to encourage sparsity."""
+
+    def __init__(self, rate=0.):
+        """Initialize."""
+        self.rate = rate
+
+    def __call__(self, w):
+        """Call."""
+        n_dim = tf.cast(tf.shape(w)[0], dtype=tf.keras.backend.floatx())
+        # Scale weights to sum to one and add fudge factor. Here we assume
+        # that weights sum to n_dim.
+        w = w / n_dim + tf.keras.backend.epsilon()
+        t = tf.negative(tf.math.reduce_sum(w * tf.math.log(w), axis=1))
+        return self.rate * (tf.reduce_mean(
+            t
+        ))
+
+    def get_config(self):
+        """Return config."""
+        return {'rate': float(self.rate)}

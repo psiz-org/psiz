@@ -129,7 +129,8 @@ class ZeroCenterZ(constraints.Constraint):
 
     def __init__(self, **kwargs):
         """Initialize."""
-        # super().__init__(**kwargs)
+        # super().__init__(**kwargs) TODO
+        pass
 
     def __call__(self, z):
         """Call."""
@@ -140,16 +141,17 @@ class ZeroCenterZ(constraints.Constraint):
 class ProjectAttention(constraints.Constraint):
     """Return projection of attention weights."""
 
-    def __init__(self):
+    def __init__(self, n_dim=None):
         """Initialize."""
+        # super().__init__(**kwargs) TODO
+        self.n_dim = tf.cast(n_dim, dtype=K.floatx())
 
-    def __call__(self, tf_attention_0):
+    def __call__(self, attention_0):
         """Call."""
-        n_dim = tf.shape(tf_attention_0, out_type=K.floatx())[1]
-        tf_attention_1 = tf.divide(
-            tf.reduce_sum(tf_attention_0, axis=1, keepdims=True), n_dim
+        attention_1 = tf.divide(
+            tf.reduce_sum(attention_0, axis=1, keepdims=True), self.n_dim
         )
-        tf_attention_proj = tf.divide(
-            tf_attention_0, tf_attention_1
+        attention_proj = tf.divide(
+            attention_0, attention_1
         )
-        return tf_attention_proj
+        return attention_proj

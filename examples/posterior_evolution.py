@@ -42,6 +42,7 @@ import matplotlib.animation as animation
 
 from psiz.generator import RandomGenerator
 import psiz.models
+import psiz.keras.layers
 from psiz.simulate import Agent
 from psiz.utils import similarity_matrix, matrix_comparison
 
@@ -163,14 +164,21 @@ def main():
 
 def ground_truth():
     """Return a ground truth embedding."""
-    kernel = psiz.models.ExponentialKernel()
-    kernel.rho = 2.
-    kernel.tau = 1.
-    kernel.beta = 10.
-    kernel.gamma = 0.001
-
     n_stimuli = 16
     n_dim = 2
+
+    kernel = psiz.keras.layers.ExponentialKernel()
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    emb = psiz.models.Proxy(rankModel)
+
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
+
     # Create a set of embedding points arranged in a grid pattern.
     x, y = np.meshgrid([.1, .2, .3, .4], [.1, .2, .3, .4])
     x = np.expand_dims(x.flatten(), axis=1)
@@ -184,9 +192,6 @@ def ground_truth():
     z_noise = .1 * np.random.multivariate_normal(mean, cov, (n_stimuli))
     z = z + z_noise
 
-    emb = psiz.models.Rank(
-        n_stimuli, n_dim=n_dim, kernel=kernel
-    )
     emb.z = z
 
     return emb

@@ -399,8 +399,8 @@ class Proxy(object):
         self.model.compile(**kwargs)
 
     def fit(
-            self, obs_train, batch_size=None, obs_val=None, n_restart=3,
-            n_record=1, monitor='loss', **kwargs):
+            self, obs_train, batch_size=None, validation_data=None,
+            n_restart=3, n_record=1, monitor='loss', **kwargs):
         """Fit the free parameters of the embedding model.
 
         This convenience function formats the observations as
@@ -412,8 +412,9 @@ class Proxy(object):
                 observed data used to train the model.
             batch_size (optional): The batch size to use for the
                 training step.
-            obs_val (optional): An RankObservations object representing
-                the observed data used to validate the model.
+            validation_data (optional): An RankObservations object
+                representing the observed data used to validate the
+                model.
             n_restart (optional): The number of independent restarts to
                 perform.
             n_record (optional): The number of top-performing restarts
@@ -446,10 +447,10 @@ class Proxy(object):
         )
 
         # Create TensorFlow validation Dataset (if necessary).
-        if obs_val is not None:
-            self._check_obs(obs_val)
-            ds_obs_val = obs_val.as_dataset()
-            n_obs_val = obs_val.n_trial
+        if validation_data is not None:
+            self._check_obs(validation_data)
+            ds_obs_val = validation_data.as_dataset()
+            n_obs_val = validation_data.n_trial
             # Format as TensorFlow dataset.
             ds_obs_val = ds_obs_val.batch(
                 n_obs_val, drop_remainder=False
@@ -462,7 +463,7 @@ class Proxy(object):
             self.model, 'val_loss', n_restart=n_restart
         )
         restart_record = restarter.fit(
-            ds_obs_train, obs_val=ds_obs_val, **kwargs
+            ds_obs_train, validation_data=ds_obs_val, **kwargs
         )
 
         return restart_record
@@ -1002,7 +1003,7 @@ class Rank(tf.keras.Model):
         self.optimizer = optimizer
 
     def fit(
-            self, obs_train, obs_val=None, epochs=1000,
+            self, obs_train, validation_data=None, epochs=1000,
             initial_epoch=0, callbacks=None, verbose=0):
         """Override fit.
 
@@ -1010,9 +1011,9 @@ class Rank(tf.keras.Model):
             obs_train: A tf.data.Dataset formatting of a
                 RankObservations object representing the observed data
                 used to train the model.
-            obs_val (optional): A tf.data.Dataset formmating of a
-                RankObservations object representing the observed data
-                used to validate the model.
+            validation_data (optional): A tf.data.Dataset formmating of
+                a RankObservations object representing the observed
+                data used to validate the model.
             epochs (optional): The number of epochs to perform.
             initial_epoch (optional): The initial epoch.
             callbacks (optional): A list of TensorFlow callbacks.
@@ -1026,7 +1027,7 @@ class Rank(tf.keras.Model):
         """
         fit_start_time_s = time.time()
 
-        if obs_val is not None:
+        if validation_data is not None:
             do_validation = True
         else:
             do_validation = False
@@ -1149,7 +1150,7 @@ class Rank(tf.keras.Model):
                 # `on_test_batch_end` are not called because these are
                 # intended to be used inside the `predict` method.
                 if do_validation:
-                    for batch_idx, batch_val in enumerate(obs_val):
+                    for batch_idx, batch_val in enumerate(validation_data):
                         eval_val_step(batch_val)
                         logs['val_loss'] = metric_val_loss.result().numpy()
 
@@ -1176,7 +1177,7 @@ class Rank(tf.keras.Model):
         final_logs['loss'] = metric_train_loss.result().numpy()
 
         if do_validation:
-            for batch_val in obs_val:
+            for batch_val in validation_data:
                 eval_val_step(batch_val)
             final_logs['val_loss'] = metric_val_loss.result().numpy()
 

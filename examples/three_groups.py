@@ -53,14 +53,17 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
+import psiz.keras.callbacks
+import psiz.keras.layers
 from psiz.generator import RandomGenerator
 import psiz.models
-import psiz.restart
 from psiz.simulate import Agent
 from psiz.trials import stack
 from psiz.utils import pairwise_matrix, matrix_comparison
 from sklearn.model_selection import StratifiedKFold
-from tensorflow.keras.callbacks import EarlyStopping
+
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -102,22 +105,22 @@ def main():
     obs_val = obs_all.subset(val_idx)
 
     # Use early stopping.
-    early_stop = EarlyStopping(
+    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
         'val_loss', patience=10, mode='min', restore_best_weights=True
     )
 
     # Infer a shared embedding with group-specific attention weights.
-    kernel = psiz.models.ExponentialKernel()
-    emb_inferred = psiz.models.Rank(
-        n_stimuli, n_dim=n_dim, n_group=n_group, kernel=kernel
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
+    kernel = psiz.keras.layers.ExponentialKernel()
+    model = psiz.models.Rank(
+        embedding=embedding, attention=attention, kernel=kernel
     )
+    emb_inferred = psiz.models.Proxy(model=model)
     emb_inferred.compile()
-    restarter = psiz.restart.Restarter(
-        emb_inferred, 'val_loss', n_restart=n_restart
-    )
-    restart_record = restarter.fit(
+    restart_record = emb_inferred.fit(
         obs_train, obs_val=obs_val, epochs=1000, verbose=3,
-        callbacks=[early_stop]
+        callbacks=[early_stop], monitor='val_loss', n_restart=n_restart
     )
 
     # Permute inferred dimensions to best match ground truth.
@@ -197,15 +200,14 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    kernel = psiz.models.ExponentialKernel()
-    kernel.rho = 2.
-    kernel.tau = 1.
-    kernel.beta = 10.
-    kernel.gamma = 0.001
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
+    kernel = psiz.keras.layers.ExponentialKernel()
 
-    emb = psiz.models.Rank(
-        n_stimuli, kernel=kernel, n_dim=n_dim, n_group=3
+    model = psiz.models.Rank(
+        embedding=embedding, attention=attention, kernel=kernel
     )
+    emb = psiz.models.Proxy(model=model)
 
     mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
@@ -215,6 +217,12 @@ def ground_truth(n_stimuli, n_dim, n_group):
         (1., 1., 1., 1.),
         (.2, .2, 1.8, 1.8)
     ))
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
     return emb
 
 

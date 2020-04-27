@@ -34,6 +34,7 @@ from tensorflow.keras import backend as K
 
 import psiz.keras.constraints
 import psiz.keras.initializers
+import psiz.keras.regularizers
 
 
 class LayerRe(tf.keras.layers.Layer):

@@ -63,3 +63,22 @@ class AttentionEntropy(tf.keras.regularizers.Regularizer):
     def get_config(self):
         """Return config."""
         return {'rate': float(self.rate)}
+
+
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
+class Squeeze(tf.keras.regularizers.Regularizer):
+    """Squeeze representation into a low number of dimensions."""
+
+    def __init__(self, rate=0.):
+        """Initialize."""
+        self.rate = rate
+
+    def __call__(self, z):
+        """Call."""
+        # Sum across stimuli, but within a dimension.
+        dimension_usage = tf.reduce_max(tf.math.abs(z), axis=0)
+        return self.rate * tf.reduce_sum(dimension_usage)
+
+    def get_config(self):
+        """Return config."""
+        return {'rate': float(self.rate)}

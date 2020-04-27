@@ -40,6 +40,7 @@ def main():
     n_dim_true = 3
     n_restart = 30
     n_dim_max = 30
+    squeeze_rate = 1.
 
     emb_true = ground_truth(n_stimuli, n_dim_true)
     simmat_true = psiz.utils.similarity_matrix(emb_true.similarity, emb_true.z)
@@ -79,7 +80,7 @@ def main():
     )
 
     # Add regularization to embedding.
-    reg = psiz.keras.regularizers.Squeeze(rate=1.)
+    reg = psiz.keras.regularizers.Squeeze(rate=squeeze_rate)
 
     # Infer embedding.
     embedding = psiz.keras.layers.EmbeddingRe(
@@ -110,10 +111,10 @@ def main():
     dimension_usage_max = np.max(np.abs(emb_inferred.z), axis=0)
     max_val = np.max(dimension_usage_max)
     idx_sorted = np.argsort(-dimension_usage_max)
-    dimension_usage_mean = dimension_usage_mean[idx_sorted]
+    dimension_usage_mean = dimension_usage_mean[idx_sorted] / max_val
     dimension_usage_max = dimension_usage_max[idx_sorted] / max_val
     print(
-        "    mean: {0}".format(
+        "    Proportion mean: {0}".format(
             np.array2string(
                 dimension_usage_mean, formatter={'float_kind': lambda x: "%.3f" % x}
             )
@@ -126,7 +127,6 @@ def main():
             )
         )
     )
-    print(emb_inferred.theta)
 
 
 def ground_truth(n_stimuli, n_dim):

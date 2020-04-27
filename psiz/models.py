@@ -968,6 +968,7 @@ class Rank(tf.keras.Model):
 
         # Expand attention weights.
         attention = self.attention(group_id)
+        attention = tf.expand_dims(attention, axis=2)
 
         # Inflate cooridnates.
         z_stimulus_set = self.embedding(obs_stimulus_set)
@@ -1073,13 +1074,14 @@ class Rank(tf.keras.Model):
             metric_train_loss.update_state(loss_value)
 
             # NOTE: There is an open issue for using constraints with
-            # tf.keras.layers.Embedding and psiz.keras.layers.EmbeddingRe (see:
+            # embedding-like layeres (e.g., tf.keras.layers.Embedding,
+            # psiz.keras.layers.EmbeddingRe, psiz.keras.layers.Attention (see:
             # https://github.com/tensorflow/tensorflow/issues/33755). There
             # are also issues when using Eager Execution. A work-around is
             # to convert the problematic gradients, which are returned as
             # tf.IndexedSlices, into dense tensors.
             for var_idx, var in enumerate(model.trainable_variables):
-                if var.name == 'z:0':
+                if var.name == 'z:0' or var.name == 'w:0':
                     gradients[var_idx] = tf.convert_to_tensor(
                         gradients[var_idx]
                     )

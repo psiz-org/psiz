@@ -106,7 +106,7 @@ class EmbeddingRe(LayerRe):
             )
         self.n_dim = n_dim
 
-        # Default initializer.
+        # Handle initializer.
         if embeddings_initializer is None:
             embeddings_initializer = psiz.keras.initializers.RandomScaleMVN(
                 minval=-4., maxval=-2.
@@ -114,9 +114,13 @@ class EmbeddingRe(LayerRe):
         self.embeddings_initializer = tf.keras.initializers.get(
             embeddings_initializer
         )
+
+        # Handle regularizer.
         self.embeddings_regularizer = tf.keras.regularizers.get(
             embeddings_regularizer
         )
+
+        # Handle constraints.
         if embeddings_constraint is None:
             embeddings_constraint = psiz.keras.constraints.ZeroCenterZ()
         self.embeddings_constraint = tf.keras.constraints.get(
@@ -129,7 +133,7 @@ class EmbeddingRe(LayerRe):
             initializer=self.embeddings_initializer,
             trainable=fit_z, name='z', dtype=K.floatx(),
             regularizer=self.embeddings_regularizer,
-            constraint=embeddings_constraint
+            constraint=self.embeddings_constraint
         )
 
     def call(self, inputs):
@@ -328,7 +332,10 @@ class SeparateAttention(LayerRe):
 class Attention(LayerRe):
     """Attention Layer."""
 
-    def __init__(self, n_dim=None, n_group=1, fit_group=None, **kwargs):
+    def __init__(
+            self, n_group=1, n_dim=None, fit_group=None,
+            embeddings_initializer=None, embeddings_regularizer=None,
+            embeddings_constraint=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -348,20 +355,45 @@ class Attention(LayerRe):
         """
         super(Attention, self).__init__(**kwargs)
 
-        if (n_dim < 1):
-            raise ValueError(
-                "The dimensionality (`n_dim`) must be an integer "
-                "greater than 0."
-            )
-
-        self.n_dim = n_dim
-
         if (n_group < 1):
             raise ValueError(
                 "The number of groups (`n_group`) must be an integer greater "
                 "than 0."
             )
         self.n_group = n_group
+
+        if (n_dim < 1):
+            raise ValueError(
+                "The dimensionality (`n_dim`) must be an integer "
+                "greater than 0."
+            )
+        self.n_dim = n_dim
+
+        # Handle initializer.
+        if embeddings_initializer is None:
+            if self.n_group == 1:
+                embeddings_initializer = tf.keras.initializers.Ones()
+            else:
+                scale = tf.constant(self.n_dim, dtype=K.floatx())
+                alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
+                embeddings_initializer = psiz.keras.initializers.RandomAttention(
+                    alpha, scale, dtype=K.floatx()
+                )
+        self.embeddings_initializer = tf.keras.initializers.get(
+            embeddings_initializer
+        )
+
+        # Handle regularizer.
+        self.embeddings_regularizer = tf.keras.regularizers.get(
+            embeddings_regularizer
+        )
+
+        # Handle constraints. TODO
+        if embeddings_constraint is None:
+            embeddings_constraint = psiz.keras.constraints.ProjectAttention()
+        self.embeddings_constraint = tf.keras.constraints.get(
+            embeddings_constraint
+        )
 
         if fit_group is None:
             if self.n_group == 1:
@@ -370,15 +402,12 @@ class Attention(LayerRe):
                 fit_group = True
         self.fit_group = fit_group
 
-        if self.n_group == 1:
-            initial_value = np.ones([1, self.n_dim])
-        else:
-            initial_value = self.random_w()
-
-        self.w = tf.Variable(
-            initial_value=initial_value,
+        self.w = self.add_weight(
+            shape=(self.n_group, self.n_dim),
+            initializer=self.embeddings_initializer,
             trainable=fit_group, name='w', dtype=K.floatx(),
-            constraint=psiz.keras.constraints.ProjectAttention()
+            regularizer=self.embeddings_regularizer,
+            constraint=self.embeddings_constraint
         )
 
     def call(self, inputs):
@@ -387,32 +416,33 @@ class Attention(LayerRe):
         Inflate weights by `group_id`.
 
         Arguments:
-            inputs: group_id
+            inputs: A Tensor denoting `group_id`.
 
         """
-        w_expand = tf.gather(self.w, inputs)
-        w_expand = tf.expand_dims(w_expand, axis=2)
-        return w_expand
+        return tf.gather(self.w, inputs)
 
     def reset_weights(self):
         """Reset trainable variables."""
         if self.fit_group:
-            self.w.assign(self.random_w())
-
-    def random_w(self):
-        """Random w."""
-        scale = tf.constant(self.n_dim, dtype=K.floatx())
-        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
-        return psiz.keras.initializers.RandomAttention(
-            alpha, scale, dtype=K.floatx()
-        )(shape=[self.n_group, self.n_dim])
+            self.w.assign(
+                self.embeddings_initializer(
+                    shape=[self.n_group, self.n_dim]
+                )
+            )
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'n_dim': self.n_dim, 'n_group': self.n_group,
-            'fit_group': self.fit_group
+            'n_group': self.n_group,
+            'n_dim': self.n_dim,
+            'fit_group': self.fit_group,
+            'embeddings_initializer':
+                tf.keras.initializers.serialize(self.embeddings_initializer),
+            'embeddings_regularizer':
+                tf.keras.regularizers.serialize(self.embeddings_regularizer),
+            'embeddings_constraint':
+                tf.keras.constraints.serialize(self.embeddings_constraint)
         })
         config = _updated_config(self, config)
         return config

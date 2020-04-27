@@ -23,14 +23,6 @@ has a different set of attention weights. An embedding model is
 inferred from the simulated data and compared to the ground truth
 model.
 
-A custom loss is used that (independently) encourages the
-attention weights associated with each group to be sparse, better
-dividing up the inferred dimensions into 'novice' and 'expert'
-dimensions. The line of code assigning the custom loss can be commented
-out to demonstrate the effect of the sparsity regularization. In
-general, a omitting regularization leads to dimensions that are less
-group specific.
-
 Example output:
 
     Attention weights:

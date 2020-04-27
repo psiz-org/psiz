@@ -32,8 +32,10 @@ import psiz.models
 import psiz.keras.layers
 from psiz.simulate import Agent
 from psiz.utils import pairwise_matrix, matrix_comparison
-
 from psiz.keras.callbacks import EarlyStoppingRe
+
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():

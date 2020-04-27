@@ -30,10 +30,12 @@ import psiz.keras.callbacks
 import psiz.keras.layers
 from psiz.generator import RandomGenerator
 import psiz.models
-import psiz.restart
 from psiz.simulate import Agent
 from psiz.trials import stack
 from psiz.utils import pairwise_matrix, matrix_comparison
+
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -121,10 +123,6 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     kernel = psiz.keras.layers.ExponentialKernel()
-    kernel.rho = 2.
-    kernel.tau = 1.
-    kernel.beta = 10.
-    kernel.gamma = 0.001
 
     embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
     rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
@@ -135,6 +133,13 @@ def ground_truth(n_stimuli, n_dim):
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     emb.z = z
+
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
 
     return emb
 

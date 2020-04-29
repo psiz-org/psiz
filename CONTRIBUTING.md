@@ -42,10 +42,12 @@ Guidance for other Keras objects is listed below.
     * don't need to always return dtype
 
 ### Custom `Initializers`
-* implement `call` method, not `__call__` method
+* implement `__call__` method
 * get_config()
     * Do not need to implement get_config if no class attributes
     * If implementing, do not need to call `super(_).get_config()`
+* seed=None should be in initialization signature and seed should be returned in config.
+* call should take `shape` and `dtype` argument
 
 ### Custom `Layer`
 * Subclass `LayerRe` which assumes a `reset_weights()` method.

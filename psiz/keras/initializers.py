@@ -55,6 +55,7 @@ class RandomScaleMVN(initializers.Initializer):
         self.minval = minval
         self.maxval = maxval
         self.seed = seed
+        # TODO set seed
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
@@ -100,16 +101,15 @@ class RandomAttention(initializers.Initializer):
 
     """
 
-    def __init__(self, concentration, scale=1.0, dtype=K.floatx()):
+    def __init__(self, concentration, scale=1.0, seed=None):
         """Initialize."""
         self.concentration = concentration
         self.scale = scale
-        self.dtype = dtype
+        self.seed = seed
+        # TODO set seed
 
-    def __call__(self, shape, dtype=None, partition_info=None):
+    def __call__(self, shape, dtype=K.floatx()):
         """Call."""
-        if dtype is None:
-            dtype = self.dtype
         dist = tfp.distributions.Dirichlet(self.concentration)
         return self.scale * dist.sample([shape[0]])
 
@@ -117,5 +117,6 @@ class RandomAttention(initializers.Initializer):
         """Return configuration."""
         return {
             "concentration": self.concentration,
-            "dtype": self.dtype.name
+            "scale": self.scale,
+            "seed": self.seed
         }

@@ -326,7 +326,7 @@ class SeparateAttention(LayerRe):
         scale = tf.constant(self.n_dim, dtype=K.floatx())
         alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
         return psiz.keras.initializers.RandomAttention(
-            alpha, scale, dtype=K.floatx()
+            alpha, scale
         )(shape=[1, self.n_dim])
 
 
@@ -378,7 +378,7 @@ class Attention(LayerRe):
                 scale = tf.constant(self.n_dim, dtype=K.floatx())
                 alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
                 embeddings_initializer = psiz.keras.initializers.RandomAttention(
-                    alpha, scale, dtype=K.floatx()
+                    alpha, scale
                 )
         self.embeddings_initializer = tf.keras.initializers.get(
             embeddings_initializer

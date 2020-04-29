@@ -28,7 +28,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
-
+from tensorflow.python.ops.init_ops_v2 import _RandomGenerator  # TODO
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomScaleMVN(initializers.Initializer):
@@ -48,14 +48,13 @@ class RandomScaleMVN(initializers.Initializer):
     """
 
     def __init__(
-            self, mean=0.0, stdev=1.0, minval=-4.0, maxval=-1.0, seed=None):
+            self, mean=0.0, stddev=1.0, minval=-4.0, maxval=-1.0, seed=None):
         """Initialize."""
         self.mean = mean
-        self.stdev = stdev
+        self.stddev = stddev
         self.minval = minval
         self.maxval = maxval
         self.seed = seed
-        # TODO set seed
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
@@ -71,16 +70,16 @@ class RandomScaleMVN(initializers.Initializer):
             tf.constant(10., dtype=dtype), p
         )
 
-        stdev = scale * self.stdev
+        stddev = scale * self.stddev
         return tf.random.normal(
-            shape, mean=self.mean, stddev=stdev, dtype=dtype, seed=self.seed
+            shape, mean=self.mean, stddev=stddev, dtype=dtype, seed=self.seed
         )
 
     def get_config(self):
         """Return configuration."""
         config = {
             "mean": self.mean,
-            "stdev": self.stdev,
+            "stddev": self.stddev,
             "minval": self.minval,
             "maxval": self.maxval,
             "seed": self.seed
@@ -106,12 +105,11 @@ class RandomAttention(initializers.Initializer):
         self.concentration = concentration
         self.scale = scale
         self.seed = seed
-        # TODO set seed
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
         dist = tfp.distributions.Dirichlet(self.concentration)
-        return self.scale * dist.sample([shape[0]])
+        return self.scale * dist.sample([shape[0]], seed=self.seed)
 
     def get_config(self):
         """Return configuration."""

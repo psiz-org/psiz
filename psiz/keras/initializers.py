@@ -108,8 +108,6 @@ class RandomAttention(initializers.Initializer):
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
-        # scale = tf.constant(self.n_dim, dtype=K.floatx())
-        # alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
         dist = tfp.distributions.Dirichlet(
             tf.cast(self.concentration, dtype=dtype)
         )

@@ -1,19 +1,22 @@
 # PsiZ: A Psychological Embedding Package
 
+NOTE: This README is in the process of being updated for release 0.4.0. Not all information is accurate.
+
 ## Purpose
 
 PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods. The companion Open Access article is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
 
 ## Installation
 
-The best way to install PsiZ is by cloning from GitHub and installing the local repo using pip.
+To install the latest version, clone from GitHub and instal the local repo using pip.
 1. Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
 2. Install the cloned repo using pip: `pip install /local/path/to/psiz`
 
 The repository can also be cloned by:
     * Manually download the latest version at https://github.com/roads/psiz.git
     * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.2.2`
-Alternatively, but not recommended, you can install from PyPI using ``pip install psiz``. The versions available through PyPI lag behind the GitHub version.
+
+Older releases can be installed from PyPI using ``pip install psiz``. The versions available through PyPI lag behind the GitHub version.
 
 **Note:** PsiZ also requires TensorFlow. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
 
@@ -30,8 +33,12 @@ import psiz
 
 # Load some observations (i.e., judged trials).
 (obs, catalog) = psiz.datasets.load('birds-16')
-# Initialize an embedding model.
-emb = psiz.models.Rank(catalog.n_stimuli)
+# Create an embedding layer.
+embedding = psiz.keras.layers.EmbeddingRe(catalog.n_stimuli)
+# Create a rank model.
+model = psiz.models.Rank(embedding=embedding)
+# Wrap the model in convenient proxy class.
+emb = psiz.model.Proxy(model)
 # Compile the model.
 emb.compile()
 # Fit the embedding model using similarity judgment observations.
@@ -41,7 +48,9 @@ emb.save('my_embedding.h5')
 ```
 
 ## Trials and Observations
-Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. 
+Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. There are three different types of trials: *rank*, *rate* and *sort*.
+
+### Rank
 
 In the simplest case, an observation is obtained from a trial consisting of three stimuli: a *query* stimulus (*q*) and two *reference* stimuli (*a* and *b*). An agent selects the reference stimulus that they believe is more similar to the query stimulus. For this simple trial, there are two possible outcomes. If the agent selected reference *a*, then the observation for the *i*th trial would be recorded as the vector: 
 
@@ -51,7 +60,15 @@ Alternatively, if the agent had selected reference *b*, the observation would be
 
 D<sub>*i*</sub> = [*q* *b* *a*]
 
-In addition to a simple *triplet* trial, this package is designed to handle a number of different trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. 
+In addition to a simple *triplet* rank trial, this package is designed to handle a number of different rank trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. 
+
+### Rate
+
+In the simplest case, an observation is obtained from a trial consisting of two stimuli. An agent provides a numerical rating regarding the similarity between the stimuli. *This functionality is not currently available and is under development.*
+
+### Sort
+
+In the simplest case, an observation is obtained from a trial consisting of three stimuli. Ag agent sorts the stimuli into two groups based on similarity. *This functionality is not currently available and is under development.*
 
 ## Using Your Own Data
 
@@ -95,7 +112,7 @@ PsiZ is built around the TensorFlow library and strives to follow TensorFlow idi
 
 Embedding models are built using the `tf.keras.Model` and `tf.keras.layers.Layer` API. In PsiZ, a psychological embedding is decomposed into three major components. Each component is implemented as `Layer` with its free parameters implemented using `tf.Variable`.
 
-1. A set of **coordinates** which model points in psychological space.
+1. A set of **embeddings** which define points in psychological space.
 2. A **similarity kernel** that defines how similarity is computed between points in psychological space.
 3. A set of **attention weights** that describe how psychological space is contorted.
 
@@ -122,6 +139,7 @@ Just like a typical TensorFlow model, all trainable variables are optimized to m
 ## Common Use Cases
 
 ### Selecting the Dimensionality.
+<!-- TODO -->
 By default, an embedding will be inferred using two dimensions. Typically you will want to set the dimensionality to something else. This can easily be done using the keyword `n_dim` during embedding initialization. The dimensionality can also be determined using a cross-validation procedure `psiz.dimensionality.search`.
 ```python
 n_stimuli = 100

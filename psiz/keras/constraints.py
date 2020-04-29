@@ -163,8 +163,7 @@ class ProjectAttention(constraints.Constraint):
 
     def __init__(self, n_dim=None):
         """Initialize."""
-        # super().__init__(**kwargs) TODO
-        self.n_dim = tf.cast(n_dim, dtype=K.floatx())
+        self.n_dim = n_dim
 
     def __call__(self, attention_0):
         """Call."""

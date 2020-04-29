@@ -28,6 +28,7 @@ Classes:
 Functions:
     load_model: Load a hdf5 file, that was saved with the `save`
         class method, as a PsychologicalEmbedding object.
+    model_from_config: Instantiate model from configuration.
 
 TODO:
     * Implement Rate class.
@@ -863,7 +864,7 @@ class Proxy(object):
 
         # Create topology.
         config = self.model.get_config()
-        model = _model_from_config(config, custom_objects=custom_objects)
+        model = model_from_config(config, custom_objects=custom_objects)
         proxy_model = Proxy(model=model)
 
         # Set weights.
@@ -1281,7 +1282,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         # Storage format for psiz_version >= 0.4.0
         psiz_version = f['psiz_version'][()]
         config = json.loads(f['config'][()])
-        model = _model_from_config(config, custom_objects)
+        model = model_from_config(config, custom_objects)
         grp_weights = f['weights']
         hdf5_format.load_weights_from_hdf5_group_by_name(
             grp_weights, model.layers
@@ -1358,7 +1359,7 @@ def load_model(filepath, custom_objects={}, compile=False):
     return emb
 
 
-def _model_from_config(config, custom_objects={}):
+def model_from_config(config, custom_objects={}):
     """Load a configured model.
 
     Arguments:

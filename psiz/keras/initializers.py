@@ -28,7 +28,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
-from tensorflow.python.ops.init_ops_v2 import _RandomGenerator  # TODO
+
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomScaleMVN(initializers.Initializer):

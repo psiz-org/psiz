@@ -66,7 +66,7 @@ def load(
         verbose (optional): Controls the verbosity of printed dataset summary.
 
     Returns:
-        obs: An Observations object.
+        obs: An RankObservations object.
         catalog: A catalog object containing information regarding the
             stimuli used to collect observations.
 
@@ -145,7 +145,7 @@ def _fetch_obs(dataset_name, cache_dir, cache_subdir):
             cached.
 
     Returns:
-        obs: An Observations object.
+        obs: An RankObservations object.
 
     """
     fname = 'obs.hdf5'

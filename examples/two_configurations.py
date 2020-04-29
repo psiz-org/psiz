@@ -20,44 +20,51 @@ Fake data is generated from a ground truth model for two different
 trial configurations: 2-choose-1 and 8-choose-2. This example
 demonstrates how one can use data collected in a variety of formats to
 infer a single embedding.
+
 """
 
 import numpy as np
+from sklearn.model_selection import StratifiedKFold
 
-from psiz.trials import stack
-from psiz.models import Exponential
-from psiz.simulate import Agent
+import psiz.keras.callbacks
+import psiz.keras.layers
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_comparison
+import psiz.models
+from psiz.simulate import Agent
+from psiz.trials import stack
+from psiz.utils import pairwise_matrix, matrix_comparison
+
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
-    """Run the simulation that infers an embedding for three groups."""
+    """Run script."""
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 3  # 20
+    n_restart = 20
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials using two different trial
     # configurations.
-    # Generate 1000 2-choose-1 trials.
+    # Generate 1500 2-choose-1 trials.
     n_reference = 2
     n_select = 1
     gen_2c1 = RandomGenerator(
         n_stimuli, n_reference=n_reference, n_select=n_select
     )
-    n_trial = 1000
+    n_trial = 1500
     docket_2c1 = gen_2c1.generate(n_trial)
-    # Generate 1000 8-choose-2 trials.
+    # Generate 1500 8-choose-2 trials.
     n_reference = 8
     n_select = 2
     gen_8c2 = RandomGenerator(
         n_stimuli, n_reference=n_reference, n_select=n_select
     )
-    n_trial = 1000
+    n_trial = 1500
     docket_8c2 = gen_8c2.generate(n_trial)
     # Merge both sets of trials into a single docket.
     docket = stack([docket_2c1, docket_8c2])
@@ -66,14 +73,43 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
+    # Partition observations into train and validation set.
+    skf = StratifiedKFold(n_splits=10)
+    (train_idx, val_idx) = list(
+        skf.split(obs.stimulus_set, obs.config_idx)
+    )[0]
+    obs_train = obs.subset(train_idx)
+    obs_val = obs.subset(val_idx)
+
+    # Use early stopping.
+    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+        'val_loss', patience=10, mode='min', restore_best_weights=True
+    )
+    # Visualize using TensorBoard.
+    cb_board = psiz.keras.callbacks.TensorBoardRe(
+        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
+        write_graph=False, write_images=False, update_freq='epoch',
+        profile_batch=0, embeddings_freq=0, embeddings_metadata=None
+    )
+
     # Infer embedding.
-    emb_inferred = Exponential(n_stimuli, n_dim)
-    emb_inferred.fit(obs, n_restart, verbose=1)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    kernel = psiz.keras.layers.ExponentialKernel()
+    rankModel = psiz.models.Rank(
+        embedding=embedding, kernel=kernel
+    )
+    emb_inferred = psiz.models.Proxy(model=rankModel)
+    emb_inferred.compile()
+    restart_record = emb_inferred.fit(
+        obs_train, validation_data=obs_val, epochs=1000, verbose=2,
+        callbacks=[cb_early, cb_board], n_restart=n_restart,
+        monitor='val_loss'
+    )
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
-    simmat_truth = similarity_matrix(emb_true.similarity, emb_true.z)
-    simmat_infer = similarity_matrix(emb_inferred.similarity, emb_inferred.z)
+    simmat_truth = pairwise_matrix(emb_true.similarity, emb_true.z)
+    simmat_infer = pairwise_matrix(emb_inferred.similarity, emb_inferred.z)
     r_squared = matrix_comparison(simmat_truth, simmat_infer, score='r2')
 
     # Display comparison results. A good inferred model will have a high
@@ -86,17 +122,23 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    emb = Exponential(
-        n_stimuli, n_dim=n_dim)
-    mean = np.ones((n_dim))
+    kernel = psiz.keras.layers.ExponentialKernel()
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    emb = psiz.models.Proxy(rankModel)
+
+    mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     emb.z = z
-    emb.rho = 2
-    emb.tau = 1
-    emb.beta = 10
-    emb.gamma = 0.001
-    emb.trainable("freeze")
+
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
+
     return emb
 
 

@@ -1,11 +1,11 @@
-"""Package initialization file.
+"""Top-level package initialization file.
 
 Modules:
-    benchmark
     catalog
     datasets
     dimensionality
     generator
+    keras
     models
     preprocess
     simulate
@@ -18,8 +18,10 @@ import psiz.catalog
 import psiz.datasets
 import psiz.dimensionality
 import psiz.generator
+import psiz.keras
 import psiz.models
 import psiz.preprocess
+import psiz.restart
 import psiz.simulate
 import psiz.trials
 import psiz.utils

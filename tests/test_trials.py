@@ -17,12 +17,12 @@
 """Module for testing `trials.py`.
 
 Notes:
-    It is critical that the function `_possible_outcomes` returns the
+    It is critical that the function `_possible_rank_outcomes` returns the
         unaltered index first (as the test cases are written). Many
         downstream applications make this assumption.
 
 Todo:
-    * Test _possible_outcomes attribute on instantiation and loading from
+    * Test _possible_rank_outcomes attribute on instantiation and loading from
         saved file.
     * Test `weights` initialization, subset, stacking, saving, loading
     * Test `rt_ms` initialization, subset, stacking, saving, loading
@@ -37,7 +37,8 @@ import pandas as pd
 from psiz import trials
 from psiz.generator import RandomGenerator
 from psiz.simulate import Agent
-from psiz.models import Exponential
+import psiz.models
+import psiz.keras.layers
 
 
 @pytest.fixture(scope="module")
@@ -63,7 +64,7 @@ def setup_docket_0():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    docket = trials.Docket(stimulus_set)
+    docket = trials.RankDocket(stimulus_set)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_select': n_select,
@@ -96,7 +97,7 @@ def setup_docket_1():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    docket = trials.Docket(stimulus_set, n_select=n_select)
+    docket = trials.RankDocket(stimulus_set, n_select=n_select)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_select': n_select,
@@ -131,7 +132,7 @@ def setup_obs_0():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2))
 
-    obs = trials.Observations(stimulus_set, n_select=n_select)
+    obs = trials.RankObservations(stimulus_set, n_select=n_select)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_select': n_select,
@@ -167,7 +168,7 @@ def setup_obs_1():
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2), dtype=np.int32)
 
-    obs = trials.Observations(
+    obs = trials.RankObservations(
         stimulus_set, n_select=n_select, group_id=group_id)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
@@ -183,7 +184,12 @@ def ground_truth(n_stimuli):
     n_dim = 3
     n_group = 2
 
-    model = Exponential(n_stimuli, n_dim, n_group)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
+    kernel = psiz.keras.layers.ExponentialKernel()
+    model = psiz.models.Rank(embedding=embedding, attention=attention, kernel=kernel)
+    proxy = psiz.models.Proxy(model=model)
+
     mean = np.ones((n_dim))
     cov = np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
@@ -191,13 +197,17 @@ def ground_truth(n_stimuli):
         (1.9, 1., .1),
         (.1, 1., 1.9)
     ))
-    model.z = z
-    model.rho = 2
-    model.tau = 1
-    model.beta = 1
-    model.gamma = 0
-    model.w = attention
-    return model
+
+    proxy.z = z
+    proxy.theta = {
+        'rho': 2,
+        'tau': 1,
+        'beta': 1,
+        'gamma': 0
+    }
+    proxy.w = attention
+
+    return proxy
 
 
 class TestSimilarityTrials:
@@ -214,17 +224,17 @@ class TestSimilarityTrials:
         # Mismatch in number of trials
         n_select = np.array((1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, n_select=n_select)
+            docket = trials.RankDocket(stimulus_set, n_select=n_select)
 
         # Below support.
         n_select = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, n_select=n_select)
+            docket = trials.RankDocket(stimulus_set, n_select=n_select)
 
         # Above support.
         n_select = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, n_select=n_select)
+            docket = trials.RankDocket(stimulus_set, n_select=n_select)
 
     def test_invalid_is_ranked(self):
         """Test handling of invalid 'is_ranked' argument."""
@@ -237,15 +247,15 @@ class TestSimilarityTrials:
         # Mismatch in number of trials
         is_ranked = np.array((True, True, True))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, is_ranked=is_ranked)
+            docket = trials.RankDocket(stimulus_set, is_ranked=is_ranked)
 
         is_ranked = np.array((True, False, True, False))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set, is_ranked=is_ranked)
+            docket = trials.RankDocket(stimulus_set, is_ranked=is_ranked)
 
 
 class TestDocket:
-    """Test class Docket."""
+    """Test class RankDocket."""
 
     def test_invalid_stimulus_set(self):
         """Test handling of invalid `stimulus_set` argument."""
@@ -256,7 +266,7 @@ class TestDocket:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set)
+            docket = trials.RankDocket(stimulus_set)
 
         # Contains integers below -1.
         stimulus_set = np.array((
@@ -265,7 +275,7 @@ class TestDocket:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set)
+            docket = trials.RankDocket(stimulus_set)
 
         # Does not contain enough references for each trial.
         stimulus_set = np.array((
@@ -274,7 +284,7 @@ class TestDocket:
             (3, 4, -1, -1, -1, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = trials.Docket(stimulus_set)
+            docket = trials.RankDocket(stimulus_set)
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -287,7 +297,7 @@ class TestDocket:
 
         # Create original trials.
         n_select = np.array((1, 1, 1, 1, 2))
-        docket = trials.Docket(stimulus_set, n_select=n_select)
+        docket = trials.RankDocket(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(docket.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -307,14 +317,14 @@ class TestDocket:
 
         # Create first set of original trials.
         n_select = np.array((1, 1, 1, 1, 1))
-        trials_0 = trials.Docket(stimulus_set, n_select=n_select)
+        trials_0 = trials.RankDocket(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
         n_select = np.array((2, 2, 2, 2, 2))
-        trials_1 = trials.Docket(stimulus_set, n_select=n_select)
+        trials_1 = trials.RankDocket(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
@@ -403,13 +413,13 @@ class TestDocket:
         )
 
     def test_persistence(self, setup_docket_0, tmpdir):
-        """Test persistence of Docket."""
+        """Test persistence of RankDocket."""
         # Save docket.
         fn = tmpdir.join('docket_test.hdf5')
         setup_docket_0['docket'].save(fn)
         # Load the saved docket.
         loaded_docket = trials.load_trials(fn)
-        # Check that the loaded Docket object is correct.
+        # Check that the loaded RankDocket object is correct.
         assert setup_docket_0['n_trial'] == loaded_docket.n_trial
         np.testing.assert_array_equal(
             setup_docket_0['stimulus_set'], loaded_docket.stimulus_set)
@@ -425,11 +435,11 @@ class TestDocket:
         np.testing.assert_array_equal(
             setup_docket_0['configuration_id'],
             loaded_docket.config_idx)
-        # TODO test _possible_outcomes
+        # TODO test _possible_rank_outcomes
 
 
 class TestObservations:
-    """Test class Observations."""
+    """Test class RankObservations."""
 
     def test_invalid_stimulus_set(self):
         """Test handling of invalid `stimulus_set` argument."""
@@ -440,7 +450,7 @@ class TestObservations:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = trials.Observations(stimulus_set)
+            obs = trials.RankObservations(stimulus_set)
 
         # Contains integers below -1.
         stimulus_set = np.array((
@@ -449,7 +459,7 @@ class TestObservations:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = trials.Observations(stimulus_set)
+            obs = trials.RankObservations(stimulus_set)
 
         # Does not contain enough references for each trial.
         stimulus_set = np.array((
@@ -458,7 +468,7 @@ class TestObservations:
             (3, 4, -1, -1, -1, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = trials.Observations(stimulus_set)
+            obs = trials.RankObservations(stimulus_set)
 
     def test_invalid_group_id(self):
         """Test handling of invalid `group_id` argument."""
@@ -471,12 +481,12 @@ class TestObservations:
         # Mismatch in number of trials
         group_id = np.array((0, 0, 1))
         with pytest.raises(Exception) as e_info:
-            obs = trials.Observations(stimulus_set, group_id=group_id)
+            obs = trials.RankObservations(stimulus_set, group_id=group_id)
 
         # Below support.
         group_id = np.array((0, -1, 1, 0))
         with pytest.raises(Exception) as e_info:
-            obs = trials.Observations(stimulus_set, group_id=group_id)
+            obs = trials.RankObservations(stimulus_set, group_id=group_id)
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -489,7 +499,7 @@ class TestObservations:
 
         # Create original trials.
         n_select = np.array((1, 1, 1, 1, 2))
-        obs = trials.Observations(stimulus_set, n_select=n_select)
+        obs = trials.RankObservations(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(obs.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -509,14 +519,14 @@ class TestObservations:
 
         # Create first set of original trials.
         n_select = np.array((1, 1, 1, 1, 1))
-        trials_0 = trials.Observations(stimulus_set, n_select=n_select)
+        trials_0 = trials.RankObservations(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
         n_select = np.array((2, 2, 2, 2, 2))
-        trials_1 = trials.Observations(stimulus_set, n_select=n_select)
+        trials_1 = trials.RankObservations(stimulus_set, n_select=n_select)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
@@ -606,13 +616,13 @@ class TestObservations:
             obs.set_group_id(new_group_id_2)
 
     def test_save_load_file(self, setup_obs_0, tmpdir):
-        """Test saving and loading of Observations."""
+        """Test saving and loading of RankObservations."""
         # Save observations.
         fn = tmpdir.join('obs_test.hdf5')
         setup_obs_0['obs'].save(fn)
         # Load the saved observations.
         loaded_obs = trials.load_trials(fn)
-        # Check that the loaded Observations object is correct.
+        # Check that the loaded RankObservations object is correct.
         assert setup_obs_0['n_trial'] == loaded_obs.n_trial
         np.testing.assert_array_equal(
             setup_obs_0['stimulus_set'], loaded_obs.stimulus_set)
@@ -630,7 +640,7 @@ class TestObservations:
         np.testing.assert_array_equal(
             setup_obs_0['configuration_id'],
             loaded_obs.config_idx)
-        # TODO test _possible_outcomes
+        # TODO test _possible_rank_outcomes
 
 
 class TestStack:
@@ -800,9 +810,9 @@ class TestPossibleOutcomes:
         """Test outcomes 2 choose 1 ranked trial."""
         stimulus_set = np.array(((0, 1, 2), (9, 12, 7)))
         n_select = 1 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_select=n_select)
+        tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array(((0, 1), (1, 0)))
         np.testing.assert_array_equal(po, correct)
@@ -811,9 +821,9 @@ class TestPossibleOutcomes:
         """Test outcomes 3 choose 2 ranked trial."""
         stimulus_set = np.array(((0, 1, 2, 3), (33, 9, 12, 7)))
         n_select = 2 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_select=n_select)
+        tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
@@ -824,9 +834,9 @@ class TestPossibleOutcomes:
         """Test outcomes 4 choose 2 ranked trial."""
         stimulus_set = np.array(((0, 1, 2, 3, 4), (45, 33, 9, 12, 7)))
         n_select = 2 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_select=n_select)
+        tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
@@ -841,9 +851,9 @@ class TestPossibleOutcomes:
             (0, 1, 2, 3, 4, 5, 6, 7, 8),
             (45, 33, 9, 12, 7, 2, 5, 4, 3)))
         n_select = 1 * np.ones((2))
-        tasks = trials.Docket(stimulus_set, n_select=n_select)
+        tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_outcomes(tasks.config_list.iloc[0])
+        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3, 4, 5, 6, 7),

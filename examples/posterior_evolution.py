@@ -40,14 +40,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from psiz.models import Exponential
-from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
+import psiz.models
+import psiz.keras.layers
+from psiz.simulate import Agent
 from psiz.utils import similarity_matrix, matrix_comparison
 
 
 def main():
-    """Sample from posterior of pre-defined embedding model."""
+    """Run script."""
     # Settings
     n_trial = 2500
     n_frame = 20
@@ -101,7 +102,7 @@ def main():
             simmat_infer, simmat_true, score='r2'
         )
         r2_list[i_frame] = r2
-        print('Frame: {0} | r^2: {1: >6.2f}'.format(i_frame, r2))
+        print('    Frame: {0} | r^2: {1: >6.2f}'.format(i_frame, r2))
         emb_inferred.z = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
@@ -165,25 +166,33 @@ def ground_truth():
     """Return a ground truth embedding."""
     n_stimuli = 16
     n_dim = 2
-    # Create embeddingp points arranged on a grid.
+
+    kernel = psiz.keras.layers.ExponentialKernel()
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    emb = psiz.models.Proxy(rankModel)
+
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
+
+    # Create a set of embedding points arranged in a grid pattern.
     x, y = np.meshgrid([.1, .2, .3, .4], [.1, .2, .3, .4])
     x = np.expand_dims(x.flatten(), axis=1)
     y = np.expand_dims(y.flatten(), axis=1)
     z = np.hstack((x, y))
-    # Add some Gaussian noise to the embedding points.
+
+    # Add a little noise to the embedding points to disrupt equal
+    # distances.
     mean = np.zeros((n_dim))
     cov = .01 * np.identity(n_dim)
     z_noise = .1 * np.random.multivariate_normal(mean, cov, (n_stimuli))
     z = z + z_noise
-    # Create embedding model.
-    n_group = 1
-    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+
     emb.z = z
-    emb.rho = 2
-    emb.tau = 1
-    emb.beta = 10
-    emb.gamma = 0
-    emb.trainable("freeze")
 
     return emb
 

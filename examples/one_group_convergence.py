@@ -20,26 +20,33 @@ Fake data is generated from a ground truth model assuming one group.
 An embedding is inferred with an increasing amount of data,
 demonstrating how the inferred model improves and asymptotes as more
 data is added.
+
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import StratifiedKFold
 
-from psiz.models import Exponential
-from psiz.simulate import Agent
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_comparison
+import psiz.models
+import psiz.keras.layers
+from psiz.simulate import Agent
+from psiz.utils import pairwise_matrix, matrix_comparison
+from psiz.keras.callbacks import EarlyStoppingRe
+
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
-    """Run the simulation that infers an embedding for one groups."""
+    """Run script."""
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 20
+    n_restart = 10
 
     emb_true = ground_truth(n_stimuli, n_dim)
-    simmat_true = similarity_matrix(emb_true.similarity, emb_true.z)
+    simmat_true = pairwise_matrix(emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
     n_trial = 1000
@@ -54,53 +61,114 @@ def main():
     agent = Agent(emb_true)
     obs = agent.simulate(docket)
 
+    # Partition observations into train, validation and test set.
+    skf = StratifiedKFold(n_splits=5)
+    (train_idx, holdout_idx) = list(
+        skf.split(obs.stimulus_set, obs.config_idx)
+    )[0]
+    obs_train = obs.subset(train_idx)
+    obs_holdout = obs.subset(holdout_idx)
+    skf = StratifiedKFold(n_splits=2)
+    (val_idx, test_idx) = list(
+        skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
+    )[0]
+    obs_val = obs_holdout.subset(val_idx)
+    obs_test = obs_holdout.subset(test_idx)
+
+    # Use early stopping.
+    early_stop = EarlyStoppingRe(
+        'val_loss', patience=10, mode='min', restore_best_weights=True
+    )
+
     # Infer independent models with increasing amounts of data.
     n_step = 8
-    n_obs = np.floor(np.linspace(15, n_trial, n_step)).astype(np.int64)
+    n_obs = np.floor(
+        np.linspace(15, obs_train.n_trial, n_step)
+    ).astype(np.int64)
     r2 = np.empty((n_step))
-    loss = np.empty((n_step))
+    train_loss = np.empty((n_step))
+    val_loss = np.empty((n_step))
+    test_loss = np.empty((n_step))
     for i_round in range(n_step):
-        emb_inferred = Exponential(n_stimuli, n_dim)
+        print('  Round {0}'.format(i_round))
         include_idx = np.arange(0, n_obs[i_round])
-        loss[i_round], _ = emb_inferred.fit(
-            obs.subset(include_idx), n_restart=n_restart, verbose=1
+        obs_round_train = obs_train.subset(include_idx)
+
+        # Infer embedding.
+        embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+        kernel = psiz.keras.layers.ExponentialKernel()
+        model = psiz.models.Rank(
+            embedding=embedding, kernel=kernel
         )
+        emb_inferred = psiz.models.Proxy(model=model)
+        emb_inferred.compile()
+        restart_record = emb_inferred.fit(
+            obs_round_train, validation_data=obs_val, epochs=1000, verbose=1,
+            callbacks=[early_stop], n_restart=n_restart, monitor='val_loss'
+        )
+
+        train_loss[i_round] = restart_record.record['loss'][0]
+        val_loss[i_round] = restart_record.record['val_loss'][0]
+        test_loss[i_round] = emb_inferred.evaluate(obs_test)
+
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = similarity_matrix(
+        simmat_infer = pairwise_matrix(
             emb_inferred.similarity, emb_inferred.z
         )
         r2[i_round] = matrix_comparison(
             simmat_infer, simmat_true, score='r2'
         )
         print(
-            'Round {0} ({1} trials) | Loss: {2:.2f} | '
-            'Correlation (R^2): {3:.2f}'.format(
-                i_round, n_obs[i_round], loss[i_round], r2[i_round]
+            '    n_obs: {0:4d} | train_loss: {1:.2f} | '
+            'val_loss: {2:.2f} | test_loss: {3:.2f} | '
+            'Correlation (R^2): {4:.2f}'.format(
+                n_obs[i_round], train_loss[i_round],
+                val_loss[i_round], test_loss[i_round], r2[i_round]
             )
         )
 
     # Plot comparison results.
-    plt.plot(n_obs, r2, 'ro-')
-    plt.title('Model Convergence to Ground Truth')
-    plt.xlabel('Number of Judged Trials')
-    plt.ylabel(r'Squared Pearson Correlation ($R^2$)')
-    plt.ylim(-0.05, 1.05)
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 3))
+
+    axes[0].plot(n_obs, train_loss, 'bo-', label='Train Loss')
+    axes[0].plot(n_obs, val_loss, 'go-', label='Val. Loss')
+    axes[0].plot(n_obs, test_loss, 'ro-', label='Test Loss')
+    axes[0].set_title('Model Loss')
+    axes[0].set_xlabel('Number of Judged Trials')
+    axes[0].set_ylabel('Loss')
+    axes[0].legend()
+
+    axes[1].plot(n_obs, r2, 'ro-')
+    axes[1].set_title('Model Convergence to Ground Truth')
+    axes[1].set_xlabel('Number of Judged Trials')
+    axes[1].set_ylabel(r'Squared Pearson Correlation ($R^2$)')
+    axes[1].set_ylim(-0.05, 1.05)
+
+    plt.tight_layout()
     plt.show()
 
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    emb = Exponential(n_stimuli, n_dim=n_dim)
-    mean = np.ones((n_dim))
+    kernel = psiz.keras.layers.ExponentialKernel()
+
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
+
+    emb = psiz.models.Proxy(model=rankModel)
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
+
+    mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
     z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     emb.z = z
-    emb.rho = 2
-    emb.tau = 1
-    emb.beta = 10
-    emb.gamma = 0.001
-    emb.trainable("freeze")
+
     return emb
 
 

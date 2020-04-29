@@ -26,16 +26,23 @@ import pytest
 import numpy as np
 
 from psiz import utils
-from psiz.models import Exponential
+import psiz.models
+import psiz.keras.layers
 
 
 @pytest.fixture(scope="module")
 def ground_truth():
     """Return a ground truth model."""
+    n_stimuli = 3
     n_dim = 2
     n_group = 2
 
-    model = Exponential(3, n_dim, n_group)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
+    kernel = psiz.keras.layers.ExponentialKernel()
+    model = psiz.models.Rank(embedding=embedding, attention=attention, kernel=kernel)
+    proxy = psiz.models.Proxy(model=model)
+
     z = np.array((
         (.1, .1), (.15, .2), (.4, .5)
     ))
@@ -43,17 +50,19 @@ def ground_truth():
         (1.2, .8),
         (.7, 1.3)
     ))
-    model.z = z
-    model.rho = 2
-    model.tau = 1
-    model.beta = 10
-    model.gamma = 0
-    model.w = attention
+    proxy.z = z
+    proxy.theta = {
+        'rho': 2,
+        'tau': 1,
+        'beta': 10,
+        'gamma': 0
+    }
+    proxy.w = attention
 
-    return model
+    return proxy
 
 
-def test_similarity_matrix(ground_truth):
+def test_pairwise_matrix(ground_truth):
     """Test similarity matrix."""
     actual_simmat1 = np.array((
         (1., 0.35035481, 0.00776613),
@@ -66,7 +75,7 @@ def test_similarity_matrix(ground_truth):
         (0.00548485, 0.01814493, 1.)
     ))
 
-    computed_simmat0 = utils.similarity_matrix(
+    computed_simmat0 = utils.pairwise_matrix(
         ground_truth.similarity, ground_truth.z)
 
     # Check explicit use of first set of attention weights.
@@ -75,7 +84,7 @@ def test_similarity_matrix(ground_truth):
         return sim_func
 
     # Check without passing in explicit attention.
-    computed_simmat1 = utils.similarity_matrix(
+    computed_simmat1 = utils.pairwise_matrix(
         similarity_func1, ground_truth.z)
 
     # Check explicit use of second set of attention weights.
@@ -83,7 +92,7 @@ def test_similarity_matrix(ground_truth):
         sim_func = ground_truth.similarity(z_q, z_ref, group_id=1)
         return sim_func
 
-    computed_simmat2 = utils.similarity_matrix(
+    computed_simmat2 = utils.pairwise_matrix(
         similarity_func2, ground_truth.z)
 
     np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat0)

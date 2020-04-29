@@ -48,7 +48,7 @@ def search(obs, model_spec, search_spec=None, verbose=0):
     as equitable as possible.
 
     Arguments:
-        obs: An Observations object representing the observed data.
+        obs: An RankObservations object representing the observed data.
             embedding_constructor: A PsychologicalEmbedding
             constructor.
         model_spec: A dictionary specifying the embedding model to use.
@@ -213,7 +213,7 @@ def dimension_search(
     the same cross-validation partitions.
 
     Arguments:
-        obs: An Observations object representing the observed data.
+        obs: An RankObservations object representing the observed data.
             embedding_constructor: A PsychologicalEmbedding
             constructor.
         n_stimuli:  An integer indicating the number of unique stimuli.

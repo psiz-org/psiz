@@ -1,4 +1,5 @@
 TODO.md
+NOTES.md
 
 # Compiled python modules.
 *.pyc
@@ -16,6 +17,3 @@ TODO.md
 .pytest_cache/*
 
 mark_*.json
-
-sparsity_loss.py
-/examples/one_group_dimensionality.py

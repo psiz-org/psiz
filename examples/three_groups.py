@@ -23,14 +23,6 @@ has a different set of attention weights. An embedding model is
 inferred from the simulated data and compared to the ground truth
 model.
 
-A custom loss is used that (independently) encourages the
-attention weights associated with each group to be sparse, better
-dividing up the inferred dimensions into 'novice' and 'expert'
-dimensions. The line of code assigning the custom loss can be commented
-out to demonstrate the effect of the sparsity regularization. In
-general, a omitting regularization leads to dimensions that are less
-group specific.
-
 Example output:
 
     Attention weights:
@@ -53,11 +45,17 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from psiz.trials import stack
-from psiz.models import Exponential
-from psiz.simulate import Agent
+import psiz.keras.callbacks
+import psiz.keras.layers
 from psiz.generator import RandomGenerator
-from psiz.utils import similarity_matrix, matrix_comparison
+import psiz.models
+from psiz.simulate import Agent
+from psiz.trials import stack
+from psiz.utils import pairwise_matrix, matrix_comparison
+from sklearn.model_selection import StratifiedKFold
+
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -66,7 +64,7 @@ def main():
     n_stimuli = 25
     n_dim = 4
     n_group = 3
-    n_restart = 30
+    n_restart = 10
 
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
@@ -90,10 +88,32 @@ def main():
     obs_expert = agent_expert.simulate(docket)
     obs_all = stack((obs_novice, obs_interm, obs_expert))
 
+    # Partition observations into train and validation set.
+    skf = StratifiedKFold(n_splits=10)
+    (train_idx, val_idx) = list(
+        skf.split(obs_all.stimulus_set, obs_all.config_idx)
+    )[0]
+    obs_train = obs_all.subset(train_idx)
+    obs_val = obs_all.subset(val_idx)
+
+    # Use early stopping.
+    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
+        'val_loss', patience=10, mode='min', restore_best_weights=True
+    )
+
     # Infer a shared embedding with group-specific attention weights.
-    emb_inferred = Exponential(emb_true.n_stimuli, n_dim, n_group)
-    emb_inferred.loss = custom_loss
-    emb_inferred.fit(obs_all, n_restart, verbose=1)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
+    kernel = psiz.keras.layers.ExponentialKernel()
+    model = psiz.models.Rank(
+        embedding=embedding, attention=attention, kernel=kernel
+    )
+    emb_inferred = psiz.models.Proxy(model=model)
+    emb_inferred.compile()
+    restart_record = emb_inferred.fit(
+        obs_train, validation_data=obs_val, epochs=1000, verbose=3,
+        callbacks=[early_stop], monitor='val_loss', n_restart=n_restart
+    )
 
     # Permute inferred dimensions to best match ground truth.
     attention_weight_0 = emb_inferred.w[0, :]
@@ -113,9 +133,9 @@ def main():
         return emb_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        similarity_matrix(truth_sim_func0, emb_true.z),
-        similarity_matrix(truth_sim_func1, emb_true.z),
-        similarity_matrix(truth_sim_func2, emb_true.z)
+        pairwise_matrix(truth_sim_func0, emb_true.z),
+        pairwise_matrix(truth_sim_func1, emb_true.z),
+        pairwise_matrix(truth_sim_func2, emb_true.z)
     )
 
     def infer_sim_func0(z_q, z_ref):
@@ -128,9 +148,9 @@ def main():
         return emb_inferred.similarity(z_q, z_ref, group_id=2)
 
     simmat_infer = (
-        similarity_matrix(infer_sim_func0, emb_inferred.z),
-        similarity_matrix(infer_sim_func1, emb_inferred.z),
-        similarity_matrix(infer_sim_func2, emb_inferred.z)
+        pairwise_matrix(infer_sim_func0, emb_inferred.z),
+        pairwise_matrix(infer_sim_func1, emb_inferred.z),
+        pairwise_matrix(infer_sim_func2, emb_inferred.z)
     )
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):
@@ -170,78 +190,17 @@ def main():
     print('\n')
 
 
-@tf.function(experimental_relax_shapes=True)
-def custom_loss(prob, weight, tf_attention):
-    """Compute model loss given observation probabilities."""
-    n_trial = tf.shape(prob)[0]
-    n_trial = tf.cast(n_trial, dtype=K.floatx())
-    n_group = tf.shape(tf_attention)[0]
-
-    # Convert to (weighted) log probabilities.
-    cap = tf.constant(2.2204e-16, dtype=K.floatx())
-    logprob = tf.math.log(tf.maximum(prob, cap))
-    logprob = tf.multiply(weight, logprob)
-
-    # Divide by number of trials to make train and test loss
-    # comparable.
-    loss = tf.negative(tf.reduce_sum(logprob))
-    loss = tf.divide(loss, n_trial)
-
-    # Penalty on attention weights (independently).
-    attention_penalty = tf.constant(0, dtype=K.floatx())
-    for i_group in tf.range(n_group):
-        attention_penalty = (
-            attention_penalty +
-            entropy_loss(tf_attention[i_group, :])
-        )
-    attention_penalty = (
-        attention_penalty / tf.cast(n_group, dtype=K.floatx())
-    )
-    loss = loss + (attention_penalty / tf.constant(10.0, dtype=K.floatx()))
-
-    return loss
-
-
-def attention_sparsity_loss(w):
-    """Sparsity encouragement.
-
-    The traditional regularizer to encourage sparsity is L1.
-    Unfortunately, L1 regularization does not work for the attention
-    weights since they are all constrained to sum to the same value
-    (i.e., the number of dimensions). Instead, we achieve sparsity
-    pressure by using a complement version of L2 loss. It tries to make
-    each attention weight as close to zero as possible, putting
-    pressure on the model to only use the dimensions it really needs.
-
-    Arguments:
-        w: Attention weights assumed to be nonnegative.
-
-    """
-    n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
-    loss = tf.negative(
-        tf.math.reduce_mean(tf.math.pow(n_dim - w, 2))
-    )
-    return loss
-
-
-def entropy_loss(w):
-    """Loss term based on entropy that encourages sparsity.
-
-    Arguments:
-        w: Attention weights assumed to be nonnegative.
-
-    """
-    n_dim = tf.cast(tf.shape(w)[0], dtype=K.floatx())
-    w_1 = w / n_dim + tf.keras.backend.epsilon()
-    loss = tf.negative(
-        tf.math.reduce_sum(w_1 * tf.math.log(w_1))
-    )
-    return loss
-
-
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    emb = Exponential(n_stimuli, n_dim=n_dim, n_group=n_group)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
+    kernel = psiz.keras.layers.ExponentialKernel()
+
+    model = psiz.models.Rank(
+        embedding=embedding, attention=attention, kernel=kernel
+    )
+    emb = psiz.models.Proxy(model=model)
+
     mean = np.zeros((n_dim))
     cov = .03 * np.identity(n_dim)
     emb.z = np.random.multivariate_normal(mean, cov, (n_stimuli))
@@ -250,11 +209,12 @@ def ground_truth(n_stimuli, n_dim, n_group):
         (1., 1., 1., 1.),
         (.2, .2, 1.8, 1.8)
     ))
-    emb.rho = 2
-    emb.tau = 1
-    emb.beta = 10
-    emb.gamma = 0.001
-    emb.trainable("freeze")
+    emb.theta = {
+        'rho': 2.,
+        'tau': 1.,
+        'beta': 10.,
+        'gamma': 0.001
+    }
     return emb
 
 

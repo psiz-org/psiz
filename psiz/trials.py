@@ -614,7 +614,7 @@ class RankObservations(RankTrials):
                 shape = (n_trial,1)
 
         """
-        RankTrials.__init__(self, response_set, n_select, is_ranked)
+        RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Handle default settings.
         if group_id is None:

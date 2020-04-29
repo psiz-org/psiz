@@ -49,6 +49,10 @@ class GreaterThan(constraints.Constraint):
         w = w + self.min_value
         return w
 
+    def get_config(self):
+        """Return configuration."""
+        return {'min_value': self.min_value}
+
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessThan(constraints.Constraint):
@@ -64,6 +68,10 @@ class LessThan(constraints.Constraint):
         w = w * tf.cast(tf.math.greater(0., w), K.floatx())
         w = w + self.max_value
         return w
+
+    def get_config(self):
+        """Return configuration."""
+        return {'max_value': self.max_value}
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
@@ -81,6 +89,10 @@ class GreaterEqualThan(constraints.Constraint):
         w = w + self.min_value
         return w
 
+    def get_config(self):
+        """Return configuration."""
+        return {'min_value': self.min_value}
+
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessEqualThan(constraints.Constraint):
@@ -96,6 +108,10 @@ class LessEqualThan(constraints.Constraint):
         w = w * tf.cast(tf.math.greater_equal(0., w), K.floatx())
         w = w + self.max_value
         return w
+
+    def get_config(self):
+        """Return configuration."""
+        return {'max_value': self.max_value}
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
@@ -118,6 +134,10 @@ class MinMax(constraints.Constraint):
         w = w + self.max_value
 
         return w
+
+    def get_config(self):
+        """Return configuration."""
+        return {'min_value': self.min_value, 'max_value': self.max_value}
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
@@ -155,3 +175,7 @@ class ProjectAttention(constraints.Constraint):
             attention_0, attention_1
         )
         return attention_proj
+
+    def get_config(self):
+        """Return configuration."""
+        return {'n_dim': self.n_dim}

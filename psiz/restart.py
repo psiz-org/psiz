@@ -78,7 +78,7 @@ class Restarter(object):
         self.n_record = n_record
         self.do_init = do_init
 
-    def fit(self, x, callbacks=None,  verbose=0, **kwargs):
+    def fit(self, x, callbacks=[],  verbose=0, **kwargs):
         """Fit the embedding model to the observations using restarts.
 
         Arguments:

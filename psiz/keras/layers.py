@@ -375,8 +375,8 @@ class Attention(LayerRe):
             if self.n_group == 1:
                 embeddings_initializer = tf.keras.initializers.Ones()
             else:
-                scale = tf.constant(self.n_dim, dtype=K.floatx())
-                alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
+                scale = self.n_dim
+                alpha = np.ones((self.n_dim))
                 embeddings_initializer = psiz.keras.initializers.RandomAttention(
                     alpha, scale
                 )

@@ -102,19 +102,26 @@ class RandomAttention(initializers.Initializer):
 
     def __init__(self, concentration, scale=1.0, seed=None):
         """Initialize."""
-        self.concentration = concentration
+        self.concentration = np.asarray(concentration)
         self.scale = scale
         self.seed = seed
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
-        dist = tfp.distributions.Dirichlet(self.concentration)
-        return self.scale * dist.sample([shape[0]], seed=self.seed)
+        # scale = tf.constant(self.n_dim, dtype=K.floatx())
+        # alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
+        dist = tfp.distributions.Dirichlet(
+            tf.cast(self.concentration, dtype=dtype)
+        )
+        sample = tf.cast(self.scale, dtype=dtype) * dist.sample(
+            [shape[0]], seed=self.seed
+        )
+        return sample
 
     def get_config(self):
         """Return configuration."""
         return {
-            "concentration": self.concentration,
+            "concentration": self.concentration.tolist(),
             "scale": self.scale,
             "seed": self.seed
         }

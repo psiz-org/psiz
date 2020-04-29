@@ -1383,12 +1383,9 @@ def model_from_config(config, custom_objects={}):
         'StudentsTKernel': psiz.keras.layers.StudentsTKernel
     })
 
-    # model_0 = tf.keras.layers.deserialize(
-    #     config, custom_objects=custom_objects
-    # )
     model_class_name = config.get('class_name')
     model_config = config.get('config')
-    layers = model_config.pop('layers')
+    layers = model_config.get('layers')
 
     # Load model.
     if model_class_name in custom_objects:

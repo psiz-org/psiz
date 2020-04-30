@@ -60,6 +60,9 @@ Guidance for other Keras objects is listed below.
 * `reset_weights()`
     * Implement.
 
+#### Custom Kernels
+* A kernel must assign the `distance` attribute a layer implementing a distance kernel.
+
 ### Custom `Model`
 * `init()`
     * use `**kwargs` in arguments and call `super().__init__(**kwargs)`

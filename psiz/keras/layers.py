@@ -19,7 +19,7 @@
 Classes:
     LayerRe: A Layer with a reset_weights() method.
     EmbeddingRe: An Embedding layer.
-    WeightedDistance: A weighted distance layer.
+    WeightedMinkowski: A weighted distance layer.
     Attention: A simple attention layer.
     InverseKernel: An inverse kernel layer.
     ExponentialKernel: An exponential-family kernel layer.
@@ -200,7 +200,7 @@ class EmbeddingRe(LayerRe):
         return config
 
 
-class WeightedDistance(LayerRe):
+class WeightedMinkowski(LayerRe):
     """Weighted Minkowski distance."""
 
     def __init__(self, fit_rho=True, **kwargs):
@@ -210,7 +210,7 @@ class WeightedDistance(LayerRe):
             fit_rho (optional): Boolean
 
         """
-        super(WeightedDistance, self).__init__(**kwargs)
+        super(WeightedMinkowski, self).__init__(**kwargs)
         self.fit_rho = fit_rho
         self.rho = tf.Variable(
             initial_value=self.random_rho(),
@@ -471,7 +471,7 @@ class InverseKernel(LayerRe):
 
         """
         super(InverseKernel, self).__init__(**kwargs)
-        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
@@ -591,7 +591,7 @@ class ExponentialKernel(LayerRe):
 
         """
         super(ExponentialKernel, self).__init__(**kwargs)
-        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
@@ -717,7 +717,7 @@ class HeavyTailedKernel(LayerRe):
 
         """
         super(HeavyTailedKernel, self).__init__(**kwargs)
-        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
@@ -840,7 +840,7 @@ class StudentsTKernel(LayerRe):
 
         """
         super(StudentsTKernel, self).__init__(**kwargs)
-        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
 
         self.n_dim = n_dim

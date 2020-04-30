@@ -355,7 +355,7 @@ class Proxy(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d_qr = self.model.kernel.distance_layer([
+        d_qr = self.model.kernel.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -815,7 +815,8 @@ class Proxy(object):
 
     def subset(self, idx):
         """Return subset of embedding."""
-        emb = copy.deepcopy(self)
+        emb = self.clone()
+        # TODO CRITICAL, must handle changes to embedding layer
         emb.z = emb.z[idx, :]
         emb.n_stimuli = emb.z.shape[0]
         return emb
@@ -841,18 +842,27 @@ class Proxy(object):
             emb: A group-specific embedding.
 
         """
-        emb = copy.deepcopy(self)
+        emb = self.clone()
         z = self.z
-        rho = self.rho
+        rho = self.theta['rho']
         if np.isscalar(group_id):
             attention_weights = self.w[group_id, :]
         else:
-            group_id = np.asarray(group_id)
-            attention_weights = self.w[group_id, :]
-            attention_weights = np.mean(attention_weights, axis=0)
+            raise ValueError(
+                "The argument `group_id` must be a scalar."
+            )
+            # group_id = np.asarray(group_id)
+            # attention_weights = self.w[group_id, :]
+            # attention_weights = np.mean(attention_weights, axis=0)
 
+        # Adjust embedding for group-specific view.
+        # TODO factor out logic: Modulation x Distance type
         z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
         emb.z = z_group
+        # TODO critical, more delicate handling.
+        # Create Attention layer.
+        attention = psiz.keras.layers.Attention(n_group=1, n_dim=self.n_dim)
+
         emb.n_group = 1
         emb.w = np.ones([1, self.n_dim])
         return emb
@@ -871,10 +881,11 @@ class Proxy(object):
         model_weights = self.get_weights()
         proxy_model.set_weights(model_weights)
 
-        # Compile.
-        proxy_model.compile(
-            loss=self.model.loss, optimizer=self.model.optimizer
-        )
+        # Compile. TODO This is brittle.
+        if self.model.loss is not None: 
+            proxy_model.compile(
+                loss=self.model.loss, optimizer=self.model.optimizer
+            )
 
         # Other attributes.
         proxy_model.log_freq = self.log_freq
@@ -1374,7 +1385,7 @@ def model_from_config(config, custom_objects={}):
     custom_objects.update({
         'Rank': psiz.models.Rank,
         'EmbeddingRe': psiz.keras.layers.EmbeddingRe,
-        'WeightedDistance': psiz.keras.layers.WeightedDistance,
+        'WeightedMinkowski': psiz.keras.layers.WeightedMinkowski,
         'SeparateAttention': psiz.keras.layers.SeparateAttention,
         'Attention': psiz.keras.layers.Attention,
         'InverseKernel': psiz.keras.layers.InverseKernel,

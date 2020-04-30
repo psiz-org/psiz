@@ -471,8 +471,8 @@ class InverseKernel(LayerRe):
 
         """
         super(InverseKernel, self).__init__(**kwargs)
-        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
-        self.rho = self.distance_layer.rho
+        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
         self.tau = tf.Variable(
@@ -489,7 +489,7 @@ class InverseKernel(LayerRe):
         )
 
         self.theta = {
-            'rho': self.distance_layer.rho,
+            'rho': self.distance.rho,
             'tau': self.tau,
             'mu': self.mu
         }
@@ -510,7 +510,7 @@ class InverseKernel(LayerRe):
         z_r = inputs[1]  # References.
         w = inputs[2]    # Dimension weights.
 
-        d_qr = self.distance_layer([z_q, z_r, w])
+        d_qr = self.distance([z_q, z_r, w])
 
         # Exponential family similarity function.
         sim_qr = 1 / (tf.pow(d_qr, self.tau) + self.mu)
@@ -518,7 +518,7 @@ class InverseKernel(LayerRe):
 
     def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset_weights()
+        self.distance.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -538,7 +538,7 @@ class InverseKernel(LayerRe):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
             'fit_mu': self.fit_mu
         })
         config = _updated_config(self, config)
@@ -591,8 +591,8 @@ class ExponentialKernel(LayerRe):
 
         """
         super(ExponentialKernel, self).__init__(**kwargs)
-        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
-        self.rho = self.distance_layer.rho
+        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
         self.tau = tf.Variable(
@@ -620,7 +620,7 @@ class ExponentialKernel(LayerRe):
         )
 
         self.theta = {
-            'rho': self.distance_layer.rho,
+            'rho': self.distance.rho,
             'tau': self.tau,
             'gamma': self.gamma,
             'beta': self.beta
@@ -649,7 +649,7 @@ class ExponentialKernel(LayerRe):
         z_r = inputs[1]  # References.
         w = inputs[2]    # Dimension weights.
 
-        d_qr = self.distance_layer([z_q, z_r, w])
+        d_qr = self.distance([z_q, z_r, w])
 
         # Exponential family similarity function.
         sim_qr = tf.exp(
@@ -659,7 +659,7 @@ class ExponentialKernel(LayerRe):
 
     def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset_weights()
+        self.distance.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -686,7 +686,7 @@ class ExponentialKernel(LayerRe):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
             'fit_gamma': self.fit_gamma, 'fit_beta': self.fit_beta
         })
         config = _updated_config(self, config)
@@ -717,8 +717,8 @@ class HeavyTailedKernel(LayerRe):
 
         """
         super(HeavyTailedKernel, self).__init__(**kwargs)
-        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
-        self.rho = self.distance_layer.rho
+        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
         self.tau = tf.Variable(
@@ -742,7 +742,7 @@ class HeavyTailedKernel(LayerRe):
         )
 
         self.theta = {
-            'rho': self.distance_layer.rho,
+            'rho': self.distance.rho,
             'tau': self.tau,
             'kappa': self.kappa,
             'alpha': self.alpha
@@ -764,7 +764,7 @@ class HeavyTailedKernel(LayerRe):
         z_r = inputs[1]  # References.
         w = inputs[2]    # Dimension weights.
 
-        d_qr = self.distance_layer([z_q, z_r, w])
+        d_qr = self.distance([z_q, z_r, w])
 
         # Heavy-tailed family similarity function.
         sim_qr = tf.pow(
@@ -774,7 +774,7 @@ class HeavyTailedKernel(LayerRe):
 
     def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset_weights()
+        self.distance.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -801,7 +801,7 @@ class HeavyTailedKernel(LayerRe):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
             'fit_kappa': self.fit_kappa, 'fit_alpha': self.fit_alpha
         })
         config = _updated_config(self, config)
@@ -840,8 +840,8 @@ class StudentsTKernel(LayerRe):
 
         """
         super(StudentsTKernel, self).__init__(**kwargs)
-        self.distance_layer = WeightedDistance(fit_rho=fit_rho)
-        self.rho = self.distance_layer.rho
+        self.distance = WeightedDistance(fit_rho=fit_rho)
+        self.rho = self.distance.rho
 
         self.n_dim = n_dim
 
@@ -860,7 +860,7 @@ class StudentsTKernel(LayerRe):
         )
 
         self.theta = {
-            'rho': self.distance_layer.rho,
+            'rho': self.distance.rho,
             'tau': self.tau,
             'alpha': self.alpha
         }
@@ -881,7 +881,7 @@ class StudentsTKernel(LayerRe):
         z_r = inputs[1]  # References.
         w = inputs[2]    # Dimension weights.
 
-        d_qr = self.distance_layer([z_q, z_r, w])
+        d_qr = self.distance([z_q, z_r, w])
 
         # Student-t family similarity kernel.
         sim_qr = tf.pow(
@@ -891,7 +891,7 @@ class StudentsTKernel(LayerRe):
 
     def reset_weights(self):
         """Reset trainable variables."""
-        self.distance_layer.reset_weights()
+        self.distance.reset_weights()
 
         if self.fit_tau:
             self.tau.assign(self.random_tau())
@@ -913,7 +913,7 @@ class StudentsTKernel(LayerRe):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'fit_rho': self.distance_layer.fit_rho, 'fit_tau': self.fit_tau,
+            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
             'fit_alpha': self.fit_alpha
         })
         config = _updated_config(self, config)

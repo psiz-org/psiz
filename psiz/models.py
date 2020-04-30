@@ -75,6 +75,7 @@ class Proxy(object):
     embedding algorithm infers a set of attention weights if there is
     more than one group.
 
+    TODO update methods and attributes.
     Methods:
         reset_weights: Reset all trainable variables.
         compile: Assign a optimizer, loss and regularization function
@@ -85,8 +86,6 @@ class Proxy(object):
         similarity: Return the similarity between provided points.
         distance: Return the (weighted) minkowski distance between
             provided points.
-        view: Returns a view-specific embedding.
-        trainable: Get or set which parameters are trainable.
         outcome_probability: Return the probability of the possible
             outcomes for each trial.
         posterior_samples: Sample from the posterior distribution.
@@ -821,52 +820,6 @@ class Proxy(object):
         emb.n_stimuli = emb.z.shape[0]
         return emb
 
-    def view(self, group_id):
-        """Return a view-specific embedding.
-
-        The returned embedding contains information only about the
-        requested group. The embedding is appropriately adjusted such
-        that the group-specific parameters are rolled into the other
-        parameters. Specifically the embedding points are adjusted to
-        account for the attention weights, and the attention weights
-        are returned to ones. This function is useful if you would like
-        to visualize and compare how group-specific embeddings differ
-        in terms of perceived similarity.
-
-        Arguments:
-            group_id: Scalar or list. If scale, indicates the group_id
-                to use. If a list, should be a list of group_id's to
-                average.
-
-        Returns:
-            emb: A group-specific embedding.
-
-        """
-        emb = self.clone()
-        z = self.z
-        rho = self.theta['rho']
-        if np.isscalar(group_id):
-            attention_weights = self.w[group_id, :]
-        else:
-            raise ValueError(
-                "The argument `group_id` must be a scalar."
-            )
-            # group_id = np.asarray(group_id)
-            # attention_weights = self.w[group_id, :]
-            # attention_weights = np.mean(attention_weights, axis=0)
-
-        # Adjust embedding for group-specific view.
-        # TODO factor out logic: Modulation x Distance type
-        z_group = z * np.expand_dims(attention_weights**(1/rho), axis=0)
-        emb.z = z_group
-        # TODO critical, more delicate handling.
-        # Create Attention layer.
-        attention = psiz.keras.layers.Attention(n_group=1, n_dim=self.n_dim)
-
-        emb.n_group = 1
-        emb.w = np.ones([1, self.n_dim])
-        return emb
-
     def clone(self, custom_objects={}):
         """Clone model."""
         model_class_name = self.model.__class__.__name__
@@ -882,7 +835,7 @@ class Proxy(object):
         proxy_model.set_weights(model_weights)
 
         # Compile. TODO This is brittle.
-        if self.model.loss is not None: 
+        if self.model.loss is not None:
             proxy_model.compile(
                 loss=self.model.loss, optimizer=self.model.optimizer
             )

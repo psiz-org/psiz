@@ -123,7 +123,7 @@ class EmbeddingRe(LayerRe):
 
         # Handle constraints.
         if embeddings_constraint is None:
-            embeddings_constraint = psiz.keras.constraints.ZeroCenterZ()
+            embeddings_constraint = psiz.keras.constraints.Center(axis=0)
         self.embeddings_constraint = tf.keras.constraints.get(
             embeddings_constraint
         )

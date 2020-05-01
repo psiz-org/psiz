@@ -22,7 +22,7 @@ Classes:
     GreaterEqualThan:
     LessEqualThan:
     MinMax:
-    ZeroCenterZ:
+    Center:
     ProjectAttention:
 
 """
@@ -141,20 +141,25 @@ class MinMax(constraints.Constraint):
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
-class ZeroCenterZ(constraints.Constraint):
-    """Constrains the embedding to be zero-centered.
+class Center(constraints.Constraint):
+    """Constrains the weights to be zero-centered.
 
-    This constraint is used to improve numerical stability.
+    This constraint can be used to improve the numerical stability of
+    an embedding.
+
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, axis=0):
         """Initialize."""
-        # super().__init__(**kwargs) TODO
-        pass
+        self.axis = axis
 
-    def __call__(self, z):
+    def __call__(self, w):
         """Call."""
-        return z - tf.reduce_mean(z, axis=0, keepdims=True)
+        return w - tf.reduce_mean(w, axis=self.axis, keepdims=True)
+
+    def get_config(self):
+        """Return configuration."""
+        return {'axis': self.axis}
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
@@ -183,3 +188,39 @@ class ProjectAttention(constraints.Constraint):
     def get_config(self):
         """Return configuration."""
         return {'n_dim': self.n_dim}
+
+
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
+class NonNegUnitNorm(constraints.Constraint):
+    """NonNegUnitNorm weight constraint.
+
+    Constrains the weights incident to each hidden unit
+    to have non-negative weights and a unit norm.
+
+    Arguments:
+        p (optional): Type of p-norm (must be  >=1).
+        axis (optional): integer, axis along which to calculate weight norms.
+
+    """
+
+    def __init__(self, p=2.0, axis=0):
+        """Initialize."""
+        self.p = p
+        self.axis = axis
+
+    def __call__(self, w):
+        """Call."""
+        # Enforce nonnegative.
+        w = w * math_ops.cast(math_ops.greater_equal(w, 0.), K.floatx())
+
+        # Enforce unit norm.
+        return w / (
+            K.epsilon() + tf.pow(
+                tf.reduce_sum(w**self.p, axis=self.axis, keepdims=True),
+                tf.divide(1, self.p)
+            )
+        )
+
+    def get_config(self):
+        """Return configuration."""
+        return {'p': self.p, 'axis': self.axis}

@@ -4,7 +4,9 @@ NOTE: This README is in the process of being updated for release 0.4.0. Not all 
 
 ## Purpose
 
-PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods. The companion Open Access article is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
+PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods.
+
+The companion Open Access article is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
 
 ## Installation
 
@@ -13,12 +15,12 @@ To install the latest version, clone from GitHub and instal the local repo using
 2. Install the cloned repo using pip: `pip install /local/path/to/psiz`
 
 The repository can also be cloned by:
-    * Manually download the latest version at https://github.com/roads/psiz.git
-    * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.2.2`
+* Manually downloading the latest version at https://github.com/roads/psiz.git
+* Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.3.0`
 
-Older releases can be installed from PyPI using ``pip install psiz``. The versions available through PyPI lag behind the GitHub version.
+Older releases can be installed from PyPI using ``pip install psiz``. The versions available through PyPI lag behind the latest GitHub version.
 
-**Note:** PsiZ also requires TensorFlow. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
+**Note:** PsiZ also requires TensorFlow. In older versions of TensorFlow, CPU only versions were targeted separately. For Tensorflow >=2.0, both CPU-only and GPU versions are obtained via `tensorflow`. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
 
 ## Quick Start
 
@@ -38,7 +40,7 @@ embedding = psiz.keras.layers.EmbeddingRe(catalog.n_stimuli)
 # Create a rank model.
 model = psiz.models.Rank(embedding=embedding)
 # Wrap the model in convenient proxy class.
-emb = psiz.model.Proxy(model)
+emb = psiz.models.Proxy(model)
 # Compile the model.
 emb.compile()
 # Fit the embedding model using similarity judgment observations.

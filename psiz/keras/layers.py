@@ -389,7 +389,7 @@ class Attention(LayerRe):
             embeddings_regularizer
         )
 
-        # Handle constraints. TODO
+        # Handle constraints.
         if embeddings_constraint is None:
             embeddings_constraint = psiz.keras.constraints.ProjectAttention(
                 n_dim=self.n_dim

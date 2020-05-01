@@ -20,9 +20,6 @@ Classes:
     EarlyStoppingRe:
     TensorBoardRe:
 
-TODO:
-    * Define interface with reset() method
-
 """
 
 import os
@@ -31,7 +28,12 @@ from tensorflow.keras import callbacks
 
 
 class EarlyStoppingRe(callbacks.EarlyStopping):
-    """Custom early stopping."""
+    """Custom early stopping.
+
+    Arguments:
+        See tf.keras.callbacks.EarlyStopping.
+
+    """
 
     def on_train_begin(self, logs=None):
         """Overload."""
@@ -56,9 +58,8 @@ class EarlyStoppingRe(callbacks.EarlyStopping):
 class TensorBoardRe(callbacks.TensorBoard):
     """Custom TensorBoard callback.
 
-    TODO:
-    log_dir: The location of the logs. The default location is
-            `/tmp/psiz/tensorboard_logs/`.
+    Arguments:
+        kwargs: See tf.keras.callbacks.Tensorboard.
 
     """
 

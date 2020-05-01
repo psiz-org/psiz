@@ -24,6 +24,7 @@ Classes:
     MinMax:
     Center:
     ProjectAttention:
+    NonNegUnitNorm:
 
 """
 
@@ -36,7 +37,12 @@ from tensorflow.keras import constraints
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class GreaterThan(constraints.Constraint):
-    """Constrains the weights to be greater than a value."""
+    """Constrains the weights to be greater than a value.
+
+    Arguments:
+        min_value: The minimum allowed weight value.
+
+    """
 
     def __init__(self, min_value=0.):
         """Initialize."""
@@ -56,7 +62,12 @@ class GreaterThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessThan(constraints.Constraint):
-    """Constrains the weights to be less than a value."""
+    """Constrains the weights to be less than a value.
+
+    Arguments:
+        max_value: The maximum allowed weight value.
+
+    """
 
     def __init__(self, max_value=0.):
         """Initialize."""
@@ -76,7 +87,12 @@ class LessThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class GreaterEqualThan(constraints.Constraint):
-    """Constrains the weights to be greater/equal than a value."""
+    """Constrains the weights to be greater/equal than a value.
+
+    Arguments:
+        min_value: The minimum allowed weight value.
+
+    """
 
     def __init__(self, min_value=0.):
         """Initialize."""
@@ -96,7 +112,12 @@ class GreaterEqualThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessEqualThan(constraints.Constraint):
-    """Constrains the weights to be greater/equal than a value."""
+    """Constrains the weights to be greater/equal than a value.
+
+    Arguments:
+        max_value: The maximum allowed weight value.
+
+    """
 
     def __init__(self, max_value=0.):
         """Initialize."""
@@ -116,7 +137,13 @@ class LessEqualThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class MinMax(constraints.Constraint):
-    """Constrains the weights to be between/equal values."""
+    """Constrains the weights to be between/equal values.
+
+    Arguments:
+        min_value: The minimum allowed weight value.
+        max_value: The maximum allowed weight value.
+
+    """
 
     def __init__(self, min_value, max_value):
         """Initialize."""
@@ -147,6 +174,10 @@ class Center(constraints.Constraint):
     This constraint can be used to improve the numerical stability of
     an embedding.
 
+    Arguments:
+        axis (optional): integer, axis along which to reduce weights
+            in order to compute mean.
+
     """
 
     def __init__(self, axis=0):
@@ -164,7 +195,12 @@ class Center(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class ProjectAttention(constraints.Constraint):
-    """Return projection of attention weights."""
+    """Return projection of attention weights.
+
+    Arguments:
+        n_dim: The dimensionality of the embedding.
+
+    """
 
     def __init__(self, n_dim=None):
         """Initialize."""
@@ -199,7 +235,8 @@ class NonNegUnitNorm(constraints.Constraint):
 
     Arguments:
         p (optional): Type of p-norm (must be  >=1).
-        axis (optional): integer, axis along which to calculate weight norms.
+        axis (optional): integer, axis along which to calculate weight
+            norms.
 
     """
 

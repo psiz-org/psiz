@@ -381,7 +381,7 @@ class Proxy(object):
                 )
             )
 
-    def compile(self, loss=None, **kwargs):
+    def compile(self, **kwargs):
         """Configure the model for training.
 
         Compile defines the loss function, the optimizer and the
@@ -881,13 +881,12 @@ class Rank(tf.keras.Model):
             attention = psiz.keras.layers.Attention(
                 n_dim=self.n_dim, n_group=1
             )
-        else:
-            if attention.n_dim != self.n_dim:
-                raise ValueError(
-                    "The dimensionality (`n_dim`) of the attention layer"
-                    " must agree with the embeding dimensionality of the"
-                    " embedding layer."
-                )
+        if attention.n_dim != self.n_dim:
+            raise ValueError(
+                "The dimensionality (`n_dim`) of the attention layer"
+                " must agree with the embeding dimensionality of the"
+                " embedding layer."
+            )
         self.attention = attention
 
         if kernel is None:

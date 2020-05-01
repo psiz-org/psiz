@@ -48,7 +48,7 @@ class LayerRe(tf.keras.layers.Layer):
 
     """
 
-    def reset_weights(self ):
+    def reset_weights(self):
         """Handle weight resetting."""
         pass
 

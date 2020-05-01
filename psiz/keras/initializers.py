@@ -95,7 +95,8 @@ class RandomAttention(initializers.Initializer):
         concentration: An array-like set of values indicating the
             concentration parameters (i.e., alpha values) governing a
             Dirichlet distribution.
-        scale (optional): Scalar indicating how the Dirichlet sample should be scaled.
+        scale (optional): Scalar indicating how the Dirichlet sample
+            should be scaled.
         seed (optional): A seed for deterministic behavior.
 
     """

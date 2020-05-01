@@ -18,7 +18,8 @@
 
 Classes:
     StimulusNormedL1:
-
+    AttentionEntropy:
+    Squeeze:
 
 """
 
@@ -26,7 +27,12 @@ import tensorflow as tf
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class StimulusNormedL1(tf.keras.regularizers.Regularizer):
-    """Stimulus-normed L1 regularization."""
+    """Stimulus-normed L1 regularization.
+
+    Arguments:
+        l1: Rate of L1 regularization.
+
+    """
 
     def __init__(self, l1=0.):
         """Initialize."""
@@ -43,7 +49,12 @@ class StimulusNormedL1(tf.keras.regularizers.Regularizer):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class AttentionEntropy(tf.keras.regularizers.Regularizer):
-    """Entropy-based regularization to encourage sparsity."""
+    """Entropy-based regularization to encourage sparsity.
+
+    Arguments:
+        rate: Rate at which regularization is applied.
+
+    """
 
     def __init__(self, rate=0.):
         """Initialize."""
@@ -67,7 +78,12 @@ class AttentionEntropy(tf.keras.regularizers.Regularizer):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class Squeeze(tf.keras.regularizers.Regularizer):
-    """Squeeze representation into a low number of dimensions."""
+    """Squeeze representation into a low number of dimensions.
+
+    Arguments:
+        rate: Rate at which regularization is applied.
+
+    """
 
     def __init__(self, rate=0.):
         """Initialize."""

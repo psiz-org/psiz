@@ -24,7 +24,7 @@ Classes:
     InverseKernel: An inverse kernel layer.
     ExponentialKernel: An exponential-family kernel layer.
     HeavyTailedKernel: A heavy-tailed family kernel layer.
-    StudentsTKernel: A Students t-distribution kernel layer.
+    StudentsTKernel: A Student's t-distribution kernel layer.
 
 """
 
@@ -32,8 +32,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-import psiz.keras.constraints
-import psiz.keras.initializers
+import psiz.keras.constraints as pk_constraints
+import psiz.keras.initializers as pk_initializers
 import psiz.keras.regularizers
 
 
@@ -56,7 +56,31 @@ class LayerRe(tf.keras.layers.Layer):
 class EmbeddingRe(LayerRe):
     """Embedding coordinates.
 
-    Handles a placeholder stimulus using stimulus ID "-1".
+    The embeddings are stored in the variable `z` that has
+    shape=(n_stimuli, n_dim). Handles a placeholder stimulus using
+    stimulus ID "-1".
+
+    Arguments:
+        n_stimuli: An integer indicating the total number of unique
+            stimuli that will be embedded. This must be equal to or
+            greater than three.
+        n_dim: An integer indicating the dimensionality of the
+            embeddings. Must be equal to or greater than one.
+        fit_z (optional): Boolean indicating whether the embeddings
+            are trainable.
+        embeddings_initializer (optional): Initializer for the `z`
+            matrix. By default, the coordinates are intialized using a
+            multivariate Gaussian at various scales.
+        embeddings_regularizer (optional): Regularizer function applied
+            to the `z` matrix.
+        embeddings_constraint (optional): Constraint function applied
+            to the `z` matrix. By default, a constraint will be used
+            that zero-centers the centroid of the embedding to promote
+            numerical stability.
+        kwargs: See tf.keras.layers.Layer.
+
+    Raises:
+        ValueError: If `n_stimuli` or `n_dim` arguments are invalid.
 
     """
 
@@ -64,36 +88,7 @@ class EmbeddingRe(LayerRe):
             self, n_stimuli, n_dim, fit_z=True, embeddings_initializer=None,
             embeddings_regularizer=None, embeddings_constraint=None,
             **kwargs):
-        """Initialize an embedding layer.
-
-        The embeddings are stored in the variable `z` that has
-        shape=(n_stimuli, n_dim).
-
-        Arguments:
-            n_stimuli: An integer indicating the total number of unique
-                stimuli that will be embedded. This must be equal to or
-                greater than three.
-            n_dim: An integer indicating the dimensionality
-                of the embeddings. Must be equal to or greater than
-                one.
-            fit_z (optional): Boolean indicating whether the embeddings
-                are trainable.
-            embeddings_initializer (optional): Initializer for the
-                `z` matrix. By default, the coordinates are
-                intialized using a multivariate Gaussian at various
-                scales.
-            embeddings_regularizer (optional): Regularizer function
-                applied to the `z` matrix.
-            embeddings_constraint (optional): Constraint function
-                applied to the `z` matrix. By default, a constraint
-                will be used that zero-centers the centroid of the
-                embedding to promote numerical stability.
-
-        Raises:
-            ValueError: If `n_stimuli` or `n_dim` arguments are
-                invalid.
-
-        """
+        """Initialize."""
         super(EmbeddingRe, self).__init__(**kwargs)
 
         if (n_stimuli < 3):
@@ -109,7 +104,7 @@ class EmbeddingRe(LayerRe):
 
         # Handle initializer.
         if embeddings_initializer is None:
-            embeddings_initializer = psiz.keras.initializers.RandomScaleMVN(
+            embeddings_initializer = pk_initializers.RandomScaleMVN(
                 minval=-4., maxval=-2.
             )
         self.embeddings_initializer = tf.keras.initializers.get(
@@ -123,7 +118,7 @@ class EmbeddingRe(LayerRe):
 
         # Handle constraints.
         if embeddings_constraint is None:
-            embeddings_constraint = psiz.keras.constraints.Center(axis=0)
+            embeddings_constraint = pk_constraints.Center(axis=0)
         self.embeddings_constraint = tf.keras.constraints.get(
             embeddings_constraint
         )
@@ -201,21 +196,22 @@ class EmbeddingRe(LayerRe):
 
 
 class WeightedMinkowski(LayerRe):
-    """Weighted Minkowski distance."""
+    """Weighted Minkowski distance.
+
+    Arguments:
+        fit_rho (optional): Boolean indicating if variable is
+            trainable.
+
+    """
 
     def __init__(self, fit_rho=True, **kwargs):
-        """Initialize.
-
-        Arguments:
-            fit_rho (optional): Boolean
-
-        """
+        """Initialize."""
         super(WeightedMinkowski, self).__init__(**kwargs)
         self.fit_rho = fit_rho
         self.rho = tf.Variable(
             initial_value=self.random_rho(),
             trainable=self.fit_rho, name="rho", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterThan(min_value=1.0)
+            constraint=pk_constraints.GreaterThan(min_value=1.0)
         )
 
     def call(self, inputs):
@@ -254,18 +250,18 @@ class WeightedMinkowski(LayerRe):
 
 
 class SeparateAttention(LayerRe):
-    """Attention Layer."""
+    """Attention Layer.
 
-    def __init__(self, n_dim, n_group=1, fit_group=None, **kwargs):
-        """Initialize.
-
-        Arguments:
-            n_dim: Integer
-            n_group: Integer
-            fit_group: Boolean Array
+    Arguments:
+            n_dim: Integer indicating number of dimensions.
+            n_group: Integer indicating number of groups.
+            fit_group: Boolean array indicating if variable is trainable
                 shape=(n_group,)
 
-        """
+    """
+
+    def __init__(self, n_dim, n_group=1, fit_group=None, **kwargs):
+        """Initialize."""
         super(SeparateAttention, self).__init__(**kwargs)
 
         self.n_dim = n_dim
@@ -289,7 +285,7 @@ class SeparateAttention(LayerRe):
             w_i = tf.Variable(
                 initial_value=initial_value,
                 trainable=fit_group[i_group], name=w_i_name, dtype=K.floatx(),
-                constraint=psiz.keras.constraints.ProjectAttention(n_dim=n_dim)
+                constraint=pk_constraints.ProjectAttention(n_dim=n_dim)
             )
             setattr(self, w_i_name, w_i)
             w_list.append(w_i)
@@ -325,35 +321,34 @@ class SeparateAttention(LayerRe):
         """Random w."""
         scale = tf.constant(self.n_dim, dtype=K.floatx())
         alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
-        return psiz.keras.initializers.RandomAttention(
+        return pk_initializers.RandomAttention(
             alpha, scale
         )(shape=[1, self.n_dim])
 
 
 class Attention(LayerRe):
-    """Attention Layer."""
+    """Attention Layer.
+
+    Arguments:
+        n_dim: An integer indicating the dimensionality of the
+            embeddings. Must be equal to or greater than one.
+        n_group (optional): An integer indicating the number of
+            different population groups in the embedding. A separate
+            set of attention weights will be inferred for each group.
+            Must be equal to or greater than one.
+        fit_group: Boolean indicating if variable is trainable.
+            shape=(n_group,)
+
+    Raises:
+        ValueError: If `n_dim` or `n_group` arguments are invalid.
+
+    """
 
     def __init__(
             self, n_group=1, n_dim=None, fit_group=None,
             embeddings_initializer=None, embeddings_regularizer=None,
             embeddings_constraint=None, **kwargs):
-        """Initialize.
-
-        Arguments:
-            n_dim: An integer indicating the dimensionality
-                of the embeddings. Must be equal to or greater than
-                one.
-            n_group (optional): An integer indicating the number of
-                different population groups in the embedding. A
-                separate set of attention weights will be inferred for
-                each group. Must be equal to or greater than one.
-            fit_group: Boolean Array
-                shape=(n_group,)
-
-        Raises:
-            ValueError: If `n_dim` or `n_group` arguments are invalid.
-
-        """
+        """Initialize."""
         super(Attention, self).__init__(**kwargs)
 
         if (n_group < 1):
@@ -377,7 +372,7 @@ class Attention(LayerRe):
             else:
                 scale = self.n_dim
                 alpha = np.ones((self.n_dim))
-                embeddings_initializer = psiz.keras.initializers.RandomAttention(
+                embeddings_initializer = pk_initializers.RandomAttention(
                     alpha, scale
                 )
         self.embeddings_initializer = tf.keras.initializers.get(
@@ -391,7 +386,7 @@ class Attention(LayerRe):
 
         # Handle constraints.
         if embeddings_constraint is None:
-            embeddings_constraint = psiz.keras.constraints.ProjectAttention(
+            embeddings_constraint = pk_constraints.ProjectAttention(
                 n_dim=self.n_dim
             )
         self.embeddings_constraint = tf.keras.constraints.get(
@@ -459,17 +454,18 @@ class InverseKernel(LayerRe):
     where x and y are n-dimensional vectors. The similarity kernel has
     three free parameters: rho, tau, and mu.
 
+    Arguments:
+        fit_tau (optional): Boolean indicating if variable is
+            trainable.
+        fit_gamma (optional): Boolean indicating if variable is
+            trainable.
+        fit_beta (optional): Boolean indicating if variable is
+            trainable.
+
     """
 
     def __init__(self, fit_rho=True, fit_tau=True, fit_mu=True, **kwargs):
-        """Initialize.
-
-        Arguments:
-            fit_tau (optional): Boolean
-            fit_gamme (optional): Boolean
-            fit_beta (optional): Boolean
-
-        """
+        """Initialize."""
         super(InverseKernel, self).__init__(**kwargs)
         self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
@@ -478,14 +474,14 @@ class InverseKernel(LayerRe):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_mu = fit_mu
         self.mu = tf.Variable(
             initial_value=self.random_mu(),
             trainable=fit_mu, name="mu", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=2.2204e-16)
+            constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16)
         )
 
         self.theta = {
@@ -559,6 +555,16 @@ class ExponentialKernel(LayerRe):
     trainable embeddings and to prevent short-circuiting any
     regularizers placed on the embeddings.
 
+    Arguments:
+        fit_rho (optional): Boolean indicating if variable is
+            trainable.
+        fit_tau (optional): Boolean indicating if variable is
+            trainable.
+        fit_gamma (optional): Boolean indicating if variable is
+            trainable.
+        fit_beta (optional): Boolean indicating if variable is
+            trainable.
+
     References:
         [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency
             effects as a window to generalization: Separating
@@ -581,15 +587,7 @@ class ExponentialKernel(LayerRe):
     def __init__(
             self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=False,
             **kwargs):
-        """Initialize.
-
-        Arguments:
-            fit_rho (optional): Boolean
-            fit_tau (optional): Boolean
-            fit_gamme (optional): Boolean
-            fit_beta (optional): Boolean
-
-        """
+        """Initialize."""
         super(ExponentialKernel, self).__init__(**kwargs)
         self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
@@ -598,14 +596,14 @@ class ExponentialKernel(LayerRe):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=self.fit_tau, name="tau", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_gamma = fit_gamma
         self.gamma = tf.Variable(
             initial_value=self.random_gamma(),
             trainable=self.fit_gamma, name="gamma", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_beta = fit_beta
@@ -616,7 +614,7 @@ class ExponentialKernel(LayerRe):
         self.beta = tf.Variable(
             initial_value=beta_value,
             trainable=self.fit_beta, name="beta", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.theta = {
@@ -702,20 +700,22 @@ class HeavyTailedKernel(LayerRe):
     four free parameters: rho, tau, kappa, and alpha. The
     heavy-tailed family is a generalization of the Student-t family.
 
+    Arguments:
+        fit_rho (optional): Boolean indicating if variable is
+            trainable.
+        fit_tau (optional): Boolean indicating if variable is
+            trainable.
+        fit_kappa (optional): Boolean indicating if variable is
+            trainable.
+        fit_alpha (optional): Boolean indicating if variable is
+            trainable.
+
     """
 
     def __init__(
             self, fit_rho=True, fit_tau=True, fit_kappa=True, fit_alpha=True,
             **kwargs):
-        """Initialize.
-
-        Arguments:
-            fit_rho (optional): Boolean
-            fit_tau (optional): Boolean
-            fit_kappa (optional): Boolean
-            fit_alpha (optional): Boolean
-
-        """
+        """Initialize."""
         super(HeavyTailedKernel, self).__init__(**kwargs)
         self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
@@ -724,21 +724,21 @@ class HeavyTailedKernel(LayerRe):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_kappa = fit_kappa
         self.kappa = tf.Variable(
             initial_value=self.random_kappa(),
             trainable=fit_kappa, name="kappa", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_alpha = fit_alpha
         self.alpha = tf.Variable(
             initial_value=self.random_alpha(),
             trainable=fit_alpha, name="alpha", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.theta = {
@@ -820,6 +820,15 @@ class StudentsTKernel(LayerRe):
     to the data. This behavior can be changed by setting the
     appropriate fit_<var_name>=False.
 
+    Arguments:
+        n_dim:  Integer indicating the dimensionality of the embedding.
+        fit_rho (optional): Boolean indicating if variable is
+            trainable.
+        fit_tau (optional): Boolean indicating if variable is
+            trainable.
+        fit_alpha (optional): Boolean indicating if variable is
+            trainable.
+
     References:
     [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
         triplet embedding. In Machine learning for signal processing
@@ -829,16 +838,9 @@ class StudentsTKernel(LayerRe):
     """
 
     def __init__(
-            self, n_dim=None, fit_rho=True, fit_tau=True, fit_alpha=True, **kwargs):
-        """Initialize.
-
-        Arguments:
-            n_dim:  Integer indicating the dimensionality of the embedding.
-            fit_rho (optional): Boolean
-            fit_tau (optional): Boolean
-            fit_alpha (optional): Boolean
-
-        """
+            self, n_dim=None, fit_rho=True, fit_tau=True, fit_alpha=True,
+            **kwargs):
+        """Initialize."""
         super(StudentsTKernel, self).__init__(**kwargs)
         self.distance = WeightedMinkowski(fit_rho=fit_rho)
         self.rho = self.distance.rho
@@ -849,14 +851,14 @@ class StudentsTKernel(LayerRe):
         self.tau = tf.Variable(
             initial_value=self.random_tau(),
             trainable=fit_tau, name="tau", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=1.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_alpha = fit_alpha
         self.alpha = tf.Variable(
             initial_value=self.random_alpha(),
             trainable=fit_alpha, name="alpha", dtype=K.floatx(),
-            constraint=psiz.keras.constraints.GreaterEqualThan(min_value=0.000001)
+            constraint=pk_constraints.GreaterEqualThan(min_value=0.000001)
         )
 
         self.theta = {
@@ -885,7 +887,8 @@ class StudentsTKernel(LayerRe):
 
         # Student-t family similarity kernel.
         sim_qr = tf.pow(
-            1 + (tf.pow(d_qr, self.tau) / self.alpha), tf.negative(self.alpha + 1)/2
+            1 + (tf.pow(d_qr, self.tau) / self.alpha),
+            tf.negative(self.alpha + 1)/2
         )
         return sim_qr
 

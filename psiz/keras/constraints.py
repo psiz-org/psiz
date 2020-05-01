@@ -211,7 +211,7 @@ class NonNegUnitNorm(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         # Enforce nonnegative.
-        w = w * math_ops.cast(math_ops.greater_equal(w, 0.), K.floatx())
+        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
 
         # Enforce unit norm.
         return w / (

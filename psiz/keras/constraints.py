@@ -167,6 +167,11 @@ class ProjectAttention(constraints.Constraint):
 
     def __call__(self, attention_0):
         """Call."""
+        # First, make sure weights are not negative.
+        attention_0 = attention_0 * tf.cast(
+            tf.math.greater_equal(attention_0, 0.), K.floatx()
+        )
+
         attention_1 = tf.divide(
             tf.reduce_sum(attention_0, axis=1, keepdims=True), self.n_dim
         )

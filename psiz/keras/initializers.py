@@ -37,13 +37,13 @@ class RandomScaleMVN(initializers.Initializer):
     Arguments:
         mean: A python scalar or a scalar tensor. Mean of the random
             values to generate.
+        stddev: A scalar indicating the initial standard deviation.
         minval: Minimum value of a uniform random sampler for each
             dimension.
         maxval: Maximum value of a uniform random sampler for each
             dimension.
-        seed: A Python integer. Used to create random seeds. See
+        seed (optional): A Python integer. Used to create random seeds. See
         `tf.set_random_seed` for behavior.
-        dtype: The data type. Only floating point types are supported.
 
     """
 
@@ -92,11 +92,11 @@ class RandomAttention(initializers.Initializer):
     """Initializer that generates tensors for attention weights.
 
     Arguments:
-        concentration: An array indicating the concentration
-            parameters (i.e., alpha values) governing a Dirichlet
-            distribution.
-        scale: Scalar indicating how the Dirichlet sample should be scaled.
-        dtype: The data type. Only floating point types are supported.
+        concentration: An array-like set of values indicating the
+            concentration parameters (i.e., alpha values) governing a
+            Dirichlet distribution.
+        scale (optional): Scalar indicating how the Dirichlet sample should be scaled.
+        seed (optional): A seed for deterministic behavior.
 
     """
 

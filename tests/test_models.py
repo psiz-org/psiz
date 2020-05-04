@@ -24,6 +24,7 @@ Todo
     * test layers
     * test inflate points
     * test FitRecord sort
+    * remove ProjectAttention, test NonNegNorm
 
 """
 

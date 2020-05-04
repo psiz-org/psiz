@@ -90,22 +90,22 @@ class DocketGenerator(object):
 
 
 class RandomGenerator(DocketGenerator):
-    """A trial generator that independently samples trials."""
+    """A trial generator that independently samples trials.
+
+    Arguments:
+        n_stimuli: A scalar indicating the total number of unique
+            stimuli.
+        n_reference (optional): A scalar indicating the number of
+            references for each trial.
+        n_select (optional): A scalar indicating the number of
+            selections an agent must make.
+        is_ranked (optional): Boolean indicating whether an agent must
+            make ranked selections.
+
+    """
 
     def __init__(self, n_stimuli, n_reference=2, n_select=1, is_ranked=True):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: A scalar indicating the total number of unique
-                stimuli.
-            n_reference (optional): A scalar indicating the number of
-                references for each trial.
-            n_select (optional): A scalar indicating the number of
-                selections an agent must make.
-            is_ranked (optional): Boolean indicating whether an agent
-                must make ranked selections.
-
-        """
+        """Initialize."""
         DocketGenerator.__init__(self)
 
         self.n_stimuli = n_stimuli
@@ -148,6 +148,32 @@ class ActiveGenerator(DocketGenerator):
     number of heuristics are used to guide the selection processes
     and narrow the search space.
 
+    Arguments:
+        n_stimuli: A scalar indicating the total number of unique
+            stimuli.
+        n_reference (optional): A scalar indicating the number of
+            references for each trial.
+        n_select (optional): A scalar indicating the number of
+            selections an agent must make.
+        is_ranked (optional): Boolean indicating whether an agent
+        max_query (optional): A scalar parameter that governs heuristic
+            behavior. The value indicates the maximum number of unique
+            query stimuli that should be chosen. By default, this is
+            equal `n_stimuli` (i.e., no heuristic used).
+        max_neighbor (optional): A scalar parameter that governs
+            heuristic behavior. When selecting references, this value
+            determines which stimuli can be selected as references for
+            a particular query stimulus. Only the stimuli that are no
+            more than max_neighbor away will be considered. Increasing
+            the value above the default is likely to increase
+            computational time. It is not recommended to use a value
+            smaller than the default.
+        max_candidate (optional): A scalar parameter that governs
+            heuristic behavior. Given a query stimulus, this parameter
+            determines how many candidate trials will be considered. In
+            general, more is better, but you may be limited by time and
+            RAM. Must be greater than zero.
+
     Attributes:
         n_stimuli:
         max_query:
@@ -162,37 +188,7 @@ class ActiveGenerator(DocketGenerator):
     def __init__(
             self, n_stimuli, n_reference=2, n_select=1, is_ranked=True,
             max_query=None, max_neighbor=1000, max_candidate=1000):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: A scalar indicating the total number of
-                unique stimuli.
-            n_reference (optional): A scalar indicating the number of
-                references for each trial.
-            n_select (optional): A scalar indicating the number of
-                selections an agent must make.
-            is_ranked (optional): Boolean indicating whether an agent
-            max_query (optional): A scalar parameter that governs
-                heuristic behavior. The value indicates the maximum
-                number of unique query stimuli that should be chosen.
-                By default, this is equal `n_stimuli` (i.e., no
-                heuristic used).
-            max_neighbor (optional): A scalar parameter that governs
-                heuristic behavior. When selecting references, this
-                value determines which stimuli can be selected as
-                references for a particular query stimulus. Only the
-                stimuli that are no more than max_neighbor away will be
-                considered. Increasing the value above the default is
-                likely to increase computational time. It is not
-                recommended to use a value smaller than the default.
-            max_candidate (optional): A scalar parameter that
-                governs heuristic behavior. Given a query stimulus,
-                this parameter determines how many candidate trials
-                will be considered. In general, more is better, but
-                you may be limited by time and RAM. Must be greater
-                than zero.
-
-        """
+        """Initialize."""
         DocketGenerator.__init__(self)
 
         self.n_stimuli = n_stimuli

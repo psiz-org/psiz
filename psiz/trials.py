@@ -73,6 +73,14 @@ class Trials(metaclass=ABCMeta):
     concrete subclass, the similarity trials represent to-be-shown
     trials (i.e., a docket) or judged trials (i.e., observations).
 
+    Arguments:
+        stimulus_set: An integer matrix containing indices that
+            indicate the set of stimuli used in each trial. Each row
+            indicates the stimuli used in one trial. The value '-1' can
+            be used as a masking placeholder to indicate non-existent
+            stimuli if each trial has a different number of stimuli.
+            shape = (n_trial, max_n_stimuli_per_trial)
+
     Attributes:
         n_trial: An integer indicating the number of trials.
         stimulus_set: An integer matrix containing indices that
@@ -98,18 +106,7 @@ class Trials(metaclass=ABCMeta):
     """
 
     def __init__(self, stimulus_set):
-        """Initialize.
-
-        Arguments:
-            stimulus_set: An integer matrix containing indices that
-                indicate the set of stimuli used in each trial. Each
-                row indicates the stimuli used in one trial. The value
-                '-1' can be used as a masking placeholder to indicate
-                non-existent stimuli if each trial has a different
-                number of stimuli.
-                shape = (n_trial, max_n_stimuli_per_trial)
-
-        """
+        """Initialize."""
         stimulus_set = self._check_stimulus_set(stimulus_set)
         self.stimulus_set = stimulus_set
         self.n_trial = stimulus_set.shape[0]
@@ -199,31 +196,31 @@ class Trials(metaclass=ABCMeta):
 
 
 class RankTrials(Trials, metaclass=ABCMeta):
-    """Abstract base class for rank-type trials."""
+    """Abstract base class for rank-type trials.
+
+    Arguments:
+        stimulus_set: An integer matrix containing indices that
+            indicate the set of stimuli used in each trial. Each row
+            indicates the stimuli used in one trial. The first column
+            is the query stimulus. The remaining, columns indicate
+            reference stimuli. It is assumed that stimuli indices are
+            composed of integers from [0, N-1], where N is the number
+            of unique stimuli. The value -1 can be used as a
+            placeholder for non-existent references.
+            shape = (n_trial, max(n_reference) + 1)
+        n_select (optional): An integer array indicating the number of
+            references selected in each trial. Values must be greater
+            than zero but less than the number of references for the
+            corresponding trial.
+            shape = n_trial,)
+        is_ranked (optional): A Boolean array indicating which trials
+            require reference selections to be ranked.
+            shape = (n_trial,)
+
+    """
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None):
-        """Initialize.
-
-        Arguments:
-            stimulus_set: An integer matrix containing indices that
-                indicate the set of stimuli used in each trial. Each
-                row indicates the stimuli used in one trial. The first
-                column is the query stimulus. The remaining, columns
-                indicate reference stimuli. It is assumed that stimuli
-                indices are composed of integers from [0, N-1], where N
-                is the number of unique stimuli. The value -1 can be
-                used as a placeholder for non-existent references.
-                shape = (n_trial, max(n_reference) + 1)
-            n_select (optional): An integer array indicating the number
-                of references selected in each trial. Values must be
-                greater than zero but less than the number of
-                references for the corresponding trial.
-                shape = n_trial,)
-            is_ranked (optional): A Boolean array indicating which
-                trials require reference selections to be ranked.
-                shape = (n_trial,)
-
-        """
+        """Initialize."""
         Trials.__init__(self, stimulus_set)
 
         n_reference = self._infer_n_reference(stimulus_set)
@@ -335,6 +332,12 @@ class RankDocket(RankTrials):
     The attributes and behavior of RankDocket is largely inherited
     from RankTrials.
 
+    Arguments:
+        stimulus_set: The order of the reference indices is not
+            important. See Trials.
+        n_select (optional): See Trials.
+        is_ranked (optional): See Trials.
+
     Attributes:
         n_trial: An integer indicating the number of trials.
         stimulus_set: An integer matrix containing indices that
@@ -384,17 +387,7 @@ class RankDocket(RankTrials):
     """
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None):
-        """Initialize.
-
-        Extends initialization of RankTrials.
-
-        Arguments:
-            stimulus_set: The order of the reference indices is not
-                important. See Trials.
-            n_select (optional): See Trials.
-            is_ranked (optional): See Trials.
-
-        """
+        """Initialize."""
         RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Determine unique display configurations.
@@ -499,6 +492,38 @@ class RankObservations(RankTrials):
     The attributes and behavior of RankObservations are largely inherited
     from RankTrials.
 
+    Extends initialization of Trials.
+
+    Arguments:
+        stimulus_set: The order of reference indices is important. An
+            agent's selected references are listed first (in order of
+            selection if the trial is ranked) and remaining unselected
+            references are listed in any order. See Trials.
+        n_select (optional): See Trials.
+        is_ranked (optional): See Trials.
+        group_id (optional): An integer array indicating the group
+            membership of each trial. It is assumed that group_id is
+            composed of integers from [0, M-1] where M is the total
+            number of groups.
+            shape = (n_trial,)
+        agent_id: An integer array indicating the agent ID of a trial.
+            It is assumed that all IDs are non-negative and that
+            observations with the same agent ID were judged by a single
+            agent.
+            shape = (n_trial,)
+        session_id: An integer array indicating the session ID of a
+            trial. It is assumed that all IDs are non-negative. Trials
+            with different session IDs were obtained during different
+            sessions.
+            shape = (n_trial,)
+        weight (optional): A float array indicating the inference
+            weight of each trial.
+            shape = (n_trial,1)
+        rt_ms(optional): An array indicating the response time (in
+            milliseconds) of the agent for each trial.
+            shape = (n_trial,1)
+
+
     Attributes:
         n_trial: An integer indicating the number of trials.
         stimulus_set: An integer matrix containing indices that
@@ -579,41 +604,7 @@ class RankObservations(RankTrials):
     def __init__(self, stimulus_set, n_select=None, is_ranked=None,
                  group_id=None, agent_id=None, session_id=None, weight=None,
                  rt_ms=None):
-        """Initialize.
-
-        Extends initialization of Trials.
-
-        Arguments:
-            stimulus_set: The order of reference indices is important.
-                An agent's selected references are listed first (in
-                order of selection if the trial is ranked) and
-                remaining unselected references are listed in any
-                order. See Trials.
-            n_select (optional): See Trials.
-            is_ranked (optional): See Trials.
-            group_id (optional): An integer array indicating the group
-                membership of each trial. It is assumed that group_id
-                is composed of integers from [0, M-1] where M is the
-                total number of groups.
-                shape = (n_trial,)
-            agent_id: An integer array indicating the agent ID of a
-                trial. It is assumed that all IDs are non-negative and
-                that observations with the same agent ID were judged by
-                a single agent.
-                shape = (n_trial,)
-            session_id: An integer array indicating the session ID of a
-                trial. It is assumed that all IDs are non-negative.
-                Trials with different session IDs were obtained during
-                different sessions.
-            shape = (n_trial,)
-            weight (optional): A float array indicating the inference
-                weight of each trial.
-                shape = (n_trial,1)
-            rt_ms(optional): An array indicating the response time
-                (in milliseconds) of the agent for each trial.
-                shape = (n_trial,1)
-
-        """
+        """Initialize."""
         RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Handle default settings.

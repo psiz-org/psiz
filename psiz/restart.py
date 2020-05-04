@@ -38,6 +38,18 @@ import psiz.utils
 class Restarter(object):
     """Object for handling restarts.
 
+    Arguments:
+        model: A compiled TensorFlow model.
+        monitor: The value to monitor and use as a basis for selecting
+            the best restarts.
+        n_restart (optional): An integer indicating the number of
+            independent restarts to perform.
+        n_record (optional): An integer indicating the number of best
+            performing restarts to record.
+        do_init (optional): A Boolean variable indicating whether the
+            initial model and it's corresponding performance should be
+            included as a candidate in the set of restarts.
+
     Attributes:
         n_restart: An integer specifying the number of
             restarts to use for the inference procedure. Since the
@@ -53,22 +65,7 @@ class Restarter(object):
 
     def __init__(
             self, model, monitor, n_restart=10, n_record=1, do_init=False):
-        """Initialize.
-
-        Arguments:
-            model: A compiled TensorFlow model.
-            monitor: The value to monitor and use as a basis for
-                selecting the best restarts.
-            n_restart (optional): An integer indicating the number of
-                independent restarts to perform.
-            n_record (optional): An integer indicating the number of
-                best performing restarts to record.
-            do_init (optional): A Boolean variable indicating whether
-                the initial model and it's corresponding performance
-                should be included as a candidate in the set of
-                restarts.
-
-        """
+        """Initialize."""
         # Make sure n_record is not greater than n_restart.
         n_record = np.minimum(n_record, n_restart)
 
@@ -174,7 +171,8 @@ class Restarter(object):
         if (verbose > 1):
             print(
                 '    Restart Summary\n'
-                '    n_valid_restart {0:.0f} | total_duration: {1:.0f} s'.format(
+                '    n_valid_restart {0:.0f} | '
+                'total_duration: {1:.0f} s'.format(
                     tracker.count, fit_duration
                 )
             )
@@ -205,6 +203,12 @@ class Restarter(object):
 class FitTracker(object):
     """Class for keeping track of best restarts.
 
+    Arguments:
+        n_record: Integer indicating the number of top restarts to
+            record.
+        monitor: String indicating the value to use in order to select
+            the best performing restarts.
+
     Methods:
         update_state: Update the records with the provided restart.
         sort: Sort the records from best to worst.
@@ -212,15 +216,7 @@ class FitTracker(object):
     """
 
     def __init__(self, n_record, monitor):
-        """Initialize.
-
-        Arguments:
-            n_record: Integer indicating the number of top restarts
-                to record.
-            monitor: String indicating the value to use in order to
-                select the best performing restarts.
-
-        """
+        """Initialize."""
         self.n_record = n_record
         self.monitor = monitor
         self.record = {

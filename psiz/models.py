@@ -59,6 +59,10 @@ from tensorflow.keras.callbacks import History
 from tensorflow.python.keras.callbacks import configure_callbacks
 from tensorflow.keras.constraints import Constraint
 from tensorflow.python.keras.saving import hdf5_format
+from tensorflow.python.keras.engine import data_adapter  # TODO
+from tensorflow.python.eager import backprop  # TODO
+from tensorflow.keras.losses import Loss  # TODO
+from tensorflow.keras.metrics import Metric  # TODO
 
 import psiz.keras.layers
 import psiz.trials
@@ -460,10 +464,10 @@ class Proxy(object):
 
         # Handle restarts.
         restarter = psiz.restart.Restarter(
-            self.model, 'val_loss', n_restart=n_restart
+            self.model, monitor=monitor, n_restart=n_restart
         )
         restart_record = restarter.fit(
-            ds_obs_train, validation_data=ds_obs_val, **kwargs
+            x=ds_obs_train, validation_data=ds_obs_val, **kwargs
         )
 
         return restart_record
@@ -492,7 +496,7 @@ class Proxy(object):
             batch_size = obs.n_trial
 
         ds_obs = ds_obs.batch(batch_size, drop_remainder=False)
-        return self.model.evaluate(ds_obs)
+        return self.model.evaluate(x=ds_obs)
 
     def outcome_probability(
             self, docket, group_id=None, z=None, unaltered_only=False):
@@ -957,231 +961,62 @@ class Rank(tf.keras.Model):
         self.kernel.reset_weights()
 
     def compile(self, loss=None, **kwargs):
-        """Intercept loss and call default compile."""
+        """Intercept and set loss, then and call compile."""
         if loss is None:
-            loss = _nll_loss
+            loss = NegLogLikelihood()
         super().compile(loss=loss, **kwargs)
 
-    def fit(
-            self, obs_train, validation_data=None, epochs=1000,
-            initial_epoch=0, callbacks=None, verbose=0):
-        """Override fit.
+    def train_step(self, data):
+        """Logic for one training step.
 
         Arguments:
-            obs_train: A tf.data.Dataset formatting of a
-                RankObservations object representing the observed data
-                used to train the model.
-            validation_data (optional): A tf.data.Dataset formmating of
-                a RankObservations object representing the observed
-                data used to validate the model.
-            epochs (optional): The number of epochs to perform.
-            initial_epoch (optional): The initial epoch.
-            callbacks (optional): A list of TensorFlow callbacks.
-            verbose (optional): An integer specifying the verbosity of
-                printed output. If zero, nothing is printed. Increasing
-                integers display an increasing amount of information.
+            data: A nested structure of `Tensor`s.
 
         Returns:
-            history: A tf.callbacks.History object.
+            A `dict` containing values that will be passed to
+            `tf.keras.callbacks.CallbackList.on_train_batch_end`. Typically,
+            the values of the `Model`'s metrics are returned. Example:
+            `{'loss': 0.2, 'accuracy': 0.7}`.
 
         """
-        fit_start_time_s = time.time()
+        data = data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
 
-        if validation_data is not None:
-            do_validation = True
-        else:
-            do_validation = False
-
-        model = self
-
-        callback_list = configure_callbacks(
-            callbacks,
-            model,
-            do_validation=False,
-            batch_size=None,
-            epochs=None,
-            steps_per_epoch=None,
-            samples=None,
-            verbose=0,
-            count_mode='steps'
-        )
-
-        logs = {}
-        metric_train_loss = tf.keras.metrics.Mean(name='loss')
-        metric_val_loss = tf.keras.metrics.Mean(name='val_loss')
-
-        # NOTE: Must bring into local scope in order for optimizer state
-        # to update appropriately.
-        optimizer = self.optimizer
-
-        # NOTE: Trainable attention weights does not work with eager
-        # execution.
-        @tf.function
-        def train_step(inputs):
-            # Compute training loss and gradients.
-            with tf.GradientTape() as grad_tape:
-                probs = model(inputs[0])
-                # Loss value for this minibatch.
-                loss_value = self.loss(probs, inputs[2])
-                # Add extra losses created during this forward pass.
-                loss_value += sum(model.losses)
-
-            gradients = grad_tape.gradient(
-                loss_value, model.trainable_variables
+        # NOTE: During computation of gradients, IndexedSlices are
+        # created which generates a TensorFlow warning. I cannot
+        # find an implementation that avoids IndexedSlices. The
+        # following catch environment silences the offending
+        # warning.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                'ignore', category=UserWarning,
+                module=r'.*indexed_slices'
             )
-            # NOTE: This assumes equal number of samples for each minibatch.
-            # The computed mean will deviate from correct if minibatch sizes
-            # vary.
-            metric_train_loss.update_state(loss_value)
-
-            # NOTE: There is an open issue for using constraints with
-            # embedding-like layers (e.g., tf.keras.layers.Embedding,
-            # psiz.keras.layers.EmbeddingRe, psiz.keras.layers.Attention (see:
-            # https://github.com/tensorflow/tensorflow/issues/33755). There
-            # are also issues when using Eager Execution. A work-around is
-            # to convert the problematic gradients, which are returned as
-            # tf.IndexedSlices, into dense tensors.
-            for var_idx, var in enumerate(model.trainable_variables):
-                if var.name == 'z:0' or var.name == 'w:0':
-                    gradients[var_idx] = tf.convert_to_tensor(
-                        gradients[var_idx]
-                    )
-
-            # Apply gradients (subject to constraints).
-            optimizer.apply_gradients(
-                zip(gradients, model.trainable_variables)
-            )
-
-        @tf.function
-        def eval_val_step(inputs):
-            probs = model(inputs[0])
-            # Loss value for this minibatch.
-            loss_value = self.loss(probs, inputs[2])
-            metric_val_loss.update_state(loss_value)
-
-        @tf.function
-        def eval_train_step(inputs):
-            probs = model(inputs[0])
-            # Loss value for this minibatch.
-            loss_value = self.loss(probs, inputs[2])
-            # Add extra losses created during this forward pass.
-            loss_value += sum(model.losses)
-            metric_train_loss.update_state(loss_value)
-
-        callback_list.on_train_begin(logs=None)
-
-        epoch_start_time_s = time.time()
-        for epoch in range(initial_epoch, epochs):
-            if callback_list.model.stop_training:
-                epoch = epoch - 1
-                break
-            else:
-                callback_list.on_epoch_begin(epoch, logs=None)
-
-                # Reset metrics at the start of each epoch.
-                metric_train_loss.reset_states()
-                metric_val_loss.reset_states()
-
-                # Compute training loss and update variables.
-                # NOTE: During computation of gradients, IndexedSlices are
-                # created which generates a TensorFlow warning. I cannot
-                # find an implementation that avoids IndexedSlices. The
-                # following catch environment silences the offending
-                # warning.
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        'ignore', category=UserWarning,
-                        module=r'.*indexed_slices'
-                    )
-                    for batch_idx, batch_train in enumerate(obs_train):
-                        logs['size'] = batch_train[0]['stimulus_set'].shape[0]
-                        logs['num_steps'] = 1
-                        callback_list.on_train_batch_begin(
-                            batch_idx, logs=logs
-                        )
-                        train_step(batch_train)
-                        logs['loss'] = metric_train_loss.result().numpy()
-                        callback_list.on_train_batch_end(
-                            batch_idx, logs=logs
+            with backprop.GradientTape() as tape:
+                y_pred = self(x, training=True)
+                loss = self.compiled_loss(
+                    y, y_pred, sample_weight, regularization_losses=self.losses
+                )
+                # Custom training steps:
+                trainable_variables = self.trainable_variables
+                gradients = tape.gradient(loss, trainable_variables)
+                # NOTE: There is an open issue for using constraints with
+                # embedding-like layers (e.g., tf.keras.layers.Embedding,
+                # psiz.keras.layers.EmbeddingRe, psiz.keras.layers.Attention (see:
+                # https://github.com/tensorflow/tensorflow/issues/33755). There
+                # are also issues when using Eager Execution. A work-around is
+                # to convert the problematic gradients, which are returned as
+                # tf.IndexedSlices, into dense tensors.
+                for var_idx, var in enumerate(self.trainable_variables):
+                    if var.name == 'z:0' or var.name == 'w:0':
+                        gradients[var_idx] = tf.convert_to_tensor(
+                            gradients[var_idx]
                         )
 
-                # Compute validation loss.
-                # NOTE: The method `on_test_batch_begin` and
-                # `on_test_batch_end` are not called because these are
-                # intended to be used inside the `predict` method.
-                if do_validation:
-                    for batch_idx, batch_val in enumerate(validation_data):
-                        eval_val_step(batch_val)
-                        logs['val_loss'] = metric_val_loss.result().numpy()
+                self.optimizer.apply_gradients(zip(gradients, trainable_variables))
 
-                if verbose > 3:
-                    if epoch % self.log_freq == 0:
-                        _print_epoch_logs(epoch, logs)
-
-                callback_list.on_epoch_end(epoch, logs=logs)
-        epoch_stop_time_s = time.time() - epoch_start_time_s
-        callback_list.on_train_end(logs=logs)
-
-        # Add final model metrics to a `final_logs` dictionary.
-        # NOTE: If there is an early stopping callback with
-        # restore_best_weights, then the final evaluation will use
-        # the best weights.
-        final_logs = {}
-
-        # Reset metrics.
-        metric_train_loss.reset_states()
-        metric_val_loss.reset_states()
-
-        for batch_train in obs_train:
-            eval_train_step(batch_train)
-        final_logs['loss'] = metric_train_loss.result().numpy()
-
-        if do_validation:
-            for batch_val in validation_data:
-                eval_val_step(batch_val)
-            final_logs['val_loss'] = metric_val_loss.result().numpy()
-
-        # Add time information.
-        total_duration = time.time() - fit_start_time_s
-        final_logs['total_duration_s'] = int(total_duration)
-        final_logs['ms_per_epoch'] = int(1000 * epoch_stop_time_s / epoch)
-
-        if (verbose > 2):
-            _print_epoch_logs(epoch, final_logs)
-            print('')
-
-        # Add epoch after print statement.
-        final_logs['epoch'] = epoch
-
-        # Piggy-back on History object.
-        model.history.final = final_logs
-
-        return model.history
-
-    def evaluate(self, obs):
-        """Overide evaluate.
-
-        Arguments:
-            obs: A tf.data.Dataset formatting of a
-                RankObservations object representing the observed data
-                used to evaluate the model.
-
-        """
-        model = self
-        metric_loss = tf.keras.metrics.Mean(name='loss')
-
-        @tf.function
-        def eval_step(inputs):
-            # Compute validation loss.
-            probs = model(inputs[0])
-            loss_value = self.loss(probs, inputs[2])
-            metric_loss.update_state(loss_value)
-
-        for batch in obs:
-            eval_step(batch)
-        loss = metric_loss.result()
-
-        return loss
+        self.compiled_metrics.update_state(y, y_pred, sample_weight)
+        return {m.name: m.result() for m in self.metrics}
 
     def get_config(self):
         """Return model configuration."""
@@ -1543,15 +1378,24 @@ def _print_epoch_logs(epoch, logs):
     print(msg)
 
 
-def _nll_loss(y_pred, sample_weight):
-    """Compute model loss given observation probabilities."""
-    # Convert to (weighted) log probabilities.
-    y_pred = _safe_neg_log_prob(y_pred)
-    y_pred = tf.multiply(sample_weight, y_pred)
+class NegLogLikelihood(Loss):
+    """Negative log-likelihood loss."""
 
-    # Get trial mean.
-    loss = tf.reduce_mean(y_pred, axis=0)
-    return loss
+    def call(self, y_true, y_pred):
+        """Call."""
+        # Convert to (weighted) log probabilities.
+        return _safe_neg_log_prob(y_pred)
+
+
+# def _nll_loss(y_pred, sample_weight):
+#     """Compute model loss given observation probabilities."""
+#     # Convert to (weighted) log probabilities.
+#     y_pred = _safe_neg_log_prob(y_pred)
+#     y_pred = tf.multiply(sample_weight, y_pred)
+
+#     # Get trial mean.
+#     loss = tf.reduce_mean(y_pred, axis=0)
+#     return loss
 
 
 def _safe_neg_log_prob(probs):

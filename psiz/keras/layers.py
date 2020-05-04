@@ -285,7 +285,7 @@ class SeparateAttention(LayerRe):
             w_i = tf.Variable(
                 initial_value=initial_value,
                 trainable=fit_group[i_group], name=w_i_name, dtype=K.floatx(),
-                constraint=pk_constraints.ProjectAttention(n_dim=n_dim)
+                constraint=pk_constraints.NonNegNorm(scale=n_dim)
             )
             setattr(self, w_i_name, w_i)
             w_list.append(w_i)
@@ -386,7 +386,7 @@ class Attention(LayerRe):
 
         # Handle constraints.
         if embeddings_constraint is None:
-            embeddings_constraint = pk_constraints.ProjectAttention(
+            embeddings_constraint = pk_constraints.NonNegNorm(
                 n_dim=self.n_dim
             )
         self.embeddings_constraint = tf.keras.constraints.get(

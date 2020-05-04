@@ -23,7 +23,6 @@ Classes:
     LessEqualThan:
     MinMax:
     Center:
-    ProjectAttention:
     NonNegNorm:
 
 """
@@ -191,39 +190,6 @@ class Center(constraints.Constraint):
     def get_config(self):
         """Return configuration."""
         return {'axis': self.axis}
-
-
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
-class ProjectAttention(constraints.Constraint):
-    """Return projection of attention weights.
-
-    Arguments:
-        n_dim: The dimensionality of the embedding.
-
-    """
-
-    def __init__(self, n_dim=None):
-        """Initialize."""
-        self.n_dim = n_dim
-
-    def __call__(self, attention_0):
-        """Call."""
-        # First, make sure weights are not negative.
-        attention_0 = attention_0 * tf.cast(
-            tf.math.greater_equal(attention_0, 0.), K.floatx()
-        )
-
-        attention_1 = tf.divide(
-            tf.reduce_sum(attention_0, axis=1, keepdims=True), self.n_dim
-        )
-        attention_proj = tf.divide(
-            attention_0, attention_1
-        )
-        return attention_proj
-
-    def get_config(self):
-        """Return configuration."""
-        return {'n_dim': self.n_dim}
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')

@@ -75,7 +75,9 @@ class Restarter(object):
         self.n_record = n_record
         self.do_init = do_init
 
-    def fit(self, x, callbacks=[],  verbose=0, **kwargs):
+    def fit(
+            self, x=None, validation_data=None, callbacks=[], verbose=0,
+            **kwargs):
         """Fit the embedding model to the observations using restarts.
 
         Arguments:
@@ -97,10 +99,8 @@ class Restarter(object):
 
         # TODO
         # if (verbose > 0):
-        #     print('[psiz] fitting embedding...')
-        # if (verbose > 1):
         #     print(
-        #         '    Settings:'
+        #         '    Restart Settings:'
         #         ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
         #         ' | n_obs_train: {3} | n_obs_val: {4}'.format(
         #             self.n_stimuli, self.n_dim, self.n_group,
@@ -124,7 +124,7 @@ class Restarter(object):
         #         )
         #         print('')
 
-        if verbose > 0 and verbose < 3:
+        if verbose == 1:
             progbar = psiz.utils.ProgressBar(
                 self.n_restart, prefix='Progress:', length=50
             )
@@ -132,35 +132,54 @@ class Restarter(object):
 
         # Run multiple restarts of embedding algorithm.
         for i_restart in range(self.n_restart):
-            if (verbose > 2):
-                print('        Restart {0}'.format(i_restart))
-            if verbose > 0 and verbose < 3:
+            if verbose == 1:
                 progbar.update(i_restart + 1)
-
-            # TODO should datasets be shuffled?
+            elif verbose > 1:
+                print('        Restart {0}'.format(i_restart))
 
             # Reset trainable weights.
             self.model.reset_weights()
-            # Reset optimizer state.
-            self.model.optimizer = type(
-                self.model.optimizer
-            ).from_config(self.optimizer_config)
+            # Reset metrics.
+            self.model.reset_metrics()
+            # Reset optimizer
+            self.model.reset_optimizer()
+            # # Compile model with fresh optimizer. TODO
+            # optimizer = type(self.model.optimizer).from_config(
+            #     self.optimizer_config
+            # )
+            # self.model.compile(optimizer=optimizer)
+
             # Reset callbacks
             for callback in callbacks:
                 callback.reset(i_restart)
 
+            fit_start_time_s = time.time()
+            # TODO clean up unnecessary kwargs (x and whatever else)
             history = self.model.fit(
-                x, callbacks=callbacks, verbose=verbose, **kwargs
+                x=x, validation_data=validation_data, callbacks=callbacks,
+                verbose=verbose-1, **kwargs
             )
+            total_duration = time.time() - fit_start_time_s
+            final_logs = {}
+            n_epoch = np.max(history.epoch) - np.min(history.epoch)
+            final_logs['epoch'] = n_epoch
+            final_logs['total_duration_s'] = int(total_duration)
+            final_logs['ms_per_epoch'] = int(1000 * total_duration / n_epoch)
+            final_logs['loss'] = self.model.evaluate(x=x, verbose=verbose-1)
+            if validation_data is not None:
+                final_logs['val_loss'] = self.model.evaluate(
+                    x=validation_data, verbose=verbose-1
+                )
+
             weights = self.model.get_weights()  # TODO check
 
             # Update fit record with latest restart.
-            tracker.update_state(history.final, weights)
+            tracker.update_state(final_logs, weights)
 
         # Sort records from best to worst and grab best.
         tracker.sort()
         loss_train_best = tracker.record['loss'][0]
-        loss_val_best = tracker.record['val_loss'][0]
+        loss_val_best = tracker.record['val_loss'][0]  # TODO conditional
         epoch_best = tracker.record['epoch'][0]
         self.model.set_weights(tracker.record['weights'][0])  # TODO check
 
@@ -168,7 +187,7 @@ class Restarter(object):
         fit_duration = time.time() - start_time_s
         summary = tracker.result()
 
-        if (verbose > 1):
+        if (verbose > 0):
             print(
                 '    Restart Summary\n'
                 '    n_valid_restart {0:.0f} | '
@@ -193,7 +212,7 @@ class Restarter(object):
                 )
             )
 
-            if not tracker.beat_init:
+            if not tracker.beat_init:  # TODO
                 print('    Did not beat initialization.')
             print()
 

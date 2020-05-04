@@ -387,7 +387,7 @@ class Attention(LayerRe):
         # Handle constraints.
         if embeddings_constraint is None:
             embeddings_constraint = pk_constraints.NonNegNorm(
-                n_dim=self.n_dim
+                scale=self.n_dim
             )
         self.embeddings_constraint = tf.keras.constraints.get(
             embeddings_constraint

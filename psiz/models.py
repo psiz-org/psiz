@@ -956,15 +956,11 @@ class Rank(tf.keras.Model):
         self.attention.reset_weights()
         self.kernel.reset_weights()
 
-    def compile(self, optimizer=None, loss=None):
-        """Override compile."""
+    def compile(self, loss=None, **kwargs):
+        """Intercept loss and call default compile."""
         if loss is None:
             loss = _nll_loss
-        self.loss = loss
-
-        if optimizer is None:
-            optimizer = tf.optimizers.RMSprop()
-        self.optimizer = optimizer
+        super().compile(loss=loss, **kwargs)
 
     def fit(
             self, obs_train, validation_data=None, epochs=1000,

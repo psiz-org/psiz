@@ -37,7 +37,7 @@ import psiz.utils
 
 
 class Restarter(object):
-    """Object for handling restarts.
+    """Object for handling TensorFlow model restarts.
 
     Arguments:
         model: A compiled TensorFlow model.

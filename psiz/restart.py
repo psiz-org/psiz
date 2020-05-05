@@ -78,7 +78,7 @@ class Restarter(object):
         self.optimizer = compile_kwargs.pop(
             'optimizer', tensorflow.keras.optimizers.RMSprop()
         )
-        self.compile_kwargs = compile_kwargs
+        self.stateless_compile_kwargs = compile_kwargs
         self.monitor = monitor
         self.n_restart = n_restart
         self.n_record = n_record
@@ -150,8 +150,10 @@ class Restarter(object):
             optimizer_re = _new_optimizer(self.optimizer)
 
             # Compile model.
-            compile_kwargs_re = copy.deepcopy(self.compile_kwargs)
-            model_re.compile(optimizer=optimizer_re)
+            model_re.compile(
+                optimizer=optimizer_re, **self.stateless_compile_kwargs
+            )
+            model_re.reset_metrics()
 
             # Reset callbacks.
             for callback in callbacks:
@@ -164,20 +166,25 @@ class Restarter(object):
                 verbose=verbose-1, **kwargs
             )
             total_duration = time.time() - fit_start_time_s
-            final_logs = {}
+            logs = {}
             n_epoch = np.max(history.epoch) - np.min(history.epoch)
-            final_logs['epoch'] = n_epoch
-            final_logs['total_duration_s'] = int(total_duration)
-            final_logs['ms_per_epoch'] = int(1000 * total_duration / n_epoch)
-            final_logs['loss'] = model_re.evaluate(x=x, verbose=verbose-1)
+            logs['epoch'] = n_epoch
+            logs['total_duration_s'] = int(total_duration)
+            logs['ms_per_epoch'] = int(1000 * total_duration / n_epoch)
+            train_metrics = model_re.evaluate(
+                x=x, verbose=0, return_dict=True
+            )
+            logs.update(train_metrics)
             if validation_data is not None:
-                final_logs['val_loss'] = model_re.evaluate(
-                    x=validation_data, verbose=verbose-1
+                val_metrics = model_re.evaluate(
+                    x=validation_data, verbose=0, return_dict=True
                 )
-            weights = model_re.get_weights()  # TODO check
+                val_metrics = _append_prefix(val_metrics, 'val_')
+                logs.update(val_metrics)
+            weights = model_re.get_weights()
 
             # Update fit record with latest restart.
-            tracker.update_state(final_logs, weights)
+            tracker.update_state(logs, weights)
 
             if verbose == 1:
                 progbar.update(i_restart + 1)
@@ -254,11 +261,11 @@ class FitTracker(object):
         self.init_loss = np.inf
         super().__init__()
 
-    def update_state(self, final, weights, is_init=False):
+    def update_state(self, logs, weights, is_init=False):
         """Update record with incoming data.
 
         Arguments:
-            final: A dictionary of non-weight properties to track.
+            logs: A dictionary of non-weight properties to track.
             weight: A dictionary of variable weights.
             is_init: Boolean indicating if the update is an initial
                 evaluation.
@@ -269,12 +276,12 @@ class FitTracker(object):
             sort method.
 
         """
-        loss_monitor = final[self.monitor]
+        loss_monitor = logs[self.monitor]
 
         # Update aggregate summary if result is not nan.
         if not np.isnan(loss_monitor):
             self.count = self.count + 1.
-            for k, v in final.items():
+            for k, v in logs.items():
                 if k not in self.summary:
                     self.summary[k] = 0
                 self.summary[k] = self.summary[k] + v
@@ -291,7 +298,7 @@ class FitTracker(object):
             idx_worst = idx_eligable_as_worst[idx_idx_worst]
 
             # Replace worst restart with incoming restart.
-            for k, v in final.items():
+            for k, v in logs.items():
                 if k not in self.record:
                     self.record[k] = np.inf * np.ones([self.n_record])
                 self.record[k][idx_worst] = v
@@ -345,3 +352,11 @@ def _new_optimizer(optimizer):
     """Create new optimizer."""
     config = optimizer.get_config()
     return type(optimizer).from_config(config)
+
+
+def _append_prefix(val_metrics, prefix):
+    """Append prefix to dictionary keys."""
+    d = {}
+    for k, v in val_metrics.items():
+        d[prefix + k] = v
+    return d

@@ -168,15 +168,6 @@ class EmbeddingRe(LayerRe):
         z_set = tf.transpose(z_set, perm=[0, 2, 1])
         return z_set
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        if self.fit_z:
-            self.z.assign(
-                self.embeddings_initializer(
-                    shape=[self.n_stimuli, self.n_dim]
-                )
-            )
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
@@ -193,6 +184,15 @@ class EmbeddingRe(LayerRe):
         })
         config = _updated_config(self, config)
         return config
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        if self.fit_z:
+            self.z.assign(
+                self.embeddings_initializer(
+                    shape=[self.n_stimuli, self.n_dim]
+                )
+            )
 
 
 class WeightedMinkowski(LayerRe):
@@ -232,11 +232,6 @@ class WeightedMinkowski(LayerRe):
 
         return d_qr
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        if self.fit_rho:
-            self.rho.assign(self.random_rho())
-
     def random_rho(self):
         """Random rho."""
         return tf.random_uniform_initializer(1.01, 3.)(shape=[])
@@ -247,6 +242,11 @@ class WeightedMinkowski(LayerRe):
         config.update({'fit_rho': self.fit_rho})
         config = _updated_config(self, config)
         return config
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        if self.fit_rho:
+            self.rho.assign(self.random_rho())
 
 
 class SeparateAttention(LayerRe):
@@ -306,6 +306,14 @@ class SeparateAttention(LayerRe):
         w_expand = tf.expand_dims(w_expand, axis=2)
         return w_expand
 
+    def random_w(self):
+        """Random w."""
+        scale = tf.constant(self.n_dim, dtype=K.floatx())
+        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
+        return pk_initializers.RandomAttention(
+            alpha, scale
+        )(shape=[1, self.n_dim])
+
     def reset_weights(self):
         """Reset trainable variables."""
         w_list = []
@@ -316,14 +324,6 @@ class SeparateAttention(LayerRe):
                 w_i.assign(self.random_w())
             w_list.append(w_i)
         self.w_list = w_list
-
-    def random_w(self):
-        """Random w."""
-        scale = tf.constant(self.n_dim, dtype=K.floatx())
-        alpha = tf.constant(np.ones((self.n_dim)), dtype=K.floatx())
-        return pk_initializers.RandomAttention(
-            alpha, scale
-        )(shape=[1, self.n_dim])
 
 
 class Attention(LayerRe):
@@ -419,15 +419,6 @@ class Attention(LayerRe):
         """
         return tf.gather(self.w, inputs)
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        if self.fit_group:
-            self.w.assign(
-                self.embeddings_initializer(
-                    shape=[self.n_group, self.n_dim]
-                )
-            )
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
@@ -444,6 +435,15 @@ class Attention(LayerRe):
         })
         config = _updated_config(self, config)
         return config
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        if self.fit_group:
+            self.w.assign(
+                self.embeddings_initializer(
+                    shape=[self.n_group, self.n_dim]
+                )
+            )
 
 
 class InverseKernel(LayerRe):
@@ -512,16 +512,6 @@ class InverseKernel(LayerRe):
         sim_qr = 1 / (tf.pow(d_qr, self.tau) + self.mu)
         return sim_qr
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
-
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_mu:
-            self.mu.assign(self.random_mu())
-
     def random_tau(self):
         """Random tau."""
         return tf.random_uniform_initializer(1., 2.)(shape=[])
@@ -539,6 +529,16 @@ class InverseKernel(LayerRe):
         })
         config = _updated_config(self, config)
         return config
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        self.distance.reset_weights()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_mu:
+            self.mu.assign(self.random_mu())
 
 
 class ExponentialKernel(LayerRe):
@@ -655,19 +655,6 @@ class ExponentialKernel(LayerRe):
         ) + self.gamma
         return sim_qr
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
-
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_gamma:
-            self.gamma.assign(self.random_gamma())
-
-        if self.fit_beta:
-            self.beta.assign(self.random_beta())
-
     def random_tau(self):
         """Random tau."""
         return tf.random_uniform_initializer(1., 2.)(shape=[])
@@ -689,6 +676,19 @@ class ExponentialKernel(LayerRe):
         })
         config = _updated_config(self, config)
         return config
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        self.distance.reset_weights()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_gamma:
+            self.gamma.assign(self.random_gamma())
+
+        if self.fit_beta:
+            self.beta.assign(self.random_beta())
 
 
 class HeavyTailedKernel(LayerRe):
@@ -772,19 +772,6 @@ class HeavyTailedKernel(LayerRe):
         )
         return sim_qr
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
-
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_kappa:
-            self.kappa.assign(self.random_kappa())
-
-        if self.fit_alpha:
-            self.alpha.assign(self.random_alpha())
-
     def random_tau(self):
         """Random tau."""
         return tf.random_uniform_initializer(1., 2.)(shape=[])
@@ -806,6 +793,19 @@ class HeavyTailedKernel(LayerRe):
         })
         config = _updated_config(self, config)
         return config
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        self.distance.reset_weights()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_kappa:
+            self.kappa.assign(self.random_kappa())
+
+        if self.fit_alpha:
+            self.alpha.assign(self.random_alpha())
 
 
 class StudentsTKernel(LayerRe):
@@ -892,16 +892,6 @@ class StudentsTKernel(LayerRe):
         )
         return sim_qr
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
-
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_alpha:
-            self.alpha.assign(self.random_alpha())
-
     def random_tau(self):
         """Random tau."""
         return tf.random_uniform_initializer(1., 2.)(shape=[])
@@ -921,6 +911,16 @@ class StudentsTKernel(LayerRe):
         })
         config = _updated_config(self, config)
         return config
+
+    def reset_weights(self):
+        """Reset trainable variables."""
+        self.distance.reset_weights()
+
+        if self.fit_tau:
+            self.tau.assign(self.random_tau())
+
+        if self.fit_alpha:
+            self.alpha.assign(self.random_alpha())
 
 
 def _updated_config(self, config):

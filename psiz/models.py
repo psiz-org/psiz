@@ -389,11 +389,7 @@ class Proxy(object):
         """Configure the model for training.
 
         Compile defines the loss function, the optimizer and the
-        metrics. Sets:
-
-        - self.loss
-        - self.optimizer
-        - self.?
+        metrics.
 
         Arguments:
             **kwargs: Key-word arguments passed to the TensorFlow
@@ -463,10 +459,13 @@ class Proxy(object):
         else:
             ds_obs_val = None
 
+        # Compile model.
+        self.model.compile(**compile_kwargs)
+
         # Handle restarts.
         restarter = psiz.restart.Restarter(
             self.model, compile_kwargs=compile_kwargs, monitor=monitor,
-            n_restart=n_restart
+            n_restart=n_restart, n_record=n_record
         )
         restart_record = restarter.fit(
             x=ds_obs_train, validation_data=ds_obs_val, **kwargs
@@ -474,7 +473,7 @@ class Proxy(object):
 
         return restart_record
 
-    def evaluate(self, obs, batch_size=None):
+    def evaluate(self, obs, batch_size=None, **kwargs):
         """Evaluate observations using the current state of the model.
 
         This convenience function formats the observations as
@@ -483,8 +482,11 @@ class Proxy(object):
         the loss.
 
         Arguments:
-            obs: A RankObservations object representing the observed data.
+            obs: A RankObservations object representing the observed
+                data.
             batch_size (optional): Integer indicating the batch size.
+            kwargs (optional): Additional key-word arguments for
+                evaluate.
 
         Returns:
             loss: The average loss per observation. Loss is defined as
@@ -498,7 +500,7 @@ class Proxy(object):
             batch_size = obs.n_trial
 
         ds_obs = ds_obs.batch(batch_size, drop_remainder=False)
-        return self.model.evaluate(x=ds_obs)
+        return self.model.evaluate(x=ds_obs, **kwargs)
 
     def outcome_probability(
             self, docket, group_id=None, z=None, unaltered_only=False):

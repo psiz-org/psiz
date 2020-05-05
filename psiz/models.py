@@ -81,7 +81,6 @@ class Proxy(object):
 
     TODO update methods and attributes.
     Methods:
-        reset_weights: Reset all trainable variables.
         compile: Assign a optimizer, loss and regularization function
             for the optimization procedure.
         fit: Fit the embedding model using the provided observations.
@@ -142,10 +141,6 @@ class Proxy(object):
 
         # Unsaved attributes.
         self.log_freq = 10
-
-    def reset_weights(self):
-        """Reinitialize trainable model parameters."""
-        self.model.reset_weights()
 
     @property
     def n_stimuli(self):
@@ -957,12 +952,6 @@ class Rank(tf.keras.Model):
         # Compute the observation likelihood.
         likelihood = _tf_ranked_sequence_probability(sim_qr, is_select)
         return likelihood
-
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.embedding.reset_weights()
-        self.attention.reset_weights()
-        self.kernel.reset_weights()
 
     def compile(self, loss=None, **kwargs):
         """Intercept and set loss, then and call compile."""

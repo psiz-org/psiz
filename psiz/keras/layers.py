@@ -17,7 +17,6 @@
 """Module of custom TensorFlow layers.
 
 Classes:
-    LayerRe: A Layer with a reset_weights() method.
     EmbeddingRe: An Embedding layer.
     WeightedMinkowski: A weighted distance layer.
     Attention: A simple attention layer.
@@ -37,23 +36,7 @@ import psiz.keras.initializers as pk_initializers
 import psiz.keras.regularizers
 
 
-class LayerRe(tf.keras.layers.Layer):
-    """Base layer class capable of weight resets.
-
-    In addition to the usual tensorflow.keras.layers Layer
-    reconmendations, descendants of `LayerRe` should also implement the
-    following methods:
-
-    * reset_weights(): Re-initializes the layer weights.
-
-    """
-
-    def reset_weights(self):
-        """Handle weight resetting."""
-        pass
-
-
-class EmbeddingRe(LayerRe):
+class EmbeddingRe(tf.keras.layers.Layer):
     """Embedding coordinates.
 
     The embeddings are stored in the variable `z` that has
@@ -185,17 +168,8 @@ class EmbeddingRe(LayerRe):
         config = _updated_config(self, config)
         return config
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        if self.fit_z:
-            self.z.assign(
-                self.embeddings_initializer(
-                    shape=[self.n_stimuli, self.n_dim]
-                )
-            )
 
-
-class WeightedMinkowski(LayerRe):
+class WeightedMinkowski(tf.keras.layers.Layer):
     """Weighted Minkowski distance.
 
     Arguments:
@@ -243,13 +217,8 @@ class WeightedMinkowski(LayerRe):
         config = _updated_config(self, config)
         return config
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        if self.fit_rho:
-            self.rho.assign(self.random_rho())
 
-
-class SeparateAttention(LayerRe):
+class SeparateAttention(tf.keras.layers.Layer):
     """Attention Layer.
 
     Arguments:
@@ -314,19 +283,8 @@ class SeparateAttention(LayerRe):
             alpha, scale
         )(shape=[1, self.n_dim])
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        w_list = []
-        for i_group in range(self.n_group):
-            w_i_name = "w_{0}".format(i_group)
-            w_i = getattr(self, w_i_name)
-            if self.fit_group[i_group]:
-                w_i.assign(self.random_w())
-            w_list.append(w_i)
-        self.w_list = w_list
 
-
-class Attention(LayerRe):
+class Attention(tf.keras.layers.Layer):
     """Attention Layer.
 
     Arguments:
@@ -436,17 +394,8 @@ class Attention(LayerRe):
         config = _updated_config(self, config)
         return config
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        if self.fit_group:
-            self.w.assign(
-                self.embeddings_initializer(
-                    shape=[self.n_group, self.n_dim]
-                )
-            )
 
-
-class InverseKernel(LayerRe):
+class InverseKernel(tf.keras.layers.Layer):
     """Inverse-distance similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -530,18 +479,8 @@ class InverseKernel(LayerRe):
         config = _updated_config(self, config)
         return config
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
 
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_mu:
-            self.mu.assign(self.random_mu())
-
-
-class ExponentialKernel(LayerRe):
+class ExponentialKernel(tf.keras.layers.Layer):
     """Exponential family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -677,21 +616,8 @@ class ExponentialKernel(LayerRe):
         config = _updated_config(self, config)
         return config
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
 
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_gamma:
-            self.gamma.assign(self.random_gamma())
-
-        if self.fit_beta:
-            self.beta.assign(self.random_beta())
-
-
-class HeavyTailedKernel(LayerRe):
+class HeavyTailedKernel(tf.keras.layers.Layer):
     """Heavy-tailed family similarity kernel.
 
     This embedding technique uses the following similarity kernel:
@@ -794,21 +720,8 @@ class HeavyTailedKernel(LayerRe):
         config = _updated_config(self, config)
         return config
 
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
 
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_kappa:
-            self.kappa.assign(self.random_kappa())
-
-        if self.fit_alpha:
-            self.alpha.assign(self.random_alpha())
-
-
-class StudentsTKernel(LayerRe):
+class StudentsTKernel(tf.keras.layers.Layer):
     """Student's t-distribution similarity kernel.
 
     The embedding technique uses the following similarity kernel:
@@ -911,16 +824,6 @@ class StudentsTKernel(LayerRe):
         })
         config = _updated_config(self, config)
         return config
-
-    def reset_weights(self):
-        """Reset trainable variables."""
-        self.distance.reset_weights()
-
-        if self.fit_tau:
-            self.tau.assign(self.random_tau())
-
-        if self.fit_alpha:
-            self.alpha.assign(self.random_alpha())
 
 
 def _updated_config(self, config):

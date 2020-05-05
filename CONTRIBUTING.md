@@ -28,7 +28,7 @@ PsiZ attempts to closely adhere to TensorFlow and Keras idioms. Model components
 
 ## Contributing to psiz.keras
 
-Since the models used in this package are prone to find sub-optimal solutions, multiple restarts are necessary. This results in a point of divergence from typical TensorFlow projects. TensorFlow does not provide a great strategy 'resetting' a model. To accommodate this need, developers should implement custom Layers with a `reset_weights()` method.
+Since the models used in this package are prone to find sub-optimal solutions, multiple restarts are necessary. This results in a point of divergence from typical TensorFlow projects. TensorFlow does not provide a great strategy for 'resetting' a model. To accommodate this need, restart functionality is provided by the Proxy class.
 
 Register the class via the decorator @tf.keras.utils.register_keras_serializable in order to facilitate model loading.
 
@@ -53,15 +53,13 @@ Guidance for other Keras objects is listed below.
 
 
 ### Custom `Layer`
-* Subclass `LayerRe` which assumes a `reset_weights()` method.
+* Subclass `Layer`.
 * `__init__`
     * include `**kwargs` argument and pass to `super().__init__(**kwargs)`
 * implement `call` not `__call__` method
 * `get_config()`
     * If custom layer requires initialization arguments, then implement by first calling `super(_).get_config()` and then update the dictionary with the custom layer's attributes.
     * Following TensorFlow convention, the returned configuration should be a dictionary of the form: {'class_name': str, 'config': dict}.
-* `reset_weights()`
-    * Implement.
 
 #### Custom Kernels
 * A kernel must assign the `distance` attribute a layer implementing a distance kernel.
@@ -73,8 +71,6 @@ Guidance for other Keras objects is listed below.
     * decorate `call` method with `@tf.function` to enable graph execution.
 * `get_config()`
     * TODO
-* `reset_weights()`
-    * Must implement.
 
 ### Custom `Regularizer`
 * implement `__call__` method

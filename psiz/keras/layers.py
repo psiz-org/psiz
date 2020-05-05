@@ -175,15 +175,20 @@ class WeightedMinkowski(tf.keras.layers.Layer):
     Arguments:
         fit_rho (optional): Boolean indicating if variable is
             trainable.
+        rho_init (optional): Initializer for rho.
 
     """
 
-    def __init__(self, fit_rho=True, **kwargs):
+    def __init__(self, fit_rho=True, rho_init=None, **kwargs):
         """Initialize."""
         super(WeightedMinkowski, self).__init__(**kwargs)
         self.fit_rho = fit_rho
-        self.rho = tf.Variable(
-            initial_value=self.random_rho(),
+
+        if rho_init is None:
+            rho_init = tf.random_uniform_initializer(1.01, 3.)
+        self.rho_init = tf.keras.initializers.get(rho_init)
+        self.rho = self.add_weight(
+            shape=[], initializer=self.rho_init,
             trainable=self.fit_rho, name="rho", dtype=K.floatx(),
             constraint=pk_constraints.GreaterThan(min_value=1.0)
         )
@@ -206,14 +211,13 @@ class WeightedMinkowski(tf.keras.layers.Layer):
 
         return d_qr
 
-    def random_rho(self):
-        """Random rho."""
-        return tf.random_uniform_initializer(1.01, 3.)(shape=[])
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({'fit_rho': self.fit_rho})
+        config.update({
+            'fit_rho': self.fit_rho,
+            'rho_init': tf.keras.initializers.serialize(self.rho_init)
+        })
         config = _updated_config(self, config)
         return config
 
@@ -413,23 +417,31 @@ class InverseKernel(tf.keras.layers.Layer):
 
     """
 
-    def __init__(self, fit_rho=True, fit_tau=True, fit_mu=True, **kwargs):
+    def __init__(
+            self, fit_rho=True, fit_tau=True, fit_mu=True, rho_init=None,
+            tau_init=None, mu_init=None, **kwargs):
         """Initialize."""
         super(InverseKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
         self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
-        self.tau = tf.Variable(
-            initial_value=self.random_tau(),
-            trainable=fit_tau, name="tau", dtype=K.floatx(),
+        if tau_init is None:
+            tau_init = tf.random_uniform_initializer(1., 2.)
+        self.tau_init = tf.keras.initializers.get(tau_init)
+        self.tau = self.add_weight(
+            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_mu = fit_mu
-        self.mu = tf.Variable(
-            initial_value=self.random_mu(),
-            trainable=fit_mu, name="mu", dtype=K.floatx(),
+        if mu_init is None:
+            mu_init = tf.random_uniform_initializer(0.0000000001, .001)
+        self.mu_init = tf.keras.initializers.get(tau_init)
+        self.tau = self.add_weight(
+            shape=[], initializer=self.tau_int, trainable=self.fit_mu,
+            name="mu", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16)
         )
 
@@ -461,20 +473,15 @@ class InverseKernel(tf.keras.layers.Layer):
         sim_qr = 1 / (tf.pow(d_qr, self.tau) + self.mu)
         return sim_qr
 
-    def random_tau(self):
-        """Random tau."""
-        return tf.random_uniform_initializer(1., 2.)(shape=[])
-
-    def random_mu(self):
-        """Random mu."""
-        return tf.random_uniform_initializer(0.0000000001, .001)(shape=[])
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update(self.distance.get_config())
         config.update({
-            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
-            'fit_mu': self.fit_mu
+            'fit_tau': self.fit_tau,
+            'fit_mu': self.fit_mu,
+            'tau_init': tf.keras.initializers.serialize(self.tau_init),
+            'mu_init': tf.keras.initializers.serialize(self.mu_init),
         })
         config = _updated_config(self, config)
         return config
@@ -525,35 +532,45 @@ class ExponentialKernel(tf.keras.layers.Layer):
 
     def __init__(
             self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=False,
+            rho_init=None, tau_init=None, gamma_init=None, beta_init=None,
             **kwargs):
         """Initialize."""
         super(ExponentialKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
         self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
-        self.tau = tf.Variable(
-            initial_value=self.random_tau(),
-            trainable=self.fit_tau, name="tau", dtype=K.floatx(),
+        if tau_init is None:
+            tau_init = tf.random_uniform_initializer(1., 2.)
+        self.tau_init = tf.keras.initializers.get(tau_init)
+        self.tau = self.add_weight(
+            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_gamma = fit_gamma
-        self.gamma = tf.Variable(
-            initial_value=self.random_gamma(),
-            trainable=self.fit_gamma, name="gamma", dtype=K.floatx(),
+        if gamma_init is None:
+            gamma_init = tf.random_uniform_initializer(0., .001)
+        self.gamma_init = tf.keras.initializers.get(gamma_init)
+        self.gamma = self.add_weight(
+            shape=[], initializer=self.gamma_init, trainable=self.fit_gamma,
+            name="gamma", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_beta = fit_beta
-        if fit_beta:
-            beta_value = self.random_beta()
-        else:
-            beta_value = 10.
-        self.beta = tf.Variable(
-            initial_value=beta_value,
-            trainable=self.fit_beta, name="beta", dtype=K.floatx(),
+        if beta_init is None:
+            if fit_beta:
+                beta_init = tf.random_uniform_initializer(1., 30.)
+            else:
+                beta_init = tf.keras.initializers.Constant(value=10.)
+        self.beta_init = tf.keras.initializers.get(beta_init)
+        self.beta = self.add_weight(
+            shape=[], initializer=self.beta_init, trainable=self.fit_beta,
+            name="beta", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+
         )
 
         self.theta = {
@@ -594,24 +611,17 @@ class ExponentialKernel(tf.keras.layers.Layer):
         ) + self.gamma
         return sim_qr
 
-    def random_tau(self):
-        """Random tau."""
-        return tf.random_uniform_initializer(1., 2.)(shape=[])
-
-    def random_gamma(self):
-        """Random gamma."""
-        return tf.random_uniform_initializer(0., .001)(shape=[])
-
-    def random_beta(self):
-        """Random beta."""
-        return tf.random_uniform_initializer(1., 30.)(shape=[])
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update(self.distance.get_config())
         config.update({
-            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
-            'fit_gamma': self.fit_gamma, 'fit_beta': self.fit_beta
+            'fit_tau': self.fit_tau,
+            'fit_gamma': self.fit_gamma,
+            'fit_beta': self.fit_beta,
+            'tau_init': tf.keras.initializers.serialize(self.tau_init),
+            'gamma_init': tf.keras.initializers.serialize(self.gamma_init),
+            'beta_init': tf.keras.initializers.serialize(self.beta_init),
         })
         config = _updated_config(self, config)
         return config
@@ -640,30 +650,40 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
 
     def __init__(
             self, fit_rho=True, fit_tau=True, fit_kappa=True, fit_alpha=True,
+            rho_init=None, tau_init=None, kappa_init=None, alpha_init=None,
             **kwargs):
         """Initialize."""
         super(HeavyTailedKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
         self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
-        self.tau = tf.Variable(
-            initial_value=self.random_tau(),
-            trainable=fit_tau, name="tau", dtype=K.floatx(),
+        if tau_init is None:
+            tau_init = tf.random_uniform_initializer(1., 2.)
+        self.tau_init = tf.keras.initializers.get(tau_init)
+        self.tau = self.add_weight(
+            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_kappa = fit_kappa
-        self.kappa = tf.Variable(
-            initial_value=self.random_kappa(),
-            trainable=fit_kappa, name="kappa", dtype=K.floatx(),
+        if kappa_init is None:
+            kappa_init = tf.random_uniform_initializer(1., 11.)
+        self.kappa_init = tf.keras.initializers.get(kappa_init)
+        self.kappa = self.add_weight(
+            shape=[], initializer=self.kappa_init, trainable=self.fit_kappa,
+            name="kappa", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_alpha = fit_alpha
-        self.alpha = tf.Variable(
-            initial_value=self.random_alpha(),
-            trainable=fit_alpha, name="alpha", dtype=K.floatx(),
+        if alpha_init is None:
+            alpha_init = tf.random_uniform_initializer(10., 60.)
+        self.alpha_init = tf.keras.initializers.get(alpha_init)
+        self.alpha = self.add_weight(
+            shape=[], initializer=self.alpha_init, trainable=self.fit_alpha,
+            name="alpha", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
@@ -698,24 +718,17 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
         )
         return sim_qr
 
-    def random_tau(self):
-        """Random tau."""
-        return tf.random_uniform_initializer(1., 2.)(shape=[])
-
-    def random_kappa(self):
-        """Random kappa."""
-        return tf.random_uniform_initializer(1., 11.)(shape=[])
-
-    def random_alpha(self):
-        """Random alpha."""
-        return tf.random_uniform_initializer(10., 60.)(shape=[])
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update(self.distance.get_config())
         config.update({
-            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
-            'fit_kappa': self.fit_kappa, 'fit_alpha': self.fit_alpha
+            'fit_tau': self.fit_tau,
+            'fit_kappa': self.fit_kappa,
+            'fit_alpha': self.fit_alpha,
+            'tau_init': tf.keras.initializers.serialize(self.tau_init),
+            'kappa_init': tf.keras.initializers.serialize(self.kappa_init),
+            'alpha_init': tf.keras.initializers.serialize(self.alpha_init),
         })
         config = _updated_config(self, config)
         return config
@@ -752,25 +765,33 @@ class StudentsTKernel(tf.keras.layers.Layer):
 
     def __init__(
             self, n_dim=None, fit_rho=True, fit_tau=True, fit_alpha=True,
-            **kwargs):
+            rho_init=None, tau_init=None, alpha_init=None, **kwargs):
         """Initialize."""
         super(StudentsTKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho)
+        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
         self.rho = self.distance.rho
 
         self.n_dim = n_dim
 
         self.fit_tau = fit_tau
-        self.tau = tf.Variable(
-            initial_value=self.random_tau(),
-            trainable=fit_tau, name="tau", dtype=K.floatx(),
+        if tau_init is None:
+            tau_init = tf.random_uniform_initializer(1., 2.)
+        self.tau_init = tf.keras.initializers.get(tau_init)
+        self.tau = self.add_weight(
+            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_alpha = fit_alpha
-        self.alpha = tf.Variable(
-            initial_value=self.random_alpha(),
-            trainable=fit_alpha, name="alpha", dtype=K.floatx(),
+        if alpha_init is None:
+            alpha_init = tf.random_uniform_initializer(
+                np.max((1, self.n_dim - 2.)), self.n_dim + 2.
+            )
+        self.alpha_init = tf.keras.initializers.get(alpha_init)
+        self.alpha = self.add_weight(
+            shape=[], initializer=self.alpha_init, trainable=fit_alpha,
+            name="alpha", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.000001)
         )
 
@@ -805,22 +826,15 @@ class StudentsTKernel(tf.keras.layers.Layer):
         )
         return sim_qr
 
-    def random_tau(self):
-        """Random tau."""
-        return tf.random_uniform_initializer(1., 2.)(shape=[])
-
-    def random_alpha(self):
-        """Random alpha."""
-        alpha_min = np.max((1, self.n_dim - 2.))
-        alpha_max = self.n_dim + 2.
-        return tf.random_uniform_initializer(alpha_min, alpha_max)(shape=[])
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update(self.distance.get_config())
         config.update({
-            'fit_rho': self.distance.fit_rho, 'fit_tau': self.fit_tau,
-            'fit_alpha': self.fit_alpha
+            'fit_tau': self.fit_tau,
+            'fit_alpha': self.fit_alpha,
+            'tau_init': tf.keras.initializers.serialize(self.tau_init),
+            'alpha_init': tf.keras.initializers.serialize(self.alpha_init),
         })
         config = _updated_config(self, config)
         return config

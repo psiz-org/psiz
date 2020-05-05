@@ -20,10 +20,11 @@ Classes:
     EmbeddingRe: An Embedding layer.
     WeightedMinkowski: A weighted distance layer.
     Attention: A simple attention layer.
-    InverseKernel: An inverse kernel layer.
-    ExponentialKernel: An exponential-family kernel layer.
-    HeavyTailedKernel: A heavy-tailed family kernel layer.
-    StudentsTKernel: A Student's t-distribution kernel layer.
+    InverseKernel: A parameterized inverse similarity layer.
+    ExponentialKernel: A parameterized exponential similarity layer.
+    HeavyTailedKernel: A parameterized heavy-tailed similarity layer.
+    StudentsTKernel: A parameterized Student's t-distribution
+        similarity layer.
 
 """
 
@@ -193,11 +194,20 @@ class WeightedMinkowski(tf.keras.layers.Layer):
             constraint=pk_constraints.GreaterThan(min_value=1.0)
         )
 
+        self.theta = {'rho': self.rho}
+
     def call(self, inputs):
         """Call.
 
         Arguments:
-            inputs: List of inputs.
+            inputs:
+                z_q: A set of embedding points.
+                    shape = (batch_size, n_dim [, n_sample])
+                z_r: A set of embedding points.
+                    shape = (batch_size, n_dim [, n_sample])
+                w: The weights allocated to each dimension
+                    in a weighted minkowski metric.
+                    shape = (batch_size, n_dim [, n_sample])
 
         """
         z_q = inputs[0]  # Query.
@@ -400,12 +410,11 @@ class Attention(tf.keras.layers.Layer):
 
 
 class InverseKernel(tf.keras.layers.Layer):
-    """Inverse-distance similarity kernel.
+    """Inverse-distance similarity function.
 
-    This embedding technique uses the following similarity kernel:
-        s(x,y) = 1 / norm(x - y, rho)**tau,
-    where x and y are n-dimensional vectors. The similarity kernel has
-    three free parameters: rho, tau, and mu.
+    The inverse-distance similarity function is parameterized as:
+        s(x,y) = 1 / (d(x,y)**tau + mu),
+    where x and y are n-dimensional vectors.
 
     Arguments:
         fit_tau (optional): Boolean indicating if variable is
@@ -418,12 +427,10 @@ class InverseKernel(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_rho=True, fit_tau=True, fit_mu=True, rho_init=None,
-            tau_init=None, mu_init=None, **kwargs):
+            self, fit_tau=True, fit_mu=True, tau_init=None, mu_init=None,
+            **kwargs):
         """Initialize."""
         super(InverseKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
-        self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
         if tau_init is None:
@@ -446,7 +453,6 @@ class InverseKernel(tf.keras.layers.Layer):
         )
 
         self.theta = {
-            'rho': self.distance.rho,
             'tau': self.tau,
             'mu': self.mu
         }
@@ -455,28 +461,18 @@ class InverseKernel(tf.keras.layers.Layer):
         """Call.
 
         Arguments:
-            inputs:
+            inputs: A tensor of distances.
 
         Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (batch_size,)
+            A tensor of similarities.
 
         """
-        z_q = inputs[0]  # Query.
-        z_r = inputs[1]  # References.
-        w = inputs[2]    # Dimension weights.
-
-        d_qr = self.distance([z_q, z_r, w])
-
-        # Exponential family similarity function.
-        sim_qr = 1 / (tf.pow(d_qr, self.tau) + self.mu)
+        sim_qr = 1 / (tf.pow(inputs, self.tau) + self.mu)
         return sim_qr
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update(self.distance.get_config())
         config.update({
             'fit_tau': self.fit_tau,
             'fit_mu': self.fit_mu,
@@ -488,13 +484,12 @@ class InverseKernel(tf.keras.layers.Layer):
 
 
 class ExponentialKernel(tf.keras.layers.Layer):
-    """Exponential family similarity kernel.
+    """Exponential family similarity function.
 
-    This embedding technique uses the following similarity kernel:
-        s(x,y) = exp(-beta .* norm(x - y, rho).^tau) + gamma,
-    where x and y are n-dimensional vectors. The similarity kernel has
-    four free parameters: rho, tau, gamma, and beta. The exponential
-    family is obtained by integrating across various psychological
+    This exponential-family similarity function is parameterized as:
+        s(x,y) = exp(-beta .* d(x,y).^tau) + gamma,
+    where x and y are n-dimensional vectors. The exponential family
+    function is obtained by integrating across various psychological
     theories [1,2,3,4].
 
     By default beta=10. and is not trainable to prevent redundancy with
@@ -502,8 +497,6 @@ class ExponentialKernel(tf.keras.layers.Layer):
     regularizers placed on the embeddings.
 
     Arguments:
-        fit_rho (optional): Boolean indicating if variable is
-            trainable.
         fit_tau (optional): Boolean indicating if variable is
             trainable.
         fit_gamma (optional): Boolean indicating if variable is
@@ -531,13 +524,10 @@ class ExponentialKernel(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_rho=True, fit_tau=True, fit_gamma=True, fit_beta=False,
-            rho_init=None, tau_init=None, gamma_init=None, beta_init=None,
-            **kwargs):
+            self, fit_tau=True, fit_gamma=True, fit_beta=False, tau_init=None,
+            gamma_init=None, beta_init=None, **kwargs):
         """Initialize."""
         super(ExponentialKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
-        self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
         if tau_init is None:
@@ -574,7 +564,6 @@ class ExponentialKernel(tf.keras.layers.Layer):
         )
 
         self.theta = {
-            'rho': self.distance.rho,
             'tau': self.tau,
             'gamma': self.gamma,
             'beta': self.beta
@@ -584,37 +573,20 @@ class ExponentialKernel(tf.keras.layers.Layer):
         """Call.
 
         Arguments:
-            inputs:
-                z_q: A set of embedding points.
-                    shape = (batch_size, n_dim [, n_sample])
-                z_r: A set of embedding points.
-                    shape = (batch_size, n_dim [, n_sample])
-                attention: The weights allocated to each dimension
-                    in a weighted minkowski metric.
-                    shape = (batch_size, n_dim [, n_sample])
+            inputs: A tensor of distances.
 
         Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (batch_size,)
+            A tensor of similarities.
 
         """
-        z_q = inputs[0]  # Query.
-        z_r = inputs[1]  # References.
-        w = inputs[2]    # Dimension weights.
-
-        d_qr = self.distance([z_q, z_r, w])
-
-        # Exponential family similarity function.
         sim_qr = tf.exp(
-            tf.negative(self.beta) * tf.pow(d_qr, self.tau)
+            tf.negative(self.beta) * tf.pow(inputs, self.tau)
         ) + self.gamma
         return sim_qr
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update(self.distance.get_config())
         config.update({
             'fit_tau': self.fit_tau,
             'fit_gamma': self.fit_gamma,
@@ -628,17 +600,14 @@ class ExponentialKernel(tf.keras.layers.Layer):
 
 
 class HeavyTailedKernel(tf.keras.layers.Layer):
-    """Heavy-tailed family similarity kernel.
+    """Heavy-tailed family similarity function.
 
-    This embedding technique uses the following similarity kernel:
-        s(x,y) = (kappa + (norm(x-y, rho).^tau)).^(-alpha),
-    where x and y are n-dimensional vectors. The similarity kernel has
-    four free parameters: rho, tau, kappa, and alpha. The
-    heavy-tailed family is a generalization of the Student-t family.
+    The heavy-tailed similarity function is parameterized as:
+        s(x,y) = (kappa + (d(x,y).^tau)).^(-alpha),
+    where x and y are n-dimensional vectors. The heavy-tailed family is
+    a generalization of the Student-t family.
 
     Arguments:
-        fit_rho (optional): Boolean indicating if variable is
-            trainable.
         fit_tau (optional): Boolean indicating if variable is
             trainable.
         fit_kappa (optional): Boolean indicating if variable is
@@ -649,13 +618,11 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_rho=True, fit_tau=True, fit_kappa=True, fit_alpha=True,
-            rho_init=None, tau_init=None, kappa_init=None, alpha_init=None,
+            self, fit_tau=True, fit_kappa=True, fit_alpha=True, tau_init=None,
+            kappa_init=None, alpha_init=None,
             **kwargs):
         """Initialize."""
         super(HeavyTailedKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
-        self.rho = self.distance.rho
 
         self.fit_tau = fit_tau
         if tau_init is None:
@@ -688,7 +655,6 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
         )
 
         self.theta = {
-            'rho': self.distance.rho,
             'tau': self.tau,
             'kappa': self.kappa,
             'alpha': self.alpha
@@ -698,30 +664,20 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
         """Call.
 
         Arguments:
-            inputs:
+            inputs: A tensor of distances.
 
         Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (batch_size,)
+            A tensor of similarities.
 
         """
-        z_q = inputs[0]  # Query.
-        z_r = inputs[1]  # References.
-        w = inputs[2]    # Dimension weights.
-
-        d_qr = self.distance([z_q, z_r, w])
-
-        # Heavy-tailed family similarity function.
         sim_qr = tf.pow(
-            self.kappa + tf.pow(d_qr, self.tau), (tf.negative(self.alpha))
+            self.kappa + tf.pow(inputs, self.tau), (tf.negative(self.alpha))
         )
         return sim_qr
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update(self.distance.get_config())
         config.update({
             'fit_tau': self.fit_tau,
             'fit_kappa': self.fit_kappa,
@@ -735,21 +691,17 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
 
 
 class StudentsTKernel(tf.keras.layers.Layer):
-    """Student's t-distribution similarity kernel.
+    """Student's t-distribution similarity function.
 
-    The embedding technique uses the following similarity kernel:
-        s(x,y) = (1 + (((norm(x-y, rho)^tau)/alpha))^(-(alpha + 1)/2),
-    where x and y are n-dimensional vectors. The similarity kernel has
-    three free parameters: rho, tau, and alpha. The original Student-t
-    kernel proposed by van der Maaten [1] uses the parameter settings
-    rho=2, tau=2, and alpha=n_dim-1. By default, all variables are fit
-    to the data. This behavior can be changed by setting the
-    appropriate fit_<var_name>=False.
+    The Student's t-distribution similarity function is parameterized
+    as:
+        s(x,y) = (1 + (((d(x,y)^tau)/alpha))^(-(alpha + 1)/2),
+    where x and y are n-dimensional vectors. The original Student-t
+    kernel proposed by van der Maaten [1] uses a L2 distane, tau=2, and
+    alpha=n_dim-1. By default, all variables are fit to the data.
 
     Arguments:
         n_dim:  Integer indicating the dimensionality of the embedding.
-        fit_rho (optional): Boolean indicating if variable is
-            trainable.
         fit_tau (optional): Boolean indicating if variable is
             trainable.
         fit_alpha (optional): Boolean indicating if variable is
@@ -764,12 +716,10 @@ class StudentsTKernel(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, n_dim=None, fit_rho=True, fit_tau=True, fit_alpha=True,
-            rho_init=None, tau_init=None, alpha_init=None, **kwargs):
+            self, n_dim=None, fit_tau=True, fit_alpha=True, tau_init=None,
+            alpha_init=None, **kwargs):
         """Initialize."""
         super(StudentsTKernel, self).__init__(**kwargs)
-        self.distance = WeightedMinkowski(fit_rho=fit_rho, rho_init=rho_init)
-        self.rho = self.distance.rho
 
         self.n_dim = n_dim
 
@@ -796,7 +746,6 @@ class StudentsTKernel(tf.keras.layers.Layer):
         )
 
         self.theta = {
-            'rho': self.distance.rho,
             'tau': self.tau,
             'alpha': self.alpha
         }
@@ -805,23 +754,14 @@ class StudentsTKernel(tf.keras.layers.Layer):
         """Call.
 
         Arguments:
-            inputs:
+            inputs: A tensor of distances.
 
         Returns:
-            The corresponding similarity between rows of embedding
-                points.
-                shape = (batch_size,)
+            A tensor of similarities.
 
         """
-        z_q = inputs[0]  # Query.
-        z_r = inputs[1]  # References.
-        w = inputs[2]    # Dimension weights.
-
-        d_qr = self.distance([z_q, z_r, w])
-
-        # Student-t family similarity kernel.
         sim_qr = tf.pow(
-            1 + (tf.pow(d_qr, self.tau) / self.alpha),
+            1 + (tf.pow(inputs, self.tau) / self.alpha),
             tf.negative(self.alpha + 1)/2
         )
         return sim_qr
@@ -829,7 +769,6 @@ class StudentsTKernel(tf.keras.layers.Layer):
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update(self.distance.get_config())
         config.update({
             'fit_tau': self.fit_tau,
             'fit_alpha': self.fit_alpha,

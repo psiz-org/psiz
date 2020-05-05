@@ -195,7 +195,7 @@ class Proxy(object):
     def theta(self):
         """Getter method for theta."""
         d = {}
-        for k, v in self.model.kernel.theta.items():
+        for k, v in self.model.theta.items():
             d[k] = v.numpy()
         return d
 
@@ -203,7 +203,7 @@ class Proxy(object):
     def theta(self, theta):
         """Setter method for w."""
         for k, v in theta.items():
-            self.model.kernel.theta[k].assign(v)
+            self.model.theta[k].assign(v)
 
     def get_weights(self):
         """Get weights for all layers.
@@ -215,7 +215,7 @@ class Proxy(object):
         weights = {
             'embedding': {'z': self.z},
             'attention': self.phi,
-            'kernel': self.theta
+            'kernel': self.theta  # TODO
         }
         return weights
 
@@ -300,7 +300,7 @@ class Proxy(object):
         (z_q, z_r, attention) = self._broadcast_for_similarity(
             z_q, z_r, group_id=group_id
         )
-        sim_qr = self.model.kernel([
+        sim_qr = self.model.similarity([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -353,7 +353,7 @@ class Proxy(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d_qr = self.model.kernel.distance([
+        d_qr = self.model.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -495,6 +495,7 @@ class Proxy(object):
             batch_size = obs.n_trial
 
         ds_obs = ds_obs.batch(batch_size, drop_remainder=False)
+        self.model.reset_metrics()
         return self.model.evaluate(x=ds_obs, **kwargs)
 
     def outcome_probability(
@@ -555,11 +556,12 @@ class Proxy(object):
             z_q, z_r, group_id=group_id
         )
 
-        sim_qr = self.model.kernel([
+        d_qr = self.model.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
-        ]).numpy()
+        ])
+        sim_qr = self.model.similarity(d_qr).numpy()
 
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):
@@ -860,7 +862,8 @@ class Rank(tf.keras.Model):
     """
 
     def __init__(
-            self, embedding=None, attention=None, kernel=None, **kwargs):
+            self, embedding=None, attention=None, distance=None,
+            similarity=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -868,8 +871,8 @@ class Rank(tf.keras.Model):
                 n_stimuli, n_dim, n_group.
             attention (optional): An attention layer. Must agree with
                 n_stimuli, n_dim, n_group.
-            kernel (optional): A similarity kernel layer. Must agree
-                with n_stimuli, n_dim, n_group.
+            distance (optional): A distance kernel function layer.
+            similarity (optional): A similarity function layer.
 
         Raises:
             ValueError: If arguments are invalid.
@@ -892,9 +895,18 @@ class Rank(tf.keras.Model):
             )
         self.attention = attention
 
-        if kernel is None:
-            kernel = psiz.keras.layers.ExponentialKernel()
-        self.kernel = kernel
+        if distance is None:
+            distance = psiz.keras.layers.WeightedMinkowski()
+        self.distance = distance
+
+        if similarity is None:
+            similarity = psiz.keras.layers.ExponentialKernel()
+        self.similarity = similarity
+
+        # Gather all pointers to theta-associated variables.
+        theta = self.distance.theta
+        theta.update(self.similarity.theta)
+        self.theta = theta
 
     @tf.function(input_signature=[{
         'membership': tf.TensorSpec(
@@ -943,8 +955,11 @@ class Rank(tf.keras.Model):
         max_n_reference = tf.shape(z_stimulus_set)[2] - 1
         z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
 
-        # Compute similarity between query and references.
-        sim_qr = self.kernel([z_q, z_r, attention])
+        # Compute distance between query and references.
+        dist_qr = self.distance([z_q, z_r, attention])
+
+        # Compute similarity.
+        sim_qr = self.similarity(dist_qr)
 
         # Zero out similarities involving placeholder.
         sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
@@ -1021,7 +1036,8 @@ class Rank(tf.keras.Model):
                 'layers': {
                     'embedding': self.embedding.get_config(),
                     'attention': self.attention.get_config(),
-                    'kernel': self.kernel.get_config()
+                    'distance': self.distance.get_config(),
+                    'similarity': self.similarity.get_config()
                 }
             }
         }
@@ -1112,7 +1128,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         #     for name in f['phi'][p_name]:
         #         embedding._phi[p_name_new][name] = f['phi'][p_name][name][()]
 
-        # Create kernel layer.
+        # Create similarity layer.
         theta_config = {}
         theta_value = {}
         for p_name in f['theta']:
@@ -1121,21 +1137,24 @@ def load_model(filepath, custom_objects={}, compile=False):
             # for name in f['theta'][p_name]:
             #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
+        dist_config = {}  # TODO Critical rho
+        distance = psiz.keras.layers.WeightedMinkowski(**dist_config)
         if embedding_type == 'Exponential':
-            kernel = psiz.keras.layers.ExponentialKernel(**theta_config)
+            similarity = psiz.keras.layers.ExponentialKernel(**theta_config)
         elif embedding_type == 'HeavyTailed':
-            kernel = psiz.keras.layers.HeavyTailedKernel(**theta_config)
+            similarity = psiz.keras.layers.HeavyTailedKernel(**theta_config)
         elif embedding_type == 'StudentsT':
-            kernel = psiz.keras.layers.StudentsTKernel(**theta_config)
+            similarity = psiz.keras.layers.StudentsTKernel(**theta_config)
         elif embedding_type == 'Inverse':
-            kernel = psiz.keras.layers.InverseKernel(**theta_config)
+            similarity = psiz.keras.layers.InverseKernel(**theta_config)
         else:
             raise ValueError(
                 'No class found matching the provided `embedding_type`.'
             )
 
         model = Rank(
-            embedding=embedding, attention=attention, kernel=kernel
+            embedding=embedding, attention=attention, distance=distance,
+            similarity=similarity
         )
         emb = Proxy(model=model)
 

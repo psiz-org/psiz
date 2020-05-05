@@ -186,8 +186,10 @@ def ground_truth(n_stimuli):
 
     embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
-    kernel = psiz.keras.layers.ExponentialKernel()
-    model = psiz.models.Rank(embedding=embedding, attention=attention, kernel=kernel)
+    similarity = psiz.keras.layers.ExponentialKernel()
+    model = psiz.models.Rank(
+        embedding=embedding, attention=attention, similarity=similarity
+    )
     proxy = psiz.models.Proxy(model=model)
 
     mean = np.ones((n_dim))

@@ -104,9 +104,9 @@ def main():
     # Infer a shared embedding with group-specific attention weights.
     embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
-    kernel = psiz.keras.layers.ExponentialKernel()
+    similarity = psiz.keras.layers.ExponentialKernel()
     model = psiz.models.Rank(
-        embedding=embedding, attention=attention, kernel=kernel
+        embedding=embedding, attention=attention, similarity=similarity
     )
     emb_inferred = psiz.models.Proxy(model=model)
     restart_record = emb_inferred.fit(
@@ -193,10 +193,10 @@ def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
-    kernel = psiz.keras.layers.ExponentialKernel()
+    similarity = psiz.keras.layers.ExponentialKernel()
 
     model = psiz.models.Rank(
-        embedding=embedding, attention=attention, kernel=kernel
+        embedding=embedding, attention=attention, similarity=similarity
     )
     emb = psiz.models.Proxy(model=model)
 

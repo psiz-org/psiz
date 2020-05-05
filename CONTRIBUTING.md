@@ -61,9 +61,6 @@ Guidance for other Keras objects is listed below.
     * If custom layer requires initialization arguments, then implement by first calling `super(_).get_config()` and then update the dictionary with the custom layer's attributes.
     * Following TensorFlow convention, the returned configuration should be a dictionary of the form: {'class_name': str, 'config': dict}.
 
-#### Custom Kernels
-* A kernel must assign the `distance` attribute a layer implementing a distance kernel.
-
 ### Custom `Model`
 * `init()`
     * use `**kwargs` in arguments and call `super().__init__(**kwargs)`

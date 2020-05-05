@@ -109,7 +109,6 @@ def main():
         embedding=embedding, attention=attention, kernel=kernel
     )
     emb_inferred = psiz.models.Proxy(model=model)
-    emb_inferred.compile()
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, verbose=1,
         callbacks=[early_stop], monitor='val_loss', n_restart=n_restart

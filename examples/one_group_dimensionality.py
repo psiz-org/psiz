@@ -89,11 +89,9 @@ def main():
     kernel = psiz.keras.layers.ExponentialKernel()
     rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb_inferred = psiz.models.Proxy(model=rankModel)
-    emb_inferred.compile()
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=2,
-        callbacks=[early_stop], n_restart=n_restart,
-        monitor='val_loss'
+        obs_train, validation_data=obs_val, epochs=1000, verbose=1,
+        callbacks=[early_stop], n_restart=n_restart, monitor='val_loss'
     )
 
     # Compare the inferred model with ground truth by comparing the
@@ -104,7 +102,7 @@ def main():
     r_squared = psiz.utils.matrix_comparison(
         simmat_true, simmat_infer, score='r2'
     )
-    print("\n    r2: {0:.2f}".format(r_squared))
+    print("    r2: {0:.2f}\n".format(r_squared))
 
     # Analyze effective dimensionality.
     dimension_usage_mean = np.mean(np.abs(emb_inferred.z), axis=0)

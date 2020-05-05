@@ -91,6 +91,7 @@ def main():
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
+    callbacks = [cb_early, cb_board]
 
     # Infer embedding.
     embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
@@ -99,11 +100,9 @@ def main():
         embedding=embedding, kernel=kernel
     )
     emb_inferred = psiz.models.Proxy(model=rankModel)
-    emb_inferred.compile()
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=2,
-        callbacks=[cb_early, cb_board], n_restart=n_restart,
-        monitor='val_loss'
+        obs_train, validation_data=obs_val, epochs=1000, verbose=1,
+        callbacks=callbacks, n_restart=n_restart, monitor='val_loss'
     )
 
     # Compare the inferred model with ground truth by comparing the

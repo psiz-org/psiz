@@ -101,7 +101,6 @@ def main():
             embedding=embedding, kernel=kernel
         )
         emb_inferred = psiz.models.Proxy(model=model)
-        emb_inferred.compile()
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000, verbose=1,
             callbacks=[early_stop], n_restart=n_restart, monitor='val_loss'
@@ -109,7 +108,7 @@ def main():
 
         train_loss[i_round] = restart_record.record['loss'][0]
         val_loss[i_round] = restart_record.record['val_loss'][0]
-        test_loss[i_round] = emb_inferred.evaluate(obs_test)
+        test_loss[i_round] = emb_inferred.evaluate(obs_test, verbose=0)
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.

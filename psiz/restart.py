@@ -31,6 +31,7 @@ import copy
 import time
 
 import numpy as np
+import tensorflow.keras.optimizers
 
 import psiz.utils
 
@@ -40,8 +41,10 @@ class Restarter(object):
 
     Arguments:
         model: A compiled TensorFlow model.
-        monitor: The value to monitor and use as a basis for selecting
-            the best restarts.
+        compile_kwargs (optional): Key-word arguments for compile
+            method.
+        monitor (optional): The value to monitor and use as a basis for
+            selecting the best restarts.
         n_restart (optional): An integer indicating the number of
             independent restarts to perform.
         n_record (optional): An integer indicating the number of best
@@ -49,6 +52,7 @@ class Restarter(object):
         do_init (optional): A Boolean variable indicating whether the
             initial model and it's corresponding performance should be
             included as a candidate in the set of restarts.
+        custom_objects (optional): Custom objects for model creation.
 
     Attributes:
         n_restart: An integer specifying the number of
@@ -64,16 +68,22 @@ class Restarter(object):
     """
 
     def __init__(
-            self, model, monitor, n_restart=10, n_record=1, do_init=False):
+            self, model, compile_kwargs={}, monitor='loss', n_restart=10,
+            n_record=1, do_init=False, custom_objects={}):
         """Initialize."""
         # Make sure n_record is not greater than n_restart.
         n_record = np.minimum(n_record, n_restart)
 
         self.model = model
+        self.optimizer = compile_kwargs.pop(
+            'optimizer', tensorflow.keras.optimizers.RMSprop()
+        )
+        self.compile_kwargs = compile_kwargs
         self.monitor = monitor
         self.n_restart = n_restart
         self.n_record = n_record
         self.do_init = do_init
+        self.custom_objects = custom_objects
 
     def fit(
             self, x=None, validation_data=None, callbacks=[], verbose=0,
@@ -92,10 +102,6 @@ class Restarter(object):
         """
         start_time_s = time.time()
         tracker = FitTracker(self.n_record, self.monitor)
-
-        # Grab initial optimizer configuration for resetting state.
-        self.optimizer_config = self.model.optimizer.get_config()
-        # TODO instead call reset states?
 
         # TODO
         # if (verbose > 0):
@@ -132,30 +138,28 @@ class Restarter(object):
 
         # Run multiple restarts of embedding algorithm.
         for i_restart in range(self.n_restart):
-            if verbose == 1:
-                progbar.update(i_restart + 1)
-            elif verbose > 1:
+            if verbose > 1:
                 print('        Restart {0}'.format(i_restart))
 
-            # Reset trainable weights.
-            self.model.reset_weights()
-            # Reset metrics.
-            self.model.reset_metrics()
-            # Reset optimizer
-            self.model.reset_optimizer()
-            # # Compile model with fresh optimizer. TODO
-            # optimizer = type(self.model.optimizer).from_config(
-            #     self.optimizer_config
-            # )
-            # self.model.compile(optimizer=optimizer)
+            # Create new model.
+            model_re = _new_model(
+                self.model, custom_objects=self.custom_objects
+            )
 
-            # Reset callbacks
+            # Create new optimizer.
+            optimizer_re = _new_optimizer(self.optimizer)
+
+            # Compile model.
+            compile_kwargs_re = copy.deepcopy(self.compile_kwargs)
+            model_re.compile(optimizer=optimizer_re)
+
+            # Reset callbacks.
             for callback in callbacks:
                 callback.reset(i_restart)
 
             fit_start_time_s = time.time()
             # TODO clean up unnecessary kwargs (x and whatever else)
-            history = self.model.fit(
+            history = model_re.fit(
                 x=x, validation_data=validation_data, callbacks=callbacks,
                 verbose=verbose-1, **kwargs
             )
@@ -165,16 +169,18 @@ class Restarter(object):
             final_logs['epoch'] = n_epoch
             final_logs['total_duration_s'] = int(total_duration)
             final_logs['ms_per_epoch'] = int(1000 * total_duration / n_epoch)
-            final_logs['loss'] = self.model.evaluate(x=x, verbose=verbose-1)
+            final_logs['loss'] = model_re.evaluate(x=x, verbose=verbose-1)
             if validation_data is not None:
-                final_logs['val_loss'] = self.model.evaluate(
+                final_logs['val_loss'] = model_re.evaluate(
                     x=validation_data, verbose=verbose-1
                 )
-
-            weights = self.model.get_weights()  # TODO check
+            weights = model_re.get_weights()  # TODO check
 
             # Update fit record with latest restart.
             tracker.update_state(final_logs, weights)
+
+            if verbose == 1:
+                progbar.update(i_restart + 1)
 
         # Sort records from best to worst and grab best.
         tracker.sort()
@@ -327,3 +333,15 @@ def set_from_record(model, tracker, idx):
 
     """
     model.set_weights(tracker.record['weights'][idx])
+
+
+def _new_model(model, custom_objects={}):
+    """Create new model."""
+    config = model.get_config()
+    return psiz.models.model_from_config(config, custom_objects=custom_objects)
+
+
+def _new_optimizer(optimizer):
+    """Create new optimizer."""
+    config = optimizer.get_config()
+    return type(optimizer).from_config(config)

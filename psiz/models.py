@@ -404,7 +404,8 @@ class Proxy(object):
 
     def fit(
             self, obs_train, batch_size=None, validation_data=None,
-            n_restart=3, n_record=1, monitor='loss', **kwargs):
+            n_restart=3, n_record=1, monitor='loss', compile_kwargs={},
+            **kwargs):
         """Fit the free parameters of the embedding model.
 
         This convenience function formats the observations as
@@ -464,7 +465,8 @@ class Proxy(object):
 
         # Handle restarts.
         restarter = psiz.restart.Restarter(
-            self.model, monitor=monitor, n_restart=n_restart
+            self.model, compile_kwargs=compile_kwargs, monitor=monitor,
+            n_restart=n_restart
         )
         restart_record = restarter.fit(
             x=ds_obs_train, validation_data=ds_obs_val, **kwargs
@@ -1367,17 +1369,6 @@ def _ranked_sequence_probability(sim_qr, n_select):
     return seq_prob
 
 
-def _print_epoch_logs(epoch, logs):
-    """Print epoch logs."""
-    msg = (
-        '        '
-        'epoch {0:5d}'.format(epoch)
-    )
-    for k, v in logs.items():
-        msg += ' | {0}: {1}'.format(k, str(v))
-    print(msg)
-
-
 class NegLogLikelihood(Loss):
     """Negative log-likelihood loss."""
 
@@ -1385,17 +1376,6 @@ class NegLogLikelihood(Loss):
         """Call."""
         # Convert to (weighted) log probabilities.
         return _safe_neg_log_prob(y_pred)
-
-
-# def _nll_loss(y_pred, sample_weight):
-#     """Compute model loss given observation probabilities."""
-#     # Convert to (weighted) log probabilities.
-#     y_pred = _safe_neg_log_prob(y_pred)
-#     y_pred = tf.multiply(sample_weight, y_pred)
-
-#     # Get trial mean.
-#     loss = tf.reduce_mean(y_pred, axis=0)
-#     return loss
 
 
 def _safe_neg_log_prob(probs):

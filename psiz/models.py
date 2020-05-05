@@ -62,9 +62,9 @@ from tensorflow.python.keras.saving import hdf5_format
 from tensorflow.python.keras.engine import data_adapter  # TODO
 from tensorflow.python.eager import backprop  # TODO
 from tensorflow.keras.losses import Loss  # TODO
-from tensorflow.keras.metrics import Metric  # TODO
 
 import psiz.keras.layers
+import psiz.keras.metrics
 import psiz.trials
 import psiz.utils
 
@@ -1368,13 +1368,19 @@ class NegLogLikelihood(Loss):
     def call(self, y_true, y_pred):
         """Call."""
         # Convert to (weighted) log probabilities.
-        return _safe_neg_log_prob(y_pred)
+        return _safe_neg_log_prob(y_true, y_pred)
 
 
-def _safe_neg_log_prob(probs):
-    """Convert to safe log probabilites."""
+def _safe_neg_log_prob(y_true, y_pred):
+    """Convert to safe log probabilites.
+
+    Arguments:
+        y_true: Not used.
+        y_pred: Predicted probabilities.
+
+    """
     cap = tf.constant(2.2204e-16, dtype=K.floatx())
-    return tf.negative(tf.math.log(tf.maximum(probs, cap)))
+    return tf.negative(tf.math.log(tf.maximum(y_pred, cap)))
 
 
 def _tf_ranked_sequence_probability(sim_qr, is_select):

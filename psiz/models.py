@@ -667,7 +667,7 @@ class Proxy(object):
 
         if verbose > 0:
             print('[psiz] Sampling from posterior...')
-            progbar = psiz.utils.ProgressBar(
+            progbar = psiz.utils.ProgressBarRe(
                 n_total_sample, prefix='Progress:', length=50
             )
             progbar.update(0)
@@ -1006,7 +1006,9 @@ class Rank(tf.keras.Model):
                             gradients[var_idx]
                         )
 
-                self.optimizer.apply_gradients(zip(gradients, trainable_variables))
+                self.optimizer.apply_gradients(zip(
+                    gradients, trainable_variables)
+                )
 
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}

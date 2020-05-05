@@ -131,7 +131,7 @@ class Restarter(object):
         #         print('')
 
         if verbose == 1:
-            progbar = psiz.utils.ProgressBar(
+            progbar = psiz.utils.ProgressBarRe(
                 self.n_restart, prefix='Progress:', length=50
             )
             progbar.update(0)

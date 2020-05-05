@@ -18,7 +18,7 @@
 """Module of utility functions.
 
 Classes:
-    ProgressBar: A progress bar displayed in the terminal.
+    ProgressBarRe: A progress bar displayed in the terminal.
 
 Functions:
     pairwise_matrix: Return the similarity matrix characterizing
@@ -330,7 +330,7 @@ def procrustean_solution(z_a, z_b, n_restart=10):
     return (z_c, params_best)
 
 
-class ProgressBar(object):
+class ProgressBarRe(object):
     """Display a progress bar in terminal.
 
     Arguments:

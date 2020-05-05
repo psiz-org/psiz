@@ -59,7 +59,7 @@ from sklearn.neighbors import NearestNeighbors
 from psiz.trials import RankDocket, stack
 from psiz.simulate import Agent
 from psiz.preprocess import remove_catch_trials
-from psiz.utils import ProgressBar
+from psiz.utils import ProgressBarRe
 
 
 class DocketGenerator(object):
@@ -324,7 +324,7 @@ class ActiveGenerator(DocketGenerator):
         n_query = query_idx_list.shape[0]
 
         if verbose > 0:
-            progbar = ProgressBar(
+            progbar = ProgressBarRe(
                 n_query, prefix='Progress:', length=50
             )
             progbar.update(0)

@@ -191,12 +191,10 @@ class Restarter(object):
 
         # Sort records from best to worst and grab best.
         tracker.sort()
-        loss_train_best = tracker.record['loss'][0]
-        loss_val_best = tracker.record['val_loss'][0]  # TODO conditional
+        monitor_best = tracker.record[self.monitor][0]
         epoch_best = tracker.record['epoch'][0]
-        self.model.set_weights(tracker.record['weights'][0])  # TODO check
+        self.model.set_weights(tracker.record['weights'][0])
 
-        # TODO handle time stats
         fit_duration = time.time() - start_time_s
         summary = tracker.result()
 
@@ -210,16 +208,16 @@ class Restarter(object):
             )
             print(
                 '    Best | n_epoch: {0:.0f} | '
-                'loss_train: {1:.6f} | loss_val: {2:.6f}'.format(
-                    epoch_best, loss_train_best, loss_val_best
+                '{1}: {2:.6f}'.format(
+                    epoch_best, self.monitor, monitor_best
                 )
             )
             print(
-                '    Mean | n_epoch: {0:.0f} | loss_train: {1:.4f} | '
-                'loss_val: {2:.4f} | {3:.0f} s | {4:.0f} ms/epoch'.format(
+                '    Mean | n_epoch: {0:.0f} | {1}: {2:.4f} | '
+                '{3:.0f} s | {4:.0f} ms/epoch'.format(
                     summary['epoch'],
-                    summary['loss'],
-                    summary['val_loss'],
+                    self.monitor,
+                    summary[self.monitor],
                     summary['total_duration_s'],
                     summary['ms_per_epoch']
                 )

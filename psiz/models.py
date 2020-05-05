@@ -454,7 +454,7 @@ class Proxy(object):
         else:
             ds_obs_val = None
 
-        # Compile model.
+        # Compile model. TODO Place inside restarter?
         self.model.compile(**compile_kwargs)
 
         # Handle restarts.
@@ -496,7 +496,11 @@ class Proxy(object):
 
         ds_obs = ds_obs.batch(batch_size, drop_remainder=False)
         self.model.reset_metrics()
-        return self.model.evaluate(x=ds_obs, **kwargs)
+        metrics = self.model.evaluate(x=ds_obs, **kwargs)
+        # TODO First call to evaluate isn't correct. Work-around is to
+        # call it twice.
+        metrics = self.model.evaluate(x=ds_obs, **kwargs)
+        return metrics
 
     def outcome_probability(
             self, docket, group_id=None, z=None, unaltered_only=False):
@@ -968,11 +972,11 @@ class Rank(tf.keras.Model):
         likelihood = _tf_ranked_sequence_probability(sim_qr, is_select)
         return likelihood
 
-    def compile(self, loss=None, **kwargs):
-        """Intercept and set loss, then and call compile."""
-        if loss is None:
-            loss = NegLogLikelihood()
-        super().compile(loss=loss, **kwargs)
+    # def compile(self, loss=None, **kwargs):
+    #     """Intercept and set loss, then and call compile."""
+    #     if loss is None:
+    #         loss = NegLogLikelihood()
+    #     super().compile(loss=loss, **kwargs)
 
     def train_step(self, data):
         """Logic for one training step.

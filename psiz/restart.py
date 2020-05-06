@@ -114,21 +114,35 @@ class Restarter(object):
         #         )
         #     )
 
-        # Initial evaluation. TODO
+        # Initial evaluation.
         # if self.do_init:
-        #     # Update record with initialization values.
-        #     history = None
-        #     weights = None
-        #     tracker.update_state(history.final, weights, is_init=True)
-        #     if (verbose > 2):
-        #         print('        Initialization')
-        #         print(
-        #             '        '
-        #             '     --     | '
-        #             'loss_train: {0: .6f} | loss_val: {1: .6f}'.format(
-        #                 loss_train_init, loss_val_init)
+        #     # Create new optimizer.
+        #     optimizer_re = _new_optimizer(self.optimizer)
+
+        #     # Compile model.
+        #     self.model.compile(
+        #         optimizer=optimizer_re, **self.stateless_compile_kwargs
+        #     )
+
+        #     logs = {}
+        #     n_epoch = 0
+        #     logs['epoch'] = 0
+        #     logs['total_duration_s'] = 0
+        #     logs['ms_per_epoch'] = 0
+        #     train_metrics = model_re.evaluate(
+        #         x=x, verbose=0, return_dict=True
+        #     )
+        #     logs.update(train_metrics)
+        #     if validation_data is not None:
+        #         val_metrics = model_re.evaluate(
+        #             x=validation_data, verbose=0, return_dict=True
         #         )
-        #         print('')
+        #         val_metrics = _append_prefix(val_metrics, 'val_')
+        #         logs.update(val_metrics)
+        #     weights = model_re.get_weights()
+
+        #     # Update fit record with latest restart.
+        #     tracker.update_state(logs, weights, is_init=True)
 
         if verbose == 1:
             progbar = psiz.utils.ProgressBarRe(
@@ -159,7 +173,6 @@ class Restarter(object):
                 callback.reset(i_restart)
 
             fit_start_time_s = time.time()
-            # TODO clean up unnecessary kwargs (x and whatever else)
             history = model_re.fit(
                 x=x, validation_data=validation_data, callbacks=callbacks,
                 verbose=verbose-1, **kwargs
@@ -183,7 +196,7 @@ class Restarter(object):
             weights = model_re.get_weights()
 
             # Update fit record with latest restart.
-            tracker.update_state(logs, weights)
+            tracker.update_state(logs, weights, is_init=False)
 
             if verbose == 1:
                 progbar.update(i_restart + 1)
@@ -195,36 +208,37 @@ class Restarter(object):
         self.model.set_weights(tracker.record['weights'][0])
 
         fit_duration = time.time() - start_time_s
-        summary = tracker.result()
+        summary_mean = tracker.result(np.mean)
+        summary_std = tracker.result(np.std)
 
         if (verbose > 0):
+            print('    Restart Summary')
+            if not tracker.beat_init:
+                print('    Did not beat initial model.')
             print(
-                '    Restart Summary\n'
                 '    n_valid_restart {0:.0f} | '
                 'total_duration: {1:.0f} s'.format(
                     tracker.count, fit_duration
                 )
             )
             print(
-                '    Best | n_epoch: {0:.0f} | '
-                '{1}: {2:.6f}'.format(
+                '    best | n_epoch: {0:.0f} | '
+                '{1}: {2:.4f}'.format(
                     epoch_best, self.monitor, monitor_best
                 )
             )
             print(
-                '    Mean | n_epoch: {0:.0f} | {1}: {2:.4f} | '
-                '{3:.0f} s | {4:.0f} ms/epoch'.format(
-                    summary['epoch'],
-                    self.monitor,
-                    summary[self.monitor],
-                    summary['total_duration_s'],
-                    summary['ms_per_epoch']
+                '    mean \u00B1stddev | n_epoch: {0:.0f} \u00B1{1:.0f} | '
+                '{2}: {3:.4f} \u00B1{4:.4f} | {5:.0f} \u00B1{6:.0f} s | '
+                '{7:.0f} \u00B1{8:.0f} ms/epoch'.format(
+                    summary_mean['epoch'], summary_std['epoch'],
+                    self.monitor, summary_mean[self.monitor],
+                    summary_std[self.monitor],
+                    summary_mean['total_duration_s'],
+                    summary_std['total_duration_s'],
+                    summary_mean['ms_per_epoch'], summary_std['ms_per_epoch']
                 )
             )
-
-            if not tracker.beat_init:  # TODO
-                print('    Did not beat initialization.')
-            print()
 
         return tracker
 
@@ -252,7 +266,7 @@ class FitTracker(object):
             monitor: np.inf * np.ones([n_record]),
             'weights': [None] * n_record
         }
-        self.summary = {monitor: 0}
+        self.summary = {monitor: []}
         self.count = 0.
         self.beat_init = None
         self.init_loss = np.inf
@@ -276,12 +290,13 @@ class FitTracker(object):
         loss_monitor = logs[self.monitor]
 
         # Update aggregate summary if result is not nan.
-        if not np.isnan(loss_monitor):
+        if not is_init and not np.isnan(loss_monitor):
             self.count = self.count + 1.
             for k, v in logs.items():
                 if k not in self.summary:
-                    self.summary[k] = 0
-                self.summary[k] = self.summary[k] + v
+                    self.summary[k] = []
+                # self.summary[k] = self.summary[k] + v  TODO
+                self.summary[k].append(v)
 
         dmy_idx = np.arange(self.n_record)
         locs_is_worse = np.greater(
@@ -319,11 +334,18 @@ class FitTracker(object):
             else:
                 self.record[k] = self.record[k][idx_sort]
 
-    def result(self):
-        """Return mean value of all summary fields."""
+    def result(self, fnc):
+        """Return function of all summary fields.
+
+        Arguments:
+            fnc: Function that takes a list of items and returns a
+                scalar.
+
+        """
         d = {}
         for k, v in self.summary.items():
-            d[k] = v / self.count
+            # d[k] = v / self.count TODO
+            d[k] = fnc(v)
         return d
 
 

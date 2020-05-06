@@ -971,12 +971,6 @@ class Rank(tf.keras.Model):
         likelihood = _tf_ranked_sequence_probability(sim_qr, is_select)
         return likelihood
 
-    # def compile(self, loss=None, **kwargs):
-    #     """Intercept and set loss, then and call compile."""
-    #     if loss is None:
-    #         loss = NegLogLikelihood()
-    #     super().compile(loss=loss, **kwargs)
-
     def train_step(self, data):
         """Logic for one training step.
 
@@ -1187,7 +1181,6 @@ def model_from_config(config, custom_objects={}):
         'Rank': psiz.models.Rank,
         'EmbeddingRe': psiz.keras.layers.EmbeddingRe,
         'WeightedMinkowski': psiz.keras.layers.WeightedMinkowski,
-        'SeparateAttention': psiz.keras.layers.SeparateAttention,
         'Attention': psiz.keras.layers.Attention,
         'InverseKernel': psiz.keras.layers.InverseKernel,
         'ExponentialKernel': psiz.keras.layers.ExponentialKernel,

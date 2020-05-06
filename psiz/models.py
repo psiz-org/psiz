@@ -495,12 +495,11 @@ class Proxy(object):
             batch_size = obs.n_trial
 
         ds_obs = ds_obs.batch(batch_size, drop_remainder=False)
-        self.model.reset_metrics()
         metrics = self.model.evaluate(x=ds_obs, **kwargs)
         # TODO First call to evaluate isn't correct. Work-around is to
         # call it twice.
-        metrics = self.model.evaluate(x=ds_obs, **kwargs)
-        return metrics
+        metrics_2 = self.model.evaluate(x=ds_obs, **kwargs)
+        return metrics_2
 
     def outcome_probability(
             self, docket, group_id=None, z=None, unaltered_only=False):

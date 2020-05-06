@@ -394,8 +394,8 @@ class Proxy(object):
 
     def fit(
             self, obs_train, batch_size=None, validation_data=None,
-            n_restart=3, n_record=1, monitor='loss', compile_kwargs={},
-            **kwargs):
+            n_restart=3, n_record=1, do_init=False, monitor='loss',
+            compile_kwargs={}, **kwargs):
         """Fit the free parameters of the embedding model.
 
         This convenience function formats the observations as
@@ -459,7 +459,7 @@ class Proxy(object):
         # Handle restarts.
         restarter = psiz.restart.Restarter(
             self.model, compile_kwargs=compile_kwargs, monitor=monitor,
-            n_restart=n_restart, n_record=n_record
+            n_restart=n_restart, n_record=n_record, do_init=do_init
         )
         restart_record = restarter.fit(
             x=ds_obs_train, validation_data=ds_obs_val, **kwargs

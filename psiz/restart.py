@@ -103,46 +103,35 @@ class Restarter(object):
         start_time_s = time.time()
         tracker = FitTracker(self.n_record, self.monitor)
 
-        # TODO
-        # if (verbose > 0):
-        #     print(
-        #         '    Restart Settings:'
-        #         ' n_stimuli: {0} | n_dim: {1} | n_group: {2}'
-        #         ' | n_obs_train: {3} | n_obs_val: {4}'.format(
-        #             self.n_stimuli, self.n_dim, self.n_group,
-        #             n_obs_train, n_obs_val
-        #         )
-        #     )
-
         # Initial evaluation.
-        # if self.do_init:
-        #     # Create new optimizer.
-        #     optimizer_re = _new_optimizer(self.optimizer)
+        if self.do_init:
+            # Create new optimizer.
+            optimizer_re = _new_optimizer(self.optimizer)
 
-        #     # Compile model.
-        #     self.model.compile(
-        #         optimizer=optimizer_re, **self.stateless_compile_kwargs
-        #     )
+            # Compile model.
+            self.model.compile(
+                optimizer=optimizer_re, **self.stateless_compile_kwargs
+            )
 
-        #     logs = {}
-        #     n_epoch = 0
-        #     logs['epoch'] = 0
-        #     logs['total_duration_s'] = 0
-        #     logs['ms_per_epoch'] = 0
-        #     train_metrics = model_re.evaluate(
-        #         x=x, verbose=0, return_dict=True
-        #     )
-        #     logs.update(train_metrics)
-        #     if validation_data is not None:
-        #         val_metrics = model_re.evaluate(
-        #             x=validation_data, verbose=0, return_dict=True
-        #         )
-        #         val_metrics = _append_prefix(val_metrics, 'val_')
-        #         logs.update(val_metrics)
-        #     weights = model_re.get_weights()
+            logs = {}
+            n_epoch = 0
+            logs['epoch'] = 0
+            logs['total_duration_s'] = 0
+            logs['ms_per_epoch'] = 0
+            train_metrics = model_re.evaluate(
+                x=x, verbose=0, return_dict=True
+            )
+            logs.update(train_metrics)
+            if validation_data is not None:
+                val_metrics = model_re.evaluate(
+                    x=validation_data, verbose=0, return_dict=True
+                )
+                val_metrics = _append_prefix(val_metrics, 'val_')
+                logs.update(val_metrics)
+            weights = model_re.get_weights()
 
-        #     # Update fit record with latest restart.
-        #     tracker.update_state(logs, weights, is_init=True)
+            # Update fit record with latest restart.
+            tracker.update_state(logs, weights, is_init=True)
 
         if verbose == 1:
             progbar = psiz.utils.ProgressBarRe(
@@ -295,7 +284,6 @@ class FitTracker(object):
             for k, v in logs.items():
                 if k not in self.summary:
                     self.summary[k] = []
-                # self.summary[k] = self.summary[k] + v  TODO
                 self.summary[k].append(v)
 
         dmy_idx = np.arange(self.n_record)
@@ -344,7 +332,6 @@ class FitTracker(object):
         """
         d = {}
         for k, v in self.summary.items():
-            # d[k] = v / self.count TODO
             d[k] = fnc(v)
         return d
 

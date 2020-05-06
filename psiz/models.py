@@ -61,7 +61,6 @@ from tensorflow.keras.constraints import Constraint
 from tensorflow.python.keras.saving import hdf5_format
 from tensorflow.python.keras.engine import data_adapter  # TODO
 from tensorflow.python.eager import backprop  # TODO
-from tensorflow.keras.losses import Loss  # TODO
 
 import psiz.keras.layers
 import psiz.keras.metrics
@@ -1382,27 +1381,6 @@ def _ranked_sequence_probability(sim_qr, n_select):
             # denom = denom + sim_qr[:, i_selected-1, :]
             denom += sim_qr[:, i_selected-1, :]
     return seq_prob
-
-
-class NegLogLikelihood(Loss):
-    """Negative log-likelihood loss."""
-
-    def call(self, y_true, y_pred):
-        """Call."""
-        # Convert to (weighted) log probabilities.
-        return _safe_neg_log_prob(y_true, y_pred)
-
-
-def _safe_neg_log_prob(y_true, y_pred):
-    """Convert to safe log probabilites.
-
-    Arguments:
-        y_true: Not used.
-        y_pred: Predicted probabilities.
-
-    """
-    cap = tf.constant(2.2204e-16, dtype=K.floatx())
-    return tf.negative(tf.math.log(tf.maximum(y_pred, cap)))
 
 
 def _tf_ranked_sequence_probability(sim_qr, is_select):

@@ -153,7 +153,6 @@ class Restarter(object):
             model_re.compile(
                 optimizer=optimizer_re, **self.stateless_compile_kwargs
             )
-            model_re.reset_metrics()
 
             # Reset callbacks.
             for callback in callbacks:

@@ -59,8 +59,8 @@ from tensorflow.keras.callbacks import History
 from tensorflow.python.keras.callbacks import configure_callbacks
 from tensorflow.keras.constraints import Constraint
 from tensorflow.python.keras.saving import hdf5_format
-from tensorflow.python.keras.engine import data_adapter  # TODO
-from tensorflow.python.eager import backprop  # TODO
+from tensorflow.python.keras.engine import data_adapter
+from tensorflow.python.eager import backprop
 
 import psiz.keras.layers
 import psiz.keras.metrics
@@ -214,7 +214,7 @@ class Proxy(object):
         weights = {
             'embedding': {'z': self.z},
             'attention': self.phi,
-            'kernel': self.theta  # TODO
+            'kernel': self.theta
         }
         return weights
 
@@ -822,6 +822,7 @@ class Proxy(object):
     def subset(self, idx):
         """Return subset of embedding."""
         emb = self.clone()
+        raise(NotImplementedError)
         # TODO CRITICAL, must handle changes to embedding layer
         emb.z = emb.z[idx, :]
         emb.n_stimuli = emb.z.shape[0]
@@ -1139,7 +1140,8 @@ def load_model(filepath, custom_objects={}, compile=False):
             # for name in f['theta'][p_name]:
             #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
-        dist_config = {}  # TODO Critical rho
+        dist_config = {}
+        dist_config.update(theta_config.pop('fit_rho'))
         distance = psiz.keras.layers.WeightedMinkowski(**dist_config)
         if embedding_type == 'Exponential':
             similarity = psiz.keras.layers.ExponentialKernel(**theta_config)

@@ -76,22 +76,29 @@ def main():
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_loss', patience=10, mode='min', restore_best_weights=True
+        'val_nll', patience=10, mode='min', restore_best_weights=True
     )
+    callbacks = [early_stop]
+
+    compile_kwargs = {
+        'loss': psiz.keras.losses.NegLogLikelihood(),
+        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+    }
 
     # Add regularization to embedding.
-    reg = psiz.keras.regularizers.Squeeze(rate=squeeze_rate)
+    embeddings_regularizer = psiz.keras.regularizers.Squeeze(rate=squeeze_rate)
 
     # Infer embedding.
     embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli, n_dim_max, embeddings_regularizer=reg
+        n_stimuli, n_dim_max, embeddings_regularizer=embeddings_regularizer
     )
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb_inferred = psiz.models.Proxy(model=rankModel)
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, verbose=1,
-        callbacks=[early_stop], n_restart=n_restart, monitor='val_loss'
+        callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
+        compile_kwargs=compile_kwargs
     )
 
     # Compare the inferred model with ground truth by comparing the

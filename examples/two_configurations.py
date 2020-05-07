@@ -28,6 +28,7 @@ from sklearn.model_selection import StratifiedKFold
 
 import psiz.keras.callbacks
 import psiz.keras.layers
+import psiz.keras.losses
 from psiz.generator import RandomGenerator
 import psiz.models
 from psiz.simulate import Agent
@@ -83,15 +84,20 @@ def main():
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_loss', patience=10, mode='min', restore_best_weights=True
+        'val_nll', patience=10, mode='min', restore_best_weights=True
     )
-    # Visualize using TensorBoard.
-    cb_board = psiz.keras.callbacks.TensorBoardRe(
-        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
-        write_graph=False, write_images=False, update_freq='epoch',
-        profile_batch=0, embeddings_freq=0, embeddings_metadata=None
-    )
-    callbacks = [cb_early, cb_board]
+    # Visualize using TensorBoard. TODO
+    # cb_board = psiz.keras.callbacks.TensorBoardRe(
+    #     log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
+    #     write_graph=False, write_images=False, update_freq='epoch',
+    #     profile_batch=0, embeddings_freq=0, embeddings_metadata=None
+    # )
+    callbacks = [cb_early]
+
+    compile_kwargs = {
+        'loss': psiz.keras.losses.NegLogLikelihood(),
+        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+    }
 
     # Infer embedding.
     embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
@@ -102,7 +108,8 @@ def main():
     emb_inferred = psiz.models.Proxy(model=rankModel)
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, verbose=1,
-        callbacks=callbacks, n_restart=n_restart, monitor='val_loss'
+        callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
+        compile_kwargs=compile_kwargs
     )
 
     # Compare the inferred model with ground truth by comparing the

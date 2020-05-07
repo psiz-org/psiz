@@ -30,11 +30,13 @@ from sklearn.model_selection import StratifiedKFold
 from psiz.generator import RandomGenerator
 import psiz.models
 import psiz.keras.layers
+import psiz.keras.losses
 from psiz.simulate import Agent
 from psiz.utils import pairwise_matrix, matrix_comparison
 from psiz.keras.callbacks import EarlyStoppingRe
 
 # Uncomment the following line to force eager execution.
+# import tensorflow as tf
 # tf.config.experimental_run_functions_eagerly(True)
 
 
@@ -77,8 +79,14 @@ def main():
 
     # Use early stopping.
     early_stop = EarlyStoppingRe(
-        'val_loss', patience=10, mode='min', restore_best_weights=True
+        'val_nll', patience=10, mode='min', restore_best_weights=True
     )
+    callbacks = [early_stop]
+
+    compile_kwargs = {
+        'loss': psiz.keras.losses.NegLogLikelihood(),
+        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+    }
 
     # Infer independent models with increasing amounts of data.
     n_step = 8
@@ -86,9 +94,9 @@ def main():
         np.linspace(15, obs_train.n_trial, n_step)
     ).astype(np.int64)
     r2 = np.empty((n_step))
-    train_loss = np.empty((n_step))
-    val_loss = np.empty((n_step))
-    test_loss = np.empty((n_step))
+    train_nll = np.empty((n_step))
+    val_nll = np.empty((n_step))
+    test_nll = np.empty((n_step))
     for i_round in range(n_step):
         print('  Round {0}'.format(i_round))
         include_idx = np.arange(0, n_obs[i_round])
@@ -103,12 +111,16 @@ def main():
         emb_inferred = psiz.models.Proxy(model=model)
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000, verbose=1,
-            callbacks=[early_stop], n_restart=n_restart, monitor='val_loss'
+            callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
+            compile_kwargs=compile_kwargs
         )
 
-        train_loss[i_round] = restart_record.record['loss'][0]
-        val_loss[i_round] = restart_record.record['val_loss'][0]
-        test_loss[i_round] = emb_inferred.evaluate(obs_test, verbose=0)
+        train_nll[i_round] = restart_record.record['nll'][0]
+        val_nll[i_round] = restart_record.record['val_nll'][0]
+        test_metrics = emb_inferred.evaluate(
+            obs_test, verbose=0, return_dict=True
+        )
+        test_nll[i_round] = test_metrics['nll']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
@@ -119,20 +131,20 @@ def main():
             simmat_infer, simmat_true, score='r2'
         )
         print(
-            '    n_obs: {0:4d} | train_loss: {1:.2f} | '
-            'val_loss: {2:.2f} | test_loss: {3:.2f} | '
+            '    n_obs: {0:4d} | train_nll: {1:.2f} | '
+            'val_nll: {2:.2f} | test_nll: {3:.2f} | '
             'Correlation (R^2): {4:.2f}'.format(
-                n_obs[i_round], train_loss[i_round],
-                val_loss[i_round], test_loss[i_round], r2[i_round]
+                n_obs[i_round], train_nll[i_round],
+                val_nll[i_round], test_nll[i_round], r2[i_round]
             )
         )
 
     # Plot comparison results.
     fig, axes = plt.subplots(1, 2, figsize=(6.5, 3))
 
-    axes[0].plot(n_obs, train_loss, 'bo-', label='Train Loss')
-    axes[0].plot(n_obs, val_loss, 'go-', label='Val. Loss')
-    axes[0].plot(n_obs, test_loss, 'ro-', label='Test Loss')
+    axes[0].plot(n_obs, train_nll, 'bo-', label='Train Loss')
+    axes[0].plot(n_obs, val_nll, 'go-', label='Val. Loss')
+    axes[0].plot(n_obs, test_nll, 'ro-', label='Test Loss')
     axes[0].set_title('Model Loss')
     axes[0].set_xlabel('Number of Judged Trials')
     axes[0].set_ylabel('Loss')

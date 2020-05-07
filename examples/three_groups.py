@@ -47,6 +47,7 @@ from tensorflow.python.keras import backend as K
 
 import psiz.keras.callbacks
 import psiz.keras.layers
+import psiz.keras.losses
 from psiz.generator import RandomGenerator
 import psiz.models
 from psiz.simulate import Agent
@@ -98,8 +99,14 @@ def main():
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_loss', patience=10, mode='min', restore_best_weights=True
+        'val_nll', patience=10, mode='min', restore_best_weights=True
     )
+    callbacks = [early_stop]
+
+    compile_kwargs = {
+        'loss': psiz.keras.losses.NegLogLikelihood(),
+        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+    }
 
     # Infer a shared embedding with group-specific attention weights.
     embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
@@ -111,7 +118,8 @@ def main():
     emb_inferred = psiz.models.Proxy(model=model)
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, verbose=1,
-        callbacks=[early_stop], monitor='val_loss', n_restart=n_restart
+        callbacks=callbacks, monitor='val_nll', n_restart=n_restart,
+        compile_kwargs=compile_kwargs
     )
 
     # Permute inferred dimensions to best match ground truth.

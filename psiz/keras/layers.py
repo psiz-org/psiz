@@ -147,7 +147,6 @@ class EmbeddingRe(tf.keras.layers.Layer):
 
         # Reshape and permute dimensions.
         z_set = tf.reshape(z_set, [batch_size, input_length, output_dim])
-        z_set = tf.transpose(z_set, perm=[0, 2, 1])
         return z_set
 
     def get_config(self):

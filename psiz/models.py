@@ -954,10 +954,9 @@ class Rank(tf.keras.Model):
         attention = self.attention(group_id)
         attention = tf.expand_dims(attention, axis=2)
 
-        # Inflate cooridnates.
+        # Inflate coordinates.
         z_stimulus_set = self.embedding(obs_stimulus_set)
-        # tf Embedding returns n_obs, n_ref + 1, n_dim
-        # psiz EmbeddingRe returns n_obs, n_dim, n_ref + 1
+        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 2, 1])
         max_n_reference = tf.shape(z_stimulus_set)[2] - 1
         z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
 

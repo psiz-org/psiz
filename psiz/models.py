@@ -1007,11 +1007,11 @@ class Rank(tf.keras.Model):
                 gradients = tape.gradient(loss, trainable_variables)
                 # NOTE: There is an open issue for using constraints with
                 # embedding-like layers (e.g., tf.keras.layers.Embedding,
-                # psiz.keras.layers.EmbeddingRe, psiz.keras.layers.Attention (see:
-                # https://github.com/tensorflow/tensorflow/issues/33755). There
-                # are also issues when using Eager Execution. A work-around is
-                # to convert the problematic gradients, which are returned as
-                # tf.IndexedSlices, into dense tensors.
+                # psiz.keras.layers.EmbeddingRe, psiz.keras.layers.Attention
+                # (see https://github.com/tensorflow/tensorflow/issues/33755).
+                # There are also issues when using Eager Execution. A
+                # work-around is to convert the problematic gradients, which
+                # are returned as tf.IndexedSlices, into dense tensors.
                 for var_idx, var in enumerate(self.trainable_variables):
                     if var.name == 'z:0' or var.name == 'w:0':
                         gradients[var_idx] = tf.convert_to_tensor(
@@ -1138,9 +1138,13 @@ def load_model(filepath, custom_objects={}, compile=False):
         dist_config.update(theta_config.pop('fit_rho'))
         distance = psiz.keras.layers.WeightedMinkowski(**dist_config)
         if embedding_type == 'Exponential':
-            similarity = psiz.keras.layers.ExponentialSimilarity(**theta_config)
+            similarity = psiz.keras.layers.ExponentialSimilarity(
+                **theta_config
+            )
         elif embedding_type == 'HeavyTailed':
-            similarity = psiz.keras.layers.HeavyTailedSimilarity(**theta_config)
+            similarity = psiz.keras.layers.HeavyTailedSimilarity(
+                **theta_config
+            )
         elif embedding_type == 'StudentsT':
             similarity = psiz.keras.layers.StudentsTSimilarity(**theta_config)
         elif embedding_type == 'Inverse':

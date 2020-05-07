@@ -21,8 +21,10 @@ Classes:
     WeightedMinkowski: A weighted distance layer.
     Attention: A simple attention layer.
     InverseSimilarity: A parameterized inverse similarity layer.
-    ExponentialSimilarity: A parameterized exponential similarity layer.
-    HeavyTailedSimilarity: A parameterized heavy-tailed similarity layer.
+    ExponentialSimilarity: A parameterized exponential similarity
+        layer.
+    HeavyTailedSimilarity: A parameterized heavy-tailed similarity
+        layer.
     StudentsTSimilarity: A parameterized Student's t-distribution
         similarity layer.
 

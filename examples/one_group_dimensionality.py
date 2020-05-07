@@ -114,14 +114,16 @@ def main():
     print(
         "    Proportion mean: {0}".format(
             np.array2string(
-                dimension_usage_mean, formatter={'float_kind': lambda x: "%.3f" % x}
+                dimension_usage_mean,
+                formatter={'float_kind': lambda x: "%.3f" % x}
             )
         )
     )
     print(
         "    Proportion max: {0}".format(
             np.array2string(
-                dimension_usage_max, formatter={'float_kind': lambda x: "%.3f" % x}
+                dimension_usage_max,
+                formatter={'float_kind': lambda x: "%.3f" % x}
             )
         )
     )

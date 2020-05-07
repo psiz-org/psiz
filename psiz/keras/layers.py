@@ -400,8 +400,7 @@ class InverseKernel(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        sim_qr = 1 / (tf.pow(inputs, self.tau) + self.mu)
-        return sim_qr
+        return 1 / (tf.pow(inputs, self.tau) + self.mu)
 
     def get_config(self):
         """Return layer configuration."""
@@ -512,10 +511,9 @@ class ExponentialKernel(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        sim_qr = tf.exp(
+        return tf.exp(
             tf.negative(self.beta) * tf.pow(inputs, self.tau)
         ) + self.gamma
-        return sim_qr
 
     def get_config(self):
         """Return layer configuration."""
@@ -603,10 +601,9 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        sim_qr = tf.pow(
+        return tf.pow(
             self.kappa + tf.pow(inputs, self.tau), (tf.negative(self.alpha))
         )
-        return sim_qr
 
     def get_config(self):
         """Return layer configuration."""
@@ -693,11 +690,10 @@ class StudentsTKernel(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        sim_qr = tf.pow(
+        return tf.pow(
             1 + (tf.pow(inputs, self.tau) / self.alpha),
             tf.negative(self.alpha + 1)/2
         )
-        return sim_qr
 
     def get_config(self):
         """Return layer configuration."""

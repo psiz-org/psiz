@@ -120,17 +120,13 @@ class EmbeddingRe(tf.keras.layers.Layer):
 
     def call(self, inputs):
         """Call."""
-        # Add one for placeholder stimulus.
-        stimulus_set = inputs + tf.constant(1, dtype=inputs.dtype)
         z_pad = tf.concat(
             [
                 tf.zeros([1, self.z.shape[1]], dtype=K.floatx()),
                 self.z
             ], axis=0
         )
-
-        z_stimulus_set = self._tf_inflate_points(stimulus_set, z_pad)
-        return z_stimulus_set
+        return self._tf_inflate_points(inputs, z_pad)
 
     def _tf_inflate_points(self, stimulus_set, z):
         """Inflate stimulus set into embedding points.

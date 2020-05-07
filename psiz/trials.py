@@ -901,12 +901,15 @@ class RankObservations(RankTrials):
             tf.data.Dataset object.
 
         """
-        # NOTE: Adding singleton dimensions because restoring a SavedModel
-        # adds singleton dimensions on the call signautre for inputs that
-        # only have one dimension. Add the singleton dimensions here solves
-        # the problem.
+        # NOTE: Should not use single dimension inputs. Add a singleton
+        # dimensions if necessary, because restoring a SavedModel adds
+        # singleton dimensions on the call signautre for inputs that only
+        # have one dimension. Add the singleton dimensions here solves the
+        # problem.
+        # NOTE: We use stimulus_set + 1, since TensorFlow requires "0", not
+        # "-1" to indicate a masked value.
         x = {
-            'stimulus_set': self.stimulus_set,
+            'stimulus_set': self.stimulus_set + 1,
             'membership': np.stack((self.group_id, self.agent_id), axis=-1),
             'is_present': self.is_present(),
             'is_select': self.is_select(compress=True)

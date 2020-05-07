@@ -1014,10 +1014,10 @@ class Rank(tf.keras.Model):
                 # There are also issues when using Eager Execution. A
                 # work-around is to convert the problematic gradients, which
                 # are returned as tf.IndexedSlices, into dense tensors.
-                for var_idx, var in enumerate(self.trainable_variables):
-                    if var.name == 'z:0' or var.name == 'w:0':
-                        gradients[var_idx] = tf.convert_to_tensor(
-                            gradients[var_idx]
+                for idx, grad in enumerate(gradients):
+                    if gradients[idx].__class__.__name__ == 'IndexedSlices':
+                        gradients[idx] = tf.convert_to_tensor(
+                            gradients[idx]
                         )
 
                 self.optimizer.apply_gradients(zip(

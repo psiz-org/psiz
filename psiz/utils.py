@@ -81,6 +81,7 @@ def assess_convergence(
             n_trial_array: Number of trials in each set.
 
     """
+    # TODO CRITICAL
     # Check arguments.
     n_back = np.maximum(n_back, 1)
     n_back = np.minimum(n_back, n_partition-1)

@@ -168,7 +168,7 @@ def ground_truth():
     n_dim = 2
 
     similarity = psiz.keras.layers.ExponentialKernel()
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb = psiz.models.Proxy(rankModel)
 

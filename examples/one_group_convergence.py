@@ -95,7 +95,7 @@ def main():
         obs_round_train = obs_train.subset(include_idx)
 
         # Infer embedding.
-        embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+        embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
         similarity = psiz.keras.layers.ExponentialKernel()
         model = psiz.models.Rank(
             embedding=embedding, similarity=similarity
@@ -152,7 +152,7 @@ def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     similarity = psiz.keras.layers.ExponentialKernel()
 
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
 
     emb = psiz.models.Proxy(model=rankModel)

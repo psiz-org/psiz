@@ -84,7 +84,7 @@ def main():
 
     # Infer embedding.
     embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli, n_dim=n_dim_max, embeddings_regularizer=reg
+        n_stimuli, n_dim_max, embeddings_regularizer=reg
     )
     similarity = psiz.keras.layers.ExponentialKernel()
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
@@ -130,7 +130,7 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     similarity = psiz.keras.layers.ExponentialKernel()
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim=n_dim)
+    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb = psiz.models.Proxy(rankModel)
 

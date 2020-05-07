@@ -109,7 +109,7 @@ class EmbeddingRe(tf.keras.layers.Layer):
         )
 
         # TODO not sure if trainable should be set this way or let
-        # superclass logic handle it?
+        # superclass Layer logic handle it?
         self.embeddings = self.add_weight(
             shape=(self.input_dim, self.output_dim),
             initializer=self.embeddings_initializer,
@@ -119,30 +119,27 @@ class EmbeddingRe(tf.keras.layers.Layer):
         )
 
     def call(self, inputs):
-        """Call."""
-        z_pad = tf.concat(
-            [
-                tf.zeros([1, self.embeddings.shape[1]], dtype=K.floatx()),
-                self.embeddings
-            ], axis=0
-        )
-        return self._tf_inflate_points(inputs, z_pad)
+        """Call.
 
-    def _tf_inflate_points(self, stimulus_set, z):
-        """Inflate stimulus set into embedding points.
+        Inflate stimulus set into embedding points.
 
         Note: This method will not gracefully handle the masking
         placeholder stimulus ID (i.e., -1). The stimulus IDs and
         coordinates must already have been adjusted for the masking
         placeholder.
 
+        Arguments:
+            inputs: stimulus_set
+
         """
-        batch_size = tf.shape(stimulus_set)[0]
-        input_length = tf.shape(stimulus_set)[1]
+        z = self.embeddings
+
+        batch_size = tf.shape(inputs)[0]
+        input_length = tf.shape(inputs)[1]
         output_dim = tf.shape(z)[1]
 
         # Flatten stimulus_set and inflate all indices at once.
-        flat_idx = tf.reshape(stimulus_set, [-1])
+        flat_idx = tf.reshape(inputs, [-1])
         z_set = tf.gather(z, flat_idx)
 
         # Reshape and permute dimensions.

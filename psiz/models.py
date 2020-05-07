@@ -159,12 +159,15 @@ class Proxy(object):
     @property
     def z(self):
         """Getter method for z."""
-        return self.model.embedding.embeddings.numpy()
+        return self.model.embedding.embeddings.numpy()[1:]
 
     @z.setter
     def z(self, z):
         """Setter method for z."""
-        self.model.embedding.embeddings.assign(z)
+        z_pad = np.vstack(
+            [np.zeros([1, self.n_dim]), z]
+        )
+        self.model.embedding.embeddings.assign(z_pad)
 
     @property
     def w(self):
@@ -454,9 +457,6 @@ class Proxy(object):
         else:
             ds_obs_val = None
 
-        # Compile model. TODO Place inside restarter?
-        self.model.compile(**compile_kwargs)
-
         # Handle restarts.
         restarter = psiz.restart.Restarter(
             self.model, compile_kwargs=compile_kwargs, monitor=monitor,
@@ -465,6 +465,7 @@ class Proxy(object):
         restart_record = restarter.fit(
             x=ds_obs_train, validation_data=ds_obs_val, **kwargs
         )
+        self.model = restarter.model  # TODO ugly
 
         return restart_record
 
@@ -843,7 +844,7 @@ class Proxy(object):
         model_weights = self.get_weights()
         proxy_model.set_weights(model_weights)
 
-        # Compile. TODO This is brittle.
+        # Compile. TODO is this too brittle?
         if self.model.loss is not None:
             proxy_model.compile(
                 loss=self.model.loss, optimizer=self.model.optimizer
@@ -1045,7 +1046,7 @@ class Rank(tf.keras.Model):
     @property
     def n_stimuli(self):
         """Getter method for n_stimuli."""
-        return self.embedding.input_dim
+        return self.embedding.input_dim - 1
 
     @property
     def n_dim(self):

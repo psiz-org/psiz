@@ -110,7 +110,7 @@ class EmbeddingRe(tf.keras.layers.Layer):
 
         # TODO not sure if trainable should be set this way or let
         # superclass logic handle it?
-        self.z = self.add_weight(
+        self.embeddings = self.add_weight(
             shape=(self.input_dim, self.output_dim),
             initializer=self.embeddings_initializer,
             trainable=self.trainable, name='z', dtype=K.floatx(),
@@ -122,8 +122,8 @@ class EmbeddingRe(tf.keras.layers.Layer):
         """Call."""
         z_pad = tf.concat(
             [
-                tf.zeros([1, self.z.shape[1]], dtype=K.floatx()),
-                self.z
+                tf.zeros([1, self.embeddings.shape[1]], dtype=K.floatx()),
+                self.embeddings
             ], axis=0
         )
         return self._tf_inflate_points(inputs, z_pad)
@@ -163,7 +163,6 @@ class EmbeddingRe(tf.keras.layers.Layer):
             'embeddings_constraint':
                 tf.keras.constraints.serialize(self.embeddings_constraint)
         })
-        config = _updated_config(self, config)
         return config
 
 
@@ -225,7 +224,6 @@ class WeightedMinkowski(tf.keras.layers.Layer):
             'fit_rho': self.fit_rho,
             'rho_init': tf.keras.initializers.serialize(self.rho_init)
         })
-        config = _updated_config(self, config)
         return config
 
 
@@ -336,7 +334,6 @@ class Attention(tf.keras.layers.Layer):
             'embeddings_constraint':
                 tf.keras.constraints.serialize(self.embeddings_constraint)
         })
-        config = _updated_config(self, config)
         return config
 
 
@@ -409,7 +406,6 @@ class InverseSimilarity(tf.keras.layers.Layer):
             'tau_init': tf.keras.initializers.serialize(self.tau_init),
             'mu_init': tf.keras.initializers.serialize(self.mu_init),
         })
-        config = _updated_config(self, config)
         return config
 
 
@@ -524,7 +520,6 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             'gamma_init': tf.keras.initializers.serialize(self.gamma_init),
             'beta_init': tf.keras.initializers.serialize(self.beta_init),
         })
-        config = _updated_config(self, config)
         return config
 
 
@@ -614,7 +609,6 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
             'kappa_init': tf.keras.initializers.serialize(self.kappa_init),
             'alpha_init': tf.keras.initializers.serialize(self.alpha_init),
         })
-        config = _updated_config(self, config)
         return config
 
 
@@ -702,13 +696,4 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
             'tau_init': tf.keras.initializers.serialize(self.tau_init),
             'alpha_init': tf.keras.initializers.serialize(self.alpha_init),
         })
-        config = _updated_config(self, config)
         return config
-
-
-def _updated_config(self, config):
-    """Return updated config."""
-    return {
-        'class_name': self.__class__.__name__,
-        'config': config
-    }

@@ -159,12 +159,12 @@ class Proxy(object):
     @property
     def z(self):
         """Getter method for z."""
-        return self.model.embedding.z.numpy()
+        return self.model.embedding.embeddings.numpy()
 
     @z.setter
     def z(self, z):
         """Setter method for z."""
-        self.model.embedding.z.assign(z)
+        self.model.embedding.embeddings.assign(z)
 
     @property
     def w(self):
@@ -956,6 +956,8 @@ class Rank(tf.keras.Model):
 
         # Inflate cooridnates.
         z_stimulus_set = self.embedding(obs_stimulus_set)
+        # tf Embedding returns n_obs, n_ref + 1, n_dim
+        # psiz EmbeddingRe returns n_obs, n_dim, n_ref + 1
         max_n_reference = tf.shape(z_stimulus_set)[2] - 1
         z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
 
@@ -1032,10 +1034,10 @@ class Rank(tf.keras.Model):
             'class_name': self.__class__.__name__,
             'config': {
                 'layers': {
-                    'embedding': self.embedding.get_config(),
-                    'attention': self.attention.get_config(),
-                    'distance': self.distance.get_config(),
-                    'similarity': self.similarity.get_config()
+                    'embedding': _updated_config(self.embedding),
+                    'attention': _updated_config(self.attention),
+                    'distance': _updated_config(self.distance),
+                    'similarity': _updated_config(self.similarity)
                 }
             }
         }
@@ -1437,3 +1439,11 @@ def _tf_ranked_sequence_probability(sim_qr, is_select):
         # seq_prob.set_shape([None])  # Not necessary any more?
 
     return seq_prob
+
+
+def _updated_config(obj):
+    """Return updated config."""
+    return {
+        'class_name': obj.__class__.__name__,
+        'config': obj.get_config()
+    }

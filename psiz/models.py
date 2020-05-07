@@ -1043,12 +1043,12 @@ class Rank(tf.keras.Model):
     @property
     def n_stimuli(self):
         """Getter method for n_stimuli."""
-        return self.embedding.n_stimuli
+        return self.embedding.input_dim
 
     @property
     def n_dim(self):
         """Getter method for n_dim."""
-        return self.embedding.n_dim
+        return self.embedding.output_dim
 
     @property
     def n_group(self):
@@ -1100,9 +1100,9 @@ def load_model(filepath, custom_objects={}, compile=False):
 
         # Create embedding layer.
         z = f['z']['value'][()]
-        fit_z = f['z']['trainable'][()]
+        z_trainable = f['z']['trainable'][()]
         embedding = psiz.keras.layers.EmbeddingRe(
-            n_stimuli=n_stimuli, n_dim=n_dim, fit_z=fit_z
+            input_dim=n_stimuli, output_dim=n_dim, trainable=z_trainable
         )
 
         # Create attention layer.

@@ -41,17 +41,15 @@ class EmbeddingRe(tf.keras.layers.Layer):
     """Embedding coordinates.
 
     The embeddings are stored in the variable `z` that has
-    shape=(n_stimuli, n_dim). Handles a placeholder stimulus using
+    shape=(input_dim, output_dim). Handles a placeholder stimulus using
     stimulus ID "-1".
 
     Arguments:
-        n_stimuli: An integer indicating the total number of unique
+        input_dim: An integer indicating the total number of unique
             stimuli that will be embedded. This must be equal to or
             greater than three.
-        n_dim: An integer indicating the dimensionality of the
+        output_dim: An integer indicating the dimensionality of the
             embeddings. Must be equal to or greater than one.
-        fit_z (optional): Boolean indicating whether the embeddings
-            are trainable.
         embeddings_initializer (optional): Initializer for the `z`
             matrix. By default, the coordinates are intialized using a
             multivariate Gaussian at various scales.
@@ -64,27 +62,28 @@ class EmbeddingRe(tf.keras.layers.Layer):
         kwargs: See tf.keras.layers.Layer.
 
     Raises:
-        ValueError: If `n_stimuli` or `n_dim` arguments are invalid.
+        ValueError: If `input_dim` or `output_dim` arguments are
+            invalid.
 
     """
 
     def __init__(
-            self, n_stimuli, n_dim, fit_z=True, embeddings_initializer=None,
+            self, input_dim, output_dim, embeddings_initializer=None,
             embeddings_regularizer=None, embeddings_constraint=None,
             **kwargs):
         """Initialize."""
         super(EmbeddingRe, self).__init__(**kwargs)
 
-        if (n_stimuli < 3):
+        if (input_dim < 3):
             raise ValueError("There must be at least three stimuli.")
-        self.n_stimuli = n_stimuli
+        self.input_dim = input_dim
 
-        if (n_dim < 1):
+        if (output_dim < 1):
             raise ValueError(
-                "The dimensionality (`n_dim`) must be an integer "
+                "The output dimensionality (`output_dim`) must be an integer "
                 "greater than 0."
             )
-        self.n_dim = n_dim
+        self.output_dim = output_dim
 
         # Handle initializer.
         if embeddings_initializer is None:
@@ -107,11 +106,12 @@ class EmbeddingRe(tf.keras.layers.Layer):
             embeddings_constraint
         )
 
-        self.fit_z = fit_z
+        # TODO not sure if trainable should be set this way or let
+        # superclass logic handle it?
         self.z = self.add_weight(
-            shape=(self.n_stimuli, self.n_dim),
+            shape=(self.input_dim, self.output_dim),
             initializer=self.embeddings_initializer,
-            trainable=fit_z, name='z', dtype=K.floatx(),
+            trainable=self.trainable, name='z', dtype=K.floatx(),
             regularizer=self.embeddings_regularizer,
             constraint=self.embeddings_constraint
         )
@@ -141,14 +141,14 @@ class EmbeddingRe(tf.keras.layers.Layer):
         """
         batch_size = tf.shape(stimulus_set)[0]
         input_length = tf.shape(stimulus_set)[1]
-        n_dim = tf.shape(z)[1]
+        output_dim = tf.shape(z)[1]
 
         # Flatten stimulus_set and inflate all indices at once.
         flat_idx = tf.reshape(stimulus_set, [-1])
         z_set = tf.gather(z, flat_idx)
 
         # Reshape and permute dimensions.
-        z_set = tf.reshape(z_set, [batch_size, input_length, n_dim])
+        z_set = tf.reshape(z_set, [batch_size, input_length, output_dim])
         z_set = tf.transpose(z_set, perm=[0, 2, 1])
         return z_set
 
@@ -156,9 +156,8 @@ class EmbeddingRe(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'n_stimuli': self.n_stimuli,
-            'n_dim': self.n_dim,
-            'fit_z': self.fit_z,
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
             'embeddings_initializer':
                 tf.keras.initializers.serialize(self.embeddings_initializer),
             'embeddings_regularizer':

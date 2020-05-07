@@ -299,11 +299,12 @@ class Proxy(object):
         (z_q, z_r, attention) = self._broadcast_for_similarity(
             z_q, z_r, group_id=group_id
         )
-        sim_qr = self.model.similarity([
+        d_qr = self.model.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
-        ]).numpy()
+        ])
+        sim_qr = self.model.similarity(d_qr).numpy()
         return sim_qr
 
     def distance(self, z_q, z_r, group_id=None):

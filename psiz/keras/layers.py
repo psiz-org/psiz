@@ -20,10 +20,10 @@ Classes:
     EmbeddingRe: An Embedding layer.
     WeightedMinkowski: A weighted distance layer.
     Attention: A simple attention layer.
-    InverseKernel: A parameterized inverse similarity layer.
-    ExponentialKernel: A parameterized exponential similarity layer.
-    HeavyTailedKernel: A parameterized heavy-tailed similarity layer.
-    StudentsTKernel: A parameterized Student's t-distribution
+    InverseSimilarity: A parameterized inverse similarity layer.
+    ExponentialSimilarity: A parameterized exponential similarity layer.
+    HeavyTailedSimilarity: A parameterized heavy-tailed similarity layer.
+    StudentsTSimilarity: A parameterized Student's t-distribution
         similarity layer.
 
 """
@@ -342,7 +342,7 @@ class Attention(tf.keras.layers.Layer):
         return config
 
 
-class InverseKernel(tf.keras.layers.Layer):
+class InverseSimilarity(tf.keras.layers.Layer):
     """Inverse-distance similarity function.
 
     The inverse-distance similarity function is parameterized as:
@@ -363,7 +363,7 @@ class InverseKernel(tf.keras.layers.Layer):
             self, fit_tau=True, fit_mu=True, tau_init=None, mu_init=None,
             **kwargs):
         """Initialize."""
-        super(InverseKernel, self).__init__(**kwargs)
+        super(InverseSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
         if tau_init is None:
@@ -415,7 +415,7 @@ class InverseKernel(tf.keras.layers.Layer):
         return config
 
 
-class ExponentialKernel(tf.keras.layers.Layer):
+class ExponentialSimilarity(tf.keras.layers.Layer):
     """Exponential family similarity function.
 
     This exponential-family similarity function is parameterized as:
@@ -459,7 +459,7 @@ class ExponentialKernel(tf.keras.layers.Layer):
             self, fit_tau=True, fit_gamma=True, fit_beta=False, tau_init=None,
             gamma_init=None, beta_init=None, **kwargs):
         """Initialize."""
-        super(ExponentialKernel, self).__init__(**kwargs)
+        super(ExponentialSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
         if tau_init is None:
@@ -530,7 +530,7 @@ class ExponentialKernel(tf.keras.layers.Layer):
         return config
 
 
-class HeavyTailedKernel(tf.keras.layers.Layer):
+class HeavyTailedSimilarity(tf.keras.layers.Layer):
     """Heavy-tailed family similarity function.
 
     The heavy-tailed similarity function is parameterized as:
@@ -553,7 +553,7 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
             kappa_init=None, alpha_init=None,
             **kwargs):
         """Initialize."""
-        super(HeavyTailedKernel, self).__init__(**kwargs)
+        super(HeavyTailedSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
         if tau_init is None:
@@ -620,7 +620,7 @@ class HeavyTailedKernel(tf.keras.layers.Layer):
         return config
 
 
-class StudentsTKernel(tf.keras.layers.Layer):
+class StudentsTSimilarity(tf.keras.layers.Layer):
     """Student's t-distribution similarity function.
 
     The Student's t-distribution similarity function is parameterized
@@ -649,7 +649,7 @@ class StudentsTKernel(tf.keras.layers.Layer):
             self, n_dim=None, fit_tau=True, fit_alpha=True, tau_init=None,
             alpha_init=None, **kwargs):
         """Initialize."""
-        super(StudentsTKernel, self).__init__(**kwargs)
+        super(StudentsTSimilarity, self).__init__(**kwargs)
 
         self.n_dim = n_dim
 

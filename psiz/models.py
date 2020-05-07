@@ -903,7 +903,7 @@ class Rank(tf.keras.Model):
         self.distance = distance
 
         if similarity is None:
-            similarity = psiz.keras.layers.ExponentialKernel()
+            similarity = psiz.keras.layers.ExponentialSimilarity()
         self.similarity = similarity
 
         # Gather all pointers to theta-associated variables.
@@ -1138,13 +1138,13 @@ def load_model(filepath, custom_objects={}, compile=False):
         dist_config.update(theta_config.pop('fit_rho'))
         distance = psiz.keras.layers.WeightedMinkowski(**dist_config)
         if embedding_type == 'Exponential':
-            similarity = psiz.keras.layers.ExponentialKernel(**theta_config)
+            similarity = psiz.keras.layers.ExponentialSimilarity(**theta_config)
         elif embedding_type == 'HeavyTailed':
-            similarity = psiz.keras.layers.HeavyTailedKernel(**theta_config)
+            similarity = psiz.keras.layers.HeavyTailedSimilarity(**theta_config)
         elif embedding_type == 'StudentsT':
-            similarity = psiz.keras.layers.StudentsTKernel(**theta_config)
+            similarity = psiz.keras.layers.StudentsTSimilarity(**theta_config)
         elif embedding_type == 'Inverse':
-            similarity = psiz.keras.layers.InverseKernel(**theta_config)
+            similarity = psiz.keras.layers.InverseSimilarity(**theta_config)
         else:
             raise ValueError(
                 'No class found matching the provided `embedding_type`.'
@@ -1182,10 +1182,10 @@ def model_from_config(config, custom_objects={}):
         'EmbeddingRe': psiz.keras.layers.EmbeddingRe,
         'WeightedMinkowski': psiz.keras.layers.WeightedMinkowski,
         'Attention': psiz.keras.layers.Attention,
-        'InverseKernel': psiz.keras.layers.InverseKernel,
-        'ExponentialKernel': psiz.keras.layers.ExponentialKernel,
-        'HeavyTailedKernel': psiz.keras.layers.HeavyTailedKernel,
-        'StudentsTKernel': psiz.keras.layers.StudentsTKernel
+        'InverseSimilarity': psiz.keras.layers.InverseSimilarity,
+        'ExponentialSimilarity': psiz.keras.layers.ExponentialSimilarity,
+        'HeavyTailedSimilarity': psiz.keras.layers.HeavyTailedSimilarity,
+        'StudentsTSimilarity': psiz.keras.layers.StudentsTSimilarity
     })
 
     model_class_name = config.get('class_name')

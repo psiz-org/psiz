@@ -120,12 +120,12 @@ Embedding models are built using the `tf.keras.Model` and `tf.keras.layers.Layer
 
 PsiZ includes predefined layers for each of these components. In the case of the similarity kernel, there are four predefined similarity kernel layers that a user can choose from:
 
-1. `psiz.layers.InverseKernel`
-2. `psiz.layers.ExponentialKernel`
-3. `psiz.layers.HeavyTailedKernel`
-4. `psiz.layers.StudentsTKernel`
+1. `psiz.layers.InverseSimilarity`
+2. `psiz.layers.ExponentialSimilarity`
+3. `psiz.layers.HeavyTailedSimilarity`
+4. `psiz.layers.StudentsTSimilarity`
 
-Each kernel layer has its own set of variables that govern the properties of the kernel. The `ExponentialKernel`, which is widely used in psychology, has four variables. Users can also implement there own kernel by subclassing `psiz.layers.LayersRe`.
+Each kernel layer has its own set of variables that govern the properties of the kernel. The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own kernel by subclassing `psiz.layers.LayersRe`.
 
 ### Compile and Fit
 <!-- TODO -->

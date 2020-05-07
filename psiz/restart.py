@@ -28,6 +28,7 @@ Functions:
 """
 
 import copy
+import os
 import time
 
 import numpy as np
@@ -69,7 +70,7 @@ class Restarter(object):
 
     def __init__(
             self, model, compile_kwargs={}, monitor='loss', n_restart=10,
-            n_record=1, do_init=False, custom_objects={}):
+            n_record=1, do_init=False, custom_objects={}, weight_dir=None):
         """Initialize."""
         # Make sure n_record is not greater than n_restart.
         n_record = np.minimum(n_record, n_restart)
@@ -84,6 +85,9 @@ class Restarter(object):
         self.n_record = n_record
         self.do_init = do_init
         self.custom_objects = custom_objects
+        if weight_dir is None:
+            weight_dir = '/tmp/psiz/restarts'
+        self.weight_dir = weight_dir
 
     def fit(
             self, x=None, validation_data=None, callbacks=[], verbose=0,
@@ -128,10 +132,12 @@ class Restarter(object):
                 )
                 val_metrics = _append_prefix(val_metrics, 'val_')
                 logs.update(val_metrics)
-            weights = model_re.get_weights()
+
+            fp_weights = os.path.join(self.weight_dir, 'restart_init')
+            model_re.save_weights(fp_weights, overwrite=True)
 
             # Update fit record with latest restart.
-            tracker.update_state(logs, weights, is_init=True)
+            tracker.update_state(logs, fp_weights, is_init=True)
 
         if verbose == 1:
             progbar = psiz.utils.ProgressBarRe(
@@ -182,10 +188,13 @@ class Restarter(object):
                 )
                 val_metrics = _append_prefix(val_metrics, 'val_')
                 logs.update(val_metrics)
-            weights = model_re.get_weights()
+            fp_weights = os.path.join(
+                self.weight_dir, 'restart_{0}'.format(i_restart)
+            )
+            model_re.save_weights(fp_weights, overwrite=True)
 
             # Update fit record with latest restart.
-            tracker.update_state(logs, weights, is_init=False)
+            tracker.update_state(logs, fp_weights, is_init=False)
 
             if verbose == 1:
                 progbar.update(i_restart + 1)
@@ -194,7 +203,8 @@ class Restarter(object):
         tracker.sort()
         monitor_best = tracker.record[self.monitor][0]
         epoch_best = tracker.record['epoch'][0]
-        self.model.set_weights(tracker.record['weights'][0])
+        model_re.load_weights(tracker.record['weights'][0])
+        self.model = model_re
 
         fit_duration = time.time() - start_time_s
         summary_mean = tracker.result(np.mean)
@@ -261,12 +271,12 @@ class FitTracker(object):
         self.init_loss = np.inf
         super().__init__()
 
-    def update_state(self, logs, weights, is_init=False):
+    def update_state(self, logs, fp_weights, is_init=False):
         """Update record with incoming data.
 
         Arguments:
             logs: A dictionary of non-weight properties to track.
-            weight: A dictionary of variable weights.
+            fp_weights: A filepath to weights.
             is_init: Boolean indicating if the update is an initial
                 evaluation.
 
@@ -302,7 +312,7 @@ class FitTracker(object):
                 if k not in self.record:
                     self.record[k] = np.inf * np.ones([self.n_record])
                 self.record[k][idx_worst] = v
-            self.record['weights'][idx_worst] = weights
+            self.record['weights'][idx_worst] = fp_weights
 
         if is_init:
             self.init_loss = loss_monitor

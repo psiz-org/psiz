@@ -26,6 +26,8 @@ data is added.
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold
+from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.layers import Embedding
 
 from psiz.generator import RandomGenerator
 import psiz.models
@@ -103,7 +105,7 @@ def main():
         obs_round_train = obs_train.subset(include_idx)
 
         # Infer embedding.
-        embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+        embedding = Embedding(n_stimuli+1, n_dim, mask_zero=True)
         similarity = psiz.keras.layers.ExponentialSimilarity()
         model = psiz.models.Rank(
             embedding=embedding, similarity=similarity
@@ -162,9 +164,11 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
+    embedding = psiz.keras.layers.EmbeddingRe(
+        n_stimuli+1, n_dim,
+        embeddings_initializer=RandomNormal(stddev=.17)
+    )
     similarity = psiz.keras.layers.ExponentialSimilarity()
-
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
 
     emb = psiz.models.Proxy(model=rankModel)
@@ -174,11 +178,6 @@ def ground_truth(n_stimuli, n_dim):
         'beta': 10.,
         'gamma': 0.001
     }
-
-    mean = np.zeros((n_dim))
-    cov = .03 * np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    emb.z = z
 
     return emb
 

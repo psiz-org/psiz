@@ -25,10 +25,14 @@ infer a single embedding.
 
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
+from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.layers import Embedding
 
 import psiz.keras.callbacks
+import psiz.keras.constraints  # TODO
 import psiz.keras.layers
 import psiz.keras.losses
+import psiz.keras.regularizers  # TODO
 from psiz.generator import RandomGenerator
 import psiz.models
 from psiz.simulate import Agent
@@ -36,6 +40,7 @@ from psiz.trials import stack
 from psiz.utils import pairwise_matrix, matrix_comparison
 
 # Uncomment the following line to force eager execution.
+# import tensorflow as tf
 # tf.config.experimental_run_functions_eagerly(True)
 
 
@@ -86,7 +91,7 @@ def main():
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
         'val_nll', patience=10, mode='min', restore_best_weights=True
     )
-    # Visualize using TensorBoard. TODO
+    # Visualize using TensorBoard.
     # cb_board = psiz.keras.callbacks.TensorBoardRe(
     #     log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
     #     write_graph=False, write_images=False, update_freq='epoch',
@@ -99,8 +104,10 @@ def main():
         'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
     }
 
-    # Infer embedding.
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    # Infer embedding. TODO
+    embedding = Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
+    )
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(
         embedding=embedding, similarity=similarity
@@ -128,15 +135,13 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
+    embedding = psiz.keras.layers.EmbeddingRe(
+        n_stimuli+1, n_dim,
+        embeddings_initializer=RandomNormal(stddev=.17)
+    )
     similarity = psiz.keras.layers.ExponentialSimilarity()
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb = psiz.models.Proxy(rankModel)
-
-    mean = np.zeros((n_dim))
-    cov = .03 * np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    emb.z = z
 
     emb.theta = {
         'rho': 2.,

@@ -24,6 +24,8 @@ number of dimensions.
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
+from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.layers import Embedding
 from tensorflow.python.keras import backend as K
 
 import psiz
@@ -89,8 +91,9 @@ def main():
     embeddings_regularizer = psiz.keras.regularizers.Squeeze(rate=squeeze_rate)
 
     # Infer embedding.
-    embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli, n_dim_max, embeddings_regularizer=embeddings_regularizer
+    embedding = Embedding(
+        n_stimuli+1, n_dim_max, embeddings_regularizer=embeddings_regularizer,
+        mask_zero=True
     )
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
@@ -139,7 +142,10 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     similarity = psiz.keras.layers.ExponentialSimilarity()
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    embedding = psiz.keras.layers.EmbeddingRe(
+        n_stimuli+1, n_dim,
+        embeddings_initializer=RandomNormal(stddev=.17)
+    )
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb = psiz.models.Proxy(rankModel)
 
@@ -149,11 +155,6 @@ def ground_truth(n_stimuli, n_dim):
         'beta': 10.,
         'gamma': 0.001
     }
-
-    mean = np.zeros((n_dim))
-    cov = .03 * np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    emb.z = z
 
     return emb
 

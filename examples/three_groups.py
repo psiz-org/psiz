@@ -43,6 +43,8 @@ Example output:
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.layers import Embedding
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.callbacks
@@ -109,7 +111,9 @@ def main():
     }
 
     # Infer a shared embedding with group-specific attention weights.
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    embedding = Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
+    )
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
     similarity = psiz.keras.layers.ExponentialSimilarity()
     model = psiz.models.Rank(
@@ -199,7 +203,10 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    embedding = psiz.keras.layers.EmbeddingRe(
+        n_stimuli+1, n_dim,
+        embeddings_initializer=RandomNormal(stddev=.17)
+    )
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
     similarity = psiz.keras.layers.ExponentialSimilarity()
 
@@ -208,9 +215,6 @@ def ground_truth(n_stimuli, n_dim, n_group):
     )
     emb = psiz.models.Proxy(model=model)
 
-    mean = np.zeros((n_dim))
-    cov = .03 * np.identity(n_dim)
-    emb.z = np.random.multivariate_normal(mean, cov, (n_stimuli))
     emb.w = np.array((
         (1.8, 1.8, .2, .2),
         (1., 1., 1., 1.),

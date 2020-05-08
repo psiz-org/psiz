@@ -56,15 +56,15 @@ class EarlyStoppingRe(callbacks.EarlyStopping):
 
 
 class TensorBoardRe(callbacks.TensorBoard):
-    """Custom TensorBoard callback.
-
-    Arguments:
-        kwargs: See tf.keras.callbacks.Tensorboard.
-
-    """
+    """Custom TensorBoard callback."""
 
     def __init__(self, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            kwargs: See tf.keras.callbacks.Tensorboard.
+
+        """
         super().__init__(**kwargs)
         self.log_dir_init = self.log_dir
 

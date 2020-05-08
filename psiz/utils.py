@@ -332,25 +332,25 @@ def procrustean_solution(z_a, z_b, n_restart=10):
 
 
 class ProgressBarRe(object):
-    """Display a progress bar in terminal.
-
-    Arguments:
-        iteration: Integer indicating current iteration.
-        total: Integer indicating total iterations.
-        prefix (optional): String that is used as prefix.
-        suffix (optional): String that is used as suffix.
-        decimals (optional): Integer indicating a positive number of
-            decimals in percent complete.
-        length (optional): Integer indicating the character length of
-            the progress bar.
-        fill (optional): String indicating the bar fill character.
-
-    """
+    """Display a progress bar in terminal."""
 
     def __init__(
             self, total, prefix='', decimals=1, length=100,
             fill='█'):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            iteration: Integer indicating current iteration.
+            total: Integer indicating total iterations.
+            prefix (optional): String that is used as prefix.
+            suffix (optional): String that is used as suffix.
+            decimals (optional): Integer indicating a positive number
+                of decimals in percent complete.
+            length (optional): Integer indicating the character length
+                of the progress bar.
+            fill (optional): String indicating the bar fill character.
+
+        """
         self.total = total
         self.prefix = prefix
         self.decimals = decimals

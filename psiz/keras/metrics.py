@@ -27,16 +27,16 @@ from tensorflow.keras.metrics import Mean
 
 
 class NegLogLikelihood(Mean):
-    """Negative Log-likelihood.
-
-    Arguments:
-        name (optional): String name of the metric instance.
-        dtype (optional): Data type of the metric result.
-
-    """
+    """Negative Log-likelihood."""
 
     def __init__(self, name='nll', dtype=None):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            name (optional): String name of the metric instance.
+            dtype (optional): Data type of the metric result.
+
+        """
         super().__init__(name, dtype=dtype)
 
     def update_state(self, y_true, y_pred, sample_weight=None):

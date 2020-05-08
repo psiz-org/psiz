@@ -40,21 +40,6 @@ import psiz.utils
 class Restarter(object):
     """Object for handling TensorFlow model restarts.
 
-    Arguments:
-        model: A compiled TensorFlow model.
-        compile_kwargs (optional): Key-word arguments for compile
-            method.
-        monitor (optional): The value to monitor and use as a basis for
-            selecting the best restarts.
-        n_restart (optional): An integer indicating the number of
-            independent restarts to perform.
-        n_record (optional): An integer indicating the number of best
-            performing restarts to record.
-        do_init (optional): A Boolean variable indicating whether the
-            initial model and it's corresponding performance should be
-            included as a candidate in the set of restarts.
-        custom_objects (optional): Custom objects for model creation.
-
     Attributes:
         n_restart: An integer specifying the number of
             restarts to use for the inference procedure. Since the
@@ -71,7 +56,26 @@ class Restarter(object):
     def __init__(
             self, model, compile_kwargs={}, monitor='loss', n_restart=10,
             n_record=1, do_init=False, custom_objects={}, weight_dir=None):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            model: A compiled TensorFlow model.
+            compile_kwargs (optional): Key-word arguments for compile
+                method.
+            monitor (optional): The value to monitor and use as a basis
+                for selecting the best restarts.
+            n_restart (optional): An integer indicating the number of
+                independent restarts to perform.
+            n_record (optional): An integer indicating the number of
+                best performing restarts to record.
+            do_init (optional): A Boolean variable indicating whether
+                the initial model and it's corresponding performance
+                should be included as a candidate in the set of
+                restarts.
+            custom_objects (optional): Custom objects for model
+                creation.
+
+        """
         # Make sure n_record is not greater than n_restart.
         n_record = np.minimum(n_record, n_restart)
 
@@ -245,12 +249,6 @@ class Restarter(object):
 class FitTracker(object):
     """Class for keeping track of best restarts.
 
-    Arguments:
-        n_record: Integer indicating the number of top restarts to
-            record.
-        monitor: String indicating the value to use in order to select
-            the best performing restarts.
-
     Methods:
         update_state: Update the records with the provided restart.
         sort: Sort the records from best to worst.
@@ -258,7 +256,15 @@ class FitTracker(object):
     """
 
     def __init__(self, n_record, monitor):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            n_record: Integer indicating the number of top restarts to
+                record.
+            monitor: String indicating the value to use in order to
+                select the best performing restarts.
+
+        """
         self.n_record = n_record
         self.monitor = monitor
         self.record = {

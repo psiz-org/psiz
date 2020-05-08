@@ -46,23 +46,6 @@ class EmbeddingRe(tf.keras.layers.Layer):
     shape=(input_dim, output_dim). Handles a placeholder stimulus using
     stimulus ID "-1".
 
-    Arguments:
-        input_dim: An integer indicating the total number of unique
-            stimuli that will be embedded. This must be equal to or
-            greater than three.
-        output_dim: An integer indicating the dimensionality of the
-            embeddings. Must be equal to or greater than one.
-        embeddings_initializer (optional): Initializer for the `z`
-            matrix. By default, the coordinates are intialized using a
-            multivariate Gaussian at various scales.
-        embeddings_regularizer (optional): Regularizer function applied
-            to the `z` matrix.
-        embeddings_constraint (optional): Constraint function applied
-            to the `z` matrix. By default, a constraint will be used
-            that zero-centers the centroid of the embedding to promote
-            numerical stability.
-        kwargs: See tf.keras.layers.Layer.
-
     Raises:
         ValueError: If `input_dim` or `output_dim` arguments are
             invalid.
@@ -73,7 +56,26 @@ class EmbeddingRe(tf.keras.layers.Layer):
             self, input_dim, output_dim, embeddings_initializer=None,
             embeddings_regularizer=None, embeddings_constraint=None,
             **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            input_dim: An integer indicating the total number of unique
+                stimuli that will be embedded. This must be equal to or
+                greater than three.
+            output_dim: An integer indicating the dimensionality of the
+                embeddings. Must be equal to or greater than one.
+            embeddings_initializer (optional): Initializer for the `z`
+                matrix. By default, the coordinates are intialized
+                using a multivariate Gaussian at various scales.
+            embeddings_regularizer (optional): Regularizer function
+                applied to the `z` matrix.
+            embeddings_constraint (optional): Constraint function
+                applied to the `z` matrix. By default, a constraint
+                will be used that zero-centers the centroid of the
+                embedding to promote numerical stability.
+            kwargs: See tf.keras.layers.Layer.
+
+        """
         super(EmbeddingRe, self).__init__(**kwargs)
 
         if (input_dim < 3):
@@ -163,17 +165,17 @@ class EmbeddingRe(tf.keras.layers.Layer):
 
 
 class WeightedMinkowski(tf.keras.layers.Layer):
-    """Weighted Minkowski distance.
-
-    Arguments:
-        fit_rho (optional): Boolean indicating if variable is
-            trainable.
-        rho_initializer (optional): Initializer for rho.
-
-    """
+    """Weighted Minkowski distance."""
 
     def __init__(self, fit_rho=True, rho_initializer=None, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            fit_rho (optional): Boolean indicating if variable is
+                trainable.
+            rho_initializer (optional): Initializer for rho.
+
+        """
         super(WeightedMinkowski, self).__init__(**kwargs)
         self.fit_rho = fit_rho
 
@@ -226,28 +228,28 @@ class WeightedMinkowski(tf.keras.layers.Layer):
 
 
 class Attention(tf.keras.layers.Layer):
-    """Attention Layer.
-
-    Arguments:
-        n_dim: An integer indicating the dimensionality of the
-            embeddings. Must be equal to or greater than one.
-        n_group (optional): An integer indicating the number of
-            different population groups in the embedding. A separate
-            set of attention weights will be inferred for each group.
-            Must be equal to or greater than one.
-        fit_group: Boolean indicating if variable is trainable.
-            shape=(n_group,)
-
-    Raises:
-        ValueError: If `n_dim` or `n_group` arguments are invalid.
-
-    """
+    """Attention Layer."""
 
     def __init__(
             self, n_group=1, n_dim=None, fit_group=None,
             embeddings_initializer=None, embeddings_regularizer=None,
             embeddings_constraint=None, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            n_dim: An integer indicating the dimensionality of the
+                embeddings. Must be equal to or greater than one.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group. Must be equal to or greater than one.
+            fit_group: Boolean indicating if variable is trainable.
+                shape=(n_group,)
+
+        Raises:
+            ValueError: If `n_dim` or `n_group` arguments are invalid.
+        
+        """
         super(Attention, self).__init__(**kwargs)
 
         if (n_group < 1):
@@ -342,20 +344,22 @@ class InverseSimilarity(tf.keras.layers.Layer):
         s(x,y) = 1 / (d(x,y)**tau + mu),
     where x and y are n-dimensional vectors.
 
-    Arguments:
-        fit_tau (optional): Boolean indicating if variable is
-            trainable.
-        fit_gamma (optional): Boolean indicating if variable is
-            trainable.
-        fit_beta (optional): Boolean indicating if variable is
-            trainable.
-
     """
 
     def __init__(
             self, fit_tau=True, fit_mu=True, tau_initializer=None,
             mu_initializer=None, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            fit_tau (optional): Boolean indicating if variable is
+                trainable.
+            fit_gamma (optional): Boolean indicating if variable is
+                trainable.
+            fit_beta (optional): Boolean indicating if variable is
+                trainable.
+
+        """
         super(InverseSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
@@ -424,14 +428,6 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
     trainable embeddings and to prevent short-circuiting any
     regularizers placed on the embeddings.
 
-    Arguments:
-        fit_tau (optional): Boolean indicating if variable is
-            trainable.
-        fit_gamma (optional): Boolean indicating if variable is
-            trainable.
-        fit_beta (optional): Boolean indicating if variable is
-            trainable.
-
     References:
         [1] Jones, M., Love, B. C., & Maddox, W. T. (2006). Recency
             effects as a window to generalization: Separating
@@ -455,7 +451,17 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             self, fit_tau=True, fit_gamma=True, fit_beta=False,
             tau_initializer=None, gamma_initializer=None,
             beta_initializer=None, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            fit_tau (optional): Boolean indicating if variable is
+                trainable.
+            fit_gamma (optional): Boolean indicating if variable is
+                trainable.
+            fit_beta (optional): Boolean indicating if variable is
+                trainable.
+
+        """
         super(ExponentialSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
@@ -540,21 +546,23 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
     where x and y are n-dimensional vectors. The heavy-tailed family is
     a generalization of the Student-t family.
 
-    Arguments:
-        fit_tau (optional): Boolean indicating if variable is
-            trainable.
-        fit_kappa (optional): Boolean indicating if variable is
-            trainable.
-        fit_alpha (optional): Boolean indicating if variable is
-            trainable.
-
     """
 
     def __init__(
             self, fit_tau=True, fit_kappa=True, fit_alpha=True,
             tau_initializer=None, kappa_initializer=None,
             alpha_initializer=None, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            fit_tau (optional): Boolean indicating if variable is
+                trainable.
+            fit_kappa (optional): Boolean indicating if variable is
+                trainable.
+            fit_alpha (optional): Boolean indicating if variable is
+                trainable.
+
+        """
         super(HeavyTailedSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
@@ -637,13 +645,6 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
     kernel proposed by van der Maaten [1] uses a L2 distane, tau=2, and
     alpha=n_dim-1. By default, all variables are fit to the data.
 
-    Arguments:
-        n_dim:  Integer indicating the dimensionality of the embedding.
-        fit_tau (optional): Boolean indicating if variable is
-            trainable.
-        fit_alpha (optional): Boolean indicating if variable is
-            trainable.
-
     References:
     [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
         triplet embedding. In Machine learning for signal processing
@@ -655,7 +656,17 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
     def __init__(
             self, n_dim=None, fit_tau=True, fit_alpha=True,
             tau_initializer=None, alpha_initializer=None, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            n_dim:  Integer indicating the dimensionality of the
+                embedding.
+            fit_tau (optional): Boolean indicating if variable is
+                trainable.
+            fit_alpha (optional): Boolean indicating if variable is
+                trainable.
+
+        """
         super(StudentsTSimilarity, self).__init__(**kwargs)
 
         self.n_dim = n_dim

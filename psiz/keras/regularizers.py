@@ -25,17 +25,18 @@ Classes:
 
 import tensorflow as tf
 
+
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class StimulusNormedL1(tf.keras.regularizers.Regularizer):
-    """Stimulus-normed L1 regularization.
-
-    Arguments:
-        l1: Rate of L1 regularization.
-
-    """
+    """Stimulus-normed L1 regularization."""
 
     def __init__(self, l1=0.):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            l1: Rate of L1 regularization.
+
+        """
         self.l1 = l1
 
     def __call__(self, z):
@@ -49,15 +50,15 @@ class StimulusNormedL1(tf.keras.regularizers.Regularizer):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class AttentionEntropy(tf.keras.regularizers.Regularizer):
-    """Entropy-based regularization to encourage sparsity.
-
-    Arguments:
-        rate: Rate at which regularization is applied.
-
-    """
+    """Entropy-based regularization to encourage sparsity."""
 
     def __init__(self, rate=0.):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            rate: Rate at which regularization is applied.
+
+        """
         self.rate = rate
 
     def __call__(self, w):
@@ -78,15 +79,15 @@ class AttentionEntropy(tf.keras.regularizers.Regularizer):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class Squeeze(tf.keras.regularizers.Regularizer):
-    """Squeeze representation into a low number of dimensions.
-
-    Arguments:
-        rate: Rate at which regularization is applied.
-
-    """
+    """Squeeze representation into a low number of dimensions."""
 
     def __init__(self, rate=0.):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            rate: Rate at which regularization is applied.
+
+        """
         self.rate = rate
 
     def __call__(self, z):

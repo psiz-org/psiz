@@ -30,18 +30,6 @@ from psiz.trials import RankObservations
 class Agent(object):
     """Agent that simulates similarity judgments.
 
-    Arguments:
-        embedding: A concrete instance of a PsychologicalEmedding
-            object.
-        group_id (optional): If the provided embedding was inferred for
-            more than one group, an index can be provided to indicate
-            which set of attention weights should be used.
-        agent_id: An integer array indicating the agent ID of a trial.
-            It is assumed that all IDs are non-negative and that
-            observations with the same agent ID were judged by a single
-            agent.
-            shape = (n_trial,)
-
     Attributes:
         embedding: A PsychologicalEmbedding object that supplies a
             similarity function and embedding points.
@@ -54,7 +42,21 @@ class Agent(object):
     """
 
     def __init__(self, embedding, group_id=0, agent_id=0):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            embedding: A concrete instance of a PsychologicalEmedding
+                object.
+            group_id (optional): If the provided embedding was inferred
+                for more than one group, an index can be provided to
+                indicate which set of attention weights should be used.
+            agent_id: An integer array indicating the agent ID of a
+                trial. It is assumed that all IDs are non-negative and
+                that observations with the same agent ID were judged by
+                a single agent.
+                shape = (n_trial,)
+
+        """
         self.embedding = embedding
         self.group_id = group_id
         self.agent_id = agent_id

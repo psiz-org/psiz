@@ -32,24 +32,24 @@ from tensorflow.keras import initializers
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomScaleMVN(initializers.Initializer):
-    """Initializer that generates tensors with a normal distribution.
-
-    Arguments:
-        mean: A python scalar or a scalar tensor. Mean of the random
-            values to generate.
-        stddev: A scalar indicating the initial standard deviation.
-        minval: Minimum value of a uniform random sampler for each
-            dimension.
-        maxval: Maximum value of a uniform random sampler for each
-            dimension.
-        seed (optional): A Python integer. Used to create random seeds. See
-        `tf.set_random_seed` for behavior.
-
-    """
+    """Initializer that generates tensors with a normal distribution."""
 
     def __init__(
             self, mean=0.0, stddev=1.0, minval=-4.0, maxval=-1.0, seed=None):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            mean: A python scalar or a scalar tensor. Mean of the
+                random values to generate.
+            stddev: A scalar indicating the initial standard deviation.
+            minval: Minimum value of a uniform random sampler for each
+                dimension.
+            maxval: Maximum value of a uniform random sampler for each
+                dimension.
+            seed (optional): A Python integer. Used to create random
+                seeds. See `tf.set_random_seed` for behavior.
+
+        """
         self.mean = mean
         self.stddev = stddev
         self.minval = minval
@@ -89,20 +89,20 @@ class RandomScaleMVN(initializers.Initializer):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomAttention(initializers.Initializer):
-    """Initializer that generates tensors for attention weights.
-
-    Arguments:
-        concentration: An array-like set of values indicating the
-            concentration parameters (i.e., alpha values) governing a
-            Dirichlet distribution.
-        scale (optional): Scalar indicating how the Dirichlet sample
-            should be scaled.
-        seed (optional): A seed for deterministic behavior.
-
-    """
+    """Initializer that generates tensors for attention weights."""
 
     def __init__(self, concentration, scale=1.0, seed=None):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            concentration: An array-like set of values indicating the
+                concentration parameters (i.e., alpha values) governing
+                a Dirichlet distribution.
+            scale (optional): Scalar indicating how the Dirichlet
+                sample should be scaled.
+            seed (optional): A seed for deterministic behavior.
+
+        """
         self.concentration = np.asarray(concentration)
         self.scale = scale
         self.seed = seed

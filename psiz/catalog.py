@@ -36,15 +36,6 @@ import pandas as pd
 class Catalog(object):
     """Class to keep track of stimuli information.
 
-    Arguments:
-        stimulus_id: A 1D integer array.
-            shape=(n_stimuli,)
-        stimulus_filepath: A 1D list of strings.
-            shape=(n_stimuli,)
-        class_id (optional): A 1D integer array.
-        class_label (optional): A dictionary mapping between class_id
-            and a string label.
-
     Attributes:
         n_stimuli:  The number of unique stimuli.
         stimuli: Pandas dataframe containing information about the
@@ -64,7 +55,18 @@ class Catalog(object):
     def __init__(
             self, stimulus_id, stimulus_filepath, class_id=None,
             class_label=None):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            stimulus_id: A 1D integer array.
+                shape=(n_stimuli,)
+            stimulus_filepath: A 1D list of strings.
+                shape=(n_stimuli,)
+            class_id (optional): A 1D integer array.
+            class_label (optional): A dictionary mapping between
+                `class_id` and a string class label.
+
+        """
         # Basic stimulus information.
         self.n_stimuli = len(stimulus_id)
         stimulus_id = self._check_id(stimulus_id)

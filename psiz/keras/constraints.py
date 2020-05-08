@@ -36,15 +36,15 @@ from tensorflow.keras import constraints
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class GreaterThan(constraints.Constraint):
-    """Constrains the weights to be greater than a value.
-
-    Arguments:
-        min_value: The minimum allowed weight value.
-
-    """
+    """Constrains the weights to be greater than a value."""
 
     def __init__(self, min_value=0.):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            min_value: The minimum allowed weight value.
+
+        """
         self.min_value = min_value
 
     def __call__(self, w):
@@ -61,15 +61,15 @@ class GreaterThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessThan(constraints.Constraint):
-    """Constrains the weights to be less than a value.
-
-    Arguments:
-        max_value: The maximum allowed weight value.
-
-    """
+    """Constrains the weights to be less than a value."""
 
     def __init__(self, max_value=0.):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            max_value: The maximum allowed weight value.
+
+        """
         self.max_value = max_value
 
     def __call__(self, w):
@@ -86,15 +86,15 @@ class LessThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class GreaterEqualThan(constraints.Constraint):
-    """Constrains the weights to be greater/equal than a value.
-
-    Arguments:
-        min_value: The minimum allowed weight value.
-
-    """
+    """Constrains the weights to be greater/equal than a value."""
 
     def __init__(self, min_value=0.):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            min_value: The minimum allowed weight value.
+
+        """
         self.min_value = min_value
 
     def __call__(self, w):
@@ -111,15 +111,15 @@ class GreaterEqualThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class LessEqualThan(constraints.Constraint):
-    """Constrains the weights to be greater/equal than a value.
-
-    Arguments:
-        max_value: The maximum allowed weight value.
-
-    """
+    """Constrains the weights to be greater/equal than a value."""
 
     def __init__(self, max_value=0.):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            max_value: The maximum allowed weight value.
+
+        """
         self.max_value = max_value
 
     def __call__(self, w):
@@ -136,16 +136,16 @@ class LessEqualThan(constraints.Constraint):
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
 class MinMax(constraints.Constraint):
-    """Constrains the weights to be between/equal values.
-
-    Arguments:
-        min_value: The minimum allowed weight value.
-        max_value: The maximum allowed weight value.
-
-    """
+    """Constrains the weights to be between/equal values."""
 
     def __init__(self, min_value, max_value):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            min_value: The minimum allowed weight value.
+            max_value: The maximum allowed weight value.
+
+        """
         self.min_value = min_value
         self.max_value = max_value
 
@@ -173,14 +173,16 @@ class Center(constraints.Constraint):
     This constraint can be used to improve the numerical stability of
     an embedding.
 
-    Arguments:
-        axis (optional): integer, axis along which to reduce weights
-            in order to compute mean.
-
     """
 
     def __init__(self, axis=0):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            axis (optional): integer, axis along which to reduce
+                weights in order to compute mean.
+
+        """
         self.axis = axis
 
     def __call__(self, w):
@@ -199,16 +201,18 @@ class NonNegNorm(constraints.Constraint):
     Constrains the weights incident to each hidden unit
     to have non-negative weights and a norm of the specified magnitude.
 
-    Arguments:
-        scale (optional): The scale (i.e., magnitude) of the norm.
-        p (optional): Type of p-norm (must be  >=1).
-        axis (optional): integer, axis along which to calculate weight
-            norms.
-
     """
 
     def __init__(self, scale=1.0, p=2.0, axis=0):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            scale (optional): The scale (i.e., magnitude) of the norm.
+            p (optional): Type of p-norm (must be  >=1).
+            axis (optional): integer, axis along which to calculate
+                weight norms.
+
+        """
         self.scale = scale
         self.p = p
         self.axis = axis

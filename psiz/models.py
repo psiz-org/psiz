@@ -207,28 +207,6 @@ class Proxy(object):
         for k, v in theta.items():
             self.model.theta[k].assign(v)
 
-    def get_weights(self):
-        """Get weights for all layers.
-
-        Returns all weights as a dictionary of layers with each layer's
-        weights as a single-level dictionary of weights.
-
-        """
-        weights = {
-            'embedding': {'z': self.z},
-            'attention': self.phi,
-            'kernel': self.theta
-        }
-        return weights
-
-    def set_weights(self, weights):
-        """Setter method for all weights."""
-        for layer_name, layer_dict in weights.items():
-            layer = getattr(self.model, layer_name)
-            for var_name, var_value in layer_dict.items():
-                var = getattr(layer, var_name)
-                var.assign(var_value)
-
     def _broadcast_for_similarity(
             self, z_q, z_r, group_id=None):
         """Return similarity between two lists of points.
@@ -832,19 +810,26 @@ class Proxy(object):
 
     def clone(self, custom_objects={}):
         """Clone model."""
-        model_class_name = self.model.__class__.__name__
-        model_class = getattr(psiz.models, model_class_name)
+        # TODO
+        # model_class_name = self.model.__class__.__name__
+        # model_class = getattr(psiz.models, model_class_name)
 
         # Create topology.
-        config = self.model.get_config()
-        model = model_from_config(config, custom_objects=custom_objects)
+        new_model = model_from_config(
+            self.model.get_config(), custom_objects=custom_objects
+        )
+
+        # Save weights.
+        fp_weights = '/tmp/psiz/clone'
+        self.model.save_weights(fp_weights, overwrite=True)
+
+        # Set weights of new model.
+        new_model.load_weights(fp_weights)
+
+        # Wrap in proxy Class.
         proxy_model = Proxy(model=model)
 
-        # Set weights.
-        model_weights = self.get_weights()
-        proxy_model.set_weights(model_weights)
-
-        # Compile. TODO is this too brittle?
+        # Compile to model. TODO is this too brittle?
         if self.model.loss is not None:
             proxy_model.compile(
                 loss=self.model.loss, optimizer=self.model.optimizer

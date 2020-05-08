@@ -1105,7 +1105,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         z = f['z']['value'][()]
         z_trainable = f['z']['trainable'][()]
         embedding = psiz.keras.layers.EmbeddingRe(
-            input_dim=n_stimuli, output_dim=n_dim, trainable=z_trainable
+            input_dim=n_stimuli+1, output_dim=n_dim, trainable=z_trainable
         )
 
         # Create attention layer.
@@ -1138,7 +1138,7 @@ def load_model(filepath, custom_objects={}, compile=False):
             #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
         dist_config = {}
-        dist_config.update(theta_config.pop('fit_rho'))
+        dist_config.update({'fit_rho': theta_config.pop('fit_rho', None)})
         distance = psiz.keras.layers.WeightedMinkowski(**dist_config)
         if embedding_type == 'Exponential':
             similarity = psiz.keras.layers.ExponentialSimilarity(

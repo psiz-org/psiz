@@ -361,7 +361,7 @@ def set_from_record(model, tracker, idx):
         idx: An integer indicating which record to use.
 
     """
-    model.set_weights(tracker.record['weights'][idx])
+    model.load_weights(tracker.record['weights'][idx])
 
 
 def _new_model(model, custom_objects={}):

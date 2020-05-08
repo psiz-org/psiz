@@ -36,7 +36,10 @@ import psiz
 # Load some observations (i.e., judged trials).
 (obs, catalog) = psiz.datasets.load('birds-16')
 # Create an embedding layer.
-embedding = psiz.keras.layers.EmbeddingRe(catalog.n_stimuli)
+n_dim = 2
+embedding = psiz.keras.layers.Embedding(
+    catalog.n_stimuli+1, n_dim, mask_zero=True
+)
 # Create a rank model.
 model = psiz.models.Rank(embedding=embedding)
 # Wrap the model in convenient proxy class.

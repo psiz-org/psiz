@@ -168,20 +168,20 @@ class WeightedMinkowski(tf.keras.layers.Layer):
     Arguments:
         fit_rho (optional): Boolean indicating if variable is
             trainable.
-        rho_init (optional): Initializer for rho.
+        rho_initializer (optional): Initializer for rho.
 
     """
 
-    def __init__(self, fit_rho=True, rho_init=None, **kwargs):
+    def __init__(self, fit_rho=True, rho_initializer=None, **kwargs):
         """Initialize."""
         super(WeightedMinkowski, self).__init__(**kwargs)
         self.fit_rho = fit_rho
 
-        if rho_init is None:
-            rho_init = tf.random_uniform_initializer(1.01, 3.)
-        self.rho_init = tf.keras.initializers.get(rho_init)
+        if rho_initializer is None:
+            rho_initializer = tf.random_uniform_initializer(1.01, 3.)
+        self.rho_initializer = tf.keras.initializers.get(rho_initializer)
         self.rho = self.add_weight(
-            shape=[], initializer=self.rho_init,
+            shape=[], initializer=self.rho_initializer,
             trainable=self.fit_rho, name="rho", dtype=K.floatx(),
             constraint=pk_constraints.GreaterThan(min_value=1.0)
         )
@@ -218,7 +218,9 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         config = super().get_config()
         config.update({
             'fit_rho': self.fit_rho,
-            'rho_init': tf.keras.initializers.serialize(self.rho_init)
+            'rho_initializer': tf.keras.initializers.serialize(
+                self.rho_initializer
+            )
         })
         return config
 
@@ -351,25 +353,25 @@ class InverseSimilarity(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_tau=True, fit_mu=True, tau_init=None, mu_init=None,
-            **kwargs):
+            self, fit_tau=True, fit_mu=True, tau_initializer=None,
+            mu_initializer=None, **kwargs):
         """Initialize."""
         super(InverseSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
-        if tau_init is None:
-            tau_init = tf.random_uniform_initializer(1., 2.)
-        self.tau_init = tf.keras.initializers.get(tau_init)
+        if tau_initializer is None:
+            tau_initializer = tf.random_uniform_initializer(1., 2.)
+        self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         self.tau = self.add_weight(
-            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            shape=[], initializer=self.tau_initializer, trainable=self.fit_tau,
             name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_mu = fit_mu
-        if mu_init is None:
-            mu_init = tf.random_uniform_initializer(0.0000000001, .001)
-        self.mu_init = tf.keras.initializers.get(tau_init)
+        if mu_initializer is None:
+            mu_initializer = tf.random_uniform_initializer(0.0000000001, .001)
+        self.mu_initializer = tf.keras.initializers.get(tau_initializer)
         self.tau = self.add_weight(
             shape=[], initializer=self.tau_int, trainable=self.fit_mu,
             name="mu", dtype=K.floatx(),
@@ -399,8 +401,12 @@ class InverseSimilarity(tf.keras.layers.Layer):
         config.update({
             'fit_tau': self.fit_tau,
             'fit_mu': self.fit_mu,
-            'tau_init': tf.keras.initializers.serialize(self.tau_init),
-            'mu_init': tf.keras.initializers.serialize(self.mu_init),
+            'tau_initializer': tf.keras.initializers.serialize(
+                self.tau_initializer
+            ),
+            'mu_initializer': tf.keras.initializers.serialize(
+                self.mu_initializer
+            ),
         })
         return config
 
@@ -446,41 +452,42 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_tau=True, fit_gamma=True, fit_beta=False, tau_init=None,
-            gamma_init=None, beta_init=None, **kwargs):
+            self, fit_tau=True, fit_gamma=True, fit_beta=False,
+            tau_initializer=None, gamma_initializer=None,
+            beta_initializer=None, **kwargs):
         """Initialize."""
         super(ExponentialSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
-        if tau_init is None:
-            tau_init = tf.random_uniform_initializer(1., 2.)
-        self.tau_init = tf.keras.initializers.get(tau_init)
+        if tau_initializer is None:
+            tau_initializer = tf.random_uniform_initializer(1., 2.)
+        self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         self.tau = self.add_weight(
-            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            shape=[], initializer=self.tau_initializer, trainable=self.fit_tau,
             name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_gamma = fit_gamma
-        if gamma_init is None:
-            gamma_init = tf.random_uniform_initializer(0., .001)
-        self.gamma_init = tf.keras.initializers.get(gamma_init)
+        if gamma_initializer is None:
+            gamma_initializer = tf.random_uniform_initializer(0., .001)
+        self.gamma_initializer = tf.keras.initializers.get(gamma_initializer)
         self.gamma = self.add_weight(
-            shape=[], initializer=self.gamma_init, trainable=self.fit_gamma,
-            name="gamma", dtype=K.floatx(),
+            shape=[], initializer=self.gamma_initializer,
+            trainable=self.fit_gamma, name="gamma", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_beta = fit_beta
-        if beta_init is None:
+        if beta_initializer is None:
             if fit_beta:
-                beta_init = tf.random_uniform_initializer(1., 30.)
+                beta_initializer = tf.random_uniform_initializer(1., 30.)
             else:
-                beta_init = tf.keras.initializers.Constant(value=10.)
-        self.beta_init = tf.keras.initializers.get(beta_init)
+                beta_initializer = tf.keras.initializers.Constant(value=10.)
+        self.beta_initializer = tf.keras.initializers.get(beta_initializer)
         self.beta = self.add_weight(
-            shape=[], initializer=self.beta_init, trainable=self.fit_beta,
-            name="beta", dtype=K.floatx(),
+            shape=[], initializer=self.beta_initializer,
+            trainable=self.fit_beta, name="beta", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
 
         )
@@ -512,9 +519,15 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             'fit_tau': self.fit_tau,
             'fit_gamma': self.fit_gamma,
             'fit_beta': self.fit_beta,
-            'tau_init': tf.keras.initializers.serialize(self.tau_init),
-            'gamma_init': tf.keras.initializers.serialize(self.gamma_init),
-            'beta_init': tf.keras.initializers.serialize(self.beta_init),
+            'tau_initializer': tf.keras.initializers.serialize(
+                self.tau_initializer
+            ),
+            'gamma_initializer': tf.keras.initializers.serialize(
+                self.gamma_initializer
+            ),
+            'beta_initializer': tf.keras.initializers.serialize(
+                self.beta_initializer
+            ),
         })
         return config
 
@@ -538,39 +551,39 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_tau=True, fit_kappa=True, fit_alpha=True, tau_init=None,
-            kappa_init=None, alpha_init=None,
-            **kwargs):
+            self, fit_tau=True, fit_kappa=True, fit_alpha=True,
+            tau_initializer=None, kappa_initializer=None,
+            alpha_initializer=None, **kwargs):
         """Initialize."""
         super(HeavyTailedSimilarity, self).__init__(**kwargs)
 
         self.fit_tau = fit_tau
-        if tau_init is None:
-            tau_init = tf.random_uniform_initializer(1., 2.)
-        self.tau_init = tf.keras.initializers.get(tau_init)
+        if tau_initializer is None:
+            tau_initializer = tf.random_uniform_initializer(1., 2.)
+        self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         self.tau = self.add_weight(
-            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            shape=[], initializer=self.tau_initializer, trainable=self.fit_tau,
             name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_kappa = fit_kappa
-        if kappa_init is None:
-            kappa_init = tf.random_uniform_initializer(1., 11.)
-        self.kappa_init = tf.keras.initializers.get(kappa_init)
+        if kappa_initializer is None:
+            kappa_initializer = tf.random_uniform_initializer(1., 11.)
+        self.kappa_initializer = tf.keras.initializers.get(kappa_initializer)
         self.kappa = self.add_weight(
-            shape=[], initializer=self.kappa_init, trainable=self.fit_kappa,
-            name="kappa", dtype=K.floatx(),
+            shape=[], initializer=self.kappa_initializer,
+            trainable=self.fit_kappa, name="kappa", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.fit_alpha = fit_alpha
-        if alpha_init is None:
-            alpha_init = tf.random_uniform_initializer(10., 60.)
-        self.alpha_init = tf.keras.initializers.get(alpha_init)
+        if alpha_initializer is None:
+            alpha_initializer = tf.random_uniform_initializer(10., 60.)
+        self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
         self.alpha = self.add_weight(
-            shape=[], initializer=self.alpha_init, trainable=self.fit_alpha,
-            name="alpha", dtype=K.floatx(),
+            shape=[], initializer=self.alpha_initializer,
+            trainable=self.fit_alpha, name="alpha", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
@@ -601,9 +614,15 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
             'fit_tau': self.fit_tau,
             'fit_kappa': self.fit_kappa,
             'fit_alpha': self.fit_alpha,
-            'tau_init': tf.keras.initializers.serialize(self.tau_init),
-            'kappa_init': tf.keras.initializers.serialize(self.kappa_init),
-            'alpha_init': tf.keras.initializers.serialize(self.alpha_init),
+            'tau_initializer': tf.keras.initializers.serialize(
+                self.tau_initializer
+            ),
+            'kappa_initializer': tf.keras.initializers.serialize(
+                self.kappa_initializer
+            ),
+            'alpha_initializer': tf.keras.initializers.serialize(
+                self.alpha_initializer
+            ),
         })
         return config
 
@@ -634,31 +653,31 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, n_dim=None, fit_tau=True, fit_alpha=True, tau_init=None,
-            alpha_init=None, **kwargs):
+            self, n_dim=None, fit_tau=True, fit_alpha=True,
+            tau_initializer=None, alpha_initializer=None, **kwargs):
         """Initialize."""
         super(StudentsTSimilarity, self).__init__(**kwargs)
 
         self.n_dim = n_dim
 
         self.fit_tau = fit_tau
-        if tau_init is None:
-            tau_init = tf.random_uniform_initializer(1., 2.)
-        self.tau_init = tf.keras.initializers.get(tau_init)
+        if tau_initializer is None:
+            tau_initializer = tf.random_uniform_initializer(1., 2.)
+        self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         self.tau = self.add_weight(
-            shape=[], initializer=self.tau_init, trainable=self.fit_tau,
+            shape=[], initializer=self.tau_initializer, trainable=self.fit_tau,
             name="tau", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
         self.fit_alpha = fit_alpha
-        if alpha_init is None:
-            alpha_init = tf.random_uniform_initializer(
+        if alpha_initializer is None:
+            alpha_initializer = tf.random_uniform_initializer(
                 np.max((1, self.n_dim - 2.)), self.n_dim + 2.
             )
-        self.alpha_init = tf.keras.initializers.get(alpha_init)
+        self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
         self.alpha = self.add_weight(
-            shape=[], initializer=self.alpha_init, trainable=fit_alpha,
+            shape=[], initializer=self.alpha_initializer, trainable=fit_alpha,
             name="alpha", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.000001)
         )
@@ -689,7 +708,11 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
         config.update({
             'fit_tau': self.fit_tau,
             'fit_alpha': self.fit_alpha,
-            'tau_init': tf.keras.initializers.serialize(self.tau_init),
-            'alpha_init': tf.keras.initializers.serialize(self.alpha_init),
+            'tau_initializer': tf.keras.initializers.serialize(
+                self.tau_initializer
+            ),
+            'alpha_initializer': tf.keras.initializers.serialize(
+                self.alpha_initializer
+            ),
         })
         return config

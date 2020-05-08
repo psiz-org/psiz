@@ -29,10 +29,8 @@ from tensorflow.keras.initializers import RandomNormal
 from tensorflow.keras.layers import Embedding
 
 import psiz.keras.callbacks
-import psiz.keras.constraints  # TODO
 import psiz.keras.layers
 import psiz.keras.losses
-import psiz.keras.regularizers  # TODO
 from psiz.generator import RandomGenerator
 import psiz.models
 from psiz.simulate import Agent
@@ -104,7 +102,7 @@ def main():
         'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
     }
 
-    # Infer embedding. TODO
+    # Infer embedding.
     embedding = Embedding(
         n_stimuli+1, n_dim, mask_zero=True
     )

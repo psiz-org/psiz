@@ -2,6 +2,9 @@
 
 NOTE: This README is in the process of being updated for release 0.4.0. Not all information is accurate.
 
+## What's in a name?
+The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
+
 ## Purpose
 
 PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods.
@@ -219,9 +222,6 @@ n_dim = search_summary['dim_best']
 * Brett D. Roads
 * Michael C. Mozer
 * See also the list of contributors who participated in this project.
-
-## What's in a name?
-The name PsiZ (pronounced *sigh zeee*) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
 
 ## Licence
 This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file for details.

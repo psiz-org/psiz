@@ -921,11 +921,13 @@ class RankObservations(RankTrials):
             'is_present': self.is_present(),
             'is_select': self.is_select(compress=True)
         }
-        # Create categorical outputs for each trial. For a Rank trial, the
-        # output indicated which outcome among a set of possible outcomes
-        # actually occurred. Rank observations are assumed to be structured
-        # such that the ording denotes the actual outcome, making the zeroth
-        # outcome the correct output.
+        # NOTE: The outputs `y` are not currently used, but included for
+        # consistency. If they were used, they would denote categorical
+        # outputs for each trial. For a Rank trial, the output indicated which
+        # outcome among a set of possible outcomes actually occurred. Rank
+        # observations are assumed to be structured such that the ording
+        # denotes the actual outcome, making the zeroth outcome the correct
+        # output.
         y = tf.constant(np.zeros([self.n_trial]), dtype=K.floatx())
 
         # Observation weight.

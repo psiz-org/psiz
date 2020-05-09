@@ -511,6 +511,8 @@ class Proxy(object):
                 trial data.
 
         """
+        # if not unaltered_only:
+        #     raise ValueError('unaltered_only=False not supported')
         n_trial_all = docket.n_trial
 
         if z is None:
@@ -529,7 +531,8 @@ class Proxy(object):
             z = np.expand_dims(z, axis=2)
         n_sample = z.shape[2]
 
-        # Compute similarity between query and references.
+        # TODO Use call to embedding layer.
+        # z_stimulus_set = self.model.embedding(docket.stimulus_set + 1)
         z_stimulus_set = _inflate_points(docket.stimulus_set, z)
         z_q = z_stimulus_set[:, :, 0, :]
         z_q = np.expand_dims(z_q, axis=2)
@@ -538,6 +541,7 @@ class Proxy(object):
             z_q, z_r, group_id=group_id
         )
 
+        # Compute similarity between query and references.
         d_qr = self.model.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),

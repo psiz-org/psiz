@@ -35,7 +35,6 @@ Functions:
         approximation to posterior samples.
     normal_entropy: Compute entropy associated with a Gaussian
         distribution.
-    choice_wo_replace: Efficient sampling without replacement.
 
 Todo:
     - MAYBE Reduce uncertainty on positions AND group-specific
@@ -59,7 +58,7 @@ from sklearn.neighbors import NearestNeighbors
 from psiz.trials import RankDocket, stack
 from psiz.simulate import Agent
 from psiz.preprocess import remove_catch_trials
-from psiz.utils import ProgressBarRe
+from psiz.utils import ProgressBarRe, choice_wo_replace
 
 
 class DocketGenerator(object):
@@ -488,48 +487,6 @@ def information_gain(embedding, samples, docket, group_id=None):
     # Convert to normal numpy.ndarray.
     info_gain = info_gain.data
     return info_gain
-
-
-def choice_wo_replace(a, size, p):
-    """Fast sampling without replacement.
-
-    Arguments:
-        a: An array indicating the eligable elements.
-        size: A tuple indicating the number of independent samples and
-            the number of draws (without replacement) for each sample.
-            The tuple is ordered such that
-            size = (n_sample, sample_size).
-        p: An array indicating the probabilites associated with drawing
-            a particular element. User provided probabilities are
-            already assumed to sum to one. Probability p[i] indicates
-            the probability of drawing index a[i].
-
-    Returns:
-        result: A 2D array containing the drawn elements.
-            shape=(n_sample, sample_size)
-
-    See: https://medium.com/ibm-watson/
-        incredibly-fast-random-sampling-in-python-baf154bd836a
-
-    """
-    n_sample = size[0]
-    sample_size = size[1]
-
-    # Replicate probabilities as many times as `n_sample`
-    replicated_probabilities = np.tile(p, (n_sample, 1))
-
-    # Get random shifting numbers & scale them correctly.
-    random_shifts = np.random.random(replicated_probabilities.shape)
-    random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
-
-    # Shift by numbers and find largest (by finding the smallest of the
-    # negative).
-    shifted_probabilities = random_shifts - replicated_probabilities
-    samples = np.argpartition(
-        shifted_probabilities, sample_size, axis=1
-    )[:, :sample_size]
-
-    return a[samples]
 
 
 def determine_stimulus_priority(embedding, samples, mode='kl'):

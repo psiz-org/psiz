@@ -328,6 +328,38 @@ class RankTrials(Trials, metaclass=ABCMeta):
                 "trial(s).").format(n_bad))
         return is_ranked
 
+    def is_select(self, compress=False):
+        """Indicate if a stimulus was selected.
+
+        This method has two modes that return 2D arrays of different
+        shapes.
+
+        Returns:
+            is_select: A 2D Boolean array indicating the stimuli that
+                were selected. By default, this will be a 2D array that
+                has the same shape as `stimulus_set`. See the
+                `compress` option for non-default behavior.
+                shape=(n_trial, n_max_reference + 1) if compress=False
+                shape=(n_trial, n_max_select) if compress=True
+            compress (optional): A Boolean indicating if the returned
+                2D array should be compressed such that the first
+                column corresponding to the query is removed, and any
+                trailing columns with no selected stimuli are also
+                removed. This results in a 2D array with a shape that
+                implies the maximum number of selected references.
+
+        """
+        is_select = np.zeros(self.stimulus_set.shape, dtype=bool)
+        max_n_select = np.max(self.n_select)
+        for n_select in range(1, max_n_select + 1):
+            locs = np.less_equal(n_select, self.n_select)
+            is_select[locs, n_select] = True
+
+        if compress:
+            is_select = is_select[:, 1:max_n_select + 1]
+
+        return is_select
+
 
 class RankDocket(RankTrials):
     """Object that encapsulates unseen trials.
@@ -489,6 +521,63 @@ class RankDocket(RankTrials):
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
+
+    def as_dataset(self, membership):
+        """Return TensorFlow Dataset."""
+        # Inflate stimulus set for all possible outcomes.
+        outcome_idx_list = self.outcome_idx_list
+        n_outcome_list = self.config_list['n_outcome'].values
+        max_n_outcome = np.max(n_outcome_list)
+        n_config = self.config_list.shape[0]
+
+        stimulus_set_expand = -1 * np.ones(
+            [self.n_trial, self.max_n_reference + 1, max_n_outcome]
+        )
+        for i_config in range(n_config):
+            # Identify relevant trials.
+            trial_locs = self.config_idx == i_config
+            n_trial_config = np.sum(trial_locs)
+
+            config = self.config_list.iloc[i_config]
+            n_reference = config['n_reference']
+            outcome_idx = outcome_idx_list[i_config]
+            n_outcome = outcome_idx.shape[0]
+            # Add query index, increment references to accommodate query.
+            stimulus_set_idx = np.hstack(
+                [np.zeros([n_outcome, 1], dtype=int), outcome_idx + 1]
+            )
+            curr_stimulus_set_copy = self.stimulus_set[trial_locs, :]
+            curr_stimulus_set_expand = -1 * np.ones(
+                [n_trial_config, self.max_n_reference + 1, max_n_outcome],
+                dtype=int
+            )
+            for i_outcome in range(n_outcome):
+                curr_stimulus_set_idx = stimulus_set_idx[i_outcome, :]
+                # Append placeholder indices.
+                curr_idx = np.hstack([
+                    curr_stimulus_set_idx,
+                    np.arange(
+                        np.max(curr_stimulus_set_idx) + 1,
+                        self.max_n_reference + 1
+                    )
+                ])
+                curr_stimulus_set_expand[:, :, i_outcome] = curr_stimulus_set_copy[:, curr_idx]
+            stimulus_set_expand[trial_locs] = curr_stimulus_set_expand
+
+        x = {
+            'stimulus_set': tf.constant(
+                stimulus_set_expand + 1, dtype=tf.int32
+            ),
+            'membership': tf.constant(membership, dtype=tf.int32),
+            'is_present': tf.constant(
+                np.not_equal(stimulus_set_expand, -1), dtype=tf.bool
+            ),
+            'is_select': tf.constant(
+                np.expand_dims(self.is_select(compress=True), axis=2),
+                dtype=tf.bool
+            )
+        }
+        return x
 
 
 class RankObservations(RankTrials):
@@ -867,38 +956,6 @@ class RankObservations(RankTrials):
         f.create_dataset("weight", data=self.weight)
         f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
-
-    def is_select(self, compress=False):
-        """Indicate if a stimulus was selected.
-
-        This method has two modes that return 2D arrays of different
-        shapes.
-
-        Returns:
-            is_select: A 2D Boolean array indicating the stimuli that
-                were selected. By default, this will be a 2D array that
-                has the same shape as `stimulus_set`. See the
-                `compress` option for non-default behavior.
-                shape=(n_trial, n_max_reference + 1) if compress=False
-                shape=(n_trial, n_max_select) if compress=True
-            compress (optional): A Boolean indicating if the returned
-                2D array should be compressed such that the first
-                column corresponding to the query is removed, and any
-                trailing columns with no selected stimuli are also
-                removed. This results in a 2D array with a shape that
-                implies the maximum number of selected references.
-
-        """
-        is_select = np.zeros(self.stimulus_set.shape, dtype=bool)
-        max_n_select = np.max(self.n_select)
-        for n_select in range(1, max_n_select + 1):
-            locs = np.less_equal(n_select, self.n_select)
-            is_select[locs, n_select] = True
-
-        if compress:
-            is_select = is_select[:, 1:max_n_select + 1]
-
-        return is_select
 
     def as_dataset(self):
         """Format necessary data as Tensorflow.data.Dataset object.

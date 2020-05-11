@@ -915,20 +915,18 @@ class RankObservations(RankTrials):
         # problem.
         # NOTE: We use stimulus_set + 1, since TensorFlow requires "0", not
         # "-1" to indicate a masked value.
+        # NOTE: The dimensions of inputs are expanded to have an additional
+        # singleton third dimension to indicate that there is only one outcome
+        # that we are interested for each trial.
         x = {
-            'stimulus_set': self.stimulus_set + 1,
+            'stimulus_set': np.expand_dims(self.stimulus_set + 1, axis=2),
             'membership': np.stack((self.group_id, self.agent_id), axis=-1),
-            'is_present': self.is_present(),
-            'is_select': self.is_select(compress=True)
+            'is_present': np.expand_dims(self.is_present(), axis=2),
+            'is_select': np.expand_dims(self.is_select(compress=True), axis=2)
         }
-        # NOTE: The outputs `y` are not currently used, but included for
-        # consistency. If they were used, they would denote categorical
-        # outputs for each trial. For a Rank trial, the output indicated which
-        # outcome among a set of possible outcomes actually occurred. Rank
-        # observations are assumed to be structured such that the ording
-        # denotes the actual outcome, making the zeroth outcome the correct
-        # output.
-        y = tf.constant(np.zeros([self.n_trial]), dtype=K.floatx())
+        # NOTE: The outputs `y` indicate if the outcome occurred and allow
+        # BinaryCrossentropy to be used as a loss term.
+        y = tf.constant(np.ones([self.n_trial]), dtype=K.floatx())
 
         # Observation weight.
         w = tf.constant(self.weight, dtype=K.floatx())

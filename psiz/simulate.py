@@ -82,6 +82,12 @@ class Agent(object):
         prob_all = self.embedding.outcome_probability(
             docket, group_id=group_id
         )
+        # TODO Expand docket for possible outcomes.
+        
+        # docket_expand = docket.add_outcomes()
+        # prob_all = self.embedding.outcome_probability_new(
+        #     docket_new, group_id=group_id
+        # )
         (obs, _) = self._select(docket, prob_all, session_id=session_id)
         return obs
 

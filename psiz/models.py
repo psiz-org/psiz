@@ -481,6 +481,87 @@ class Proxy(object):
         metrics_2 = self.model.evaluate(x=ds_obs, **kwargs)
         return metrics_2
 
+    def outcome_probability_new(
+            self, docket, group_id=None, z=None, unaltered_only=True):
+        """Return probability of each outcome for each trial.
+
+        Arguments:
+            docket: A docket of unjudged similarity trials. The indices
+                used must correspond to the rows of z.
+            group_id (optional): The group ID for which to compute the
+                probabilities.
+            z (optional): A set of embedding points. If no embedding
+                points are provided, the points associated with the
+                object are used.
+                shape=(n_stimuli, n_dim, [n_sample])
+
+        Returns:
+            prob_all: A MaskedArray representing the probabilities
+                associated with the different outcomes for each
+                unjudged trial. In general, different trial
+                configurations have a different number of possible
+                outcomes. The mask attribute of the MaskedArray
+                indicates which elements are actual outcome
+                probabilities.
+                shape = (n_trial, n_max_outcome, [n_sample])
+
+        Notes:
+            The first outcome corresponds to the original order of the
+                trial data.
+
+        """
+        n_trial_all = docket.n_trial
+
+        if z is None:
+            z = self.z
+
+        n_config = docket.config_list.shape[0]
+
+        if z.ndim == 2:
+            z = np.expand_dims(z, axis=2)
+        n_sample = z.shape[2]
+
+        # TODO Use call to embedding layer.
+        # z_stimulus_set = self.model.embedding(docket.stimulus_set + 1)
+        z_stimulus_set = _inflate_points(docket.stimulus_set, z)
+        z_q = z_stimulus_set[:, :, 0, :]
+        z_q = np.expand_dims(z_q, axis=2)
+        z_r = z_stimulus_set[:, :, 1:, :]
+        z_q, z_r, attention = self._broadcast_for_similarity(
+            z_q, z_r, group_id=group_id
+        )
+
+        # Compute similarity between query and references.
+        d_qr = self.model.distance([
+            tf.constant(z_q, dtype=K.floatx()),
+            tf.constant(z_r, dtype=K.floatx()),
+            tf.constant(attention, dtype=K.floatx())
+        ])
+        sim_qr = self.model.similarity(d_qr).numpy()
+
+        prob_all = -1 * np.ones((n_trial_all, n_sample))
+        for i_config in range(n_config):
+            config = docket.config_list.iloc[i_config]
+            trial_locs = docket.config_idx == i_config
+            n_trial = np.sum(trial_locs)
+            n_reference = config['n_reference']
+
+            sim_qr_config = sim_qr[trial_locs]
+            sim_qr_config = sim_qr_config[:, 0:n_reference]
+
+            # Compute probability of each possible outcome.
+            probs_config = _ranked_sequence_probability(
+                sim_qr_config, config['n_select']
+            )
+            prob_all[trial_locs, :] = probs_config
+        prob_all = ma.masked_values(prob_all, -1)
+
+        # Reshape prob_all as necessary.
+        if n_sample == 1:
+            prob_all = prob_all[:, :, 0]
+
+        return prob_all
+
     def outcome_probability(
             self, docket, group_id=None, z=None, unaltered_only=False):
         """Return probability of each outcome for each trial.
@@ -908,13 +989,13 @@ class Rank(tf.keras.Model):
             shape=[None, 2], dtype=tf.int32, name='membership'
         ),
         'is_select': tf.TensorSpec(
-            shape=[None, None], dtype=tf.bool, name='is_select'
+            shape=[None, None, None], dtype=tf.bool, name='is_select'
         ),
         'is_present': tf.TensorSpec(
-            shape=[None, None], dtype=tf.bool, name='is_present'
+            shape=[None, None, None], dtype=tf.bool, name='is_present'
         ),
         'stimulus_set': tf.TensorSpec(
-            shape=[None, None], dtype=tf.int32, name='stimulus_set'
+            shape=[None, None, None], dtype=tf.int32, name='stimulus_set'
         )
     }])
     def call(self, inputs):
@@ -943,11 +1024,15 @@ class Rank(tf.keras.Model):
 
         # Expand attention weights.
         attention = self.attention(group_id)
+        # Add singleton dimensions for n_reference and n_outcome axis.
         attention = tf.expand_dims(attention, axis=2)
+        attention = tf.expand_dims(attention, axis=3)
 
         # Inflate coordinates.
-        z_stimulus_set = self.embedding(obs_stimulus_set)  # TensorShape([2700, 9, 3])
-        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 2, 1])
+        z_stimulus_set = self.embedding(obs_stimulus_set)
+        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim]) TensorShape([2700, 9, 1, 3])
+        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
+        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
         max_n_reference = tf.shape(z_stimulus_set)[2] - 1
         z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
 
@@ -960,9 +1045,66 @@ class Rank(tf.keras.Model):
         # Zero out similarities involving placeholder.
         sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
 
-        # Compute the observation likelihood.
-        likelihood = _tf_ranked_sequence_probability(sim_qr, is_select)
-        return likelihood
+        # Compute the observation probability.
+        probs = self._tf_ranked_sequence_probability(sim_qr, is_select)
+        return probs
+
+    def _tf_ranked_sequence_probability(self, sim_qr, is_select):
+        """Return probability of a ranked selection sequence.
+
+        See: _ranked_sequence_probability
+
+        Arguments:
+            sim_qr: A tensor containing the precomputed similarities
+                between the query stimuli and corresponding reference
+                stimuli.
+                shape = (batch_size, n_max_reference, n_outcome)
+            is_select: A Boolean tensor indicating if a reference was
+                selected.
+                shape = (batch_size, n_max_select)
+
+        """
+        # Determine batch_size.
+        batch_size = tf.shape(sim_qr)[0]
+        # Determine max_select_idx (i.e, max_n_select - 1).
+        max_select_idx = tf.shape(is_select)[1] - 1
+        n_outcome = tf.shape(sim_qr)[2]
+
+        # Pre-allocate
+        seq_prob = tf.ones([batch_size, n_outcome], dtype=K.floatx())
+
+        # Compute denominator of Luce's choice rule.
+        # Start by computing denominator of last selection
+        denom = tf.reduce_sum(sim_qr[:, max_select_idx:, :], axis=1)
+
+        # Pre-compute masks for handling non-existent selections.
+        does_exist = tf.cast(is_select, dtype=K.floatx())
+        does_not_exist = tf.cast(
+            tf.math.logical_not(is_select), dtype=K.floatx()
+        )
+
+        # Compute remaining denominators in reverse order for numerical
+        # stability.
+        for select_idx in tf.range(max_select_idx, -1, -1):
+            # Compute selection probability.
+            # Use safe divide since some denominators may be zero.
+            prob = tf.math.divide_no_nan(sim_qr[:, select_idx, :], denom)
+            # Zero out non-existent selections.
+            prob = prob * does_exist[:, select_idx, :]
+            # Add one to non-existent selections.
+            prob = prob + does_not_exist[:, select_idx, :]
+
+            # Update sequence probability.
+            # NOTE: Non-existent selections will have a probability of 1, which
+            # results in an idempotent multiplication operation.
+            seq_prob = tf.multiply(seq_prob, prob)
+
+            # Update denominator in preparation for computing the probability
+            # of the previous selection in the sequence.
+            if select_idx > tf.constant(0, dtype=tf.int32):
+                denom = tf.add(denom, sim_qr[:, select_idx - 1, :])
+
+        return seq_prob
 
     def train_step(self, data):
         """Logic for one training step.
@@ -1410,62 +1552,6 @@ def _ranked_sequence_probability(sim_qr, n_select):
         if i_selected > 0:
             # denom = denom + sim_qr[:, i_selected-1, :]
             denom += sim_qr[:, i_selected-1, :]
-    return seq_prob
-
-
-def _tf_ranked_sequence_probability(sim_qr, is_select):
-    """Return probability of a ranked selection sequence.
-
-    See: _ranked_sequence_probability
-
-    Arguments:
-        sim_qr: A tensor containing the precomputed similarities
-            between the query stimuli and corresponding reference
-            stimuli.
-            shape = (batch_size, n_max_reference)
-        is_select: A Boolean tensor indicating if a reference was
-            selected.
-            shape = (batch_size, n_max_select)
-
-    """
-    # Determine batch_size.
-    batch_size = tf.shape(sim_qr)[0]
-    # Determine max_select_idx (i.e, max_n_select - 1).
-    max_select_idx = tf.shape(is_select)[1] - 1
-
-    # Pre-allocate
-    seq_prob = tf.ones([batch_size], dtype=K.floatx())
-
-    # Compute denominator of Luce's choice rule.
-    # Start by computing denominator of last selection
-    denom = tf.reduce_sum(sim_qr[:, max_select_idx:], axis=1)
-
-    # Pre-compute masks for handling non-existent selections.
-    does_exist = tf.cast(is_select, dtype=K.floatx())
-    does_not_exist = tf.cast(tf.math.logical_not(is_select), dtype=K.floatx())
-
-    # Compute remaining denominators in reverse order for numerical
-    # stability.
-    for select_idx in tf.range(max_select_idx, -1, -1):
-        # Compute selection probability.
-        # Use safe divide since some denominators may be zero.
-        prob = tf.math.divide_no_nan(sim_qr[:, select_idx], denom)
-        # Zero out non-existent selections.
-        prob = prob * does_exist[:, select_idx]
-        # Add one to non-existent selections.
-        prob = prob + does_not_exist[:, select_idx]
-
-        # Update sequence probability.
-        # NOTE: Non-existent selections will have a probability of 1, which
-        # results in an idempotent multiplication operation.
-        seq_prob = tf.multiply(seq_prob, prob)
-
-        # Update denominator in preparation for computing the probability
-        # of the previous selection in the sequence.
-        if select_idx > tf.constant(0, dtype=tf.int32):
-            denom = tf.add(denom, sim_qr[:, select_idx - 1])
-        # seq_prob.set_shape([None])  # Not necessary any more?
-
     return seq_prob
 
 

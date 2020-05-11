@@ -39,7 +39,7 @@ def main():
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 20
+    n_restart = 3  # TODO 20
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -96,8 +96,9 @@ def main():
 
     compile_kwargs = {
         'loss': psiz.keras.losses.NegLogLikelihood(),
+        # 'loss': tf.keras.losses.BinaryCrossentropy(),
         'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
-        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll'), tf.keras.metrics.BinaryCrossentropy(name='bc')]
     }
 
     # Infer embedding.

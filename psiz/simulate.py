@@ -78,17 +78,24 @@ class Agent(object):
                 order of the stimuli is now informative.
 
         """
+        agent_id = self.agent_id * np.ones((docket.n_trial), dtype=np.int32)
         group_id = self.group_id * np.ones((docket.n_trial), dtype=np.int32)
-        prob_all = self.embedding.outcome_probability(
-            docket, group_id=group_id
-        )
-        # TODO Expand docket for possible outcomes.
-        
-        # docket_expand = docket.add_outcomes()
-        # prob_all = self.embedding.outcome_probability_new(
-        #     docket_new, group_id=group_id
+
+        # Call model with TensorFlow formatted docket.
+        membership = np.stack((group_id, agent_id), axis=-1)
+        inputs = docket.as_dataset(membership)
+        prob_all = self.embedding.model(inputs)
+
+        # Old approach.
+        # prob_all_2 = self.embedding.outcome_probability(
+        #     docket, group_id=group_id
         # )
+        # prob_all_old = prob_all_2.data
+        # prob_all_old[prob_all_2.mask] = 0
+        # np.testing.assert_array_almost_equal(prob_all.numpy(), prob_all_old, decimal=6)  # TODO
+
         (obs, _) = self._select(docket, prob_all, session_id=session_id)
+        # TODO new select using fast categorical sampling.
         return obs
 
     def _select(self, docket, prob_all, session_id=None):

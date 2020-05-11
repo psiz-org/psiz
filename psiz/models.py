@@ -1043,7 +1043,7 @@ class Rank(tf.keras.Model):
         sim_qr = self.similarity(dist_qr)
 
         # Zero out similarities involving placeholder.
-        sim_qr = sim_qr * tf.cast(is_present[:, 1:], dtype=K.floatx())
+        sim_qr = sim_qr * tf.cast(is_present[:, 1:, :], dtype=K.floatx())
 
         # Compute the observation probability.
         probs = self._tf_ranked_sequence_probability(sim_qr, is_select)

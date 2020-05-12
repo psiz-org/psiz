@@ -951,7 +951,7 @@ class Rank(tf.keras.Model):
     """Model based on ranked similarity judgments.
 
     Attributes:
-        n_stimuli: The number of stimuli. 
+        n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.
         n_group: The number of groups.
 

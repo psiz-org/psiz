@@ -254,7 +254,6 @@ class ActiveGenerator(DocketGenerator):
         if verbose > 0:
             print('[psiz] Generating docket using active selection...')
 
-
         # Ensure priorities sum to one. TODO
         # if np.sum(np.less(priority, 0)) > 0:
         #     raise('ValueError')

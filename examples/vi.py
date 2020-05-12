@@ -22,6 +22,7 @@ trial configurations.
 """
 
 import edward2 as ed
+from edward2.tensorflow import generated_random_variables  # TODO
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
@@ -34,10 +35,22 @@ import psiz
 
 def main():
     """Run script."""
+    # mean = [0.0, 1.0]
+    # scale = [-3., -.29]
+    # rv = ed.Normal(loc=mean, scale=scale)
+    # samples = rv.distribution.sample([1000]).numpy()
+    # lp = rv.distribution.log_prob([.1]).numpy()
+
+    # rv2 = ed.Independent(
+    #     ed.Normal(loc=mean, scale=scale).distribution
+    # )
+    # samples = rv2.distribution.sample([1000]).numpy()
+    # lp = rv2.distribution.log_prob([.1]).numpy()
+
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 3  # TODO 20
+    n_restart = 1  # TODO 20
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -92,18 +105,18 @@ def main():
     # embedding = tf.keras.layers.Embedding(
     #     n_stimuli+1, n_dim, mask_zero=True
     # )
-    # embeddings_initializer = ed.tensorflow.initializers.TrainableNormal(
-    #     mean_initializer=psiz.keras.initializers.RandomScaleMVN(
-    #         minval=-2., maxval=-1.
-    #     ),
-    #     stddev_initializer=tf.keras.initializers.TruncatedNormal(
-    #         mean=.0001, stddev=0.00001
-    #     ),
-    #     # stddev_initializer=tf.keras.initializers.Constant(value=.0001),
-    # )
+    embeddings_initializer = ed.tensorflow.initializers.TrainableNormal(
+        # mean_initializer=psiz.keras.initializers.RandomScaleMVN(
+        #     minval=-2., maxval=-1.
+        # ),
+        stddev_initializer=tf.keras.initializers.TruncatedNormal(
+            mean=3., stddev=0.1
+        )
+        # stddev_initializer=tf.keras.initializers.Constant(value=.0001),
+    )
     embedding = ed.layers.EmbeddingReparameterization(
         n_stimuli+1, output_dim=n_dim, mask_zero=True,
-        # embeddings_initializer=embeddings_initializer,
+        embeddings_initializer=embeddings_initializer,
         embeddings_regularizer=ed.tensorflow.regularizers.NormalKLDivergence(
             stddev=.17, scale_factor=0.0
         )
@@ -130,6 +143,12 @@ def main():
     r_squared = psiz.utils.matrix_comparison(
         simmat_truth, simmat_infer, score='r2'
     )
+
+    tf.print(emb_inferred.model.embedding.embeddings_initializer.stddev.numpy()[1:, :])
+    # Place in model.
+    # tf.print(tf.reduce_mean(
+    #     self.embedding.embeddings_initializer.stddev[1:, :]
+    # ))
 
     # Display comparison results. A good inferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2

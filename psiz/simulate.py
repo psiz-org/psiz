@@ -23,7 +23,7 @@ Classes:
 """
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp  # TODO
+import tensorflow_probability as tfp
 
 from psiz.trials import RankObservations
 
@@ -87,19 +87,10 @@ class Agent(object):
         inputs = docket.as_dataset(membership)
         prob_all = self.embedding.model(inputs)
 
-        # Old approach. TODO
-        # prob_all_2 = self.embedding.outcome_probability(
-        #     docket, group_id=group_id
-        # )
-        # prob_all_old = prob_all_2.data
-        # prob_all_old[prob_all_2.mask] = 0
-        # np.testing.assert_array_almost_equal(prob_all.numpy(), prob_all_old, decimal=6)  # TODO
-
         obs = self._select(
             docket, prob_all, inputs['stimulus_set'] - 1,
             session_id=session_id
         )
-        # (obs, _) = self._select_old(docket, prob_all_2, session_id=session_id)  TODO
 
         return obs
 
@@ -108,11 +99,11 @@ class Agent(object):
 
         Arguments:
             docket: An RankDocket object.
-            prob_all: A MaskedArray object.TODO
+            prob_all: A 2D Tensor indicating the probabilites of all outcomes.
+                shape=[n_trial, n_max_outcome]
             stimulus_set_expand: An expanded stimulus set 3D array.
                 shape=[n_trial, n_max_reference+1, n_max_outcome]
             session_id (optional): The session ID.
-
 
         Returns:
             A RankObservations object.

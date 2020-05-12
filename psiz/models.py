@@ -1030,7 +1030,7 @@ class Rank(tf.keras.Model):
 
         # Inflate coordinates.
         z_stimulus_set = self.embedding(obs_stimulus_set)
-        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim]) TensorShape([2700, 9, 1, 3])
+        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
         z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
         # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
         max_n_reference = tf.shape(z_stimulus_set)[2] - 1

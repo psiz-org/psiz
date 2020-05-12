@@ -84,7 +84,7 @@ class Agent(object):
 
         # Call model with TensorFlow formatted docket.
         membership = np.stack((group_id, agent_id), axis=-1)
-        inputs = docket.as_dataset(membership)
+        inputs = docket.as_dataset(membership, all_outcomes=True)
         prob_all = self.embedding.model(inputs)
 
         obs = self._select(

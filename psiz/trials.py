@@ -360,6 +360,48 @@ class RankTrials(Trials, metaclass=ABCMeta):
 
         return is_select
 
+    def all_outcomes(self):
+        """Inflate stimulus set for all possible outcomes."""
+        outcome_idx_list = self.outcome_idx_list
+        n_outcome_list = self.config_list['n_outcome'].values
+        max_n_outcome = np.max(n_outcome_list)
+        n_config = self.config_list.shape[0]
+
+        stimulus_set_expand = -1 * np.ones(
+            [self.n_trial, self.max_n_reference + 1, max_n_outcome]
+        )
+        for i_config in range(n_config):
+            # Identify relevant trials.
+            trial_locs = self.config_idx == i_config
+            n_trial_config = np.sum(trial_locs)
+
+            config = self.config_list.iloc[i_config]
+            n_reference = config['n_reference']
+            outcome_idx = outcome_idx_list[i_config]
+            n_outcome = outcome_idx.shape[0]
+            # Add query index, increment references to accommodate query.
+            stimulus_set_idx = np.hstack(
+                [np.zeros([n_outcome, 1], dtype=int), outcome_idx + 1]
+            )
+            curr_stimulus_set_copy = self.stimulus_set[trial_locs, :]
+            curr_stimulus_set_expand = -1 * np.ones(
+                [n_trial_config, self.max_n_reference + 1, max_n_outcome],
+                dtype=int
+            )
+            for i_outcome in range(n_outcome):
+                curr_stimulus_set_idx = stimulus_set_idx[i_outcome, :]
+                # Append placeholder indices.
+                curr_idx = np.hstack([
+                    curr_stimulus_set_idx,
+                    np.arange(
+                        np.max(curr_stimulus_set_idx) + 1,
+                        self.max_n_reference + 1
+                    )
+                ])
+                curr_stimulus_set_expand[:, :, i_outcome] = curr_stimulus_set_copy[:, curr_idx]
+            stimulus_set_expand[trial_locs] = curr_stimulus_set_expand
+        return stimulus_set_expand
+
 
 class RankDocket(RankTrials):
     """Object that encapsulates unseen trials.
@@ -522,61 +564,49 @@ class RankDocket(RankTrials):
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
-    def as_dataset(self, membership):
-        """Return TensorFlow Dataset."""
-        # Inflate stimulus set for all possible outcomes.
-        outcome_idx_list = self.outcome_idx_list
-        n_outcome_list = self.config_list['n_outcome'].values
-        max_n_outcome = np.max(n_outcome_list)
-        n_config = self.config_list.shape[0]
+    def as_dataset(self, membership, all_outcomes=False):
+        """Return TensorFlow dataset.
 
-        stimulus_set_expand = -1 * np.ones(
-            [self.n_trial, self.max_n_reference + 1, max_n_outcome]
-        )
-        for i_config in range(n_config):
-            # Identify relevant trials.
-            trial_locs = self.config_idx == i_config
-            n_trial_config = np.sum(trial_locs)
+        Arguments:
+            membership: ND array indicating membership information for
+                each trial.
+            all_outcomes (optional): Boolean indicating whether all
+                possible outcomes (along third dimension) should be
+                included in returned dataset.
 
-            config = self.config_list.iloc[i_config]
-            n_reference = config['n_reference']
-            outcome_idx = outcome_idx_list[i_config]
-            n_outcome = outcome_idx.shape[0]
-            # Add query index, increment references to accommodate query.
-            stimulus_set_idx = np.hstack(
-                [np.zeros([n_outcome, 1], dtype=int), outcome_idx + 1]
-            )
-            curr_stimulus_set_copy = self.stimulus_set[trial_locs, :]
-            curr_stimulus_set_expand = -1 * np.ones(
-                [n_trial_config, self.max_n_reference + 1, max_n_outcome],
-                dtype=int
-            )
-            for i_outcome in range(n_outcome):
-                curr_stimulus_set_idx = stimulus_set_idx[i_outcome, :]
-                # Append placeholder indices.
-                curr_idx = np.hstack([
-                    curr_stimulus_set_idx,
-                    np.arange(
-                        np.max(curr_stimulus_set_idx) + 1,
-                        self.max_n_reference + 1
-                    )
-                ])
-                curr_stimulus_set_expand[:, :, i_outcome] = curr_stimulus_set_copy[:, curr_idx]
-            stimulus_set_expand[trial_locs] = curr_stimulus_set_expand
+        Returns:
+            x: A TensorFlow dataset.
 
-        x = {
-            'stimulus_set': tf.constant(
-                stimulus_set_expand + 1, dtype=tf.int32
-            ),
-            'membership': tf.constant(membership, dtype=tf.int32),
-            'is_present': tf.constant(
-                np.not_equal(stimulus_set_expand, -1), dtype=tf.bool
-            ),
-            'is_select': tf.constant(
-                np.expand_dims(self.is_select(compress=True), axis=2),
-                dtype=tf.bool
-            )
-        }
+        """
+        # Return tensorflow dataset.
+        if all_outcomes:
+            stimulus_set = self.all_outcomes()
+            x = {
+                'stimulus_set': tf.constant(
+                    stimulus_set + 1, dtype=tf.int32
+                ),
+                'membership': tf.constant(membership, dtype=tf.int32),
+                'is_present': tf.constant(
+                    np.not_equal(stimulus_set, -1), dtype=tf.bool
+                ),
+                'is_select': tf.constant(
+                    np.expand_dims(self.is_select(compress=True), axis=2),
+                    dtype=tf.bool
+                )
+            }
+        else:
+            stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
+            x = {
+                'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
+                'membership': tf.constant(membership, dtype=tf.int32),
+                'is_present': tf.constant(
+                    np.not_equal(stimulus_set, -1), dtype=tf.bool
+                ),
+                'is_select': tf.constant(
+                    np.expand_dims(self.is_select(compress=True), axis=2),
+                    dtype=tf.bool
+                )
+            }
         return x
 
 

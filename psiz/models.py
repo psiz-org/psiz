@@ -481,6 +481,26 @@ class Proxy(object):
         metrics_2 = self.model.evaluate(x=ds_obs, **kwargs)
         return metrics_2
 
+    def predict(self, docket, batch_size=None, **kwargs):
+        """Predict outcomes given current state of model.
+
+        Arguments:
+            docket: A docket of trials.
+            batch_size (optional): Integer indicating batch size.
+
+        Returns:
+            Numpy array(s) of predictions.
+
+        """
+        ds_docket = docket.as_dataset()
+
+        if batch_size is None:
+            batch_size = docket.n_trial
+
+        ds_docket = ds_docket.batch(batch_size, drop_remainder=False)
+        predictions = self.model.predict(x=ds_docket, **kwargs)
+        return predictions.numpy()
+
     def outcome_probability_new(
             self, docket, group_id=None, z=None, unaltered_only=True):
         """Return probability of each outcome for each trial.

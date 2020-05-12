@@ -41,18 +41,21 @@ class NegLogLikelihood(Mean):
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         """Update state."""
+        # y_true = tf.cast(y_pred, self._dtype)
         y_pred = tf.cast(y_pred, self._dtype)
-        values = _safe_neg_log_prob(y_true, y_pred)
+        values = _safe_neg_log_prob(y_pred)
         super().update_state(values, sample_weight=sample_weight)
 
 
-def _safe_neg_log_prob(y_true, y_pred):
-    """Convert to safe log probabilites.
+def _safe_neg_log_prob(prob):
+    """Safely convert to log probabilites.
 
     Arguments:
-        y_true: Not used.
-        y_pred: Predicted probabilities.
+        prob: Probabilities to convert.
+
+    Returns:
+        log(prob)
 
     """
     cap = tf.constant(2.2204e-16, dtype=K.floatx())
-    return tf.negative(tf.math.log(tf.maximum(y_pred, cap)))
+    return tf.negative(tf.math.log(tf.maximum(prob, cap)))

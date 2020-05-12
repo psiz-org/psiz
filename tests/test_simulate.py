@@ -124,3 +124,12 @@ def test_select(ground_truth):
 
     x = np.array([.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01])
     np.testing.assert_allclose(x, prop, rtol=1e-6, atol=.005)
+
+        # Old approach. TODO
+        # prob_all_2 = self.embedding.outcome_probability(
+        #     docket, group_id=group_id
+        # )
+        # prob_all_old = prob_all_2.data
+        # prob_all_old[prob_all_2.mask] = 0
+        # np.testing.assert_array_almost_equal(prob_all.numpy(), prob_all_old, decimal=6)  # TODO
+        # (obs, _) = self._select_old(docket, prob_all_2, session_id=session_id)  TODO

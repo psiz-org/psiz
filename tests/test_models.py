@@ -973,7 +973,7 @@ def test_public_exponential_similarity_broadcast():
 
 def test_probability(model_true, docket_0):
     """Test probability method."""
-    prob = model_true.outcome_probability(docket_0)
+    prob = model_true.outcome_probability(docket_0)  # TODO
     prob_actual = np.sum(prob, axis=1)
     prob_desired = np.ones((docket_0.n_trial))
     np.testing.assert_allclose(prob_actual, prob_desired)

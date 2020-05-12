@@ -17,6 +17,8 @@ To install the latest version, clone from GitHub and instal the local repo using
 1. Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
 2. Install the cloned repo using pip: `pip install /local/path/to/psiz`
 
+There is not yet a stable version (nor an official release of this library). All APIs are subject to change.
+
 The repository can also be cloned by:
 * Manually downloading the latest version at https://github.com/roads/psiz.git
 * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.3.0`

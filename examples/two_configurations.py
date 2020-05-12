@@ -23,22 +23,14 @@ infer a single embedding.
 
 """
 
+import edward2 as ed
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
-from tensorflow.keras.initializers import RandomNormal
-from tensorflow.keras.layers import Embedding
+import tensorflow as tf
 
-import psiz.keras.callbacks
-import psiz.keras.layers
-import psiz.keras.losses
-from psiz.generator import RandomGenerator
-import psiz.models
-from psiz.simulate import Agent
-from psiz.trials import stack
-from psiz.utils import pairwise_matrix, matrix_comparison
+import psiz
 
 # Uncomment the following line to force eager execution.
-# import tensorflow as tf
 # tf.config.experimental_run_functions_eagerly(True)
 
 
@@ -47,7 +39,7 @@ def main():
     # Settings.
     n_stimuli = 25
     n_dim = 3
-    n_restart = 20
+    n_restart = 3  # TODO 20
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -57,7 +49,7 @@ def main():
     # Generate 1500 2-choose-1 trials.
     n_reference = 2
     n_select = 1
-    gen_2c1 = RandomGenerator(
+    gen_2c1 = psiz.generator.RandomGenerator(
         n_stimuli, n_reference=n_reference, n_select=n_select
     )
     n_trial = 1500
@@ -65,16 +57,16 @@ def main():
     # Generate 1500 8-choose-2 trials.
     n_reference = 8
     n_select = 2
-    gen_8c2 = RandomGenerator(
+    gen_8c2 = psiz.generator.RandomGenerator(
         n_stimuli, n_reference=n_reference, n_select=n_select
     )
     n_trial = 1500
     docket_8c2 = gen_8c2.generate(n_trial)
     # Merge both sets of trials into a single docket.
-    docket = stack([docket_2c1, docket_8c2])
+    docket = psiz.trials.stack([docket_2c1, docket_8c2])
 
     # Simulate similarity judgments for the three groups.
-    agent = Agent(emb_true)
+    agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
 
     # Partition observations into train and validation set.
@@ -84,44 +76,75 @@ def main():
     )[0]
     obs_train = obs.subset(train_idx)
     obs_val = obs.subset(val_idx)
+    # Expand dataset for stochastic generative processess. TODO
+    n_train_sample = 1
+    n_val_sample = 100
+    obs_train = psiz.trials.stack([obs_train for _ in range(n_train_sample)])
+    obs_val = psiz.trials.stack([obs_val for _ in range(n_val_sample)])
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
         'val_nll', patience=10, mode='min', restore_best_weights=True
     )
     # Visualize using TensorBoard.
-    # cb_board = psiz.keras.callbacks.TensorBoardRe(
-    #     log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
-    #     write_graph=False, write_images=False, update_freq='epoch',
-    #     profile_batch=0, embeddings_freq=0, embeddings_metadata=None
-    # )
-    callbacks = [cb_early]
+    cb_board = psiz.keras.callbacks.TensorBoardRe(
+        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
+        write_graph=False, write_images=False, update_freq='epoch',
+        profile_batch=0, embeddings_freq=0, embeddings_metadata=None
+    )
+    callbacks = [cb_early, cb_board]
 
     compile_kwargs = {
         'loss': psiz.keras.losses.NegLogLikelihood(),
-        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+        # 'loss': tf.keras.losses.BinaryCrossentropy(),
+        'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
+        'weighted_metrics': [
+            psiz.keras.metrics.NegLogLikelihood(name='nll')
+        ]
     }
 
     # Infer embedding.
-    embedding = Embedding(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True
     )
+    # embeddings_initializer = ed.tensorflow.initializers.TrainableNormal(
+    #     mean_initializer=psiz.keras.initializers.RandomScaleMVN(
+    #         minval=-2., maxval=-1.
+    #     ),
+    #     stddev_initializer=tf.keras.initializers.TruncatedNormal(
+    #         mean=.0001, stddev=0.00001
+    #     ),
+    #     # stddev_initializer=tf.keras.initializers.Constant(value=.0001),
+    # )
+    # embedding = ed.layers.EmbeddingReparameterization(
+    #     n_stimuli+1, output_dim=n_dim, mask_zero=True,
+    #     # embeddings_initializer=embeddings_initializer,
+    #     embeddings_regularizer=ed.tensorflow.regularizers.NormalKLDivergence(
+    #         stddev=.17, scale_factor=.00001
+    #     )
+    # )
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(
         embedding=embedding, similarity=similarity
     )
     emb_inferred = psiz.models.Proxy(model=rankModel)
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=1,
+        obs_train, validation_data=obs_val, epochs=1000, verbose=2,
         callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
         compile_kwargs=compile_kwargs
     )
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
-    simmat_truth = pairwise_matrix(emb_true.similarity, emb_true.z)
-    simmat_infer = pairwise_matrix(emb_inferred.similarity, emb_inferred.z)
-    r_squared = matrix_comparison(simmat_truth, simmat_infer, score='r2')
+    simmat_truth = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
+    simmat_infer = psiz.utils.pairwise_matrix(
+        emb_inferred.similarity,
+        emb_inferred.z  # TODO
+        # emb_inferred.model.embedding.embeddings_initializer.mean.numpy()[1:, :]  # TODO
+    )
+    r_squared = psiz.utils.matrix_comparison(
+        simmat_truth, simmat_infer, score='r2'
+    )
 
     # Display comparison results. A good inferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
@@ -133,9 +156,9 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli+1, n_dim,
-        embeddings_initializer=RandomNormal(stddev=.17)
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)

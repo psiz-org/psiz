@@ -42,20 +42,10 @@ Example output:
 """
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.initializers import RandomNormal
-from tensorflow.keras.layers import Embedding
-from tensorflow.python.keras import backend as K
-
-import psiz.keras.callbacks
-import psiz.keras.layers
-import psiz.keras.losses
-from psiz.generator import RandomGenerator
-import psiz.models
-from psiz.simulate import Agent
-from psiz.trials import stack
-from psiz.utils import pairwise_matrix, matrix_comparison
 from sklearn.model_selection import StratifiedKFold
+import tensorflow as tf
+
+import psiz
 
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
@@ -75,21 +65,21 @@ def main():
     n_trial = 5000
     n_reference = 8
     n_select = 2
-    generator = RandomGenerator(
+    generator = psiz.generator.RandomGenerator(
         n_stimuli, n_reference=n_reference, n_select=n_select
     )
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = Agent(emb_true, group_id=0)
-    agent_interm = Agent(emb_true, group_id=1)
-    agent_expert = Agent(emb_true, group_id=2)
+    agent_novice = psiz.generator.Agent(emb_true, group_id=0)
+    agent_interm = psiz.generator.Agent(emb_true, group_id=1)
+    agent_expert = psiz.generator.Agent(emb_true, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
     obs_interm = agent_interm.simulate(docket)
     obs_expert = agent_expert.simulate(docket)
-    obs_all = stack((obs_novice, obs_interm, obs_expert))
+    obs_all = psiz.trials.stack((obs_novice, obs_interm, obs_expert))
 
     # Partition observations into train and validation set.
     skf = StratifiedKFold(n_splits=10)
@@ -111,7 +101,7 @@ def main():
     }
 
     # Infer a shared embedding with group-specific attention weights.
-    embedding = Embedding(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True
     )
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
@@ -144,9 +134,9 @@ def main():
         return emb_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        pairwise_matrix(truth_sim_func0, emb_true.z),
-        pairwise_matrix(truth_sim_func1, emb_true.z),
-        pairwise_matrix(truth_sim_func2, emb_true.z)
+        psiz.utils.pairwise_matrix(truth_sim_func0, emb_true.z),
+        psiz.utils.pairwise_matrix(truth_sim_func1, emb_true.z),
+        psiz.utils.pairwise_matrix(truth_sim_func2, emb_true.z)
     )
 
     def infer_sim_func0(z_q, z_ref):
@@ -159,14 +149,14 @@ def main():
         return emb_inferred.similarity(z_q, z_ref, group_id=2)
 
     simmat_infer = (
-        pairwise_matrix(infer_sim_func0, emb_inferred.z),
-        pairwise_matrix(infer_sim_func1, emb_inferred.z),
-        pairwise_matrix(infer_sim_func2, emb_inferred.z)
+        psiz.utils.pairwise_matrix(infer_sim_func0, emb_inferred.z),
+        psiz.utils.pairwise_matrix(infer_sim_func1, emb_inferred.z),
+        psiz.utils.pairwise_matrix(infer_sim_func2, emb_inferred.z)
     )
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):
         for j_infer in range(n_group):
-            r_squared[i_truth, j_infer] = matrix_comparison(
+            r_squared[i_truth, j_infer] = psiz.utils.matrix_comparison(
                 simmat_truth[i_truth], simmat_infer[j_infer],
                 score='r2'
             )
@@ -203,9 +193,9 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli+1, n_dim,
-        embeddings_initializer=RandomNormal(stddev=.17)
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
     similarity = psiz.keras.layers.ExponentialSimilarity()

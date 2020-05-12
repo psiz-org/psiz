@@ -23,6 +23,7 @@ Classes:
 """
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp  # TODO
 
 from psiz.trials import RankObservations
 
@@ -86,7 +87,7 @@ class Agent(object):
         inputs = docket.as_dataset(membership)
         prob_all = self.embedding.model(inputs)
 
-        # Old approach.
+        # Old approach. TODO
         # prob_all_2 = self.embedding.outcome_probability(
         #     docket, group_id=group_id
         # )
@@ -94,59 +95,53 @@ class Agent(object):
         # prob_all_old[prob_all_2.mask] = 0
         # np.testing.assert_array_almost_equal(prob_all.numpy(), prob_all_old, decimal=6)  # TODO
 
-        (obs, _) = self._select(docket, prob_all, session_id=session_id)
-        # TODO new select using fast categorical sampling.
+        obs = self._select(
+            docket, prob_all, inputs['stimulus_set'] - 1,
+            session_id=session_id
+        )
+        # (obs, _) = self._select_old(docket, prob_all_2, session_id=session_id)  TODO
+
         return obs
 
-    def _select(self, docket, prob_all, session_id=None):
+    def _select(self, docket, prob_all, stimulus_set_expand, session_id=None):
         """Stochastically select from possible outcomes.
 
         Arguments:
             docket: An RankDocket object.
-            prob_all: A MaskedArray object.
+            prob_all: A MaskedArray object.TODO
+            stimulus_set_expand: An expanded stimulus set 3D array.
+                shape=[n_trial, n_max_reference+1, n_max_outcome]
+            session_id (optional): The session ID.
 
 
         Returns:
             A RankObservations object.
 
         """
-        outcome_idx_list = docket.outcome_idx_list
+        stimulus_set_expand = stimulus_set_expand.numpy()
 
-        n_trial_all = docket.n_trial
-        trial_idx_all = np.arange(n_trial_all)
-        max_n_ref = docket.stimulus_set.shape[1] - 1
-        n_config = docket.config_list.shape[0]
-
-        # Pre-allocate.
-        chosen_outcome_idx = np.empty((n_trial_all), dtype=np.int32)
-        stimulus_set = -1 * np.ones(
-            (n_trial_all, 1 + max_n_ref), dtype=np.int32
+        # Clean up rounding errors.
+        prob_all /= tf.reduce_sum(prob_all, axis=1, keepdims=True)
+        # Sample from outcomes.
+        dist = tfp.distributions.Multinomial(
+            1, probs=prob_all, name='Multinomial'
         )
-        stimulus_set[:, 0] = docket.stimulus_set[:, 0]
-        for i_config in range(n_config):
-            n_reference = docket.config_list.iloc[i_config]['n_reference']
-            outcome_idx = outcome_idx_list[i_config]
-            n_outcome = outcome_idx.shape[0]
-            dummy_idx = np.arange(0, n_outcome)
-            trial_locs = docket.config_idx == i_config
-            n_trial = np.sum(trial_locs)
-            trial_idx = trial_idx_all[trial_locs]
-            prob = prob_all.data[trial_locs, 0:n_outcome]
-            stimuli_set_ref = docket.stimulus_set[trial_locs, 1:]
+        outcome_mask = tf.cast(dist.sample(), dtype=tf.bool)
+        outcome_mask = outcome_mask.numpy()
 
-            for i_trial in range(n_trial):
-                outcome_loc = np.random.multinomial(
-                    1, prob[i_trial, :]).astype(bool)
-                chosen_outcome_idx[trial_idx[i_trial]] = dummy_idx[outcome_loc]
-                stimulus_set[trial_idx[i_trial], 1:n_reference+1] = \
-                    stimuli_set_ref[i_trial, outcome_idx[outcome_loc, :]]
+        stimulus_set = np.empty(stimulus_set_expand.shape[0:2], dtype=np.int32)
+        for i_trial in range(docket.n_trial):
+            stimulus_set[i_trial, :] = stimulus_set_expand[
+                i_trial, :, outcome_mask[i_trial]
+            ]
 
         group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
         agent_id = np.full((docket.n_trial), self.agent_id, dtype=np.int32)
-        return (
-            RankObservations(
-                stimulus_set,
-                n_select=docket.n_select,
-                is_ranked=docket.is_ranked,
-                group_id=group_id, agent_id=agent_id, session_id=session_id
-            ), chosen_outcome_idx)
+        obs = RankObservations(
+            stimulus_set,
+            n_select=docket.n_select,
+            is_ranked=docket.is_ranked,
+            group_id=group_id, agent_id=agent_id,
+            session_id=session_id
+        )
+        return obs

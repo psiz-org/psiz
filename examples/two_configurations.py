@@ -30,8 +30,8 @@ import tensorflow as tf
 
 import psiz
 
-# Uncomment the following two lines to force eager execution.
-tf.config.experimental_run_functions_eagerly(True)
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -98,7 +98,9 @@ def main():
         'loss': psiz.keras.losses.NegLogLikelihood(),
         # 'loss': tf.keras.losses.BinaryCrossentropy(),
         'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
-        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll'), tf.keras.metrics.BinaryCrossentropy(name='bc')]
+        'weighted_metrics': [
+            psiz.keras.metrics.NegLogLikelihood(name='nll')
+        ]
     }
 
     # Infer embedding.
@@ -154,8 +156,8 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli+1, n_dim,
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     similarity = psiz.keras.layers.ExponentialSimilarity()

@@ -34,48 +34,49 @@ Notes:
 
 import copy
 
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import numpy as np
+import tensorflow as tf
 
-from psiz.generator import RandomGenerator
-import psiz.models
-import psiz.keras.layers
-from psiz.simulate import Agent
-from psiz.utils import similarity_matrix, matrix_comparison
+import psiz
 
 
 def main():
     """Run script."""
     # Settings
     n_trial = 2500
-    n_frame = 20
+    n_frame = 10
     n_sample = 1000
     n_burn = 100
     thin_step = 3
+    n_reference = 2
+    n_select = 1
+    n_outcome = 2  # Determined by `n_reference` and `n_select`.
 
     # Ground truth model.
-    emb_true = ground_truth()
+    # Must know input_shape in order to set embeddings, since embeddings
+    # must be built first.
+    input_shape = [None, n_reference+1, n_outcome]
+    emb_true = ground_truth(input_shape)
     n_stimuli = emb_true.z.shape[0]
     n_dim = emb_true.z.shape[1]
     z_true = emb_true.z.astype(np.float64)
-    simmat_true = similarity_matrix(
-        emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
-    n_reference = 2
-    n_select = 1
-    generator = RandomGenerator(
+    generator = psiz.generator.RandomGenerator(
         emb_true.n_stimuli, n_reference=n_reference, n_select=n_select
     )
     docket = generator.generate(n_trial)
-
     # Simulate similarity judgments using ground truth model.
-    agent = Agent(emb_true)
+    agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
 
+    simmat_true = psiz.utils.similarity_matrix(
+        emb_true.similarity, emb_true.z
+    )
     # Use the ground-truth embedding model.
     emb_inferred = emb_true
     z_original = copy.copy(emb_inferred.z)
@@ -96,13 +97,13 @@ def main():
         z_central_list[i_frame] = z_central
 
         emb_inferred.z = z_central
-        simmat_infer = similarity_matrix(
+        simmat_infer = psiz.utils.similarity_matrix(
             emb_inferred.similarity, emb_inferred.z)
-        r2 = matrix_comparison(
+        r2 = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'
         )
         r2_list[i_frame] = r2
-        print('    Frame: {0} | r^2: {1: >6.2f}'.format(i_frame, r2))
+        print('    Animation frame {0} | r^2: {1: >6.2f}'.format(i_frame, r2))
         emb_inferred.z = z_original
 
     cmap = matplotlib.cm.get_cmap('jet')
@@ -162,12 +163,13 @@ def main():
     ani.save('posterior_evolution.mp4', writer=writer)
 
 
-def ground_truth():
+def ground_truth(input_shape):
     """Return a ground truth embedding."""
     n_stimuli = 16
     n_dim = 2
 
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli+1, n_dim)
+    embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
+    embedding.build(input_shape=input_shape)
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb = psiz.models.Proxy(rankModel)

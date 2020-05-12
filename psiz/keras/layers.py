@@ -17,7 +17,6 @@
 """Module of custom TensorFlow layers.
 
 Classes:
-    EmbeddingRe: An Embedding layer.
     WeightedMinkowski: A weighted distance layer.
     Attention: A simple attention layer.
     InverseSimilarity: A parameterized inverse similarity layer.
@@ -37,131 +36,6 @@ from tensorflow.keras import backend as K
 import psiz.keras.constraints as pk_constraints
 import psiz.keras.initializers as pk_initializers
 import psiz.keras.regularizers
-
-
-class EmbeddingRe(tf.keras.layers.Layer):
-    """Embedding coordinates.
-
-    The embeddings are stored in the variable `z` that has
-    shape=(input_dim, output_dim). Handles a placeholder stimulus using
-    stimulus ID "-1".
-
-    Raises:
-        ValueError: If `input_dim` or `output_dim` arguments are
-            invalid.
-
-    """
-
-    def __init__(
-            self, input_dim, output_dim, embeddings_initializer=None,
-            embeddings_regularizer=None, embeddings_constraint=None,
-            **kwargs):
-        """Initialize.
-
-        Arguments:
-            input_dim: An integer indicating the total number of unique
-                stimuli that will be embedded. This must be equal to or
-                greater than three.
-            output_dim: An integer indicating the dimensionality of the
-                embeddings. Must be equal to or greater than one.
-            embeddings_initializer (optional): Initializer for the `z`
-                matrix. By default, the coordinates are intialized
-                using a multivariate Gaussian at various scales.
-            embeddings_regularizer (optional): Regularizer function
-                applied to the `z` matrix.
-            embeddings_constraint (optional): Constraint function
-                applied to the `z` matrix. By default, a constraint
-                will be used that zero-centers the centroid of the
-                embedding to promote numerical stability.
-            kwargs: See tf.keras.layers.Layer.
-
-        """
-        super(EmbeddingRe, self).__init__(**kwargs)
-
-        if (input_dim < 3):
-            raise ValueError("There must be at least three stimuli.")
-        self.input_dim = input_dim
-
-        if (output_dim < 1):
-            raise ValueError(
-                "The output dimensionality (`output_dim`) must be an integer "
-                "greater than 0."
-            )
-        self.output_dim = output_dim
-
-        # Handle initializer.
-        if embeddings_initializer is None:
-            embeddings_initializer = pk_initializers.RandomScaleMVN(
-                minval=-4., maxval=-2.
-            )
-        self.embeddings_initializer = tf.keras.initializers.get(
-            embeddings_initializer
-        )
-
-        # Handle regularizer.
-        self.embeddings_regularizer = tf.keras.regularizers.get(
-            embeddings_regularizer
-        )
-
-        # Handle constraints.
-        if embeddings_constraint is None:
-            embeddings_constraint = pk_constraints.Center(axis=0)
-        self.embeddings_constraint = tf.keras.constraints.get(
-            embeddings_constraint
-        )
-
-        # TODO not sure if trainable should be set this way or let
-        # superclass Layer logic handle it?
-        self.embeddings = self.add_weight(
-            shape=(self.input_dim, self.output_dim),
-            initializer=self.embeddings_initializer,
-            trainable=self.trainable, name='z', dtype=K.floatx(),
-            regularizer=self.embeddings_regularizer,
-            constraint=self.embeddings_constraint
-        )
-
-    def call(self, inputs):
-        """Call.
-
-        Inflate stimulus set into embedding points.
-
-        Note: This method will not gracefully handle the masking
-        placeholder stimulus ID (i.e., -1). The stimulus IDs and
-        coordinates must already have been adjusted for the masking
-        placeholder.
-
-        Arguments:
-            inputs: stimulus_set
-
-        """
-        z = self.embeddings
-
-        batch_size = tf.shape(inputs)[0]
-        input_length = tf.shape(inputs)[1]
-        output_dim = tf.shape(z)[1]
-
-        # Flatten stimulus_set and inflate all indices at once.
-        flat_idx = tf.reshape(inputs, [-1])
-        z_set = tf.gather(z, flat_idx)
-
-        # Reshape and permute dimensions.
-        z_set = tf.reshape(z_set, [batch_size, input_length, output_dim])
-        return z_set
-
-    def get_config(self):
-        """Return layer configuration."""
-        config = super().get_config()
-        config.update({
-            'input_dim': self.input_dim,
-            'output_dim': self.output_dim,
-            'embeddings_initializer':
-                tf.keras.initializers.serialize(self.embeddings_initializer),
-            'embeddings_regularizer':
-                tf.keras.regularizers.serialize(self.embeddings_regularizer),
-            'embeddings_constraint':
-                tf.keras.constraints.serialize(self.embeddings_constraint)
-        })
-        return config
 
 
 class WeightedMinkowski(tf.keras.layers.Layer):

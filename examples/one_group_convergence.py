@@ -26,19 +26,11 @@ data is added.
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold
-from tensorflow.keras.initializers import RandomNormal
-from tensorflow.keras.layers import Embedding
+import tensorflow as tf
 
-from psiz.generator import RandomGenerator
-import psiz.models
-import psiz.keras.layers
-import psiz.keras.losses
-from psiz.simulate import Agent
-from psiz.utils import pairwise_matrix, matrix_comparison
-from psiz.keras.callbacks import EarlyStoppingRe
+import psiz
 
 # Uncomment the following line to force eager execution.
-# import tensorflow as tf
 # tf.config.experimental_run_functions_eagerly(True)
 
 
@@ -50,20 +42,21 @@ def main():
     n_restart = 10
 
     emb_true = ground_truth(n_stimuli, n_dim)
-    simmat_true = pairwise_matrix(emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
     n_trial = 1000
     n_reference = 8
     n_select = 2
-    generator = RandomGenerator(
+    generator = psiz.generator.RandomGenerator(
         n_stimuli, n_reference=n_reference, n_select=n_select
     )
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = Agent(emb_true)
+    agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
+
+    simmat_true = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
 
     # Partition observations into train, validation and test set.
     skf = StratifiedKFold(n_splits=5)
@@ -80,7 +73,7 @@ def main():
     obs_test = obs_holdout.subset(test_idx)
 
     # Use early stopping.
-    early_stop = EarlyStoppingRe(
+    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
         'val_nll', patience=10, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]
@@ -105,7 +98,9 @@ def main():
         obs_round_train = obs_train.subset(include_idx)
 
         # Infer embedding.
-        embedding = Embedding(n_stimuli+1, n_dim, mask_zero=True)
+        embedding = tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True
+        )
         similarity = psiz.keras.layers.ExponentialSimilarity()
         model = psiz.models.Rank(
             embedding=embedding, similarity=similarity
@@ -126,10 +121,10 @@ def main():
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = pairwise_matrix(
+        simmat_infer = psiz.utils.pairwise_matrix(
             emb_inferred.similarity, emb_inferred.z
         )
-        r2[i_round] = matrix_comparison(
+        r2[i_round] = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'
         )
         print(
@@ -164,9 +159,9 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli+1, n_dim,
-        embeddings_initializer=RandomNormal(stddev=.17)
+    embedding = psiz.keras.layers.tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)

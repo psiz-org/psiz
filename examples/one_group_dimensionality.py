@@ -24,9 +24,6 @@ number of dimensions.
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
-from tensorflow.keras.initializers import RandomNormal
-from tensorflow.keras.layers import Embedding
-from tensorflow.python.keras import backend as K
 
 import psiz
 
@@ -45,7 +42,6 @@ def main():
     squeeze_rate = 1.
 
     emb_true = ground_truth(n_stimuli, n_dim_true)
-    simmat_true = psiz.utils.similarity_matrix(emb_true.similarity, emb_true.z)
 
     # Generate a random docket of trials.
     n_trial = 5000
@@ -59,6 +55,8 @@ def main():
     # Simulate similarity judgments.
     agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
+
+    simmat_true = psiz.utils.similarity_matrix(emb_true.similarity, emb_true.z)
 
     # Partition observations into train and test set.
     skf = StratifiedKFold(n_splits=10)
@@ -91,7 +89,7 @@ def main():
     embeddings_regularizer = psiz.keras.regularizers.Squeeze(rate=squeeze_rate)
 
     # Infer embedding.
-    embedding = Embedding(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim_max, embeddings_regularizer=embeddings_regularizer,
         mask_zero=True
     )
@@ -142,9 +140,9 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     similarity = psiz.keras.layers.ExponentialSimilarity()
-    embedding = psiz.keras.layers.EmbeddingRe(
-        n_stimuli+1, n_dim,
-        embeddings_initializer=RandomNormal(stddev=.17)
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb = psiz.models.Proxy(rankModel)

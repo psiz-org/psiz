@@ -184,7 +184,7 @@ def ground_truth(n_stimuli):
     n_dim = 3
     n_group = 2
 
-    embedding = psiz.keras.layers.EmbeddingRe(n_stimuli, n_dim)
+    embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
     attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
     similarity = psiz.keras.layers.ExponentialSimilarity()
     model = psiz.models.Rank(

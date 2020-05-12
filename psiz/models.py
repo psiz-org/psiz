@@ -931,9 +931,9 @@ class Rank(tf.keras.Model):
     """Model based on ranked similarity judgments.
 
     Attributes:
-        n_stimuli: See EmbeddingRe.
-        n_dim: See EmbeddingRe.
-        n_group: See Attention.
+        n_stimuli: The number of stimuli. 
+        n_dim: The dimensionality of the embedding.
+        n_group: The number of groups.
 
     """
 
@@ -1142,8 +1142,8 @@ class Rank(tf.keras.Model):
                 gradients = tape.gradient(loss, trainable_variables)
                 # NOTE: There is an open issue for using constraints with
                 # embedding-like layers (e.g., tf.keras.layers.Embedding,
-                # psiz.keras.layers.EmbeddingRe, psiz.keras.layers.Attention
-                # (see https://github.com/tensorflow/tensorflow/issues/33755).
+                # psiz.keras.layers.Attention), see
+                # https://github.com/tensorflow/tensorflow/issues/33755.
                 # There are also issues when using Eager Execution. A
                 # work-around is to convert the problematic gradients, which
                 # are returned as tf.IndexedSlices, into dense tensors.
@@ -1273,8 +1273,9 @@ def load_model(filepath, custom_objects={}, compile=False):
         # Create embedding layer.
         z = f['z']['value'][()]
         z_trainable = f['z']['trainable'][()]
-        embedding = psiz.keras.layers.EmbeddingRe(
-            input_dim=n_stimuli+1, output_dim=n_dim, trainable=z_trainable
+        embedding = psiz.keras.layers.Embedding(
+            input_dim=n_stimuli+1, output_dim=n_dim, trainable=z_trainable,
+            mask_zero=True
         )
 
         # Create attention layer.
@@ -1355,7 +1356,6 @@ def model_from_config(config, custom_objects={}):
     # Add Psiz layer classes.
     custom_objects.update({
         'Rank': psiz.models.Rank,
-        'EmbeddingRe': psiz.keras.layers.EmbeddingRe,
         'WeightedMinkowski': psiz.keras.layers.WeightedMinkowski,
         'Attention': psiz.keras.layers.Attention,
         'InverseSimilarity': psiz.keras.layers.InverseSimilarity,

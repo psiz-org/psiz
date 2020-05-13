@@ -119,7 +119,7 @@ PsiZ is built around the TensorFlow ecosystem and strives to follow TensorFlow i
 
 ### Model, Layer, Variable
 
-Package-defined models are built by sub-classing `tf.keras.Model`. Components of a model are built using the `tf.keras.layers.Layer` API. Free parameters are implemented as a `tf.Variable`.
+Package-defined models are built by sub-classing `tf.keras.Model`. Components of a model are built using the `tf.keras.layers.Layer` API. A free parameter is implemented as a `tf.Variable`.
 
 In PsiZ, a psychological embedding can be thought of as having two major components. The first component is a conventional embedding which models stimulus coordinates in psychological space. In the simplest case, this is implemented using `tf.keras.layers.Embedding`. The second component embodies the *psychological* aspect of the model and includes parameterized distance, similarity, and choice functions.
 
@@ -130,7 +130,7 @@ PsiZ includes a number of predefined layers to facilitate the construction of ne
 3. `psiz.keras.layers.HeavyTailedSimilarity`
 4. `psiz.keras.layers.StudentsTSimilarity`
 
-Each similarity function has its own set of parameters (i.e., `tf.Variable`s). The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own similarity functions by sub-classing `tf.keras.layers.Layers`. See [a relative link](CONTRIBUTING.md) for more guidance.
+Each similarity function has its own set of parameters (i.e., `tf.Variable`s). The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own similarity functions by sub-classing `tf.keras.layers.Layers`. See [CONTRIBUTING](CONTRIBUTING.md) for more guidance.
 
 ### Deviations from TensorFlow
 <!-- TODO -->
@@ -227,7 +227,7 @@ n_dim = search_summary['dim_best']
 This project is licensed under the Apache Licence 2.0 - see LICENSE file for details.
 
 ## Code of Conduct
-This project uses a Code of Conduct [a relative link](CODE.md) adapted from the [Contributor Covenant][homepage], version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
+This project uses a Code of Conduct [CODE](CODE.md) adapted from the [Contributor Covenant][homepage], version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
 
 ## References
 * van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet

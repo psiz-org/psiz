@@ -6,10 +6,18 @@ Please note we have a code of conduct, please follow it in all your interactions
 
 PsiZ's scope is restricted to computational modeling of *similarity* data. This includes ratings, rankings, and sorts of stimuli. Not all of this functionality is implemented. Contributions that support this functionality are welcome.
 
-PsiZ attempts to closely adhere to TensorFlow and Keras idioms. Model components are implemented as layers. All custom Keras objects places in `psiz.keras` and intentionally mirror the module structure of `tensorflow.keras` in order to leverage developers pre-existing knowledge of TensorFlow's organization.
+## Issues
+* Please tag your issue with `bug`, `enhancement`, or `question` to help us effectively respond.
+* Please include the versions of TensorFlow and PsiZ you are running.
+* Please provide the command line you ran as well as the log output.
 
-## Pull Request Process
-* TODO
+## Pull Requests
+
+Please send in fixes and feature additions through Pull Requests.
+
+# Additional Guidance
+
+PsiZ attempts to closely adhere to TensorFlow and Keras idioms. Model components are implemented as layers. All custom Keras objects places in `psiz.keras` and intentionally mirror the module structure of `tensorflow.keras` in order to leverage developers pre-existing knowledge of TensorFlow's organization.
 
 ## Module: trials
 * Code to the appropriate interface.

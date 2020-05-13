@@ -55,7 +55,7 @@ emb.fit(obs)
 emb.save('my_embedding.h5')
 ```
 
-Check out the [examples](examples/) directory to see some examples that take advantage of the various features that PsiZ offers.
+Check out the [examples](examples/) directory to explore examples that take advantage of the various features that PsiZ offers.
 
 
 ## Trials and Observations

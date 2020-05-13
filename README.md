@@ -55,6 +55,9 @@ emb.fit(obs)
 emb.save('my_embedding.h5')
 ```
 
+Check out the [examples](examples/) directory to see some examples that take advantage of the various features that PsiZ offers.
+
+
 ## Trials and Observations
 
 Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. There are currently three different types of trials: *rank*, *rate* and *sort*.
@@ -115,7 +118,7 @@ Note that the values in `stimulus_set` are assumed to be contiguous integers [0,
 
 ## Design Philosophy
 
-PsiZ is built around the TensorFlow ecosystem and strives to follow TensorFlow idioms as closely as possible.
+PsiZ is built around the TensorFlow ecosystem and strives to follow TensorFlow idioms as closely as possible. See [CONTRIBUTING](CONTRIBUTING.md) for additional guidance.
 
 ### Model, Layer, Variable
 
@@ -130,7 +133,7 @@ PsiZ includes a number of predefined layers to facilitate the construction of ne
 3. `psiz.keras.layers.HeavyTailedSimilarity`
 4. `psiz.keras.layers.StudentsTSimilarity`
 
-Each similarity function has its own set of parameters (i.e., `tf.Variable`s). The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own similarity functions by sub-classing `tf.keras.layers.Layers`. See [CONTRIBUTING](CONTRIBUTING.md) for more guidance.
+Each similarity function has its own set of parameters (i.e., `tf.Variable`s). The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own similarity functions by sub-classing `tf.keras.layers.Layers`.
 
 ### Deviations from TensorFlow
 

@@ -1,8 +1,7 @@
 # PsiZ: A Psychological Embedding Package
 
-NOTE: This README is in the process of being updated for release 0.4.0. Not all information is accurate.
-
 ## What's in a name?
+
 The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
 
 ## Purpose
@@ -57,6 +56,7 @@ emb.save('my_embedding.h5')
 ```
 
 ## Trials and Observations
+
 Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. There are currently three different types of trials: *rank*, *rate* and *sort*.
 
 ### Rank
@@ -133,76 +133,9 @@ PsiZ includes a number of predefined layers to facilitate the construction of ne
 Each similarity function has its own set of parameters (i.e., `tf.Variable`s). The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own similarity functions by sub-classing `tf.keras.layers.Layers`. See [CONTRIBUTING](CONTRIBUTING.md) for more guidance.
 
 ### Deviations from TensorFlow
-<!-- TODO -->
-* restarts
-* multiple possible trial configurations
-* likelihood loss (minor deviation)
 
-### Compile and Fit
-<!-- TODO -->
-Just like a typical TensorFlow model, all trainable variables are optimized to minimize loss. 
+The models in PsiZ are susceptible to becoming stuck in local optimums. While the usual tricks, such as stochastic gradient decent help, we typically need to perform multiple restarts with different initializations to be confident in the solution. In an effort to shield a user from the burden of writing restart logic, PsiZ includes a restart module that is employed by the `fit` method of the `Proxy` class. The state of most TensorFlow objects can be reset using a serialization/deserialization strategy. However, `tf.keras.callbacks` do not permit this strategy. To fix this problem, PsiZ implements a subclass of `tf.keras.callbacks.Callback`, which adds a `reset` method. This solution is unattractive and is likely to change when a more elegant solution is found. 
 
-## Common Use Cases
-
-### Selecting the Dimensionality.
-<!-- TODO -->
-By default, an embedding will be inferred using two dimensions. Typically you will want to set the dimensionality to something else. This can easily be done using the keyword `n_dim` during embedding initialization. The dimensionality can also be determined using a cross-validation procedure `psiz.dimensionality.search`.
-```python
-n_stimuli = 100
-
-model_spec = {
-    'model': psiz.models.Exponential,
-    'n_stimuli': n_stimuli,
-    'n_group': 1,
-    'modifier': None
-}
-
-search_summary = psiz.dimensionality.search(obs, model_spec)
-n_dim = search_summary['dim_best']
-
-emb = psiz.models.Exponential(n_stimuli, n_dim=4)
-emb.fit(obs)
-```
-
-### Multiple Groups
-By default, the embedding will be inferred assuming that all observations were obtained from a single population or group. If you would like to infer an embedding with multiple group-level parameters, use the `n_group` keyword during embedding initialization. When you create your `psiz.trials.observations` object you will also need to set the `group_id` attribute to indicate the group-membership of each trial.
-```python
-n_stimuli = 100
-emb = psiz.models.Exponential(n_stimuli, n_dim=4, n_group=2)
-emb.fit(obs)
-```
-
-### Fixing Free Parameters
-If you know some of the free parameters already, you can set them to the desired value and then make those parameters untrainable.
-```python
-n_stimuli = 100
-emb = psiz.models.Exponential(n_stimuli, n_dim=2)
-emb.rho = 2.0
-emb.tau = 1.0
-emb.trainable({'rho': False, 'tau': False})
-emb.fit(obs)
-```
-
-If you are also performing a dimensionality search, these constraints can be passed in using a post-initialization `modifier` function.
-```python
-n_stimuli = 100
-
-def modifier_func(emb):
-    emb.rho = 2.0
-    emb.tau = 1.0
-    emb.trainable({'rho': False, 'tau': False})
-    return emb
-
-model_spec = {
-    'model': psiz.models.Exponential,
-    'n_stimuli': n_stimuli,
-    'n_group': 1,
-    'modifier': modifier_func
-}
-
-search_summary = psiz.dimensionality.search(obs, model_spec)
-n_dim = search_summary['dim_best']
-```
 
 ## Modules
 * `keras` - A module containing Keras related classes.

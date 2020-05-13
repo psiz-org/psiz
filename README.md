@@ -7,58 +7,57 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 
 ## Purpose
 
-PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using ordinal similarity relations. It integrates well-established cognitive theory with contemporary computational methods.
-
-The companion Open Access article is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
+PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using similarity relations. It integrates well-established cognitive theory with contemporary computational methods.
 
 ## Installation
 
-To install the latest version, clone from GitHub and instal the local repo using pip.
-1. Use git to clone the latest version: `git clone https://github.com/roads/psiz.git`
-2. Install the cloned repo using pip: `pip install /local/path/to/psiz`
+There is not yet a stable version (nor an official release of this library). All APIs are subject to change and all releases are alpha.
 
-There is not yet a stable version (nor an official release of this library). All APIs are subject to change.
+To install the latest development version, clone from GitHub and instal the local repo using pip.
+1. Use `git` to clone the latest version to your local machine: `git clone https://github.com/roads/psiz.git`
+2. Use `pip` to install the cloned repo (using editable mode): `pip install -e /local/path/to/psiz`
+By using editable mode, you can easily update your local copy by use `git pull origin master` inside your local copy of the repo. You do not have to re-install with `pip`.
 
-The repository can also be cloned by:
+The package can also be obtained by:
 * Manually downloading the latest version at https://github.com/roads/psiz.git
 * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.3.0`
-
-Older releases can be installed from PyPI using ``pip install psiz``. The versions available through PyPI lag behind the latest GitHub version.
+* Using PyPi to install older alpha releases: ``pip install psiz``. The versions available through PyPI lag behind the latest GitHub version.
 
 **Note:** PsiZ also requires TensorFlow. In older versions of TensorFlow, CPU only versions were targeted separately. For Tensorflow >=2.0, both CPU-only and GPU versions are obtained via `tensorflow`. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
 
 ## Quick Start
 
-Use a default psychological embedding model (`Rank`) and provide two mandatory pieces of information:
+Similarity relations can be collected using a variety of paradigms. You will need to use the appropriate model for your data. In addition to a model choice, you need to provide two additional pieces of information:
 
-1. The similarity judgment observations (often abbreviated as *obs*).
-2. The number of unique stimuli that will be in your embedding.
+1. The observed similarity relations (referred to as observations or *obs*).
+2. The number of unique stimuli that will be in your embedding (`n_stimuli`).
 
-The following example uses a predefined set of observations:
+
+The following minimalist example uses a `Rank` psychological embedding to model a predefined set of ordinal similarity relations.
 ```python
 import psiz
 
-# Load some observations (i.e., judged trials).
+# Load observations from a predefined dataset.
 (obs, catalog) = psiz.datasets.load('birds-16')
-# Create an embedding layer.
-n_dim = 2
-embedding = psiz.keras.layers.Embedding(
-    catalog.n_stimuli+1, n_dim, mask_zero=True
+# Create a TensorFlow embedding layer.
+# NOTE: Since we will use masking, we increment n_stimuli by one.
+embedding = tf.keras.layers.Embedding(
+    catalog.n_stimuli+1, mask_zero=True
 )
-# Create a rank model.
+# Create a Rank model that uses the TensorFlow Keras API.
 model = psiz.models.Rank(embedding=embedding)
 # Wrap the model in convenient proxy class.
 emb = psiz.models.Proxy(model)
 # Compile the model.
 emb.compile()
-# Fit the embedding model using similarity judgment observations.
+# Fit the psychological embedding using observations.
 emb.fit(obs)
 # Optionally save the fitted model in HDF5 format.
 emb.save('my_embedding.h5')
 ```
 
 ## Trials and Observations
-Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. There are three different types of trials: *rank*, *rate* and *sort*.
+Inference is performed by fitting a model to a set of observations. In this package, a single observation is comprised of trial where multiple stimuli that have been judged by an agent (human or machine) based on their similarity. There are currently three different types of trials: *rank*, *rate* and *sort*.
 
 ### Rank
 
@@ -70,7 +69,7 @@ Alternatively, if the agent had selected reference *b*, the observation would be
 
 D<sub>*i*</sub> = [*q* *b* *a*]
 
-In addition to a simple *triplet* rank trial, this package is designed to handle a number of different rank trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. 
+In addition to a simple *triplet* rank trial, this package is designed to handle a number of different rank trial configurations. A trial may have 2-8 reference stimuli and an agent may be required to select and rank more than one reference stimulus. A companion Open Access article dealing with rank trials is available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
 
 ### Rate
 
@@ -82,11 +81,11 @@ In the simplest case, an observation is obtained from a trial consisting of thre
 
 ## Using Your Own Data
 
-To use your own data, you should place your data in a `psiz.trials.Observations` object. Once the Observations object has been created, you can save it to disk by calling its `save` method. It can be loaded later using the function `psiz.trials.load(filepath)`. Consider the following example that uses randomly generated data:
+To use your own data, you should place your data in an appropriate subclass of `psiz.trials.Observations`. Once the `Observations` object has been created, you can save it to disk by calling its `save` method. It can be loaded later using the function `psiz.trials.load(filepath)`. Consider the following example that creates random rank observations:
 
 ```python
 import numpy as np
-import psiz.trials
+import psiz
 
 # Let's assume that we have 10 unique stimuli.
 stimuli_list = np.arange(0, 10, dtype=int)
@@ -96,48 +95,42 @@ stimuli_list = np.arange(0, 10, dtype=int)
 # references (in order of their similarity to the query.)
 n_trial = 100
 n_reference = 4
-response_set = np.empty([n_trial, n_reference + 1], dtype=int)
+stimulus_set = np.empty([n_trial, n_reference + 1], dtype=int)
 n_select = 2 * np.ones((n_trial), dtype=int)
 for i_trial in range(n_trial):
     # Randomly selected stimuli and randomly simulate behavior for each
     # trial (one query, four references).
-    response_set[i_trial, :] = np.random.choice(
+    stimulus_set[i_trial, :] = np.random.choice(
         stimuli_list, n_reference + 1, replace=False
     )
 
 # Create the observations object and save it to disk.
-obs = psiz.trials.Observations(response_set, n_select=n_select)
+obs = psiz.trials.RankObservations(stimulus_set, n_select=n_select)
 obs.save('path/to/obs.hdf5')
 
 # Load the observations from disk.
 obs = psiz.trials.load('path/to/obs.hdf5')
 ```
-Note that the values in `response_set` are assumed to be contiguous integers [0, N[, where N is the number of unique stimuli. Their order is also important. The query is listed in the first column, an agent's selected references are listed second (in order of selection if the trial is ranked) and then any remaining unselected references are listed (in any order).
+Note that the values in `stimulus_set` are assumed to be contiguous integers [0, N[, where N is the number of unique stimuli. Their order is also important. The query is listed in the first column, an agent's selected references are listed second (in order of selection if there are more than two) and then any remaining unselected references are listed (in any order).
 
 ## Design Philosophy
 
-PsiZ is built around the TensorFlow library and strives to follow TensorFlow idioms as closely as possible.
+PsiZ is built around the TensorFlow ecosystem and strives to follow TensorFlow idioms as closely as possible.
 
 ### Model, Layer, Variable
 
-Embedding models are built using the `tf.keras.Model` and `tf.keras.layers.Layer` API. In PsiZ, a psychological embedding is decomposed into three major components. Each component is implemented as `Layer` with its free parameters implemented using `tf.Variable`.
+Package-defined models are built by sub-classing `tf.keras.Model`. Components of a model are built using the `tf.keras.layers.Layer` API. Free parameters are implemented as a `tf.Variable`.
 
-1. A set of **embeddings** which define points in psychological space.
-2. A **similarity kernel** that defines how similarity is computed between points in psychological space.
-3. A set of **attention weights** that describe how psychological space is contorted.
+In PsiZ, a psychological embedding can be thought of as having two major components. The first component is a conventional embedding which models stimulus coordinates in psychological space. In the simplest case, this is implemented using `tf.keras.layers.Embedding`. The second component embodies the *psychological* aspect of the model and includes parameterized distance, similarity, and choice functions.
 
-PsiZ includes predefined layers for each of these components. In the case of the similarity kernel, there are four predefined similarity kernel layers that a user can choose from:
+PsiZ includes a number of predefined layers to facilitate the construction of new Models. For example, there are four predefined similarity functions (implemented as subclasses of `tf.keras.layers.Layer`):
 
-1. `psiz.layers.InverseSimilarity`
-2. `psiz.layers.ExponentialSimilarity`
-3. `psiz.layers.HeavyTailedSimilarity`
-4. `psiz.layers.StudentsTSimilarity`
+1. `psiz.keras.layers.InverseSimilarity`
+2. `psiz.keras.layers.ExponentialSimilarity`
+3. `psiz.keras.layers.HeavyTailedSimilarity`
+4. `psiz.keras.layers.StudentsTSimilarity`
 
-Each kernel layer has its own set of variables that govern the properties of the kernel. The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own kernel by subclassing `psiz.layers.LayersRe`.
-
-### Compile and Fit
-<!-- TODO -->
-Just like a typical TensorFlow model, all trainable variables are optimized to minimize loss. 
+Each similarity function has its own set of parameters (i.e., `tf.Variable`s). The `ExponentialSimilarity`, which is widely used in psychology, has four variables. Users can also implement there own similarity functions by sub-classing `tf.keras.layers.Layers`. See [a relative link](CONTRIBUTING.md) for more guidance.
 
 ### Deviations from TensorFlow
 <!-- TODO -->
@@ -145,6 +138,9 @@ Just like a typical TensorFlow model, all trainable variables are optimized to m
 * multiple possible trial configurations
 * likelihood loss (minor deviation)
 
+### Compile and Fit
+<!-- TODO -->
+Just like a typical TensorFlow model, all trainable variables are optimized to minimize loss. 
 
 ## Common Use Cases
 
@@ -209,12 +205,14 @@ n_dim = search_summary['dim_best']
 ```
 
 ## Modules
+* `keras` - A module containing Keras related classes.
 * `catalog` - Class for storing stimulus information.
 * `datasets` - Functions for loading some pre-defined catalogs and observations.
 * `dimensionality` - Routine for selecting the dimensionality of the embedding.
 * `generator` - Generate new trials randomly or using active selection.
-* `models` - A set of pre-defined pscyhological embedding models.
+* `models` - A set of pre-defined psychological embedding models.
 * `preprocess` - Functions for preprocessing observations.
+* `restart` - Classes and functionality for performing model restarts.
 * `simulate` - Simulate an agent making similarity judgments.
 * `trials` - Classes and functions for creating and managing observations.
 * `utils` - Utility functions.
@@ -226,7 +224,10 @@ n_dim = search_summary['dim_best']
 * See also the list of contributors who participated in this project.
 
 ## Licence
-This project is licensed under the Apache Licence 2.0 - see the LICENSE.txt file for details.
+This project is licensed under the Apache Licence 2.0 - see LICENSE file for details.
+
+## Code of Conduct
+This project uses a Code of Conduct [a relative link](CODE.md) adapted from the [Contributor Covenant][homepage], version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
 
 ## References
 * van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic triplet

@@ -416,7 +416,7 @@ class Proxy(object):
         # Create TensorFlow training Dataset.
         self._check_obs(obs_train)
         # Format as TensorFlow dataset.
-        ds_obs_train = obs_train.as_dataset()
+        ds_obs_train = obs_train.as_dataset(all_outcomes=True)
         ds_obs_train = ds_obs_train.shuffle(
             buffer_size=n_obs_train, reshuffle_each_iteration=True
         )
@@ -427,7 +427,7 @@ class Proxy(object):
         # Create TensorFlow validation Dataset (if necessary).
         if validation_data is not None:
             self._check_obs(validation_data)
-            ds_obs_val = validation_data.as_dataset()
+            ds_obs_val = validation_data.as_dataset(all_outcomes=True)
             n_obs_val = validation_data.n_trial
             # Format as TensorFlow dataset.
             ds_obs_val = ds_obs_val.batch(
@@ -469,7 +469,7 @@ class Proxy(object):
 
         """
         self._check_obs(obs)
-        ds_obs = obs.as_dataset()
+        ds_obs = obs.as_dataset(all_outcomes=True)
 
         if batch_size is None:
             batch_size = obs.n_trial

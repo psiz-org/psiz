@@ -35,7 +35,7 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -94,10 +94,10 @@ def main():
     callbacks = [cb_early, cb_board]
 
     compile_kwargs = {
-        'loss': psiz.keras.losses.NegLogLikelihood(),
+        'loss': tf.keras.losses.SparseCategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
         'weighted_metrics': [
-            psiz.keras.metrics.NegLogLikelihood(name='nll')
+            tf.keras.metrics.SparseCategoricalCrossentropy(name='nll')
         ]
     }
 

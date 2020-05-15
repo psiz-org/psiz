@@ -1010,20 +1010,34 @@ class RankObservations(RankTrials):
             stimulus_set = self.all_outcomes()
             x = {
                 'stimulus_set': stimulus_set + 1,
-                'membership': np.stack((self.group_id, self.agent_id), axis=-1),
+                'membership': np.stack(
+                    (self.group_id, self.agent_id), axis=-1
+                ),
                 'is_present': np.not_equal(stimulus_set, -1),
-                'is_select': np.expand_dims(self.is_select(compress=True), axis=2)
+                'is_select': np.expand_dims(
+                    self.is_select(compress=True), axis=2
+                )
             }
+            # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
+            # that occurred.
+            y = np.zeros([self.n_trial, stimulus_set.shape[2]])  # TODO
+            y[:, 0] = 1
         else:
             x = {
                 'stimulus_set': np.expand_dims(self.stimulus_set + 1, axis=2),
-                'membership': np.stack((self.group_id, self.agent_id), axis=-1),
+                'membership': np.stack(
+                    (self.group_id, self.agent_id), axis=-1
+                ),
                 'is_present': np.expand_dims(self.is_present(), axis=2),
-                'is_select': np.expand_dims(self.is_select(compress=True), axis=2)
+                'is_select': np.expand_dims(
+                    self.is_select(compress=True), axis=2
+                )
             }
+            # NOTE: The outputs `y` indicate a sparse encoding of the outcome
+            # that occurred.
+            y = np.zeros([self.n_trial])
 
-        # NOTE: The outputs `y` indicate that the first outcome occurred.
-        y = tf.constant(np.zeros([self.n_trial]), dtype=K.floatx())
+        y = tf.constant(y, dtype=K.floatx())
 
         # Observation weight.
         w = tf.constant(self.weight, dtype=K.floatx())

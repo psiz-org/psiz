@@ -35,33 +35,20 @@ import psiz
 
 def main():
     """Run script."""
-    # mean = [0.0, 1.0]
-    # scale = [-3., -.29]
-    # rv = ed.Normal(loc=mean, scale=scale)
-    # samples = rv.distribution.sample([1000]).numpy()
-    # lp = rv.distribution.log_prob([.1]).numpy()
-
-    # rv2 = ed.Independent(
-    #     ed.Normal(loc=mean, scale=scale).distribution
-    # )
-    # samples = rv2.distribution.sample([1000]).numpy()
-    # lp = rv2.distribution.log_prob([.1]).numpy()
-
     # Settings.
-    n_stimuli = 25
+    n_stimuli = 30
     n_dim = 3
-    n_restart = 1  # TODO 20
+    n_trial = 2000
+    batch_size = 500
+    n_restart = 1  # TODO
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of 8-choose-2 trials.
-    n_reference = 8
-    n_select = 2
     gen_8c2 = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=8, n_select=2
     )
-    n_trial = 2000
     docket = gen_8c2.generate(n_trial)
 
     # Simulate similarity judgments.
@@ -78,57 +65,51 @@ def main():
     # Expand dataset for stochastic generative processess. TODO
     # n_train_sample = 1
     # obs_train = psiz.trials.stack([obs_train for _ in range(n_train_sample)])
-    n_val_sample = 100
-    obs_val = psiz.trials.stack([obs_val for _ in range(n_val_sample)])
+    # n_val_sample = 100
+    # obs_val = psiz.trials.stack([obs_val for _ in range(n_val_sample)])
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_nll', patience=100, mode='min', restore_best_weights=True
+        'val_cce', patience=100, mode='min', restore_best_weights=True
     )
-    # Visualize using TensorBoard.
-    cb_board = psiz.keras.callbacks.TensorBoardRe(
-        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
-        write_graph=False, write_images=False, update_freq='epoch',
-        profile_batch=0, embeddings_freq=0, embeddings_metadata=None
-    )
-    callbacks = [cb_early, cb_board]
+    callbacks = [cb_early]
 
     compile_kwargs = {
-        'loss': psiz.keras.losses.NegLogLikelihood(),
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
         'weighted_metrics': [
-            psiz.keras.metrics.NegLogLikelihood(name='nll')
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
     }
 
     # Infer embedding.
-    # embedding = tf.keras.layers.Embedding(
-    #     n_stimuli+1, n_dim, mask_zero=True
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
+    )
+    # embeddings_initializer = ed.tensorflow.initializers.TrainableNormal(
+    #     # mean_initializer=psiz.keras.initializers.RandomScaleMVN(
+    #     #     minval=-2., maxval=-1.
+    #     # ),
+    #     stddev_initializer=tf.keras.initializers.TruncatedNormal(
+    #         mean=3., stddev=0.1
+    #     )
+    #     # stddev_initializer=tf.keras.initializers.Constant(value=.0001),
     # )
-    embeddings_initializer = ed.tensorflow.initializers.TrainableNormal(
-        # mean_initializer=psiz.keras.initializers.RandomScaleMVN(
-        #     minval=-2., maxval=-1.
-        # ),
-        stddev_initializer=tf.keras.initializers.TruncatedNormal(
-            mean=3., stddev=0.1
-        )
-        # stddev_initializer=tf.keras.initializers.Constant(value=.0001),
-    )
-    embedding = ed.layers.EmbeddingReparameterization(
-        n_stimuli+1, output_dim=n_dim, mask_zero=True,
-        embeddings_initializer=embeddings_initializer,
-        embeddings_regularizer=ed.tensorflow.regularizers.NormalKLDivergence(
-            stddev=.17, scale_factor=0.0
-        )
-    )
+    # embedding = ed.layers.EmbeddingReparameterization(
+    #     n_stimuli+1, output_dim=n_dim, mask_zero=True,
+    #     embeddings_initializer=embeddings_initializer,
+    #     embeddings_regularizer=ed.tensorflow.regularizers.NormalKLDivergence(
+    #         stddev=.17, scale_factor=0.0
+    #     )
+    # )
     similarity = psiz.keras.layers.ExponentialSimilarity()
     rankModel = psiz.models.Rank(
         embedding=embedding, similarity=similarity
     )
     emb_inferred = psiz.models.Proxy(model=rankModel)
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=2,
-        callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
+        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
+        callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
         compile_kwargs=compile_kwargs
     )
 
@@ -137,14 +118,14 @@ def main():
     simmat_truth = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
     simmat_infer = psiz.utils.pairwise_matrix(
         emb_inferred.similarity,
-        # emb_inferred.z  # TODO
-        emb_inferred.model.embedding.embeddings_initializer.mean.numpy()[1:, :]  # TODO
+        emb_inferred.z  # TODO
+        # emb_inferred.model.embedding.embeddings_initializer.mean.numpy()[1:, :]  # TODO
     )
     r_squared = psiz.utils.matrix_comparison(
         simmat_truth, simmat_infer, score='r2'
     )
 
-    tf.print(emb_inferred.model.embedding.embeddings_initializer.stddev.numpy()[1:, :])
+    # tf.print(emb_inferred.model.embedding.embeddings_initializer.stddev.numpy()[1:, :])
     # Place in model.
     # tf.print(tf.reduce_mean(
     #     self.embedding.embeddings_initializer.stddev[1:, :]

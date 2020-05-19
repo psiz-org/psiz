@@ -35,7 +35,7 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():

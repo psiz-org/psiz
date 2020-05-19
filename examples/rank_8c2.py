@@ -35,26 +35,25 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-tf.config.experimental_run_functions_eagerly(True)
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
     """Run script."""
     # Settings.
-    n_stimuli = 25
+    n_stimuli = 30
     n_dim = 3
+    n_trial = 2000
+    batch_size = 500
     n_restart = 3
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of 8-choose-2 trials.
-    n_reference = 8
-    n_select = 2
     gen_8c2 = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=8, n_select=2
     )
-    n_trial = 2000
     docket = gen_8c2.generate(n_trial)
 
     # Simulate similarity judgments.
@@ -71,7 +70,7 @@ def main():
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_nll', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=10, mode='min', restore_best_weights=True
     )
     # Visualize using TensorBoard.
     cb_board = psiz.keras.callbacks.TensorBoardRe(
@@ -85,7 +84,7 @@ def main():
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
         'weighted_metrics': [
-            tf.keras.metrics.CategoricalCrossentropy(name='nll'),
+            tf.keras.metrics.CategoricalCrossentropy(name='cce'),
             tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='top_k_acc')
         ]
     }
@@ -100,8 +99,8 @@ def main():
     )
     emb_inferred = psiz.models.Proxy(model=rankModel)
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=2,
-        callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
+        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
+        callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=1,
         compile_kwargs=compile_kwargs
     )
 

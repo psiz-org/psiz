@@ -35,15 +35,16 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-tf.config.experimental_run_functions_eagerly(True)
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
     """Run script."""
     # Settings.
-    n_stimuli = 25
+    n_stimuli = 30
     n_dim = 3
     n_restart = 3
+    batch_size = 500
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -83,7 +84,7 @@ def main():
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_nll', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=10, mode='min', restore_best_weights=True
     )
     # Visualize using TensorBoard.
     cb_board = psiz.keras.callbacks.TensorBoardRe(
@@ -94,10 +95,10 @@ def main():
     callbacks = [cb_early, cb_board]
 
     compile_kwargs = {
-        'loss': tf.keras.losses.SparseCategoricalCrossentropy(),
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
         'weighted_metrics': [
-            tf.keras.metrics.SparseCategoricalCrossentropy(name='nll')
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
     }
 
@@ -111,8 +112,8 @@ def main():
     )
     emb_inferred = psiz.models.Proxy(model=rankModel)
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=1,
-        callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
+        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
+        callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=1,
         compile_kwargs=compile_kwargs
     )
 

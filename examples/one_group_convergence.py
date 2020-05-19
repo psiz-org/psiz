@@ -37,14 +37,15 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    n_stimuli = 25
+    n_stimuli = 30
     n_dim = 3
-    n_restart = 10
+    n_restart = 3
+    batch_size = 100
 
     emb_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
-    n_trial = 1000
+    n_trial = 2000
     n_reference = 8
     n_select = 2
     generator = psiz.generator.RandomGenerator(
@@ -74,13 +75,15 @@ def main():
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_nll', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=10, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]
 
     compile_kwargs = {
-        'loss': psiz.keras.losses.NegLogLikelihood(),
-        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
     }
 
     # Infer independent models with increasing amounts of data.
@@ -89,9 +92,9 @@ def main():
         np.linspace(15, obs_train.n_trial, n_step)
     ).astype(np.int64)
     r2 = np.empty((n_step))
-    train_nll = np.empty((n_step))
-    val_nll = np.empty((n_step))
-    test_nll = np.empty((n_step))
+    train_cce = np.empty((n_step))
+    val_cce = np.empty((n_step))
+    test_cce = np.empty((n_step))
     for i_round in range(n_step):
         print('  Round {0}'.format(i_round))
         include_idx = np.arange(0, n_obs[i_round])
@@ -107,17 +110,17 @@ def main():
         )
         emb_inferred = psiz.models.Proxy(model=model)
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000, verbose=1,
-            callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
-            compile_kwargs=compile_kwargs
+            obs_round_train, validation_data=obs_val, epochs=1000,
+            batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
+            monitor='val_cce', verbose=1, compile_kwargs=compile_kwargs
         )
 
-        train_nll[i_round] = restart_record.record['nll'][0]
-        val_nll[i_round] = restart_record.record['val_nll'][0]
+        train_cce[i_round] = restart_record.record['cce'][0]
+        val_cce[i_round] = restart_record.record['val_cce'][0]
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
-        test_nll[i_round] = test_metrics['nll']
+        test_cce[i_round] = test_metrics['cce']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
@@ -128,20 +131,20 @@ def main():
             simmat_infer, simmat_true, score='r2'
         )
         print(
-            '    n_obs: {0:4d} | train_nll: {1:.2f} | '
-            'val_nll: {2:.2f} | test_nll: {3:.2f} | '
+            '    n_obs: {0:4d} | train_cce: {1:.2f} | '
+            'val_cce: {2:.2f} | test_cce: {3:.2f} | '
             'Correlation (R^2): {4:.2f}'.format(
-                n_obs[i_round], train_nll[i_round],
-                val_nll[i_round], test_nll[i_round], r2[i_round]
+                n_obs[i_round], train_cce[i_round],
+                val_cce[i_round], test_cce[i_round], r2[i_round]
             )
         )
 
     # Plot comparison results.
     fig, axes = plt.subplots(1, 2, figsize=(6.5, 3))
 
-    axes[0].plot(n_obs, train_nll, 'bo-', label='Train Loss')
-    axes[0].plot(n_obs, val_nll, 'go-', label='Val. Loss')
-    axes[0].plot(n_obs, test_nll, 'ro-', label='Test Loss')
+    axes[0].plot(n_obs, train_cce, 'bo-', label='Train CCE')
+    axes[0].plot(n_obs, val_cce, 'go-', label='Val. CCE')
+    axes[0].plot(n_obs, test_cce, 'ro-', label='Test CCE')
     axes[0].set_title('Model Loss')
     axes[0].set_xlabel('Number of Judged Trials')
     axes[0].set_ylabel('Loss')

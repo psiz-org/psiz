@@ -35,11 +35,12 @@ def main():
     """Run simulation."""
     # Settings.
     n_group = 1
-    n_stimuli = 25
+    n_stimuli = 30
     n_dim_true = 3
-    n_restart = 30
+    n_restart = 3
     n_dim_max = 30
     squeeze_rate = 1.
+    batch_size = 500
 
     emb_true = ground_truth(n_stimuli, n_dim_true)
 
@@ -76,13 +77,15 @@ def main():
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_nll', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=10, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]
 
     compile_kwargs = {
-        'loss': psiz.keras.losses.NegLogLikelihood(),
-        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
     }
 
     # Add regularization to embedding.
@@ -97,8 +100,8 @@ def main():
     rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
     emb_inferred = psiz.models.Proxy(model=rankModel)
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=1,
-        callbacks=callbacks, n_restart=n_restart, monitor='val_nll',
+        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
+        callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
         compile_kwargs=compile_kwargs
     )
 

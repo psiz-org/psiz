@@ -565,7 +565,7 @@ class RankDocket(RankTrials):
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
-    def as_dataset(self, membership, all_outcomes=False):
+    def as_dataset(self, membership, all_outcomes=True):
         """Return TensorFlow dataset.
 
         Arguments:
@@ -586,27 +586,21 @@ class RankDocket(RankTrials):
                 'stimulus_set': tf.constant(
                     stimulus_set + 1, dtype=tf.int32
                 ),
-                'membership': tf.constant(membership, dtype=tf.int32),
-                'is_present': tf.constant(
-                    np.not_equal(stimulus_set, -1), dtype=tf.bool
-                ),
                 'is_select': tf.constant(
-                    np.expand_dims(self.is_select(compress=True), axis=2),
+                    np.expand_dims(self.is_select(compress=False), axis=2),
                     dtype=tf.bool
-                )
+                ),
+                'membership': tf.constant(membership, dtype=tf.int32)
             }
         else:
             stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
             x = {
                 'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
-                'membership': tf.constant(membership, dtype=tf.int32),
-                'is_present': tf.constant(
-                    np.not_equal(stimulus_set, -1), dtype=tf.bool
-                ),
                 'is_select': tf.constant(
-                    np.expand_dims(self.is_select(compress=True), axis=2),
+                    np.expand_dims(self.is_select(compress=False), axis=2),
                     dtype=tf.bool
-                )
+                ),
+                'membership': tf.constant(membership, dtype=tf.int32)
             }
         return x
 
@@ -988,7 +982,7 @@ class RankObservations(RankTrials):
         f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
 
-    def as_dataset(self, all_outcomes=False):
+    def as_dataset(self, all_outcomes=True):
         """Format necessary data as Tensorflow.data.Dataset object.
 
         Returns:
@@ -1010,27 +1004,25 @@ class RankObservations(RankTrials):
             stimulus_set = self.all_outcomes()
             x = {
                 'stimulus_set': stimulus_set + 1,
+                'is_select': np.expand_dims(
+                    self.is_select(compress=False), axis=2
+                ),
                 'membership': np.stack(
                     (self.group_id, self.agent_id), axis=-1
-                ),
-                'is_present': np.not_equal(stimulus_set, -1),
-                'is_select': np.expand_dims(
-                    self.is_select(compress=True), axis=2
                 )
             }
             # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
             # that occurred.
-            y = np.zeros([self.n_trial, stimulus_set.shape[2]])  # TODO
+            y = np.zeros([self.n_trial, stimulus_set.shape[2]])
             y[:, 0] = 1
         else:
             x = {
                 'stimulus_set': np.expand_dims(self.stimulus_set + 1, axis=2),
+                'is_select': np.expand_dims(
+                    self.is_select(compress=False), axis=2
+                ),
                 'membership': np.stack(
                     (self.group_id, self.agent_id), axis=-1
-                ),
-                'is_present': np.expand_dims(self.is_present(), axis=2),
-                'is_select': np.expand_dims(
-                    self.is_select(compress=True), axis=2
                 )
             }
             # NOTE: The outputs `y` indicate a sparse encoding of the outcome

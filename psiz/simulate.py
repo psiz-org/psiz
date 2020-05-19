@@ -85,22 +85,28 @@ class Agent(object):
         # Call model with TensorFlow formatted docket.
         membership = np.stack((group_id, agent_id), axis=-1)
         inputs = docket.as_dataset(membership, all_outcomes=True)
-        prob_all = self.embedding.model(inputs)
+        probs = self.embedding.model(inputs)
+        outcome_distribution = tfp.distributions.Categorical(
+            probs=probs
+        )
 
         obs = self._select(
-            docket, prob_all, inputs['stimulus_set'] - 1,
+            docket, outcome_distribution, inputs['stimulus_set'] - 1,
             session_id=session_id
         )
 
         return obs
 
-    def _select(self, docket, prob_all, stimulus_set_expand, session_id=None):
+    def _select(
+            self, docket, outcome_distribution, stimulus_set_expand,
+            session_id=None):
         """Stochastically select from possible outcomes.
 
         Arguments:
             docket: An RankDocket object.
-            prob_all: A 2D Tensor indicating the probabilites of all outcomes.
-                shape=[n_trial, n_max_outcome]
+            outcome_distribution: A TF distribution defining the
+                outcome distribution.
+                shape=[batch_shape,]
             stimulus_set_expand: An expanded stimulus set 3D array.
                 shape=[n_trial, n_max_reference+1, n_max_outcome]
             session_id (optional): The session ID.
@@ -111,19 +117,14 @@ class Agent(object):
         """
         stimulus_set_expand = stimulus_set_expand.numpy()
 
-        # Clean up rounding errors.
-        prob_all /= tf.reduce_sum(prob_all, axis=1, keepdims=True)
         # Sample from outcomes.
-        dist = tfp.distributions.Multinomial(
-            1, probs=prob_all, name='Multinomial'
-        )
-        outcome_mask = tf.cast(dist.sample(), dtype=tf.bool)
-        outcome_mask = outcome_mask.numpy()
+        sample_outcomes = outcome_distribution.sample().numpy()
 
+        # Define observations.
         stimulus_set = np.empty(stimulus_set_expand.shape[0:2], dtype=np.int32)
         for i_trial in range(docket.n_trial):
             stimulus_set[i_trial, :] = stimulus_set_expand[
-                i_trial, :, outcome_mask[i_trial]
+                i_trial, :, sample_outcomes[i_trial]
             ]
 
         group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)

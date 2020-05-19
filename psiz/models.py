@@ -1134,6 +1134,12 @@ class Rank(tf.keras.Model):
             )
             with backprop.GradientTape() as tape:
                 y_pred = self(x, training=True)
+                # y_pred_distribution = tfp.distributions.Categorical(
+                #     probs=y_pred, validate_args=True  # TODO
+                # )
+                # TODO have to expand last dimension of `y`, Perhaps this is
+                # the dimension that indicates number of samples?
+                # tf.expand_dims(y, axis=2), y_pred_distribution,
                 loss = self.compiled_loss(
                     y, y_pred, sample_weight, regularization_losses=self.losses
                 )

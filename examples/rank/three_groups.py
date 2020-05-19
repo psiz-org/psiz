@@ -24,20 +24,19 @@ inferred from the simulated data and compared to the ground truth
 model.
 
 Example output:
-
     Attention weights:
-          Novice | [0.81 0.20 0.26 2.72]
-    Intermediate | [0.42 0.92 1.12 1.54]
-          Expert | [0.08 1.80 1.80 0.32]
+          Novice | [3.46 3.17 0.63 0.55]
+    Intermediate | [1.95 2.42 1.93 2.24]
+          Expert | [0.51 0.28 3.45 3.27]
 
-    Model Comparison (r^2)
+    Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.99    0.76    0.25
-     Interm |   0.77    0.99    0.63
-     Expert |   0.25    0.63    0.98
+     Novice |   0.98    0.65    0.14
+     Interm |   0.67    0.99    0.61
+     Expert |   0.19    0.62    0.98
 
 """
 
@@ -54,15 +53,16 @@ import psiz
 def main():
     """Run the simulation that infers an embedding for three groups."""
     # Settings.
-    n_stimuli = 25
+    n_stimuli = 30
     n_dim = 4
     n_group = 3
-    n_restart = 10
+    n_restart = 3
+    batch_size = 200
 
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
-    n_trial = 5000
+    n_trial = 2000
     n_reference = 8
     n_select = 2
     generator = psiz.generator.RandomGenerator(
@@ -91,13 +91,15 @@ def main():
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_nll', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=10, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]
 
     compile_kwargs = {
-        'loss': psiz.keras.losses.NegLogLikelihood(),
-        'weighted_metrics': [psiz.keras.metrics.NegLogLikelihood(name='nll')]
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
     }
 
     # Infer a shared embedding with group-specific attention weights.
@@ -111,8 +113,8 @@ def main():
     )
     emb_inferred = psiz.models.Proxy(model=model)
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, verbose=1,
-        callbacks=callbacks, monitor='val_nll', n_restart=n_restart,
+        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
+        callbacks=callbacks, monitor='val_cce', n_restart=n_restart, verbose=1,
         compile_kwargs=compile_kwargs
     )
 

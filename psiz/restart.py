@@ -158,6 +158,7 @@ class Restarter(object):
             model_re = _new_model(
                 self.model, custom_objects=self.custom_objects
             )
+            # model_re.build([None, ]) TODO
 
             # Create new optimizer.
             optimizer_re = _new_optimizer(self.optimizer)

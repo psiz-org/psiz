@@ -36,6 +36,7 @@ from tensorflow.keras import backend as K
 import psiz.keras.constraints as pk_constraints
 import psiz.keras.initializers as pk_initializers
 import psiz.keras.regularizers
+import psiz.ops
 
 
 class WeightedMinkowski(tf.keras.layers.Layer):
@@ -83,10 +84,8 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         w = inputs[2]    # Dimension weights.
 
         # Weighted Minkowski distance.
-        d_qr = tf.pow(tf.abs(z_q - z_r), self.rho)
-        d_qr = tf.multiply(d_qr, w)
-        d_qr = tf.pow(tf.reduce_sum(d_qr, axis=1), 1. / self.rho)
-
+        x = z_q - z_r
+        d_qr = psiz.ops.wpnorm(x, w, self.rho)[:, 0]
         return d_qr
 
     def get_config(self):

@@ -670,8 +670,6 @@ class Proxy(object):
             probs_config = np.ones(
                 (n_trial, n_outcome, n_sample), dtype=np.float64
             )
-            # TODO (maybe faster) stack permutations, run
-            # _ranked_sequence_probability once and then reshape.
             for i_outcome in range(n_outcome):
                 s_qr_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
                 probs_config[:, i_outcome, :] = _ranked_sequence_probability(
@@ -1011,9 +1009,6 @@ class Rank(tf.keras.Model):
         'is_select': tf.TensorSpec(
             shape=[None, None, None], dtype=tf.bool, name='is_select'
         ),
-        'is_present': tf.TensorSpec(
-            shape=[None, None, None], dtype=tf.bool, name='is_present'
-        ),
         'stimulus_set': tf.TensorSpec(
             shape=[None, None, None], dtype=tf.int32, name='stimulus_set'
         )
@@ -1038,9 +1033,13 @@ class Rank(tf.keras.Model):
         """
         # Grab inputs.
         obs_stimulus_set = inputs['stimulus_set']
+        is_select = inputs['is_select'][:, 1:, :]
         group_id = inputs['membership'][:, 0]
-        is_present = inputs['is_present']
-        is_select = inputs['is_select']
+
+        is_select = tf.cast(is_select, dtype=K.floatx())
+        is_present = tf.math.not_equal(obs_stimulus_set, 0)
+        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
+        is_outcome = is_present[:, 0, :]
 
         # Expand attention weights.
         attention = self.attention(group_id)
@@ -1061,18 +1060,19 @@ class Rank(tf.keras.Model):
 
         # Compute similarity.
         sim_qr = self.similarity(dist_qr)
-
-        # Zero out similarities involving placeholder.
-        sim_qr = sim_qr * tf.cast(is_present[:, 1:, :], dtype=K.floatx())
+        # Zero out similarities involving placeholder IDs.
+        sim_qr = sim_qr * is_present
 
         # Compute the observation probability.
-        probs = self._tf_ranked_sequence_probability(sim_qr, is_select)
+        probs = self._tf_ranked_sequence_probability(
+            sim_qr, is_select, is_outcome
+        )
         return probs
 
-    def _tf_ranked_sequence_probability(self, sim_qr, is_select):
+    def _tf_ranked_sequence_probability(self, sim_qr, is_select, is_outcome):
         """Return probability of a ranked selection sequence.
 
-        See: _ranked_sequence_probability
+        See: _ranked_sequence_probability for NumPy implementation.
 
         Arguments:
             sim_qr: A tensor containing the precomputed similarities
@@ -1081,50 +1081,30 @@ class Rank(tf.keras.Model):
                 shape = (batch_size, n_max_reference, n_outcome)
             is_select: A Boolean tensor indicating if a reference was
                 selected.
-                shape = (batch_size, n_max_select)
+                shape = (batch_size, n_max_reference, n_outcome)
 
         """
-        # Determine batch_size.
+        # Initialize sequence log-probability. Note that log(prob=1)=1.
         batch_size = tf.shape(sim_qr)[0]
-        # Determine max_select_idx (i.e, max_n_select - 1).
-        max_select_idx = tf.shape(is_select)[1] - 1
         n_outcome = tf.shape(sim_qr)[2]
+        seq_log_prob = tf.zeros([batch_size, n_outcome], dtype=K.floatx())
 
-        # Pre-allocate
-        seq_prob = tf.ones([batch_size, n_outcome], dtype=K.floatx())
+        # Compute denominator based on formulation of Luce's choice rule.
+        denom = tf.cumsum(sim_qr, axis=1, reverse=True)
 
-        # Compute denominator of Luce's choice rule.
-        # Start by computing denominator of last selection
-        denom = tf.reduce_sum(sim_qr[:, max_select_idx:, :], axis=1)
+        # Compute log-probability of each selection, assuming all selections
+        # occurred. Add fuzz factor to avoid log(0)
+        sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
+        denom = tf.maximum(denom, tf.keras.backend.epsilon())
+        log_prob = tf.math.log(sim_qr) - tf.math.log(denom)
 
-        # Pre-compute masks for handling non-existent selections.
-        does_exist = tf.cast(is_select, dtype=K.floatx())
-        does_not_exist = tf.cast(
-            tf.math.logical_not(is_select), dtype=K.floatx()
-        )
+        # Mask non-existent selections.
+        log_prob = is_select * log_prob
 
-        # Compute remaining denominators in reverse order for numerical
-        # stability.
-        for select_idx in tf.range(max_select_idx, -1, -1):
-            # Compute selection probability.
-            # Use safe divide since some denominators may be zero.
-            prob = tf.math.divide_no_nan(sim_qr[:, select_idx, :], denom)
-            # Zero out non-existent selections.
-            prob = prob * does_exist[:, select_idx, :]
-            # Add one to non-existent selections.
-            prob = prob + does_not_exist[:, select_idx, :]
-
-            # Update sequence probability.
-            # NOTE: Non-existent selections will have a probability of 1, which
-            # results in an idempotent multiplication operation.
-            seq_prob = tf.multiply(seq_prob, prob)
-
-            # Update denominator in preparation for computing the probability
-            # of the previous selection in the sequence.
-            if select_idx > tf.constant(0, dtype=tf.int32):
-                denom = tf.add(denom, sim_qr[:, select_idx - 1, :])
-
-        return seq_prob
+        # Compute sequence log-probability
+        seq_log_prob = tf.reduce_sum(log_prob, axis=1)
+        seq_prob = tf.math.exp(seq_log_prob)
+        return is_outcome * seq_prob
 
     def train_step(self, data):
         """Logic for one training step.
@@ -1157,25 +1137,25 @@ class Rank(tf.keras.Model):
                 loss = self.compiled_loss(
                     y, y_pred, sample_weight, regularization_losses=self.losses
                 )
-                # Custom training steps:
-                trainable_variables = self.trainable_variables
-                gradients = tape.gradient(loss, trainable_variables)
-                # NOTE: There is an open issue for using constraints with
-                # embedding-like layers (e.g., tf.keras.layers.Embedding,
-                # psiz.keras.layers.Attention), see
-                # https://github.com/tensorflow/tensorflow/issues/33755.
-                # There are also issues when using Eager Execution. A
-                # work-around is to convert the problematic gradients, which
-                # are returned as tf.IndexedSlices, into dense tensors.
-                for idx, grad in enumerate(gradients):
-                    if gradients[idx].__class__.__name__ == 'IndexedSlices':
-                        gradients[idx] = tf.convert_to_tensor(
-                            gradients[idx]
-                        )
+            # Custom training steps:
+            trainable_variables = self.trainable_variables
+            gradients = tape.gradient(loss, trainable_variables)
+            # NOTE: There is an open issue for using constraints with
+            # embedding-like layers (e.g., tf.keras.layers.Embedding,
+            # psiz.keras.layers.Attention), see
+            # https://github.com/tensorflow/tensorflow/issues/33755.
+            # There are also issues when using Eager Execution. A
+            # work-around is to convert the problematic gradients, which
+            # are returned as tf.IndexedSlices, into dense tensors.
+            for idx, grad in enumerate(gradients):
+                if gradients[idx].__class__.__name__ == 'IndexedSlices':
+                    gradients[idx] = tf.convert_to_tensor(
+                        gradients[idx]
+                    )
 
-                self.optimizer.apply_gradients(zip(
-                    gradients, trainable_variables)
-                )
+        self.optimizer.apply_gradients(zip(
+            gradients, trainable_variables)
+        )
 
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}

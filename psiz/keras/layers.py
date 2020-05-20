@@ -604,7 +604,11 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
 
 
 class Rank(tf.keras.layers.Layer):
-    """A rank behavior layer."""
+    """A rank behavior layer.
+
+    Embodies a `_tf_ranked_sequence_probability` call.
+
+    """
 
     def __init__(self, **kwargs):
         """Initialize.

@@ -997,6 +997,8 @@ class Rank(tf.keras.Model):
             similarity = psiz.keras.layers.ExponentialSimilarity()
         self.similarity = similarity
 
+        self.behavior = psiz.keras.layers.Rank()
+
         # Gather all pointers to theta-associated variables.
         theta = self.distance.theta
         theta.update(self.similarity.theta)
@@ -1063,48 +1065,9 @@ class Rank(tf.keras.Model):
         # Zero out similarities involving placeholder IDs.
         sim_qr = sim_qr * is_present
 
-        # Compute the observation probability.
-        probs = self._tf_ranked_sequence_probability(
-            sim_qr, is_select, is_outcome
-        )
+        # Compute probability of different behavioral outcomes.
+        probs = self.behavior([sim_qr, is_select, is_outcome])
         return probs
-
-    def _tf_ranked_sequence_probability(self, sim_qr, is_select, is_outcome):
-        """Return probability of a ranked selection sequence.
-
-        See: _ranked_sequence_probability for NumPy implementation.
-
-        Arguments:
-            sim_qr: A tensor containing the precomputed similarities
-                between the query stimuli and corresponding reference
-                stimuli.
-                shape = (batch_size, n_max_reference, n_outcome)
-            is_select: A Boolean tensor indicating if a reference was
-                selected.
-                shape = (batch_size, n_max_reference, n_outcome)
-
-        """
-        # Initialize sequence log-probability. Note that log(prob=1)=1.
-        batch_size = tf.shape(sim_qr)[0]
-        n_outcome = tf.shape(sim_qr)[2]
-        seq_log_prob = tf.zeros([batch_size, n_outcome], dtype=K.floatx())
-
-        # Compute denominator based on formulation of Luce's choice rule.
-        denom = tf.cumsum(sim_qr, axis=1, reverse=True)
-
-        # Compute log-probability of each selection, assuming all selections
-        # occurred. Add fuzz factor to avoid log(0)
-        sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
-        denom = tf.maximum(denom, tf.keras.backend.epsilon())
-        log_prob = tf.math.log(sim_qr) - tf.math.log(denom)
-
-        # Mask non-existent selections.
-        log_prob = is_select * log_prob
-
-        # Compute sequence log-probability
-        seq_log_prob = tf.reduce_sum(log_prob, axis=1)
-        seq_prob = tf.math.exp(seq_log_prob)
-        return is_outcome * seq_prob
 
     def train_step(self, data):
         """Logic for one training step.
@@ -1159,43 +1122,6 @@ class Rank(tf.keras.Model):
 
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
-
-    # def test_step(self, data):
-    #     """The logic for one evaluation step.
-
-    #     This method can be overridden to support custom evaluation logic.
-    #     This method is called by `Model.make_test_function`.
-
-    #     This function should contain the mathemetical logic for one step of
-    #     evaluation.
-
-    #     This typically includes the forward pass, loss calculation, and metrics
-    #     updates.
-
-    #     Configuration details for *how* this logic is run (e.g. `tf.function` and
-    #     `tf.distribute.Strategy` settings), should be left to
-    #     `Model.make_test_function`, which can also be overridden.
-
-    #     Arguments:
-    #         data: A nested structure of `Tensor`s.
-
-    #     Returns:
-    #         A `dict` containing values that will be passed to
-    #         `tf.keras.callbacks.CallbackList.on_train_batch_end`. Typically, the
-    #         values of the `Model`'s metrics are returned.
-
-    #     """
-    #     data = data_adapter.expand_1d(data)
-    #     x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
-
-    #     y_pred = self(x, training=False)
-    #     # Updates stateful loss metrics.
-    #     self.compiled_loss(
-    #         y, y_pred, sample_weight, regularization_losses=self.losses
-    #     )
-
-    #     self.compiled_metrics.update_state(y, y_pred, sample_weight)
-    #     return {m.name: m.result() for m in self.metrics}
 
     def get_config(self):
         """Return model configuration."""

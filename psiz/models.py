@@ -160,7 +160,7 @@ class Proxy(object):
     @property
     def z(self):
         """Getter method for z."""
-        return self.model.embedding.embeddings.numpy()[1:]
+        return self.model.core.embedding.embeddings.numpy()[1:]
 
     @z.setter
     def z(self, z):
@@ -168,17 +168,17 @@ class Proxy(object):
         z_pad = np.vstack(
             [np.zeros([1, self.n_dim]), z]
         )
-        self.model.embedding.embeddings.assign(z_pad)
+        self.model.core.embedding.embeddings.assign(z_pad)
 
     @property
     def w(self):
         """Getter method for phi."""
-        return self.model.attention.w.numpy()
+        return self.model.core.attention.w.numpy()
 
     @w.setter
     def w(self, w):
         """Setter method for w."""
-        self.model.attention.w.assign(w)
+        self.model.core.attention.w.assign(w)
 
     @property
     def phi(self):
@@ -281,12 +281,12 @@ class Proxy(object):
         (z_q, z_r, attention) = self._broadcast_for_similarity(
             z_q, z_r, group_id=group_id
         )
-        d_qr = self.model.distance([
+        d_qr = self.model.core.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ])
-        sim_qr = self.model.similarity(d_qr).numpy()
+        sim_qr = self.model.core.similarity(d_qr).numpy()
         return sim_qr
 
     def distance(self, z_q, z_r, group_id=None):
@@ -335,7 +335,7 @@ class Proxy(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d_qr = self.model.distance([
+        d_qr = self.model.core.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -957,7 +957,7 @@ class Rank(tf.keras.Model):
 
     def __init__(
             self, embedding=None, attention=None, distance=None,
-            similarity=None, **kwargs):
+            similarity=None, behavior=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -974,34 +974,20 @@ class Rank(tf.keras.Model):
         """
         super().__init__(**kwargs)
 
-        # Initialize model components.
-        self.embedding = embedding
+        # Initialize core psychological embedding.
+        self.core = psiz.keras.layers.PsychologicalEmbedding(
+            embedding=embedding, attention=attention, distance=distance,
+            similarity=similarity
+        )
 
-        if attention is None:
-            attention = psiz.keras.layers.Attention(
-                n_dim=self.n_dim, n_group=1
-            )
-        if attention.n_dim != self.n_dim:
-            raise ValueError(
-                "The dimensionality (`n_dim`) of the attention layer"
-                " must agree with the embeding dimensionality of the"
-                " embedding layer."
-            )
-        self.attention = attention
+        # Initialize behavioral component.
+        if behavior is None:
+            behavior = psiz.keras.layers.RankBehavior()
+        self.behavior = behavior
 
-        if distance is None:
-            distance = psiz.keras.layers.WeightedMinkowski()
-        self.distance = distance
-
-        if similarity is None:
-            similarity = psiz.keras.layers.ExponentialSimilarity()
-        self.similarity = similarity
-
-        self.behavior = psiz.keras.layers.Rank()
-
-        # Gather all pointers to theta-associated variables.
-        theta = self.distance.theta
-        theta.update(self.similarity.theta)
+        # Gather all pointers to theta-associated variables. TODO
+        theta = self.core.distance.theta
+        theta.update(self.core.similarity.theta)
         self.theta = theta
 
     @tf.function(input_signature=[{
@@ -1036,36 +1022,14 @@ class Rank(tf.keras.Model):
         # Grab inputs.
         obs_stimulus_set = inputs['stimulus_set']
         is_select = inputs['is_select'][:, 1:, :]
-        group_id = inputs['membership'][:, 0]
+        membership = inputs['membership']
 
-        is_select = tf.cast(is_select, dtype=K.floatx())
-        is_present = tf.math.not_equal(obs_stimulus_set, 0)
-        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
-        is_outcome = is_present[:, 0, :]
-
-        # Expand attention weights.
-        attention = self.attention(group_id)
-        # Add singleton dimensions for n_reference and n_outcome axis.
-        attention = tf.expand_dims(attention, axis=2)
-        attention = tf.expand_dims(attention, axis=3)
-
-        # Inflate coordinates.
-        z_stimulus_set = self.embedding(obs_stimulus_set)
-        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
-        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
-        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
-        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
-        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
-
-        # Compute distance between query and references.
-        dist_qr = self.distance([z_q, z_r, attention])
-
-        # Compute similarity.
-        sim_qr = self.similarity(dist_qr)
-        # Zero out similarities involving placeholder IDs.
-        sim_qr = sim_qr * is_present
+        sim_qr = self.core([obs_stimulus_set, membership])
 
         # Compute probability of different behavioral outcomes.
+        is_select = tf.cast(is_select, dtype=K.floatx())
+        is_present = tf.math.not_equal(obs_stimulus_set, 0)
+        is_outcome = tf.cast(is_present[:, 1, :], dtype=K.floatx())
         probs = self.behavior([sim_qr, is_select, is_outcome])
         return probs
 
@@ -1129,10 +1093,11 @@ class Rank(tf.keras.Model):
             'class_name': self.__class__.__name__,
             'config': {
                 'layers': {
-                    'embedding': _updated_config(self.embedding),
-                    'attention': _updated_config(self.attention),
-                    'distance': _updated_config(self.distance),
-                    'similarity': _updated_config(self.similarity)
+                    'embedding': _updated_config(self.core.embedding),
+                    'attention': _updated_config(self.core.attention),
+                    'distance': _updated_config(self.core.distance),
+                    'similarity': _updated_config(self.core.similarity),
+                    'behavior': _updated_config(self.behavior)
                 }
             }
         }
@@ -1141,17 +1106,17 @@ class Rank(tf.keras.Model):
     @property
     def n_stimuli(self):
         """Getter method for n_stimuli."""
-        return self.embedding.input_dim - 1
+        return self.core.n_stimuli
 
     @property
     def n_dim(self):
         """Getter method for n_dim."""
-        return self.embedding.output_dim
+        return self.core.n_dim
 
     @property
     def n_group(self):
         """Getter method for n_group."""
-        return self.attention.n_group
+        return self.core.n_group
 
 
 # class Rate(tf.keras.Model):
@@ -1288,6 +1253,7 @@ def model_from_config(config, custom_objects={}):
         'ExponentialSimilarity': psiz.keras.layers.ExponentialSimilarity,
         'HeavyTailedSimilarity': psiz.keras.layers.HeavyTailedSimilarity,
         'StudentsTSimilarity': psiz.keras.layers.StudentsTSimilarity,
+        'RankBehavior': psiz.keras.layers.RankBehavior,
         'EmbeddingReparameterization': ed.layers.EmbeddingReparameterization,
     })
 

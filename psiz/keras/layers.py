@@ -26,7 +26,10 @@ Classes:
         layer.
     StudentsTSimilarity: A parameterized Student's t-distribution
         similarity layer.
-    Rank: A rank behavior layer.
+    PsychologicalEmbedding: A layer encapsulating the behavior-agnostic
+        components of representations and the functions that operate on
+        them.
+    RankBehavior: A rank behavior layer.
 
 """
 
@@ -603,7 +606,96 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
         return config
 
 
-class Rank(tf.keras.layers.Layer):
+class PsychologicalEmbedding(tf.keras.layers.Layer):
+    """A psychological embedding layer."""
+
+    def __init__(
+            self, embedding=None, attention=None, distance=None,
+            similarity=None, **kwargs):
+        """Initialize."""
+        super(PsychologicalEmbedding, self).__init__(**kwargs)
+
+        # Initialize model components.
+        self.embedding = embedding
+
+        if attention is None:
+            attention = psiz.keras.layers.Attention(
+                n_dim=self.n_dim, n_group=1
+            )
+        if attention.n_dim != self.n_dim:
+            raise ValueError(
+                "The dimensionality (`n_dim`) of the attention layer"
+                " must agree with the embeding dimensionality of the"
+                " embedding layer."
+            )
+        self.attention = attention
+
+        if distance is None:
+            distance = psiz.keras.layers.WeightedMinkowski()
+        self.distance = distance
+
+        if similarity is None:
+            similarity = psiz.keras.layers.ExponentialSimilarity()
+        self.similarity = similarity
+
+    def call(self, inputs):
+        """Call.
+
+        Compute appropriate stimulus similarities.
+
+        Arguments:
+            inputs:
+                stimulus_set:
+                membership:
+
+        """
+        obs_stimulus_set = inputs[0]
+        group_id = inputs[1][:, 0]
+
+        # TODO handle more general case of all pairwise similarities.
+        is_present = tf.math.not_equal(obs_stimulus_set, 0)
+        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
+
+        # Expand attention weights.
+        attention = self.attention(group_id)
+        # Add singleton dimensions for n_reference and n_outcome axis.
+        attention = tf.expand_dims(attention, axis=2)
+        attention = tf.expand_dims(attention, axis=3)
+
+        # Inflate coordinates.
+        z_stimulus_set = self.embedding(obs_stimulus_set)
+        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
+        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
+        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
+        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
+
+        # Compute distance between query and references.
+        dist_qr = self.distance([z_q, z_r, attention])
+
+        # Compute similarity.
+        sim_qr = self.similarity(dist_qr)
+        # Zero out similarities involving placeholder IDs.
+        sim_qr = sim_qr * is_present
+        return sim_qr
+
+    @property
+    def n_stimuli(self):
+        """Getter method for n_stimuli."""
+        return self.embedding.input_dim - 1
+
+    @property
+    def n_dim(self):
+        """Getter method for n_dim."""
+        return self.embedding.output_dim
+
+    @property
+    def n_group(self):
+        """Getter method for n_group."""
+        return self.attention.n_group
+
+
+class RankBehavior(tf.keras.layers.Layer):
     """A rank behavior layer.
 
     Embodies a `_tf_ranked_sequence_probability` call.
@@ -617,7 +709,7 @@ class Rank(tf.keras.layers.Layer):
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(Rank, self).__init__(**kwargs)
+        super(RankBehavior, self).__init__(**kwargs)
 
     def call(self, inputs):
         """Return probability of a ranked selection sequence.
@@ -660,3 +752,8 @@ class Rank(tf.keras.layers.Layer):
         seq_log_prob = tf.reduce_sum(log_prob, axis=1)
         seq_prob = tf.math.exp(seq_log_prob)
         return is_outcome * seq_prob
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        return config

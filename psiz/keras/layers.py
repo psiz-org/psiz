@@ -43,6 +43,9 @@ import psiz.keras.regularizers
 import psiz.ops
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='WeightedMinkowski'
+)
 class WeightedMinkowski(tf.keras.layers.Layer):
     """Weighted Minkowski distance."""
 
@@ -104,6 +107,9 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='Attention'
+)
 class Attention(tf.keras.layers.Layer):
     """Attention Layer."""
 
@@ -214,6 +220,9 @@ class Attention(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='InverseSimilarity'
+)
 class InverseSimilarity(tf.keras.layers.Layer):
     """Inverse-distance similarity function.
 
@@ -292,6 +301,9 @@ class InverseSimilarity(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='ExponentialSimilarity'
+)
 class ExponentialSimilarity(tf.keras.layers.Layer):
     """Exponential family similarity function.
 
@@ -415,6 +427,9 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='HeavyTailedSimilarity'
+)
 class HeavyTailedSimilarity(tf.keras.layers.Layer):
     """Heavy-tailed family similarity function.
 
@@ -512,6 +527,9 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='StudentsTSimilarity'
+)
 class StudentsTSimilarity(tf.keras.layers.Layer):
     """Student's t-distribution similarity function.
 
@@ -606,6 +624,9 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='PsychologicalEmbedding'
+)
 class PsychologicalEmbedding(tf.keras.layers.Layer):
     """A psychological embedding layer."""
 
@@ -694,7 +715,34 @@ class PsychologicalEmbedding(tf.keras.layers.Layer):
         """Getter method for n_group."""
         return self.attention.n_group
 
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'embedding': tf.keras.utils.serialize_keras_object(self.embedding),
+            'attention': tf.keras.utils.serialize_keras_object(self.attention),
+            'distance': tf.keras.utils.serialize_keras_object(self.distance),
+            'similarity': tf.keras.utils.serialize_keras_object(
+                self.similarity
+            ),
+        })
+        return config
 
+    @classmethod
+    def from_config(cls, config):
+        """Create from configuration."""
+        config['embedding'] = tf.keras.layers.deserialize(config['embedding'])
+        config['attention'] = tf.keras.layers.deserialize(config['attention'])
+        config['distance'] = tf.keras.layers.deserialize(config['distance'])
+        config['similarity'] = tf.keras.layers.deserialize(
+            config['similarity']
+        )
+        return cls(**config)
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='RankBehavior'
+)
 class RankBehavior(tf.keras.layers.Layer):
     """A rank behavior layer.
 

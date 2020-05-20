@@ -26,6 +26,7 @@ Classes:
         layer.
     StudentsTSimilarity: A parameterized Student's t-distribution
         similarity layer.
+    Rank: A rank behavior layer.
 
 """
 
@@ -600,3 +601,58 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
             ),
         })
         return config
+
+
+class Rank(tf.keras.layers.Layer):
+    """A rank behavior layer."""
+
+    def __init__(self, **kwargs):
+        """Initialize.
+
+        Arguments:
+            kwargs (optional): Additional keyword arguments.
+
+        """
+        super(Rank, self).__init__(**kwargs)
+
+    def call(self, inputs):
+        """Return probability of a ranked selection sequence.
+
+        See: _ranked_sequence_probability for NumPy implementation.
+
+        Arguments:
+            inputs:
+                sim_qr: A tensor containing the precomputed
+                    similarities between the query stimuli and
+                    corresponding reference stimuli.
+                    shape = (batch_size, n_max_reference, n_outcome)
+                is_select: A Boolean tensor indicating if a reference
+                    was selected.
+                    shape = (batch_size, n_max_reference, n_outcome)
+
+        """
+        sim_qr = inputs[0]
+        is_select = inputs[1]
+        is_outcome = inputs[2]
+
+        # Initialize sequence log-probability. Note that log(prob=1)=1.
+        batch_size = tf.shape(sim_qr)[0]
+        n_outcome = tf.shape(sim_qr)[2]
+        seq_log_prob = tf.zeros([batch_size, n_outcome], dtype=K.floatx())
+
+        # Compute denominator based on formulation of Luce's choice rule.
+        denom = tf.cumsum(sim_qr, axis=1, reverse=True)
+
+        # Compute log-probability of each selection, assuming all selections
+        # occurred. Add fuzz factor to avoid log(0)
+        sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
+        denom = tf.maximum(denom, tf.keras.backend.epsilon())
+        log_prob = tf.math.log(sim_qr) - tf.math.log(denom)
+
+        # Mask non-existent selections.
+        log_prob = is_select * log_prob
+
+        # Compute sequence log-probability
+        seq_log_prob = tf.reduce_sum(log_prob, axis=1)
+        seq_prob = tf.math.exp(seq_log_prob)
+        return is_outcome * seq_prob

@@ -26,6 +26,8 @@ Classes:
         layer.
     StudentsTSimilarity: A parameterized Student's t-distribution
         similarity layer.
+    Kernel: A kernel that allows the user to separately specify a
+        distance and similarity function.
     AttentionKernel: A kernel that uses group-specific attention
         weights and allows the user to separately specify a distance
         and similarity function.
@@ -623,6 +625,84 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
             ),
         })
         return config
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='Kernel'
+)
+class Kernel(tf.keras.layers.Layer):
+    """A basic population-wide kernel."""
+
+    def __init__(self, distance=None, similarity=None, **kwargs):
+        """Initialize."""
+        super(Kernel, self).__init__(**kwargs)
+
+        if distance is None:
+            distance = psiz.keras.layers.WeightedMinkowski()
+        self.distance = distance
+
+        if similarity is None:
+            similarity = psiz.keras.layers.ExponentialSimilarity()
+        self.similarity = similarity
+
+        # Gather all pointers to theta-associated variables.
+        theta = self.distance.theta
+        theta.update(self.similarity.theta)
+        self.theta = theta
+
+    def call(self, inputs):
+        """Call.
+
+        Compute k(z_0, z_1), where `k` is the similarity kernel.
+
+        Note: Broadcasting rules are used to compute similarity between
+            `z_0` and `z_1`.
+
+        Arguments:
+            inputs:
+                z_0:
+                z_1:
+                membership: (unused)
+
+        """
+        z_0 = inputs[0]
+        z_1 = inputs[1]
+
+        # Create identity attention weights.
+        batch_size = tf.shape(z_0)[0]
+        # TODO can we always assume 4D?
+        attention = tf.ones([batch_size, 1, 1, 1])
+
+        # Compute distance between query and references.
+        dist_qr = self.distance([z_0, z_1, attention])
+        # Compute similarity.
+        sim_qr = self.similarity(dist_qr)
+        return sim_qr
+
+    @property
+    def n_group(self):
+        """Getter method for n_group."""
+        return 1
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'distance': tf.keras.utils.serialize_keras_object(self.distance),
+            'similarity': tf.keras.utils.serialize_keras_object(
+                self.similarity
+            ),
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Create from configuration."""
+        config['distance'] = tf.keras.layers.deserialize(config['distance'])
+        config['similarity'] = tf.keras.layers.deserialize(
+            config['similarity']
+        )
+        return cls(**config)
 
 
 @tf.keras.utils.register_keras_serializable(

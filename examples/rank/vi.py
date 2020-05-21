@@ -82,10 +82,8 @@ def main():
         ]
     }
 
-    # Infer embedding.
-    embedding = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
-    )
+    # Define model.
+    embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
     # embeddings_initializer = ed.tensorflow.initializers.TrainableNormal(
     #     # mean_initializer=psiz.keras.initializers.RandomScaleMVN(
     #     #     minval=-2., maxval=-1.
@@ -102,11 +100,13 @@ def main():
     #         stddev=.17, scale_factor=0.0
     #     )
     # )
-    similarity = psiz.keras.layers.ExponentialSimilarity()
-    rankModel = psiz.models.Rank(
-        embedding=embedding, similarity=similarity
+    kernel = psiz.keras.layers.Kernel(
+        similarity=psiz.keras.layers.ExponentialSimilarity()
     )
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb_inferred = psiz.models.Proxy(model=rankModel)
+
+    # Infer embedding.
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
         callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
@@ -145,8 +145,10 @@ def ground_truth(n_stimuli, n_dim):
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
-    similarity = psiz.keras.layers.ExponentialSimilarity()
-    rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
+    kernel = psiz.keras.layers.Kernel(
+        similarity=psiz.keras.layers.ExponentialSimilarity()
+    )
+    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb = psiz.models.Proxy(rankModel)
 
     emb.theta = {

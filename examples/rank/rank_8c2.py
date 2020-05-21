@@ -35,7 +35,7 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-tf.config.experimental_run_functions_eagerly(True)
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -45,7 +45,7 @@ def main():
     n_dim = 3
     n_trial = 2000
     batch_size = 500
-    n_restart = 1  # TODO
+    n_restart = 3
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -96,6 +96,7 @@ def main():
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb_inferred = psiz.models.Proxy(model=model)
+
     # Infer embedding.
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,

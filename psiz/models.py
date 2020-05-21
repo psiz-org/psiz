@@ -265,6 +265,15 @@ class Proxy(object):
 
         return (z_q, z_r, attention)
 
+    def _broadcast_ready_z(self, z):
+        """Create necessary singleton dimensions for `z`."""
+        if z.ndim == 2:
+            z = np.expand_dims(z, axis=2)
+            z = np.expand_dims(z, axis=3)
+        elif z.ndim == 3:
+            z = np.expand_dims(z, axis=3)
+        return z
+
     def similarity(self, z_q, z_r, group_id=None):
         """Return similarity between two lists of points.
 
@@ -274,9 +283,9 @@ class Proxy(object):
 
         Arguments:
             z_q: A set of embedding points.
-                shape = (n_trial, n_dim, [1, n_sample])
+                shape = (n_trial, n_dim, [1, n_sample])  TODO
             z_r: A set of embedding points.
-                shape = (n_trial, n_dim, [n_reference, n_sample])
+                shape = (n_trial, n_dim, [n_reference, n_sample])  TODO
             group_id (optional): The group ID for each sample. Can be a
                 scalar or an array of shape = (n_trial,).
 
@@ -285,24 +294,26 @@ class Proxy(object):
                 points.
 
         """
-        (z_q, z_r, attention) = self._broadcast_for_similarity(
-            z_q, z_r, group_id=group_id
-        )
-        # TODO brittle assumption
-        d_qr = self.model.kernel.distance([
+        # Prepare inputs to exploit broadcasting.
+        n_trial = z_q.shape[0]
+        if group_id is None:
+            group_id = np.zeros((n_trial), dtype=np.int32)
+        else:
+            if np.isscalar(group_id):
+                group_id = group_id * np.ones((n_trial), dtype=np.int32)
+            else:
+                group_id = group_id.astype(dtype=np.int32)
+        group_id = np.expand_dims(group_id, axis=1)
+        z_q = self._broadcast_ready_z(z_q)
+        z_r = self._broadcast_ready_z(z_r)
+
+        # Pass through kernel function.
+        sim_qr = self.model.kernel([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
-            tf.constant(attention, dtype=K.floatx())
-        ])
-        sim_qr = self.model.kernel.similarity(d_qr).numpy()
-        # TODO use kernel instead, but need to pass in membership
-        # sim_qr_2 = self.model.kernel([
-        #     tf.constant(z_q, dtype=K.floatx()),
-        #     tf.constant(z_r, dtype=K.floatx()),
-        #     tf.constant(membership, dtype=tf.int32)
-        # ]).numpy()
-        # np.testing.assert_array_equal(sim_qr.numpy(), sim_qr_2.numpy())
-        return sim_qr
+            tf.constant(group_id, dtype=tf.int32)
+        ]).numpy()
+        return np.squeeze(sim_qr)
 
     def distance(self, z_q, z_r, group_id=None):
         """Return distance between two lists of points.
@@ -660,12 +671,13 @@ class Proxy(object):
         )
 
         # Compute similarity between query and references.
-        d_qr = self.model.distance([
+        # TODO brittle
+        d_qr = self.model.kernel.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ])
-        sim_qr = self.model.similarity(d_qr).numpy()
+        sim_qr = self.model.kernel.similarity(d_qr).numpy()
 
         prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
         for i_config in range(n_config):

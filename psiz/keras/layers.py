@@ -670,8 +670,12 @@ class Kernel(tf.keras.layers.Layer):
 
         # Create identity attention weights.
         batch_size = tf.shape(z_0)[0]
+        n_dim = tf.shape(z_0)[1]
+        # NOTE: We must fill in the `dimensionality` dimension in order to
+        # keep shapes compatible between op input and calculated input
+        # gradient.
         # TODO can we always assume 4D?
-        attention = tf.ones([batch_size, 1, 1, 1])
+        attention = tf.ones([batch_size, n_dim, 1, 1])
 
         # Compute distance between query and references.
         dist_qr = self.distance([z_0, z_1, attention])

@@ -345,7 +345,7 @@ class Proxy(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
 
-        attention = self.w[group_id, :]
+        attention = self.w[group_id, :]  # TODO brittle assumption
 
         # Make sure z_q and attention have an appropriate singleton
         # dimensions.

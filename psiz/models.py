@@ -28,7 +28,6 @@ Classes:
 Functions:
     load_model: Load a hdf5 file, that was saved with the `save`
         class method, as a PsychologicalEmbedding object.
-    model_from_config: Instantiate model from configuration.
 
 TODO:
     * Implement Rate class.
@@ -40,7 +39,7 @@ import copy
 import datetime
 import json
 import os
-from random import randint
+from pathlib import Path
 import sys
 import time
 import warnings
@@ -160,29 +159,34 @@ class Proxy(object):
     @property
     def z(self):
         """Getter method for z."""
-        return self.model.core.embedding.embeddings.numpy()[1:]
+        # TODO brittle
+        return self.model.embedding.embeddings.numpy()[1:]
 
     @z.setter
     def z(self, z):
         """Setter method for z."""
+        # TODO brittle
         z_pad = np.vstack(
             [np.zeros([1, self.n_dim]), z]
         )
-        self.model.core.embedding.embeddings.assign(z_pad)
+        self.model.embedding.embeddings.assign(z_pad)
 
     @property
     def w(self):
         """Getter method for phi."""
-        return self.model.core.attention.w.numpy()
+        # TODO brittle
+        return self.model.kernel.attention.w.numpy()
 
     @w.setter
     def w(self, w):
         """Setter method for w."""
-        self.model.core.attention.w.assign(w)
+        # TODO brittle
+        self.model.kernel.attention.w.assign(w)
 
     @property
     def phi(self):
         """Getter method for phi."""
+        # TODO brittle
         d = {
             'w': self.w
         }
@@ -191,12 +195,14 @@ class Proxy(object):
     @phi.setter
     def phi(self, phi):
         """Setter method for w."""
+        # TODO brittle
         for k, v in phi.items():
             setattr(self, k, v)
 
     @property
     def theta(self):
         """Getter method for theta."""
+        # TODO brittle
         d = {}
         for k, v in self.model.theta.items():
             d[k] = v.numpy()
@@ -205,6 +211,7 @@ class Proxy(object):
     @theta.setter
     def theta(self, theta):
         """Setter method for w."""
+        # TODO brittle
         for k, v in theta.items():
             self.model.theta[k].assign(v)
 
@@ -281,12 +288,20 @@ class Proxy(object):
         (z_q, z_r, attention) = self._broadcast_for_similarity(
             z_q, z_r, group_id=group_id
         )
-        d_qr = self.model.core.distance([
+        # TODO brittle assumption
+        d_qr = self.model.kernel.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ])
-        sim_qr = self.model.core.similarity(d_qr).numpy()
+        sim_qr = self.model.kernel.similarity(d_qr).numpy()
+        # TODO use kernel instead, but need to pass in membership
+        # sim_qr_2 = self.model.kernel([
+        #     tf.constant(z_q, dtype=K.floatx()),
+        #     tf.constant(z_r, dtype=K.floatx()),
+        #     tf.constant(membership, dtype=tf.int32)
+        # ]).numpy()
+        # np.testing.assert_array_equal(sim_qr.numpy(), sim_qr_2.numpy())
         return sim_qr
 
     def distance(self, z_q, z_r, group_id=None):
@@ -335,7 +350,8 @@ class Proxy(object):
             if attention.ndim == 3:
                 attention = np.expand_dims(attention, axis=3)
 
-        d_qr = self.model.core.distance([
+        # TODO brittle assumption
+        d_qr = self.model.kernel.distance([
             tf.constant(z_q, dtype=K.floatx()),
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
@@ -444,7 +460,7 @@ class Proxy(object):
         restart_record = restarter.fit(
             x=ds_obs_train, validation_data=ds_obs_val, **kwargs
         )
-        self.model = restarter.model  # TODO ugly
+        self.model = restarter.model
 
         return restart_record
 
@@ -883,25 +899,46 @@ class Proxy(object):
 
         return part_idx, n_stimuli_part
 
-    def save(self, filepath):
+    def save(self, filepath, overwrite=False):
         """Save the PsychologialEmbedding model as an HDF5 file.
 
         Arguments:
             filepath: String specifying the path to save the model.
 
         """
-        config = self.model.get_config()
-        json_config = json.dumps(config)
+        # NOTE: Ideally we would use TensorFlow's save method using the
+        # snippet below.
+        # self.model.save(filepath, overwrite=overwrite, save_format='tf')
 
-        f = h5py.File(filepath, "w")
+        # Make directory.
+        Path(filepath).mkdir(parents=True, exist_ok=overwrite)
+
+        fp_config = os.path.join(filepath, 'config.h5')
+        fp_weights = os.path.join(filepath, 'weights')
+
+        # Save configuration.
+        json_model_config = json.dumps(self.model.get_config())
+        json_loss_config = json.dumps(
+            tf.keras.losses.serialize(self.model.loss)
+        )
+        optimizer_config = tf.keras.optimizers.serialize(self.model.optimizer)
+        # HACK: numpy.float32 is not serializable
+        for k, v in optimizer_config['config'].items():
+            if isinstance(v, np.float32):
+                optimizer_config['config'][k] = float(v)
+        json_optimizer_config = json.dumps(optimizer_config)
+        f = h5py.File(fp_config, "w")
         f.create_dataset('model_type', data='psiz')
         f.create_dataset('psiz_version', data='0.4.0')
-        f.create_dataset('config', data=json_config)
-        grp_weights = f.create_group('weights')
-        hdf5_format.save_weights_to_hdf5_group(
-            grp_weights, self.model.layers
-        )
+        f.create_dataset('config', data=json_model_config)
+        f.create_dataset('loss', data=json_loss_config)
+        f.create_dataset('optimizer', data=json_optimizer_config)
         f.close()
+
+        # Save weights.
+        self.model.save_weights(
+            fp_weights, overwrite=overwrite, save_format='tf'
+        )
 
     def subset(self, idx):
         """Return subset of embedding."""
@@ -914,14 +951,10 @@ class Proxy(object):
 
     def clone(self, custom_objects={}):
         """Clone model."""
-        # TODO
-        # model_class_name = self.model.__class__.__name__
-        # model_class = getattr(psiz.models, model_class_name)
-
+        # TODO Test
         # Create topology.
-        new_model = model_from_config(
-            self.model.get_config(), custom_objects=custom_objects
-        )
+        with tf.keras.utils.custom_object_scope(custom_objects):
+            model = self.model.from_config(self.model.get_config())
 
         # Save weights.
         fp_weights = '/tmp/psiz/clone'
@@ -934,10 +967,10 @@ class Proxy(object):
         proxy_model = Proxy(model=model)
 
         # Compile to model. TODO is this too brittle?
-        if self.model.loss is not None:
-            proxy_model.compile(
-                loss=self.model.loss, optimizer=self.model.optimizer
-            )
+        # if self.model.loss is not None:
+        #     proxy_model.compile(
+        #         loss=self.model.loss, optimizer=self.model.optimizer
+        #     )
 
         # Other attributes.
         proxy_model.log_freq = self.log_freq
@@ -956,8 +989,7 @@ class Rank(tf.keras.Model):
     """
 
     def __init__(
-            self, embedding=None, attention=None, distance=None,
-            similarity=None, behavior=None, **kwargs):
+            self, embedding=None, kernel=None, behavior=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -973,22 +1005,16 @@ class Rank(tf.keras.Model):
 
         """
         super().__init__(**kwargs)
-
-        # Initialize core psychological embedding.
-        self.core = psiz.keras.layers.PsychologicalEmbedding(
-            embedding=embedding, attention=attention, distance=distance,
-            similarity=similarity
-        )
+        self.embedding = embedding
+        self.kernel = kernel
 
         # Initialize behavioral component.
         if behavior is None:
             behavior = psiz.keras.layers.RankBehavior()
         self.behavior = behavior
 
-        # Gather all pointers to theta-associated variables. TODO
-        theta = self.core.distance.theta
-        theta.update(self.core.similarity.theta)
-        self.theta = theta
+        # Create convenience pointer to kernel parameters.
+        self.theta = self.kernel.theta
 
     @tf.function(input_signature=[{
         'membership': tf.TensorSpec(
@@ -1009,27 +1035,39 @@ class Rank(tf.keras.Model):
                 stimulus_set: dtype=tf.int32, consisting of the
                     integers on the interval [0, n_stimuli[
                     shape=(batch_size, n_max_reference + 1)
-                membership: dtype=tf.int32, Integers indicating the
-                    group and agent membership of a trial.
-                    shape=(batch_size, 2)
-                is_present: dtype=tf.bool
-                    shape=(batch_size, n_max_reference + 1)
                 is_select: dtype=tf.bool, the shape implies the
                     maximum number of selected stimuli in the data
                     shape=(batch_size, n_max_select)
+                membership: dtype=tf.int32, Integers indicating the
+                    group and agent membership of a trial.
+                    shape=(batch_size, 2)
 
         """
         # Grab inputs.
-        obs_stimulus_set = inputs['stimulus_set']
+        stimulus_set = inputs['stimulus_set']
         is_select = inputs['is_select'][:, 1:, :]
         membership = inputs['membership']
 
-        sim_qr = self.core([obs_stimulus_set, membership])
+        # Inflate coordinates.
+        # TODO can we always assume this split pattern?
+        z_stimulus_set = self.embedding(stimulus_set)
+        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
+        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
+        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
+        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
+
+        # Pass through similarity kernel.
+        sim_qr = self.kernel([z_q, z_r, membership])
+
+        # Zero out similarities involving placeholder IDs.
+        is_present = tf.math.not_equal(stimulus_set, 0)
+        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
+        sim_qr = sim_qr * is_present
 
         # Compute probability of different behavioral outcomes.
         is_select = tf.cast(is_select, dtype=K.floatx())
-        is_present = tf.math.not_equal(obs_stimulus_set, 0)
-        is_outcome = tf.cast(is_present[:, 1, :], dtype=K.floatx())
+        is_outcome = tf.cast(is_present[:, 0, :], dtype=K.floatx())
         probs = self.behavior([sim_qr, is_select, is_outcome])
         return probs
 
@@ -1056,8 +1094,7 @@ class Rank(tf.keras.Model):
         # warning.
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                'ignore', category=UserWarning,
-                module=r'.*indexed_slices'
+                'ignore', category=UserWarning, module=r'.*indexed_slices'
             )
             with backprop.GradientTape() as tape:
                 y_pred = self(x, training=True)
@@ -1069,7 +1106,7 @@ class Rank(tf.keras.Model):
             gradients = tape.gradient(loss, trainable_variables)
             # NOTE: There is an open issue for using constraints with
             # embedding-like layers (e.g., tf.keras.layers.Embedding,
-            # psiz.keras.layers.Attention), see
+            # psiz.keras.layers.GroupAttention), see
             # https://github.com/tensorflow/tensorflow/issues/33755.
             # There are also issues when using Eager Execution. A
             # work-around is to convert the problematic gradients, which
@@ -1087,36 +1124,62 @@ class Rank(tf.keras.Model):
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
-    def get_config(self):
-        """Return model configuration."""
-        config = {
-            'class_name': self.__class__.__name__,
-            'config': {
-                'layers': {
-                    'embedding': _updated_config(self.core.embedding),
-                    'attention': _updated_config(self.core.attention),
-                    'distance': _updated_config(self.core.distance),
-                    'similarity': _updated_config(self.core.similarity),
-                    'behavior': _updated_config(self.behavior)
-                }
-            }
-        }
-        return config
-
     @property
     def n_stimuli(self):
         """Getter method for n_stimuli."""
-        return self.core.n_stimuli
+        return self.embedding.input_dim - 1
 
     @property
     def n_dim(self):
         """Getter method for n_dim."""
-        return self.core.n_dim
+        return self.embedding.output_dim
 
     @property
     def n_group(self):
         """Getter method for n_group."""
-        return self.core.n_group
+        return self.kernel.n_group
+
+    def get_config(self):
+        """Return model configuration."""
+        layer_configs = {
+            'embedding': tf.keras.utils.serialize_keras_object(
+                self.embedding
+            ),
+            'kernel': tf.keras.utils.serialize_keras_object(
+                self.kernel
+            ),
+            'behavior': tf.keras.utils.serialize_keras_object(self.behavior)
+        }
+
+        config = {
+            'name': self.name,
+            'class_name': self.__class__.__name__,
+            'layers': copy.deepcopy(layer_configs)
+        }
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Create model from configuration.
+
+        Arguments:
+            config: A hierarchical configuration dictionary.
+            custom_objects: A dictionary of custom classes.
+
+        Returns:
+            layer: An instantiated and configured TensorFlow model.
+
+        """
+        model_config = copy.deepcopy(config)
+        layer_configs = model_config.pop('layers', None)
+
+        # Deserialize layers.
+        built_layers = {}
+        for layer_name, layer_config in layer_configs.items():
+            layer = tf.keras.layers.deserialize(layer_config)
+            built_layers[layer_name] = layer
+
+        return cls(**built_layers)
 
 
 # class Rate(tf.keras.Model):
@@ -1141,20 +1204,47 @@ def load_model(filepath, custom_objects={}, compile=False):
         ValueError
 
     """
-    extension = os.fspath(filepath).split('.')[-1]
-    f = h5py.File(filepath, 'r')
-    if 'psiz_version' in f.keys():
+    # Check if directory.
+    if os.path.isdir(filepath):
+        # NOTE: Ideally we could call TensorFlow's `load_model` method as used
+        # in the snippet below, but our sub-classed model does not play
+        # nice.
+        # with tf.keras.utils.custom_object_scope(custom_objects):
+        #     model = tf.keras.models.load_model(filepath, compile=compile)
+        # return Proxy(model=model)
         # Storage format for psiz_version >= 0.4.0
+        fp_config = os.path.join(filepath, 'config.h5')
+        fp_weights = os.path.join(filepath, 'weights')
+
+        # Load configuration.
+        f = h5py.File(fp_config, 'r')
         psiz_version = f['psiz_version'][()]
         config = json.loads(f['config'][()])
-        model = model_from_config(config, custom_objects)
-        grp_weights = f['weights']
-        hdf5_format.load_weights_from_hdf5_group_by_name(
-            grp_weights, model.layers
-        )
+        loss_config = json.loads(f['loss'][()])
+        optimizer_config = json.loads(f['optimizer'][()])
+
+        model_class_name = config.get('class_name')
+        # Load model.
+        if model_class_name in custom_objects:
+            model_class = custom_objects[model_class_name]
+        else:
+            model_class = getattr(psiz.models, model_class_name)
+        with tf.keras.utils.custom_object_scope(custom_objects):
+            model = model_class.from_config(config)
+            loss = tf.keras.losses.deserialize(loss_config)
+            optimizer = tf.keras.optimizers.deserialize(optimizer_config)
+
+        if compile:
+            model.compile(loss=loss, optimizer=optimizer)
+        # Build lazy layers in order to set weights.
+        model.embedding.build(input_shape=[None, None, None])
+
+        # Load weights.
+        model.load_weights(fp_weights).expect_partial()
         emb = Proxy(model=model)
     else:
         # Storage format for psiz_version < 0.4.0.
+        f = h5py.File(filepath, 'r')
         # Common attributes.
         embedding_type = f['embedding_type'][()]
         n_stimuli = f['n_stimuli'][()]
@@ -1176,7 +1266,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         else:
             fit_group = f['phi']['w']['trainable'][()]
             w = f['phi']['w']['value'][()]
-        attention = psiz.keras.layers.Attention(
+        attention = psiz.keras.layers.GroupAttention(
             n_dim=n_dim, n_group=n_group, fit_group=fit_group
         )
         # OLD code for reference.
@@ -1231,52 +1321,6 @@ def load_model(filepath, custom_objects={}, compile=False):
 
         f.close()
     return emb
-
-
-def model_from_config(config, custom_objects={}):
-    """Load a configured model.
-
-    Arguments:
-        config: A hierarchical configuration dictionary.
-        custom_objects: A dictionary of custom classes.
-
-    Returns:
-        layer: An instantiated and configured TensorFlow model.
-
-    """
-    # Add Psiz layer classes.
-    custom_objects.update({
-        'Rank': psiz.models.Rank,
-        'WeightedMinkowski': psiz.keras.layers.WeightedMinkowski,
-        'Attention': psiz.keras.layers.Attention,
-        'InverseSimilarity': psiz.keras.layers.InverseSimilarity,
-        'ExponentialSimilarity': psiz.keras.layers.ExponentialSimilarity,
-        'HeavyTailedSimilarity': psiz.keras.layers.HeavyTailedSimilarity,
-        'StudentsTSimilarity': psiz.keras.layers.StudentsTSimilarity,
-        'RankBehavior': psiz.keras.layers.RankBehavior,
-        'EmbeddingReparameterization': ed.layers.EmbeddingReparameterization,
-    })
-
-    model_class_name = config.get('class_name')
-    model_config = config.get('config')
-    layers = model_config.get('layers')
-
-    # Load model.
-    if model_class_name in custom_objects:
-        model_class = custom_objects[model_class_name]
-    else:
-        model_class = getattr(psiz.models, model_class_name)
-
-    # Deserialize layers.
-    built_layers = {}
-    for layer_name, layer_config in layers.items():
-        layer = tf.keras.layers.deserialize(
-            layer_config, custom_objects=custom_objects
-        )
-        built_layers[layer_name] = layer
-
-    model = model_class(**built_layers)
-    return model
 
 
 def _elliptical_slice(
@@ -1445,11 +1489,3 @@ def _ranked_sequence_probability(sim_qr, n_select):
             # denom = denom + sim_qr[:, i_selected-1, :]
             denom += sim_qr[:, i_selected-1, :]
     return seq_prob
-
-
-def _updated_config(obj):
-    """Return updated config."""
-    return {
-        'class_name': obj.__class__.__name__,
-        'config': obj.get_config()
-    }

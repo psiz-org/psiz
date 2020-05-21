@@ -18,7 +18,7 @@
 
 Classes:
     WeightedMinkowski: A weighted distance layer.
-    Attention: A simple attention layer.
+    GroupAttention: A simple group-specific attention layer.
     InverseSimilarity: A parameterized inverse similarity layer.
     ExponentialSimilarity: A parameterized exponential similarity
         layer.
@@ -26,9 +26,9 @@ Classes:
         layer.
     StudentsTSimilarity: A parameterized Student's t-distribution
         similarity layer.
-    PsychologicalEmbedding: A layer encapsulating the behavior-agnostic
-        components of representations and the functions that operate on
-        them.
+    AttentionKernel: A kernel that uses group-specific attention
+        weights and allows the user to separately specify a distance
+        and similarity function.
     RankBehavior: A rank behavior layer.
 
 """
@@ -108,10 +108,10 @@ class WeightedMinkowski(tf.keras.layers.Layer):
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='Attention'
+    package='psiz.keras.layers', name='GroupAttention'
 )
-class Attention(tf.keras.layers.Layer):
-    """Attention Layer."""
+class GroupAttention(tf.keras.layers.Layer):
+    """Group-specific attention weights."""
 
     def __init__(
             self, n_group=1, n_dim=None, fit_group=None,
@@ -131,9 +131,9 @@ class Attention(tf.keras.layers.Layer):
 
         Raises:
             ValueError: If `n_dim` or `n_group` arguments are invalid.
-        
+
         """
-        super(Attention, self).__init__(**kwargs)
+        super(GroupAttention, self).__init__(**kwargs)
 
         if (n_group < 1):
             raise ValueError(
@@ -201,7 +201,8 @@ class Attention(tf.keras.layers.Layer):
             inputs: A Tensor denoting `group_id`.
 
         """
-        return tf.gather(self.w, inputs)
+        group_id = inputs[:, 0]
+        return tf.gather(self.w, group_id)
 
     def get_config(self):
         """Return layer configuration."""
@@ -625,29 +626,30 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='PsychologicalEmbedding'
+    package='psiz.keras.layers', name='AttentionKernel'
 )
-class PsychologicalEmbedding(tf.keras.layers.Layer):
-    """A psychological embedding layer."""
+class AttentionKernel(tf.keras.layers.Layer):
+    """Attention kernel container."""
 
     def __init__(
-            self, embedding=None, attention=None, distance=None,
-            similarity=None, **kwargs):
-        """Initialize."""
-        super(PsychologicalEmbedding, self).__init__(**kwargs)
+            self, n_dim=None, attention=None, distance=None, similarity=None,
+            **kwargs):
+        """Initialize.
 
-        # Initialize model components.
-        self.embedding = embedding
+        Arguments:
+            n_dim: The dimensionality of the attention weights. This
+                should match the dimensionality of the embedding.
+            attention: A attention layer. If this is specified, the
+                argument `n_dim` is ignored.
+            distance: A distance layer.
+            similarity: A similarity layer.
+
+        """
+        super(AttentionKernel, self).__init__(**kwargs)
 
         if attention is None:
-            attention = psiz.keras.layers.Attention(
-                n_dim=self.n_dim, n_group=1
-            )
-        if attention.n_dim != self.n_dim:
-            raise ValueError(
-                "The dimensionality (`n_dim`) of the attention layer"
-                " must agree with the embeding dimensionality of the"
-                " embedding layer."
+            attention = psiz.keras.layers.GroupAttention(
+                n_dim=n_dim, n_group=1
             )
         self.attention = attention
 
@@ -659,56 +661,46 @@ class PsychologicalEmbedding(tf.keras.layers.Layer):
             similarity = psiz.keras.layers.ExponentialSimilarity()
         self.similarity = similarity
 
+        # Gather all pointers to theta-associated variables.
+        theta = self.distance.theta
+        theta.update(self.similarity.theta)
+        self.theta = theta
+
     def call(self, inputs):
         """Call.
 
-        Compute appropriate stimulus similarities.
+        Compute k(z_0, z_1), where `k` is the similarity kernel.
+
+        Note: Broadcasting rules are used to compute similarity between
+            `z_0` and `z_1`.
 
         Arguments:
             inputs:
-                stimulus_set:
+                z_0:
+                z_1:
                 membership:
 
         """
-        obs_stimulus_set = inputs[0]
-        group_id = inputs[1][:, 0]
-
-        # TODO handle more general case of all pairwise similarities.
-        is_present = tf.math.not_equal(obs_stimulus_set, 0)
-        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
+        z_0 = inputs[0]
+        z_1 = inputs[1]
+        membership = inputs[2]
 
         # Expand attention weights.
-        attention = self.attention(group_id)
+        attention = self.attention(membership)
         # Add singleton dimensions for n_reference and n_outcome axis.
         attention = tf.expand_dims(attention, axis=2)
         attention = tf.expand_dims(attention, axis=3)
 
-        # Inflate coordinates.
-        z_stimulus_set = self.embedding(obs_stimulus_set)
-        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
-        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
-        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
-        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
-        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
-
         # Compute distance between query and references.
-        dist_qr = self.distance([z_q, z_r, attention])
-
+        dist_qr = self.distance([z_0, z_1, attention])
         # Compute similarity.
         sim_qr = self.similarity(dist_qr)
-        # Zero out similarities involving placeholder IDs.
-        sim_qr = sim_qr * is_present
         return sim_qr
-
-    @property
-    def n_stimuli(self):
-        """Getter method for n_stimuli."""
-        return self.embedding.input_dim - 1
 
     @property
     def n_dim(self):
         """Getter method for n_dim."""
-        return self.embedding.output_dim
+        return self.attention.n_dim
 
     @property
     def n_group(self):
@@ -719,7 +711,7 @@ class PsychologicalEmbedding(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'embedding': tf.keras.utils.serialize_keras_object(self.embedding),
+            'n_dim': self.n_dim,
             'attention': tf.keras.utils.serialize_keras_object(self.attention),
             'distance': tf.keras.utils.serialize_keras_object(self.distance),
             'similarity': tf.keras.utils.serialize_keras_object(
@@ -731,7 +723,6 @@ class PsychologicalEmbedding(tf.keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         """Create from configuration."""
-        config['embedding'] = tf.keras.layers.deserialize(config['embedding'])
         config['attention'] = tf.keras.layers.deserialize(config['attention'])
         config['distance'] = tf.keras.layers.deserialize(config['distance'])
         config['similarity'] = tf.keras.layers.deserialize(

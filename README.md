@@ -139,7 +139,7 @@ Each similarity function has its own set of parameters (i.e., `tf.Variable`s). T
 
 ### Deviations from TensorFlow
 
-The models in PsiZ are susceptible to local optima. While the usual tricks help, such as stochastic gradient decent, we typically need multiple restarts with different initializations to be confident in the solution. In an effort to shield a user from the burden of writing restart logic, PsiZ includes a restart module that is employed by the `fit` method of the `Proxy` class. The state of most TensorFlow objects can be reset using a serialization/deserialization strategy. However, `tf.keras.callbacks` do not permit this strategy. To fix this problem, PsiZ implements a subclass of `tf.keras.callbacks.Callback`, which adds a `reset` method. This solution is unattractive and is likely to change when a more elegant solution is found. 
+The models in PsiZ are susceptible to local optima. While the usual tricks help, such as stochastic gradient decent, we typically require multiple restarts with different initializations to be confident in the solution. In an effort to shield users from the burden of writing restart logic, PsiZ includes a restart module that is employed by the `fit` method of the `Proxy` class. The state of most TensorFlow objects can be reset using a serialization/deserialization strategy. However, `tf.keras.callbacks` do not permit this strategy. To fix this problem, PsiZ implements a subclass of `tf.keras.callbacks.Callback`, which adds a `reset` method. This solution is unattractive and is likely to change when a more elegant solution is found. 
 
 
 ## Modules

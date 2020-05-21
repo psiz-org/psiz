@@ -25,18 +25,18 @@ model.
 
 Example output:
     Attention weights:
-          Novice | [3.46 3.17 0.63 0.55]
-    Intermediate | [1.95 2.42 1.93 2.24]
-          Expert | [0.51 0.28 3.45 3.27]
+          Novice | [3.38 3.32 0.49 0.43]
+    Intermediate | [2.06 2.18 2.04 2.18]
+          Expert | [0.55 0.50 3.40 3.32]
 
     Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.98    0.65    0.14
-     Interm |   0.67    0.99    0.61
-     Expert |   0.19    0.62    0.98
+     Novice |   0.95    0.68    0.16
+     Interm |   0.64    0.96    0.54
+     Expert |   0.16    0.61    0.96
 
 """
 
@@ -106,11 +106,13 @@ def main():
     embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True
     )
-    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
-    similarity = psiz.keras.layers.ExponentialSimilarity()
-    model = psiz.models.Rank(
-        embedding=embedding, attention=attention, similarity=similarity
+    kernel = psiz.keras.layers.AttentionKernel(
+        attention=psiz.keras.layers.GroupAttention(
+            n_dim=n_dim, n_group=n_group
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity()
     )
+    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb_inferred = psiz.models.Proxy(model=model)
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
@@ -199,12 +201,13 @@ def ground_truth(n_stimuli, n_dim, n_group):
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
-    attention = psiz.keras.layers.Attention(n_dim=n_dim, n_group=n_group)
-    similarity = psiz.keras.layers.ExponentialSimilarity()
-
-    model = psiz.models.Rank(
-        embedding=embedding, attention=attention, similarity=similarity
+    kernel = psiz.keras.layers.AttentionKernel(
+        attention=psiz.keras.layers.GroupAttention(
+            n_dim=n_dim, n_group=n_group
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity()
     )
+    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb = psiz.models.Proxy(model=model)
 
     emb.w = np.array((

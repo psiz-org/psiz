@@ -97,8 +97,8 @@ def main():
         mask_zero=True
     )
     similarity = psiz.keras.layers.ExponentialSimilarity()
-    rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
-    emb_inferred = psiz.models.Proxy(model=rankModel)
+    rank_model = psiz.models.Rank(embedding=embedding, similarity=similarity)
+    emb_inferred = psiz.models.Proxy(model=rank_model)
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
         callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
@@ -147,8 +147,8 @@ def ground_truth(n_stimuli, n_dim):
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
-    rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
-    emb = psiz.models.Proxy(rankModel)
+    rank_model = psiz.models.Rank(embedding=embedding, similarity=similarity)
+    emb = psiz.models.Proxy(rank_model)
 
     emb.theta = {
         'rho': 2.,

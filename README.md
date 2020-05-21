@@ -43,16 +43,18 @@ import psiz
 embedding = tf.keras.layers.Embedding(
     catalog.n_stimuli+1, mask_zero=True
 )
-# Create a Rank model that uses the TensorFlow Keras API.
-model = psiz.models.Rank(embedding=embedding)
+# Use a default kernel (exponential with p-norm).
+kernel = psiz.keras.layers.Kernel()
+# Create a Rank model that subclasses TensorFlow Keras Model.
+model = psiz.models.Rank(embedding=embedding, kernel=kernel)
 # Wrap the model in convenient proxy class.
 emb = psiz.models.Proxy(model)
 # Compile the model.
 emb.compile()
 # Fit the psychological embedding using observations.
 emb.fit(obs)
-# Optionally save the fitted model in HDF5 format.
-emb.save('my_embedding.h5')
+# Optionally save the fitted model.
+emb.save('my_embedding')
 ```
 
 Check out the [examples](examples/) directory to explore examples that take advantage of the various features that PsiZ offers.
@@ -124,9 +126,9 @@ PsiZ is built around the TensorFlow ecosystem and strives to follow TensorFlow i
 
 Package-defined models are built by sub-classing `tf.keras.Model`. Components of a model are built using the `tf.keras.layers.Layer` API. A free parameter is implemented as a `tf.Variable`.
 
-In PsiZ, a psychological embedding can be thought of as having two major components. The first component is a conventional embedding which models stimulus coordinates in psychological space. In the simplest case, this is implemented using `tf.keras.layers.Embedding`. The second component embodies the *psychological* aspect of the model and includes parameterized distance, similarity, and choice functions.
+In PsiZ, a model can be thought as having two major components. The first component is a psychological embedding which describes how the agent of interest perceives similarity between set of stimuli. This component includes a conventional embedding and a kernel that defines similarities between embedding points. The second component describes how similarities are converted into an observed behavior, such as rankings or ratings.
 
-PsiZ includes a number of predefined layers to facilitate the construction of new Models. For example, there are four predefined similarity functions (implemented as subclasses of `tf.keras.layers.Layer`):
+PsiZ includes a number of predefined layers to facilitate the construction of arbitrary models. For example, there are four predefined similarity functions (implemented as subclasses of `tf.keras.layers.Layer`) which can be used to create a kernel:
 
 1. `psiz.keras.layers.InverseSimilarity`
 2. `psiz.keras.layers.ExponentialSimilarity`
@@ -137,7 +139,7 @@ Each similarity function has its own set of parameters (i.e., `tf.Variable`s). T
 
 ### Deviations from TensorFlow
 
-The models in PsiZ are susceptible to becoming stuck in local optimums. While the usual tricks, such as stochastic gradient decent help, we typically need to perform multiple restarts with different initializations to be confident in the solution. In an effort to shield a user from the burden of writing restart logic, PsiZ includes a restart module that is employed by the `fit` method of the `Proxy` class. The state of most TensorFlow objects can be reset using a serialization/deserialization strategy. However, `tf.keras.callbacks` do not permit this strategy. To fix this problem, PsiZ implements a subclass of `tf.keras.callbacks.Callback`, which adds a `reset` method. This solution is unattractive and is likely to change when a more elegant solution is found. 
+The models in PsiZ are susceptible to local optima. While the usual tricks help, such as stochastic gradient decent, we typically require multiple restarts with different initializations to be confident in the solution. In an effort to shield users from the burden of writing restart logic, PsiZ includes a restart module that is employed by the `fit` method of the `Proxy` class. The state of most TensorFlow objects can be reset using a serialization/deserialization strategy. However, `tf.keras.callbacks` do not permit this strategy. To fix this problem, PsiZ implements a subclass of `tf.keras.callbacks.Callback`, which adds a `reset` method. This solution is unattractive and is likely to change when a more elegant solution is found. 
 
 
 ## Modules

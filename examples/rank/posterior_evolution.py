@@ -52,14 +52,15 @@ def main():
     n_sample = 1000
     n_burn = 100
     thin_step = 3
-    n_reference = 2
-    n_select = 1
-    n_outcome = 2  # Determined by `n_reference` and `n_select`.
+    n_reference = 2  # TODO
+    n_select = 1  # TODO
+    n_outcome = 2  # Determined by `n_reference` and `n_select`. TODO
 
     # Ground truth model.
     # Must know input_shape in order to set embeddings, since embeddings
     # must be built first.
-    input_shape = [None, n_reference+1, n_outcome]
+    # input_shape = [None, n_reference+1, n_outcome]  # TODO
+    input_shape = [None, None, None]
     emb_true = ground_truth(input_shape)
     n_stimuli = emb_true.z.shape[0]
     n_dim = emb_true.z.shape[1]
@@ -170,9 +171,11 @@ def ground_truth(input_shape):
 
     embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
     embedding.build(input_shape=input_shape)
-    similarity = psiz.keras.layers.ExponentialSimilarity()
-    rankModel = psiz.models.Rank(embedding=embedding, similarity=similarity)
-    emb = psiz.models.Proxy(rankModel)
+    kernel = psiz.keras.layers.AttentionKernel(  # TODO
+        n_dim=n_dim, similarity=psiz.keras.layers.ExponentialSimilarity()
+    )
+    rank_model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    emb = psiz.models.Proxy(rank_model)
 
     emb.theta = {
         'rho': 2.,

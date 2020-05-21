@@ -379,7 +379,7 @@ def _select_query_references(
     n_stimuli = embedding.n_stimuli
     z = embedding.z
     z_q = z[query_idx, :]
-    s_qr = embedding.similarity(np.expand_dims(z_q, axis=0), z)
+    s_qr = embedding.similarity(np.expand_dims(z_q, axis=0), z)  # TODO
 
     # Determine eligable reference stimuli and their draw probability
     # based on similarity. TODO remove self

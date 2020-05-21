@@ -18,7 +18,7 @@
 
 Classes:
     WeightedMinkowski: A weighted distance layer.
-    Attention: A simple attention layer.
+    GroupAttention: A simple group-specific attention layer.
     InverseSimilarity: A parameterized inverse similarity layer.
     ExponentialSimilarity: A parameterized exponential similarity
         layer.
@@ -26,6 +26,12 @@ Classes:
         layer.
     StudentsTSimilarity: A parameterized Student's t-distribution
         similarity layer.
+    Kernel: A kernel that allows the user to separately specify a
+        distance and similarity function.
+    AttentionKernel: A kernel that uses group-specific attention
+        weights and allows the user to separately specify a distance
+        and similarity function.
+    RankBehavior: A rank behavior layer.
 
 """
 
@@ -39,6 +45,9 @@ import psiz.keras.regularizers
 import psiz.ops
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='WeightedMinkowski'
+)
 class WeightedMinkowski(tf.keras.layers.Layer):
     """Weighted Minkowski distance."""
 
@@ -100,8 +109,11 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         return config
 
 
-class Attention(tf.keras.layers.Layer):
-    """Attention Layer."""
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='GroupAttention'
+)
+class GroupAttention(tf.keras.layers.Layer):
+    """Group-specific attention weights."""
 
     def __init__(
             self, n_group=1, n_dim=None, fit_group=None,
@@ -121,9 +133,9 @@ class Attention(tf.keras.layers.Layer):
 
         Raises:
             ValueError: If `n_dim` or `n_group` arguments are invalid.
-        
+
         """
-        super(Attention, self).__init__(**kwargs)
+        super(GroupAttention, self).__init__(**kwargs)
 
         if (n_group < 1):
             raise ValueError(
@@ -191,7 +203,8 @@ class Attention(tf.keras.layers.Layer):
             inputs: A Tensor denoting `group_id`.
 
         """
-        return tf.gather(self.w, inputs)
+        group_id = inputs[:, 0]
+        return tf.gather(self.w, group_id)
 
     def get_config(self):
         """Return layer configuration."""
@@ -210,6 +223,9 @@ class Attention(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='InverseSimilarity'
+)
 class InverseSimilarity(tf.keras.layers.Layer):
     """Inverse-distance similarity function.
 
@@ -288,6 +304,9 @@ class InverseSimilarity(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='ExponentialSimilarity'
+)
 class ExponentialSimilarity(tf.keras.layers.Layer):
     """Exponential family similarity function.
 
@@ -411,6 +430,9 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='HeavyTailedSimilarity'
+)
 class HeavyTailedSimilarity(tf.keras.layers.Layer):
     """Heavy-tailed family similarity function.
 
@@ -508,6 +530,9 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
         return config
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='StudentsTSimilarity'
+)
 class StudentsTSimilarity(tf.keras.layers.Layer):
     """Student's t-distribution similarity function.
 
@@ -599,4 +624,259 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
                 self.alpha_initializer
             ),
         })
+        return config
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='Kernel'
+)
+class Kernel(tf.keras.layers.Layer):
+    """A basic population-wide kernel."""
+
+    def __init__(self, distance=None, similarity=None, **kwargs):
+        """Initialize."""
+        super(Kernel, self).__init__(**kwargs)
+
+        if distance is None:
+            distance = psiz.keras.layers.WeightedMinkowski()
+        self.distance = distance
+
+        if similarity is None:
+            similarity = psiz.keras.layers.ExponentialSimilarity()
+        self.similarity = similarity
+
+        # Gather all pointers to theta-associated variables.
+        theta = self.distance.theta
+        theta.update(self.similarity.theta)
+        self.theta = theta
+
+    def call(self, inputs):
+        """Call.
+
+        Compute k(z_0, z_1), where `k` is the similarity kernel.
+
+        Note: Broadcasting rules are used to compute similarity between
+            `z_0` and `z_1`.
+
+        Arguments:
+            inputs:
+                z_0:
+                z_1:
+                membership: (unused)
+
+        """
+        z_0 = inputs[0]
+        z_1 = inputs[1]
+
+        # Create identity attention weights.
+        batch_size = tf.shape(z_0)[0]
+        n_dim = tf.shape(z_0)[1]
+        # NOTE: We must fill in the `dimensionality` dimension in order to
+        # keep shapes compatible between op input and calculated input
+        # gradient.
+        # TODO can we always assume 4D?
+        attention = tf.ones([batch_size, n_dim, 1, 1])
+
+        # Compute distance between query and references.
+        dist_qr = self.distance([z_0, z_1, attention])
+        # Compute similarity.
+        sim_qr = self.similarity(dist_qr)
+        return sim_qr
+
+    @property
+    def n_group(self):
+        """Getter method for n_group."""
+        return 1
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'distance': tf.keras.utils.serialize_keras_object(self.distance),
+            'similarity': tf.keras.utils.serialize_keras_object(
+                self.similarity
+            ),
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Create from configuration."""
+        config['distance'] = tf.keras.layers.deserialize(config['distance'])
+        config['similarity'] = tf.keras.layers.deserialize(
+            config['similarity']
+        )
+        return cls(**config)
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='AttentionKernel'
+)
+class AttentionKernel(tf.keras.layers.Layer):
+    """Attention kernel container."""
+
+    def __init__(
+            self, n_dim=None, attention=None, distance=None, similarity=None,
+            **kwargs):
+        """Initialize.
+
+        Arguments:
+            n_dim: The dimensionality of the attention weights. This
+                should match the dimensionality of the embedding.
+            attention: A attention layer. If this is specified, the
+                argument `n_dim` is ignored.
+            distance: A distance layer.
+            similarity: A similarity layer.
+
+        """
+        super(AttentionKernel, self).__init__(**kwargs)
+
+        if attention is None:
+            attention = psiz.keras.layers.GroupAttention(
+                n_dim=n_dim, n_group=1
+            )
+        self.attention = attention
+
+        if distance is None:
+            distance = psiz.keras.layers.WeightedMinkowski()
+        self.distance = distance
+
+        if similarity is None:
+            similarity = psiz.keras.layers.ExponentialSimilarity()
+        self.similarity = similarity
+
+        # Gather all pointers to theta-associated variables.
+        theta = self.distance.theta
+        theta.update(self.similarity.theta)
+        self.theta = theta
+
+    def call(self, inputs):
+        """Call.
+
+        Compute k(z_0, z_1), where `k` is the similarity kernel.
+
+        Note: Broadcasting rules are used to compute similarity between
+            `z_0` and `z_1`.
+
+        Arguments:
+            inputs:
+                z_0:
+                z_1:
+                membership:
+
+        """
+        z_0 = inputs[0]
+        z_1 = inputs[1]
+        membership = inputs[2]
+
+        # Expand attention weights.
+        attention = self.attention(membership)
+        # Add singleton dimensions for n_reference and n_outcome axis.
+        attention = tf.expand_dims(attention, axis=2)
+        attention = tf.expand_dims(attention, axis=3)
+
+        # Compute distance between query and references.
+        dist_qr = self.distance([z_0, z_1, attention])
+        # Compute similarity.
+        sim_qr = self.similarity(dist_qr)
+        return sim_qr
+
+    @property
+    def n_dim(self):
+        """Getter method for n_dim."""
+        return self.attention.n_dim
+
+    @property
+    def n_group(self):
+        """Getter method for n_group."""
+        return self.attention.n_group
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'n_dim': self.n_dim,
+            'attention': tf.keras.utils.serialize_keras_object(self.attention),
+            'distance': tf.keras.utils.serialize_keras_object(self.distance),
+            'similarity': tf.keras.utils.serialize_keras_object(
+                self.similarity
+            ),
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Create from configuration."""
+        config['attention'] = tf.keras.layers.deserialize(config['attention'])
+        config['distance'] = tf.keras.layers.deserialize(config['distance'])
+        config['similarity'] = tf.keras.layers.deserialize(
+            config['similarity']
+        )
+        return cls(**config)
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='RankBehavior'
+)
+class RankBehavior(tf.keras.layers.Layer):
+    """A rank behavior layer.
+
+    Embodies a `_tf_ranked_sequence_probability` call.
+
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize.
+
+        Arguments:
+            kwargs (optional): Additional keyword arguments.
+
+        """
+        super(RankBehavior, self).__init__(**kwargs)
+
+    def call(self, inputs):
+        """Return probability of a ranked selection sequence.
+
+        See: _ranked_sequence_probability for NumPy implementation.
+
+        Arguments:
+            inputs:
+                sim_qr: A tensor containing the precomputed
+                    similarities between the query stimuli and
+                    corresponding reference stimuli.
+                    shape = (batch_size, n_max_reference, n_outcome)
+                is_select: A Boolean tensor indicating if a reference
+                    was selected.
+                    shape = (batch_size, n_max_reference, n_outcome)
+
+        """
+        sim_qr = inputs[0]
+        is_select = inputs[1]
+        is_outcome = inputs[2]
+
+        # Initialize sequence log-probability. Note that log(prob=1)=1.
+        batch_size = tf.shape(sim_qr)[0]
+        n_outcome = tf.shape(sim_qr)[2]
+        seq_log_prob = tf.zeros([batch_size, n_outcome], dtype=K.floatx())
+
+        # Compute denominator based on formulation of Luce's choice rule.
+        denom = tf.cumsum(sim_qr, axis=1, reverse=True)
+
+        # Compute log-probability of each selection, assuming all selections
+        # occurred. Add fuzz factor to avoid log(0)
+        sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
+        denom = tf.maximum(denom, tf.keras.backend.epsilon())
+        log_prob = tf.math.log(sim_qr) - tf.math.log(denom)
+
+        # Mask non-existent selections.
+        log_prob = is_select * log_prob
+
+        # Compute sequence log-probability
+        seq_log_prob = tf.reduce_sum(log_prob, axis=1)
+        seq_prob = tf.math.exp(seq_log_prob)
+        return is_outcome * seq_prob
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
         return config

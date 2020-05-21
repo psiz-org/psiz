@@ -32,7 +32,7 @@ import os
 import time
 
 import numpy as np
-import tensorflow.keras.optimizers
+import tensorflow as tf
 
 import psiz.utils
 
@@ -81,7 +81,7 @@ class Restarter(object):
 
         self.model = model
         self.optimizer = compile_kwargs.pop(
-            'optimizer', tensorflow.keras.optimizers.RMSprop()
+            'optimizer', tf.keras.optimizers.RMSprop()
         )
         self.stateless_compile_kwargs = compile_kwargs
         self.monitor = monitor
@@ -158,7 +158,6 @@ class Restarter(object):
             model_re = _new_model(
                 self.model, custom_objects=self.custom_objects
             )
-            # model_re.build([None, ]) TODO
 
             # Create new optimizer.
             optimizer_re = _new_optimizer(self.optimizer)
@@ -367,14 +366,17 @@ def set_from_record(model, tracker, idx):
 
 def _new_model(model, custom_objects={}):
     """Create new model."""
-    config = model.get_config()
-    return psiz.models.model_from_config(config, custom_objects=custom_objects)
+    with tf.keras.utils.custom_object_scope(custom_objects):
+        new_model = model.from_config(model.get_config())
+    return new_model
 
 
-def _new_optimizer(optimizer):
+def _new_optimizer(optimizer, custom_objects={}):
     """Create new optimizer."""
-    config = optimizer.get_config()
-    return type(optimizer).from_config(config)
+    config = tf.keras.optimizers.serialize(optimizer)
+    with tf.keras.utils.custom_object_scope(custom_objects):
+        new_optimizer = tf.keras.optimizers.deserialize(config)
+    return new_optimizer
 
 
 def _append_prefix(val_metrics, prefix):

@@ -1142,6 +1142,43 @@ class Rank(tf.keras.Model):
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
+    def test_step(self, data):
+        """The logic for one evaluation step.
+
+        Arguments:
+            data: A nested structure of `Tensor`s.
+
+        Returns:
+            A `dict` containing values that will be passed to
+            `tf.keras.callbacks.CallbackList.on_train_batch_end`.
+            Typically, the values of the `Model`'s metrics are
+            returned.
+
+        """
+        data = data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+
+        # y_pred = self(x, training=False)  TODO
+        # HACK for variational inference.
+        # Compute log prob of heldout set by averaging draws from the model:
+        # p(heldout | train) = int_model p(heldout|model) p(model|train)
+        #                   ~= 1/n * sum_{i=1}^n p(heldout | model_i)
+        # where model_i is a draw from the posterior p(model|train).
+        num_monte_carlo = 100  # TODO
+        y_pred = tf.stack([
+            self(x, training=False)
+            for _ in range(num_monte_carlo)
+        ], axis=0)
+        y_pred = tf.reduce_mean(y_pred, axis=0)
+
+        # Updates stateful loss metrics.
+        self.compiled_loss(
+            y, y_pred, sample_weight, regularization_losses=self.losses
+        )
+
+        self.compiled_metrics.update_state(y, y_pred, sample_weight)
+        return {m.name: m.result() for m in self.metrics}
+
     @property
     def n_stimuli(self):
         """Getter method for n_stimuli."""

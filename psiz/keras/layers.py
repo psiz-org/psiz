@@ -42,6 +42,7 @@ from tensorflow.python.eager import context
 from tensorflow.python.keras.utils import tf_utils
 from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import math_ops
+import tensorflow_probability as tfp
 from tensorflow_probability.python.distributions import kullback_leibler as kl_lib
 from tensorflow_probability.python.distributions import Normal
 from tensorflow_probability.python.layers import util as tfp_layers_util
@@ -99,9 +100,119 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         z_r = inputs[1]  # References.
         w = inputs[2]    # Dimension weights.
 
+        # Expand rho.
+        batch_size = tf.shape(z_q)[0]
+        n_compare = tf.shape(z_r)[2]  # TODO
+        n_outcome = tf.shape(z_q)[3]
+        rho = self.rho * tf.ones([batch_size, 1, n_compare, n_outcome])
+
         # Weighted Minkowski distance.
         x = z_q - z_r
-        d_qr = psiz.ops.wpnorm(x, w, self.rho)[:, 0]
+        d_qr = psiz.ops.wpnorm(x, w, rho)[:, 0]
+        return d_qr
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'fit_rho': self.fit_rho,
+            'rho_initializer': tf.keras.initializers.serialize(
+                self.rho_initializer
+            )
+        })
+        return config
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='WeightedMinkowskiVariational'
+)
+class WeightedMinkowskiVariational(tf.keras.layers.Layer):
+    """Variational analog of weighted Minkowski distance."""
+
+    def __init__(self, fit_rho=True, rho_initializer=None, **kwargs):
+        """Initialize.
+
+        Arguments:
+            fit_rho (optional): Boolean indicating if variable is
+                trainable.
+            rho_initializer (optional): Initializer for rho.
+
+        """
+        super(WeightedMinkowskiVariational, self).__init__(**kwargs)
+        self.fit_rho = fit_rho
+
+        # TODO initializer strategy?
+        # NOTE: Apply bijector below, hence the use of untransformed_rho
+        # initializer with range ]0., 2.] and not ]1., 3].
+        if rho_initializer is None:
+            rho_initializer = tf.random_uniform_initializer(0.01, 2.)
+        self.rho_initializer = tf.keras.initializers.get(rho_initializer)
+
+        untransformed_loc = self.add_weight(
+            shape=[], initializer=self.rho_initializer,
+            trainable=self.fit_rho, name='rho_posterior_loc',
+            dtype=K.floatx(),
+            # constraint=pk_constraints.GreaterThan(min_value=1.0)
+        )
+
+        untransformed_scale_initializer = tf.initializers.RandomNormal(
+            mean=-3., stddev=0.1
+        )
+        untransformed_scale = self.add_weight(
+            shape=[], initializer=untransformed_scale_initializer,
+            trainable=self.fit_rho, name='rho_posterior_untransformed_scale',
+            dtype=K.floatx(),
+        )
+
+        loc = tfp.util.DeferredTensor(
+            untransformed_loc,
+            lambda x: (1. + K.epsilon() + tf.nn.softplus(x))
+        )
+        scale = tfp.util.DeferredTensor(
+            untransformed_scale,
+            lambda x: (K.epsilon() + tf.nn.softplus(x))
+        )
+        dist = tfp.distributions.Normal(loc=loc, scale=scale)
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        self.rho_posterior = tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+
+        self.theta = {'rho': self.rho_posterior.distribution.loc}  # TODO
+
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs:
+                z_q: A set of embedding points.
+                    shape = (batch_size, n_dim [, n_sample])
+                z_r: A set of embedding points.
+                    shape = (batch_size, n_dim [, n_sample])
+                w: The weights allocated to each dimension
+                    in a weighted minkowski metric.
+                    shape = (batch_size, n_dim [, n_sample])
+
+        """
+        z_q = inputs[0]  # Query.
+        z_r = inputs[1]  # References.
+        w = inputs[2]    # Dimension weights.
+
+        # Reify posterior distribution of rho.
+        batch_size = tf.shape(z_q)[0]
+        n_compare = tf.shape(z_r)[2]  # TODO
+        n_outcome = tf.shape(z_q)[3]
+        rho = self.rho_posterior.sample(
+            sample_shape=(batch_size, 1, n_compare, n_outcome)
+        )
+
+        # Weighted Minkowski distance.
+        x = z_q - z_r
+        d_qr = psiz.ops.wpnorm(x, w, rho)[:, 0]
+
+        # Log debug metric. TODO REMOVE
+        self.add_metric(self.rho_posterior.distribution.scale, name="rho_stddev", aggregation='mean')
+
         return d_qr
 
     def get_config(self):

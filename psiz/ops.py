@@ -59,7 +59,6 @@ def wpnorm(x, w, p):
         dydp = dy * (
             p_0 - p_1
         )
-        dydp = tf.reduce_sum(dydp)
         return dydx, dydw, dydp
 
     return y, grad

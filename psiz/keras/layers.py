@@ -37,7 +37,14 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.python.keras import backend as K
+from tensorflow.python.eager import context
+from tensorflow.python.keras.utils import tf_utils
+from tensorflow.python.ops import embedding_ops
+from tensorflow.python.ops import math_ops
+from tensorflow_probability.python.distributions import kullback_leibler as kl_lib
+from tensorflow_probability.python.distributions import Normal
+from tensorflow_probability.python.layers import util as tfp_layers_util
 
 import psiz.keras.constraints as pk_constraints
 import psiz.keras.initializers as pk_initializers
@@ -221,6 +228,211 @@ class GroupAttention(tf.keras.layers.Layer):
                 tf.keras.constraints.serialize(self.embeddings_constraint)
         })
         return config
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='EmbeddingVariational'
+)
+class EmbeddingVariational(tf.keras.layers.Layer):
+    """Embedding layer class with variational estimator.
+
+    This layer implements the Bayesian variational inference analogue
+    to an Embedding layer by assuming the `embedding` is drawn from a
+    distribution. By default, the layer implements a stochastic forward
+    pass via sampling from the embedding posterior.
+
+    """
+
+    def __init__(
+            self, input_dim, output_dim, mask_zero=False, input_length=None,
+            embeddings_posterior_fn=tfp_layers_util.default_mean_field_normal_fn(),
+            embeddings_posterior_tensor_fn=lambda d: d.sample(),
+            embeddings_prior_fn=tfp_layers_util.default_multivariate_normal_fn,
+            embeddings_regularizer=None,
+            activity_regularizer=None,
+            embeddings_constraint=None,
+            kl_weight=1.,
+            **kwargs):
+        """Initialize."""
+        if 'input_shape' not in kwargs:
+            if input_length:
+                kwargs['input_shape'] = (input_length,)
+            else:
+                kwargs['input_shape'] = (None,)
+        dtype = kwargs.pop('dtype', K.floatx())
+        # We set autocast to False, as we do not want to cast floating-
+        # point inputs to self.dtype. In call(), we cast to int32, and
+        # casting to self.dtype before casting to int32 might cause the
+        # int32 values to be different due to a loss of precision.
+        kwargs['autocast'] = False
+        super(EmbeddingVariational, self).__init__(dtype=dtype, **kwargs)
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.embeddings_regularizer = tf.keras.regularizers.get(embeddings_regularizer)
+        self.activity_regularizer = tf.keras.regularizers.get(activity_regularizer)
+        self.embeddings_constraint = tf.keras.constraints.get(embeddings_constraint)
+        self.mask_zero = mask_zero
+        self.supports_masking = mask_zero
+        self.input_length = input_length
+        self._supports_ragged_inputs = True
+
+        self.embeddings_posterior_fn = embeddings_posterior_fn
+        self.embeddings_posterior_tensor_fn = embeddings_posterior_tensor_fn
+        self.embeddings_prior_fn = embeddings_prior_fn
+
+        self.kl_weight = kl_weight
+
+    @tf_utils.shape_type_conversion
+    def build(self, input_shape):
+        """Build."""
+        # If self.dtype is None, build weights using the default dtype.
+        dtype = tf.as_dtype(self.dtype or K.floatx())
+
+        # Note: most sparse optimizers do not have GPU kernels defined.
+        # When building graphs, the placement algorithm is able to
+        # place variables on CPU since it knows all kernels using the
+        # variable only exist on CPU. When eager execution is enabled,
+        # the placement decision has to be made right now. Checking for
+        # the presence of GPUs to avoid complicating the TPU codepaths
+        # which can handle sparse optimizers.
+        if context.executing_eagerly() and context.context().num_gpus():
+            with ops.device('cpu:0'):
+                self.embeddings_posterior = self.embeddings_posterior_fn(
+                    dtype, [self.input_dim, self.output_dim],
+                    'embeddings_posterior', self.trainable, self.add_weight
+                )
+                if self.embeddings_prior_fn is None:
+                    self.embeddings_prior = None
+                else:
+                    self.embeddings_prior = self.embeddings_prior_fn(
+                        dtype, [self.input_dim, self.output_dim],
+                        'embeddings_prior', self.trainable, self.add_weight
+                    )
+        else:
+            self.embeddings_posterior = self.embeddings_posterior_fn(
+                dtype, [self.input_dim, self.output_dim],
+                'embeddings_posterior', self.trainable, self.add_weight
+            )
+            if self.embeddings_prior_fn is None:
+                self.embeddings_prior = None
+            else:
+                self.embeddings_prior = self.embeddings_prior_fn(
+                    dtype, [self.input_dim, self.output_dim],
+                    'embeddings_prior', self.trainable, self.add_weight
+                )
+
+        self.built = True
+
+    def call(self, inputs):
+        """Call."""
+        dtype = K.dtype(inputs)
+        if dtype != 'int32' and dtype != 'int64':
+            inputs = math_ops.cast(inputs, 'int32')
+
+        # Sample from embeddings posterior distribution.
+        outputs = self._apply_variational_embeddings(inputs)
+
+        # Apply KL divergence. TODO
+        # self.add_loss(
+        #     lambda: kl_lib.kl_divergence(
+        #         self.embeddings_posterior, self.embeddings_prior
+        #     ) * self.kl_weight
+        # )
+
+        # Log debug metric. TODO REMOVE
+        stddev = tf.reduce_mean(self.embeddings_posterior.distribution.scale[1:, :])
+        self.add_metric(stddev, name="stddev", aggregation='mean')
+
+        return outputs
+
+    def get_config(self):
+        """Return configuration."""
+        # TODO
+        config = {
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+            'mask_zero': self.mask_zero,
+            'input_length': self.input_length,
+            # 'embeddings_posterior_fn': self.embeddings_posterior_fn,
+            # 'embeddings_prior_fn': self.embeddings_prior_fn,
+            'embeddings_regularizer':
+                tf.keras.regularizers.serialize(self.embeddings_regularizer),
+            'activity_regularizer':
+                tf.keras.regularizers.serialize(self.activity_regularizer),
+            'embeddings_constraint':
+                tf.keras.constraints.serialize(self.embeddings_constraint),
+            'kl_weight': self.kl_weight,
+        }
+
+        # function_keys = [
+        #     # 'embeddings_posterior_fn',
+        #     'embeddings_posterior_tensor_fn',
+        #     'embeddings_prior_fn',
+        #     # 'kernel_divergence_fn',
+        # ]
+        # for function_key in function_keys:
+        #     function = getattr(self, function_key)
+        #     if function is None:
+        #         function_name = None
+        #         function_type = None
+        #     else:
+        #         function_name, function_type = tfp_layers_util.serialize_function(
+        #             function
+        #         )
+        #     config[function_key] = function_name
+        #     config[function_key + '_type'] = function_type
+
+        base_config = super(EmbeddingVariational, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+    @classmethod
+    def from_config(cls, config):
+        """Create layer from configuration.
+
+        This method is the reverse of `get_config`, capable of
+        instantiating the same layer from the config dictionary.
+
+        Args:
+            config: A Python dictionary, typically the output of
+                `get_config`.
+
+        Returns:
+            layer: A layer instance.
+
+        """
+        config = config.copy()
+        # function_keys = [
+        #     'embeddings_posterior_fn',
+        #     # 'embeddings_posterior_tensor_fn',
+        #     'embeddings_prior_fn',
+        #     # 'kernel_divergence_fn',
+        # ]
+        # for function_key in function_keys:
+        #     serial = config[function_key]
+        #     function_type = config.pop(function_key + '_type')
+        #     if serial is not None:
+        #         config[function_key] = tfp_layers_util.deserialize_function(
+        #             serial, function_type=function_type
+        #         )
+        return cls(**config)
+
+    def _apply_variational_embeddings(self, inputs):
+        """Apply variational inference to embeddings."""
+        # Delay reification until end of call in order to generate
+        # independent samples for each instance in batch_size.
+        inputs_mean = embedding_ops.embedding_lookup(
+            self.embeddings_posterior.distribution.loc, inputs
+        )
+        inputs_scale = embedding_ops.embedding_lookup(
+            self.embeddings_posterior.distribution.scale, inputs
+        )
+        affine_dist = Normal(
+            loc=tf.zeros_like(inputs_mean), scale=inputs_scale
+        )
+        outputs = inputs_mean + self.embeddings_posterior_tensor_fn(affine_dist)
+        self.embeddings_posterior_tensor = None  # TODO
+        return outputs
 
 
 @tf.keras.utils.register_keras_serializable(

@@ -16,13 +16,17 @@
 
 """Example that infers an embedding using variation inference.
 
-Fake data is generated from a ground truth model for rank 8-choose-2 
+Fake data is generated from a ground truth model for rank 8-choose-2
 trial configurations.
+
+Example output:
+
+    R^2 Model Comparison:   0.94
 
 """
 
-import edward2 as ed
-from edward2.tensorflow import generated_random_variables  # TODO
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
@@ -39,7 +43,7 @@ def main():
     n_stimuli = 30
     n_dim = 3
     n_trial = 2000
-    batch_size = 500
+    batch_size = 100
     n_restart = 1  # TODO
 
     # Ground truth embedding.
@@ -62,53 +66,42 @@ def main():
     )[0]
     obs_train = obs.subset(train_idx)
     obs_val = obs.subset(val_idx)
-    # Expand dataset for stochastic generative processess. TODO
-    # n_train_sample = 1
-    # obs_train = psiz.trials.stack([obs_train for _ in range(n_train_sample)])
-    # n_val_sample = 100
-    # obs_val = psiz.trials.stack([obs_val for _ in range(n_val_sample)])
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=100, mode='min', restore_best_weights=True
+        'val_cce', patience=15, mode='min', restore_best_weights=True
+    )
+    cb_board = psiz.keras.callbacks.TensorBoardRe(
+        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
+        write_graph=False, write_images=False, update_freq='epoch',
+        profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
     callbacks = [cb_early]
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(lr=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
     }
 
     # Define model.
-    embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
-    # embeddings_initializer = ed.tensorflow.initializers.TrainableNormal(
-    #     # mean_initializer=psiz.keras.initializers.RandomScaleMVN(
-    #     #     minval=-2., maxval=-1.
-    #     # ),
-    #     stddev_initializer=tf.keras.initializers.TruncatedNormal(
-    #         mean=3., stddev=0.1
-    #     )
-    #     # stddev_initializer=tf.keras.initializers.Constant(value=.0001),
-    # )
-    # embedding = ed.layers.EmbeddingReparameterization(
-    #     n_stimuli+1, output_dim=n_dim, mask_zero=True,
-    #     embeddings_initializer=embeddings_initializer,
-    #     embeddings_regularizer=ed.tensorflow.regularizers.NormalKLDivergence(
-    #         stddev=.17, scale_factor=0.0
-    #     )
-    # )
-    kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+    # embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
+    kl_weight = (1.0 / obs_train.n_trial)
+    embedding = psiz.keras.layers.EmbeddingVariational(
+        n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight
     )
-    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
-    emb_inferred = psiz.models.Proxy(model=rankModel)
+    kernel = psiz.keras.layers.Kernel(
+        similarity=psiz.keras.layers.ExponentialSimilarityVariational(),
+        distance=psiz.keras.layers.WeightedMinkowskiVariational()
+    )
+    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    emb_inferred = psiz.models.Proxy(model=model)
 
     # Infer embedding.
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
+        obs_train, validation_data=obs_val, epochs=10000, batch_size=batch_size,
         callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
         compile_kwargs=compile_kwargs
     )
@@ -117,19 +110,11 @@ def main():
     # similarity matrices implied by each model.
     simmat_truth = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
     simmat_infer = psiz.utils.pairwise_matrix(
-        emb_inferred.similarity,
-        emb_inferred.z  # TODO
-        # emb_inferred.model.embedding.embeddings_initializer.mean.numpy()[1:, :]  # TODO
+        emb_inferred.similarity, emb_inferred.z
     )
     r_squared = psiz.utils.matrix_comparison(
         simmat_truth, simmat_infer, score='r2'
     )
-
-    # tf.print(emb_inferred.model.embedding.embeddings_initializer.stddev.numpy()[1:, :])
-    # Place in model.
-    # tf.print(tf.reduce_mean(
-    #     self.embedding.embeddings_initializer.stddev[1:, :]
-    # ))
 
     # Display comparison results. A good inferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
@@ -137,6 +122,58 @@ def main():
     print(
         '\n    R^2 Model Comparison: {0: >6.2f}\n'.format(r_squared)
     )
+    print(emb_inferred.theta)
+    plot_posterior(emb_inferred)
+
+
+def plot_posterior(emb_inferred):
+    """Plot posteriors."""
+    fig, ax = plt.subplots(figsize=(12, 5))
+
+    # Rho.
+    ax = plt.subplot(1, 3, 1)
+    xg = np.linspace(0, 5, 1000)
+    y = emb_inferred.model.kernel.distance.rho_posterior.distribution.prob(xg)
+    x_map = emb_inferred.model.kernel.distance.rho_posterior.distribution.loc.numpy()
+    ax.plot(xg, y)
+    ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
+    ax.set_xlabel('x')
+    ax.set_ylabel('p(x)')
+    ax.set_title('rho')
+
+    # Tau.
+    ax = plt.subplot(1, 3, 2)
+    xg = np.linspace(0, 5, 1000)
+    y = emb_inferred.model.kernel.similarity.tau_posterior.distribution.prob(xg)
+    x_map = emb_inferred.model.kernel.similarity.tau_posterior.distribution.loc.numpy()
+    ax.plot(xg, y)
+    ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
+    ax.set_xlabel('x')
+    ax.set_ylabel('p(x)')
+    ax.set_title('tau')
+
+    # Gamma.
+    x_map = emb_inferred.model.kernel.similarity.gamma_posterior.distribution.loc.numpy()
+    ax = plt.subplot(1, 3, 3)
+    xg = np.linspace(x_map - 1, x_map + 1, 1000)
+    y = emb_inferred.model.kernel.similarity.gamma_posterior.distribution.prob(xg)
+    ax.plot(xg, y)
+    ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
+    ax.set_xlabel('x')
+    ax.set_ylabel('p(x)')
+    ax.set_title('gamma')
+
+    # Beta.
+    # ax = plt.subplot(1, 4, 4)
+    # xg = np.linspace(0, 5, 1000)
+    # y = emb_inferred.model.kernel.similarity.rho_posterior.distribution.prob(xg)
+    # ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
+    # ax.set_xlabel('x')
+    # ax.set_ylabel('p(x)')
+    # ax.set_title('beta')
+
+    plt.tight_layout()
+    plt.show()
 
 
 def ground_truth(n_stimuli, n_dim):
@@ -148,8 +185,8 @@ def ground_truth(n_stimuli, n_dim):
     kernel = psiz.keras.layers.Kernel(
         similarity=psiz.keras.layers.ExponentialSimilarity()
     )
-    rankModel = psiz.models.Rank(embedding=embedding, kernel=kernel)
-    emb = psiz.models.Proxy(rankModel)
+    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    emb = psiz.models.Proxy(model)
 
     emb.theta = {
         'rho': 2.,

@@ -101,7 +101,7 @@ def main():
 
     # Infer embedding.
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=10000, batch_size=batch_size,
+        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
         callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
         compile_kwargs=compile_kwargs
     )
@@ -129,10 +129,10 @@ def plot_posterior(emb_inferred):
     fig, ax = plt.subplots(figsize=(12, 5))
 
     # Rho.
-    ax = plt.subplot(1, 3, 1)
-    xg = np.linspace(0, 5, 1000)
-    y = emb_inferred.model.kernel.distance.rho_posterior.distribution.prob(xg)
     x_map = emb_inferred.model.kernel.distance.rho_posterior.distribution.loc.numpy()
+    ax = plt.subplot(1, 3, 1)
+    xg = np.linspace(x_map - 1, x_map + 1, 1000)
+    y = emb_inferred.model.kernel.distance.rho_posterior.distribution.prob(xg)
     ax.plot(xg, y)
     ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
     ax.set_xlabel('x')
@@ -140,10 +140,10 @@ def plot_posterior(emb_inferred):
     ax.set_title('rho')
 
     # Tau.
-    ax = plt.subplot(1, 3, 2)
-    xg = np.linspace(0, 5, 1000)
-    y = emb_inferred.model.kernel.similarity.tau_posterior.distribution.prob(xg)
     x_map = emb_inferred.model.kernel.similarity.tau_posterior.distribution.loc.numpy()
+    ax = plt.subplot(1, 3, 2)
+    xg = np.linspace(x_map - 1, x_map + 1, 1000)
+    y = emb_inferred.model.kernel.similarity.tau_posterior.distribution.prob(xg)
     ax.plot(xg, y)
     ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
     ax.set_xlabel('x')

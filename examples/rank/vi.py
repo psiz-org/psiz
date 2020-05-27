@@ -117,12 +117,10 @@ def main():
     )
 
     # Display comparison results. A good inferred model will have a high
-    # R^2 value on the diagonal elements (max is 1) and relatively low R^2
-    # values on the off-diagonal elements.
+    # R^2 value (max is 1).
     print(
         '\n    R^2 Model Comparison: {0: >6.2f}\n'.format(r_squared)
     )
-    print(emb_inferred.theta)
     plot_posterior(emb_inferred)
 
 

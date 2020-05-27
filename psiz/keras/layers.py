@@ -150,9 +150,8 @@ class WeightedMinkowskiVariational(tf.keras.layers.Layer):
 
         untransformed_loc = self.add_weight(
             shape=[], initializer=self.rho_initializer,
-            trainable=self.fit_rho, name='rho_posterior_loc',
-            dtype=K.floatx(),
-            # constraint=pk_constraints.GreaterThan(min_value=1.0)
+            trainable=self.fit_rho, name='rho_posterior_untransformed_loc',
+            dtype=K.floatx()
         )
 
         untransformed_scale_initializer = tf.initializers.RandomNormal(
@@ -211,7 +210,7 @@ class WeightedMinkowskiVariational(tf.keras.layers.Layer):
         d_qr = psiz.ops.wpnorm(x, w, rho)[:, 0]
 
         # Log debug metric. TODO REMOVE
-        self.add_metric(self.rho_posterior.distribution.scale, name="rho_stddev", aggregation='mean')
+        # self.add_metric(self.rho_posterior.distribution.scale, name="rho_stddev", aggregation='mean')
 
         return d_qr
 
@@ -225,6 +224,11 @@ class WeightedMinkowskiVariational(tf.keras.layers.Layer):
             )
         })
         return config
+
+    @property
+    def rho(self):
+        """Getter method for `rho`."""
+        return self.rho_posterior.distribution.loc
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -342,6 +346,154 @@ class GroupAttention(tf.keras.layers.Layer):
 
 
 @tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='GroupAttentionVariational'
+)
+class GroupAttentionVariational(tf.keras.layers.Layer):
+    """Variational analog of group-specific attention weights."""
+
+    def __init__(
+            self, n_group=1, n_dim=None, fit_group=True,
+            embeddings_initializer=None, embeddings_regularizer=None,
+            embeddings_constraint=None, **kwargs):
+        """Initialize.
+
+        Arguments:
+            n_dim: An integer indicating the dimensionality of the
+                embeddings. Must be equal to or greater than one.
+            n_group (optional): An integer indicating the number of
+                different population groups in the embedding. A
+                separate set of attention weights will be inferred for
+                each group. Must be equal to or greater than one.
+            fit_group: Boolean indicating if variable is trainable.
+                shape=(n_group,)
+
+        Raises:
+            ValueError: If `n_dim` or `n_group` arguments are invalid.
+
+        """
+        super(GroupAttentionVariational, self).__init__(**kwargs)
+
+        if (n_group < 1):
+            raise ValueError(
+                "The number of groups (`n_group`) must be an integer greater "
+                "than 0."
+            )
+        self.n_group = n_group
+
+        if (n_dim < 1):
+            raise ValueError(
+                "The dimensionality (`n_dim`) must be an integer "
+                "greater than 0."
+            )
+        self.n_dim = n_dim
+
+        # Handle initializer.
+        if embeddings_initializer is None:
+            # scale = self.n_dim
+            # alpha = np.ones((self.n_dim))
+            # embeddings_initializer = pk_initializers.RandomAttention(
+            #     alpha, scale
+            # )
+            embeddings_initializer = tf.initializers.RandomNormal(0.01, .05)
+        self.embeddings_initializer = tf.keras.initializers.get(
+            embeddings_initializer
+        )
+
+        # Handle regularizer. TODO
+        self.embeddings_regularizer = tf.keras.regularizers.get(
+            embeddings_regularizer
+        )
+
+        # Handle constraints. TODO
+        if embeddings_constraint is None:
+            embeddings_constraint = pk_constraints.NonNegNorm(
+                scale=self.n_dim
+            )
+        self.embeddings_constraint = tf.keras.constraints.get(
+            embeddings_constraint
+        )
+
+        self.fit_group = fit_group
+
+        # TODO ==============================================================
+        untransformed_loc = self.add_weight(
+            shape=(self.n_group, self.n_dim),
+            initializer=self.embeddings_initializer,
+            trainable=self.fit_group, name='w_posterior_untransformed_loc',
+            dtype=K.floatx()
+        )
+
+        untransformed_scale_initializer = tf.initializers.RandomNormal(
+            mean=-3., stddev=0.1
+        )
+        untransformed_scale = self.add_weight(
+            shape=(self.n_group, self.n_dim), initializer=untransformed_scale_initializer,
+            trainable=self.fit_group, name='w_posterior_untransformed_scale',
+            dtype=K.floatx(),
+        )
+
+        loc = tfp.util.DeferredTensor(
+            untransformed_loc,
+            lambda x: (K.epsilon() + tf.math.sigmoid(x))  # TODO alt constraint
+        )
+        scale = tfp.util.DeferredTensor(
+            untransformed_scale,
+            lambda x: (K.epsilon() + tf.nn.softplus(x))
+        )
+        dist = tfp.distributions.Normal(loc=loc, scale=scale)
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        self.w_posterior = tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+
+    def call(self, inputs):
+        """Call.
+
+        Inflate weights by `group_id`.
+
+        Arguments:
+            inputs: A Tensor denoting `group_id`.
+
+        """
+        group_id = inputs[:, 0]
+
+        # Sample from posterior.
+        inputs_loc = tf.gather(self.w_posterior.distribution.loc, group_id)
+        inputs_scale = tf.gather(self.w_posterior.distribution.scale, group_id)
+        affine_dist = tfp.distributions.Normal(
+            loc=tf.zeros_like(inputs_loc), scale=inputs_scale
+        )
+        outputs = inputs_loc + affine_dist.sample()
+
+        # Log debug metric. TODO REMOVE
+        stddev = tf.reduce_mean(self.w_posterior.distribution.scale)
+        self.add_metric(stddev, name="stddev", aggregation='mean')
+
+        return outputs
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'n_group': self.n_group,
+            'n_dim': self.n_dim,
+            'fit_group': self.fit_group,
+            'embeddings_initializer':
+                tf.keras.initializers.serialize(self.embeddings_initializer),
+            'embeddings_regularizer':
+                tf.keras.regularizers.serialize(self.embeddings_regularizer),
+            'embeddings_constraint':
+                tf.keras.constraints.serialize(self.embeddings_constraint)
+        })
+        return config
+
+    @property
+    def w(self):
+        """Getter method for `w`."""
+        return self.w_posterior.distribution.loc
+
+
+@tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='EmbeddingVariational'
 )
 class EmbeddingVariational(tf.keras.layers.Layer):
@@ -452,8 +604,8 @@ class EmbeddingVariational(tf.keras.layers.Layer):
         # )
 
         # Log debug metric. TODO REMOVE
-        stddev = tf.reduce_mean(self.embeddings_posterior.distribution.scale[1:, :])
-        self.add_metric(stddev, name="stddev", aggregation='mean')
+        # stddev = tf.reduce_mean(self.embeddings_posterior.distribution.scale[1:, :])
+        # self.add_metric(stddev, name="stddev", aggregation='mean')
 
         return outputs
 
@@ -544,6 +696,11 @@ class EmbeddingVariational(tf.keras.layers.Layer):
         outputs = inputs_mean + self.embeddings_posterior_tensor_fn(affine_dist)
         self.embeddings_posterior_tensor = None  # TODO
         return outputs
+
+    @property
+    def embeddings(self):
+        """Getter method for `embeddings`."""
+        return self.embeddings_posterior.distribution.loc
 
 
 @tf.keras.utils.register_keras_serializable(

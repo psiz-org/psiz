@@ -23,7 +23,12 @@ infer a single embedding.
 
 Example output:
 
-    R^2 Model Comparison:   0.95
+    Restart Summary
+    n_valid_restart 3 | total_duration: 84 s
+    best | n_epoch: 123 | val_cce: 3.1770
+    mean ±stddev | n_epoch: 127 ±21 | val_cce: 3.1834 ±0.0054 | 27 ±5 s | 219 ±2 ms/epoch
+
+    R^2 Model Comparison:   0.96
 
 """
 

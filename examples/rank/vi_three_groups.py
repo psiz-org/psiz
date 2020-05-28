@@ -94,7 +94,7 @@ def main():
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=15, mode='min', restore_best_weights=True
     )
     callbacks = [cb_early]
 
@@ -106,18 +106,21 @@ def main():
         ]
     }
 
-    # Infer a shared embedding with group-specific attention weights.
+    # Define model with a shared embedding and group-specific attention
+    # weights.
     embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True
     )
     kernel = psiz.keras.layers.AttentionKernel(
+        distance=psiz.keras.layers.WeightedMinkowskiVariational(),
         attention=psiz.keras.layers.GroupAttentionVariational(
             n_dim=n_dim, n_group=n_group
         ),
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+        similarity=psiz.keras.layers.ExponentialSimilarityVariational()
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb_inferred = psiz.models.Proxy(model=model)
+    # Infer model.
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
         callbacks=callbacks, monitor='val_cce', n_restart=n_restart, verbose=2,

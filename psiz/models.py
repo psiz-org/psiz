@@ -175,7 +175,7 @@ class Proxy(object):
     def w(self):
         """Getter method for phi."""
         # TODO brittle
-        return self.model.kernel.attention.w.numpy()
+        return self.model.kernel.attention.w.numpy()  # TODO should kernel have a w property?
 
     @w.setter
     def w(self, w):
@@ -1001,7 +1001,8 @@ class Rank(tf.keras.Model):
     """
 
     def __init__(
-            self, embedding=None, kernel=None, behavior=None, **kwargs):
+            self, embedding=None, kernel=None, behavior=None,
+            n_sample_test=1, **kwargs):
         """Initialize.
 
         Arguments:
@@ -1011,6 +1012,9 @@ class Rank(tf.keras.Model):
                 n_stimuli, n_dim, n_group.
             distance (optional): A distance kernel function layer.
             similarity (optional): A similarity function layer.
+            n_sample_test (optional): The number of samples from
+                posterior to use during evaluation.
+            kwargs:  Additional key-word arguments.
 
         Raises:
             ValueError: If arguments are invalid.
@@ -1024,6 +1028,8 @@ class Rank(tf.keras.Model):
         if behavior is None:
             behavior = psiz.keras.layers.RankBehavior()
         self.behavior = behavior
+
+        self.n_sample_test = n_sample_test
 
         # Create convenience pointer to kernel parameters.
         self.theta = self.kernel.theta
@@ -1110,12 +1116,6 @@ class Rank(tf.keras.Model):
             )
             with backprop.GradientTape() as tape:
                 y_pred = self(x, training=True)
-                # y_pred_distribution = tfp.distributions.Categorical(
-                #     probs=y_pred, validate_args=True  # TODO
-                # )
-                # TODO have to expand last dimension of `y`, Perhaps this is
-                # the dimension that indicates number of samples?
-                # tf.expand_dims(y, axis=2), y_pred_distribution,
                 loss = self.compiled_loss(
                     y, y_pred, sample_weight, regularization_losses=self.losses
                 )
@@ -1158,16 +1158,15 @@ class Rank(tf.keras.Model):
         data = data_adapter.expand_1d(data)
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
 
-        # y_pred = self(x, training=False)  TODO
-        # HACK for variational inference.
-        # Compute log prob of heldout set by averaging draws from the model:
+        # NOTE: The standard prediction is performmed with one sample. To
+        # accommodate variational inference, the log prob of the data is
+        # computed by averaging samples from the model:
         # p(heldout | train) = int_model p(heldout|model) p(model|train)
         #                   ~= 1/n * sum_{i=1}^n p(heldout | model_i)
         # where model_i is a draw from the posterior p(model|train).
-        num_monte_carlo = 100  # TODO
         y_pred = tf.stack([
             self(x, training=False)
-            for _ in range(num_monte_carlo)
+            for _ in range(self.n_sample_test)
         ], axis=0)
         y_pred = tf.reduce_mean(y_pred, axis=0)
 
@@ -1209,6 +1208,7 @@ class Rank(tf.keras.Model):
         config = {
             'name': self.name,
             'class_name': self.__class__.__name__,
+            'n_sample_test': self.n_sample_test,
             'layers': copy.deepcopy(layer_configs)
         }
         return config
@@ -1226,15 +1226,17 @@ class Rank(tf.keras.Model):
 
         """
         model_config = copy.deepcopy(config)
-        layer_configs = model_config.pop('layers', None)
+        model_config.pop('class_name', None)
 
         # Deserialize layers.
+        layer_configs = model_config.pop('layers', None)
         built_layers = {}
         for layer_name, layer_config in layer_configs.items():
             layer = tf.keras.layers.deserialize(layer_config)
             built_layers[layer_name] = layer
 
-        return cls(**built_layers)
+        model_config.update(built_layers)
+        return cls(**model_config)
 
 
 # class Rate(tf.keras.Model):

@@ -118,7 +118,9 @@ def main():
         ),
         similarity=psiz.keras.layers.ExponentialSimilarityVariational()
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(
+        embedding=embedding, kernel=kernel, n_sample_test=100
+    )
     emb_inferred = psiz.models.Proxy(model=model)
     # Infer model.
     restart_record = emb_inferred.fit(

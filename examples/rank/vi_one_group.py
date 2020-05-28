@@ -21,7 +21,12 @@ trial configurations.
 
 Example output:
 
-    R^2 Model Comparison:   0.94
+    Restart Summary
+    n_valid_restart 3 | total_duration: 305 s
+    best | n_epoch: 202 | val_cce: 2.9570
+    mean ±stddev | n_epoch: 146 ±40 | val_cce: 2.9705 ±0.0100 | 96 ±26 s | 663 ±10 ms/epoch
+
+    R^2 Model Comparison:   0.96
 
 """
 
@@ -44,7 +49,7 @@ def main():
     n_dim = 3
     n_trial = 2000
     batch_size = 100
-    n_restart = 1  # TODO
+    n_restart = 3
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -96,13 +101,15 @@ def main():
         similarity=psiz.keras.layers.ExponentialSimilarityVariational(),
         distance=psiz.keras.layers.WeightedMinkowskiVariational()
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(
+        embedding=embedding, kernel=kernel, n_sample_test=100
+    )
     emb_inferred = psiz.models.Proxy(model=model)
 
     # Infer embedding.
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
-        callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
+        callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=1,
         compile_kwargs=compile_kwargs
     )
 

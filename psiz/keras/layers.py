@@ -466,8 +466,8 @@ class GroupAttentionVariational(tf.keras.layers.Layer):
         outputs = inputs_loc + affine_dist.sample()
 
         # Log debug metric. TODO REMOVE
-        stddev = tf.reduce_mean(self.w_posterior.distribution.scale)
-        self.add_metric(stddev, name="stddev", aggregation='mean')
+        # stddev = tf.reduce_mean(self.w_posterior.distribution.scale)
+        # self.add_metric(stddev, name="stddev", aggregation='mean')
 
         return outputs
 

@@ -16,8 +16,12 @@
 
 """Module for visualizing embeddings.
 
-Todo:
+Functions:
+    bvn_ellipse: Create a bivariate normal ellipse.
+
+TODO:
     classes -> class_dict
+
 """
 
 import os
@@ -407,3 +411,38 @@ def image_2d(
         # in plot.
         for i_handle in lgnd.legendHandles:
             i_handle._sizes = [30]
+
+
+def bvn_ellipse(mu, cov, r=1.96, **kwargs):
+    """Return ellipse object representing bivariate normal.
+
+    This code was inspired by a solution posted on Stack Overflow:
+    https://stackoverflow.com/a/25022642/1860294
+
+    Arguments:
+        mu: A 1D array of the mean.
+        cov: A 2D array of the covariance matrix.
+        r (optional): The radius (specified in standard deviations) at
+            which to draw the ellipse. The default value corresponds to
+            an ellipse indicating a region containing 95% of the
+            probability mass.
+        kwargs (optional): Additional key-word arguments to pass to
+            `matplotlib.patches.Ellipse` constructor.
+
+    Returns:
+        ellipse: A `matplotlib.patches.Ellipse` artist object.
+
+    """
+    def eig_sorted(cov):
+        """Sort eigenvalues."""
+        vals, vecs = np.linalg.eigh(cov)
+        order = vals.argsort()[::-1]
+        return vals[order], vecs[:, order]
+
+    vals, vecs = eig_sorted(cov)
+    theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
+    w, h = 2 * r * np.sqrt(vals)
+    ellipse = matplotlib.patches.Ellipse(
+        xy=(mu[0], mu[1]), width=w, height=h, angle=theta, **kwargs
+    )
+    return ellipse

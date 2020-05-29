@@ -414,15 +414,15 @@ def image_2d(
             i_handle._sizes = [30]
 
 
-def bvn_ellipse(mu, cov, r=1.96, **kwargs):
+def bvn_ellipse(loc, cov, r=1.96, **kwargs):
     """Return ellipse object representing bivariate normal.
 
     This code was inspired by a solution posted on Stack Overflow:
     https://stackoverflow.com/a/25022642/1860294
 
     Arguments:
-        mu: A 1D array of the mean.
-        cov: A 2D array of the covariance matrix.
+        loc: A 1D array denoting the mean.
+        cov: A 2D array denoting the covariance matrix.
         r (optional): The radius (specified in standard deviations) at
             which to draw the ellipse. The default value corresponds to
             an ellipse indicating a region containing 95% of the
@@ -444,6 +444,6 @@ def bvn_ellipse(mu, cov, r=1.96, **kwargs):
     theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
     w, h = 2 * r * np.sqrt(vals)
     ellipse = matplotlib.patches.Ellipse(
-        xy=(mu[0], mu[1]), width=w, height=h, angle=theta, **kwargs
+        xy=(loc[0], loc[1]), width=w, height=h, angle=theta, **kwargs
     )
     return ellipse

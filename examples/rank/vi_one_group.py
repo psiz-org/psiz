@@ -22,11 +22,11 @@ trial configurations.
 Example output:
 
     Restart Summary
-    n_valid_restart 3 | total_duration: 305 s
-    best | n_epoch: 202 | val_cce: 2.9570
-    mean ±stddev | n_epoch: 146 ±40 | val_cce: 2.9705 ±0.0100 | 96 ±26 s | 663 ±10 ms/epoch
+    n_valid_restart 3 | total_duration: 211 s
+    best | n_epoch: 112 | val_cce: 3.2553
+    mean ±stddev | n_epoch: 95 ±13 | val_cce: 3.2988 ±0.0406 | 65 ±8 s | 692 ±13 ms/epoch
 
-    R^2 Model Comparison:   0.96
+    R^2 Model Comparison:   0.92
 
 """
 
@@ -92,14 +92,17 @@ def main():
     }
 
     # Define model.
-    # embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
-    kl_weight = (1.0 / obs_train.n_trial)
+    kl_weight = 1. / obs_train.n_trial
     embedding = psiz.keras.layers.EmbeddingVariational(
         n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight
     )
     kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarityVariational(),
-        distance=psiz.keras.layers.WeightedMinkowskiVariational()
+        similarity=psiz.keras.layers.ExponentialSimilarityVariational(
+            kl_weight=kl_weight
+        ),
+        distance=psiz.keras.layers.WeightedMinkowskiVariational(
+            kl_weight=kl_weight
+        )
     )
     model = psiz.models.Rank(
         embedding=embedding, kernel=kernel, n_sample_test=100

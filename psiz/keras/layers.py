@@ -123,10 +123,35 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         return config
 
 
+class _Variational(tf.keras.layers.Layer):
+    """Private base class for variational layer."""
+
+    def __init__(self, kl_weight=1., **kwargs):
+        """Initialize.
+
+        Arguments:
+            kl_weight (optional): A scalar applied to the KL
+                divergence computation. This value should be 1 divided
+                by the total number of training examples.
+            kwargs: Additional key-word arguments.
+
+        """
+        super(_Variational, self).__init__(**kwargs)
+        self.kl_weight = kl_weight
+
+    def get_config(self):
+        """Return configuration."""
+        config = super().get_config()
+        config.update({
+            'kl_weight': self.kl_weight
+        })
+        return config
+
+
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='WeightedMinkowskiVariational'
 )
-class WeightedMinkowskiVariational(tf.keras.layers.Layer):
+class WeightedMinkowskiVariational(_Variational):
     """Variational analog of weighted Minkowski distance."""
 
     def __init__(self, fit_rho=True, rho_initializer=None, **kwargs):
@@ -348,7 +373,7 @@ class GroupAttention(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='GroupAttentionVariational'
 )
-class GroupAttentionVariational(tf.keras.layers.Layer):
+class GroupAttentionVariational(_Variational):
     """Variational analog of group-specific attention weights."""
 
     def __init__(
@@ -496,7 +521,7 @@ class GroupAttentionVariational(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='EmbeddingVariational'
 )
-class EmbeddingVariational(tf.keras.layers.Layer):
+class EmbeddingVariational(_Variational):
     """Embedding layer class with variational estimator.
 
     This layer implements the Bayesian variational inference analogue
@@ -514,7 +539,6 @@ class EmbeddingVariational(tf.keras.layers.Layer):
             embeddings_regularizer=None,
             activity_regularizer=None,
             embeddings_constraint=None,
-            kl_weight=1.,
             **kwargs):
         """Initialize."""
         if 'input_shape' not in kwargs:
@@ -543,8 +567,6 @@ class EmbeddingVariational(tf.keras.layers.Layer):
         self.embeddings_posterior_fn = embeddings_posterior_fn
         self.embeddings_posterior_tensor_fn = embeddings_posterior_tensor_fn
         self.embeddings_prior_fn = embeddings_prior_fn
-
-        self.kl_weight = kl_weight
 
     @tf_utils.shape_type_conversion
     def build(self, input_shape):
@@ -625,7 +647,6 @@ class EmbeddingVariational(tf.keras.layers.Layer):
                 tf.keras.regularizers.serialize(self.activity_regularizer),
             'embeddings_constraint':
                 tf.keras.constraints.serialize(self.embeddings_constraint),
-            'kl_weight': self.kl_weight,
         }
 
         # function_keys = [
@@ -913,7 +934,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='ExponentialSimilarityVariational'
 )
-class ExponentialSimilarityVariational(tf.keras.layers.Layer):
+class ExponentialSimilarityVariational(_Variational):
     """Exponential family similarity function.
 
     This exponential-family similarity function is parameterized as:

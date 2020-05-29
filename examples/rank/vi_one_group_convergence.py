@@ -57,13 +57,13 @@ def main():
     small_size = 6
     medium_size = 8
     large_size = 10
-    plt.rc('font', size=small_size)          # controls default text sizes
-    plt.rc('axes', titlesize=medium_size)     # fontsize of the axes title
-    plt.rc('axes', labelsize=small_size)    # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=small_size)    # fontsize of the tick labels
-    plt.rc('ytick', labelsize=small_size)    # fontsize of the tick labels
-    plt.rc('legend', fontsize=small_size)    # legend fontsize
-    plt.rc('figure', titlesize=large_size)  # fontsize of the figure title
+    plt.rc('font', size=small_size)  # controls default text sizes
+    plt.rc('axes', titlesize=medium_size)
+    plt.rc('axes', labelsize=small_size)
+    plt.rc('xtick', labelsize=small_size)
+    plt.rc('ytick', labelsize=small_size)
+    plt.rc('legend', fontsize=small_size)
+    plt.rc('figure', titlesize=large_size)
 
     # Color settings.
     cmap = matplotlib.cm.get_cmap('jet')
@@ -131,17 +131,23 @@ def main():
         obs_round_train = obs_train.subset(include_idx)
 
         # Define model.
+        kl_weight = 1. / obs_train.n_trial
         embedding = psiz.keras.layers.EmbeddingVariational(
-            n_stimuli+1, n_dim, mask_zero=True
+            n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight
         )
         kernel = psiz.keras.layers.Kernel(
-            distance=psiz.keras.layers.WeightedMinkowskiVariational(),
-            similarity=psiz.keras.layers.ExponentialSimilarityVariational()
+            distance=psiz.keras.layers.WeightedMinkowskiVariational(
+                kl_weight=kl_weight
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarityVariational(
+                kl_weight=kl_weight
+            )
         )
         model = psiz.models.Rank(
             embedding=embedding, kernel=kernel, n_sample_test=100
         )
         emb_inferred = psiz.models.Proxy(model=model)
+
         # Infer embedding.
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,

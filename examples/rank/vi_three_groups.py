@@ -24,19 +24,25 @@ inferred from the simulated data and compared to the ground truth
 model.
 
 Example output:
+
+    Restart Summary
+    n_valid_restart 1 | total_duration: 510 s
+    best | n_epoch: 229 | val_cce: 3.0566
+    mean ±stddev | n_epoch: 229 ±0 | val_cce: 3.0566 ±0.0000 | 493 ±0 s | 2155 ±0 ms/epoch
+
     Attention weights:
-          Novice | [3.38 3.32 0.49 0.43]
-    Intermediate | [2.06 2.18 2.04 2.18]
-          Expert | [0.55 0.50 3.40 3.32]
+          Novice | [0.82 0.80 0.12 0.11]
+    Intermediate | [0.42 0.47 0.46 0.45]
+          Expert | [0.11 0.11 0.81 0.83]
 
     Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.95    0.68    0.16
-     Interm |   0.64    0.96    0.54
-     Expert |   0.16    0.61    0.96
+     Novice |   0.96    0.61    0.19
+     Interm |   0.62    0.96    0.67
+     Expert |   0.20    0.69    0.97
 
 """
 
@@ -106,26 +112,31 @@ def main():
         ]
     }
 
-    # Define model with a shared embedding and group-specific attention
-    # weights.
-    embedding = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+    # Define model.
+    kl_weight = 1. / obs_train.n_trial
+    embedding = psiz.keras.layers.EmbeddingVariational(
+        n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight
     )
     kernel = psiz.keras.layers.AttentionKernel(
-        distance=psiz.keras.layers.WeightedMinkowskiVariational(),
-        attention=psiz.keras.layers.GroupAttentionVariational(
-            n_dim=n_dim, n_group=n_group
+        distance=psiz.keras.layers.WeightedMinkowskiVariational(
+            kl_weight=kl_weight
         ),
-        similarity=psiz.keras.layers.ExponentialSimilarityVariational()
+        attention=psiz.keras.layers.GroupAttentionVariational(
+            n_dim=n_dim, n_group=n_group, kl_weight=kl_weight
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarityVariational(
+            kl_weight=kl_weight
+        )
     )
     model = psiz.models.Rank(
         embedding=embedding, kernel=kernel, n_sample_test=100
     )
     emb_inferred = psiz.models.Proxy(model=model)
+
     # Infer model.
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
-        callbacks=callbacks, monitor='val_cce', n_restart=n_restart, verbose=2,
+        callbacks=callbacks, monitor='val_cce', n_restart=n_restart, verbose=1,
         compile_kwargs=compile_kwargs
     )
 

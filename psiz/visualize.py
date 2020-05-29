@@ -14,10 +14,11 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Module for visualizing embeddings.
+"""Module of visualization tools.
 
 Functions:
-    bvn_ellipse: Create a bivariate normal ellipse.
+    bvn_ellipse: Create an ellipse representing a bivariate normal
+        distribution.
 
 TODO:
     classes -> class_dict

@@ -21,6 +21,8 @@ Classes:
     ProgressBarRe: A progress bar displayed in the terminal.
 
 Functions:
+    affine_mvn: Affine transformation of multivariate normal
+        distribution.
     pairwise_matrix: Return the similarity matrix characterizing
         the embedding.
     similarity_matrix: Return the similarity matrix characterizing
@@ -43,6 +45,52 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.stats import pearsonr
 from sklearn.metrics import r2_score
+
+
+def affine_mvn(loc, cov, r=None, t=None):
+    """Affine transformation of multivariate normal.
+
+    Performs the following operations:
+        loc_affine = loc @ r + t
+        cov_affine = r^T @ cov @ r
+
+    Arguments:
+        loc: Location parameters.
+            shape=(1, n_dim)
+        cov: Covariance.
+            shape=(n_dim, n_dim)
+        r: Rotation matrix.
+            shape=(n_dim, n_dim)
+        t: Transformation vector.
+            shape=(1, n_dim)
+
+    Returns:
+        loc_affine: Rotated location parameters.
+        cov_affine: Rotated covariance.
+
+    NOTE:
+        This implementation hits the means with a rotation matrix on
+        the RHS, allowing the rows to correspond to an instance and
+        columns to correspond to dimensionality. The more conventional
+        pattern has rows corresponding to dimensionality, in which case
+        the code would be implemented as:
+
+        ```
+        loc_affine = np.matmul(r, loc) + t
+        cov_affine = np.matmul(r, np.matmul(cov, np.transpose(r)))
+        ```
+
+    """
+    n_dim = loc.shape[0]
+
+    if t is None:
+        t = 0
+    if r is None:
+        r = np.eye(n_dim)
+
+    loc_affine = np.matmul(loc, r) + t
+    cov_affine = np.matmul(np.transpose(r), np.matmul(cov, r))
+    return loc_affine, cov_affine
 
 
 def assess_convergence(

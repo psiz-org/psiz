@@ -337,7 +337,7 @@ def procrustes_2d(x, y, n_restart=10, scale=True):
         s = params[3] * np.eye(n_dim)
         r = rotation_matrix(params[2])
         r = np.matmul(s, r)
-        f = np.array([[params[4], 0], [0, 1]])
+        f = np.array([[np.sign(params[4]), 0], [0, np.sign(params[5])]])
         r = np.matmul(f, r)
 
         # Assemble translation vector.
@@ -369,16 +369,21 @@ def procrustes_2d(x, y, n_restart=10, scale=True):
             s_bnds = (1., 1.)
         # Perform a flip on some restarts.
         if np.random.rand(1) < .5:
-            f0 = -1.
+            fx0 = -.1
         else:
-            f0 = 1.
-        params0 = np.array((x0, y0, theta0, s0, f0))
+            fx0 = .1
+        if np.random.rand(1) < .5:
+            fy0 = -.1
+        else:
+            fy0 = .1
+        params0 = np.array((x0, y0, theta0, s0, fx0, fy0))
         bnds = (
             (None, None),
             (None, None),
             (0., 2*np.pi),
             s_bnds,
-            (f0, f0)
+            (-.1, .1),
+            (-.1, .1)
         )
         res = minimize(objective_fn, params0, args=(x, y), bounds=bnds)
         params_candidate = res.x

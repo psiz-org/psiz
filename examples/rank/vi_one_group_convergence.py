@@ -170,8 +170,31 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_cce', verbose=2, compile_kwargs=compile_kwargs
+            monitor='val_cce', verbose=1, compile_kwargs=compile_kwargs
         )
+
+        # TODO
+        n_sample = 100
+        emb_inferred.model.embedding.build([None, None, None])
+        z_sample = emb_inferred.model.embedding.embeddings_posterior.distribution.sample(n_sample).numpy()
+        z_sample = z_sample[:, 1:, :]
+        simmat_infer = np.zeros([n_sample, n_stimuli, n_stimuli])
+        for i_sample in range(n_sample):
+            simmat_infer[i_sample] = psiz.utils.pairwise_matrix(
+                emb_inferred.similarity, z_sample[i_sample]
+            )
+
+        simmat_mean = np.mean(simmat_infer, axis=0)
+        simmat_std = np.std(simmat_infer, axis=0)
+
+        # Compare to real.
+        ci_low = simmat_mean - (1.96 * simmat_std)
+        ci_high = simmat_mean + (1.96 * simmat_std)
+        within_ci = np.logical_and(
+            np.greater(simmat_true, ci_low),
+            np.less(simmat_true, ci_high)
+        )
+        print('similarities within 95% CI: {0:.2f}'.format(np.sum(within_ci) / within_ci.size))
 
         train_cce[i_frame] = restart_record.record['cce'][0]
         val_cce[i_frame] = restart_record.record['val_cce'][0]
@@ -448,6 +471,34 @@ def apply_affine(loc, cov, r, t):
             loc[np.newaxis, i_dist], cov[i_dist], r, t
         )
     return loc_a, cov_a
+
+
+def similarity_matrix(kernel_fn, z):
+    """Return a pairwise similarity matrix.
+
+    Arguments:
+        kernel_fn: A kernel function
+        z: A set of points.
+            shape=(n_stimuli, n_dim, n_sample)
+
+    Returns:
+        A 2D array where element s_{i,j} indicates the similarity
+            between the ith and jth stimulus.
+
+    """
+    n_stimuli = z.shape[0]
+    n_sample = z.shape[2]
+
+    xg = np.arange(n_stimuli)
+    a, b = np.meshgrid(xg, xg)
+    a = a.flatten()
+    b = b.flatten()
+
+    z_a = z[a, :, :]
+    z_b = z[b, :, :]
+    k = kernel_fn(z_a, z_b)
+    k = k.reshape(n_stimuli, n_stimuli, n_sample)
+    return k
 
 
 if __name__ == "__main__":

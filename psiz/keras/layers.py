@@ -160,49 +160,92 @@ class WeightedMinkowskiVariational(_Variational):
         Arguments:
             fit_rho (optional): Boolean indicating if variable is
                 trainable.
-            rho_initializer (optional): Initializer for rho.
+            rho_initializer (optional): Initializer for rho in
+                untransformed coordinates.
 
         """
         super(WeightedMinkowskiVariational, self).__init__(**kwargs)
+        # fit_rho = False  # TODO
         self.fit_rho = fit_rho
 
-        # TODO initializer strategy?
-        # NOTE: Apply bijector below, hence the use of untransformed_rho
-        # initializer with range ]0., 2.] and not ]1., 3].
+        # TODO currently ignoring this initializer.
         if rho_initializer is None:
             rho_initializer = tf.random_uniform_initializer(0.01, 2.)
         self.rho_initializer = tf.keras.initializers.get(rho_initializer)
 
-        untransformed_loc = self.add_weight(
-            shape=[], initializer=self.rho_initializer,
-            trainable=self.fit_rho, name='rho_posterior_untransformed_loc',
+        # Define initial posterior of `rho`.
+        concentration_unt_init = tf.keras.initializers.Constant(4.6051)
+        rate_unt_int = tf.keras.initializers.Constant(4.5951)
+        concentration_unt = self.add_weight(
+            shape=[], initializer=concentration_unt_init,
+            trainable=self.fit_rho,
+            name='rho_posterior_untransformed_concentration',
             dtype=K.floatx()
         )
-
-        untransformed_scale_initializer = tf.initializers.RandomNormal(
-            mean=-3., stddev=0.1
-        )
-        untransformed_scale = self.add_weight(
-            shape=[], initializer=untransformed_scale_initializer,
-            trainable=self.fit_rho, name='rho_posterior_untransformed_scale',
+        rate_unt = self.add_weight(
+            shape=[], initializer=rate_unt_int,
+            trainable=self.fit_rho, name='rho_posterior_untransformed_rate',
             dtype=K.floatx(),
         )
+        concentration = tfp.util.DeferredTensor(
+            concentration_unt,
+            lambda x: tf.exp(x)
+        )
+        rate = tfp.util.DeferredTensor(
+            rate_unt,
+            lambda x: tf.exp(x)
+        )
+        dist = tfp.distributions.Gamma(concentration=concentration, rate=rate)
 
-        loc = tfp.util.DeferredTensor(
-            untransformed_loc,
-            lambda x: (1. + K.epsilon() + tf.nn.softplus(x))
-        )
-        scale = tfp.util.DeferredTensor(
-            untransformed_scale,
-            lambda x: (K.epsilon() + tf.nn.softplus(x))
-        )
-        dist = tfp.distributions.Normal(loc=loc, scale=scale)
+        # TODO initializer strategy?
+        # NOTE: Apply bijector below, hence the use of untransformed_rho
+        # initializer with range ]0., 2.] and not ]1., 3].
+        # if rho_initializer is None:
+        #     # rho_initializer = tf.random_uniform_initializer(0.01, 2.)  # TODO
+        #     rho_initializer = tf.keras.initializers.Constant(2.)  # TODO not great with softmax
+        # self.rho_initializer = tf.keras.initializers.get(rho_initializer)
+
+        # untransformed_loc = self.add_weight(
+        #     shape=[], initializer=self.rho_initializer,
+        #     trainable=self.fit_rho, name='rho_posterior_untransformed_loc',
+        #     dtype=K.floatx()
+        # )
+
+        # untransformed_scale_initializer = tf.initializers.RandomNormal(
+        #     mean=-3., stddev=0.1
+        # )
+        # # untransformed_scale_initializer = tf.initializers.Constant(.0001)  # TODO
+        # untransformed_scale = self.add_weight(
+        #     shape=[], initializer=untransformed_scale_initializer,
+        #     trainable=self.fit_rho, name='rho_posterior_untransformed_scale',
+        #     dtype=K.floatx(),
+        # )
+
+        # # loc = tfp.util.DeferredTensor( TODO
+        # #     untransformed_loc,
+        # #     lambda x: (1. + K.epsilon() + tf.nn.softplus(x))
+        # # )
+        # loc = untransformed_loc
+        # scale = tfp.util.DeferredTensor(
+        #     untransformed_scale,
+        #     lambda x: (K.epsilon() + tf.nn.softplus(x))
+        # )
+        # dist = tfp.distributions.Normal(loc=loc, scale=scale)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         self.rho_posterior = tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )
 
-        self.theta = {'rho': self.rho_posterior.distribution.loc}  # TODO
+        # Initialize prior.
+        concentration = tf.constant(2.)
+        rate = tf.constant(1.)
+        dist = tfp.distributions.Gamma(concentration=concentration, rate=rate)
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        self.rho_prior = tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+
+        self.theta = {'rho': self.rho_posterior.distribution.mode()}  # TODO mode ok?
 
     def call(self, inputs):
         """Call.
@@ -228,14 +271,24 @@ class WeightedMinkowskiVariational(_Variational):
         n_outcome = tf.shape(z_q)[3]
         rho = self.rho_posterior.sample(
             sample_shape=(batch_size, 1, n_compare, n_outcome)
-        )
+        ) + tf.constant(1.)  # TODO still good?
 
         # Weighted Minkowski distance.
         x = z_q - z_r
         d_qr = psiz.ops.wpnorm(x, w, rho)[:, 0]
 
+        # Apply KL divergence.
+        self.add_loss(
+            lambda: kl_lib.kl_divergence(
+                self.rho_posterior, self.rho_prior
+            ) * self.kl_weight
+        )
+
         # Log debug metric. TODO REMOVE
-        # self.add_metric(self.rho_posterior.distribution.scale, name="rho_stddev", aggregation='mean')
+        c = self.rho_posterior.distribution.concentration
+        r = self.rho_posterior.distribution.rate
+        self.add_metric(c, name="c", aggregation='mean')
+        self.add_metric(r, name="r", aggregation='mean')
 
         return d_qr
 
@@ -488,13 +541,7 @@ class GroupAttentionVariational(_Variational):
         affine_dist = tfp.distributions.Normal(
             loc=tf.zeros_like(inputs_loc), scale=inputs_scale
         )
-        outputs = inputs_loc + affine_dist.sample()
-
-        # Log debug metric. TODO REMOVE
-        # stddev = tf.reduce_mean(self.w_posterior.distribution.scale)
-        # self.add_metric(stddev, name="stddev", aggregation='mean')
-
-        return outputs
+        return inputs_loc + affine_dist.sample()
 
     def get_config(self):
         """Return layer configuration."""
@@ -566,7 +613,18 @@ class EmbeddingVariational(_Variational):
 
         self.embeddings_posterior_fn = embeddings_posterior_fn
         self.embeddings_posterior_tensor_fn = embeddings_posterior_tensor_fn
-        self.embeddings_prior_fn = embeddings_prior_fn
+        self.embeddings_prior_fn = embeddings_prior_fn  # TODO
+
+        def default_multivariate_normal_fn(
+                dtype, shape, name, trainable, add_variable_fn):
+            dist = tfp.distributions.Normal(
+                loc=tf.zeros(shape, dtype), scale=dtype.as_numpy_dtype(.17)  # TODO
+            )
+            batch_ndims = tf.size(dist.batch_shape_tensor())
+            return tfp.distributions.Independent(
+                dist, reinterpreted_batch_ndims=batch_ndims)
+
+        self.embeddings_prior_fn = default_multivariate_normal_fn
 
     @tf_utils.shape_type_conversion
     def build(self, input_shape):
@@ -618,16 +676,12 @@ class EmbeddingVariational(_Variational):
         # Sample from embeddings posterior distribution.
         outputs = self._apply_variational_embeddings(inputs)
 
-        # Apply KL divergence. TODO
-        # self.add_loss(
-        #     lambda: kl_lib.kl_divergence(
-        #         self.embeddings_posterior, self.embeddings_prior
-        #     ) * self.kl_weight
-        # )
-
-        # Log debug metric. TODO REMOVE
-        # stddev = tf.reduce_mean(self.embeddings_posterior.distribution.scale[1:, :])
-        # self.add_metric(stddev, name="stddev", aggregation='mean')
+        # Apply KL divergence.
+        self.add_loss(
+            lambda: kl_lib.kl_divergence(
+                self.embeddings_posterior, self.embeddings_prior
+            ) * self.kl_weight
+        )
 
         return outputs
 
@@ -983,10 +1037,12 @@ class ExponentialSimilarityVariational(_Variational):
         """
         super(ExponentialSimilarityVariational, self).__init__(**kwargs)
 
+        fit_tau = False  # TODO
         self.fit_tau = fit_tau
         if tau_initializer is None:
             # NOTE: untransformed initializer
-            tau_initializer = tf.random_uniform_initializer(0., 1.) 
+            # tau_initializer = tf.random_uniform_initializer(0., 1.)  # TODO
+            tau_initializer = tf.keras.initializers.Constant(0.)  # TODO
         self.tau_initializer = tf.keras.initializers.get(tau_initializer)
 
         untransformed_loc = self.add_weight(
@@ -995,33 +1051,42 @@ class ExponentialSimilarityVariational(_Variational):
             dtype=K.floatx()
         )
 
-        untransformed_scale_initializer = tf.initializers.RandomNormal(
-            mean=-3., stddev=0.1
-        )
+        # untransformed_scale_initializer = tf.initializers.RandomNormal( % TODO
+        #     mean=-3., stddev=0.1
+        # )
+        untransformed_scale_initializer = tf.initializers.Constant(.0001)
         untransformed_scale = self.add_weight(
             shape=[], initializer=untransformed_scale_initializer,
             trainable=self.fit_tau, name='tau_posterior_untransformed_scale',
             dtype=K.floatx(),
         )
 
+        # loc = tfp.util.DeferredTensor(s  # TODO
+        #     untransformed_loc,
+        #     lambda x: (1. + K.epsilon() + tf.nn.softplus(x))
+        # )
         loc = tfp.util.DeferredTensor(
             untransformed_loc,
-            lambda x: (1. + K.epsilon() + tf.nn.softplus(x))
+            lambda x: (1. + x)
         )
-        scale = tfp.util.DeferredTensor(
-            untransformed_scale,
-            lambda x: (K.epsilon() + tf.nn.softplus(x))
-        )
+        # scale = tfp.util.DeferredTensor(  # TODO
+        #     untransformed_scale,
+        #     lambda x: (K.epsilon() + tf.nn.softplus(x))
+        # )
+        scale = untransformed_scale  # TODO
         dist = tfp.distributions.Normal(loc=loc, scale=scale)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         self.tau_posterior = tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )
 
+        fit_gamma = False  # TODO
+        # tf.pow(10., gamma)  TODO transform
         self.fit_gamma = fit_gamma
         if gamma_initializer is None:
             # gamma_initializer = tf.random_uniform_initializer(0., .001)
-            gamma_initializer = tf.random_uniform_initializer(-7, -3)
+            # gamma_initializer = tf.random_uniform_initializer(-7, -3)
+            gamma_initializer = tf.keras.initializers.Constant(0.)
         self.gamma_initializer = tf.keras.initializers.get(gamma_initializer)
 
         loc = self.add_weight(
@@ -1030,9 +1095,10 @@ class ExponentialSimilarityVariational(_Variational):
             dtype=K.floatx()
         )
 
-        untransformed_scale_initializer = tf.initializers.RandomNormal(
-            mean=-3., stddev=0.1
-        )
+        untransformed_scale_initializer = tf.initializers.Constant(.001)
+        # untransformed_scale_initializer = tf.initializers.RandomNormal(
+        #     mean=-3., stddev=0.1
+        # ) TODO
         untransformed_scale = self.add_weight(
             shape=[], initializer=untransformed_scale_initializer,
             trainable=self.fit_gamma,
@@ -1040,10 +1106,11 @@ class ExponentialSimilarityVariational(_Variational):
             dtype=K.floatx(),
         )
 
-        scale = tfp.util.DeferredTensor(
-            untransformed_scale,
-            lambda x: (K.epsilon() + tf.nn.softplus(x))
-        )
+        # scale = tfp.util.DeferredTensor(
+        #     untransformed_scale,
+        #     lambda x: (K.epsilon() + tf.nn.softplus(x))
+        # )
+        scale = untransformed_scale  # TODO
         dist = tfp.distributions.Normal(loc=loc, scale=scale)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         self.gamma_posterior = tfp.distributions.Independent(
@@ -1087,7 +1154,7 @@ class ExponentialSimilarityVariational(_Variational):
         gamma = self.gamma_posterior.sample(sample_shape=input_shape)
         return tf.exp(
             tf.negative(self.beta) * tf.pow(inputs, tau)
-        ) + tf.pow(10., gamma)
+        ) + gamma
 
     def get_config(self):
         """Return layer configuration."""

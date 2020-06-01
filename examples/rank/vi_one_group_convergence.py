@@ -22,9 +22,12 @@ demonstrating how the inferred model improves and asymptotes as more
 data is added.
 
 NOTE: This example uses `imageio` to create frames and a GIF animation.
+The frames are stored in the temporary directory `.psiz/tmp` in your
+home directory.
 
 """
 
+import copy
 import os
 from pathlib import Path
 
@@ -45,11 +48,15 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    fp_ani = Path.home() / Path('vi_one_group_convergence')
+    fp_ani = Path.home() / Path('vi_one_group_convergence')  # TODO
+    # fp_tmp = Path.home() / Path(
+    #     '.psiz', 'tmp', 'examples', 'vi_one_group_convergence'
+    # )
+    # fp_ani = Path.home() / Path('vi_one_group_convergence')
     n_stimuli = 30
     n_dim = 2
     n_trial = 2000
-    n_restart = 3
+    n_restart = 1  # TODO
     batch_size = 100
     n_frame = 8
 
@@ -135,12 +142,23 @@ def main():
         embedding = psiz.keras.layers.EmbeddingVariational(
             n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight
         )
+        # kernel = psiz.keras.layers.Kernel(
+        #     distance=psiz.keras.layers.WeightedMinkowskiVariational(
+        #         kl_weight=kl_weight
+        #     ),
+        #     similarity=psiz.keras.layers.ExponentialSimilarityVariational(
+        #         kl_weight=kl_weight
+        #     )
+        # )
         kernel = psiz.keras.layers.Kernel(
-            distance=psiz.keras.layers.WeightedMinkowskiVariational(
-                kl_weight=kl_weight
+            distance=psiz.keras.layers.WeightedMinkowski(
+                fit_rho=False,
+                rho_initializer=tf.keras.initializers.Constant(2.),
             ),
             similarity=psiz.keras.layers.ExponentialSimilarityVariational(
-                kl_weight=kl_weight
+                fit_tau=False, fit_gamma=False,
+                tau_initializer=tf.keras.initializers.Constant(1.),
+                gamma_initializer=tf.keras.initializers.Constant(0.),
             )
         )
         model = psiz.models.Rank(
@@ -152,7 +170,7 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_cce', verbose=1, compile_kwargs=compile_kwargs
+            monitor='val_cce', verbose=2, compile_kwargs=compile_kwargs
         )
 
         train_cce[i_frame] = restart_record.record['cce'][0]
@@ -201,55 +219,68 @@ def plot_frame(
         fig0, n_obs, train_cce, val_cce, test_cce, r2, emb_true, emb_inferred,
         color_array):
     """Plot frame."""
+    # Settings.
+    s = 10
+
     gs = fig0.add_gridspec(6, 8)
 
     f0_ax0 = fig0.add_subplot(gs[0:3, 0:3])
     plot_loss(f0_ax0, n_obs, train_cce, val_cce, test_cce)
 
-    f0_ax6 = fig0.add_subplot(gs[0:3, 3:6])
+    f0_ax6 = fig0.add_subplot(gs[3:6, 0:3])
     plot_convergence(f0_ax6, n_obs, r2)
 
-    f0_ax1 = fig0.add_subplot(gs[3:6, 0:3])
-    plot_embeddings_distribution(f0_ax1, emb_true.z, color_array)
-    f0_ax1.set_title('True Embeddings')
+    # Plot embeddings.
+    f0_ax1 = fig0.add_subplot(gs[0:3, 3:6])
+    # Determine embedding limits.
+    z_max = 1.3 * np.max(np.abs(emb_true.z))
+    z_limits = [-z_max, z_max]
 
-    # Prepare posterior for plotting.
-    # Prepare covariance matrices. TODO
-    # cov = None
-    # z_inferred_affine, params = procprocrustean_solution(emb_true.z, emb_inferred.z)
-    # Apply transformations to covariance matrices. TODO
-    # Plot affine transformation of posterior.
-    f0_ax2 = fig0.add_subplot(gs[3:6, 3:6])
-    plot_embeddings_distribution(
-        f0_ax2,
-        emb_inferred.model.embedding.embeddings_posterior.distribution,
-        color_array
-    )
-    f0_ax2.set_title('Posterior Embeddings')
+    # Apply and plot Procrustes affine transformation of posterior.
+    dist = emb_inferred.model.embedding.embeddings_posterior.distribution
+    loc, cov = unpack_embeddings_distribution(dist)
+    r, t = psiz.utils.procrustes_2d(emb_true.z, loc, scale=False)
+    loc, cov = apply_affine(loc, cov, r, t)
+    plot_bvn(f0_ax1, loc, cov=cov, c=color_array, show_loc=False)
 
-    f0_ax3 = fig0.add_subplot(gs[0:2, 6:8])
-    plot_univariate_distribution(
-        f0_ax3,
-        emb_inferred.model.kernel.distance.rho_posterior.distribution,
-        landmark=emb_true.model.kernel.distance.rho.numpy(),
+    # Plot true embedding.
+    f0_ax1.scatter(
+        emb_true.z[:, 0], emb_true.z[:, 1], s=s, c=color_array, marker='o',
+        edgecolors='none'
     )
-    f0_ax3.set_title('rho')
+    f0_ax1.set_xlim(z_limits)
+    f0_ax1.set_ylim(z_limits)
+    f0_ax1.set_aspect('equal')
+    f0_ax1.set_xticks([])
+    f0_ax1.set_yticks([])
+    f0_ax1.set_title('Embeddings')
 
-    f0_ax4 = fig0.add_subplot(gs[2:4, 6:8])
-    plot_univariate_distribution(
-        f0_ax4,
-        emb_inferred.model.kernel.similarity.tau_posterior.distribution,
-        landmark=emb_true.model.kernel.similarity.tau.numpy(),
-    )
-    f0_ax4.set_title('tau')
+    # f0_ax3 = fig0.add_subplot(gs[0:2, 6:8])
+    # plot_univariate_distribution(
+    #     f0_ax3,
+    #     emb_inferred.model.kernel.distance.rho_posterior.distribution,
+    #     name=r'\rho'
+    # )
+    # landmark = emb_true.model.kernel.distance.rho.numpy() - 1  # TODO
+    # f0_ax3.plot([landmark], [0.], 'rd', clip_on=False, alpha=.5)
 
-    f0_ax5 = fig0.add_subplot(gs[4:6, 6:8])
-    plot_univariate_distribution(
-        f0_ax5,
-        emb_inferred.model.kernel.similarity.gamma_posterior.distribution,
-        landmark=np.log10(emb_true.model.kernel.similarity.gamma.numpy()),  # TODO
-    )
-    f0_ax5.set_title('gamma')
+    # f0_ax4 = fig0.add_subplot(gs[2:4, 6:8])
+    # plot_univariate_distribution(
+    #     f0_ax4,
+    #     emb_inferred.model.kernel.similarity.tau_posterior.distribution,
+    #     name=r'\tau'
+    # )
+    # landmark = emb_true.model.kernel.similarity.tau.numpy()
+    # f0_ax4.plot([landmark], [0.], 'rd', clip_on=False, alpha=.5)
+
+    # f0_ax5 = fig0.add_subplot(gs[4:6, 6:8])
+    # plot_univariate_distribution(
+    #     f0_ax5,
+    #     emb_inferred.model.kernel.similarity.gamma_posterior.distribution,
+    #     name=r'\gamma'
+    # )
+    # landmark = emb_true.model.kernel.similarity.gamma.numpy()
+    # f0_ax5.plot([landmark], [0.], 'rd', clip_on=False, alpha=.5)
 
     gs.tight_layout(fig0)
 
@@ -292,111 +323,103 @@ def plot_convergence(ax, n_obs, r2):
     ax.set_ylim(-0.05, 1.05)
 
 
-def plot_embeddings_distribution(ax, dist, c, limits=None):
-    """Plot embeddings distribution.
+def plot_bvn(ax, loc, cov=None, c=None, r=1.96, show_loc=True):
+    """Plot bivariate normal embeddings.
 
-    Assumes normal distributions.
+    If covariances are supplied, ellipses are drawn to indicate regions
+    of highest probability mass.
 
     Arguments:
-        dist: A tfp.distributions.Distribution or a 2D array of points
-            representing locations.
-        c: color array
+        ax: A 'matplotlib' axes object.
+        loc: Array denoting the means of bivariate normal
+            distributions.
+        cov (optional): Array denoting the covariance matrices of
+            bivariate normal distributions.
+        c (optional): color array
+        limits (optional): Limits of axes.
+        r (optional): The radius (specified in standard deviations) at
+            which to draw the ellipse. The default value corresponds to
+            an ellipse indicating a region containing 95% of the
+            probability mass.
 
     """
     # Settings.
     s = 10
-    n_std = 1.96  # as ci
-
-    if isinstance(dist, tfp.distributions.Distribution):
-        loc = dist.loc.numpy()[1:]  # Drop placeholder
-        scale = dist.scale.numpy()[1:]
-    else:
-        loc = dist
-        scale = None
-
-    if limits is None:
-        z_max = 1.2 * np.max(np.abs(loc))
-        limits = [-z_max, z_max]
 
     n_stimuli = loc.shape[0]
-    n_dim = loc.shape[1]
 
     # Plot means.
-    ax.scatter(
-        loc[:, 0], loc[:, 1], s=s, c=c, marker='o', edgecolors='none'
-    )
+    if show_loc:
+        ax.scatter(
+            loc[:, 0], loc[:, 1], s=s, c=c, marker='o', edgecolors='none'
+        )
 
-    if scale is not None:
-        # Plot posterior confidence intervals.
+    if cov is not None:
+        # Draw regions of highest probability mass.
         for i_stimulus in range(n_stimuli):
-            mu = loc[i_stimulus]
-            cov = np.eye(n_dim) * scale[i_stimulus]**2
-            ell = error_ellipse(mu, cov, n_std)
-            ell.set_facecolor('none')
-            ell.set_edgecolor(c[i_stimulus])
-            ax.add_artist(ell)
-
-    ax.set_xlim(limits)
-    ax.set_ylim(limits)
-    ax.set_aspect('equal')
-    ax.set_xticks([])
-    ax.set_yticks([])
+            ellipse = psiz.visualize.bvn_ellipse(
+                loc[i_stimulus], cov[i_stimulus], r=r, fill=False,
+                edgecolor=c[i_stimulus]
+            )
+            ax.add_artist(ellipse)
 
 
-def error_ellipse(mu, cov, nstd):
-    """Return artist of error ellipse.
+def unpack_embeddings_distribution(dist):
+    """Unpack embeddings distribution."""
+    def scale_to_cov(scale):
+        """Convert scale to covariance matrix.
 
-    SEE: https://stackoverflow.com/questions/20126061/
-    creating-a-confidence-ellipses-in-a-sccatterplot-using-matplotlib
+        Assumes `scale` represents diagonal elements only.
+        """
+        n_stimuli = scale.shape[0]
+        n_dim = scale.shape[1]
+        cov = np.zeros([n_stimuli, n_dim, n_dim])
+        for i_stimulus in range(n_stimuli):
+            cov[i_stimulus] = np.eye(n_dim) * scale[i_stimulus]**2
+        return cov
 
-    """
-    # TODO inject kwargs
-    vals, vecs = eigsorted(cov)
-    theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
-    w, h = 2 * nstd * np.sqrt(vals)
-    ell = matplotlib.patches.Ellipse(
-        xy=(mu[0], mu[1]), width=w, height=h, angle=theta,
-        color='black'
-    )
-    return ell
-
-
-def eigsorted(cov):
-    """Sort eigenvalues."""
-    vals, vecs = np.linalg.eigh(cov)
-    order = vals.argsort()[::-1]
-    return vals[order], vecs[:, order]
+    loc = dist.loc.numpy()[1:]  # Drop placeholder
+    scale = dist.scale.numpy()[1:]
+    cov = scale_to_cov(scale)
+    return loc, cov
 
 
-def plot_univariate_distribution(ax, dist, limits=None, landmark=None):
+def plot_univariate_distribution(ax, dist, limits=None, name=None):
     """Plot univariate distribution.
 
     Arguments:
         ax:
         dist:
         limits:
-        landmark:
+        name:
 
     """
     x_mode = dist.mode().numpy()
+
     if limits is None:
         limits = [x_mode - 1, x_mode + 1]
-    xg = np.linspace(limits[0], limits[1], 1000)
-    y = dist.prob(xg)
-    ax.plot(xg, y)
-    ax.text(x_mode, .9 * np.max(y), '{0:.2f}'.format(x_mode))
-    ax.set_xlabel('x')
-    ax.set_ylabel('p(x)')
+    span = limits[1] - limits[0]
 
-    if landmark is not None:
-        ax.plot([landmark, landmark], [0, np.max(y)], 'r--')
+    if name is None:
+        name = 'x'
+
+    x = np.linspace(limits[0], limits[1], 1000)
+    y = dist.prob(x)
+
+    ax.plot(x, y)
+    ax.text(x_mode + .1 * span, .9 * np.max(y), '{0:.2f}'.format(x_mode))
+    ax.set_xlabel(r'${0}$'.format(name))
+    ax.set_ylabel(r'$p({0})$'.format(name))
+    ax.set_ylim([0, 1.1 * np.max(y)])
 
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     embedding = psiz.keras.layers.tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17, seed=57
+        )
     )
     kernel = psiz.keras.layers.Kernel(
         similarity=psiz.keras.layers.ExponentialSimilarity()
@@ -408,10 +431,23 @@ def ground_truth(n_stimuli, n_dim):
         'rho': 2.,
         'tau': 1.,
         'beta': 10.,
-        'gamma': 0.001
+        'gamma': 0.
     }
 
     return emb
+
+
+def apply_affine(loc, cov, r, t):
+    """Apply affine transformation to set of MVN."""
+    n_dist = loc.shape[0]
+    loc_a = copy.copy(loc)
+    cov_a = copy.copy(cov)
+
+    for i_dist in range(n_dist):
+        loc_a[i_dist], cov_a[i_dist] = psiz.utils.affine_mvn(
+            loc[np.newaxis, i_dist], cov[i_dist], r, t
+        )
+    return loc_a, cov_a
 
 
 if __name__ == "__main__":

@@ -880,3 +880,39 @@ class RankBehavior(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         return config
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='RateBehavior'
+)
+class RateBehavior(tf.keras.layers.Layer):
+    """A rate behavior layer."""
+
+    def __init__(self, **kwargs):
+        """Initialize.
+
+        Arguments:
+            kwargs (optional): Additional keyword arguments.
+
+        """
+        super(RateBehavior, self).__init__(**kwargs)
+
+    def call(self, inputs):
+        """Return probability of a rating trial.
+
+        Arguments:
+            inputs:
+                sim_qr: A tensor containing the precomputed
+                    similarities between the query stimuli and
+                    corresponding reference stimuli (only 1 reference).
+                    shape = (batch_size, 1, 1)
+
+        """
+        sim_qr = inputs[0]
+        prob = tf.math.sigmoid(sim_qr)
+        return prob
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        return config

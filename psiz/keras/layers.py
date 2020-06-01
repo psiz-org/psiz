@@ -387,7 +387,6 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             shape=[], initializer=self.beta_initializer,
             trainable=self.fit_beta, name="beta", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
-
         )
 
         self.theta = {
@@ -886,16 +885,87 @@ class RankBehavior(tf.keras.layers.Layer):
     package='psiz.keras.layers', name='RateBehavior'
 )
 class RateBehavior(tf.keras.layers.Layer):
-    """A rate behavior layer."""
+    """A rate behavior layer.
+
+    Similarities are converted to probabilities using a parameterized
+    logistic function,
+
+    p(x) = lower + ((upper - lower) / (1 + exp(-rate*(x - midpoint))))
+
+    with the following variable meanings:
+    `lower`: The lower asymptote of the function's range.
+    `upper`: The upper asymptote of the function's range.
+    `midpoint`: The midpoint of the function's domain and point of
+        maximum growth.
+    `rate`: The growth rate of the logistic function.
+
+    """
 
     def __init__(self, **kwargs):
         """Initialize.
 
         Arguments:
+            fit_lower (optional): Boolean indicating if variable is
+                trainable.
+            fit_upper (optional): Boolean indicating if variable is
+                trainable.
+            fid_midpoint (optional): Boolean indicating if variable is
+                trainable.
+            fit_rate (optional): Boolean indicating if variable is
+                trainable.
+            lower_initializer (optional): TensorFlow initializer.
+            upper_initializer (optional): TensorFlow initializer.
+            midpoint_initializer (optional): TensorFlow initializer.
+            rate_initializer (optional): TensorFlow initializer.
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(RateBehavior, self).__init__(**kwargs)
+        super(RateBehavior, self).__init__(
+            fit_lower=True, fit_upper=True, fit_midpoint=True, fit_rate=True,
+            lower_initializer=None, upper_initializer=None,
+            midpoint_initializer=None, rate_initializer=None, **kwargs)
+
+        self.fit_lower = fit_lower
+        if lower_initializer is None:
+            lower_initializer = tf.keras.initializers.Constant(0.)
+        self.lower_initializer = tf.keras.initializers.get(lower_initializer)
+        self.lower = self.add_weight(
+            shape=[], initializer=self.lower_initializer,
+            trainable=self.fit_lower, name="lower", dtype=K.floatx(),
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+        )
+
+        self.fit_upper = fit_upper
+        if upper_initializer is None:
+            upper_initializer = tf.keras.initializers.Constant(1.)
+        self.upper_initializer = tf.keras.initializers.get(upper_initializer)
+        self.upper = self.add_weight(
+            shape=[], initializer=self.upper_initializer,
+            trainable=self.fit_upper, name="upper", dtype=K.floatx(),
+            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+        )
+
+        self.fit_midpoint = fit_midpoint
+        if midpoint_initializer is None:
+            midpoint_initializer = tf.keras.initializers.Constant(.5)
+        self.midpoint_initializer = tf.keras.initializers.get(
+            midpoint_initializer
+        )
+        self.midpoint = self.add_weight(
+            shape=[], initializer=self.midpoint_initializer,
+            trainable=self.fit_midpoint, name="midpoint", dtype=K.floatx(),
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+        )
+
+        self.fit_rate = fit_rate
+        if rate_initializer is None:
+            rate_initializer = tf.keras.initializers.Constant(10.)
+        self.rate_initializer = tf.keras.initializers.get(rate_initializer)
+        self.rate = self.add_weight(
+            shape=[], initializer=self.rate_initializer,
+            trainable=self.fit_rate, name="rate", dtype=K.floatx(),
+            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+        )
 
     def call(self, inputs):
         """Return probability of a rating trial.
@@ -907,12 +977,37 @@ class RateBehavior(tf.keras.layers.Layer):
                     corresponding reference stimuli (only 1 reference).
                     shape = (batch_size, 1, 1)
 
+        Returns:
+            probs: The probabilites as determined by a parameterized
+                logistic function.
+
         """
         sim_qr = inputs[0]
-        prob = tf.math.sigmoid(sim_qr)
+        prob = self.lower + tf.math.divide(
+            self.upper - self.lower,
+            1 + tf.math.exp(-self.rate*(sim_qr - self.midpoint))
+        )
         return prob
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update({
+            'fit_lower': self.fit_lower,
+            'fit_upper': self.fit_upper,
+            'fit_midpoint': self.fit_midpoint,
+            'fit_rate': self.fit_rate,
+            'lower_initializer': tf.keras.initializers.serialize(
+                self.lower_initializer
+            ),
+            'upper_initializer': tf.keras.initializers.serialize(
+                self.upper_initializer
+            ),
+            'midpoint_initializer': tf.keras.initializers.serialize(
+                self.midpoint_initializer
+            ),
+            'rate_initializer': tf.keras.initializers.serialize(
+                self.rate_initializer
+            ),
+        })
         return config

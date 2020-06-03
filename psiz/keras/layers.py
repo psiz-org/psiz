@@ -285,10 +285,10 @@ class WeightedMinkowskiVariational(_Variational):
         )
 
         # Log debug metric. TODO REMOVE
-        c = self.rho_posterior.distribution.concentration
-        r = self.rho_posterior.distribution.rate
-        self.add_metric(c, name="c", aggregation='mean')
-        self.add_metric(r, name="r", aggregation='mean')
+        # c = self.rho_posterior.distribution.concentration
+        # r = self.rho_posterior.distribution.rate
+        # self.add_metric(c, name="c", aggregation='mean')
+        # self.add_metric(r, name="r", aggregation='mean')
 
         return d_qr
 
@@ -306,7 +306,7 @@ class WeightedMinkowskiVariational(_Variational):
     @property
     def rho(self):
         """Getter method for `rho`."""
-        return self.rho_posterior.distribution.loc
+        return self.rho_posterior.distribution.mode()
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -472,7 +472,9 @@ class GroupAttentionVariational(_Variational):
             # embeddings_initializer = pk_initializers.RandomAttention(
             #     alpha, scale
             # )
-            embeddings_initializer = tf.initializers.RandomNormal(0.01, .05)
+            # embeddings_initializer = tf.initializers.RandomNormal(0.1, .05) # TODO
+            # embeddings_initializer = tf.initializers.RandomNormal(0.5, .05) # TODO
+            embeddings_initializer = tf.initializers.RandomNormal(0.0, .05) # TODO
         self.embeddings_initializer = tf.keras.initializers.get(
             embeddings_initializer
         )
@@ -494,6 +496,35 @@ class GroupAttentionVariational(_Variational):
         self.fit_group = fit_group
 
         # TODO ==============================================================
+        # TODO constraints, initializer saving
+        # concentration1_untr_initializer = tf.keras.initializers.RandomNormal(
+        #     -3., .001
+        # )
+        # concentration0_untr_initializer = tf.keras.initializers.RandomNormal(
+        #     -3., .001
+        # )
+        # concentration1_untr = self.add_weight(
+        #     shape=(self.n_group, self.n_dim),
+        #     initializer=concentration1_untr_initializer,
+        #     trainable=self.fit_group, name='w_posterior_untransformed_conc1',
+        #     dtype=K.floatx()
+        # )
+        # concentration0_untr = self.add_weight(
+        #     shape=(self.n_group, self.n_dim),
+        #     initializer=concentration0_untr_initializer,
+        #     trainable=self.fit_group, name='w_posterior_untransformed_conc0',
+        #     dtype=K.floatx()
+        # )
+        # concentration1 = tfp.util.DeferredTensor(
+        #     concentration0_untr,
+        #     lambda x: (K.epsilon() + tf.nn.softplus(x) + 1.)
+        # )
+        # concentration0 = tfp.util.DeferredTensor(
+        #     concentration1_untr,
+        #     lambda x: (K.epsilon() + tf.nn.softplus(x) + 1.)
+        # )
+        # dist = tfp.distributions.Beta(concentration1, concentration0)
+        # TODO ==============================================================
         untransformed_loc = self.add_weight(
             shape=(self.n_group, self.n_dim),
             initializer=self.embeddings_initializer,
@@ -501,26 +532,79 @@ class GroupAttentionVariational(_Variational):
             dtype=K.floatx()
         )
 
-        untransformed_scale_initializer = tf.initializers.RandomNormal(
-            mean=-3., stddev=0.1
+        # untransformed_scale_initializer = tf.initializers.Constant(1.11)  # TODO
+        untransformed_scale_initializer = tf.keras.initializers.RandomNormal(
+            0.3365, .001
         )
         untransformed_scale = self.add_weight(
-            shape=(self.n_group, self.n_dim), initializer=untransformed_scale_initializer,
+            shape=(self.n_group, self.n_dim),
+            initializer=untransformed_scale_initializer,
             trainable=self.fit_group, name='w_posterior_untransformed_scale',
             dtype=K.floatx(),
         )
-
-        loc = tfp.util.DeferredTensor(
-            untransformed_loc,
-            lambda x: (K.epsilon() + tf.math.sigmoid(x))  # TODO alt constraint
-        )
         scale = tfp.util.DeferredTensor(
             untransformed_scale,
-            lambda x: (K.epsilon() + tf.nn.softplus(x))
+            # lambda x: (K.epsilon() + tf.nn.softplus(x))  # TODO
+            lambda x: (K.epsilon() + tf.math.exp(x))
         )
-        dist = tfp.distributions.Normal(loc=loc, scale=scale)
+        dist = tfp.distributions.LogitNormal(
+            loc=untransformed_loc, scale=scale
+        )
+        # TODO ==============================================================
+        # untransformed_loc = self.add_weight(
+        #     shape=(self.n_group, self.n_dim),
+        #     initializer=self.embeddings_initializer,
+        #     trainable=self.fit_group, name='w_posterior_untransformed_loc',
+        #     dtype=K.floatx()
+        # )
+
+        # untransformed_scale_initializer = tf.initializers.RandomNormal(
+        #     mean=-2., stddev=0.1
+        # )
+        # # untransformed_scale_initializer = tf.initializers.RandomNormal(
+        # #     mean=1., stddev=0.1
+        # # )
+        # untransformed_scale = self.add_weight(
+        #     shape=(self.n_group, self.n_dim),
+        #     initializer=untransformed_scale_initializer,
+        #     trainable=self.fit_group, name='w_posterior_untransformed_scale',
+        #     dtype=K.floatx(),
+        # )
+        # # scale = tfp.util.DeferredTensor(
+        # #     untransformed_scale,
+        # #     lambda x: (K.epsilon() + tf.nn.softplus(x))
+        # # )
+        # # dist = tfp.distributions.LogitNormal(
+        # #     loc=untransformed_loc, scale=scale
+        # # )
+        # loc = tfp.util.DeferredTensor(
+        #     untransformed_loc,
+        #     lambda x: tf.math.sigmoid(x)
+        # )
+        # scale = tfp.util.DeferredTensor(
+        #     untransformed_scale,
+        #     lambda x: (K.epsilon() + tf.nn.softplus(x))
+        # )
+        # dist = tfp.distributions.Normal(loc=loc, scale=scale)
+        # TODO ==============================================================
         batch_ndims = tf.size(dist.batch_shape_tensor())
         self.w_posterior = tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+
+        # dist = tfp.distributions.Beta(
+        #     1.01 * tf.ones([self.n_group, self.n_dim]), 1.01
+        # )
+        # batch_ndims = tf.size(dist.batch_shape_tensor())
+        # self.w_prior = tfp.distributions.Independent(
+        #     dist, reinterpreted_batch_ndims=batch_ndims
+        # )
+        # Prior. TODO
+        dist = tfp.distributions.LogitNormal(
+            loc=tf.zeros([self.n_group, self.n_dim]), scale=1.4
+        )
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        self.w_prior = tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )
 
@@ -535,13 +619,33 @@ class GroupAttentionVariational(_Variational):
         """
         group_id = inputs[:, 0]
 
-        # Sample from posterior.
+        # Sample from posterior. TODO
+        # inputs_loc = tf.gather(self.w_posterior.distribution.loc, group_id)
+        # inputs_scale = tf.gather(self.w_posterior.distribution.scale, group_id)
+        # affine_dist = tfp.distributions.Normal(
+        #     loc=tf.zeros_like(inputs_loc), scale=inputs_scale
+        # )
+        # return inputs_loc + affine_dist.sample()
         inputs_loc = tf.gather(self.w_posterior.distribution.loc, group_id)
         inputs_scale = tf.gather(self.w_posterior.distribution.scale, group_id)
-        affine_dist = tfp.distributions.Normal(
-            loc=tf.zeros_like(inputs_loc), scale=inputs_scale
+        dist = tfp.distributions.LogitNormal(
+            loc=inputs_loc, scale=inputs_scale
         )
-        return inputs_loc + affine_dist.sample()
+
+        # Apply KL divergence.
+        self.add_loss(
+            lambda: kl_lib.kl_divergence(
+                self.w_posterior, self.w_prior
+            ) * self.kl_weight
+        )
+
+        # Log debug metric. TODO REMOVE
+        # c1 = tf.math.reduce_std(
+        #     self.w_posterior.distribution.concentration1
+        # )
+        # self.add_metric(c1, name="c1", aggregation='mean')
+
+        return dist.sample()
 
     def get_config(self):
         """Return layer configuration."""
@@ -562,7 +666,18 @@ class GroupAttentionVariational(_Variational):
     @property
     def w(self):
         """Getter method for `w`."""
-        return self.w_posterior.distribution.loc
+        # TODO horrible
+        n_sample = 1000
+        samples = self.w_posterior.distribution.sample(n_sample)
+        avg = tf.reduce_mean(samples, axis=0)
+        return tf.constant(avg)
+        # n_step = 999  # TODO sampled mode
+        # x = np.linspace(0.001, .999, n_step)
+        # y = np.zeros([self.n_group, self.n_dim, n_step])
+        # for step, x_i in enumerate(x):
+        #     y[:, :, step] = self.w_posterior.distribution.prob(x_i)
+        # idx = np.argmax(y, axis=2)
+        # return tf.constant(x[idx])  # TODO horrible
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -580,9 +695,7 @@ class EmbeddingVariational(_Variational):
 
     def __init__(
             self, input_dim, output_dim, mask_zero=False, input_length=None,
-            embeddings_posterior_fn=tfp_layers_util.default_mean_field_normal_fn(),
-            embeddings_posterior_tensor_fn=lambda d: d.sample(),
-            embeddings_prior_fn=tfp_layers_util.default_multivariate_normal_fn,
+            prior_scale=None,
             embeddings_regularizer=None,
             activity_regularizer=None,
             embeddings_constraint=None,
@@ -603,28 +716,17 @@ class EmbeddingVariational(_Variational):
 
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.embeddings_regularizer = tf.keras.regularizers.get(embeddings_regularizer)
-        self.activity_regularizer = tf.keras.regularizers.get(activity_regularizer)
-        self.embeddings_constraint = tf.keras.constraints.get(embeddings_constraint)
+        self.embeddings_regularizer = tf.keras.regularizers.get(embeddings_regularizer)  # TODO
+        self.activity_regularizer = tf.keras.regularizers.get(activity_regularizer)  # TODO
+        self.embeddings_constraint = tf.keras.constraints.get(embeddings_constraint)  # TODO
         self.mask_zero = mask_zero
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
 
-        self.embeddings_posterior_fn = embeddings_posterior_fn
-        self.embeddings_posterior_tensor_fn = embeddings_posterior_tensor_fn
-        self.embeddings_prior_fn = embeddings_prior_fn  # TODO
-
-        def default_multivariate_normal_fn(
-                dtype, shape, name, trainable, add_variable_fn):
-            dist = tfp.distributions.Normal(
-                loc=tf.zeros(shape, dtype), scale=dtype.as_numpy_dtype(.17)  # TODO
-            )
-            batch_ndims = tf.size(dist.batch_shape_tensor())
-            return tfp.distributions.Independent(
-                dist, reinterpreted_batch_ndims=batch_ndims)
-
-        self.embeddings_prior_fn = default_multivariate_normal_fn
+        if prior_scale is None:
+            prior_scale = 1.
+        self.prior_scale = prior_scale
 
     @tf_utils.shape_type_conversion
     def build(self, input_shape):
@@ -641,31 +743,52 @@ class EmbeddingVariational(_Variational):
         # which can handle sparse optimizers.
         if context.executing_eagerly() and context.context().num_gpus():
             with ops.device('cpu:0'):
-                self.embeddings_posterior = self.embeddings_posterior_fn(
-                    dtype, [self.input_dim, self.output_dim],
-                    'embeddings_posterior', self.trainable, self.add_weight
-                )
-                if self.embeddings_prior_fn is None:
-                    self.embeddings_prior = None
-                else:
-                    self.embeddings_prior = self.embeddings_prior_fn(
-                        dtype, [self.input_dim, self.output_dim],
-                        'embeddings_prior', self.trainable, self.add_weight
-                    )
+                self.embeddings_posterior = self._default_posterior(dtype)
+                self.embeddings_prior = self._default_prior(dtype)
         else:
-            self.embeddings_posterior = self.embeddings_posterior_fn(
-                dtype, [self.input_dim, self.output_dim],
-                'embeddings_posterior', self.trainable, self.add_weight
-            )
-            if self.embeddings_prior_fn is None:
-                self.embeddings_prior = None
-            else:
-                self.embeddings_prior = self.embeddings_prior_fn(
-                    dtype, [self.input_dim, self.output_dim],
-                    'embeddings_prior', self.trainable, self.add_weight
-                )
+            self.embeddings_posterior = self._default_posterior(dtype)
+            self.embeddings_prior = self._default_prior(dtype)
 
         self.built = True
+
+    def _default_prior(self, dtype):
+        """Return default prior."""
+        dist = tfp.distributions.Normal(
+            loc=tf.zeros([self.input_dim, self.output_dim], dtype),
+            scale=self.prior_scale
+        )
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        return tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+
+    def _default_posterior(self, dtype):
+        """Create default mean field posterior."""
+        loc_initializer = tf.keras.initializers.RandomNormal()  # stddev=0.1 TODO
+        loc = self.add_weight(
+            shape=[self.input_dim, self.output_dim],
+            initializer=loc_initializer, trainable=True,
+            name='embeddings_posterior_loc', dtype=dtype
+        )  # TODO constraints, regularizer, trainable
+
+        untransformed_scale_initializer = tf.keras.initializers.RandomNormal(
+            mean=tfp.math.softplus_inverse(self.prior_scale), stddev=.001
+        )
+        untransformed_scale = self.add_weight(
+            shape=[self.input_dim, self.output_dim],
+            initializer=untransformed_scale_initializer, trainable=True,
+            name='embeddings_posterior_untransformed_scale', dtype=dtype
+        )  # TODO constraints, regularizer, trainable
+
+        scale = tfp.util.DeferredTensor(
+            untransformed_scale,
+            lambda x: (K.epsilon() + tf.nn.softplus(x))
+        )
+        dist = tfp.distributions.Normal(loc=loc, scale=scale)
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        return tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
 
     def call(self, inputs):
         """Call."""
@@ -683,6 +806,10 @@ class EmbeddingVariational(_Variational):
             ) * self.kl_weight
         )
 
+        # Log debug metric. TODO REMOVE
+        # stddev = tf.reduce_mean(self.embeddings_posterior.distribution.scale)
+        # self.add_metric(stddev, name="stddev", aggregation='mean')
+
         return outputs
 
     def get_config(self):
@@ -695,6 +822,7 @@ class EmbeddingVariational(_Variational):
             'input_length': self.input_length,
             # 'embeddings_posterior_fn': self.embeddings_posterior_fn,
             # 'embeddings_prior_fn': self.embeddings_prior_fn,
+            'prior_scale': self.prior_scale,
             'embeddings_regularizer':
                 tf.keras.regularizers.serialize(self.embeddings_regularizer),
             'activity_regularizer':
@@ -768,14 +896,14 @@ class EmbeddingVariational(_Variational):
         affine_dist = Normal(
             loc=tf.zeros_like(inputs_mean), scale=inputs_scale
         )
-        outputs = inputs_mean + self.embeddings_posterior_tensor_fn(affine_dist)
+        outputs = inputs_mean + affine_dist.sample()
         self.embeddings_posterior_tensor = None  # TODO
         return outputs
 
     @property
     def embeddings(self):
         """Getter method for `embeddings`."""
-        return self.embeddings_posterior.distribution.loc
+        return self.embeddings_posterior.distribution.mode()
 
 
 @tf.keras.utils.register_keras_serializable(

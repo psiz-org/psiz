@@ -53,12 +53,13 @@ def main():
     #     '.psiz', 'tmp', 'examples', 'vi_one_group_convergence'
     # )
     # fp_ani = Path.home() / Path('vi_one_group_convergence')
+    fp_ani.mkdir(parents=True, exist_ok=True)
     n_stimuli = 30
     n_dim = 2
     n_trial = 2000
-    n_restart = 1  # TODO
+    n_restart = 3  # TODO
     batch_size = 100
-    n_frame = 8
+    n_frame = 7
 
     # Plot settings.
     small_size = 6
@@ -82,7 +83,6 @@ def main():
     color_array = np.vstack([gray_array, color_array])
 
     emb_true = ground_truth(n_stimuli, n_dim)
-    fp_ani.mkdir(parents=True, exist_ok=True)
 
     # Generate a random docket of trials.
     generator = psiz.generator.RandomGenerator(
@@ -111,10 +111,10 @@ def main():
     obs_test = obs_holdout.subset(test_idx)
 
     # Use early stopping.
-    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=15, mode='min', restore_best_weights=True
+    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+        'val_cce', patience=20, mode='min', restore_best_weights=True  # TODO val_loss
     )
-    callbacks = [early_stop]
+    callbacks = [cb_early]
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -125,7 +125,7 @@ def main():
     }
 
     # Infer independent models with increasing amounts of data.
-    n_obs = np.floor(
+    n_obs = np.round(
         np.linspace(15, obs_train.n_trial, n_frame)
     ).astype(np.int64)
     r2 = np.empty((n_frame)) * np.nan
@@ -138,9 +138,10 @@ def main():
         obs_round_train = obs_train.subset(include_idx)
 
         # Define model.
-        kl_weight = 1. / obs_train.n_trial
+        kl_weight = 1. / obs_round_train.n_trial
         embedding = psiz.keras.layers.EmbeddingVariational(
-            n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight
+            n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight,
+            prior_scale=.17
         )
         # kernel = psiz.keras.layers.Kernel(
         #     distance=psiz.keras.layers.WeightedMinkowskiVariational(
@@ -155,7 +156,7 @@ def main():
                 fit_rho=False,
                 rho_initializer=tf.keras.initializers.Constant(2.),
             ),
-            similarity=psiz.keras.layers.ExponentialSimilarityVariational(
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 fit_tau=False, fit_gamma=False,
                 tau_initializer=tf.keras.initializers.Constant(1.),
                 gamma_initializer=tf.keras.initializers.Constant(0.),
@@ -170,31 +171,8 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_cce', verbose=1, compile_kwargs=compile_kwargs
+            monitor='val_cce', verbose=2, compile_kwargs=compile_kwargs
         )
-
-        # TODO
-        n_sample = 100
-        emb_inferred.model.embedding.build([None, None, None])
-        z_sample = emb_inferred.model.embedding.embeddings_posterior.distribution.sample(n_sample).numpy()
-        z_sample = z_sample[:, 1:, :]
-        simmat_infer = np.zeros([n_sample, n_stimuli, n_stimuli])
-        for i_sample in range(n_sample):
-            simmat_infer[i_sample] = psiz.utils.pairwise_matrix(
-                emb_inferred.similarity, z_sample[i_sample]
-            )
-
-        simmat_mean = np.mean(simmat_infer, axis=0)
-        simmat_std = np.std(simmat_infer, axis=0)
-
-        # Compare to real.
-        ci_low = simmat_mean - (1.96 * simmat_std)
-        ci_high = simmat_mean + (1.96 * simmat_std)
-        within_ci = np.logical_and(
-            np.greater(simmat_true, ci_low),
-            np.less(simmat_true, ci_high)
-        )
-        print('similarities within 95% CI: {0:.2f}'.format(np.sum(within_ci) / within_ci.size))
 
         train_cce[i_frame] = restart_record.record['cce'][0]
         val_cce[i_frame] = restart_record.record['val_cce'][0]
@@ -231,6 +209,7 @@ def main():
             os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
         )
 
+    # Create animation.
     frames = []
     for i_frame in range(n_frame):
         fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
@@ -262,14 +241,16 @@ def plot_frame(
     # Apply and plot Procrustes affine transformation of posterior.
     dist = emb_inferred.model.embedding.embeddings_posterior.distribution
     loc, cov = unpack_embeddings_distribution(dist)
-    r, t = psiz.utils.procrustes_2d(emb_true.z, loc, scale=False)
+    r, t = psiz.utils.procrustes_2d(
+        emb_true.z, loc, scale=False, n_restart=30
+    )
     loc, cov = apply_affine(loc, cov, r, t)
     plot_bvn(f0_ax1, loc, cov=cov, c=color_array, show_loc=False)
 
     # Plot true embedding.
     f0_ax1.scatter(
         emb_true.z[:, 0], emb_true.z[:, 1], s=s, c=color_array, marker='o',
-        edgecolors='none'
+        edgecolors='none', zorder=100
     )
     f0_ax1.set_xlim(z_limits)
     f0_ax1.set_ylim(z_limits)

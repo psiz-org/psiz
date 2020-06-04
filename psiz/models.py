@@ -44,7 +44,6 @@ import sys
 import time
 import warnings
 
-import edward2 as ed
 import h5py
 import numpy as np
 import numpy.ma as ma

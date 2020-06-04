@@ -27,7 +27,6 @@ Example output:
 
 """
 
-import edward2 as ed
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf

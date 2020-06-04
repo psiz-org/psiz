@@ -112,7 +112,7 @@ def main():
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=20, mode='min', restore_best_weights=True  # TODO val_loss
+        'val_loss', patience=20, mode='min', restore_best_weights=True
     )
     callbacks = [cb_early]
 
@@ -129,9 +129,9 @@ def main():
         np.linspace(15, obs_train.n_trial, n_frame)
     ).astype(np.int64)
     r2 = np.empty((n_frame)) * np.nan
-    train_cce = np.empty((n_frame)) * np.nan
-    val_cce = np.empty((n_frame)) * np.nan
-    test_cce = np.empty((n_frame)) * np.nan
+    train_loss = np.empty((n_frame)) * np.nan
+    val_loss = np.empty((n_frame)) * np.nan
+    test_loss = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
         print('  Round {0}'.format(i_frame))
         include_idx = np.arange(0, n_obs[i_frame])
@@ -171,15 +171,15 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_cce', verbose=2, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
         )
 
-        train_cce[i_frame] = restart_record.record['cce'][0]
-        val_cce[i_frame] = restart_record.record['val_cce'][0]
+        train_loss[i_frame] = restart_record.record['loss'][0]
+        val_loss[i_frame] = restart_record.record['val_loss'][0]
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
-        test_cce[i_frame] = test_metrics['cce']
+        test_loss[i_frame] = test_metrics['loss']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
@@ -190,18 +190,18 @@ def main():
             simmat_infer, simmat_true, score='r2'
         )
         print(
-            '    n_obs: {0:4d} | train_cce: {1:.2f} | '
-            'val_cce: {2:.2f} | test_cce: {3:.2f} | '
+            '    n_obs: {0:4d} | train_loss: {1:.2f} | '
+            'val_loss: {2:.2f} | test_loss: {3:.2f} | '
             'Correlation (R^2): {4:.2f}'.format(
-                n_obs[i_frame], train_cce[i_frame],
-                val_cce[i_frame], test_cce[i_frame], r2[i_frame]
+                n_obs[i_frame], train_loss[i_frame],
+                val_loss[i_frame], test_loss[i_frame], r2[i_frame]
             )
         )
 
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
-            fig0, n_obs, train_cce, val_cce, test_cce, r2, emb_true,
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
             emb_inferred, color_array
         )
         fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
@@ -218,7 +218,7 @@ def main():
 
 
 def plot_frame(
-        fig0, n_obs, train_cce, val_cce, test_cce, r2, emb_true, emb_inferred,
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
         color_array):
     """Plot frame."""
     # Settings.
@@ -227,7 +227,7 @@ def plot_frame(
     gs = fig0.add_gridspec(6, 8)
 
     f0_ax0 = fig0.add_subplot(gs[0:3, 0:3])
-    plot_loss(f0_ax0, n_obs, train_cce, val_cce, test_cce)
+    plot_loss(f0_ax0, n_obs, train_loss, val_loss, test_loss)
 
     f0_ax6 = fig0.add_subplot(gs[3:6, 0:3])
     plot_convergence(f0_ax6, n_obs, r2)
@@ -289,14 +289,14 @@ def plot_frame(
     gs.tight_layout(fig0)
 
 
-def plot_loss(ax, n_obs, train_cce, val_cce, test_cce):
+def plot_loss(ax, n_obs, train_loss, val_loss, test_loss):
     """Plot loss."""
     # Settings
     ms = 2
 
-    ax.plot(n_obs, train_cce, 'bo-', ms=ms, label='Train CCE')
-    ax.plot(n_obs, val_cce, 'go-', ms=ms, label='Val. CCE')
-    ax.plot(n_obs, test_cce, 'ro-', ms=ms, label='Test CCE')
+    ax.plot(n_obs, train_loss, 'bo-', ms=ms, label='Train Loss')
+    ax.plot(n_obs, val_loss, 'go-', ms=ms, label='Val. Loss')
+    ax.plot(n_obs, test_loss, 'ro-', ms=ms, label='Test Loss')
     ax.set_title('Loss')
 
     ax.set_xlabel('Trials')

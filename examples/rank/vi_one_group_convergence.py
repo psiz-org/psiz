@@ -57,7 +57,7 @@ def main():
     n_stimuli = 30
     n_dim = 2
     n_trial = 2000
-    n_restart = 1  # TODO
+    n_restart = 1
     batch_size = 100
     n_frame = 7
 
@@ -110,12 +110,7 @@ def main():
     obs_val = obs_holdout.subset(val_idx)
     obs_test = obs_holdout.subset(test_idx)
 
-    # Use early stopping.
-    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_loss', patience=20, mode='min', restore_best_weights=True
-    )
-    callbacks = [cb_early]
-
+    callbacks = []
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(lr=.001),
@@ -132,6 +127,7 @@ def main():
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
+    train_time = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
         print('  Round {0}'.format(i_frame))
         include_idx = np.arange(0, n_obs[i_frame])
@@ -167,6 +163,7 @@ def main():
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]
+        train_time[i_frame] = restart_record.record['ms_per_epoch'][0]
         val_loss[i_frame] = restart_record.record['val_loss'][0]
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
@@ -194,7 +191,7 @@ def main():
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
             fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, color_array
+            emb_inferred, color_array, train_time
         )
         fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -211,7 +208,7 @@ def main():
 
 def plot_frame(
         fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
-        color_array):
+        color_array, train_time):
     """Plot frame."""
     # Settings.
     s = 10
@@ -223,6 +220,9 @@ def plot_frame(
 
     f0_ax6 = fig0.add_subplot(gs[3:6, 0:3])
     plot_convergence(f0_ax6, n_obs, r2)
+
+    f0_ax3 = fig0.add_subplot(gs[3:6, 3:6])
+    plot_time(f0_ax3, n_obs, train_time)
 
     # Plot embeddings.
     f0_ax1 = fig0.add_subplot(gs[0:3, 3:6])
@@ -251,13 +251,14 @@ def plot_frame(
     f0_ax1.set_yticks([])
     f0_ax1.set_title('Embeddings')
 
+    # TODO
     # f0_ax3 = fig0.add_subplot(gs[0:2, 6:8])
     # plot_univariate_distribution(
     #     f0_ax3,
     #     emb_inferred.model.kernel.distance.rho_posterior.distribution,
     #     name=r'\rho'
     # )
-    # landmark = emb_true.model.kernel.distance.rho.numpy() - 1  # TODO
+    # landmark = emb_true.model.kernel.distance.rho.numpy() - 1
     # f0_ax3.plot([landmark], [0.], 'rd', clip_on=False, alpha=.5)
 
     # f0_ax4 = fig0.add_subplot(gs[2:4, 6:8])
@@ -289,7 +290,7 @@ def plot_loss(ax, n_obs, train_loss, val_loss, test_loss):
     ax.plot(n_obs, train_loss, 'bo-', ms=ms, label='Train Loss')
     ax.plot(n_obs, val_loss, 'go-', ms=ms, label='Val. Loss')
     ax.plot(n_obs, test_loss, 'ro-', ms=ms, label='Test Loss')
-    ax.set_title('Loss')
+    ax.set_title('Optimization Objective')
 
     ax.set_xlabel('Trials')
     limits = [0, np.max(n_obs) + 10]
@@ -317,6 +318,22 @@ def plot_convergence(ax, n_obs, r2):
 
     ax.set_ylabel(r'$R^2$')
     ax.set_ylim(-0.05, 1.05)
+
+
+def plot_time(ax, n_obs, train_time):
+    # Settings.
+    ms = 2
+
+    ax.plot(n_obs, train_time, 'o-',  ms=ms,)
+    ax.set_title('Train Time')
+
+    ax.set_xlabel('Trials')
+    limits = [0, np.max(n_obs) + 10]
+    ax.set_xlim(limits)
+    ticks = [np.min(n_obs), np.max(n_obs)]
+    ax.set_xticks(ticks)
+
+    ax.set_ylabel('ms')
 
 
 def plot_bvn(ax, loc, cov=None, c=None, r=1.96, show_loc=True):

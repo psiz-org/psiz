@@ -49,6 +49,7 @@ Example output:
 import copy
 import os
 from pathlib import Path
+import shutil
 
 import imageio
 import matplotlib
@@ -72,7 +73,7 @@ def main():
     n_stimuli = 30
     n_dim = 4
     n_group = 3
-    n_restart = 2  # TODO
+    n_restart = 1
     batch_size = 200
     n_frame = 4
 
@@ -101,10 +102,8 @@ def main():
 
     # Generate a random docket of trials to show each group.
     n_trial = 2000
-    n_reference = 8
-    n_select = 2
     generator = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
@@ -149,12 +148,6 @@ def main():
     obs_val = obs_holdout.subset(val_idx)
     obs_test = obs_holdout.subset(test_idx)
 
-    # Use early stopping.
-    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_loss', patience=20, mode='min', restore_best_weights=True
-    )
-    callbacks = [cb_early]
-
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(lr=.001),
@@ -176,23 +169,23 @@ def main():
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
 
+        # Use Tensorboard.
+        log_dir='/tmp/psiz/tensorboard_logs/frame_{0}'.format(i_frame)
+        # Remove existing TensorBoard logs.
+        shutil.rmtree(log_dir)
+        cb_board = psiz.keras.callbacks.TensorBoardRe(
+            log_dir=log_dir, histogram_freq=0,
+            write_graph=False, write_images=False, update_freq='epoch',
+            profile_batch=0, embeddings_freq=0, embeddings_metadata=None
+        )
+        callbacks = [cb_board]
+
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
         embedding = psiz.keras.layers.EmbeddingVariational(
             n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight,
             prior_scale=.17
         )
-        # kernel = psiz.keras.layers.AttentionKernel(
-        #     distance=psiz.keras.layers.WeightedMinkowskiVariational(
-        #         kl_weight=kl_weight
-        #     ),
-        #     attention=psiz.keras.layers.GroupAttentionVariational(
-        #         n_dim=n_dim, n_group=n_group, kl_weight=kl_weight
-        #     ),
-        #     similarity=psiz.keras.layers.ExponentialSimilarityVariational(
-        #         kl_weight=kl_weight
-        #     )
-        # )
         kernel = psiz.keras.layers.AttentionKernel(
             distance=psiz.keras.layers.WeightedMinkowski(
                 fit_rho=False,
@@ -216,7 +209,7 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs  # TODO
+            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]
@@ -407,7 +400,7 @@ def plot_loss(ax, n_obs, train_loss, val_loss, test_loss):
     ax.plot(n_obs, train_loss, 'bo-', ms=ms, label='Train Loss')
     ax.plot(n_obs, val_loss, 'go-', ms=ms, label='Val. Loss')
     ax.plot(n_obs, test_loss, 'ro-', ms=ms, label='Test Loss')
-    ax.set_title('Loss')
+    ax.set_title('Optimization Objective')
 
     ax.set_xlabel('Trials')
     limits = [0, np.max(n_obs) + 10]

@@ -102,20 +102,16 @@ def main():
     obs_val = obs_holdout.subset(val_idx)
     obs_test = obs_holdout.subset(test_idx)
 
-    # Use early stopping.
-    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_loss', patience=15, mode='min', restore_best_weights=True
-    )
     # Use Tensorboard.
     log_dir='/tmp/psiz/tensorboard_logs'
-    # Remove existing logs.
+    # Remove existing TensorBoard logs.
     shutil.rmtree(log_dir)
     cb_board = psiz.keras.callbacks.TensorBoardRe(
         log_dir=log_dir, histogram_freq=0,
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
-    callbacks = [cb_board]  # TODO cb_early?
+    callbacks = [cb_board]
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),

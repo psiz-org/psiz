@@ -30,6 +30,9 @@ Example output:
 
 """
 
+import copy
+import shutil
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -46,10 +49,31 @@ def main():
     """Run script."""
     # Settings.
     n_stimuli = 30
-    n_dim = 3
-    n_trial = 2000
+    n_dim = 2
+    n_trial = 125  # 500  # 2000
     batch_size = 100
-    n_restart = 3
+    n_restart = 1
+
+    # Plot settings.
+    small_size = 6
+    medium_size = 8
+    large_size = 10
+    plt.rc('font', size=small_size)  # controls default text sizes
+    plt.rc('axes', titlesize=medium_size)
+    plt.rc('axes', labelsize=small_size)
+    plt.rc('xtick', labelsize=small_size)
+    plt.rc('ytick', labelsize=small_size)
+    plt.rc('legend', fontsize=small_size)
+    plt.rc('figure', titlesize=large_size)
+
+    # Color settings.
+    cmap = matplotlib.cm.get_cmap('jet')
+    n_color = np.minimum(7, n_stimuli)
+    norm = matplotlib.colors.Normalize(vmin=0., vmax=n_color)
+    color_array = cmap(norm(range(n_color)))
+    gray_array = np.ones([n_stimuli - n_color, 4])
+    gray_array[:, 0:3] = .8
+    color_array = np.vstack([gray_array, color_array])
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -64,24 +88,34 @@ def main():
     agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Partition observations into train and validation set.
-    skf = StratifiedKFold(n_splits=10)
-    (train_idx, val_idx) = list(
+    # Partition observations into train, validation, and test set.
+    skf = StratifiedKFold(n_splits=5)
+    (train_idx, holdout_idx) = list(
         skf.split(obs.stimulus_set, obs.config_idx)
     )[0]
     obs_train = obs.subset(train_idx)
-    obs_val = obs.subset(val_idx)
+    obs_holdout = obs.subset(holdout_idx)
+    skf = StratifiedKFold(n_splits=2)
+    (val_idx, test_idx) = list(
+        skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
+    )[0]
+    obs_val = obs_holdout.subset(val_idx)
+    obs_test = obs_holdout.subset(test_idx)
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=15, mode='min', restore_best_weights=True
+        'val_loss', patience=15, mode='min', restore_best_weights=True
     )
+    # Use Tensorboard.
+    log_dir='/tmp/psiz/tensorboard_logs'
+    # Remove existing logs.
+    shutil.rmtree(log_dir)
     cb_board = psiz.keras.callbacks.TensorBoardRe(
-        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
+        log_dir=log_dir, histogram_freq=0,
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
-    callbacks = [cb_early]
+    callbacks = [cb_board]  # TODO cb_early?
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -90,18 +124,21 @@ def main():
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
     }
-
+ 
     # Define model.
     kl_weight = 1. / obs_train.n_trial
     embedding = psiz.keras.layers.EmbeddingVariational(
-        n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight
+        n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight, prior_scale=.17
     )
     kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarityVariational(
-            kl_weight=kl_weight
+        distance=psiz.keras.layers.WeightedMinkowski(
+            fit_rho=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
         ),
-        distance=psiz.keras.layers.WeightedMinkowskiVariational(
-            kl_weight=kl_weight
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
     model = psiz.models.Rank(
@@ -111,8 +148,8 @@ def main():
 
     # Infer embedding.
     restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
-        callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=1,
+        obs_train, validation_data=obs_val, epochs=3000, batch_size=batch_size,  # TODO 1000
+        callbacks=callbacks, n_restart=n_restart, monitor='val_loss', verbose=2,
         compile_kwargs=compile_kwargs
     )
 
@@ -131,64 +168,131 @@ def main():
     print(
         '\n    R^2 Model Comparison: {0: >6.2f}\n'.format(r_squared)
     )
-    plot_posterior(emb_inferred)
-
-
-def plot_posterior(emb_inferred):
-    """Plot posteriors."""
-    fig, ax = plt.subplots(figsize=(12, 5))
-
-    # Rho.
-    x_map = emb_inferred.model.kernel.distance.rho_posterior.distribution.loc.numpy()
-    ax = plt.subplot(1, 3, 1)
-    xg = np.linspace(x_map - 1, x_map + 1, 1000)
-    y = emb_inferred.model.kernel.distance.rho_posterior.distribution.prob(xg)
-    ax.plot(xg, y)
-    ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
-    ax.set_xlabel('x')
-    ax.set_ylabel('p(x)')
-    ax.set_title('rho')
-
-    # Tau.
-    x_map = emb_inferred.model.kernel.similarity.tau_posterior.distribution.loc.numpy()
-    ax = plt.subplot(1, 3, 2)
-    xg = np.linspace(x_map - 1, x_map + 1, 1000)
-    y = emb_inferred.model.kernel.similarity.tau_posterior.distribution.prob(xg)
-    ax.plot(xg, y)
-    ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
-    ax.set_xlabel('x')
-    ax.set_ylabel('p(x)')
-    ax.set_title('tau')
-
-    # Gamma.
-    x_map = emb_inferred.model.kernel.similarity.gamma_posterior.distribution.loc.numpy()
-    ax = plt.subplot(1, 3, 3)
-    xg = np.linspace(x_map - 1, x_map + 1, 1000)
-    y = emb_inferred.model.kernel.similarity.gamma_posterior.distribution.prob(xg)
-    ax.plot(xg, y)
-    ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
-    ax.set_xlabel('x')
-    ax.set_ylabel('p(x)')
-    ax.set_title('gamma')
-
-    # Beta.
-    # ax = plt.subplot(1, 4, 4)
-    # xg = np.linspace(0, 5, 1000)
-    # y = emb_inferred.model.kernel.similarity.rho_posterior.distribution.prob(xg)
-    # ax.text(x_map, np.max(y), '{0:.2f}'.format(x_map))
-    # ax.set_xlabel('x')
-    # ax.set_ylabel('p(x)')
-    # ax.set_title('beta')
-
-    plt.tight_layout()
+    fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
+    plot_embedding(fig0, emb_true, emb_inferred, color_array)
     plt.show()
+    # fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
+    # plt.savefig(
+    #     os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
+    # )
+
+
+def plot_embedding(fig0, emb_true, emb_inferred, color_array):
+    """Plot frame."""
+    # Settings.
+    s = 10
+
+    gs = fig0.add_gridspec(1, 1)
+
+    # Plot embeddings.
+    f0_ax1 = fig0.add_subplot(gs[0, 0])
+    # Determine embedding limits.
+    z_max = 1.3 * np.max(np.abs(emb_true.z))
+    z_limits = [-z_max, z_max]
+
+    # Apply and plot Procrustes affine transformation of posterior.
+    dist = emb_inferred.model.embedding.embeddings_posterior.distribution
+    loc, cov = unpack_embeddings_distribution(dist)
+    r, t = psiz.utils.procrustes_2d(
+        emb_true.z, loc, scale=False, n_restart=30
+    )
+    loc, cov = apply_affine(loc, cov, r, t)
+    plot_bvn(f0_ax1, loc, cov=cov, c=color_array, show_loc=False)
+
+    # Plot true embedding.
+    f0_ax1.scatter(
+        emb_true.z[:, 0], emb_true.z[:, 1], s=s, c=color_array, marker='o',
+        edgecolors='none', zorder=100
+    )
+    f0_ax1.set_xlim(z_limits)
+    f0_ax1.set_ylim(z_limits)
+    f0_ax1.set_aspect('equal')
+    f0_ax1.set_xticks([])
+    f0_ax1.set_yticks([])
+    f0_ax1.set_title('Embeddings')
+
+    gs.tight_layout(fig0)
+
+
+def unpack_embeddings_distribution(dist):
+    """Unpack embeddings distribution."""
+    def scale_to_cov(scale):
+        """Convert scale to covariance matrix.
+
+        Assumes `scale` represents diagonal elements only.
+        """
+        n_stimuli = scale.shape[0]
+        n_dim = scale.shape[1]
+        cov = np.zeros([n_stimuli, n_dim, n_dim])
+        for i_stimulus in range(n_stimuli):
+            cov[i_stimulus] = np.eye(n_dim) * scale[i_stimulus]**2
+        return cov
+
+    loc = dist.loc.numpy()[1:]  # Drop placeholder
+    scale = dist.scale.numpy()[1:]
+    cov = scale_to_cov(scale)
+    return loc, cov
+
+
+def apply_affine(loc, cov, r, t):
+    """Apply affine transformation to set of MVN."""
+    n_dist = loc.shape[0]
+    loc_a = copy.copy(loc)
+    cov_a = copy.copy(cov)
+
+    for i_dist in range(n_dist):
+        loc_a[i_dist], cov_a[i_dist] = psiz.utils.affine_mvn(
+            loc[np.newaxis, i_dist], cov[i_dist], r, t
+        )
+    return loc_a, cov_a
+
+
+def plot_bvn(ax, loc, cov=None, c=None, r=1.96, show_loc=True):
+    """Plot bivariate normal embeddings.
+
+    If covariances are supplied, ellipses are drawn to indicate regions
+    of highest probability mass.
+
+    Arguments:
+        ax: A 'matplotlib' axes object.
+        loc: Array denoting the means of bivariate normal
+            distributions.
+        cov (optional): Array denoting the covariance matrices of
+            bivariate normal distributions.
+        c (optional): color array
+        limits (optional): Limits of axes.
+        r (optional): The radius (specified in standard deviations) at
+            which to draw the ellipse. The default value corresponds to
+            an ellipse indicating a region containing 95% of the
+            probability mass.
+
+    """
+    # Settings.
+    s = 10
+
+    n_stimuli = loc.shape[0]
+
+    # Plot means.
+    if show_loc:
+        ax.scatter(
+            loc[:, 0], loc[:, 1], s=s, c=c, marker='o', edgecolors='none'
+        )
+
+    if cov is not None:
+        # Draw regions of highest probability mass.
+        for i_stimulus in range(n_stimuli):
+            ellipse = psiz.visualize.bvn_ellipse(
+                loc[i_stimulus], cov[i_stimulus], r=r, fill=False,
+                edgecolor=c[i_stimulus]
+            )
+            ax.add_artist(ellipse)
 
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17, seed=58)
     )
     kernel = psiz.keras.layers.Kernel(
         similarity=psiz.keras.layers.ExponentialSimilarity()

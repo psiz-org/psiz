@@ -57,7 +57,7 @@ def main():
     n_stimuli = 30
     n_dim = 2
     n_trial = 2000
-    n_restart = 3  # TODO
+    n_restart = 1  # TODO
     batch_size = 100
     n_frame = 7
 
@@ -143,14 +143,6 @@ def main():
             n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight,
             prior_scale=.17
         )
-        # kernel = psiz.keras.layers.Kernel(
-        #     distance=psiz.keras.layers.WeightedMinkowskiVariational(
-        #         kl_weight=kl_weight
-        #     ),
-        #     similarity=psiz.keras.layers.ExponentialSimilarityVariational(
-        #         kl_weight=kl_weight
-        #     )
-        # )
         kernel = psiz.keras.layers.Kernel(
             distance=psiz.keras.layers.WeightedMinkowski(
                 fit_rho=False,

@@ -351,8 +351,10 @@ def procrustes_2d(x, y, n_restart=10, scale=True):
         r, t = assemble_r_t(params)
         # Apply affine transformation.
         y_affine = np.matmul(y, r) + t
-        # Loss is defined as the MSE of L2 distance.
-        loss = np.mean(np.sum((x - y_affine)**2, axis=1))
+        # loss = np.mean(np.sum((x - y_affine)**2, axis=1))  TODO
+        # Loss is defined as MAE, since MSE chases outliers and can result
+        # in rediculous solutions.
+        loss = np.mean(np.sum(np.abs(x - y_affine), axis=1))
         return loss
 
     # t_0, t_1, theta, scaling, flip

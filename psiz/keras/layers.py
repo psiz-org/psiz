@@ -921,51 +921,52 @@ class RateBehavior(tf.keras.layers.Layer):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(
+            self, lower_initializer=None, upper_initializer=None,
+            midpoint_initializer=None, rate_initializer=None,
+            lower_trainable=True, upper_trainable=True,
+            midpoint_trainable=True, rate_trainable=True, **kwargs):
         """Initialize.
 
         Arguments:
-            fit_lower (optional): Boolean indicating if variable is
-                trainable.
-            fit_upper (optional): Boolean indicating if variable is
-                trainable.
-            fid_midpoint (optional): Boolean indicating if variable is
-                trainable.
-            fit_rate (optional): Boolean indicating if variable is
-                trainable.
             lower_initializer (optional): TensorFlow initializer.
             upper_initializer (optional): TensorFlow initializer.
             midpoint_initializer (optional): TensorFlow initializer.
             rate_initializer (optional): TensorFlow initializer.
+            lower_trainable (optional): Boolean indicating if variable
+                is trainable.
+            upper_trainable (optional): Boolean indicating if variable
+                is trainable.
+            fid_midpoint (optional): Boolean indicating if variable is
+                trainable.
+            rate_trainable (optional): Boolean indicating if variable
+                is trainable.
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(RateBehavior, self).__init__(
-            fit_lower=True, fit_upper=True, fit_midpoint=True, fit_rate=True,
-            lower_initializer=None, upper_initializer=None,
-            midpoint_initializer=None, rate_initializer=None, **kwargs)
+        super(RateBehavior, self).__init__(**kwargs)
 
-        self.fit_lower = fit_lower
+        self.lower_trainable = lower_trainable
         if lower_initializer is None:
             lower_initializer = tf.keras.initializers.Constant(0.)
         self.lower_initializer = tf.keras.initializers.get(lower_initializer)
         self.lower = self.add_weight(
             shape=[], initializer=self.lower_initializer,
-            trainable=self.fit_lower, name="lower", dtype=K.floatx(),
+            trainable=self.lower_trainable, name="lower", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
-        self.fit_upper = fit_upper
+        self.upper_trainable = upper_trainable
         if upper_initializer is None:
             upper_initializer = tf.keras.initializers.Constant(1.)
         self.upper_initializer = tf.keras.initializers.get(upper_initializer)
         self.upper = self.add_weight(
             shape=[], initializer=self.upper_initializer,
-            trainable=self.fit_upper, name="upper", dtype=K.floatx(),
+            trainable=self.upper_trainable, name="upper", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
-        self.fit_midpoint = fit_midpoint
+        self.midpoint_trainable = midpoint_trainable
         if midpoint_initializer is None:
             midpoint_initializer = tf.keras.initializers.Constant(.5)
         self.midpoint_initializer = tf.keras.initializers.get(
@@ -973,17 +974,18 @@ class RateBehavior(tf.keras.layers.Layer):
         )
         self.midpoint = self.add_weight(
             shape=[], initializer=self.midpoint_initializer,
-            trainable=self.fit_midpoint, name="midpoint", dtype=K.floatx(),
+            trainable=self.midpoint_trainable, name="midpoint",
+            dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
-        self.fit_rate = fit_rate
+        self.rate_trainable = rate_trainable
         if rate_initializer is None:
             rate_initializer = tf.keras.initializers.Constant(10.)
         self.rate_initializer = tf.keras.initializers.get(rate_initializer)
         self.rate = self.add_weight(
             shape=[], initializer=self.rate_initializer,
-            trainable=self.fit_rate, name="rate", dtype=K.floatx(),
+            trainable=self.rate_trainable, name="rate", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
@@ -1013,10 +1015,10 @@ class RateBehavior(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'fit_lower': self.fit_lower,
-            'fit_upper': self.fit_upper,
-            'fit_midpoint': self.fit_midpoint,
-            'fit_rate': self.fit_rate,
+            'lower_trainable': self.lower_trainable,
+            'upper_trainable': self.upper_trainable,
+            'midpoint_trainable': self.midpoint_trainable,
+            'rate_trainable': self.rate_trainable,
             'lower_initializer': tf.keras.initializers.serialize(
                 self.lower_initializer
             ),

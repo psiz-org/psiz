@@ -77,8 +77,7 @@ class Proxy(object):
     embedding algorithm infers a set of attention weights if there is
     more than one group.
 
-    TODO update methods and attributes.
-    Methods:
+    Methods: TODO
         compile: Assign a optimizer, loss and regularization function
             for the optimization procedure.
         fit: Fit the embedding model using the provided observations.
@@ -87,13 +86,10 @@ class Proxy(object):
         similarity: Return the similarity between provided points.
         distance: Return the (weighted) minkowski distance between
             provided points.
-        outcome_probability: Return the probability of the possible
-            outcomes for each trial.
-        posterior_samples: Sample from the posterior distribution.
         set_log: Adjust the TensorBoard logging behavior.
         save: Save the embedding model as an hdf5 file.
 
-    Attributes:
+    Attributes: TODO
         n_stimuli: The number of unique stimuli in the embedding.
         n_dim: The dimensionality of the embedding.
         n_group: The number of distinct groups in the embedding.
@@ -160,15 +156,6 @@ class Proxy(object):
         """Getter method for `z`."""
         return self.model.embedding.embeddings.numpy()[1:]
 
-    # TODO brittle, remove
-    # @z.setter
-    # def z(self, z):
-    #     """Setter method for z."""
-    #     z_pad = np.vstack(
-    #         [np.zeros([1, self.n_dim]), z]
-    #     )
-    #     self.model.embedding.embeddings.assign(z_pad)
-
     @property
     def w(self):
         """Getter method for `w`."""
@@ -178,12 +165,6 @@ class Proxy(object):
             w = np.ones([1, self.n_dim])
         return w
 
-    # TODO brittle, remove
-    # @w.setter
-    # def w(self, w):
-    #     """Setter method for w."""
-    #     self.model.kernel.attention.w.assign(w)
-
     @property
     def phi(self):
         """Getter method for `phi`."""
@@ -192,13 +173,6 @@ class Proxy(object):
         }
         return d
 
-    # TODO brittle, remove
-    # @phi.setter
-    # def phi(self, phi):
-    #     """Setter method for w."""
-    #     for k, v in phi.items():
-    #         setattr(self, k, v)
-
     @property
     def theta(self):
         """Getter method for `theta`."""
@@ -206,13 +180,6 @@ class Proxy(object):
         for k, v in self.model.theta.items():
             d[k] = v.numpy()
         return d
-
-    # TODO brittle, remove
-    # @theta.setter
-    # def theta(self, theta):
-    #     """Setter method for w."""
-    #     for k, v in theta.items():
-    #         self.model.theta[k].assign(v)
 
     def _broadcast_for_similarity(
             self, z_q, z_r, group_id=None):
@@ -526,389 +493,6 @@ class Proxy(object):
     #     ds_docket = ds_docket.batch(batch_size, drop_remainder=False)
     #     predictions = self.model.predict(x=ds_docket, **kwargs)
     #     return predictions.numpy()
-
-    def outcome_probability_new(
-            self, docket, group_id=None, z=None, unaltered_only=True):
-        """Return probability of each outcome for each trial.
-
-        Arguments:
-            docket: A docket of unjudged similarity trials. The indices
-                used must correspond to the rows of z.
-            group_id (optional): The group ID for which to compute the
-                probabilities.
-            z (optional): A set of embedding points. If no embedding
-                points are provided, the points associated with the
-                object are used.
-                shape=(n_stimuli, n_dim, [n_sample])
-
-        Returns:
-            prob_all: A MaskedArray representing the probabilities
-                associated with the different outcomes for each
-                unjudged trial. In general, different trial
-                configurations have a different number of possible
-                outcomes. The mask attribute of the MaskedArray
-                indicates which elements are actual outcome
-                probabilities.
-                shape = (n_trial, n_max_outcome, [n_sample])
-
-        Notes:
-            The first outcome corresponds to the original order of the
-                trial data.
-
-        """
-        n_trial_all = docket.n_trial
-
-        if z is None:
-            z = self.z
-
-        n_config = docket.config_list.shape[0]
-
-        if z.ndim == 2:
-            z = np.expand_dims(z, axis=2)
-        n_sample = z.shape[2]
-
-        # TODO Use call to embedding layer.
-        # z_stimulus_set = self.model.embedding(docket.stimulus_set + 1)
-        z_stimulus_set = _inflate_points(docket.stimulus_set, z)
-        z_q = z_stimulus_set[:, :, 0, :]
-        z_q = np.expand_dims(z_q, axis=2)
-        z_r = z_stimulus_set[:, :, 1:, :]
-        z_q, z_r, attention = self._broadcast_for_similarity(
-            z_q, z_r, group_id=group_id
-        )
-
-        # Compute similarity between query and references.
-        d_qr = self.model.distance([
-            tf.constant(z_q, dtype=K.floatx()),
-            tf.constant(z_r, dtype=K.floatx()),
-            tf.constant(attention, dtype=K.floatx())
-        ])
-        sim_qr = self.model.similarity(d_qr).numpy()
-
-        prob_all = -1 * np.ones((n_trial_all, n_sample))
-        for i_config in range(n_config):
-            config = docket.config_list.iloc[i_config]
-            trial_locs = docket.config_idx == i_config
-            n_trial = np.sum(trial_locs)
-            n_reference = config['n_reference']
-
-            sim_qr_config = sim_qr[trial_locs]
-            sim_qr_config = sim_qr_config[:, 0:n_reference]
-
-            # Compute probability of each possible outcome.
-            probs_config = _ranked_sequence_probability(
-                sim_qr_config, config['n_select']
-            )
-            prob_all[trial_locs, :] = probs_config
-        prob_all = ma.masked_values(prob_all, -1)
-
-        # Reshape prob_all as necessary.
-        if n_sample == 1:
-            prob_all = prob_all[:, :, 0]
-
-        return prob_all
-
-    def outcome_probability(
-            self, docket, group_id=None, z=None, unaltered_only=False):
-        """Return probability of each outcome for each trial.
-
-        Arguments:
-            docket: A docket of unjudged similarity trials. The indices
-                used must correspond to the rows of z.
-            group_id (optional): The group ID for which to compute the
-                probabilities.
-            z (optional): A set of embedding points. If no embedding
-                points are provided, the points associated with the
-                object are used.
-                shape=(n_stimuli, n_dim, [n_sample])
-            unaltered_only (optional): Flag that determines whether
-                only the unaltered ordering is evaluated and returned.
-
-        Returns:
-            prob_all: A MaskedArray representing the probabilities
-                associated with the different outcomes for each
-                unjudged trial. In general, different trial
-                configurations have a different number of possible
-                outcomes. The mask attribute of the MaskedArray
-                indicates which elements are actual outcome
-                probabilities.
-                shape = (n_trial, n_max_outcome, [n_sample])
-
-        Notes:
-            The first outcome corresponds to the original order of the
-                trial data.
-
-        """
-        # if not unaltered_only:
-        #     raise ValueError('unaltered_only=False not supported')
-        n_trial_all = docket.n_trial
-
-        if z is None:
-            z = self.z
-
-        n_config = docket.config_list.shape[0]
-
-        outcome_idx_list = docket.outcome_idx_list
-        n_outcome_list = docket.config_list['n_outcome'].values
-        max_n_outcome = np.max(n_outcome_list)
-
-        if unaltered_only:
-            max_n_outcome = 1
-
-        if z.ndim == 2:
-            z = np.expand_dims(z, axis=2)
-        n_sample = z.shape[2]
-
-        # TODO Use call to embedding layer.
-        # z_stimulus_set = self.model.embedding(docket.stimulus_set + 1)
-        z_stimulus_set = _inflate_points(docket.stimulus_set, z)
-        z_q = z_stimulus_set[:, :, 0, :]
-        z_q = np.expand_dims(z_q, axis=2)
-        z_r = z_stimulus_set[:, :, 1:, :]
-        z_q, z_r, attention = self._broadcast_for_similarity(
-            z_q, z_r, group_id=group_id
-        )
-
-        # Compute similarity between query and references.
-        # TODO brittle
-        d_qr = self.model.kernel.distance([
-            tf.constant(z_q, dtype=K.floatx()),
-            tf.constant(z_r, dtype=K.floatx()),
-            tf.constant(attention, dtype=K.floatx())
-        ])
-        sim_qr = self.model.kernel.similarity(d_qr).numpy()
-
-        prob_all = -1 * np.ones((n_trial_all, max_n_outcome, n_sample))
-        for i_config in range(n_config):
-            config = docket.config_list.iloc[i_config]
-            outcome_idx = outcome_idx_list[i_config]
-            trial_locs = docket.config_idx == i_config
-            n_trial = np.sum(trial_locs)
-            n_reference = config['n_reference']
-
-            sim_qr_config = sim_qr[trial_locs]
-            sim_qr_config = sim_qr_config[:, 0:n_reference]
-
-            n_outcome = n_outcome_list[i_config]
-            if unaltered_only:
-                n_outcome = 1
-
-            # Compute probability of each possible outcome.
-            probs_config = np.ones(
-                (n_trial, n_outcome, n_sample), dtype=np.float64
-            )
-            for i_outcome in range(n_outcome):
-                s_qr_perm = sim_qr_config[:, outcome_idx[i_outcome, :], :]
-                probs_config[:, i_outcome, :] = _ranked_sequence_probability(
-                    s_qr_perm, config['n_select']
-                )
-            prob_all[trial_locs, 0:n_outcome, :] = probs_config
-        prob_all = ma.masked_values(prob_all, -1)
-
-        # Correct for any numerical inaccuracy.
-        if not unaltered_only:
-            prob_all = ma.divide(
-                prob_all, ma.sum(prob_all, axis=1, keepdims=True))
-
-        # Reshape prob_all as necessary.
-        if n_sample == 1:
-            prob_all = prob_all[:, :, 0]
-
-        return prob_all
-
-    def posterior_samples(
-            self, obs, n_final_sample=1000, n_burn=100, thin_step=5,
-            z_init=None, verbose=0):
-        """Sample from the posterior of the embedding.
-
-        Samples are drawn from the posterior holding theta constant. A
-        variant of Elliptical Slice Sampling (Murray & Adams 2010) is
-        used to estimate the posterior for the embedding points. Since
-        the latent embedding variables are translation and rotation
-        invariant, generic sampling will artificially inflate the
-        entropy of the samples. To compensate for this issue, the
-        points are split into two groups, holding one set constant
-        while sampling the other set.
-
-        Arguments:
-            obs: A RankObservations object representing the observed data.
-                There must be at least one observation in order to
-                sample from the posterior distribution.
-            n_final_sample (optional): The number of samples desired
-                after removing the "burn in" samples and applying
-                thinning.
-            n_burn (optional): The number of samples to remove from the
-                beginning of the sampling sequence.
-            thin_step (optional): The interval to use in order to thin
-                (i.e., de-correlate) the samples.
-            z_init (optional): Initialization of z. If not provided,
-                the current embedding values associated with the object
-                are used.
-            verbose (optional): An integer specifying the verbosity of
-                printed output. If zero, nothing is printed. Increasing
-                integers display an increasing amount of information.
-
-        Returns:
-            A dictionary of posterior samples for different parameters.
-                The samples are stored as a NumPy array.
-                'z' : shape = (n_stimuli, n_dim, n_total_sample).
-
-        Notes:
-            The step_size of the Hamiltonian Monte Carlo procedure is
-                determined by the scale of the current embedding.
-
-        References:
-            Murray, I., & Adams, R. P. (2010). Slice sampling
-            covariance hyperparameters of latent Gaussian models. In
-            Advances in Neural Information Processing Systems (pp.
-            1732-1740).
-
-        """
-        # Timer attributes. TODO
-        # posterior_duration: The duration (in seconds) of the last
-        #     called posterior sampling procedure.
-        # self.posterior_duration = 0.0
-        # change references to .posterior_duration
-
-        start_time_s = time.time()
-        n_final_sample = int(n_final_sample)
-        n_total_sample = n_burn + (n_final_sample * thin_step)
-        n_stimuli = self.n_stimuli
-        n_dim = self.n_dim
-        if z_init is None:
-            z = copy.copy(self.z)
-        else:
-            z = z_init
-
-        if verbose > 0:
-            print('[psiz] Sampling from posterior...')
-            progbar = psiz.utils.ProgressBarRe(
-                n_total_sample, prefix='Progress:', length=50
-            )
-            progbar.update(0)
-
-        if (verbose > 1):
-            print('    Settings:')
-            print('    n_total_sample: ', n_total_sample)
-            print('    n_burn:         ', n_burn)
-            print('    thin_step:      ', thin_step)
-            print('    --------------------------')
-            print('    n_final_sample: ', n_final_sample)
-
-        # Prior
-        # p(z_k | Z_negk, theta) ~ N(mu, sigma)
-        # Approximate prior of z_k using all embedding points to reduce
-        # computational burden.
-        gmm = mixture.GaussianMixture(
-            n_components=1, covariance_type='spherical'
-        )
-        gmm.fit(z)
-        mu = np.expand_dims(gmm.means_[0], axis=0)
-        sigma = gmm.covariances_[0] * np.identity(n_dim)
-        # NOTE: Since the covariance is spherical, we just need one element.
-        chol_element = np.linalg.cholesky(sigma)[0, 0]
-
-        # Center embedding to satisfy assumptions of elliptical slice sampling.
-        z = z - mu
-
-        # Define log-likelihood for elliptical slice sampler.
-        def log_likelihood(z_part, part_idx, z_full, obs):
-            # Assemble full z.
-            z_full[part_idx, :] = z_part
-            cap = 2.2204e-16
-            probs = self.outcome_probability(
-                obs, group_id=obs.group_id, z=z_full,
-                unaltered_only=True
-            )
-            probs = ma.maximum(cap, probs[:, 0])
-            ll = ma.sum(ma.log(probs))
-            return ll
-
-        # Initialize sampler.
-        z_full = copy.copy(z)
-        samples = np.empty((n_stimuli, n_dim, n_total_sample))
-
-        # Make first partition.
-        n_partition = 2
-        part_idx, n_stimuli_part = self._make_partition(
-            n_stimuli, n_partition
-        )
-
-        for i_round in range(n_total_sample):
-
-            if np.mod(i_round, 100) == 0:
-                if verbose > 0:
-                    progbar.update(i_round + 1)
-
-            # Partition stimuli into two groups to fix rotation invariance.
-            if np.mod(i_round, 10) == 0:
-                part_idx, n_stimuli_part = self._make_partition(
-                    n_stimuli, n_partition
-                )
-
-            for i_part in range(n_partition):
-                z_part = z_full[part_idx[i_part], :]
-                # Sample.
-                (z_part, _) = _elliptical_slice(
-                    z_part, chol_element, log_likelihood,
-                    pdf_params=[part_idx[i_part], copy.copy(z), obs]
-                )
-                # Update.
-                z_full[part_idx[i_part], :] = z_part
-
-            samples[:, :, i_round] = z_full
-
-        # Add back in mean.
-        mu = np.expand_dims(mu, axis=2)
-        samples = samples + mu
-
-        samples_all = samples[:, :, n_burn::thin_step]
-        samples_all = samples_all[:, :, 0:n_final_sample]
-        samples = dict(z=samples_all)
-
-        if verbose > 0:
-            progbar.update(n_total_sample)
-
-        self.posterior_duration = time.time() - start_time_s
-        return samples
-
-    @staticmethod
-    def _make_partition(n_stimuli, n_partition):
-        """Partition stimuli.
-
-        Arguments:
-            n_stimuli: Scalar indicating the total number of stimuli.
-            n_partition: Scalar indicating the number of partitions.
-
-        Returns:
-            part_idx: A boolean array indicating partition membership.
-                shape = (n_partition, n_stimuli)
-            n_stimuli_part: An integer array indicating the number of
-                stimuli in each partition.
-                shape = (n_partition)
-
-        """
-        n_stimuli_part = np.floor(n_stimuli / n_partition)
-        n_stimuli_part = n_stimuli_part * np.ones([n_partition])
-        n_stimuli_part[1] = n_stimuli_part[1] + (
-            n_stimuli - (n_stimuli_part[1] * n_partition)
-        )
-        n_stimuli_part = n_stimuli_part.astype(np.int32)
-
-        partition = np.empty([0])
-        for i_part in range(n_partition):
-            partition = np.hstack(
-                (partition, i_part * np.ones([n_stimuli_part[i_part]]))
-            )
-        partition = np.random.choice(partition, n_stimuli, replace=False)
-
-        part_idx = np.zeros((n_partition, n_stimuli), dtype=np.int32)
-        for i_part in range(n_partition):
-            locs = np.equal(partition, i_part)
-            part_idx[i_part, locs] = 1
-        part_idx = part_idx.astype(bool)
-
-        return part_idx, n_stimuli_part
 
     def save(self, filepath, overwrite=False):
         """Save the PsychologialEmbedding model as an HDF5 file.

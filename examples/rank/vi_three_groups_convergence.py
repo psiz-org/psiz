@@ -116,7 +116,7 @@ def main():
     obs_novice = agent_novice.simulate(docket)
     obs_interm = agent_interm.simulate(docket)
     obs_expert = agent_expert.simulate(docket)
-    obs_all = psiz.trials.stack((obs_novice, obs_interm, obs_expert))
+    obs = psiz.trials.stack((obs_novice, obs_interm, obs_expert))
 
     # Compute ground truth similarity matrices.
     def truth_sim_func0(z_q, z_ref):
@@ -221,7 +221,7 @@ def main():
 
         # Infer model.
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=10,  # TODO 1000
+            obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
         )

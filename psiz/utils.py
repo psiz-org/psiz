@@ -21,6 +21,8 @@ Classes:
     ProgressBarRe: A progress bar displayed in the terminal.
 
 Functions:
+    affine_mvn: Affine transformation of multivariate normal
+        distribution.
     pairwise_matrix: Return the similarity matrix characterizing
         the embedding.
     similarity_matrix: Return the similarity matrix characterizing
@@ -29,11 +31,11 @@ Functions:
     compare_models: Compare the similarity structure between two
         embedding models.
     rotation_matrix: Returns a two-dimensional rotation matrix.
-    affine_transformation: Performs an affine transformation on a set
-        of points.
-    procrustean_solution: Attempt to allign two embeddings by finding
-        a Procrustean solution.
+    procrustes_2d: Attempt to allign two sets of 2D points by finding
+        an affine transformation.
     choice_wo_replace: Efficient sampling without replacement.
+    standard_split: Standard 80-10-10 split of observations.
+
 """
 
 import copy
@@ -45,6 +47,52 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.stats import pearsonr
 from sklearn.metrics import r2_score
+from sklearn.model_selection import StratifiedKFold
+
+def affine_mvn(loc, cov, r=None, t=None):
+    """Affine transformation of multivariate normal.
+
+    Performs the following operations:
+        loc_affine = loc @ r + t
+        cov_affine = r^T @ cov @ r
+
+    Arguments:
+        loc: Location parameters.
+            shape=(1, n_dim)
+        cov: Covariance.
+            shape=(n_dim, n_dim)
+        r: Rotation matrix.
+            shape=(n_dim, n_dim)
+        t: Transformation vector.
+            shape=(1, n_dim)
+
+    Returns:
+        loc_affine: Rotated location parameters.
+        cov_affine: Rotated covariance.
+
+    NOTE:
+        This implementation hits the means with a rotation matrix on
+        the RHS, allowing the rows to correspond to an instance and
+        columns to correspond to dimensionality. The more conventional
+        pattern has rows corresponding to dimensionality, in which case
+        the code would be implemented as:
+
+        ```
+        loc_affine = np.matmul(r, loc) + t
+        cov_affine = np.matmul(r, np.matmul(cov, np.transpose(r)))
+        ```
+
+    """
+    n_dim = loc.shape[0]
+
+    if t is None:
+        t = 0
+    if r is None:
+        r = np.eye(n_dim)
+
+    loc_affine = np.matmul(loc, r) + t
+    cov_affine = np.matmul(np.transpose(r), np.matmul(cov, r))
+    return loc_affine, cov_affine
 
 
 def assess_convergence(
@@ -256,79 +304,100 @@ def rotation_matrix(theta):
     ))
 
 
-def affine_transformation(z, params):
-    """Return affine transformation of 2D points.
+def procrustes_2d(x, y, n_restart=10, scale=True):
+    """Align two sets of coordinates using an affine transformation.
+
+    Attempts to find the affine transformation (composed of a rotation
+    matrix `r` and a transformation vector `t`) for `y` such that
+    `y_affine` closely matches `x`. Closeness is measures using MSE.
+
+        y_affine = np.matmul(y, r) + t
+
+    This algorithm only works with 2D coordinates (i.e., n_dim=2).
 
     Arguments:
-        z: Original set of points.
-            shape = (n_point, 2)
-        params: Transformation parameters denoting x translation,
-            y translation, rotation (in radians), scaling, and flip
-            factor.
-            shape = (5,)
-
-    """
-    x = params[0]
-    y = params[1]
-    translation = np.array((x, y))
-    theta = params[2]
-    s = params[3]
-    f = params[4]
-    x = f * x
-    r = rotation_matrix(theta)
-    z_trans = s * (np.matmul(z, r) + translation)
-    return z_trans
-
-
-def procrustean_solution(z_a, z_b, n_restart=10):
-    """Align the two embeddings using an affine transformation.
-
-    Arguments:
-        z_a: A 2D embedding.
-            shape = (n_point, 2)
-        z_b: A 2D embedding.
-            shape = (n_point, 2)
+        x: The first set of points.
+            shape = (n_point, n_dim)
+        y: The second set of points.
+            shape = (n_point, n_dim)
         n_restart (optional): A scalar indicating the number of
             restarts for the optimization routine.
+        scale (optional): Boolean indicating if scaling is permitted
+            in the affine transformation.
 
     Returns:
-        z_c: An affine transformation of z_b that is maximally aligned
-            with z_a.
-        params: The affine transformation parameters.
+        r: A rotation matrix.
+            shape=(n_dim, n_dim)
+        t: A transformation vector.
+            shape=(1, n_dim)
 
     """
-    def objective_fn(params, z_a, z_b):
-        z_c = affine_transformation(z_b, params)
-        # Loss is defined as the MSE of L2 distance.
-        loss = np.mean(np.sum((z_a - z_c)**2, axis=1))
+    n_dim = 2
+
+    def assemble_r_t(params):
+        # Assemble valid rotation matrix.
+        s = params[3] * np.eye(n_dim)
+        r = rotation_matrix(params[2])
+        r = np.matmul(s, r)
+        f = np.array([[np.sign(params[4]), 0], [0, np.sign(params[5])]])
+        r = np.matmul(f, r)
+
+        # Assemble translation vector.
+        t = np.array([params[0], params[1]])
+        t = np.expand_dims(t, axis=0)
+        return r, t
+
+    # In order to avoid impossible rotation matrices, perform optimization
+    # on rotation components separately (theta, scaling, mirror).
+    def objective_fn(params, x, y):
+        r, t = assemble_r_t(params)
+        # Apply affine transformation.
+        y_affine = np.matmul(y, r) + t
+        # loss = np.mean(np.sum((x - y_affine)**2, axis=1))  TODO
+        # Loss is defined as MAE, since MSE chases outliers and can result
+        # in rediculous solutions.
+        loss = np.mean(np.sum(np.abs(x - y_affine), axis=1))
         return loss
 
+    # t_0, t_1, theta, scaling, flip
     params_best = np.array((0., 0., 0., 1.))
     loss_best = np.inf
     for _ in range(n_restart):
-        (x0, y0) = np.random.rand(2)
+        (x0, y0) = np.random.rand(2) - .5
         theta0 = 2 * np.pi * np.random.rand(1)
-        s0 = 2 * np.random.rand(1)
+        if scale:
+            s0 = np.random.rand(1) + .5
+            s_bnds = (0., None)
+        else:
+            s0 = 1
+            s_bnds = (1., 1.)
         # Perform a flip on some restarts.
-        f0 = 1.
         if np.random.rand(1) < .5:
-            f0 = -1.
-        params0 = np.array((x0, y0, theta0, s0, f0))
+            fx0 = -.1
+        else:
+            fx0 = .1
+        if np.random.rand(1) < .5:
+            fy0 = -.1
+        else:
+            fy0 = .1
+        params0 = np.array((x0, y0, theta0, s0, fx0, fy0))
         bnds = (
             (None, None),
             (None, None),
             (0., 2*np.pi),
-            (0., None),
-            (f0, f0)
+            s_bnds,
+            (-.1, .1),
+            (-.1, .1)
         )
-        res = minimize(objective_fn, params0, args=(z_a, z_b), bounds=bnds)
+        res = minimize(objective_fn, params0, args=(x, y), bounds=bnds)
         params_candidate = res.x
         loss_candidate = res.fun
         if loss_candidate < loss_best:
             loss_best = loss_candidate
             params_best = params_candidate
-        z_c = affine_transformation(z_b, params_best)
-    return (z_c, params_best)
+
+    r, t = assemble_r_t(params_best)
+    return r, t
 
 
 def choice_wo_replace(a, size, p):
@@ -371,6 +440,32 @@ def choice_wo_replace(a, size, p):
     )[:, :sample_size]
 
     return a[samples]
+
+
+def standard_split(obs):
+    """Creata a standard 80-10-10 split of the observations.
+    
+    Arguments:
+        obs: A set of observations.
+
+    Returns:
+        obs_train: A train set (80%).
+        obs_val: A validation set (10%).
+        obs_test: A test set (10%).
+    """
+    skf = StratifiedKFold(n_splits=5)
+    (train_idx, holdout_idx) = list(
+        skf.split(obs.stimulus_set, obs.config_idx)
+    )[0]
+    obs_train = obs.subset(train_idx)
+    obs_holdout = obs.subset(holdout_idx)
+    skf = StratifiedKFold(n_splits=2)
+    (val_idx, test_idx) = list(
+        skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
+    )[0]
+    obs_val = obs_holdout.subset(val_idx)
+    obs_test = obs_holdout.subset(test_idx)
+    return obs_train, obs_val, obs_test
 
 
 class ProgressBarRe(object):

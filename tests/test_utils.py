@@ -38,14 +38,24 @@ def ground_truth():
     n_dim = 2
     n_group = 2
 
+    # Define embedding.
     embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
+    embedding.build([None, None, None])
+
+    # Define kernel.
     attention = psiz.keras.layers.GroupAttention(n_dim=n_dim, n_group=n_group)
     similarity = psiz.keras.layers.ExponentialSimilarity()
+    kernel = psiz.keras.layers.AttentionKernel(
+        attention=attention, similarity=similarity
+    )
+
+    # Build model.
     model = psiz.models.Rank(
-        embedding=embedding, attention=attention, similarity=similarity
+        embedding=embedding, kernel=kernel
     )
     proxy = psiz.models.Proxy(model=model)
 
+    # Set parameters.
     z = np.array((
         (.1, .1), (.15, .2), (.4, .5)
     ))
@@ -125,15 +135,21 @@ def test_matrix_comparison():
 
 def test_procrustean_solution():
     """Test procrustean solution for simple problem."""
-    s = 2
-    x = -.8
-    y = 1
-    theta = np.pi/4
-    f = -1.
-    params = np.array((x, y, theta, s, f))
+    # Assemble rotation matrix (with scaling and reflection).
+    s = np.array([[-2, 0], [0, 2]])
+    r = psiz.utils.rotation_matrix(np.pi/4)
+    r = np.matmul(s, r)
 
-    z_a = np.random.rand(10, 2)
-    z_b = utils.affine_transformation(z_a, params)
-    (z_c, _) = utils.procrustean_solution(z_a, z_b, n_restart=10)
+    # Assemble translation vector.
+    t = np.array([-.8, 1])
+    t = np.expand_dims(t, axis=0)
 
-    np.testing.assert_almost_equal(z_a, z_c, decimal=2)
+    # Create random set of points.
+    x = np.random.rand(10, 2)
+    # Apply affine transformation.
+    y = np.matmul(x, r) + t
+    # Attempt to recover original set of points.
+    r_recov, t_recov = utils.procrustes_2d(x, y, n_restart=10)
+    x_recov = np.matmul(y, r_recov) + t_recov
+
+    np.testing.assert_almost_equal(x, x_recov, decimal=2)

@@ -22,7 +22,6 @@ number of dimensions.
 
 """
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 
 import psiz
@@ -40,16 +39,14 @@ def main():
     n_restart = 3
     n_dim_max = 30
     squeeze_rate = 1.
-    batch_size = 500
+    n_trial = 5000
+    batch_size = 100
 
     emb_true = ground_truth(n_stimuli, n_dim_true)
 
     # Generate a random docket of trials.
-    n_trial = 5000
-    n_reference = 8
-    n_select = 2
     generator = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
@@ -59,46 +56,37 @@ def main():
 
     simmat_true = psiz.utils.similarity_matrix(emb_true.similarity, emb_true.z)
 
-    # Partition observations into train and test set.
-    skf = StratifiedKFold(n_splits=10)
-    (train_idx, test_idx) = list(
-        skf.split(obs.stimulus_set, obs.config_idx)
-    )[0]
-    obs_train = obs.subset(train_idx)
-    obs_test = obs.subset(test_idx)
-
-    # Partition training observations into train and validation set.
-    skf = StratifiedKFold(n_splits=10)
-    (train_idx, val_idx) = list(
-        skf.split(obs_train.stimulus_set, obs_train.config_idx)
-    )[0]
-    obs_train_train = obs_train.subset(train_idx)
-    obs_val = obs_train.subset(val_idx)
+    # Partition observations into 80% train, 10% validation and 10% test set.
+    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=15, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(lr=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
     }
 
-    # Add regularization to embedding.
-    embeddings_regularizer = psiz.keras.regularizers.Squeeze(rate=squeeze_rate)
+    # Define model.
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim_max, mask_zero=True,
+        embeddings_regularizer=psiz.keras.regularizers.Squeeze(
+            rate=squeeze_rate
+        )
+    )
+    kernel = psiz.keras.layers.Kernel(
+        similarity=psiz.keras.layers.ExponentialSimilarity()
+    )
+    rank_model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    emb_inferred = psiz.models.Proxy(model=rank_model)
 
     # Infer embedding.
-    embedding = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim_max, embeddings_regularizer=embeddings_regularizer,
-        mask_zero=True
-    )
-    similarity = psiz.keras.layers.ExponentialSimilarity()
-    rank_model = psiz.models.Rank(embedding=embedding, similarity=similarity)
-    emb_inferred = psiz.models.Proxy(model=rank_model)
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
         callbacks=callbacks, n_restart=n_restart, monitor='val_cce', verbose=2,
@@ -142,21 +130,25 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    similarity = psiz.keras.layers.ExponentialSimilarity()
     embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
-    rank_model = psiz.models.Rank(embedding=embedding, similarity=similarity)
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            fit_rho=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+        )
+    )
+    rank_model = psiz.models.Rank(
+        embedding=embedding, kernel=kernel
+    )
     emb = psiz.models.Proxy(rank_model)
-
-    emb.theta = {
-        'rho': 2.,
-        'tau': 1.,
-        'beta': 10.,
-        'gamma': 0.001
-    }
-
     return emb
 
 

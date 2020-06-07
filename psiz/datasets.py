@@ -197,16 +197,16 @@ def _extract_archive(file_path, path='.', archive_format='auto'):
     """
     if archive_format is None:
         return False
-    if archive_format is 'auto':
+    if archive_format == 'auto':
         archive_format = ['tar', 'zip']
     if isinstance(archive_format, six.string_types):
         archive_format = [archive_format]
 
     for archive_type in archive_format:
-        if archive_type is 'tar':
+        if archive_type == 'tar':
             open_fn = tarfile.open
             is_match_fn = tarfile.is_tarfile
-        if archive_type is 'zip':
+        if archive_type == 'zip':
             open_fn = zipfile.ZipFile
             is_match_fn = zipfile.is_zipfile
 
@@ -262,7 +262,7 @@ def _get_file(
 
         def dl_progress(count, block_size, total_size):
             if ProgressTracker.progbar is None:
-                if total_size is -1:
+                if total_size == -1:
                     total_size = None
                 ProgressTracker.progbar = Progbar(total_size)
             else:

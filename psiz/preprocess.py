@@ -99,11 +99,11 @@ def grade_catch_trials(obs, grade_mode='lenient'):
                 obs.stimulus_set[i_trial, 0], obs.stimulus_set[i_trial, 1:]
             )
             # Grade response.
-            if grade_mode is 'lenient':
+            if grade_mode == 'lenient':
                 is_identical_selected = is_identical[0:obs.n_select[i_trial]]
                 if np.sum(is_identical_selected) > 0:
                     grade[i_trial] = 1
-            elif grade_mode is 'strict':
+            elif grade_mode == 'strict':
                 if obs.is_ranked[i_trial]:
                     is_identical_selected = is_identical[0]
                 else:
@@ -112,7 +112,7 @@ def grade_catch_trials(obs, grade_mode='lenient'):
                     ]
                 if np.sum(is_identical_selected) > 0:
                     grade[i_trial] = 1
-            elif grade_mode is 'partial':
+            elif grade_mode == 'partial':
                 if obs.is_ranked[i_trial]:
                     is_identical_selected = is_identical[0]
                     if is_identical_selected:

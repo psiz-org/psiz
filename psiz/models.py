@@ -157,62 +157,62 @@ class Proxy(object):
 
     @property
     def z(self):
-        """Getter method for z."""
-        # TODO brittle
+        """Getter method for `z`."""
         return self.model.embedding.embeddings.numpy()[1:]
 
-    @z.setter
-    def z(self, z):
-        """Setter method for z."""
-        # TODO brittle
-        z_pad = np.vstack(
-            [np.zeros([1, self.n_dim]), z]
-        )
-        self.model.embedding.embeddings.assign(z_pad)
+    # TODO brittle, remove
+    # @z.setter
+    # def z(self, z):
+    #     """Setter method for z."""
+    #     z_pad = np.vstack(
+    #         [np.zeros([1, self.n_dim]), z]
+    #     )
+    #     self.model.embedding.embeddings.assign(z_pad)
 
     @property
     def w(self):
-        """Getter method for phi."""
-        # TODO brittle
-        return self.model.kernel.attention.w.numpy()  # TODO should kernel have a w property?
+        """Getter method for `w`."""
+        if hasattr(self.model.kernel, 'attention'):
+            w = self.model.kernel.attention.w.numpy()
+        else:
+            w = np.ones([1, self.n_dim])
+        return w
 
-    @w.setter
-    def w(self, w):
-        """Setter method for w."""
-        # TODO brittle
-        self.model.kernel.attention.w.assign(w)
+    # TODO brittle, remove
+    # @w.setter
+    # def w(self, w):
+    #     """Setter method for w."""
+    #     self.model.kernel.attention.w.assign(w)
 
     @property
     def phi(self):
-        """Getter method for phi."""
-        # TODO brittle
+        """Getter method for `phi`."""
         d = {
             'w': self.w
         }
         return d
 
-    @phi.setter
-    def phi(self, phi):
-        """Setter method for w."""
-        # TODO brittle
-        for k, v in phi.items():
-            setattr(self, k, v)
+    # TODO brittle, remove
+    # @phi.setter
+    # def phi(self, phi):
+    #     """Setter method for w."""
+    #     for k, v in phi.items():
+    #         setattr(self, k, v)
 
     @property
     def theta(self):
-        """Getter method for theta."""
-        # TODO brittle
+        """Getter method for `theta`."""
         d = {}
         for k, v in self.model.theta.items():
             d[k] = v.numpy()
         return d
 
-    @theta.setter
-    def theta(self, theta):
-        """Setter method for w."""
-        # TODO brittle
-        for k, v in theta.items():
-            self.model.theta[k].assign(v)
+    # TODO brittle, remove
+    # @theta.setter
+    # def theta(self, theta):
+    #     """Setter method for w."""
+    #     for k, v in theta.items():
+    #         self.model.theta[k].assign(v)
 
     def _broadcast_for_similarity(
             self, z_q, z_r, group_id=None):
@@ -951,21 +951,21 @@ class Proxy(object):
             fp_weights, overwrite=overwrite, save_format='tf'
         )
 
-    def subset(self, idx):
-        """Return subset of embedding."""
-        emb = self.clone()
-        raise(NotImplementedError)
-        # TODO CRITICAL, must handle changes to embedding layer
-        emb.z = emb.z[idx, :]
-        emb.n_stimuli = emb.z.shape[0]
-        return emb
+    # def subset(self, idx):  TODO DELETE
+    #     """Return subset of embedding."""
+    #     emb = self.clone()
+    #     raise(NotImplementedError)
+    #     # TODO CRITICAL, must handle changes to embedding layer
+    #     emb.z = emb.z[idx, :] # must use assign
+    #     emb.n_stimuli = emb.z.shape[0]
+    #     return emb
 
     def clone(self, custom_objects={}):
         """Clone model."""
         # TODO Test
         # Create topology.
         with tf.keras.utils.custom_object_scope(custom_objects):
-            model = self.model.from_config(self.model.get_config())
+            new_model = self.model.from_config(self.model.get_config())
 
         # Save weights.
         fp_weights = '/tmp/psiz/clone'
@@ -975,7 +975,7 @@ class Proxy(object):
         new_model.load_weights(fp_weights)
 
         # Wrap in proxy Class.
-        proxy_model = Proxy(model=model)
+        proxy_model = Proxy(model=new_model)
 
         # Compile to model. TODO is this too brittle?
         # if self.model.loss is not None:
@@ -1371,7 +1371,10 @@ def load_model(filepath, custom_objects={}, compile=False):
         emb = Proxy(model=model)
 
         # Set weights.
-        emb.z = z
+        z_pad = np.vstack(
+            [np.zeros([1, n_dim]), z]
+        )
+        emb.model.embedding.embeddings.assign(z_pad)
         emb.w = w
         emb.theta = theta_value
 

@@ -134,19 +134,8 @@ def main():
         psiz.utils.pairwise_matrix(truth_sim_func2, emb_true.z)
     )
 
-    # Partition observations into train and validation set.
-    skf = StratifiedKFold(n_splits=5)
-    (train_idx, holdout_idx) = list(
-        skf.split(obs_all.stimulus_set, obs_all.config_idx)
-    )[0]
-    obs_train = obs_all.subset(train_idx)
-    obs_holdout = obs_all.subset(holdout_idx)
-    skf = StratifiedKFold(n_splits=2)
-    (val_idx, test_idx) = list(
-        skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
-    )[0]
-    obs_val = obs_holdout.subset(val_idx)
-    obs_test = obs_holdout.subset(test_idx)
+    # Partition observations into 80% train, 10% validation and 10% test set.
+    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),

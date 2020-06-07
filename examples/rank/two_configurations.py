@@ -23,12 +23,19 @@ infer a single embedding.
 
 Example output:
 
+    Restart Summary
+    n_valid_restart 3 | total_duration: 33 s
+    best | n_epoch: 65 | val_cce: 1.8201
+    mean ±stddev | n_epoch: 60 ±10 | val_cce: 1.8359 ±0.0113 | 10 ±2 s | 180 ±3 ms/epoch
+
     R^2 Model Comparison:   0.95
 
 """
 
+from pathlib import Path
+import shutil
+
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 
 import psiz
@@ -43,7 +50,8 @@ def main():
     n_stimuli = 30
     n_dim = 3
     n_restart = 3
-    batch_size = 500
+    batch_size = 100
+    log_dir='/tmp/psiz/tensorboard_logs'
 
     # Ground truth embedding.
     emb_true = ground_truth(n_stimuli, n_dim)
@@ -51,18 +59,14 @@ def main():
     # Generate a random docket of trials using two different trial
     # configurations.
     # Generate 1500 2-choose-1 trials.
-    n_reference = 2
-    n_select = 1
     gen_2c1 = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=2, n_select=1
     )
     n_trial = 1500
     docket_2c1 = gen_2c1.generate(n_trial)
     # Generate 1500 8-choose-2 trials.
-    n_reference = 8
-    n_select = 2
     gen_8c2 = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=8, n_select=2
     )
     n_trial = 1500
     docket_8c2 = gen_8c2.generate(n_trial)
@@ -73,21 +77,19 @@ def main():
     agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
 
-    # Partition observations into train and validation set.
-    skf = StratifiedKFold(n_splits=10)
-    (train_idx, val_idx) = list(
-        skf.split(obs.stimulus_set, obs.config_idx)
-    )[0]
-    obs_train = obs.subset(train_idx)
-    obs_val = obs.subset(val_idx)
+    # Partition observations into 80% train, 10% validation and 10% test set.
+    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
 
     # Use early stopping.
     cb_early = psiz.keras.callbacks.EarlyStoppingRe(
         'val_cce', patience=10, mode='min', restore_best_weights=True
     )
     # Visualize using TensorBoard.
+    # Remove existing TensorBoard logs.
+    if Path(log_dir).exists():
+        shutil.rmtree(log_dir)
     cb_board = psiz.keras.callbacks.TensorBoardRe(
-        log_dir='/tmp/psiz/tensorboard_logs', histogram_freq=0,
+        log_dir=log_dir, histogram_freq=0,
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
@@ -95,7 +97,7 @@ def main():
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.RMSprop(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(lr=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -110,6 +112,7 @@ def main():
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb_inferred = psiz.models.Proxy(model=model)
+
     # Infer embedding.
     restart_record = emb_inferred.fit(
         obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
@@ -142,18 +145,18 @@ def ground_truth(n_stimuli, n_dim):
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+        distance=psiz.keras.layers.WeightedMinkowski(
+            fit_rho=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+        )
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb = psiz.models.Proxy(model)
-
-    emb.theta = {
-        'rho': 2.,
-        'tau': 1.,
-        'beta': 10.,
-        'gamma': 0.001
-    }
-
     return emb
 
 

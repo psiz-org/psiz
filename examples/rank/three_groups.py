@@ -41,7 +41,6 @@ Example output:
 """
 
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 
 import psiz
@@ -57,16 +56,14 @@ def main():
     n_dim = 4
     n_group = 3
     n_restart = 3
-    batch_size = 200
+    n_trial = 2000
+    batch_size = 100
 
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
-    n_trial = 2000
-    n_reference = 8
-    n_select = 2
     generator = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
@@ -79,24 +76,20 @@ def main():
     obs_novice = agent_novice.simulate(docket)
     obs_interm = agent_interm.simulate(docket)
     obs_expert = agent_expert.simulate(docket)
-    obs_all = psiz.trials.stack((obs_novice, obs_interm, obs_expert))
+    obs = psiz.trials.stack((obs_novice, obs_interm, obs_expert))
 
-    # Partition observations into train and validation set.
-    skf = StratifiedKFold(n_splits=10)
-    (train_idx, val_idx) = list(
-        skf.split(obs_all.stimulus_set, obs_all.config_idx)
-    )[0]
-    obs_train = obs_all.subset(train_idx)
-    obs_val = obs_all.subset(val_idx)
+    # Partition observations into 80% train, 10% validation and 10% test set.
+    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=15, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(lr=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -119,12 +112,6 @@ def main():
         callbacks=callbacks, monitor='val_cce', n_restart=n_restart, verbose=1,
         compile_kwargs=compile_kwargs
     )
-
-    # Permute inferred dimensions to best match ground truth.
-    attention_weight_0 = emb_inferred.w[0, :]
-    idx_sorted = np.argsort(-attention_weight_0)
-    emb_inferred.w = emb_inferred.w[:, idx_sorted]
-    emb_inferred.z = emb_inferred.z[:, idx_sorted]
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
@@ -157,6 +144,7 @@ def main():
         psiz.utils.pairwise_matrix(infer_sim_func1, emb_inferred.z),
         psiz.utils.pairwise_matrix(infer_sim_func2, emb_inferred.z)
     )
+
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):
         for j_infer in range(n_group):
@@ -166,7 +154,9 @@ def main():
             )
 
     # Display attention weights.
-    attention_weight = emb_inferred.w
+    # Permute inferred dimensions to best match ground truth.
+    idx_sorted = np.argsort(-emb_inferred.w[0, :])
+    attention_weight = emb_inferred.w[:, idx_sorted]
     group_labels = ["Novice", "Intermediate", "Expert"]
     print("\n    Attention weights:")
     for i_group in range(emb_inferred.n_group):
@@ -202,25 +192,28 @@ def ground_truth(n_stimuli, n_dim, n_group):
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     kernel = psiz.keras.layers.AttentionKernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            fit_rho=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+        ),
         attention=psiz.keras.layers.GroupAttention(
             n_dim=n_dim, n_group=n_group
         ),
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+        )
+    )
+    kernel.attention.w.assign(
+        np.array((
+            (1.8, 1.8, .2, .2),
+            (1., 1., 1., 1.),
+            (.2, .2, 1.8, 1.8)
+        ))
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb = psiz.models.Proxy(model=model)
-
-    emb.w = np.array((
-        (1.8, 1.8, .2, .2),
-        (1., 1., 1., 1.),
-        (.2, .2, 1.8, 1.8)
-    ))
-    emb.theta = {
-        'rho': 2.,
-        'tau': 1.,
-        'beta': 10.,
-        'gamma': 0.001
-    }
     return emb
 
 

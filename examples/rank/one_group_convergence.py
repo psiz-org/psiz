@@ -25,7 +25,6 @@ data is added.
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 
 import psiz
@@ -40,16 +39,14 @@ def main():
     n_stimuli = 30
     n_dim = 3
     n_restart = 3
+    n_trial = 2000
     batch_size = 100
 
     emb_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
-    n_trial = 2000
-    n_reference = 8
-    n_select = 2
     generator = psiz.generator.RandomGenerator(
-        n_stimuli, n_reference=n_reference, n_select=n_select
+        n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
@@ -59,45 +56,35 @@ def main():
 
     simmat_true = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
 
-    # Partition observations into train, validation and test set.
-    skf = StratifiedKFold(n_splits=5)
-    (train_idx, holdout_idx) = list(
-        skf.split(obs.stimulus_set, obs.config_idx)
-    )[0]
-    obs_train = obs.subset(train_idx)
-    obs_holdout = obs.subset(holdout_idx)
-    skf = StratifiedKFold(n_splits=2)
-    (val_idx, test_idx) = list(
-        skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
-    )[0]
-    obs_val = obs_holdout.subset(val_idx)
-    obs_test = obs_holdout.subset(test_idx)
+    # Partition observations into 80% train, 10% validation and 10% test set.
+    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=10, mode='min', restore_best_weights=True
+        'val_cce', patience=15, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(lr=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
     }
 
     # Infer independent models with increasing amounts of data.
-    n_step = 8
+    n_frame = 8
     n_obs = np.floor(
-        np.linspace(15, obs_train.n_trial, n_step)
+        np.linspace(15, obs_train.n_trial, n_frame)
     ).astype(np.int64)
-    r2 = np.empty((n_step))
-    train_cce = np.empty((n_step))
-    val_cce = np.empty((n_step))
-    test_cce = np.empty((n_step))
-    for i_round in range(n_step):
-        print('  Round {0}'.format(i_round))
-        include_idx = np.arange(0, n_obs[i_round])
+    r2 = np.empty((n_frame))
+    train_cce = np.empty((n_frame))
+    val_cce = np.empty((n_frame))
+    test_cce = np.empty((n_frame))
+    for i_frame in range(n_frame):
+        print('  Frame {0}'.format(i_frame))
+        include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
 
         # Infer embedding.
@@ -115,27 +102,27 @@ def main():
             monitor='val_cce', verbose=1, compile_kwargs=compile_kwargs
         )
 
-        train_cce[i_round] = restart_record.record['cce'][0]
-        val_cce[i_round] = restart_record.record['val_cce'][0]
+        train_cce[i_frame] = restart_record.record['cce'][0]
+        val_cce[i_frame] = restart_record.record['val_cce'][0]
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
-        test_cce[i_round] = test_metrics['cce']
+        test_cce[i_frame] = test_metrics['cce']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = psiz.utils.pairwise_matrix(
             emb_inferred.similarity, emb_inferred.z
         )
-        r2[i_round] = psiz.utils.matrix_comparison(
+        r2[i_frame] = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'
         )
         print(
             '    n_obs: {0:4d} | train_cce: {1:.2f} | '
             'val_cce: {2:.2f} | test_cce: {3:.2f} | '
             'Correlation (R^2): {4:.2f}'.format(
-                n_obs[i_round], train_cce[i_round],
-                val_cce[i_round], test_cce[i_round], r2[i_round]
+                n_obs[i_frame], train_cce[i_frame],
+                val_cce[i_frame], test_cce[i_frame], r2[i_frame]
             )
         )
 
@@ -167,18 +154,19 @@ def ground_truth(n_stimuli, n_dim):
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+        distance=psiz.keras.layers.WeightedMinkowski(
+            fit_rho=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+        )
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
 
     emb = psiz.models.Proxy(model=model)
-    emb.theta = {
-        'rho': 2.,
-        'tau': 1.,
-        'beta': 10.,
-        'gamma': 0.001
-    }
-
     return emb
 
 

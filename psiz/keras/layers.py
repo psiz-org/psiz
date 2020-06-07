@@ -65,24 +65,21 @@ import psiz.ops
 class WeightedMinkowski(tf.keras.layers.Layer):
     """Weighted Minkowski distance."""
 
-    def __init__(self, fit_rho=True, rho_initializer=None, **kwargs):
+    def __init__(self, rho_initializer=None, **kwargs):
         """Initialize.
 
         Arguments:
-            fit_rho (optional): Boolean indicating if variable is
-                trainable.
             rho_initializer (optional): Initializer for rho.
 
         """
         super(WeightedMinkowski, self).__init__(**kwargs)
-        self.fit_rho = fit_rho
 
         if rho_initializer is None:
             rho_initializer = tf.random_uniform_initializer(1.01, 3.)
         self.rho_initializer = tf.keras.initializers.get(rho_initializer)
         self.rho = self.add_weight(
             shape=[], initializer=self.rho_initializer,
-            trainable=self.fit_rho, name="rho", dtype=K.floatx(),
+            trainable=self.trainable, name="rho", dtype=K.floatx(),
             constraint=pk_constraints.GreaterThan(min_value=1.0)
         )
 
@@ -121,7 +118,6 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'fit_rho': self.fit_rho,
             'rho_initializer': tf.keras.initializers.serialize(
                 self.rho_initializer
             )

@@ -201,8 +201,8 @@ def main():
         )
         kernel = psiz.keras.layers.AttentionKernel(
             distance=psiz.keras.layers.WeightedMinkowski(
-                fit_rho=False,
                 rho_initializer=tf.keras.initializers.Constant(2.),
+                trainable=False,
             ),
             attention=psiz.keras.layers.GroupAttentionVariational(
                 posterior=attention_posterior, prior=attention_prior,
@@ -314,8 +314,8 @@ def ground_truth(n_stimuli, n_dim, n_group):
     )
     kernel = psiz.keras.layers.AttentionKernel(
         distance=psiz.keras.layers.WeightedMinkowski(
-            fit_rho=False,
             rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
         ),
         attention=psiz.keras.layers.GroupAttention(
             n_dim=n_dim, n_group=n_group

@@ -136,8 +136,8 @@ def ground_truth(n_stimuli, n_dim):
     )
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
-            fit_rho=False,
             rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             fit_tau=False, fit_gamma=False,

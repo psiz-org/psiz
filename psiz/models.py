@@ -929,7 +929,7 @@ def load_model(filepath, custom_objects={}, compile=False):
             #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
 
         dist_config = {}
-        dist_config.update({'fit_rho': theta_config.pop('fit_rho', None)})
+        dist_config.update({'trainable': theta_config.pop('fit_rho', True)})
         distance = psiz.keras.layers.WeightedMinkowski(**dist_config)
         if embedding_type == 'Exponential':
             similarity = psiz.keras.layers.ExponentialSimilarity(

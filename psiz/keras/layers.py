@@ -1249,9 +1249,9 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
     @property
     def embeddings_mode(self):
         """Getter method for mode of `embeddings`."""
-        # Use median as approximation of mode.
-        # For logit-normal distribution, median = logistic(loc)
-        return tf.math.sigmoid(self.posterior.embeddings.distribution.loc)
+        # Use median as approximation of mode. For logit-normal distribution,
+        # `median = logistic(loc)`.
+        return tf.math.sigmoid(self.embeddings.distribution.loc)
 
 
 class _Variational(tf.keras.layers.Layer):

@@ -34,6 +34,8 @@ Functions:
     procrustes_2d: Attempt to allign two sets of 2D points by finding
         an affine transformation.
     choice_wo_replace: Efficient sampling without replacement.
+    standard_split: Standard 80-10-10 split of observations.
+
 """
 
 import copy
@@ -45,7 +47,7 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.stats import pearsonr
 from sklearn.metrics import r2_score
-
+from sklearn.model_selection import StratifiedKFold
 
 def affine_mvn(loc, cov, r=None, t=None):
     """Affine transformation of multivariate normal.
@@ -438,6 +440,32 @@ def choice_wo_replace(a, size, p):
     )[:, :sample_size]
 
     return a[samples]
+
+
+def standard_split(obs):
+    """Creata a standard 80-10-10 split of the observations.
+    
+    Arguments:
+        obs: A set of observations.
+
+    Returns:
+        obs_train: A train set (80%).
+        obs_val: A validation set (10%).
+        obs_test: A test set (10%).
+    """
+    skf = StratifiedKFold(n_splits=5)
+    (train_idx, holdout_idx) = list(
+        skf.split(obs.stimulus_set, obs.config_idx)
+    )[0]
+    obs_train = obs.subset(train_idx)
+    obs_holdout = obs.subset(holdout_idx)
+    skf = StratifiedKFold(n_splits=2)
+    (val_idx, test_idx) = list(
+        skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
+    )[0]
+    obs_val = obs_holdout.subset(val_idx)
+    obs_test = obs_holdout.subset(test_idx)
+    return obs_train, obs_val, obs_test
 
 
 class ProgressBarRe(object):

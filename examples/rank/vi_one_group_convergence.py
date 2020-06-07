@@ -160,7 +160,7 @@ def main():
 
         # Infer embedding.
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=100,  # TODO 1000
+            obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
         )

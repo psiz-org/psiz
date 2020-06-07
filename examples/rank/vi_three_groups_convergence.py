@@ -170,9 +170,10 @@ def main():
         obs_round_train = obs_train.subset(include_idx)
 
         # Use Tensorboard.
-        log_dir='/tmp/psiz/tensorboard_logs/frame_{0}'.format(i_frame)
+        log_dir = '/tmp/psiz/tensorboard_logs/frame_{0}'.format(i_frame)
         # Remove existing TensorBoard logs.
-        shutil.rmtree(log_dir)
+        if Path(log_dir).exists():
+            shutil.rmtree(log_dir)
         cb_board = psiz.keras.callbacks.TensorBoardRe(
             log_dir=log_dir, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
@@ -182,9 +183,32 @@ def main():
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
+        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+            n_stimuli+1, n_dim, mask_zero=True,
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(.17).numpy()
+            )
+        )
+        embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
+            n_stimuli+1, n_dim, mask_zero=True,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(.17).numpy()
+            ), trainable=False
+        )
         embedding = psiz.keras.layers.EmbeddingVariational(
-            n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight,
-            prior_scale=.17
+            posterior=embedding_posterior, prior=embedding_prior,
+            kl_weight=kl_weight
+        )
+
+        attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
+            n_group, n_dim
+        )
+        attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
+            n_group, n_dim,
+            loc_initializer=tf.keras.initializers.Constant(0.0),
+            scale_initializer=tf.keras.initializers.Constant(0.3),
+            trainable=False
         )
         kernel = psiz.keras.layers.AttentionKernel(
             distance=psiz.keras.layers.WeightedMinkowski(
@@ -192,7 +216,8 @@ def main():
                 rho_initializer=tf.keras.initializers.Constant(2.),
             ),
             attention=psiz.keras.layers.GroupAttentionVariational(
-                n_dim=n_dim, n_group=n_group, kl_weight=kl_weight
+                posterior=attention_posterior, prior=attention_prior,
+                kl_weight=kl_weight
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 fit_tau=False, fit_gamma=False,
@@ -207,9 +232,9 @@ def main():
 
         # Infer model.
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+            obs_round_train, validation_data=obs_val, epochs=10,  # TODO 1000
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]
@@ -299,25 +324,28 @@ def ground_truth(n_stimuli, n_dim, n_group):
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
     kernel = psiz.keras.layers.AttentionKernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            fit_rho=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+        ),
         attention=psiz.keras.layers.GroupAttention(
             n_dim=n_dim, n_group=n_group
         ),
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+    kernel.attention.w.assign(
+        np.array((
+            (1.8, 1.8, .2, .2),
+            (1., 1., 1., 1.),
+            (.2, .2, 1.8, 1.8)
+        ))
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb = psiz.models.Proxy(model=model)
-
-    emb.w = np.array((
-        (1.8, 1.8, .2, .2),
-        (1., 1., 1., 1.),
-        (.2, .2, 1.8, 1.8)
-    ))
-    emb.theta = {
-        'rho': 2.,
-        'tau': 1.,
-        'beta': 10.,
-        'gamma': 0.,
-    }
     return emb
 
 
@@ -351,8 +379,8 @@ def plot_frame(
             name = 'w'
             ax = fig0.add_subplot(gs[i_group + 1, i_dim])
             curr_dim = idx_sorted[i_dim]
-            loc = emb_inferred.model.kernel.attention.w_posterior.distribution.loc[i_group, curr_dim]
-            scale = emb_inferred.model.kernel.attention.w_posterior.distribution.scale[i_group, curr_dim]
+            loc = emb_inferred.model.kernel.attention.posterior.embeddings.distribution.loc[i_group, curr_dim]
+            scale = emb_inferred.model.kernel.attention.posterior.embeddings.distribution.scale[i_group, curr_dim]
             dist = tfp.distributions.LogitNormal(loc=loc, scale=scale)
             plot_logitnormal(ax, dist, name=name, c=c)
             if i_group == 0:
@@ -378,8 +406,7 @@ def plot_logitnormal(ax, dist, name=None, c=None):
     x = np.linspace(.001, .999, 1000)
     y = dist.prob(x)
 
-    # Determine mode.
-    # try # x_mode = dist.mode().numpy()  TODO
+    # Determine mode from samples.
     idx = np.argmax(y)
     x_mode = x[idx]
 
@@ -415,31 +442,15 @@ def plot_loss(ax, n_obs, train_loss, val_loss, test_loss):
 def plot_convergence(fig, ax, n_obs, r2):
     """Plot convergence."""
     # Settings.
-    # ms = 2
-    # r2_diag_0 = r2[:, 0, 0]
-    # r2_diag_1 = r2[:, 1, 1]
-    # r2_diag_2 = r2[:, 2, 2]
-
-    # ax.plot(n_obs, r2_diag_0, 'o-',  ms=ms)
-    # ax.plot(n_obs, r2_diag_1, 'o-',  ms=ms)
-    # ax.plot(n_obs, r2_diag_2, 'o-',  ms=ms)
-    # ax.set_title('Convergence')
-
-    # ax.set_xlabel('Trials')
-    # limits = [0, np.max(n_obs) + 10]
-    # ax.set_xlim(limits)
-    # ticks = [np.min(n_obs), np.max(n_obs)]
-    # ax.set_xticks(ticks)
-
-    # ax.set_ylabel(r'$R^2$')
-    # ax.set_ylim(-0.05, 1.05)
     cmap = matplotlib.cm.get_cmap('Greys')
+    labels = ['Nov', 'Int', 'Exp']
+
     im = ax.imshow(r2, cmap=cmap, vmin=0., vmax=1.)
     fig.colorbar(im, ax=ax)
     ax.set_xticks([0, 1, 2])
-    ax.set_xticklabels(['Nov', 'Int', 'Exp'])
+    ax.set_xticklabels(labels)
     ax.set_yticks([0, 1, 2])
-    ax.set_yticklabels(['Nov', 'Int', 'Exp'])
+    ax.set_yticklabels(labels)
     ax.set_ylabel('True')
     ax.set_xlabel('Inferred')
     ax.set_title(r'$R^2$ Convergence')

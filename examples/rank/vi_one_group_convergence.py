@@ -94,7 +94,8 @@ def main():
     agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
 
-    simmat_true = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
+    simmat_true = psiz.utils.pairwise_matrix(
+        emb_true.similarity, emb_true.z)
 
     # Partition observations into train, validation and test set.
     skf = StratifiedKFold(n_splits=5)
@@ -135,10 +136,24 @@ def main():
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
-        embedding = psiz.keras.layers.EmbeddingVariational(
-            n_stimuli+1, n_dim, mask_zero=True, kl_weight=kl_weight,
-            prior_scale=.17
+        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+            n_stimuli+1, n_dim, mask_zero=True,
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(.17).numpy()
+            )
         )
+        embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
+            n_stimuli+1, n_dim, mask_zero=True,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(.17).numpy()
+            ), trainable=False
+        )
+        embedding = psiz.keras.layers.EmbeddingVariational(
+            posterior=embedding_posterior, prior=embedding_prior,
+            kl_weight=kl_weight
+        )
+
         kernel = psiz.keras.layers.Kernel(
             distance=psiz.keras.layers.WeightedMinkowski(
                 fit_rho=False,
@@ -157,7 +172,7 @@ def main():
 
         # Infer embedding.
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+            obs_round_train, validation_data=obs_val, epochs=100,  # TODO 1000
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
         )
@@ -213,26 +228,26 @@ def plot_frame(
     # Settings.
     s = 10
 
-    gs = fig0.add_gridspec(6, 8)
+    gs = fig0.add_gridspec(2, 2)
 
-    f0_ax0 = fig0.add_subplot(gs[0:3, 0:3])
+    f0_ax0 = fig0.add_subplot(gs[0, 0])
     plot_loss(f0_ax0, n_obs, train_loss, val_loss, test_loss)
 
-    f0_ax6 = fig0.add_subplot(gs[3:6, 0:3])
-    plot_convergence(f0_ax6, n_obs, r2)
+    f0_ax2 = fig0.add_subplot(gs[1, 0])
+    plot_convergence(f0_ax2, n_obs, r2)
 
-    f0_ax3 = fig0.add_subplot(gs[3:6, 3:6])
+    f0_ax3 = fig0.add_subplot(gs[1, 1])
     plot_time(f0_ax3, n_obs, train_time)
 
     # Plot embeddings.
-    f0_ax1 = fig0.add_subplot(gs[0:3, 3:6])
+    f0_ax1 = fig0.add_subplot(gs[0, 1])
     # Determine embedding limits.
     z_max = 1.3 * np.max(np.abs(emb_true.z))
     z_limits = [-z_max, z_max]
 
     # Apply and plot Procrustes affine transformation of posterior.
-    dist = emb_inferred.model.embedding.embeddings_posterior.distribution
-    loc, cov = unpack_embeddings_distribution(dist)
+    dist = emb_inferred.model.embedding.posterior.embeddings
+    loc, cov = unpack_mvn(dist)
     r, t = psiz.utils.procrustes_2d(
         emb_true.z, loc, scale=False, n_restart=30
     )
@@ -250,34 +265,6 @@ def plot_frame(
     f0_ax1.set_xticks([])
     f0_ax1.set_yticks([])
     f0_ax1.set_title('Embeddings')
-
-    # TODO
-    # f0_ax3 = fig0.add_subplot(gs[0:2, 6:8])
-    # plot_univariate_distribution(
-    #     f0_ax3,
-    #     emb_inferred.model.kernel.distance.rho_posterior.distribution,
-    #     name=r'\rho'
-    # )
-    # landmark = emb_true.model.kernel.distance.rho.numpy() - 1
-    # f0_ax3.plot([landmark], [0.], 'rd', clip_on=False, alpha=.5)
-
-    # f0_ax4 = fig0.add_subplot(gs[2:4, 6:8])
-    # plot_univariate_distribution(
-    #     f0_ax4,
-    #     emb_inferred.model.kernel.similarity.tau_posterior.distribution,
-    #     name=r'\tau'
-    # )
-    # landmark = emb_true.model.kernel.similarity.tau.numpy()
-    # f0_ax4.plot([landmark], [0.], 'rd', clip_on=False, alpha=.5)
-
-    # f0_ax5 = fig0.add_subplot(gs[4:6, 6:8])
-    # plot_univariate_distribution(
-    #     f0_ax5,
-    #     emb_inferred.model.kernel.similarity.gamma_posterior.distribution,
-    #     name=r'\gamma'
-    # )
-    # landmark = emb_true.model.kernel.similarity.gamma.numpy()
-    # f0_ax5.plot([landmark], [0.], 'rd', clip_on=False, alpha=.5)
 
     gs.tight_layout(fig0)
 
@@ -377,8 +364,8 @@ def plot_bvn(ax, loc, cov=None, c=None, r=1.96, show_loc=True):
             ax.add_artist(ellipse)
 
 
-def unpack_embeddings_distribution(dist):
-    """Unpack embeddings distribution."""
+def unpack_mvn(dist):
+    """Unpack multivariate normal distribution."""
     def scale_to_cov(scale):
         """Convert scale to covariance matrix.
 
@@ -391,12 +378,22 @@ def unpack_embeddings_distribution(dist):
             cov[i_stimulus] = np.eye(n_dim) * scale[i_stimulus]**2
         return cov
 
-    loc = dist.loc.numpy()[1:]  # Drop placeholder
-    scale = dist.scale.numpy()[1:]
+    if isinstance(dist, tfp.distributions.Independent):
+        d = dist.distribution
+    else:
+        d = dist
+
+    # Drop placeholder stimulus.
+    loc = d.loc.numpy()[1:]
+    scale = d.scale.numpy()[1:]
+
+    # Convert to full covariance matrix.
     cov = scale_to_cov(scale)
+
     return loc, cov
 
 
+# TODO move function out
 def plot_univariate_distribution(ax, dist, limits=None, name=None):
     """Plot univariate distribution.
 
@@ -435,18 +432,18 @@ def ground_truth(n_stimuli, n_dim):
         )
     )
     kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+        distance=psiz.keras.layers.WeightedMinkowski(
+            fit_rho=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
-
     emb = psiz.models.Proxy(model=model)
-    emb.theta = {
-        'rho': 2.,
-        'tau': 1.,
-        'beta': 10.,
-        'gamma': 0.
-    }
-
     return emb
 
 

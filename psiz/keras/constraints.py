@@ -235,3 +235,30 @@ class NonNegNorm(constraints.Constraint):
     def get_config(self):
         """Return configuration."""
         return {'scale': self.scale, 'p': self.p, 'axis': self.axis}
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.constraints', name='SharedMean'
+)
+class SharedMean(constraints.Constraint):
+    """Constrains all weights to equal the incoming mean."""
+
+    def __init__(self, axis=None):
+        """Initialize.
+
+        Arguments:
+            axis (optional): integer, axis along which to reduce
+                weights in order to compute mean.
+
+        """
+        self.axis = axis  # TODO
+
+    def __call__(self, w):
+        """Call."""
+        w_avg = tf.reduce_mean(w, axis=None, keepdims=True)
+        return w - (w - w_avg)
+
+    def get_config(self):
+        """Return configuration."""
+        return {'axis': self.axis}
+

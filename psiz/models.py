@@ -231,8 +231,8 @@ class Proxy(object):
 
         return (z_q, z_r, attention)
 
-    def _broadcast_ready_z(self, z):
-        """Create necessary singleton dimensions for `z`."""
+    def _broadcast_ready(self, z):
+        """Create necessary trailing singleton dimensions for `z`."""
         if z.ndim == 2:
             z = np.expand_dims(z, axis=2)
             z = np.expand_dims(z, axis=3)
@@ -270,8 +270,8 @@ class Proxy(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
         group_id = np.expand_dims(group_id, axis=1)
-        z_q = self._broadcast_ready_z(z_q)
-        z_r = self._broadcast_ready_z(z_r)
+        z_q = self._broadcast_ready(z_q)
+        z_r = self._broadcast_ready(z_r)
 
         # Pass through kernel function.
         sim_qr = self.model.kernel([
@@ -302,7 +302,7 @@ class Proxy(object):
 
         """
         n_trial = z_q.shape[0]
-        # Handle group_id.
+        # Prepare inputs to exploit broadcasting.
         if group_id is None:
             group_id = np.zeros((n_trial), dtype=np.int32)
         else:
@@ -310,22 +310,10 @@ class Proxy(object):
                 group_id = group_id * np.ones((n_trial), dtype=np.int32)
             else:
                 group_id = group_id.astype(dtype=np.int32)
-
         attention = self.w[group_id, :]  # TODO brittle assumption
-
-        # Make sure z_q and attention have an appropriate singleton
-        # dimensions.
-        if z_r.ndim > 2:
-            if z_q.ndim == 2:
-                z_q = np.expand_dims(z_q, axis=2)
-            if attention.ndim == 2:
-                attention = np.expand_dims(attention, axis=2)
-        if z_r.ndim == 4:
-            # A fourth dimension means there are samples for each point.
-            if z_q.ndim == 3:
-                z_q = np.expand_dims(z_q, axis=3)
-            if attention.ndim == 3:
-                attention = np.expand_dims(attention, axis=3)
+        z_q = self._broadcast_ready(z_q)
+        z_r = self._broadcast_ready(z_r)
+        attention = self._broadcast_ready(attention)
 
         # TODO brittle assumption
         d_qr = self.model.kernel.distance([
@@ -333,7 +321,7 @@ class Proxy(object):
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ]).numpy()
-        return d_qr
+        return np.squeeze(d_qr)
 
     def _check_obs(self, obs):
         """Check observerations.

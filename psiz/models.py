@@ -511,8 +511,18 @@ class Proxy(object):
         fp_config = os.path.join(filepath, 'config.h5')
         fp_weights = os.path.join(filepath, 'weights')
 
+        def _convert_to_64(d):
+            for k, v in d.items():
+                if isinstance(v, np.float32):
+                    d[k] = float(v)
+                elif isinstance(v, dict):
+                    d[k] = _convert_to_64(v)
+            return d
+
         # Save configuration.
-        json_model_config = json.dumps(self.model.get_config())
+        model_config = self.model.get_config()
+        model_config = _convert_to_64(model_config)
+        json_model_config = json.dumps(model_config)
         json_loss_config = json.dumps(
             tf.keras.losses.serialize(self.model.loss)
         )

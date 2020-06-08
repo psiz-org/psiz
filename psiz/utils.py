@@ -442,18 +442,22 @@ def choice_wo_replace(a, size, p):
     return a[samples]
 
 
-def standard_split(obs):
+def standard_split(obs, shuffle=False, seed=None):
     """Creata a standard 80-10-10 split of the observations.
     
     Arguments:
         obs: A set of observations.
+        shuffle (optional): Boolean indicating if the data should be
+            shuffled before splitting.
+        seed: Integer to seed randomness.
 
     Returns:
         obs_train: A train set (80%).
         obs_val: A validation set (10%).
         obs_test: A test set (10%).
+
     """
-    skf = StratifiedKFold(n_splits=5)
+    skf = StratifiedKFold(n_splits=5, shuffle=shuffle, random_state=seed)
     (train_idx, holdout_idx) = list(
         skf.split(obs.stimulus_set, obs.config_idx)
     )[0]

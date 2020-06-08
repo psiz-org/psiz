@@ -118,24 +118,36 @@ def main():
     test_loss = np.empty((n_frame)) * np.nan
     train_time = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        print('  Round {0}'.format(i_frame))
+        print('\n  Round {0}'.format(i_frame))
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
 
         # Define model.
+        # If prior_scale=.3, a rough x2 misspecificiation, still works great
+        # If prior_scale=.085, a x.5 misspecificiation, has issues under low-data conditions, otherwise comparable
+        prior_scale = .085  # .17 .3 TODO
         kl_weight = 1. / obs_round_train.n_trial
         embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim, mask_zero=True,
             scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(.17).numpy()
+                tfp.math.softplus_inverse(prior_scale).numpy()
             )
         )
+        # TODO
+        # embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
+        #     n_stimuli+1, n_dim, mask_zero=True,
+        #     loc_initializer=tf.keras.initializers.Constant(0.),
+        #     scale_initializer=tf.keras.initializers.Constant(
+        #         tfp.math.softplus_inverse(prior_scale).numpy()
+        #     ), trainable=False
+        # )
         embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim, mask_zero=True,
             loc_initializer=tf.keras.initializers.Constant(0.),
             scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(.17).numpy()
-            ), trainable=False
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ), loc_trainable=False,
+            scale_constraint=psiz.keras.constraints.SharedMean()
         )
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
@@ -162,8 +174,12 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
+        print('    Initial scale: {0:.4f}'.format(prior_scale))
+        print('    Inferred scale: {0:.4f}'.format(
+            emb_inferred.model.embedding.prior.embeddings.distribution.scale[0, 0]
+        ))
 
         train_loss[i_frame] = restart_record.record['loss'][0]
         train_time[i_frame] = restart_record.record['ms_per_epoch'][0]
@@ -240,7 +256,9 @@ def plot_frame(
         emb_true.z, loc, scale=False, n_restart=30
     )
     loc, cov = apply_affine(loc, cov, r, t)
-    plot_bvn(f0_ax1, loc, cov=cov, c=color_array, show_loc=False)
+    # r = 1.960  # 95%
+    r = 2.576  # 99%
+    plot_bvn(f0_ax1, loc, cov=cov, c=color_array, r=r, show_loc=False)
 
     # Plot true embedding.
     f0_ax1.scatter(
@@ -413,12 +431,16 @@ def plot_univariate_distribution(ax, dist, limits=None, name=None):
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
+    # Settings.
+    scale_request = .17
+
     embedding = psiz.keras.layers.tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
-            stddev=.17, seed=57
+            stddev=scale_request, seed=58
         )
     )
+    embedding.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -432,6 +454,14 @@ def ground_truth(n_stimuli, n_dim):
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
     emb = psiz.models.Proxy(model=model)
+
+    scale_sample = np.std(emb.model.embedding.embeddings.numpy())
+    print(
+        '\n  Requested scale: {0:.4f}'
+        '\n  Sampled scale: {1:.4f}\n'.format(
+            scale_request, scale_sample
+        )
+    )
     return emb
 
 

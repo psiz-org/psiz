@@ -463,7 +463,7 @@ def standard_split(obs, shuffle=False, seed=None):
     )[0]
     obs_train = obs.subset(train_idx)
     obs_holdout = obs.subset(holdout_idx)
-    skf = StratifiedKFold(n_splits=2)
+    skf = StratifiedKFold(n_splits=2, shuffle=shuffle, random_state=seed)
     (val_idx, test_idx) = list(
         skf.split(obs_holdout.stimulus_set, obs_holdout.config_idx)
     )[0]

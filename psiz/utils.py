@@ -176,8 +176,12 @@ def assess_convergence(
     return {"n_trial_array": n_trial_array, "val": val, "measure": score}
 
 
-def similarity_matrix(similarity_fn, z):
+def pairwise_matrix(kernel_fn, z):
     """Return a pairwise similarity matrix.
+
+    Arguments:
+        kernel_fn: A kernel function.
+        z: An embedding.
 
     Returns:
         A 2D array where element s_{i,j} indicates the similarity
@@ -193,12 +197,12 @@ def similarity_matrix(similarity_fn, z):
 
     z_a = z[a, :]
     z_b = z[b, :]
-    simmat = similarity_fn(z_a, z_b)
-    simmat = simmat.reshape(n_stimuli, n_stimuli)
-    return simmat
+    pmat = kernel_fn(z_a, z_b)
+    pmat = pmat.reshape(n_stimuli, n_stimuli)
+    return pmat
 
 
-pairwise_matrix = similarity_matrix
+similarity_matrix = pairwise_matrix
 
 
 def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):

@@ -29,6 +29,8 @@ import tensorflow_probability as tfp
 from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
 
+import tensorflow_probability as tfp
+
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomScaleMVN(initializers.Initializer):
@@ -124,3 +126,49 @@ class RandomAttention(initializers.Initializer):
             "scale": self.scale,
             "seed": self.seed
         }
+
+
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
+class SoftplusUniform(initializers.Initializer):
+    """Initializer using an inverse-softplus-uniform distribution."""
+
+    def __init__(
+            self, minval=-0.05, maxval=0.05, seed=None):
+        """Initialize.
+
+        Arguments:
+            minval: Minimum value of a uniform random sampler for each
+                dimension.
+            maxval: Maximum value of a uniform random sampler for each
+                dimension.
+            seed (optional): A Python integer. Used to create random
+                seeds. See `tf.set_random_seed` for behavior.
+
+        """
+        self.minval = minval
+        self.maxval = maxval
+        self.seed = seed
+
+    def __call__(self, shape, dtype=K.floatx()):
+        """Call."""
+        w = tf.random.uniform(
+            shape,
+            minval=self.minval,
+            maxval=self.maxval,
+            dtype=dtype,
+            seed=self.seed,
+            name=None
+        )
+        # TOOD critical handle zeros
+        return tfp.math.softplus_inverse(w)
+
+    def get_config(self):
+        """Return configuration."""
+        config = {
+            "minval": self.minval,
+            "maxval": self.maxval,
+            "seed": self.seed
+        }
+        return config
+
+

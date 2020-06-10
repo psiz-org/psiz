@@ -4,6 +4,7 @@ Modules:
     catalog
     datasets
     dimensionality
+    distributions
     generator
     keras
     models
@@ -17,6 +18,7 @@ Modules:
 import psiz.catalog
 import psiz.datasets
 import psiz.dimensionality
+import psiz.distributions
 import psiz.generator
 import psiz.keras
 import psiz.models

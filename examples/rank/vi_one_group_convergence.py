@@ -123,9 +123,11 @@ def main():
         obs_round_train = obs_train.subset(include_idx)
 
         # Define model.
-        # If prior_scale=.3, a rough x2 misspecificiation, still works great
-        # If prior_scale=.085, a x.5 misspecificiation, has issues under low-data conditions, otherwise comparable
-        prior_scale = .085  # .17 .3 TODO
+        # Note that scale of the prior can be misspecified. The true scale
+        # is .17, but halving (.085) or doubling (.34) still works well. When
+        # the prior scale is much smaller than appropriate and there is
+        # little data, the posterior will be driven by an incorrect prior.
+        prior_scale = .2  # Mispecified to demonstrate robustness.
         kl_weight = 1. / obs_round_train.n_trial
         embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim, mask_zero=True,
@@ -133,14 +135,6 @@ def main():
                 tfp.math.softplus_inverse(prior_scale).numpy()
             )
         )
-        # TODO
-        # embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
-        #     n_stimuli+1, n_dim, mask_zero=True,
-        #     loc_initializer=tf.keras.initializers.Constant(0.),
-        #     scale_initializer=tf.keras.initializers.Constant(
-        #         tfp.math.softplus_inverse(prior_scale).numpy()
-        #     ), trainable=False
-        # )
         embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim, mask_zero=True,
             loc_initializer=tf.keras.initializers.Constant(0.),

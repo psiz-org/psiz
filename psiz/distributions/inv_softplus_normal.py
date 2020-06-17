@@ -28,8 +28,8 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
     """The inverse-softplus-normal distribution."""
 
     def __init__(
-            self, loc, scale, validate_args=False, allow_nan_stats=True,
-            name='InverseSoftplusNormal'):
+            self, loc, scale, hinge_softness=1., validate_args=False,
+            allow_nan_stats=True, name='InverseSoftplusNormal'):
         """Construct an inverse-softplus-normal distribution.
 
         The InverseSoftplusNormal distribution models positive-valued
@@ -43,6 +43,8 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
                 Normal distribution(s).
             scale: Floating-point `Tensor`; the stddevs of the
                 underlying Normal distribution(s).
+            hinge_softness: Floating-point `Tensor`; Governs the hinge
+                of the softplus operation.
             validate_args: Python `bool`, default `False`. Whether to
                 validate input with asserts. If `validate_args` is
                 `False`, and the inputs are invalid, correct behavior
@@ -59,7 +61,7 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
         with tf.name_scope(name) as name:
             super(InvSoftplusNormal, self).__init__(
                 distribution=normal.Normal(loc=loc, scale=scale),
-                bijector=Softplus(),
+                bijector=Softplus(hinge_softness=hinge_softness),
                 validate_args=validate_args,
                 parameters=parameters,
                 name=name
@@ -79,8 +81,13 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
         """Distribution parameter for the pre-transformed standard deviation."""
         return self.distribution.scale
 
+    @property
+    def hinge_softness(self):
+        """Bijector parameter governing the hinge softness."""
+        return self.bijector.hinge_softness
+
     def _median(self):
-        return tf.softplus(self.distribution.mean())
+        return self.bijector(self.Distribution.mean())
 
     # TODO work out math
     # def _mean(self):

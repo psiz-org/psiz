@@ -133,7 +133,7 @@ class SoftplusUniform(initializers.Initializer):
     """Initializer using an inverse-softplus-uniform distribution."""
 
     def __init__(
-            self, minval=-0.05, maxval=0.05, seed=None):
+            self, minval=-0.05, maxval=0.05, hinge_softness=1., seed=None):
         """Initialize.
 
         Arguments:
@@ -147,6 +147,7 @@ class SoftplusUniform(initializers.Initializer):
         """
         self.minval = minval
         self.maxval = maxval
+        self.hinge_softness = hinge_softness
         self.seed = seed
 
     def __call__(self, shape, dtype=K.floatx()):
@@ -159,8 +160,13 @@ class SoftplusUniform(initializers.Initializer):
             seed=self.seed,
             name=None
         )
+        
+        def generalized_softplus_inverse(x, c, name=None):
+            return c * tfp.math.softplus_inverse(x / c)
+
         # TOOD critical handle zeros
-        return tfp.math.softplus_inverse(w)
+        return generalized_softplus_inverse(w, self.hinge_softness)
+
 
     def get_config(self):
         """Return configuration."""
@@ -170,5 +176,3 @@ class SoftplusUniform(initializers.Initializer):
             "seed": self.seed
         }
         return config
-
-

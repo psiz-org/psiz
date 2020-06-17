@@ -47,18 +47,20 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    fp_ani = Path.home() / Path('vi_one_group_convergence')  # TODO
-    # fp_tmp = Path.home() / Path(
-    #     '.psiz', 'tmp', 'examples', 'vi_one_group_convergence'
-    # )
-    # fp_ani = Path.home() / Path('vi_one_group_convergence')
-    fp_ani.mkdir(parents=True, exist_ok=True)
+    fp_example = Path.home() / Path('ex_vi_1g')  # TODO
+    fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 2
     n_trial = 2000
     n_restart = 1
     batch_size = 100
     n_frame = 7
+
+    # Directory preparation.
+    fp_example.mkdir(parents=True, exist_ok=True)
+    # Remove existing TensorBoard logs.
+    if fp_board.exists():
+        shutil.rmtree(fp_board)
 
     # Plot settings.
     small_size = 6
@@ -99,7 +101,6 @@ def main():
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
 
-    callbacks = []
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(lr=.001),
@@ -109,26 +110,40 @@ def main():
     }
 
     # Infer independent models with increasing amounts of data.
-    n_obs = np.round(
-        np.linspace(15, obs_train.n_trial, n_frame)
-    ).astype(np.int64)
+    if n_frame == 1:
+        n_obs = np.array([obs_train.n_trial], dtype=int)
+    else:
+        n_obs = np.round(
+            np.linspace(15, obs_train.n_trial, n_frame)
+        ).astype(np.int64)
     r2 = np.empty((n_frame)) * np.nan
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
     train_time = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        print('\n  Round {0}'.format(i_frame))
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
+        print(
+            '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
+        )
+
+        # Use Tensorboard callback.
+        fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
+        cb_board = psiz.keras.callbacks.TensorBoardRe(
+            log_dir=fp_board_frame, histogram_freq=0,
+            write_graph=False, write_images=False, update_freq='epoch',
+            profile_batch=0, embeddings_freq=0, embeddings_metadata=None
+        )
+        callbacks = [cb_board]
 
         # Define model.
+        kl_weight = 1. / obs_round_train.n_trial
         # Note that scale of the prior can be misspecified. The true scale
         # is .17, but halving (.085) or doubling (.34) still works well. When
         # the prior scale is much smaller than appropriate and there is
         # little data, the posterior will be driven by an incorrect prior.
         prior_scale = .2  # Mispecified to demonstrate robustness.
-        kl_weight = 1. / obs_round_train.n_trial
         embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim, mask_zero=True,
             scale_initializer=tf.keras.initializers.Constant(
@@ -206,17 +221,18 @@ def main():
             fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
             emb_inferred, color_array, train_time
         )
-        fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
+        fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
             os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
         )
 
     # Create animation.
-    frames = []
-    for i_frame in range(n_frame):
-        fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
-        frames.append(imageio.imread(fname))
-    imageio.mimwrite(fp_ani / Path('posterior.gif'), frames, fps=1)
+    if n_frame > 1:
+        frames = []
+        for i_frame in range(n_frame):
+            fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
+            frames.append(imageio.imread(fname))
+        imageio.mimwrite(fp_example / Path('posterior.gif'), frames, fps=1)
 
 
 def plot_frame(

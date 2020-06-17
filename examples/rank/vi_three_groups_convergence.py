@@ -26,24 +26,24 @@ model.
 Example output:
 
     Restart Summary
-    n_valid_restart 1 | total_duration: 394 s
-    best | n_epoch: 233 | val_cce: 2.8810
-    mean ±stddev | n_epoch: 233 ±0 | val_cce: 2.8810 ±0.0000 | 380 ±0 s | 1633 ±0 ms/epoch
+    n_valid_restart 1 | total_duration: 2104 s
+    best | n_epoch: 999 | val_loss: 3.0700
+    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 | 2088 ±0 s | 2090 ±0 ms/epoch
 
     Attention weights:
-          Novice | [0.58 0.46 0.07 0.04]
-    Intermediate | [0.34 0.26 0.37 0.24]
-          Expert | [0.06 0.06 0.68 0.39]
+          Novice | [0.89 0.81 0.13 0.11]
+    Intermediate | [0.54 0.44 0.53 0.58]
+          Expert | [0.06 0.08 0.80 0.92]
 
     Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.97    0.59    0.15
-     Interm |   0.61    0.97    0.63
-     Expert |   0.15    0.60    0.97
-
+     Novice |   0.97    0.59    0.12
+     Interm |   0.64    0.98    0.60
+     Expert |   0.14    0.58    0.96
+ 
 """
 
 import copy
@@ -66,16 +66,23 @@ import psiz
 
 
 def main():
-    """Run the simulation that infers an embedding for three groups."""
+    """Run script."""
     # Settings.
-    fp_ani = Path.home() / Path('vi_three_groups_convergence')  # TODO
-    fp_ani.mkdir(parents=True, exist_ok=True)
+    fp_example = Path.home() / Path('ex_vi_3g')  # TODO
+    fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 4
     n_group = 3
+    n_trial = 2000
     n_restart = 1
     batch_size = 200
-    n_frame = 4
+    n_frame = 1  # TODO 4
+
+    # Directory preparation.
+    fp_example.mkdir(parents=True, exist_ok=True)
+    # Remove existing TensorBoard logs.
+    if fp_board.exists():
+        shutil.rmtree(fp_board)
 
     # Plot settings.
     small_size = 6
@@ -101,7 +108,6 @@ def main():
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
-    n_trial = 2000
     generator = psiz.generator.RandomGenerator(
         n_stimuli, n_reference=8, n_select=2
     )
@@ -143,28 +149,30 @@ def main():
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
-    }
+    }    
 
     # Infer independent models with increasing amounts of data.
-    n_obs = np.round(
-        np.linspace(15, obs_train.n_trial, n_frame)
-    ).astype(np.int64)
+    if n_frame == 1:
+        n_obs = np.array([obs_train.n_trial], dtype=int)
+    else:
+        n_obs = np.round(
+            np.linspace(15, obs_train.n_trial, n_frame)
+        ).astype(np.int64)
     r2 = np.empty([n_frame, n_group, n_group]) * np.nan
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        print('  Round {0}'.format(i_frame))
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
+        print(
+            '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
+        )
 
-        # Use Tensorboard.
-        log_dir = '/tmp/psiz/tensorboard_logs/frame_{0}'.format(i_frame)
-        # Remove existing TensorBoard logs.
-        if Path(log_dir).exists():
-            shutil.rmtree(log_dir)
+        # Use Tensorboard callback.
+        fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
         cb_board = psiz.keras.callbacks.TensorBoardRe(
-            log_dir=log_dir, histogram_freq=0,
+            log_dir=fp_board_frame, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
@@ -172,6 +180,7 @@ def main():
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
+
         embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim, mask_zero=True,
             scale_initializer=tf.keras.initializers.Constant(
@@ -183,7 +192,7 @@ def main():
             loc_initializer=tf.keras.initializers.Constant(0.),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(.17).numpy()
-            ), trainable=False
+            ), trainable=False  # TODO trainable scale
         )
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
@@ -223,7 +232,7 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]
@@ -293,17 +302,18 @@ def main():
             fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
             emb_inferred, color_array, idx_sorted, i_frame
         )
-        fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
+        fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
             os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
         )
 
     # Create animation.
-    frames = []
-    for i_frame in range(n_frame):
-        fname = fp_ani / Path('frame_{0}.tiff'.format(i_frame))
-        frames.append(imageio.imread(fname))
-    imageio.mimwrite(fp_ani / Path('posterior.gif'), frames, fps=1)
+    if n_frame > 1:
+        frames = []
+        for i_frame in range(n_frame):
+            fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
+            frames.append(imageio.imread(fname))
+        imageio.mimwrite(fp_example / Path('posterior.gif'), frames, fps=1)
 
 
 def ground_truth(n_stimuli, n_dim, n_group):

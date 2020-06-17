@@ -36,8 +36,6 @@ Classes:
     EmbeddingLogNormalDiag: A log-normal distribution embedding layer.
     EmbeddingLogitNormalDiag: A logit-normal distribution embedding
         layer.
-    EmbeddingInvSoftplusNormalDiag: An inverse-softmax-normal
-        distribution embedding layer.
     EmbeddingVariational: A variational embedding layer.
     GroupAttentionVariational: A variation group attention layer.
 
@@ -59,7 +57,6 @@ import psiz.keras.constraints as pk_constraints
 import psiz.keras.initializers as pk_initializers
 import psiz.keras.regularizers
 import psiz.ops
-from psiz.distributions import InvSoftplusNormal
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -1393,100 +1390,17 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         return tf.math.sigmoid(self.embeddings.distribution.loc)
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='EmbeddingInvSoftplusNormalDiag'
-)
-class EmbeddingInvSoftplusNormalDiag(_EmbeddingLocScale):
-    """A distribution-based embedding.
-
-    Each embedding point is characterized by a truncated-Normal
-    distribution with a diagonal scale matrix.
-
-    """
-    def __init__(self, input_dim, output_dim, **kwargs):
-        """Initialize."""
-        super(EmbeddingInvSoftplusNormalDiag, self).__init__(
-            input_dim, output_dim, **kwargs
-        )
-
-    def _build_embeddings_distribution(self, dtype):
-        """Build embeddings distribution."""
-        # Handle location variables.
-        loc_trainable = self.trainable and self.loc_trainable
-        loc = self.add_weight(
-            name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
-            initializer=self.loc_initializer, regularizer=self.loc_regularizer,
-            trainable=loc_trainable, constraint=self.loc_constraint
-        )
-
-        # Handle scale variables.
-        scale_trainable = self.trainable and self.scale_trainable
-        untransformed_scale = self.add_weight(
-            name='untransformed_scale',
-            shape=[self.input_dim, self.output_dim], dtype=dtype,
-            initializer=self.scale_initializer,
-            regularizer=self.scale_regularizer, trainable=scale_trainable,
-            constraint=self.scale_constraint
-        )
-        scale = tfp.util.DeferredTensor(
-            untransformed_scale,
-            lambda x: (K.epsilon() + tf.nn.softplus(x))
-        )
-
-        dist = psiz.distributions.InvSoftplusNormal(loc=loc, scale=scale)
-        batch_ndims = tf.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
-
-    def call(self, inputs):
-        """Call."""
-        """Override call since using transformed distribution."""
-        [inputs_loc, inputs_scale] = super().call(inputs)
-        # Use reparameterization trick.
-        dist_batch = InvSoftplusNormal(loc=inputs_loc, scale=inputs_scale)
-
-        # TODO
-        # self.add_metric(tf.reduce_mean(
-        #     self.embeddings.distribution.loc[1:]),
-        #     aggregation='mean', name='loc'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(self.embeddings.distribution.scale[1:]),
-        #     aggregation='mean', name='scale'
-        # )
-        m = tf.math.softplus(
-            self.embeddings.distribution.distribution.loc[1:]
-        )  # TODO math?
-        self.add_metric(
-            tf.reduce_min(m),
-            aggregation='mean', name='mode_min'
-        )
-        self.add_metric(
-            tf.reduce_mean(m),
-            aggregation='mean', name='mode_avg'
-        )
-        self.add_metric(
-            tf.reduce_max(m),
-            aggregation='mean', name='mode_max'
-        )
-
-        # Reify output using samples.
-        return dist_batch.sample()
-
-    @property
-    def embeddings_mode(self):
-        """Getter method for mode of `embeddings`."""
-        # Use median as approximation of mode, where
-        # `median = softplus(loc)`.  TODO check math
-        return tf.math.softplus(self.embeddings.distribution.loc)
-
-
 class _Variational(tf.keras.layers.Layer):
     """Private base class for variational layer.
 
-    NOTE: Assumes that the KL divergence between the posterior and
+    This class assumes that the KL divergence between the posterior and
     prior is registered.
+
+    Attributes:
+        kl_weight: The weighting of the kl term. Should be 1/n_train.
+        kl_anneal: An annealing weight that can be accessed using a
+            callback. Iniitalized to one so it has no effect if not
+            used in a callback.
 
     """
 
@@ -1506,6 +1420,11 @@ class _Variational(tf.keras.layers.Layer):
         self.posterior = posterior
         self.prior = prior
         self.kl_weight = kl_weight
+        self.kl_anneal = self.add_weight(
+            name='kl_anneal', shape=[], dtype=K.floatx(),
+            initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        )
 
     def call(self, inputs):
         """Call."""
@@ -1522,7 +1441,7 @@ class _Variational(tf.keras.layers.Layer):
         self.add_loss(
             lambda: kl_lib.kl_divergence(
                 posterior_dist, prior_dist
-            ) * self.kl_weight
+            ) * self.kl_weight * self.kl_anneal
         )
 
     def get_config(self):
@@ -1569,7 +1488,7 @@ class EmbeddingVariational(_Variational):
 
         """
         super(EmbeddingVariational, self).__init__(**kwargs)
-    
+
     def apply_kl(self, posterior, prior):
         """Apply KL divergence."""
         self._add_kl_loss(posterior.embeddings, prior.embeddings)

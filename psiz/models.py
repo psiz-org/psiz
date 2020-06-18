@@ -483,55 +483,59 @@ class Proxy(object):
     #     return predictions.numpy()
 
     def save(self, filepath, overwrite=False):
-        """Save the PsychologialEmbedding model as an HDF5 file.
+        """Save the model."""
+        self.model.save(filepath, overwrite=overwrite)
 
-        Arguments:
-            filepath: String specifying the path to save the model.
+    # def save(self, filepath, overwrite=False):
+    #     """Save the PsychologialEmbedding model as an HDF5 file.
 
-        """
-        # NOTE: Ideally we would use TensorFlow's save method using the
-        # snippet below.
-        # self.model.save(filepath, overwrite=overwrite, save_format='tf')
+    #     Arguments:
+    #         filepath: String specifying the path to save the model.
 
-        # Make directory.
-        Path(filepath).mkdir(parents=True, exist_ok=overwrite)
+    #     """
+    #     # NOTE: Ideally we would use TensorFlow's save method using the
+    #     # snippet below.
+    #     # self.model.save(filepath, overwrite=overwrite, save_format='tf')
 
-        fp_config = os.path.join(filepath, 'config.h5')
-        fp_weights = os.path.join(filepath, 'weights')
+    #     # Make directory.
+    #     Path(filepath).mkdir(parents=True, exist_ok=overwrite)
 
-        def _convert_to_64(d):
-            for k, v in d.items():
-                if isinstance(v, np.float32):
-                    d[k] = float(v)
-                elif isinstance(v, dict):
-                    d[k] = _convert_to_64(v)
-            return d
+    #     fp_config = os.path.join(filepath, 'config.h5')
+    #     fp_weights = os.path.join(filepath, 'weights')
 
-        # Save configuration.
-        model_config = self.model.get_config()
-        model_config = _convert_to_64(model_config)
-        json_model_config = json.dumps(model_config)
-        json_loss_config = json.dumps(
-            tf.keras.losses.serialize(self.model.loss)
-        )
-        optimizer_config = tf.keras.optimizers.serialize(self.model.optimizer)
-        # HACK: numpy.float32 is not serializable
-        for k, v in optimizer_config['config'].items():
-            if isinstance(v, np.float32):
-                optimizer_config['config'][k] = float(v)
-        json_optimizer_config = json.dumps(optimizer_config)
-        f = h5py.File(fp_config, "w")
-        f.create_dataset('model_type', data='psiz')
-        f.create_dataset('psiz_version', data='0.4.0')
-        f.create_dataset('config', data=json_model_config)
-        f.create_dataset('loss', data=json_loss_config)
-        f.create_dataset('optimizer', data=json_optimizer_config)
-        f.close()
+    #     def _convert_to_64(d):
+    #         for k, v in d.items():
+    #             if isinstance(v, np.float32):
+    #                 d[k] = float(v)
+    #             elif isinstance(v, dict):
+    #                 d[k] = _convert_to_64(v)
+    #         return d
 
-        # Save weights.
-        self.model.save_weights(
-            fp_weights, overwrite=overwrite, save_format='tf'
-        )
+    #     # Save configuration.
+    #     model_config = self.model.get_config()
+    #     model_config = _convert_to_64(model_config)
+    #     json_model_config = json.dumps(model_config)
+    #     json_loss_config = json.dumps(
+    #         tf.keras.losses.serialize(self.model.loss)
+    #     )
+    #     optimizer_config = tf.keras.optimizers.serialize(self.model.optimizer)
+    #     # HACK: numpy.float32 is not serializable
+    #     for k, v in optimizer_config['config'].items():
+    #         if isinstance(v, np.float32):
+    #             optimizer_config['config'][k] = float(v)
+    #     json_optimizer_config = json.dumps(optimizer_config)
+    #     f = h5py.File(fp_config, "w")
+    #     f.create_dataset('model_type', data='psiz')
+    #     f.create_dataset('psiz_version', data='0.4.0')
+    #     f.create_dataset('config', data=json_model_config)
+    #     f.create_dataset('loss', data=json_loss_config)
+    #     f.create_dataset('optimizer', data=json_optimizer_config)
+    #     f.close()
+
+    #     # Save weights.
+    #     self.model.save_weights(
+    #         fp_weights, overwrite=overwrite, save_format='tf'
+    #     )
 
     # def subset(self, idx):  TODO DELETE
     #     """Return subset of embedding."""
@@ -571,13 +575,22 @@ class Proxy(object):
         return proxy_model
 
 
-class Rank(tf.keras.Model):
-    """Model based on ranked similarity judgments.
+class PsychologicalEmbedding(tf.keras.Model):
+    """A pscyhological embedding model.
+
+    This model can be subclassed to infer a psychological embedding
+    from different types similarity judgment data.
 
     Attributes:
+        embedding: An embedding layer.
+        kernel: A kernel layer.
+        behavior: A behavior layer.
         n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.
         n_group: The number of groups.
+        n_sample_test: The number of samples to use during test. This
+            attribute is only relevant if using probabilistic layers.
+            Otherwise it should be kept at the default value of 1.
 
     """
 
@@ -602,12 +615,10 @@ class Rank(tf.keras.Model):
 
         """
         super().__init__(**kwargs)
+
+        # Assign layers.
         self.embedding = embedding
         self.kernel = kernel
-
-        # Initialize behavioral component.
-        if behavior is None:
-            behavior = psiz.keras.layers.RankBehavior()
         self.behavior = behavior
 
         self.n_sample_test = n_sample_test
@@ -615,60 +626,20 @@ class Rank(tf.keras.Model):
         # Create convenience pointer to kernel parameters.
         self.theta = self.kernel.theta
 
-    @tf.function(input_signature=[{
-        'membership': tf.TensorSpec(
-            shape=[None, 2], dtype=tf.int32, name='membership'
-        ),
-        'is_select': tf.TensorSpec(
-            shape=[None, None, None], dtype=tf.bool, name='is_select'
-        ),
-        'stimulus_set': tf.TensorSpec(
-            shape=[None, None, None], dtype=tf.int32, name='stimulus_set'
-        )
-    }])
-    def call(self, inputs):
-        """Call.
+    @property
+    def n_stimuli(self):
+        """Getter method for n_stimuli."""
+        return self.embedding.input_dim - 1  # TODO handle general case without masking
 
-        Arguments:
-            inputs: A dictionary of inputs:
-                stimulus_set: dtype=tf.int32, consisting of the
-                    integers on the interval [0, n_stimuli[
-                    shape=(batch_size, n_max_reference + 1)
-                is_select: dtype=tf.bool, the shape implies the
-                    maximum number of selected stimuli in the data
-                    shape=(batch_size, n_max_select)
-                membership: dtype=tf.int32, Integers indicating the
-                    group and agent membership of a trial.
-                    shape=(batch_size, 2)
+    @property
+    def n_dim(self):
+        """Getter method for n_dim."""
+        return self.embedding.output_dim
 
-        """
-        # Grab inputs.
-        stimulus_set = inputs['stimulus_set']
-        is_select = inputs['is_select'][:, 1:, :]
-        membership = inputs['membership']
-
-        # Inflate coordinates.
-        # TODO can we always assume this split pattern?
-        z_stimulus_set = self.embedding(stimulus_set)
-        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
-        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
-        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
-        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
-        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
-
-        # Pass through similarity kernel.
-        sim_qr = self.kernel([z_q, z_r, membership])
-
-        # Zero out similarities involving placeholder IDs.
-        is_present = tf.math.not_equal(stimulus_set, 0)
-        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
-        sim_qr = sim_qr * is_present
-
-        # Compute probability of different behavioral outcomes.
-        is_select = tf.cast(is_select, dtype=K.floatx())
-        is_outcome = tf.cast(is_present[:, 0, :], dtype=K.floatx())
-        probs = self.behavior([sim_qr, is_select, is_outcome])
-        return probs
+    @property
+    def n_group(self):
+        """Getter method for n_group."""
+        return self.kernel.n_group
 
     def train_step(self, data):
         """Logic for one training step.
@@ -759,21 +730,6 @@ class Rank(tf.keras.Model):
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
-    @property
-    def n_stimuli(self):
-        """Getter method for n_stimuli."""
-        return self.embedding.input_dim - 1
-
-    @property
-    def n_dim(self):
-        """Getter method for n_dim."""
-        return self.embedding.output_dim
-
-    @property
-    def n_group(self):
-        """Getter method for n_group."""
-        return self.kernel.n_group
-
     def get_config(self):
         """Return model configuration."""
         layer_configs = {
@@ -800,10 +756,9 @@ class Rank(tf.keras.Model):
 
         Arguments:
             config: A hierarchical configuration dictionary.
-            custom_objects: A dictionary of custom classes.
 
         Returns:
-            layer: An instantiated and configured TensorFlow model.
+            An instantiated and configured TensorFlow model.
 
         """
         model_config = copy.deepcopy(config)
@@ -819,11 +774,146 @@ class Rank(tf.keras.Model):
         model_config.update(built_layers)
         return cls(**model_config)
 
+    def save(self, filepath, overwrite=False):
+        """Save the PsychologialEmbedding model.
 
-# class Rate(tf.keras.Model):
+        Ideally we would use TensorFlow model's defualt save
+        method. Unfortunately, this does not always work for the
+        sub-classed model appraoch. A custom implementation is used
+        here.
+
+        Arguments:
+            filepath: String specifying the path to save the model.
+            overwrite (optional): Whether to overwrite exisitng files.
+
+        """
+        # Make directory.
+        Path(filepath).mkdir(parents=True, exist_ok=overwrite)
+
+        fp_config = os.path.join(filepath, 'config.h5')
+        fp_weights = os.path.join(filepath, 'weights')
+
+        def _convert_to_64(d):
+            for k, v in d.items():
+                if isinstance(v, np.float32):
+                    d[k] = float(v)
+                elif isinstance(v, dict):
+                    d[k] = _convert_to_64(v)
+            return d
+
+        # Save configuration.
+        model_config = self.get_config()
+        model_config = _convert_to_64(model_config)
+        json_model_config = json.dumps(model_config)
+        json_loss_config = json.dumps(
+            tf.keras.losses.serialize(self.loss)
+        )
+        optimizer_config = tf.keras.optimizers.serialize(self.optimizer)
+        # HACK: numpy.float32 is not serializable
+        for k, v in optimizer_config['config'].items():
+            if isinstance(v, np.float32):
+                optimizer_config['config'][k] = float(v)
+        json_optimizer_config = json.dumps(optimizer_config)
+        f = h5py.File(fp_config, "w")
+        f.create_dataset('model_type', data='psiz')
+        f.create_dataset('psiz_version', data='0.4.0')
+        f.create_dataset('config', data=json_model_config)
+        f.create_dataset('loss', data=json_loss_config)
+        f.create_dataset('optimizer', data=json_optimizer_config)
+        f.close()
+
+        # Save weights.
+        self.save_weights(
+            fp_weights, overwrite=overwrite, save_format='tf'
+        )
 
 
-# class Sort(tf.keras.Model):
+class Rank(PsychologicalEmbedding):
+    """Psychological embedding inferred from ranked similarity judgments.
+
+    Attributes:
+        See PsychologicalEmbedding.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize.
+
+        Arguments:
+            See PschologicalEmbedding.
+
+        Raises:
+            ValueError: If arguments are invalid.
+
+        """
+        behavior = kwargs.pop('behavior', None)
+        # Initialize behavioral component.
+        if behavior is None:
+            behavior = psiz.keras.layers.RankBehavior()
+        kwargs.update({'behavior': behavior})
+
+        super().__init__(**kwargs)
+
+    @tf.function(input_signature=[{
+        'membership': tf.TensorSpec(
+            shape=[None, 2], dtype=tf.int32, name='membership'
+        ),
+        'is_select': tf.TensorSpec(
+            shape=[None, None, None], dtype=tf.bool, name='is_select'
+        ),
+        'stimulus_set': tf.TensorSpec(
+            shape=[None, None, None], dtype=tf.int32, name='stimulus_set'
+        )
+    }])
+    def call(self, inputs):
+        """Call.
+
+        Arguments:
+            inputs: A dictionary of inputs:
+                stimulus_set: dtype=tf.int32, consisting of the
+                    integers on the interval [0, n_stimuli[
+                    shape=(batch_size, n_max_reference + 1)
+                is_select: dtype=tf.bool, the shape implies the
+                    maximum number of selected stimuli in the data
+                    shape=(batch_size, n_max_select)
+                membership: dtype=tf.int32, Integers indicating the
+                    group and agent membership of a trial.
+                    shape=(batch_size, 2)
+
+        """
+        # Grab inputs.
+        stimulus_set = inputs['stimulus_set']
+        is_select = inputs['is_select'][:, 1:, :]
+        membership = inputs['membership']
+
+        # Inflate coordinates.
+        # TODO can we always assume this split pattern?
+        z_stimulus_set = self.embedding(stimulus_set)
+        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
+        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
+        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
+        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
+
+        # Pass through similarity kernel.
+        sim_qr = self.kernel([z_q, z_r, membership])
+
+        # Zero out similarities involving placeholder IDs.
+        is_present = tf.math.not_equal(stimulus_set, 0)
+        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
+        sim_qr = sim_qr * is_present
+
+        # Compute probability of different behavioral outcomes.
+        is_select = tf.cast(is_select, dtype=K.floatx())
+        is_outcome = tf.cast(is_present[:, 0, :], dtype=K.floatx())
+        probs = self.behavior([sim_qr, is_select, is_outcome])
+        return probs
+
+
+# class Rate(PsychologicalEmbedding):
+
+
+# class Sort(PsychologicalEmbedding):
 
 
 def load_model(filepath, custom_objects={}, compile=False):

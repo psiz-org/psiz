@@ -638,11 +638,11 @@ class Kernel(tf.keras.layers.Layer):
         super(Kernel, self).__init__(**kwargs)
 
         if distance is None:
-            distance = psiz.keras.layers.WeightedMinkowski()
+            distance = WeightedMinkowski()
         self.distance = distance
 
         if similarity is None:
-            similarity = psiz.keras.layers.ExponentialSimilarity()
+            similarity = ExponentialSimilarity()
         self.similarity = similarity
 
         # Gather all pointers to theta-associated variables.
@@ -732,17 +732,17 @@ class AttentionKernel(tf.keras.layers.Layer):
         super(AttentionKernel, self).__init__(**kwargs)
 
         if attention is None:
-            attention = psiz.keras.layers.GroupAttention(
+            attention = GroupAttention(
                 n_dim=n_dim, n_group=1
             )
         self.attention = attention
 
         if distance is None:
-            distance = psiz.keras.layers.WeightedMinkowski()
+            distance = WeightedMinkowski()
         self.distance = distance
 
         if similarity is None:
-            similarity = psiz.keras.layers.ExponentialSimilarity()
+            similarity = ExponentialSimilarity()
         self.similarity = similarity
 
         # Gather all pointers to theta-associated variables.

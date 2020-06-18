@@ -628,17 +628,20 @@ class PsychologicalEmbedding(tf.keras.Model):
 
     @property
     def n_stimuli(self):
-        """Getter method for n_stimuli."""
-        return self.embedding.input_dim - 1  # TODO handle general case without masking
+        """Getter method for `n_stimuli`."""
+        n_stimuli = self.embedding.input_dim
+        if self.embedding.mask_zero:
+            n_stimuli = n_stimuli - 1
+        return n_stimuli
 
     @property
     def n_dim(self):
-        """Getter method for n_dim."""
+        """Getter method for `n_dim`."""
         return self.embedding.output_dim
 
     @property
     def n_group(self):
-        """Getter method for n_group."""
+        """Getter method for `n_group`."""
         return self.kernel.n_group
 
     def train_step(self, data):

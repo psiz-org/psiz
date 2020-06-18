@@ -416,13 +416,18 @@ class EmbeddingVariational(Variational):
 
     @property
     def input_dim(self):
-        """Getter method for embedding `input_dim`."""
-        return self.posterior.embeddings.distribution.loc.shape[0]
+        """Getter method for embeddings `input_dim`."""
+        return self.posterior.input_dim
 
     @property
     def output_dim(self):
         """Getter method for embeddings `output_dim`."""
-        return self.posterior.embeddings.distribution.loc.shape[1]
+        return self.posterior.output_dim
+
+    @property
+    def mask_zero(self):
+        """Getter method for embeddings `mask_zero`."""
+        return self.posterior.mask_zero
 
     @property
     def embeddings(self):

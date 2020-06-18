@@ -1386,7 +1386,7 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
     def embeddings_mode(self):
         """Getter method for mode of `embeddings`."""
         # Use median as approximation of mode. For logit-normal distribution,
-        # `median = logistic(loc)`.
+        # `median = logistic(loc)`. TODO
         return tf.math.sigmoid(self.embeddings.distribution.loc)
 
 
@@ -1551,7 +1551,13 @@ class GroupAttentionVariational(_Variational):
         """Getter method for `n_group`"""
         return self.posterior.embeddings.distribution.loc.shape[1]
 
+    # TODO deprecate `w` in favor of `embeddings`?
     @property
     def w(self):
+        """Getter method for embeddings posterior mode."""
+        return self.posterior.embeddings_mode
+
+    @property
+    def embeddings(self):
         """Getter method for embeddings posterior mode."""
         return self.posterior.embeddings_mode

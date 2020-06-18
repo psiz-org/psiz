@@ -31,7 +31,6 @@ from tensorflow.python.keras.utils import tf_utils
 from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import math_ops
 import tensorflow_probability as tfp
-from tensorflow_probability.python.distributions import Normal, LogNormal, LogitNormal
 
 from psiz.keras.layers.variational import Variational
 
@@ -94,7 +93,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
 
         # Handle initializer.
         if loc_initializer is None:
-            loc_initializer = tf.keras.initializers.RandomNormal()
+            loc_initializer = tf.keras.initializers.RandomUniform()
         self.loc_initializer = tf.keras.initializers.get(loc_initializer)
         if scale_initializer is None:
             scale_initializer = (
@@ -258,7 +257,66 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
         """Call."""
         [inputs_loc, inputs_scale] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = Normal(loc=inputs_loc, scale=inputs_scale)
+        dist_batch = tfp.distributions.Normal(
+            loc=inputs_loc, scale=inputs_scale
+        )
+        # Reify output using samples.
+        return dist_batch.sample()
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='EmbeddingLaplaceDiag'
+)
+class EmbeddingLaplaceDiag(_EmbeddingLocScale):
+    """A distribution-based embedding.
+
+    Each embedding point is characterized by a Laplace distribution with
+    a diagonal scale matrix.
+
+    """
+    def __init__(self, input_dim, output_dim, **kwargs):
+        """Initialize."""
+        super(EmbeddingLaplaceDiag, self).__init__(
+            input_dim, output_dim, **kwargs
+        )
+
+    def _build_embeddings_distribution(self, dtype):
+        """Build embeddings distribution."""
+        # Handle location variables.
+        loc_trainable = self.trainable and self.loc_trainable
+        loc = self.add_weight(
+            name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
+            initializer=self.loc_initializer, regularizer=self.loc_regularizer,
+            trainable=loc_trainable, constraint=self.loc_constraint
+        )
+
+        # Handle scale variables.
+        scale_trainable = self.trainable and self.scale_trainable
+        untransformed_scale = self.add_weight(
+            name='untransformed_scale',
+            shape=[self.input_dim, self.output_dim], dtype=dtype,
+            initializer=self.scale_initializer,
+            regularizer=self.scale_regularizer, trainable=scale_trainable,
+            constraint=self.scale_constraint
+        )
+        scale = tfp.util.DeferredTensor(
+            untransformed_scale,
+            lambda x: (K.epsilon() + tf.nn.softplus(x))
+        )
+
+        dist = tfp.distributions.Laplace(loc=loc, scale=scale)
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        return tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+
+    def call(self, inputs):
+        """Call."""
+        [inputs_loc, inputs_scale] = super().call(inputs)
+        # Use reparameterization trick.
+        dist_batch = tfp.distributions.Laplace(
+            loc=inputs_loc, scale=inputs_scale
+        )
         # Reify output using samples.
         return dist_batch.sample()
 
@@ -320,7 +378,9 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
         """Call."""
         [inputs_loc, inputs_scale] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = LogNormal(loc=inputs_loc, scale=inputs_scale)
+        dist_batch = tfp.distributions.LogNormal(
+            loc=inputs_loc, scale=inputs_scale
+        )
         # Reify output using samples.
         return dist_batch.sample()
 
@@ -383,7 +443,9 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         """Call."""
         [inputs_loc, inputs_scale] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = LogitNormal(loc=inputs_loc, scale=inputs_scale)
+        dist_batch = tfp.distributions.LogitNormal(
+            loc=inputs_loc, scale=inputs_scale
+        )
         # Reify output using samples.
         return dist_batch.sample()
 
@@ -433,3 +495,49 @@ class EmbeddingVariational(Variational):
     def embeddings(self):
         """Getter method for embeddings posterior mode."""
         return self.posterior.embeddings_mode
+
+        # TODO Remove this debug call.
+    def call(self, inputs):
+        outputs = super(EmbeddingVariational, self).call(inputs)
+
+        # self.add_metric(
+        #     self.kl_anneal, aggregation='mean', name='kl_anneal'
+        # )
+
+        m = self.posterior.embeddings.distribution.loc[1:]
+        # m = self.posterior.embeddings.distribution.bijector(
+        #     self.posterior.embeddings.distribution.distribution.loc[1:]
+        # )
+        s = self.posterior.embeddings.distribution.scale[1:]
+        self.add_metric(
+            tf.reduce_mean(m),
+            aggregation='mean', name='po_loc_avg'
+        )
+        self.add_metric(
+            tf.reduce_mean(s),
+            aggregation='mean', name='po_scale_avg'
+        )
+
+        # m = self.posterior.embeddings.distribution.mode()[1:]
+        # s = self.posterior.embeddings.distribution.stddev()[1:]
+        # self.add_metric(
+        #     tf.reduce_mean(m),
+        #     aggregation='mean', name='po_mode_avg'
+        # )
+        # self.add_metric(
+        #     tf.reduce_mean(s),
+        #     aggregation='mean', name='po_stddev_avg'
+        # )
+
+        # m = self.prior.embeddings.distribution.loc[1:]
+        s = self.prior.embeddings.distribution.scale[1:]
+        # self.add_metric(
+        #     tf.reduce_mean(m),
+        #     aggregation='mean', name='pr_loc'
+        # )
+        self.add_metric(
+            tf.reduce_mean(s),
+            aggregation='mean', name='pr_scale'
+        )
+
+        return outputs

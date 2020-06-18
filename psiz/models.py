@@ -474,57 +474,6 @@ class Proxy(object):
         """Save the model."""
         self.model.save(filepath, overwrite=overwrite)
 
-    # def save(self, filepath, overwrite=False):
-    #     """Save the PsychologialEmbedding model as an HDF5 file.
-
-    #     Arguments:
-    #         filepath: String specifying the path to save the model.
-
-    #     """
-    #     # NOTE: Ideally we would use TensorFlow's save method using the
-    #     # snippet below.
-    #     # self.model.save(filepath, overwrite=overwrite, save_format='tf')
-
-    #     # Make directory.
-    #     Path(filepath).mkdir(parents=True, exist_ok=overwrite)
-
-    #     fp_config = os.path.join(filepath, 'config.h5')
-    #     fp_weights = os.path.join(filepath, 'weights')
-
-    #     def _convert_to_64(d):
-    #         for k, v in d.items():
-    #             if isinstance(v, np.float32):
-    #                 d[k] = float(v)
-    #             elif isinstance(v, dict):
-    #                 d[k] = _convert_to_64(v)
-    #         return d
-
-    #     # Save configuration.
-    #     model_config = self.model.get_config()
-    #     model_config = _convert_to_64(model_config)
-    #     json_model_config = json.dumps(model_config)
-    #     json_loss_config = json.dumps(
-    #         tf.keras.losses.serialize(self.model.loss)
-    #     )
-    #     optimizer_config = tf.keras.optimizers.serialize(self.model.optimizer)
-    #     # HACK: numpy.float32 is not serializable
-    #     for k, v in optimizer_config['config'].items():
-    #         if isinstance(v, np.float32):
-    #             optimizer_config['config'][k] = float(v)
-    #     json_optimizer_config = json.dumps(optimizer_config)
-    #     f = h5py.File(fp_config, "w")
-    #     f.create_dataset('model_type', data='psiz')
-    #     f.create_dataset('psiz_version', data='0.4.0')
-    #     f.create_dataset('config', data=json_model_config)
-    #     f.create_dataset('loss', data=json_loss_config)
-    #     f.create_dataset('optimizer', data=json_optimizer_config)
-    #     f.close()
-
-    #     # Save weights.
-    #     self.model.save_weights(
-    #         fp_weights, overwrite=overwrite, save_format='tf'
-    #     )
-
     # def subset(self, idx):  TODO DELETE
     #     """Return subset of embedding."""
     #     emb = self.clone()

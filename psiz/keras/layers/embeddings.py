@@ -17,6 +17,7 @@
 
 Classes:
     EmbeddingNormalDiag: A normal distribution embedding layer.
+    EmbeddingLaplaceDiag: A Laplace distribution embedding layer.
     EmbeddingLogNormalDiag: A log-normal distribution embedding layer.
     EmbeddingLogitNormalDiag: A logit-normal distribution embedding
         layer.

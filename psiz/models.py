@@ -18,6 +18,8 @@
 
 Classes:
     Proxy: Proxy class for embedding model.
+    PsychologicalEmbedding: Abstract base class for a psychological
+        embedding model.
     Rate: Class that uses ratio observations between unanchored sets
         of stimulus (typically two stimuli).
     Rank: Class that uses ordinal observations that are anchored by a
@@ -36,35 +38,21 @@ TODO:
 """
 
 import copy
-import datetime
 import json
 import os
 from pathlib import Path
-import sys
-import time
 import warnings
 
 import h5py
 import numpy as np
-import numpy.ma as ma
-import pandas as pd
-from sklearn import mixture
 import tensorflow as tf
-import tensorflow_probability as tfp
-from tensorflow.keras.initializers import Initializer
-import tensorflow.keras.optimizers
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import History
-from tensorflow.python.keras.callbacks import configure_callbacks
-from tensorflow.keras.constraints import Constraint
-from tensorflow.python.keras.saving import hdf5_format
 from tensorflow.python.keras.engine import data_adapter
 from tensorflow.python.eager import backprop
 
 import psiz.keras.layers
-import psiz.keras.metrics
 import psiz.trials
-import psiz.utils
 
 
 class Proxy(object):
@@ -890,12 +878,12 @@ class Rank(PsychologicalEmbedding):
         membership = inputs['membership']
 
         # Inflate coordinates.
-        # TODO can we always assume this split pattern?
         z_stimulus_set = self.embedding(stimulus_set)
         # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
         z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
         # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
         max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+        # TODO can we always assume this split pattern?
         z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
 
         # Pass through similarity kernel.

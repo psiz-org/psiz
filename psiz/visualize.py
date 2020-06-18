@@ -19,6 +19,7 @@
 Functions:
     bvn_ellipse: Create an ellipse representing a bivariate normal
         distribution.
+    heatmap_embeddings: Create a heatmap of embeddings.
 
 TODO:
     classes -> class_dict
@@ -32,6 +33,45 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+
+
+def heatmap_embeddings(fig, ax, embedding, cmap=None):
+    """Visualize embeddings as a heatmap.
+    
+    Arguments:
+        fig: A Matplotlib Figure object.
+        ax: A Matplotlib Axes object.
+        embedding: An embedding layer.
+        cmap (optional): A Matplotlib compatible colormap.
+
+    """
+    if cmap is None:
+        cmap = matplotlib.cm.get_cmap('Greys')
+
+    if hasattr(embedding, 'posterior'):
+        # Handle distribution.
+        z_mode = embedding.embeddings.numpy()
+        if embedding.posterior.mask_zero:
+            z_mode = z_mode[1:]
+    else:
+        # Handle point estimate.
+        z_mode = embedding.embeddings.numpy()
+        if embedding.mask_zero:
+            z_mode = z_mode[1:]
+
+    n_dim = z_mode.shape[1]
+    z_mode_max = np.max(z_mode)
+    im = ax.imshow(
+        z_mode, cmap=cmap, interpolation='none', vmin=0., vmax=z_mode_max
+    )
+
+    # Note: imshow displays different rows as different values of y and
+    # different columns as different values of x.
+    ax.set_xticks([0, n_dim-1])
+    ax.set_xticklabels([0, n_dim-1])
+    ax.set_xlabel('Dimension')
+    ax.set_ylabel('Stimulus')
+    fig.colorbar(im, ax=ax)
 
 
 def visualize_embedding_static(

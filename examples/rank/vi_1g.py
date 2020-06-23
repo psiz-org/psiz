@@ -457,33 +457,5 @@ def apply_affine(loc, cov, r, t):
     return loc_a, cov_a
 
 
-def similarity_matrix(kernel_fn, z):
-    """Return a pairwise similarity matrix.
-
-    Arguments:
-        kernel_fn: A kernel function
-        z: A set of points.
-            shape=(n_stimuli, n_dim, n_sample)
-
-    Returns:
-        A 2D array where element s_{i,j} indicates the similarity
-            between the ith and jth stimulus.
-
-    """
-    n_stimuli = z.shape[0]
-    n_sample = z.shape[2]
-
-    xg = np.arange(n_stimuli)
-    a, b = np.meshgrid(xg, xg)
-    a = a.flatten()
-    b = b.flatten()
-
-    z_a = z[a, :, :]
-    z_b = z[b, :, :]
-    k = kernel_fn(z_a, z_b)
-    k = k.reshape(n_stimuli, n_stimuli, n_sample)
-    return k
-
-
 if __name__ == "__main__":
     main()

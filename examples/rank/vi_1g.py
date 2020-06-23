@@ -21,9 +21,8 @@ An embedding is inferred with an increasing amount of data,
 demonstrating how the inferred model improves and asymptotes as more
 data is added.
 
-NOTE: This example uses `imageio` to create frames and a GIF animation.
-The frames are stored in the temporary directory `.psiz/tmp` in your
-home directory.
+Results are saved in the directory specified by `fp_example`. By
+default, this is a directory created in your home directory.
 
 """
 
@@ -47,7 +46,7 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('ex_vi_1g')  # TODO
+    fp_example = Path.home() / Path('psiz_ex_vi_1g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 2
@@ -232,7 +231,7 @@ def main():
         for i_frame in range(n_frame):
             fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
             frames.append(imageio.imread(fname))
-        imageio.mimwrite(fp_example / Path('posterior.gif'), frames, fps=1)
+        imageio.mimwrite(fp_example / Path('evolution.gif'), frames, fps=1)
 
 
 def plot_frame(
@@ -407,36 +406,6 @@ def unpack_mvn(dist):
     cov = scale_to_cov(scale)
 
     return loc, cov
-
-
-# TODO move function out
-def plot_univariate_distribution(ax, dist, limits=None, name=None):
-    """Plot univariate distribution.
-
-    Arguments:
-        ax:
-        dist:
-        limits:
-        name:
-
-    """
-    x_mode = dist.mode().numpy()
-
-    if limits is None:
-        limits = [x_mode - 1, x_mode + 1]
-    span = limits[1] - limits[0]
-
-    if name is None:
-        name = 'x'
-
-    x = np.linspace(limits[0], limits[1], 1000)
-    y = dist.prob(x)
-
-    ax.plot(x, y)
-    ax.text(x_mode + .1 * span, .9 * np.max(y), '{0:.2f}'.format(x_mode))
-    ax.set_xlabel(r'${0}$'.format(name))
-    ax.set_ylabel(r'$p({0})$'.format(name))
-    ax.set_ylim([0, 1.1 * np.max(y)])
 
 
 def ground_truth(n_stimuli, n_dim):

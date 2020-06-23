@@ -23,6 +23,9 @@ has a different set of attention weights. An embedding model is
 inferred from the simulated data and compared to the ground truth
 model.
 
+Results are saved in the directory specified by `fp_example`. By
+default, this is a directory created in your home directory.
+
 Example output:
 
     Restart Summary
@@ -68,7 +71,7 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('ex_vi_3g')  # TODO
+    fp_example = Path.home() / Path('psiz_ex_vi_3g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 4
@@ -76,7 +79,7 @@ def main():
     n_trial = 2000
     n_restart = 1
     batch_size = 200
-    n_frame = 1  # TODO 4
+    n_frame = 4
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -192,7 +195,7 @@ def main():
             loc_initializer=tf.keras.initializers.Constant(0.),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(.17).numpy()
-            ), trainable=False  # TODO trainable scale
+            ), trainable_loc=False
         )
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
@@ -313,7 +316,7 @@ def main():
         for i_frame in range(n_frame):
             fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
             frames.append(imageio.imread(fname))
-        imageio.mimwrite(fp_example / Path('posterior.gif'), frames, fps=1)
+        imageio.mimwrite(fp_example / Path('evolution.gif'), frames, fps=1)
 
 
 def ground_truth(n_stimuli, n_dim, n_group):

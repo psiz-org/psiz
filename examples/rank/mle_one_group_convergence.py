@@ -21,10 +21,17 @@ An embedding is inferred with an increasing amount of data,
 demonstrating how the inferred model improves and asymptotes as more
 data is added.
 
+Results are saved in the directory specified by `fp_example`. By
+default, a `psiz_examples` directory is created in your home directory.
+
 """
 
-import numpy as np
+import os
+from pathlib import Path
+import shutil
+
 import matplotlib.pyplot as plt
+import numpy as np
 import tensorflow as tf
 
 import psiz
@@ -36,11 +43,20 @@ import psiz
 def main():
     """Run script."""
     # Settings.
+    fp_example = Path.home() / Path('psiz_examples', 'mle_1g')
+    fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 3
     n_restart = 3
     n_trial = 2000
     batch_size = 100
+    n_frame = 8
+
+    # Directory preparation.
+    fp_example.mkdir(parents=True, exist_ok=True)
+    # Remove existing TensorBoard logs.
+    if fp_board.exists():
+        shutil.rmtree(fp_board)
 
     emb_true = ground_truth(n_stimuli, n_dim)
 
@@ -63,7 +79,6 @@ def main():
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
         'val_cce', patience=15, mode='min', restore_best_weights=True
     )
-    callbacks = [early_stop]
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -74,18 +89,31 @@ def main():
     }
 
     # Infer independent models with increasing amounts of data.
-    n_frame = 8
-    n_obs = np.floor(
-        np.linspace(15, obs_train.n_trial, n_frame)
-    ).astype(np.int64)
+    if n_frame == 1:
+        n_obs = np.array([obs_train.n_trial], dtype=int)
+    else:
+        n_obs = np.round(
+            np.linspace(15, obs_train.n_trial, n_frame)
+        ).astype(np.int64)
     r2 = np.empty((n_frame))
     train_cce = np.empty((n_frame))
     val_cce = np.empty((n_frame))
     test_cce = np.empty((n_frame))
     for i_frame in range(n_frame):
-        print('  Frame {0}'.format(i_frame))
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
+        print(
+            '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
+        )
+
+        # Use Tensorboard callback.
+        fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
+        cb_board = psiz.keras.callbacks.TensorBoardRe(
+            log_dir=fp_board_frame, histogram_freq=0,
+            write_graph=False, write_images=False, update_freq='epoch',
+            profile_batch=0, embeddings_freq=0, embeddings_metadata=None
+        )
+        callbacks = [early_stop, cb_board]
 
         # Infer embedding.
         embedding = tf.keras.layers.Embedding(
@@ -144,12 +172,15 @@ def main():
     axes[1].set_ylim(-0.05, 1.05)
 
     plt.tight_layout()
-    plt.show()
+    fname = fp_example / Path('evolution.tiff')
+    plt.savefig(
+        os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
+    )
 
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    embedding = psiz.keras.layers.tf.keras.layers.Embedding(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )

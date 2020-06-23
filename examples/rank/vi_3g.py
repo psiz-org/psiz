@@ -24,7 +24,7 @@ inferred from the simulated data and compared to the ground truth
 model.
 
 Results are saved in the directory specified by `fp_example`. By
-default, this is a directory created in your home directory.
+default, a `psiz_examples` directory is created in your home directory.
 
 Example output:
 
@@ -71,7 +71,7 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_ex_vi_3g')
+    fp_example = Path.home() / Path('psiz_examples', 'vi_3g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 4

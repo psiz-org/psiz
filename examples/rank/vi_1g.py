@@ -22,7 +22,7 @@ demonstrating how the inferred model improves and asymptotes as more
 data is added.
 
 Results are saved in the directory specified by `fp_example`. By
-default, this is a directory created in your home directory.
+default, a `psiz_examples` directory is created in your home directory.
 
 """
 
@@ -46,7 +46,7 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_ex_vi_1g')
+    fp_example = Path.home() / Path('psiz_examples', 'vi_1g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 2
@@ -413,7 +413,7 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    embedding = psiz.keras.layers.tf.keras.layers.Embedding(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58

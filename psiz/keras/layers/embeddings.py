@@ -67,7 +67,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
 
         Notes:
             The trinability of a particular variable is determined by a
-            logical and between `self.trainable` (the
+            logical "and" between `self.trainable` (the
             layer-wise attribute) and `self.x_trainable` (the
             attribute that specifically controls the variable `x`).
 

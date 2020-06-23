@@ -156,6 +156,7 @@ def main():
                 tfp.math.softplus_inverse(1.).numpy()
             ),
             loc_trainable=False,
+            # scale_constraint=psiz.keras.constraints.SharedMean()  # TODO
         )
 
         embedding = psiz.keras.layers.EmbeddingVariational(

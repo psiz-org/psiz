@@ -199,9 +199,10 @@ def main():
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(1.).numpy()
             ),
-            loc_trainable=False,
+            trainable=False
+            # loc_trainable=False,  # TODO
+            # scale_constraint=psiz.keras.constraints.SharedMean()
         )
-
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
             kl_weight=kl_weight, kl_use_exact=False, kl_n_sample=30

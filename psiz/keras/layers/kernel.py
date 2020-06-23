@@ -833,19 +833,21 @@ class GroupAttentionVariational(Variational):
     def call(self, inputs):
         """Call.
 
-        Inflate weights by `group_id`.
+        Grab `group_id` only.
 
         Arguments:
-            inputs: A Tensor denoting `group_id`.
+            inputs: A Tensor denoting trial `membership`.
 
         """
         group_id = inputs[:, 0]
-        outputs = super().call(group_id)
-        return outputs
 
-    def apply_kl(self, posterior, prior):
-        """Apply KL divergence."""
-        self._add_kl_loss(posterior.embeddings, prior.embeddings)
+        # Run forward pass through variational posterior layer.
+        outputs = self.posterior(group_id)
+
+        # Apply KL divergence between posterior and prior.
+        self.add_kl_loss(self.posterior.embeddings, self.prior.embeddings)
+
+        return outputs
 
     @property
     def n_group(self):

@@ -473,34 +473,15 @@ class EmbeddingVariational(Variational):
         """
         super(EmbeddingVariational, self).__init__(**kwargs)
 
-    def apply_kl(self, posterior, prior):
-        """Apply KL divergence."""
-        self._add_kl_loss(posterior.embeddings, prior.embeddings)
-
-    @property
-    def input_dim(self):
-        """Getter method for embeddings `input_dim`."""
-        return self.posterior.input_dim
-
-    @property
-    def output_dim(self):
-        """Getter method for embeddings `output_dim`."""
-        return self.posterior.output_dim
-
-    @property
-    def mask_zero(self):
-        """Getter method for embeddings `mask_zero`."""
-        return self.posterior.mask_zero
-
-    @property
-    def embeddings(self):
-        """Getter method for embeddings posterior mode."""
-        return self.posterior.embeddings_mode
-
-        # TODO Remove this debug call.
     def call(self, inputs):
-        outputs = super(EmbeddingVariational, self).call(inputs)
+        """Call."""
+        # Run forward pass through variational posterior layer.
+        outputs = self.posterior(inputs)
 
+        # Apply KL divergence between posterior and prior.
+        self.add_kl_loss(self.posterior.embeddings, self.prior.embeddings)
+
+        # TODO Remove debug metrics.
         # self.add_metric(
         #     self.kl_anneal, aggregation='mean', name='kl_anneal'
         # )
@@ -542,3 +523,23 @@ class EmbeddingVariational(Variational):
         )
 
         return outputs
+
+    @property
+    def input_dim(self):
+        """Getter method for embeddings `input_dim`."""
+        return self.posterior.input_dim
+
+    @property
+    def output_dim(self):
+        """Getter method for embeddings `output_dim`."""
+        return self.posterior.output_dim
+
+    @property
+    def mask_zero(self):
+        """Getter method for embeddings `mask_zero`."""
+        return self.posterior.mask_zero
+
+    @property
+    def embeddings(self):
+        """Getter method for embeddings posterior mode."""
+        return self.posterior.embeddings_mode

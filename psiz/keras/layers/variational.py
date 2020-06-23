@@ -16,7 +16,8 @@
 """Module of abstract TensorFlow variational layer.
 
 Classes:
-    Variational: A base class for variational inference layers.
+    Variational: An abstract base class for variational inference
+        layers.
 
 """
 
@@ -26,24 +27,30 @@ from tensorflow_probability.python.distributions import kullback_leibler as kl_l
 
 
 class Variational(tf.keras.layers.Layer):
-    """A base class for variational layers.
+    """An abstract base class for variational layers.
 
-    This class assumes that the KL divergence between the posterior and
-    prior is registered.
+    This class can take advantage of a registered KL divergence
+    between the posterior and prior is registered.
 
     Attributes:
         kl_weight: The weighting of the kl term. Should be 1/n_train.
+        kl_use_exact: Boolean indicating if a registered KL divergence
+            should be used.
         kl_anneal: An annealing weight that can be accessed using a
             callback. Iniitalized to one so it has no effect if not
             used in a callback.
 
     Notes:
         This layer is not registered as serializable because it is
-        intended to be subclassed.
+        intended to be subclassed. Subclasses must implement `call`,
+        which should sample from the posterior and call
+        `add_kl_loss`.
 
     """
 
-    def __init__(self, posterior=None, prior=None, kl_weight=1., **kwargs):
+    def __init__(
+            self, posterior=None, prior=None, kl_weight=1., kl_use_exact=False,
+            kl_n_sample=1, **kwargs):
         """Initialize.
 
         Arguments:
@@ -52,6 +59,11 @@ class Variational(tf.keras.layers.Layer):
             kl_weight (optional): A scalar applied to the KL
                 divergence computation. This value should be 1 divided
                 by the total number of training examples.
+            kl_use_exact (optional): Boolean indicating if analytical
+                KL divergence should be used rather than a Monte Carlo
+                approximation.
+            kl_n_sample (optional): The number of samples to use if
+                approximation KL.
             kwargs: Additional key-word arguments.
 
         """
@@ -59,28 +71,35 @@ class Variational(tf.keras.layers.Layer):
         self.posterior = posterior
         self.prior = prior
         self.kl_weight = kl_weight
+        self.kl_use_exact = kl_use_exact
+        self.kl_n_sample = kl_n_sample
         self.kl_anneal = self.add_weight(
             name='kl_anneal', shape=[], dtype=K.floatx(),
             initializer=tf.keras.initializers.Constant(1.),
             trainable=False
         )
 
-    def call(self, inputs):
-        """Call."""
-        # Run forward pass through variational posterior layer.
-        outputs = self.posterior(inputs)
+    def add_kl_loss(self, posterior_dist, prior_dist):
+        """Add KL divergence loss."""
+        if self.kl_use_exact:
+            self.add_loss(
+                lambda: kl_lib.kl_divergence(
+                    posterior_dist, prior_dist
+                ) * self.kl_weight * self.kl_anneal
+            )
+        else:
+            self.add_loss(
+                lambda: self._kl_approximation(
+                    posterior_dist, prior_dist
+                ) * self.kl_weight * self.kl_anneal
+            )
 
-        # Apply KL divergence between posterior and prior.
-        self.apply_kl(self.posterior, self.prior)
-
-        return outputs
-     
-    def _add_kl_loss(self, posterior_dist, prior_dist):
-        """Add KL divergence loss.""" 
-        self.add_loss(
-            lambda: kl_lib.kl_divergence(
-                posterior_dist, prior_dist
-            ) * self.kl_weight * self.kl_anneal
+    def _kl_approximation(self, posterior_dist, prior_dist):
+        """Sample-based KL approximation."""
+        posterior_samples = posterior_dist.sample(self.kl_n_sample)
+        return tf.reduce_mean(
+            posterior_dist.log_prob(posterior_samples) -
+            prior_dist.log_prob(posterior_samples)
         )
 
     def get_config(self):
@@ -89,7 +108,9 @@ class Variational(tf.keras.layers.Layer):
         config.update({
             'posterior': tf.keras.utils.serialize_keras_object(self.posterior),
             'prior': tf.keras.utils.serialize_keras_object(self.prior),
-            'kl_weight': self.kl_weight
+            'kl_weight': self.kl_weight,
+            'kl_use_exact': self.kl_use_exact,
+            'kl_n_sample': self.kl_n_sample,
         })
         return config
 

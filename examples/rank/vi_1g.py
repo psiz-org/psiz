@@ -160,7 +160,7 @@ def main():
         )
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight
+            kl_weight=kl_weight, kl_use_exact=True
         )
 
         kernel = psiz.keras.layers.Kernel(

@@ -196,7 +196,7 @@ def main():
         )
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight
+            kl_weight=kl_weight, kl_use_exact=True
         )
 
         attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
@@ -215,7 +215,7 @@ def main():
             ),
             attention=psiz.keras.layers.GroupAttentionVariational(
                 posterior=attention_posterior, prior=attention_prior,
-                kl_weight=kl_weight
+                kl_weight=kl_weight, kl_use_exact=True
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 fit_tau=False, fit_gamma=False,

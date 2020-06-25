@@ -24,6 +24,8 @@ Classes:
     MinMax:
     Center:
     NonNegNorm:
+    SharedMean:
+    SharedMedian:
 
 """
 

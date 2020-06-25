@@ -48,7 +48,7 @@ def main():
     """Run script."""
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'vi_1g_nonneg')
-    fp_board = fp_example / Path('logs', 'fit')
+    fp_board = fp_example / Path('logs', 'fit', 'gamma_np')  # TODO
     n_stimuli = 30
     n_dim = 2
     n_dim_nonneg = 20
@@ -130,7 +130,7 @@ def main():
         )
 
         # Use Tensorboard callback.
-        fp_board_frame = fp_board / Path('median', 'frame_{0}'.format(i_frame))  # TODO
+        fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
         cb_board = psiz.keras.callbacks.TensorBoardRe(
             log_dir=fp_board_frame, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
@@ -139,46 +139,59 @@ def main():
         callbacks = [cb_board]
 
         # Define model.
-        kl_weight = 1. / obs_round_train.n_trial
+        kl_weight = 0  # 1. / obs_round_train.n_trial TODO
 
-        # embedding_posterior = psiz.keras.layers.EmbeddingGammaDiag(
+        embedding_posterior = psiz.keras.layers.EmbeddingGammaDiag(
+            n_stimuli+1, n_dim_nonneg, mask_zero=True,
+            concentration_initializer=tf.keras.initializers.RandomUniform(
+                5.0, 10.
+            ),
+            rate_initializer=tf.keras.initializers.RandomUniform(20., 30.)
+        )
+        embedding_prior = psiz.keras.layers.EmbeddingGammaDiag(
+            n_stimuli+1, n_dim_nonneg, mask_zero=True,
+            concentration_initializer=tf.keras.initializers.Constant(1.0001),
+            rate_initializer=tf.keras.initializers.Constant(10),
+            trainable=False
+            # concentration_trainable=False,
+            # rate_constraint=psiz.keras.constraints.SharedMean()
+        )
+        # embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
         #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
-        #     concentration_initializer=tf.keras.initializers.RandomUniform(
-        #         5.0, 10.
+        #     loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
+        #     scale_initializer=psiz.keras.initializers.SoftplusUniform(
+        #         .01, .05
         #     ),
-        #     rate_initializer=tf.keras.initializers.RandomUniform(90., 100.)
+        #     loc_constraint=tf.keras.constraints.NonNeg(),
         # )
-        # embedding_prior = psiz.keras.layers.EmbeddingGammaDiag(
+        # embedding_prior = psiz.keras.layers.EmbeddingLaplaceDiag(
         #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
-        #     concentration_initializer=tf.keras.initializers.Constant(1.0001),
-        #     rate_initializer=tf.keras.initializers.Constant(10),
-        #     trainable=False
-        #     # concentration_trainable=False,
-        #     # rate_constraint=psiz.keras.constraints.SharedMean()
+        #     loc_initializer=tf.keras.initializers.Constant(0.),
+        #     scale_initializer=tf.keras.initializers.Constant(
+        #         tfp.math.softplus_inverse(1.).numpy()
+        #     ),
+        #     shared=False,  # TODO
+        #     # trainable=False
+        #     loc_trainable=False,
+        #     # scale_constraint=psiz.keras.constraints.SharedMedian()
+        #     # scale_constraint=psiz.keras.constraints.SharedMean()
         # )
-        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
-            scale_initializer=psiz.keras.initializers.SoftplusUniform(
-                .01, .05
-            ),
-            loc_constraint=tf.keras.constraints.NonNeg(),
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingLaplaceDiag(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            loc_initializer=tf.keras.initializers.Constant(0.),
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(1.).numpy()
-            ),
-            loc_trainable=False,
-            scale_constraint=psiz.keras.constraints.SharedMedian()
-        )
+        # embedding_prior = psiz.keras.layers.EmbeddingShared(
+        #     embeddings=psiz.keras.layers.EmbeddingLaplaceDiag(
+        #         2, n_dim_nonneg, mask_zero=True,
+        #         loc_initializer=tf.keras.initializers.Constant(0.),
+        #         scale_initializer=tf.keras.initializers.Constant(
+        #             tfp.math.softplus_inverse(1.).numpy()
+        #         ),
+        #         loc_trainable=False,
+        #     )
+        # )
 
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
             kl_weight=kl_weight,
-            kl_use_exact=True,  # TODO
-            # kl_n_sample=30,  # TODO
+            # kl_use_exact=True,  # TODO
+            kl_n_sample=30,  # TODO
         )
 
         kernel = psiz.keras.layers.Kernel(
@@ -202,7 +215,7 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]

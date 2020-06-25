@@ -538,7 +538,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
 
         # Handle constraints.
         if concentration_constraint is None:
-            concentration_constraint = psiz.keras.constraints.GreaterEqualThan(
+            concentration_constraint = psiz.keras.constraints.GreaterThan(  # TODO
                 min_value=1.
             )
         self.concentration_constraint = tf.keras.constraints.get(
@@ -680,36 +680,47 @@ class EmbeddingVariational(Variational):
         #     self.kl_anneal, aggregation='mean', name='kl_anneal'
         # )
 
-        # c = self.posterior.embeddings.distribution.concentration[1:]
-        # r = self.posterior.embeddings.distribution.rate[1:]
-        # m = self.posterior.embeddings.mode()[1:]
-        # self.add_metric(
-        #     tf.reduce_mean(m),
-        #     aggregation='mean', name='po_mode_avg'
-        # )
-        # self.add_metric(
-        #     tf.reduce_max(m),
-        #     aggregation='mean', name='po_mode_max'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(c),
-        #     aggregation='mean', name='po_con_avg'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(r),
-        #     aggregation='mean', name='po_rate_avg'
-        # )
-
-        m = self.posterior.embeddings.distribution.loc[1:]
-        s = self.posterior.embeddings.distribution.scale[1:]
+        c = self.posterior.embeddings.distribution.concentration[1:]
+        r = self.posterior.embeddings.distribution.rate[1:]
+        m = self.posterior.embeddings.mode()[1:]
         self.add_metric(
             tf.reduce_mean(m),
-            aggregation='mean', name='po_loc_avg'
+            aggregation='mean', name='po_mode_avg'
         )
         self.add_metric(
-            tf.reduce_mean(s),
-            aggregation='mean', name='po_scale_avg'
+            tf.reduce_max(m),
+            aggregation='mean', name='po_mode_max'
         )
+        self.add_metric(
+            tf.reduce_mean(c),
+            aggregation='mean', name='po_con_avg'
+        )
+        self.add_metric(
+            tf.reduce_mean(r),
+            aggregation='mean', name='po_rate_avg'
+        )
+
+        # m = self.posterior.embeddings.distribution.loc[1:]
+        # s = self.posterior.embeddings.distribution.scale[1:]
+        # self.add_metric(
+        #     tf.reduce_mean(m),
+        #     aggregation='mean', name='po_loc_avg'
+        # )
+        # self.add_metric(
+        #     tf.reduce_mean(s),
+        #     aggregation='mean', name='po_scale_avg'
+        # )
+
+        # m = self.posterior.embeddings.distribution.loc[1:]
+        # s = self.posterior.embeddings.distribution.scale[1:]
+        # self.add_metric(
+        #     tf.reduce_mean(m),
+        #     aggregation='mean', name='po_loc_avg'
+        # )
+        # self.add_metric(
+        #     tf.reduce_mean(s),
+        #     aggregation='mean', name='po_scale_avg'
+        # )
 
         # m = self.posterior.embeddings.distribution.bijector(
         #     self.posterior.embeddings.distribution.distribution.loc[1:]

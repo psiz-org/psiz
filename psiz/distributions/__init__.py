@@ -2,6 +2,9 @@
 
 Modules:
     inv_softplus_normal
+    gamma
+
 """
 
 from psiz.distributions.inv_softplus_normal import InvSoftplusNormal
+from psiz.distributions.gamma import Gamma

@@ -35,6 +35,7 @@ from tensorflow.python.ops import math_ops
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.variational import Variational
+import psiz.keras.constraints
 
 
 class _EmbeddingLocScale(tf.keras.layers.Layer):
@@ -590,7 +591,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             constraint=self.rate_constraint
         )
 
-        dist = tfp.distributions.Gamma(conentration, rate)
+        dist = tfp.distributions.Gamma(concentration, rate)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -622,7 +623,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
 
     def get_config(self):
         """Return layer configuration."""
-        config = super(_EmbeddingLocScale, self).get_config()
+        config = super(EmbeddingGammaDiag, self).get_config()
         config.update({
             'input_dim': self.input_dim,
             'output_dim': self.output_dim,
@@ -679,10 +680,27 @@ class EmbeddingVariational(Variational):
         #     self.kl_anneal, aggregation='mean', name='kl_anneal'
         # )
 
-        m = self.posterior.embeddings.distribution.loc[1:]
-        # m = self.posterior.embeddings.distribution.bijector(
-        #     self.posterior.embeddings.distribution.distribution.loc[1:]
+        # c = self.posterior.embeddings.distribution.concentration[1:]
+        # r = self.posterior.embeddings.distribution.rate[1:]
+        # m = self.posterior.embeddings.mode()[1:]
+        # self.add_metric(
+        #     tf.reduce_mean(m),
+        #     aggregation='mean', name='po_mode_avg'
         # )
+        # self.add_metric(
+        #     tf.reduce_max(m),
+        #     aggregation='mean', name='po_mode_max'
+        # )
+        # self.add_metric(
+        #     tf.reduce_mean(c),
+        #     aggregation='mean', name='po_con_avg'
+        # )
+        # self.add_metric(
+        #     tf.reduce_mean(r),
+        #     aggregation='mean', name='po_rate_avg'
+        # )
+
+        m = self.posterior.embeddings.distribution.loc[1:]
         s = self.posterior.embeddings.distribution.scale[1:]
         self.add_metric(
             tf.reduce_mean(m),
@@ -692,6 +710,10 @@ class EmbeddingVariational(Variational):
             tf.reduce_mean(s),
             aggregation='mean', name='po_scale_avg'
         )
+
+        # m = self.posterior.embeddings.distribution.bijector(
+        #     self.posterior.embeddings.distribution.distribution.loc[1:]
+        # )
 
         # m = self.posterior.embeddings.distribution.mode()[1:]
         # s = self.posterior.embeddings.distribution.stddev()[1:]
@@ -704,16 +726,27 @@ class EmbeddingVariational(Variational):
         #     aggregation='mean', name='po_stddev_avg'
         # )
 
+        # c = self.prior.embeddings.distribution.concentration[1:]
+        # r = self.prior.embeddings.distribution.rate[1:]
+        # self.add_metric(
+        #     tf.reduce_mean(c),
+        #     aggregation='mean', name='pr_con'
+        # )
+        # self.add_metric(
+        #     tf.reduce_mean(r),
+        #     aggregation='mean', name='pr_rate'
+        # )
+
         # m = self.prior.embeddings.distribution.loc[1:]
-        s = self.prior.embeddings.distribution.scale[1:]
+        # s = self.prior.embeddings.distribution.scale[1:]
         # self.add_metric(
         #     tf.reduce_mean(m),
         #     aggregation='mean', name='pr_loc'
         # )
-        self.add_metric(
-            tf.reduce_mean(s),
-            aggregation='mean', name='pr_scale'
-        )
+        # self.add_metric(
+        #     tf.reduce_mean(s),
+        #     aggregation='mean', name='pr_scale'
+        # )
 
         return outputs
 

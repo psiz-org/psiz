@@ -29,6 +29,7 @@ default, a `psiz_examples` directory is created in your home directory.
 import copy
 import os
 from pathlib import Path
+import shutil
 
 import imageio
 import matplotlib

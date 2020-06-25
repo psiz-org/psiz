@@ -55,7 +55,7 @@ def main():
     n_trial = 2000
     n_restart = 1
     batch_size = 100
-    n_frame = 7
+    n_frame = 1  # TODO
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -130,7 +130,7 @@ def main():
         )
 
         # Use Tensorboard callback.
-        fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
+        fp_board_frame = fp_board / Path('median', 'frame_{0}'.format(i_frame))  # TODO
         cb_board = psiz.keras.callbacks.TensorBoardRe(
             log_dir=fp_board_frame, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
@@ -141,6 +141,21 @@ def main():
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
 
+        # embedding_posterior = psiz.keras.layers.EmbeddingGammaDiag(
+        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
+        #     concentration_initializer=tf.keras.initializers.RandomUniform(
+        #         5.0, 10.
+        #     ),
+        #     rate_initializer=tf.keras.initializers.RandomUniform(90., 100.)
+        # )
+        # embedding_prior = psiz.keras.layers.EmbeddingGammaDiag(
+        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
+        #     concentration_initializer=tf.keras.initializers.Constant(1.0001),
+        #     rate_initializer=tf.keras.initializers.Constant(10),
+        #     trainable=False
+        #     # concentration_trainable=False,
+        #     # rate_constraint=psiz.keras.constraints.SharedMean()
+        # )
         embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim_nonneg, mask_zero=True,
             loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
@@ -156,12 +171,14 @@ def main():
                 tfp.math.softplus_inverse(1.).numpy()
             ),
             loc_trainable=False,
-            # scale_constraint=psiz.keras.constraints.SharedMean()  # TODO
+            scale_constraint=psiz.keras.constraints.SharedMedian()
         )
 
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_use_exact=False, kl_n_sample=30
+            kl_weight=kl_weight,
+            kl_use_exact=True,  # TODO
+            # kl_n_sample=30,  # TODO
         )
 
         kernel = psiz.keras.layers.Kernel(
@@ -185,7 +202,7 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]

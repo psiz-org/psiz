@@ -563,10 +563,6 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
                 transformation approach in order to avoid low viscosity
                 issues with small parameter values.
 
-        TODO:
-            Use custom Gamma distribution with mode defined for
-            concentration=1.
-
         """
         if 'input_shape' not in kwargs:
             if input_length:
@@ -591,7 +587,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         # Handle initializer.
         if concentration_initializer is None:
             concentration_initializer = tf.keras.initializers.RandomUniform(
-                1.01, 3.  # TODO 1. should be allowed
+                1., 3.
             )
         self.concentration_initializer = tf.keras.initializers.get(
             concentration_initializer
@@ -612,7 +608,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
 
         # Handle constraints.
         if concentration_constraint is None:
-            concentration_constraint = psiz.keras.constraints.GreaterThan(  # TODO
+            concentration_constraint = psiz.keras.constraints.GreaterEqualThan(
                 min_value=1.
             )
         self.concentration_constraint = tf.keras.constraints.get(
@@ -665,7 +661,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             constraint=self.rate_constraint
         )
 
-        dist = tfp.distributions.Gamma(concentration, rate)
+        dist = psiz.distributions.Gamma(concentration, rate)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -689,7 +685,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
 
         # [inputs_concetration, inputs_rate] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = tfp.distributions.Gamma(
+        dist_batch = psiz.distributions.Gamma(
             inputs_concentration, inputs_rate
         )
         # Reify output using samples.

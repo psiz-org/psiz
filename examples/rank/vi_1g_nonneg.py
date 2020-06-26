@@ -48,7 +48,7 @@ def main():
     """Run script."""
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'vi_1g_nonneg')
-    fp_board = fp_example / Path('logs', 'fit', 'gamma_np')  # TODO
+    fp_board = fp_example / Path('logs', 'fit', 'trunc2_mean')  # TODO
     n_stimuli = 30
     n_dim = 2
     n_dim_nonneg = 20
@@ -139,23 +139,23 @@ def main():
         callbacks = [cb_board]
 
         # Define model.
-        kl_weight = 0  # 1. / obs_round_train.n_trial TODO
+        kl_weight = 1. / obs_round_train.n_trial
 
-        embedding_posterior = psiz.keras.layers.EmbeddingGammaDiag(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            concentration_initializer=tf.keras.initializers.RandomUniform(
-                5.0, 10.
-            ),
-            rate_initializer=tf.keras.initializers.RandomUniform(20., 30.)
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingGammaDiag(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            concentration_initializer=tf.keras.initializers.Constant(1.0001),
-            rate_initializer=tf.keras.initializers.Constant(10),
-            trainable=False
-            # concentration_trainable=False,
-            # rate_constraint=psiz.keras.constraints.SharedMean()
-        )
+        # embedding_posterior = psiz.keras.layers.EmbeddingGammaDiag(
+        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
+        #     concentration_initializer=tf.keras.initializers.RandomUniform(
+        #         5.0, 10.
+        #     ),
+        #     rate_initializer=tf.keras.initializers.RandomUniform(20., 30.)
+        # )
+        # embedding_prior = psiz.keras.layers.EmbeddingGammaDiag(
+        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
+        #     concentration_initializer=tf.keras.initializers.Constant(1.0001),
+        #     rate_initializer=tf.keras.initializers.Constant(10),
+        #     trainable=False
+        #     # concentration_trainable=False,
+        #     # rate_constraint=psiz.keras.constraints.SharedMean()
+        # )
         # embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
         #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
         #     loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
@@ -164,28 +164,25 @@ def main():
         #     ),
         #     loc_constraint=tf.keras.constraints.NonNeg(),
         # )
-        # embedding_prior = psiz.keras.layers.EmbeddingLaplaceDiag(
-        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
-        #     loc_initializer=tf.keras.initializers.Constant(0.),
-        #     scale_initializer=tf.keras.initializers.Constant(
-        #         tfp.math.softplus_inverse(1.).numpy()
-        #     ),
-        #     shared=False,  # TODO
-        #     # trainable=False
-        #     loc_trainable=False,
-        #     # scale_constraint=psiz.keras.constraints.SharedMedian()
-        #     # scale_constraint=psiz.keras.constraints.SharedMean()
-        # )
-        # embedding_prior = psiz.keras.layers.EmbeddingShared(
-        #     embeddings=psiz.keras.layers.EmbeddingLaplaceDiag(
-        #         2, n_dim_nonneg, mask_zero=True,
-        #         loc_initializer=tf.keras.initializers.Constant(0.),
-        #         scale_initializer=tf.keras.initializers.Constant(
-        #             tfp.math.softplus_inverse(1.).numpy()
-        #         ),
-        #         loc_trainable=False,
-        #     )
-        # )
+        embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
+            n_stimuli+1, n_dim_nonneg, mask_zero=True,
+            loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
+            scale_initializer=psiz.keras.initializers.SoftplusUniform(
+                .01, .05
+            ),
+            loc_constraint=tf.keras.constraints.NonNeg(),
+        )
+        embedding_prior = psiz.keras.layers.EmbeddingLaplaceDiag(
+            n_stimuli+1, n_dim_nonneg, mask_zero=True,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(1.).numpy()
+            ),
+            # trainable=False
+            loc_trainable=False,
+            # scale_constraint=psiz.keras.constraints.SharedMedian()
+            scale_constraint=psiz.keras.constraints.SharedMean()
+        )
 
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
@@ -212,8 +209,9 @@ def main():
         emb_inferred = psiz.models.Proxy(model=model)
 
         # Infer embedding.
+        # TODO with epochs=100, (R^2): 0.95
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+            obs_round_train, validation_data=obs_val, epochs=100,  # TODO
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
@@ -279,40 +277,27 @@ def plot_frame(
 
     gs = fig0.add_gridspec(2, 6)
 
-    f0_ax0 = fig0.add_subplot(gs[0, 0:3])
+    f0_ax0 = fig0.add_subplot(gs[0, 0:2])
     plot_loss(f0_ax0, n_obs, train_loss, val_loss, test_loss)
  
-    f0_ax2 = fig0.add_subplot(gs[1, 0:3])
-    plot_convergence(f0_ax2, n_obs, r2)
+    f0_ax1 = fig0.add_subplot(gs[0, 2:4])
+    plot_convergence(f0_ax1, n_obs, r2)
 
-    f0_ax3 = fig0.add_subplot(gs[1, 3:6])
-    plot_time(f0_ax3, n_obs, train_time)
+    f0_ax2 = fig0.add_subplot(gs[0, 4:6])
+    plot_time(f0_ax2, n_obs, train_time)
 
-    # Plot embeddings.
-    f0_ax1a = fig0.add_subplot(gs[0, 3])
+    # Visualize embedding point estimates.
+    f0_ax3 = fig0.add_subplot(gs[1, 0:2])
     psiz.visualize.heatmap_embeddings(
-        fig0, f0_ax1a, emb_inferred.model.embedding
+        fig0, f0_ax3, emb_inferred.model.embedding
     )
 
-    f0_ax1b = fig0.add_subplot(gs[0, 4])
+    # Visualize embedding distributions for the first dimension.
+    f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
-    dimension_hpd(
-        fig0, f0_ax1b, emb_inferred.model.embedding, i_dim, p=.99
+    psiz.visualize.embedding_dimension(
+        fig0, f0_ax4, emb_inferred.model.embedding, i_dim
     )
-    
-    f0_ax1c = fig0.add_subplot(gs[0, 5])
-
-    # Prior.
-    z_mode = emb_inferred.model.embedding.embeddings.numpy()
-    if hasattr(emb_inferred.model.embedding, 'posterior'):
-        # Handle distribution.
-        if emb_inferred.model.embedding.posterior.mask_zero:
-            z_mode = z_mode[1:]
-    else:
-        # Handle point estimate.
-        if emb_inferred.model.embedding.mask_zero:
-            z_mode = z_mode[1:]
-    f0_ax1c.hist(np.ravel(z_mode))
 
     gs.tight_layout(fig0)
 
@@ -369,53 +354,6 @@ def plot_time(ax, n_obs, train_time):
     ax.set_xticks(ticks)
 
     ax.set_ylabel('ms')
-
-
-# TODO dry out
-def dimension_hpd(fig, ax, embedding, dim, p=.95):
-    """Highest probability density of embeddings.
-    
-    Arguments:
-        fig:
-        ax:
-        embedding:
-        dim:
-        p (optional):
-
-    """
-    if hasattr(embedding, 'posterior'):
-        v = (1 - p) / 2
-        quant_lower = embedding.posterior.embeddings.distribution.quantile(v).numpy()[:, dim]
-        quant_upper = embedding.posterior.embeddings.distribution.quantile(1-v).numpy()
-        q_max = np.max(quant_upper) # Grab max across all dims.
-        quant_upper = quant_upper[:, dim]
-        if embedding.posterior.mask_zero:
-            quant_lower = quant_lower[1:]
-            quant_upper = quant_upper[1:]
-    else:
-        quant_lower = embedding.embeddings.numpy()[:, dim]
-        quant_upper = embedding.embeddings.numpy()[:, dim] + np.finfo(np.float32).eps
-        q_max = np.max(quant_upper)
-        if embedding.mask_zero:
-            quant_lower = quant_lower[1:]
-            quant_upper = quant_upper[1:]
-
-    n_stimuli = quant_lower.shape[0]
-    for i_stimulus in range(n_stimuli):
-        x_stimulus = np.array(
-            [quant_lower[i_stimulus], quant_upper[i_stimulus]]
-        )
-        y_stimulus = np.array([i_stimulus, i_stimulus])
-        ax.plot(x_stimulus, y_stimulus, 'b')
-
-    ax.set_ylim([0, n_stimuli])
-    plt.gca().invert_yaxis()
-    ax.set_xlim([0, 1.05 * q_max])
-    ax.set_xticks([0, 1.05 * q_max])
-    ax.set_xticklabels(['0', '{0:.1f}'.format(1.05 * q_max)])
-    ax.set_xlabel(r'$x$')
-    ax.set_ylabel('Stimulus')
-    ax.set_title('Dim. {0}'.format(dim))
 
 
 def plot_bvn(ax, loc, cov=None, c=None, r=1.96, show_loc=True):

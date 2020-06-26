@@ -387,9 +387,10 @@ def plot_frame(
 
     f0_ax3 = fig0.add_subplot(gs[0:2, 3:6])
     i_dim = 0
-    embedding_hpd(
+    psiz.visualize.embedding_dimension(
         fig0, f0_ax3, emb_inferred.model.embedding, i_dim
     )
+    f0_ax3.set_title('Dim. {0}'.format(dim))
         
     for i_group in range(n_group):
         if i_group == 0:
@@ -399,7 +400,7 @@ def plot_frame(
         elif i_group == 2:
             c = 'g'
         ax = fig0.add_subplot(gs[i_group + 2, 2:6])
-        attention_hpd(
+        attention_group(
             fig0, ax, emb_inferred.model.kernel.attention, i_group, p=.99, c=c
         )
         ax.set_title(group_labels[i_group])
@@ -444,133 +445,8 @@ def plot_convergence(fig, ax, n_obs, r2):
     ax.set_title(r'$R^2$ Convergence')
 
 
-# TODO dry out
-def dimension_hpd(fig, ax, embedding, dim, p=.95, c='b'):
-    """Highest probability density of embeddings.
-    
-    Arguments:
-        fig:
-        ax:
-        embedding:
-        dim:
-        p (optional):
-        c (optional): Color of interval marks.
-
-    """
-    pe = embedding.embeddings.numpy()
-    x_max = np.max(pe)  # Grab max across all dimensions.
-    pe = pe[:, dim]
-    if hasattr(embedding, 'posterior'):
-        if embedding.posterior.mask_zero:
-            pe = pe[1:]
-    else:
-        if embedding.mask_zero:
-            pe = pe[1:]
-    n_stimuli = pe.shape[0]
-
-    # Scatter point estimate.
-    yg = np.arange(n_stimuli)
-    ax.scatter(pe, yg, c=c, marker='|', linewidth=1)
-
-    if hasattr(embedding, 'posterior'):
-        v = (1 - p) / 2
-        quant_lower = embedding.posterior.embeddings.distribution.quantile(v).numpy()[:, dim]
-        quant_upper = embedding.posterior.embeddings.distribution.quantile(1-v).numpy()
-        x_max = np.max(quant_upper) # Grab max across all dimensions.
-        quant_upper = quant_upper[:, dim]
-        if embedding.posterior.mask_zero:
-            quant_lower = quant_lower[1:]
-            quant_upper = quant_upper[1:]
-
-        for i_stimulus in range(n_stimuli):
-            xg = np.array(
-                [quant_lower[i_stimulus], quant_upper[i_stimulus]]
-            )
-            yg = np.array([i_stimulus, i_stimulus])
-            ax.plot(xg, yg, c=c, linewidth=1)
-    
-
-    ax.set_ylim([0, n_stimuli])
-    plt.gca().invert_yaxis()
-    ax.set_xlim([0, 1.05 * x_max])
-    ax.set_xticks([0, 1.05 * x_max])
-    ax.set_xticklabels(['0', '{0:.1f}'.format(1.05 * x_max)])
-    ax.set_xlabel(r'$x$')
-    ax.set_ylabel('Stimulus')
-    ax.set_title('Dim. {0}'.format(dim))
-
-
-def embedding_hpd(fig, ax, embedding, dim, p=.99, c='b'):
-    """Highest probability density of embeddings.
-    
-    Arguments:
-        fig:
-        ax:
-        embedding:
-        dim:
-        p (optional):
-        c (optional): Color of interval marks.
-
-    """
-    pe = embedding.embeddings.numpy()
-    y_max = np.max(pe)  # Grab max across all dimensions.
-    pe = pe[:, dim]
-    if hasattr(embedding, 'posterior'):
-        if embedding.posterior.mask_zero:
-            pe = pe[1:]
-    else:
-        if embedding.mask_zero:
-            pe = pe[1:]
-    n_stimuli = pe.shape[0]
-
-    # Scatter point estimate.
-    xg = np.arange(n_stimuli)
-    ax.scatter(xg, pe, c=c, marker='_', linewidth=1)
-
-    if hasattr(embedding, 'posterior'):
-        v = (1 - p) / 2
-        quant_lower = embedding.posterior.embeddings.distribution.quantile(v).numpy()[:, dim]
-        quant_upper = embedding.posterior.embeddings.distribution.quantile(1-v).numpy()
-        y_max = np.max(quant_upper) # Grab max across all dimensions.
-        quant_upper = quant_upper[:, dim]
-
-        # Middle 50% probability mass.
-        p = .5
-        v = (1 - p) / 2
-        mid_lower = embedding.posterior.embeddings.distribution.quantile(v).numpy()[:, dim]
-        mid_upper = embedding.posterior.embeddings.distribution.quantile(1-v).numpy()[:, dim]
-
-        if embedding.posterior.mask_zero:
-            quant_lower = quant_lower[1:]
-            quant_upper = quant_upper[1:]
-            mid_lower = mid_lower[1:]
-            mid_upper = mid_upper[1:]
-
-        for i_stimulus in range(n_stimuli):
-            xg = np.array([i_stimulus, i_stimulus])
-            yg = np.array(
-                [quant_lower[i_stimulus], quant_upper[i_stimulus]]
-            )
-            ax.plot(xg, yg, c=c, linewidth=1)
-
-            yg = np.array(
-                [mid_lower[i_stimulus], mid_upper[i_stimulus]]
-            )
-            ax.plot(xg, yg, c=c, linewidth=3)
-    
-    ax.set_xlabel('Stimulus')
-    ax.set_xlim([0, n_stimuli])
-
-    ax.set_ylabel(r'$x$')
-    ax.set_ylim([0, 1.05 * y_max])
-    ax.set_yticks([0, 1.05 * y_max])
-    ax.set_yticklabels(['0', '{0:.1f}'.format(1.05 * y_max)])
-    
-    ax.set_title('Dim. {0}'.format(dim))
-
-
-def attention_hpd(fig, ax, attention, group, p=.95, c='b'):
-    """Highest probability density of attention embeddings.
+def attention_group(fig, ax, attention, group, c='b'):
+    """Visualize attention values for a requested group.
     
     Arguments:
         fig:
@@ -581,32 +457,35 @@ def attention_hpd(fig, ax, attention, group, p=.95, c='b'):
         c (optional): Color of interval marks.
 
     """
-    y_max = 1.05
+    y_max = 1.05 # TODO don't assume this for general-purpose function.
 
     # Scatter point estimate.
-    pe = attention.embeddings.numpy()[group, :]
-    n_dim = pe.shape[0]
+    point_estimate = attention.embeddings.numpy()[group, :]
+    n_dim = point_estimate.shape[0]
     if hasattr(attention, 'posterior'):
         if attention.posterior.mask_zero:
-            pe = pe[1:]
+            point_estimate = point_estimate[1:]
     else:
         if attention.mask_zero:
-            pe = pe[1:]
+            point_estimate = point_estimate[1:]
     xg = np.arange(n_dim)
-    ax.scatter(xg, pe, c=c, marker='_')
+    ax.scatter(xg, point_estimate, c=c, marker='_')
 
     # Add posterior quantiles if available.
     if hasattr(attention, 'posterior'):
-        # Middle 95%/user requested probability mass.
+        dist = attention.posterior.embeddings.distribution
+
+        # Middle 99% of probability mass.
+        p=.99
         v = (1 - p) / 2
-        quant_lower = attention.posterior.embeddings.distribution.quantile(v).numpy()[group, :]
-        quant_upper = attention.posterior.embeddings.distribution.quantile(1-v).numpy()[group, :]
+        quant_lower = dist.quantile(v).numpy()[group, :]
+        quant_upper = dist.quantile(1-v).numpy()[group, :]
 
         # Middle 50% probability mass.
         p = .5
         v = (1 - p) / 2
-        mid_lower = attention.posterior.embeddings.distribution.quantile(v).numpy()[group, :]
-        mid_upper = attention.posterior.embeddings.distribution.quantile(1-v).numpy()[group, :]
+        mid_lower = dist.quantile(v).numpy()[group, :]
+        mid_upper = dist.quantile(1-v).numpy()[group, :]
         if attention.posterior.mask_zero:
             quant_lower = quant_lower[1:]
             quant_upper = quant_upper[1:]

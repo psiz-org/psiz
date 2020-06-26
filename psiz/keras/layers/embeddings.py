@@ -563,6 +563,10 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
                 transformation approach in order to avoid low viscosity
                 issues with small parameter values.
 
+        TODO:
+            Use custom Gamma distribution with mode defined for
+            concentration=1.
+
         """
         if 'input_shape' not in kwargs:
             if input_length:
@@ -584,10 +588,10 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         self.input_length = input_length
         self._supports_ragged_inputs = True
 
-        # Handle initializer.  # TODO
+        # Handle initializer.
         if concentration_initializer is None:
             concentration_initializer = tf.keras.initializers.RandomUniform(
-                1., 3.
+                1.01, 3.  # TODO 1. should be allowed
             )
         self.concentration_initializer = tf.keras.initializers.get(
             concentration_initializer

@@ -8,3 +8,4 @@ Modules:
 
 from psiz.distributions.inv_softplus_normal import InvSoftplusNormal
 from psiz.distributions.gamma import Gamma
+from psiz.distributions.truncated_normal import TruncatedNormal

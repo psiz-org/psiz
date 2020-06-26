@@ -21,6 +21,8 @@ Classes:
     EmbeddingLogNormalDiag: A log-normal distribution embedding layer.
     EmbeddingLogitNormalDiag: A logit-normal distribution embedding
         layer.
+    EmbeddingTruncatedNormalDiag: A truncated normal distribution
+        embedding layer.
     EmbeddingGammaDiag: A Gamma distribution embedding layer.
     EmbeddingVariational: A variational embedding layer.
 
@@ -453,6 +455,74 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
 
 
 @tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='EmbeddingTruncatedNormalDiag'
+)
+class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
+    """A distribution-based embedding.
+
+    Each embedding point is characterized by a Truncated Normal
+    distribution with a diagonal scale matrix.
+
+    """
+    def __init__(self, input_dim, output_dim, low=0., high=1000000, **kwargs):
+        """Initialize."""
+        self.low = low
+        self.high = high
+        super(EmbeddingTruncatedNormalDiag, self).__init__(
+            input_dim, output_dim, **kwargs
+        )
+
+    def _build_embeddings_distribution(self, dtype):
+        """Build embeddings distribution."""
+        # Handle location variables.
+        loc = self.add_weight(
+            name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
+            initializer=self.loc_initializer, regularizer=self.loc_regularizer,
+            trainable=self.loc_trainable, constraint=self.loc_constraint
+        )
+
+        # Handle scale variables.
+        untransformed_scale = self.add_weight(
+            name='untransformed_scale',
+            shape=[self.input_dim, self.output_dim], dtype=dtype,
+            initializer=self.scale_initializer,
+            regularizer=self.scale_regularizer, trainable=self.scale_trainable,
+            constraint=self.scale_constraint
+        )
+        scale = tfp.util.DeferredTensor(
+            untransformed_scale,
+            lambda x: (K.epsilon() + tf.nn.softplus(x))
+        )
+
+        dist = psiz.distributions.TruncatedNormal(
+            loc, scale, self.low, self.high
+        )
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        return tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+
+    def call(self, inputs):
+        """Call."""
+        [inputs_loc, inputs_scale] = super().call(inputs)
+        # Use reparameterization trick.
+        dist_batch = psiz.distributions.TruncatedNormal(
+            inputs_loc, inputs_scale, self.low, self.high
+        )
+        # Reify output using samples.
+        return dist_batch.sample()
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'low': float(self.low),
+            'high': float(self.high),
+        })
+        return config
+
+
+@tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='EmbeddingGammaDiag'
 )
 class EmbeddingGammaDiag(tf.keras.layers.Layer):
@@ -680,36 +750,40 @@ class EmbeddingVariational(Variational):
         #     self.kl_anneal, aggregation='mean', name='kl_anneal'
         # )
 
-        c = self.posterior.embeddings.distribution.concentration[1:]
-        r = self.posterior.embeddings.distribution.rate[1:]
+        # c = self.posterior.embeddings.distribution.concentration[1:]
+        # r = self.posterior.embeddings.distribution.rate[1:]
         m = self.posterior.embeddings.mode()[1:]
         self.add_metric(
             tf.reduce_mean(m),
             aggregation='mean', name='po_mode_avg'
         )
         self.add_metric(
+            tf.reduce_min(m),
+            aggregation='mean', name='po_mode_min'
+        )
+        self.add_metric(
             tf.reduce_max(m),
             aggregation='mean', name='po_mode_max'
         )
-        self.add_metric(
-            tf.reduce_mean(c),
-            aggregation='mean', name='po_con_avg'
-        )
-        self.add_metric(
-            tf.reduce_mean(r),
-            aggregation='mean', name='po_rate_avg'
-        )
+        # self.add_metric(
+        #     tf.reduce_mean(c),
+        #     aggregation='mean', name='po_con_avg'
+        # )
+        # self.add_metric(
+        #     tf.reduce_mean(r),
+        #     aggregation='mean', name='po_rate_avg'
+        # )
 
-        # m = self.posterior.embeddings.distribution.loc[1:]
-        # s = self.posterior.embeddings.distribution.scale[1:]
-        # self.add_metric(
-        #     tf.reduce_mean(m),
-        #     aggregation='mean', name='po_loc_avg'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(s),
-        #     aggregation='mean', name='po_scale_avg'
-        # )
+        m = self.posterior.embeddings.distribution.loc[1:]
+        s = self.posterior.embeddings.distribution.scale[1:]
+        self.add_metric(
+            tf.reduce_mean(m),
+            aggregation='mean', name='po_loc_avg'
+        )
+        self.add_metric(
+            tf.reduce_mean(s),
+            aggregation='mean', name='po_scale_avg'
+        )
 
         # m = self.posterior.embeddings.distribution.loc[1:]
         # s = self.posterior.embeddings.distribution.scale[1:]

@@ -29,23 +29,23 @@ default, a `psiz_examples` directory is created in your home directory.
 Example output:
 
     Restart Summary
-    n_valid_restart 1 | total_duration: 2104 s
-    best | n_epoch: 999 | val_loss: 3.0700
-    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 | 2088 ±0 s | 2090 ±0 ms/epoch
+    n_valid_restart 1 | total_duration: 2597 s
+    best | n_epoch: 999 | val_loss: 3.2250
+    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.2250 ±0.0000 | 2593 ±0 s | 2595 ±0 ms/epoch
 
     Attention weights:
-          Novice | [0.89 0.81 0.13 0.11]
-    Intermediate | [0.54 0.44 0.53 0.58]
-          Expert | [0.06 0.08 0.80 0.92]
+          Novice | [0.91 0.84 0.56 0.45 0.09 0.05 0.04 0.02 0.01 0.01]
+    Intermediate | [0.45 0.53 0.35 0.21 0.50 0.38 0.37 0.27 0.01 0.01]
+          Expert | [0.05 0.12 0.12 0.03 0.87 0.76 0.62 0.46 0.01 0.01]
 
     Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.97    0.59    0.12
-     Interm |   0.64    0.98    0.60
-     Expert |   0.14    0.58    0.96
+     Novice |   0.95    0.67    0.12
+     Interm |   0.60    0.97    0.53
+     Expert |   0.14    0.63    0.94
  
 """
 
@@ -72,7 +72,7 @@ def main():
     """Run script."""
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'vi_3g_nonneg')
-    fp_board = fp_example / Path('logs', 'fit')
+    fp_board = fp_example / Path('logs', 'fit', 'r0')
     n_stimuli = 30
     n_dim = 4
     n_dim_nonneg = 10
@@ -99,15 +99,6 @@ def main():
     plt.rc('ytick', labelsize=small_size)
     plt.rc('legend', fontsize=small_size)
     plt.rc('figure', titlesize=large_size)
-
-    # Color settings.
-    cmap = matplotlib.cm.get_cmap('jet')
-    n_color = np.minimum(7, n_stimuli)
-    norm = matplotlib.colors.Normalize(vmin=0., vmax=n_color)
-    color_array = cmap(norm(range(n_color)))
-    gray_array = np.ones([n_stimuli - n_color, 4])
-    gray_array[:, 0:3] = .8
-    color_array = np.vstack([gray_array, color_array])
 
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
@@ -185,27 +176,25 @@ def main():
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
 
-        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+        embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
             n_stimuli+1, n_dim_nonneg, mask_zero=True,
             loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
             scale_initializer=psiz.keras.initializers.SoftplusUniform(
                 .01, .05
             ),
-            loc_constraint=tf.keras.constraints.NonNeg(),
         )
-        embedding_prior = psiz.keras.layers.EmbeddingLaplaceDiag(
+        embedding_prior = psiz.keras.layers.EmbeddingShared(
             n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            loc_initializer=tf.keras.initializers.Constant(0.),
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(1.).numpy()
-            ),
-            trainable=False
-            # loc_trainable=False,  # TODO
-            # scale_constraint=psiz.keras.constraints.SharedMean()
+            embedding=psiz.keras.layers.EmbeddingGammaDiag(
+                1, 1,
+                concentration_initializer=tf.keras.initializers.Constant(1.),
+                rate_initializer=tf.keras.initializers.Constant(1),
+                concentration_trainable=False,
+            )
         )
-        embedding = psiz.keras.layers.EmbeddingVariational(
+        embedding = EmbeddingVariationalLog(
             posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_use_exact=False, kl_n_sample=30
+            kl_weight=kl_weight, kl_n_sample=30,
         )
 
         attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
@@ -213,8 +202,6 @@ def main():
         )
         attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
             n_group, n_dim_nonneg,
-            # loc_initializer=tf.keras.initializers.Constant(0.0), TODO
-            # scale_initializer=tf.keras.initializers.Constant(0.3),
             loc_initializer=tf.keras.initializers.Constant(-4.),
             scale_initializer=tf.keras.initializers.Constant(1.),
             trainable=False
@@ -314,7 +301,7 @@ def main():
         fig0 = plt.figure(figsize=(12, 5), dpi=200)
         plot_frame(
             fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, color_array, idx_sorted, i_frame
+            emb_inferred, idx_sorted, i_frame
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -364,7 +351,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
 
 def plot_frame(
         fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
-        color_array, idx_sorted, i_frame):
+        idx_sorted, i_frame):
     """Plot posteriors."""
     # Settings.
     group_labels = ['Novice', 'Intermediate', 'Expert']
@@ -390,7 +377,7 @@ def plot_frame(
     psiz.visualize.embedding_dimension(
         fig0, f0_ax3, emb_inferred.model.embedding, i_dim
     )
-    f0_ax3.set_title('Dim. {0}'.format(dim))
+    f0_ax3.set_title('Dim. {0}'.format(i_dim))
         
     for i_group in range(n_group):
         if i_group == 0:
@@ -401,7 +388,7 @@ def plot_frame(
             c = 'g'
         ax = fig0.add_subplot(gs[i_group + 2, 2:6])
         attention_group(
-            fig0, ax, emb_inferred.model.kernel.attention, i_group, p=.99, c=c
+            fig0, ax, emb_inferred.model.kernel.attention, i_group, c=c
         )
         ax.set_title(group_labels[i_group])
 
@@ -511,6 +498,59 @@ def attention_group(fig, ax, attention, group, c='b'):
     ax.set_yticklabels(['0', '1'])
     ax.set_ylabel(r'$x$')
     ax.set_xlabel('Dimension')
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='EmbeddingVariationalLog'
+)
+class EmbeddingVariationalLog(psiz.keras.layers.EmbeddingVariational):
+    """Sub-class for logging weight metrics."""
+
+    def call(self, inputs):
+        """Call."""
+        outputs = super().call(inputs)
+
+        m = self.posterior.embeddings.mode()[1:]
+        self.add_metric(
+            tf.reduce_mean(m),
+            aggregation='mean', name='po_mode_avg'
+        )
+        self.add_metric(
+            tf.reduce_min(m),
+            aggregation='mean', name='po_mode_min'
+        )
+        self.add_metric(
+            tf.reduce_max(m),
+            aggregation='mean', name='po_mode_max'
+        )
+
+        l = self.posterior.embeddings.distribution.loc[1:]
+        s = self.posterior.embeddings.distribution.scale[1:]
+        self.add_metric(
+            tf.reduce_mean(l),
+            aggregation='mean', name='po_loc_avg'
+        )
+        self.add_metric(
+            tf.reduce_mean(s),
+            aggregation='mean', name='po_scale_avg'
+        )
+
+        c = self.prior.embeddings.distribution.distribution.distribution.concentration
+        r = self.prior.embeddings.distribution.distribution.distribution.rate
+        self.add_metric(
+            tf.reduce_mean(c),
+            aggregation='mean', name='pr_con'
+        )
+        self.add_metric(
+            tf.reduce_min(r),
+            aggregation='mean', name='pr_rate_min'
+        )
+        self.add_metric(
+            tf.reduce_max(r),
+            aggregation='mean', name='pr_rate_max'
+        )
+
+        return outputs
 
 
 if __name__ == "__main__":

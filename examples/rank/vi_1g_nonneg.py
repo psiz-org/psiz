@@ -48,7 +48,11 @@ def main():
     """Run script."""
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'vi_1g_nonneg')
-    fp_board = fp_example / Path('logs', 'fit', 'trunc2_mean')  # TODO
+    fp_board = fp_example / Path('logs', 'fit', 'trunc_gamma1_tr2j')  # TODO
+    # g: epsilon=1e-07 | test_loss: 3.29 | Correlation (R^2): 0.90
+    # h: epsilon=1e-04 | test_loss: 3.42 | Correlation (R^2): 0.93
+    # i: epsilon=1e-07, epochs=3000 | test_loss: 3.37 | Correlation (R^2): 0.90
+    # j: anneal, epochs=1000 | 
     n_stimuli = 30
     n_dim = 2
     n_dim_nonneg = 20
@@ -74,15 +78,6 @@ def main():
     plt.rc('ytick', labelsize=small_size)
     plt.rc('legend', fontsize=small_size)
     plt.rc('figure', titlesize=large_size)
-
-    # Color settings.
-    cmap = matplotlib.cm.get_cmap('jet')
-    n_color = np.minimum(7, n_stimuli)
-    norm = matplotlib.colors.Normalize(vmin=0., vmax=n_color)
-    color_array = cmap(norm(range(n_color)))
-    gray_array = np.ones([n_stimuli - n_color, 4])
-    gray_array[:, 0:3] = .8
-    color_array = np.vstack([gray_array, color_array])
 
     emb_true = ground_truth(n_stimuli, n_dim)
 
@@ -141,54 +136,25 @@ def main():
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
 
-        # embedding_posterior = psiz.keras.layers.EmbeddingGammaDiag(
-        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
-        #     concentration_initializer=tf.keras.initializers.RandomUniform(
-        #         5.0, 10.
-        #     ),
-        #     rate_initializer=tf.keras.initializers.RandomUniform(20., 30.)
-        # )
-        # embedding_prior = psiz.keras.layers.EmbeddingGammaDiag(
-        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
-        #     concentration_initializer=tf.keras.initializers.Constant(1.0001),
-        #     rate_initializer=tf.keras.initializers.Constant(10),
-        #     trainable=False
-        #     # concentration_trainable=False,
-        #     # rate_constraint=psiz.keras.constraints.SharedMean()
-        # )
-        # embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        #     n_stimuli+1, n_dim_nonneg, mask_zero=True,
-        #     loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
-        #     scale_initializer=psiz.keras.initializers.SoftplusUniform(
-        #         .01, .05
-        #     ),
-        #     loc_constraint=tf.keras.constraints.NonNeg(),
-        # )
         embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
             n_stimuli+1, n_dim_nonneg, mask_zero=True,
             loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
             scale_initializer=psiz.keras.initializers.SoftplusUniform(
                 .01, .05
             ),
-            loc_constraint=tf.keras.constraints.NonNeg(),
         )
-        embedding_prior = psiz.keras.layers.EmbeddingLaplaceDiag(
+        embedding_prior = psiz.keras.layers.EmbeddingShared(
             n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            loc_initializer=tf.keras.initializers.Constant(0.),
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(1.).numpy()
-            ),
-            # trainable=False
-            loc_trainable=False,
-            # scale_constraint=psiz.keras.constraints.SharedMedian()
-            scale_constraint=psiz.keras.constraints.SharedMean()
+            embedding=psiz.keras.layers.EmbeddingGammaDiag(
+                1, 1,
+                concentration_initializer=tf.keras.initializers.Constant(1.),
+                rate_initializer=tf.keras.initializers.Constant(1),
+                concentration_trainable=False,
+            )
         )
-
-        embedding = psiz.keras.layers.EmbeddingVariational(
+        embedding = EmbeddingVariationalLog(
             posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight,
-            # kl_use_exact=True,  # TODO
-            kl_n_sample=30,  # TODO
+            kl_weight=kl_weight, kl_n_sample=30,
         )
 
         kernel = psiz.keras.layers.Kernel(
@@ -209,9 +175,8 @@ def main():
         emb_inferred = psiz.models.Proxy(model=model)
 
         # Infer embedding.
-        # TODO with epochs=100, (R^2): 0.95
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=100,  # TODO
+            obs_round_train, validation_data=obs_val, epochs=1000,  # TODO
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
@@ -248,7 +213,7 @@ def main():
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
             fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, color_array, train_time
+            emb_inferred, train_time
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -270,7 +235,7 @@ def main():
 
 def plot_frame(
         fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
-        color_array, train_time):
+        train_time):
     """Plot frame."""
     # Settings.
     s = 10
@@ -426,13 +391,65 @@ def ground_truth(n_stimuli, n_dim):
     emb = psiz.models.Proxy(model=model)
 
     scale_sample = np.std(emb.model.embedding.embeddings.numpy())
-    print(
-        '\n  Requested scale: {0:.4f}'
-        '\n  Sampled scale: {1:.4f}\n'.format(
-            scale_request, scale_sample
-        )
-    )
     return emb
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='EmbeddingVariationalLog'
+)
+class EmbeddingVariationalLog(psiz.keras.layers.EmbeddingVariational):
+    """Sub-class for logging weight metrics."""
+
+    def call(self, inputs):
+        """Call."""
+        outputs = super().call(inputs)
+
+        self.add_metric(
+            self.kl_anneal,
+            aggregation='mean', name='kl_anneal'
+        )
+
+        m = self.posterior.embeddings.mode()[1:]
+        self.add_metric(
+            tf.reduce_mean(m),
+            aggregation='mean', name='po_mode_avg'
+        )
+        self.add_metric(
+            tf.reduce_min(m),
+            aggregation='mean', name='po_mode_min'
+        )
+        self.add_metric(
+            tf.reduce_max(m),
+            aggregation='mean', name='po_mode_max'
+        )
+
+        l = self.posterior.embeddings.distribution.loc[1:]
+        s = self.posterior.embeddings.distribution.scale[1:]
+        self.add_metric(
+            tf.reduce_mean(l),
+            aggregation='mean', name='po_loc_avg'
+        )
+        self.add_metric(
+            tf.reduce_mean(s),
+            aggregation='mean', name='po_scale_avg'
+        )
+
+        c = self.prior.embeddings.distribution.distribution.distribution.concentration
+        r = self.prior.embeddings.distribution.distribution.distribution.rate
+        self.add_metric(
+            tf.reduce_mean(c),
+            aggregation='mean', name='pr_con'
+        )
+        self.add_metric(
+            tf.reduce_min(r),
+            aggregation='mean', name='pr_rate_min'
+        )
+        self.add_metric(
+            tf.reduce_max(r),
+            aggregation='mean', name='pr_rate_max'
+        )
+
+        return outputs
 
 
 if __name__ == "__main__":

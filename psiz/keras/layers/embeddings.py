@@ -25,6 +25,8 @@ Classes:
         embedding layer.
     EmbeddingGammaDiag: A Gamma distribution embedding layer.
     EmbeddingVariational: A variational embedding layer.
+    EmbeddingShared: An embedding layer that shares weights across
+        stimuli and dimensions.
 
 """
 
@@ -464,10 +466,15 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
     distribution with a diagonal scale matrix.
 
     """
-    def __init__(self, input_dim, output_dim, low=0., high=1000000, **kwargs):
+    def __init__(self, input_dim, output_dim, low=0., high=1000000., **kwargs):
         """Initialize."""
         self.low = low
         self.high = high
+        # Intercept constraints.
+        loc_constraint = kwargs.pop('loc_constraint', None)
+        if loc_constraint is None:
+            loc_constraint = tf.keras.constraints.NonNeg()
+        kwargs.update({'loc_constraint': loc_constraint})
         super(EmbeddingTruncatedNormalDiag, self).__init__(
             input_dim, output_dim, **kwargs
         )
@@ -741,98 +748,8 @@ class EmbeddingVariational(Variational):
         """Call."""
         # Run forward pass through variational posterior layer.
         outputs = self.posterior(inputs)
-
         # Apply KL divergence between posterior and prior.
         self.add_kl_loss(self.posterior.embeddings, self.prior.embeddings)
-
-        # TODO Remove debug metrics.
-        # self.add_metric(
-        #     self.kl_anneal, aggregation='mean', name='kl_anneal'
-        # )
-
-        # c = self.posterior.embeddings.distribution.concentration[1:]
-        # r = self.posterior.embeddings.distribution.rate[1:]
-        m = self.posterior.embeddings.mode()[1:]
-        self.add_metric(
-            tf.reduce_mean(m),
-            aggregation='mean', name='po_mode_avg'
-        )
-        self.add_metric(
-            tf.reduce_min(m),
-            aggregation='mean', name='po_mode_min'
-        )
-        self.add_metric(
-            tf.reduce_max(m),
-            aggregation='mean', name='po_mode_max'
-        )
-        # self.add_metric(
-        #     tf.reduce_mean(c),
-        #     aggregation='mean', name='po_con_avg'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(r),
-        #     aggregation='mean', name='po_rate_avg'
-        # )
-
-        m = self.posterior.embeddings.distribution.loc[1:]
-        s = self.posterior.embeddings.distribution.scale[1:]
-        self.add_metric(
-            tf.reduce_mean(m),
-            aggregation='mean', name='po_loc_avg'
-        )
-        self.add_metric(
-            tf.reduce_mean(s),
-            aggregation='mean', name='po_scale_avg'
-        )
-
-        # m = self.posterior.embeddings.distribution.loc[1:]
-        # s = self.posterior.embeddings.distribution.scale[1:]
-        # self.add_metric(
-        #     tf.reduce_mean(m),
-        #     aggregation='mean', name='po_loc_avg'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(s),
-        #     aggregation='mean', name='po_scale_avg'
-        # )
-
-        # m = self.posterior.embeddings.distribution.bijector(
-        #     self.posterior.embeddings.distribution.distribution.loc[1:]
-        # )
-
-        # m = self.posterior.embeddings.distribution.mode()[1:]
-        # s = self.posterior.embeddings.distribution.stddev()[1:]
-        # self.add_metric(
-        #     tf.reduce_mean(m),
-        #     aggregation='mean', name='po_mode_avg'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(s),
-        #     aggregation='mean', name='po_stddev_avg'
-        # )
-
-        # c = self.prior.embeddings.distribution.concentration[1:]
-        # r = self.prior.embeddings.distribution.rate[1:]
-        # self.add_metric(
-        #     tf.reduce_mean(c),
-        #     aggregation='mean', name='pr_con'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(r),
-        #     aggregation='mean', name='pr_rate'
-        # )
-
-        # m = self.prior.embeddings.distribution.loc[1:]
-        # s = self.prior.embeddings.distribution.scale[1:]
-        # self.add_metric(
-        #     tf.reduce_mean(m),
-        #     aggregation='mean', name='pr_loc'
-        # )
-        # self.add_metric(
-        #     tf.reduce_mean(s),
-        #     aggregation='mean', name='pr_scale'
-        # )
-
         return outputs
 
     @property
@@ -854,3 +771,100 @@ class EmbeddingVariational(Variational):
     def embeddings(self):
         """Getter method for embeddings posterior mode."""
         return self.posterior.embeddings_mode
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='EmbeddingShared'
+)
+class EmbeddingShared(tf.keras.layers.Layer):
+    """A class for wrapping a shared Embedding."""
+    def __init__(
+            self, input_dim, output_dim, embedding, mask_zero=False,
+            **kwargs):
+        """Initialize.
+
+        Arguments:
+            input_dim:
+            output_dim:
+            embedding: An embedding layer.
+            mask_zero (optional):
+            kwargs: Additional key-word arguments.
+
+        """
+        super(EmbeddingShared, self).__init__(**kwargs)
+        self._embedding = embedding
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.mask_zero = mask_zero
+
+    def call(self, inputs):
+        """Call."""
+        # Intercept inputs.
+        inputs = tf.zeros_like(inputs)
+        outputs = self._embedding(inputs)
+        return outputs
+
+    def get_config(self):
+        """Return configuration."""
+        config = super(EmbeddingShared, self).get_config()
+        config.update({
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+            'embedding': tf.keras.utils.serialize_keras_object(
+                self._embedding
+            ),
+            'mask_zero': self.mask_zero,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        """Create layer from configuration.
+
+        This method is the reverse of `get_config`, capable of
+        instantiating the same layer from the config dictionary.
+
+        Args:
+            config: A Python dictionary, typically the output of
+                `get_config`.
+
+        Returns:
+            layer: A layer instance.
+
+        """
+        config['embedding'] = tf.keras.layers.deserialize(
+            config['embedding']
+        )
+        return cls(**config)
+
+    @property
+    def embeddings_mode(self):
+        """Getter method for mode of `embeddings`."""
+        return self._embedding.embeddings.mode()
+
+    @property
+    def embeddings(self):
+        """Getter method for `embeddings`.
+
+        Return distribution that creates copies of the source
+        distribution for each stimulus and dimension. The incoming
+        distribution has event_shape=[1, 1], but need a distribution
+        with event_shape=[input_dim, output_dim].
+        """
+        # First, reshape to event_shape=[] and
+        # batch_size=[input_dim, output_dim].
+        b = tfp.bijectors.Reshape(
+            event_shape_out=tf.TensorShape([]),
+            event_shape_in=tf.TensorShape([1, 1])
+        )
+        dist = tfp.distributions.TransformedDistribution(
+            distribution=self._embedding.embeddings,
+            bijector=b,
+            batch_shape=[self.input_dim, self.output_dim],
+        )
+        # Second, reinterpret batch_shape as event_shape.
+        batch_ndims = tf.size(dist.batch_shape_tensor())
+        dist = tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
+        return dist

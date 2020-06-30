@@ -20,8 +20,8 @@ Functions:
     bvn_ellipse: Create an ellipse representing a bivariate normal
         distribution.
     heatmap_embeddings: Create a heatmap of embeddings.
-    embedding_dimension: Visualize embedding values for a requested
-        dimension.
+    embedding_output_dimension: Visualize embedding values for a
+        requested output dimension.
 
 TODO:
     classes -> class_dict
@@ -76,11 +76,11 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
     fig.colorbar(im, ax=ax)
 
 
-def embedding_dimension(fig, ax, embedding, dim, c='b'):
-    """Visualize embedding values for a particular dimension.
+def embedding_output_dimension(fig, ax, embedding, idx, c='b'):
+    """Visualize embedding values for a requested output dimension.
     
-    Plots point estimates for each stimulus for the requested
-    dimension.
+    Plots point estimates of embedding values for the requested
+    output dimension.
 
     If the embedding layer is a distribution, also attempts to draw a
     thick linewidth interval indicating the middle 50% probability mass
@@ -91,13 +91,15 @@ def embedding_dimension(fig, ax, embedding, dim, c='b'):
         fig: A Matplotlib Figure object.
         ax: A Matplotlib Axes object.
         embedding: An embedding layer.
-        dim: Integer indicating the dimension to visualize.
+        idx: Index of requested output dimension to visualize.
         c (optional): Color of interval marks.
 
     """
     point_estimate = embedding.embeddings.numpy()
-    y_max = np.max(point_estimate)  # Grab max across all dimensions.
-    point_estimate = point_estimate[:, dim]
+    y_max = np.max(point_estimate)
+    point_estimate = point_estimate[:, idx]
+
+    # Handle masking.
     if hasattr(embedding, 'posterior'):
         # Typically this is the mode of the posterior distribution.
         if embedding.posterior.mask_zero:
@@ -105,27 +107,29 @@ def embedding_dimension(fig, ax, embedding, dim, c='b'):
     else:
         if embedding.mask_zero:
             point_estimate = point_estimate[1:]
-    n_stimuli = point_estimate.shape[0]
+
+    n_input_dim = point_estimate.shape[0]
 
     # Scatter point estimate.
-    xg = np.arange(n_stimuli)
+    xg = np.arange(n_input_dim)
     ax.scatter(xg, point_estimate, c=c, marker='_', linewidth=1)
 
     if hasattr(embedding, 'posterior'):
+        dist = embedding.posterior.embeddings.distribution
+
         # Middle 99% probability mass.
         p=.99
-        dist = embedding.posterior.embeddings.distribution
         v = (1 - p) / 2
-        quant_lower = dist.quantile(v).numpy()[:, dim]
+        quant_lower = dist.quantile(v).numpy()[:, idx]
         quant_upper = dist.quantile(1-v).numpy()
-        y_max = np.max(quant_upper) # Grab max across all dimensions.
-        quant_upper = quant_upper[:, dim]
+        y_max = np.max(quant_upper)
+        quant_upper = quant_upper[:, idx]
 
         # Middle 50% probability mass.
         p = .5
         v = (1 - p) / 2
-        mid_lower = dist.quantile(v).numpy()[:, dim]
-        mid_upper = dist.quantile(1-v).numpy()[:, dim]
+        mid_lower = dist.quantile(v).numpy()[:, idx]
+        mid_upper = dist.quantile(1-v).numpy()[:, idx]
 
         if embedding.posterior.mask_zero:
             quant_lower = quant_lower[1:]
@@ -133,20 +137,102 @@ def embedding_dimension(fig, ax, embedding, dim, c='b'):
             mid_lower = mid_lower[1:]
             mid_upper = mid_upper[1:]
 
-        for i_stimulus in range(n_stimuli):
-            xg = np.array([i_stimulus, i_stimulus])
+        for i_dim in range(n_input_dim):
+            xg = np.array([i_dim, i_dim])
             yg = np.array(
-                [quant_lower[i_stimulus], quant_upper[i_stimulus]]
+                [quant_lower[i_dim], quant_upper[i_dim]]
             )
             ax.plot(xg, yg, c=c, linewidth=1)
 
             yg = np.array(
-                [mid_lower[i_stimulus], mid_upper[i_stimulus]]
+                [mid_lower[i_dim], mid_upper[i_dim]]
             )
             ax.plot(xg, yg, c=c, linewidth=3)
     
-    ax.set_xlabel('Stimulus')
-    ax.set_xlim([0, n_stimuli])
+    ax.set_xlabel('Input Dimension')
+    ax.set_xlim([-.5, n_input_dim-.5])
+
+    ax.set_ylabel(r'$x$')
+    ax.set_ylim([0, 1.05 * y_max])
+    ax.set_yticks([0, 1.05 * y_max])
+    ax.set_yticklabels(['0', '{0:.1f}'.format(1.05 * y_max)])
+
+
+def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
+    """Visualize embedding values for a requested input dimension.
+
+    Plots point estimates of embedding values for the requested
+    input dimension.
+
+    If the embedding layer is a distribution, also attempts to draw a
+    thick linewidth interval indicating the middle 50% probability mass
+    and a thin linewidth interval indicating the middle 99% probability
+    mass via the inverse CDF function.
+
+    Arguments:
+        fig: A Matplotlib Figure object.
+        ax: A Matplotlib Axes object.
+        embedding: An embedding layer.
+        idx: Index of requested input dimension to visualize.
+        c (optional): Color of interval marks.
+
+    """
+    point_estimate = embedding.embeddings.numpy()
+    y_max = np.max(point_estimate)
+    point_estimate = point_estimate[idx, :]
+    
+    # Handle masking.
+    if hasattr(embedding, 'posterior'):
+        if embedding.posterior.mask_zero:
+            point_estimate = point_estimate[1:]
+    else:
+        if embedding.mask_zero:
+            point_estimate = point_estimate[1:]
+
+    n_output_dim = point_estimate.shape[0]
+
+    # Scatter point estimate.
+    xg = np.arange(n_output_dim)
+    ax.scatter(xg, point_estimate, c=c, marker='_')
+
+    # Add posterior quantiles if available.
+    if hasattr(embedding, 'posterior'):
+        dist = embedding.posterior.embeddings.distribution
+
+        # Middle 99% of probability mass.
+        p=.99
+        v = (1 - p) / 2
+        quant_lower = dist.quantile(v).numpy()[idx, :]
+        quant_upper = dist.quantile(1-v).numpy()
+        y_max = np.max(quant_upper)
+        quant_upper = quant_upper[idx, :]
+
+        # Middle 50% probability mass.
+        p = .5
+        v = (1 - p) / 2
+        mid_lower = dist.quantile(v).numpy()[idx, :]
+        mid_upper = dist.quantile(1-v).numpy()[idx, :]
+
+        if embedding.posterior.mask_zero:
+            quant_lower = quant_lower[1:]
+            quant_upper = quant_upper[1:]
+            mid_lower = mid_lower[1:]
+            mid_upper = mid_upper[1:]
+
+        for i_dim in range(n_output_dim):
+            xg = np.array([i_dim, i_dim])
+            yg = np.array(
+                [quant_lower[i_dim], quant_upper[i_dim]]
+            )
+            ax.plot(xg, yg, c=c, linewidth=1)
+            
+            yg = np.array(
+                [mid_lower[i_dim], mid_upper[i_dim]]
+            )
+            ax.plot(xg, yg, c=c, linewidth=3)
+
+    ax.set_xlabel('Output Dimension')
+    ax.set_xlim([-.5, n_output_dim-.5])
 
     ax.set_ylabel(r'$x$')
     ax.set_ylim([0, 1.05 * y_max])

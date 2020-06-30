@@ -64,10 +64,6 @@ import tensorflow_probability as tfp
 
 import psiz
 
-# Set the following to restrict GPU visibility. TODO
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
@@ -84,7 +80,7 @@ def main():
     n_trial = 2000
     n_restart = 1
     batch_size = 200
-    n_frame = 1  # TODO 4
+    n_frame = 1
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -232,7 +228,7 @@ def main():
 
         # Infer model.
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=30,  # TODO 1000
+            obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )

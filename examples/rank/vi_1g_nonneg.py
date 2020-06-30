@@ -48,18 +48,14 @@ def main():
     """Run script."""
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'vi_1g_nonneg')
-    fp_board = fp_example / Path('logs', 'fit', 'trunc_gamma1_tr2j')  # TODO
-    # g: epsilon=1e-07 | test_loss: 3.29 | Correlation (R^2): 0.90
-    # h: epsilon=1e-04 | test_loss: 3.42 | Correlation (R^2): 0.93
-    # i: epsilon=1e-07, epochs=3000 | test_loss: 3.37 | Correlation (R^2): 0.90
-    # j: anneal, epochs=1000 | 
+    fp_board = fp_example / Path('logs', 'fit', 'r0')
     n_stimuli = 30
     n_dim = 2
     n_dim_nonneg = 20
     n_trial = 2000
     n_restart = 1
     batch_size = 100
-    n_frame = 1  # TODO
+    n_frame = 1
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -176,7 +172,7 @@ def main():
 
         # Infer embedding.
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,  # TODO
+            obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )

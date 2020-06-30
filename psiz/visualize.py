@@ -22,9 +22,8 @@ Functions:
     heatmap_embeddings: Create a heatmap of embeddings.
     embedding_output_dimension: Visualize embedding values for a
         requested output dimension.
-
-TODO:
-    classes -> class_dict
+    embedding_input_dimension: Visualize embedding values for a
+        requested input dimension.
 
 """
 

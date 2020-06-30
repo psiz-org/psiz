@@ -177,7 +177,7 @@ class Restarter(object):
             )
             total_duration = time.time() - fit_start_time_s
             logs = {}
-            n_epoch = np.max(history.epoch) - np.min(history.epoch)
+            n_epoch = np.max(history.epoch) - np.min(history.epoch) + 1
             logs['epoch'] = n_epoch
             logs['total_duration_s'] = int(total_duration)
             logs['ms_per_epoch'] = int(1000 * total_duration / n_epoch)

@@ -40,6 +40,10 @@ import tensorflow_probability as tfp
 
 import psiz
 
+# Set the following to specify GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
@@ -150,17 +154,20 @@ def main():
                 tfp.math.softplus_inverse(prior_scale).numpy()
             )
         )
-        embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
+        embedding_prior = psiz.keras.layers.EmbeddingShared(
             n_stimuli+1, n_dim, mask_zero=True,
-            loc_initializer=tf.keras.initializers.Constant(0.),
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ), loc_trainable=False,
-            scale_constraint=psiz.keras.constraints.SharedMean()
+            embedding=psiz.keras.layers.EmbeddingNormalDiag(
+                1, 1,
+                loc_initializer=tf.keras.initializers.Constant(0.),
+                scale_initializer=tf.keras.initializers.Constant(
+                    tfp.math.softplus_inverse(prior_scale).numpy()
+                ),
+                loc_trainable=False,
+            )
         )
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_use_exact=True
+            kl_weight=kl_weight, kl_n_sample=30
         )
 
         kernel = psiz.keras.layers.Kernel(
@@ -185,9 +192,10 @@ def main():
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
-        print('    Initial scale: {0:.4f}'.format(prior_scale))
-        print('    Inferred scale: {0:.4f}'.format(
-            emb_inferred.model.embedding.prior.embeddings.distribution.scale[0, 0]
+
+        dist = emb_inferred.model.embedding.prior.embeddings.distribution
+        print('    Inferred prior scale: {0:.4f}'.format(
+            dist.distribution.distribution.scale[0, 0]
         ))
 
         train_loss[i_frame] = restart_record.record['loss'][0]

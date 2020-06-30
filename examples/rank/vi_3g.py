@@ -58,11 +58,14 @@ import imageio
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
+
+# Set the following to specify GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
@@ -98,15 +101,6 @@ def main():
     plt.rc('ytick', labelsize=small_size)
     plt.rc('legend', fontsize=small_size)
     plt.rc('figure', titlesize=large_size)
-
-    # Color settings.
-    cmap = matplotlib.cm.get_cmap('jet')
-    n_color = np.minimum(7, n_stimuli)
-    norm = matplotlib.colors.Normalize(vmin=0., vmax=n_color)
-    color_array = cmap(norm(range(n_color)))
-    gray_array = np.ones([n_stimuli - n_color, 4])
-    gray_array[:, 0:3] = .8
-    color_array = np.vstack([gray_array, color_array])
 
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
@@ -183,23 +177,28 @@ def main():
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
+        prior_scale = .2
 
         embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
             n_stimuli+1, n_dim, mask_zero=True,
             scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(.17).numpy()
+                tfp.math.softplus_inverse(prior_scale).numpy()
             )
         )
-        embedding_prior = psiz.keras.layers.EmbeddingNormalDiag(
+        embedding_prior = psiz.keras.layers.EmbeddingShared(
             n_stimuli+1, n_dim, mask_zero=True,
-            loc_initializer=tf.keras.initializers.Constant(0.),
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(.17).numpy()
-            ), trainable_loc=False
+            embedding=psiz.keras.layers.EmbeddingNormalDiag(
+                1, 1,
+                loc_initializer=tf.keras.initializers.Constant(0.),
+                scale_initializer=tf.keras.initializers.Constant(
+                    tfp.math.softplus_inverse(prior_scale).numpy()
+                ),
+                loc_trainable=False
+            )
         )
         embedding = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_use_exact=True
+            kl_weight=kl_weight, kl_n_sample=30
         )
 
         attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
@@ -207,8 +206,8 @@ def main():
         )
         attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
             n_group, n_dim,
-            loc_initializer=tf.keras.initializers.Constant(0.0),
-            scale_initializer=tf.keras.initializers.Constant(0.3),
+            loc_initializer=tf.keras.initializers.Constant(-4.),
+            scale_initializer=tf.keras.initializers.Constant(1.),
             trainable=False
         )
         kernel = psiz.keras.layers.AttentionKernel(
@@ -303,7 +302,7 @@ def main():
         fig0 = plt.figure(figsize=(12, 5), dpi=200)
         plot_frame(
             fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, color_array, idx_sorted, i_frame
+            emb_inferred, idx_sorted, i_frame
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -323,7 +322,9 @@ def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17, seed=58
+        )
     )
     kernel = psiz.keras.layers.AttentionKernel(
         distance=psiz.keras.layers.WeightedMinkowski(
@@ -353,7 +354,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
 
 def plot_frame(
         fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
-        color_array, idx_sorted, i_frame):
+        idx_sorted, i_frame):
     """Plot posteriors."""
     # Settings.
     group_labels = ['Novice', 'Intermediate', 'Expert']

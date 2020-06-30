@@ -64,6 +64,10 @@ import tensorflow_probability as tfp
 
 import psiz
 
+# Set the following to restrict GPU visibility. TODO
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
@@ -228,7 +232,7 @@ def main():
 
         # Infer model.
         restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+            obs_round_train, validation_data=obs_val, epochs=30,  # TODO 1000
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
@@ -374,7 +378,7 @@ def plot_frame(
 
     f0_ax3 = fig0.add_subplot(gs[0:2, 3:6])
     i_dim = 0
-    psiz.visualize.embedding_dimension(
+    psiz.visualize.embedding_output_dimension(
         fig0, f0_ax3, emb_inferred.model.embedding, i_dim
     )
     f0_ax3.set_title('Dim. {0}'.format(i_dim))
@@ -387,7 +391,7 @@ def plot_frame(
         elif i_group == 2:
             c = 'g'
         ax = fig0.add_subplot(gs[i_group + 2, 2:6])
-        attention_group(
+        psiz.visualize.embedding_input_dimension(
             fig0, ax, emb_inferred.model.kernel.attention, i_group, c=c
         )
         ax.set_title(group_labels[i_group])
@@ -430,74 +434,6 @@ def plot_convergence(fig, ax, n_obs, r2):
     ax.set_ylabel('True')
     ax.set_xlabel('Inferred')
     ax.set_title(r'$R^2$ Convergence')
-
-
-def attention_group(fig, ax, attention, group, c='b'):
-    """Visualize attention values for a requested group.
-    
-    Arguments:
-        fig:
-        ax:
-        attention: An attention layer.
-        group:
-        p (optional):
-        c (optional): Color of interval marks.
-
-    """
-    y_max = 1.05 # TODO don't assume this for general-purpose function.
-
-    # Scatter point estimate.
-    point_estimate = attention.embeddings.numpy()[group, :]
-    n_dim = point_estimate.shape[0]
-    if hasattr(attention, 'posterior'):
-        if attention.posterior.mask_zero:
-            point_estimate = point_estimate[1:]
-    else:
-        if attention.mask_zero:
-            point_estimate = point_estimate[1:]
-    xg = np.arange(n_dim)
-    ax.scatter(xg, point_estimate, c=c, marker='_')
-
-    # Add posterior quantiles if available.
-    if hasattr(attention, 'posterior'):
-        dist = attention.posterior.embeddings.distribution
-
-        # Middle 99% of probability mass.
-        p=.99
-        v = (1 - p) / 2
-        quant_lower = dist.quantile(v).numpy()[group, :]
-        quant_upper = dist.quantile(1-v).numpy()[group, :]
-
-        # Middle 50% probability mass.
-        p = .5
-        v = (1 - p) / 2
-        mid_lower = dist.quantile(v).numpy()[group, :]
-        mid_upper = dist.quantile(1-v).numpy()[group, :]
-        if attention.posterior.mask_zero:
-            quant_lower = quant_lower[1:]
-            quant_upper = quant_upper[1:]
-            mid_lower = mid_lower[1:]
-            mid_upper = mid_upper[1:]
-
-        for i_dim in range(n_dim):
-            x = np.array([i_dim, i_dim])
-            y = np.array(
-                [quant_lower[i_dim], quant_upper[i_dim]]
-            )
-            ax.plot(x, y, c=c, linewidth=1)
-            
-            y = np.array(
-                [mid_lower[i_dim], mid_upper[i_dim]]
-            )
-            ax.plot(x, y, c=c, linewidth=3)
-
-    ax.set_xlim([-.5, n_dim-.5])
-    ax.set_xticks(xg)
-    ax.set_ylim([0, 1.05])
-    ax.set_yticks([0, 1])
-    ax.set_yticklabels(['0', '1'])
-    ax.set_ylabel(r'$x$')
-    ax.set_xlabel('Dimension')
 
 
 @tf.keras.utils.register_keras_serializable(

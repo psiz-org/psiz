@@ -260,7 +260,7 @@ def plot_frame(
     # Visualize embedding distributions for the first dimension.
     f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
-    psiz.visualize.embedding_dimension(
+    psiz.visualize.embedding_output_dimension(
         fig0, f0_ax4, emb_inferred.model.embedding, i_dim
     )
 

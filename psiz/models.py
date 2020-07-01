@@ -793,17 +793,6 @@ class Rank(PsychologicalEmbedding):
 
         super().__init__(**kwargs)
 
-    @tf.function(input_signature=[{
-        'membership': tf.TensorSpec(
-            shape=[None, 2], dtype=tf.int32, name='membership'
-        ),
-        'is_select': tf.TensorSpec(
-            shape=[None, None, None], dtype=tf.bool, name='is_select'
-        ),
-        'stimulus_set': tf.TensorSpec(
-            shape=[None, None, None], dtype=tf.int32, name='stimulus_set'
-        )
-    }])
     def call(self, inputs):
         """Call.
 
@@ -811,10 +800,10 @@ class Rank(PsychologicalEmbedding):
             inputs: A dictionary of inputs:
                 stimulus_set: dtype=tf.int32, consisting of the
                     integers on the interval [0, n_stimuli[
-                    shape=(batch_size, n_max_reference + 1)
+                    shape=(batch_size, n_max_reference + 1, n_outcome)
                 is_select: dtype=tf.bool, the shape implies the
                     maximum number of selected stimuli in the data
-                    shape=(batch_size, n_max_select)
+                    shape=(batch_size, n_max_select, n_outcome)
                 membership: dtype=tf.int32, Integers indicating the
                     group and agent membership of a trial.
                     shape=(batch_size, 2)

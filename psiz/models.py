@@ -865,7 +865,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         compile: Boolean indicating if model should be compiled.
 
     Returns:
-        Loaded embedding model.
+        A TensorFlow Keras model.
 
     Raises:
         ValueError
@@ -908,7 +908,10 @@ def load_model(filepath, custom_objects={}, compile=False):
 
         # Load weights.
         model.load_weights(fp_weights).expect_partial()
-        emb = Proxy(model=model)
+
+        # emb = Proxy(model=model)
+        emb = model
+        
     else:
         # Storage format for psiz_version < 0.4.0.
         f = h5py.File(filepath, 'r')
@@ -990,6 +993,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         emb.theta = theta_value
 
         f.close()
+
     return emb
 
 

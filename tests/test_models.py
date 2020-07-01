@@ -1310,7 +1310,7 @@ def random_weights(n_group, n_dim):
 
 # TODO
 # emb_inferred.save('tmp_emb', overwrite=True)
-# emb_inferred2 = psiz.models.load_model('tmp_emb')
+# emb_inferred2 = psiz.models.Proxy(psiz.models.load_model('tmp_emb'))
 # simmat_infer = psiz.utils.pairwise_matrix(
 #     emb_inferred2.similarity, emb_inferred2.z
 # )

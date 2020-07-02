@@ -65,6 +65,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # TODO
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 def main():
     """Run script."""
@@ -76,8 +79,8 @@ def main():
     n_group = 3
     n_trial = 2000
     n_restart = 1
-    batch_size = 200
-    n_frame = 4
+    batch_size = 128
+    n_frame = 1  # TODO 4
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -97,7 +100,8 @@ def main():
     plt.rc('legend', fontsize=small_size)
     plt.rc('figure', titlesize=large_size)
 
-    emb_true = ground_truth(n_stimuli, n_dim, n_group)
+    model_true = ground_truth(n_stimuli, n_dim, n_group)
+    emb_true = psiz.models.Proxy(model=model_true)
 
     # Generate a random docket of trials to show each group.
     generator = psiz.generator.RandomGenerator(
@@ -161,7 +165,11 @@ def main():
             '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
         )
 
-        # Use Tensorboard callback.
+        # Define model.
+        model = build_model(n_stimuli, n_dim, n_group, obs_round_train.n_trial)
+        emb_inferred = psiz.models.Proxy(model=model)
+
+        # Define callbacks.
         fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
         cb_board = psiz.keras.callbacks.TensorBoardRe(
             log_dir=fp_board_frame, histogram_freq=0,
@@ -170,70 +178,17 @@ def main():
         )
         callbacks = [cb_board]
 
-        # Define model.
-        kl_weight = 1. / obs_round_train.n_trial
-        prior_scale = .2
-
-        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli+1, n_dim, mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            )
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingNormalDiag(
-                1, 1,
-                loc_initializer=tf.keras.initializers.Constant(0.),
-                scale_initializer=tf.keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
-                ),
-                loc_trainable=False
-            )
-        )
-        embedding = psiz.keras.layers.EmbeddingVariational(
-            posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_n_sample=30
-        )
-
-        attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
-            n_group, n_dim
-        )
-        attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
-            n_group, n_dim,
-            loc_initializer=tf.keras.initializers.Constant(-4.),
-            scale_initializer=tf.keras.initializers.Constant(1.),
-            trainable=False
-        )
-        kernel = psiz.keras.layers.AttentionKernel(
-            distance=psiz.keras.layers.WeightedMinkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.),
-                trainable=False,
-            ),
-            attention=psiz.keras.layers.GroupAttentionVariational(
-                posterior=attention_posterior, prior=attention_prior,
-                kl_weight=kl_weight, kl_use_exact=True
-            ),
-            similarity=psiz.keras.layers.ExponentialSimilarity(
-                fit_tau=False, fit_gamma=False,
-                tau_initializer=tf.keras.initializers.Constant(1.),
-                gamma_initializer=tf.keras.initializers.Constant(0.),
-            )
-        )
-        model = psiz.models.Rank(
-            embedding=embedding, kernel=kernel, n_sample_test=100
-        )
-        emb_inferred = psiz.models.Proxy(model=model)
-
         # Infer model.
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs  # TODO verbose
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]
         val_loss[i_frame] = restart_record.record['val_loss'][0]
+
+        emb.model.n_sample_test = 100
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
@@ -330,9 +285,9 @@ def ground_truth(n_stimuli, n_dim, n_group):
             n_dim=n_dim, n_group=n_group
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False,
         )
     )
     kernel.attention.w.assign(
@@ -343,8 +298,78 @@ def ground_truth(n_stimuli, n_dim, n_group):
         ))
     )
     model = psiz.models.Rank(embedding=embedding, kernel=kernel)
-    emb = psiz.models.Proxy(model=model)
-    return emb
+    return model
+
+
+def build_model(n_stimuli, n_dim, n_group, n_obs_train):
+    """Build model.
+
+    Arguments:
+        n_stimuli: Integer indicating the number of stimuli in the
+            embedding.
+        n_dim: Integer indicating the dimensionality of the embedding.
+        n_group: Integer indicating the number of groups.
+        n_obs_train: Integer indicating the number of training
+            observations. Used to determine KL weight for variational
+            inference.
+
+    Returns:
+        model: A TensorFlow Keras model.
+
+    """
+    kl_weight = 1. / n_obs_train
+    prior_scale = .2
+
+    embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(prior_scale).numpy()
+        )
+    )
+    embedding_prior = psiz.keras.layers.EmbeddingShared(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embedding=psiz.keras.layers.EmbeddingNormalDiag(
+            1, 1,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ),
+            loc_trainable=False
+        )
+    )
+    embedding = psiz.keras.layers.EmbeddingVariational(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+
+    attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
+        n_group, n_dim
+    )
+    attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
+        n_group, n_dim,
+        loc_initializer=tf.keras.initializers.Constant(-4.),
+        scale_initializer=tf.keras.initializers.Constant(1.),
+        trainable=False
+    )
+    kernel = psiz.keras.layers.AttentionKernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        attention=psiz.keras.layers.GroupAttentionVariational(
+            posterior=attention_posterior, prior=attention_prior,
+            kl_weight=kl_weight, kl_use_exact=True
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False
+        )
+    )
+    model = psiz.models.Rank(
+        embedding=embedding, kernel=kernel, n_sample_test=3
+    )
+    return model
 
 
 def plot_frame(

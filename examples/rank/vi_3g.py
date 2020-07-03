@@ -65,9 +65,6 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # TODO
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-
 
 def main():
     """Run script."""
@@ -80,7 +77,7 @@ def main():
     n_trial = 2000
     n_restart = 1
     batch_size = 128
-    n_frame = 1  # TODO 4
+    n_frame = 4
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -182,13 +179,13 @@ def main():
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs  # TODO verbose
+            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]
         val_loss[i_frame] = restart_record.record['val_loss'][0]
 
-        emb.model.n_sample_test = 100
+        emb_inferred.model.n_sample_test = 100
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )

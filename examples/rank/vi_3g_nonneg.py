@@ -102,7 +102,7 @@ def main():
     emb_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
-    generator = psiz.generator.RandomGenerator(
+    generator = psiz.generator.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)

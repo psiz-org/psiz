@@ -34,7 +34,7 @@ import numpy as np
 import pandas as pd
 
 from psiz import trials
-from psiz.generator import RandomGenerator
+from psiz.generator import RandomRank
 from psiz.simulate import Agent
 import psiz.models
 import psiz.keras.layers
@@ -655,7 +655,7 @@ class TestStack:
         n_trial = 50
         n_reference = 8
         n_select = 2
-        generator = RandomGenerator(
+        generator = RandomRank(
             n_stimuli, n_reference=n_reference, n_select=n_select
         )
         docket = generator.generate(n_trial)
@@ -712,21 +712,21 @@ class TestStack:
 
         n_reference1 = 2
         n_select1 = 1
-        generator = RandomGenerator(
+        generator = RandomRank(
             n_stimuli, n_reference=n_reference1, n_select=n_select1
         )
         trials1 = generator.generate(n_trial)
 
         n_reference2 = 4
         n_select2 = 2
-        generator = RandomGenerator(
+        generator = RandomRank(
             n_stimuli, n_reference=n_reference2, n_select=n_select2
         )
         trials2 = generator.generate(n_trial)
 
         n_reference3 = 6
         n_select3 = 2
-        generator = RandomGenerator(
+        generator = RandomRank(
             n_stimuli, n_reference=n_reference3, n_select=n_select3
         )
         trials3 = generator.generate(n_trial)
@@ -750,21 +750,21 @@ class TestStack:
 
         n_reference1 = 2
         n_select1 = 1
-        generator = RandomGenerator(
+        generator = RandomRank(
             n_stimuli, n_reference=n_reference1, n_select=n_select1
         )
         trials1 = generator.generate(n_trial)
 
         n_reference2 = 4
         n_select2 = 2
-        generator = RandomGenerator(
+        generator = RandomRank(
             n_stimuli, n_reference=n_reference2, n_select=n_select2
         )
         trials2 = generator.generate(n_trial)
 
         n_reference3 = 8
         n_select3 = 2
-        generator = RandomGenerator(
+        generator = RandomRank(
             n_stimuli, n_reference=n_reference3, n_select=n_select3
         )
         trials3 = generator.generate(n_trial)

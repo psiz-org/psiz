@@ -102,7 +102,7 @@ def test_random_generator():
     n_reference_desired = 4
     n_select_desired = 2
     is_ranked_desired = True
-    gen = generator.RandomGenerator(
+    gen = generator.RandomRank(
         n_stimuli_desired, n_reference=n_reference_desired,
         n_select=n_select_desired
     )
@@ -283,14 +283,14 @@ def test_select_query_references(model_true_det):
 #     n_trial_desired = 200
 #     n_reference_desired = 2
 #     n_select_desired = 1
-#     gen = generator.RandomGenerator(
+#     gen = generator.RandomRank(
 #         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
 #     unjudged_trials_0 = gen.generate(
 #         n_trial_desired, n_stimuli_desired)
 #     n_stimuli_desired = 10
 #     n_trial_desired = 50
-#     gen = generator.RandomGenerator(
+#     gen = generator.RandomRank(
 #         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
 #     unjudged_trials_1 = gen.generate(

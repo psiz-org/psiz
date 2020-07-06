@@ -18,7 +18,7 @@
 Classes:
     DocketGenerator: Base class for generating a docket of unjudged
         similarity trials.
-    RandomGenerator: Concrete class for generating random similarity
+    RandomRank: Concrete class for generating random Rank similarity
         trials.
 
 """
@@ -69,7 +69,7 @@ class DocketGenerator(object):
         pass
 
 
-class RandomGenerator(DocketGenerator):
+class RandomRank(DocketGenerator):
     """A trial generator that independently samples trials."""
 
     def __init__(self, n_stimuli, n_reference=2, n_select=1, is_ranked=True):

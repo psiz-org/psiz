@@ -21,6 +21,10 @@ Classes:
     RandomRank: Concrete class for generating random Rank similarity
         trials.
 
+Functions:
+    expected_information_gain: A sample-based function for computing
+        expected information gain.
+
 """
 
 from abc import ABCMeta, abstractmethod
@@ -70,9 +74,9 @@ class DocketGenerator(object):
 
 
 class RandomRank(DocketGenerator):
-    """A trial generator that independently samples trials."""
+    """A trial generator that blindly samples trials."""
 
-    def __init__(self, n_stimuli, n_reference=2, n_select=1, is_ranked=True):
+    def __init__(self, n_stimuli, n_reference=2, n_select=1):
         """Initialize.
 
         Arguments:
@@ -82,8 +86,6 @@ class RandomRank(DocketGenerator):
                 references for each trial.
             n_select (optional): A scalar indicating the number of
                 selections an agent must make.
-            is_ranked (optional): Boolean indicating whether an agent
-                must make ranked selections.
 
         """
         DocketGenerator.__init__(self)
@@ -94,7 +96,7 @@ class RandomRank(DocketGenerator):
         # TODO re-use sanitize methods from elsewhere
         self.n_reference = np.int32(n_reference)
         self.n_select = np.int32(n_select)
-        self.is_ranked = bool(is_ranked)
+        self.is_ranked = True
 
     def generate(self, n_trial):
         """Return generated trials based on provided arguments.
@@ -119,3 +121,63 @@ class RandomRank(DocketGenerator):
         return RankDocket(
             stimulus_set, n_select=n_select, is_ranked=is_ranked
         )
+
+
+def expected_information_gain(y_pred):
+    """Return expected information gain of each discrete outcome trial.
+
+    A sample-based approximation of information gain is determined by
+    computing the mutual information between the candidate trial(s)
+    and the existing set of observations (implied by the current model
+    state).
+
+    This sample-based approximation is intended for trials that have
+    multiple discrete outcomes.
+
+    This function is designed to be agnostic to the manner in which
+    `y_pred` samples are drawn. For example, these could be dervied
+    using MCMC or by sampling output predictions from a model fit using
+    variational inference.
+
+    NOTE: This function works with placeholder elements as long as
+    `y_pred` is zero for those elements.
+
+    Arguments:
+        y_pred: A tf.Tensor of model predictions.
+            shape=(n_sample, n_trial, n_outcome)
+
+    Returns:
+        A tf.Tensor object representing the expected information gain
+        of the candidate trial(s).
+        shape=(n_trial,)
+
+    """
+    # First term of mutual information.
+    # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c),
+    # where `c` indicates a candidate trial that we want to compute the
+    # expected information gain for.
+    # Take mean over samples to approximate p(y_i | obs, c).
+    term0 = tf.reduce_mean(y_pred, axis=0)  # shape=(n_trial, n_outcome)
+    term0 = term0 * tf.math.log(
+        tf.math.maximum(term0, tf.keras.backend.epsilon())
+    )
+    # NOTE: At this point we would need to zero out place-holder outcomes,
+    # but placeholder elements will always have a value of zero  since
+    # y_pred will be zero for placeholder elements.
+    # Sum over possible outcomes.
+    term0 = -tf.reduce_sum(term0, axis=1)  # shape=(n_trial,)
+
+    # Second term of mutual information.
+    # E[H(Y | Z, D, x)]
+    term1 = y_pred * tf.math.log(
+        tf.math.maximum(y_pred, tf.keras.backend.epsilon())
+    )
+    # Take the sum over the possible outcomes.
+    # NOTE: At this point we would need to zero out place-holder outcomes,
+    # but placeholder elements will always have a value of zero since
+    # y_pred will be zero for placeholder elements.
+    term1 = tf.reduce_sum(term1, axis=2)  # shape=(n_sample, n_trial,)
+    # Take the mean over all samples.
+    term1 = tf.reduce_mean(term1, axis=0)  # shape=(n_trial,)
+
+    return term0 + term1

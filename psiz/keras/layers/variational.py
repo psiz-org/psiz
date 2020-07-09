@@ -108,9 +108,9 @@ class Variational(tf.keras.layers.Layer):
         config.update({
             'posterior': tf.keras.utils.serialize_keras_object(self.posterior),
             'prior': tf.keras.utils.serialize_keras_object(self.prior),
-            'kl_weight': self.kl_weight,
+            'kl_weight': float(self.kl_weight),
             'kl_use_exact': self.kl_use_exact,
-            'kl_n_sample': self.kl_n_sample,
+            'kl_n_sample': int(self.kl_n_sample),
         })
         return config
 

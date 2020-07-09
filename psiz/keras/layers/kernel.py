@@ -211,8 +211,8 @@ class GroupAttention(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'n_group': self.n_group,
-            'n_dim': self.n_dim,
+            'n_group': int(self.n_group),
+            'n_dim': int(self.n_dim),
             'fit_group': self.fit_group,
             'embeddings_initializer':
                 tf.keras.initializers.serialize(self.embeddings_initializer),
@@ -805,7 +805,7 @@ class AttentionKernel(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'n_dim': self.n_dim,
+            'n_dim': int(self.n_dim),
             'attention': tf.keras.utils.serialize_keras_object(self.attention),
             'distance': tf.keras.utils.serialize_keras_object(self.distance),
             'similarity': tf.keras.utils.serialize_keras_object(

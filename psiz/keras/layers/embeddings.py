@@ -50,7 +50,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
 
     """
     def __init__(
-            self, input_dim, output_dim, mask_zero=False, input_length=None,
+            self, input_dim, output_dim, mask_zero=False, input_length=1,
             loc_initializer=None, scale_initializer=None, loc_regularizer=None,
             scale_regularizer=None, loc_constraint=None, scale_constraint=None,
             loc_trainable=True, scale_trainable=True, **kwargs):
@@ -187,10 +187,10 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super(_EmbeddingLocScale, self).get_config()
         config.update({
-            'input_dim': self.input_dim,
-            'output_dim': self.output_dim,
+            'input_dim': int(self.input_dim),
+            'output_dim': int(self.output_dim),
             'mask_zero': self.mask_zero,
-            'input_length': self.input_length,
+            'input_length': int(self.input_length),
             'loc_initializer':
                 tf.keras.initializers.serialize(self.loc_initializer),
             'scale_initializer':
@@ -539,7 +539,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
 
     """
     def __init__(
-            self, input_dim, output_dim, mask_zero=False, input_length=None,
+            self, input_dim, output_dim, mask_zero=False, input_length=1,
             concentration_initializer=None, rate_initializer=None,
             concentration_regularizer=None, rate_regularizer=None,
             concentration_constraint=None, rate_constraint=None,
@@ -702,10 +702,10 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super(EmbeddingGammaDiag, self).get_config()
         config.update({
-            'input_dim': self.input_dim,
-            'output_dim': self.output_dim,
+            'input_dim': int(self.input_dim),
+            'output_dim': int(self.output_dim),
             'mask_zero': self.mask_zero,
-            'input_length': self.input_length,
+            'input_length': int(self.input_length),
             'concentration_initializer':
                 tf.keras.initializers.serialize(self.concentration_initializer),
             'rate_initializer':
@@ -808,8 +808,8 @@ class EmbeddingShared(tf.keras.layers.Layer):
         """Return configuration."""
         config = super(EmbeddingShared, self).get_config()
         config.update({
-            'input_dim': self.input_dim,
-            'output_dim': self.output_dim,
+            'input_dim': int(self.input_dim),
+            'output_dim': int(self.output_dim),
             'embedding': tf.keras.utils.serialize_keras_object(
                 self._embedding
             ),

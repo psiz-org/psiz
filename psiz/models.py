@@ -732,10 +732,32 @@ class PsychologicalEmbedding(tf.keras.Model):
         fp_config = os.path.join(filepath, 'config.h5')
         fp_weights = os.path.join(filepath, 'weights')
 
+        # TODO Guarantee types during get_config() method call, making
+        # this recursive check unnecessary.
         def _convert_to_64(d):
             for k, v in d.items():
                 if isinstance(v, np.float32):
+                    if 'name' in d:
+                        component_name = d['name'] + ':' + k
+                    else:
+                        component_name = k
+                    print(
+                        'WARNING: Model component {0} had type float32. Please'
+                        ' check the corresponding get_config method for'
+                        ' appropriate float casting.'.format(component_name)
+                    )
                     d[k] = float(v)
+                if isinstance(v, np.int64):
+                    if 'name' in d:
+                        component_name = d['name'] + ':' + k
+                    else:
+                        component_name = k
+                    print(
+                        'WARNING: Model component {0} had type int64. Please'
+                        ' check the corresponding get_config method for'
+                        ' appropriate int casting.'.format(component_name)
+                    )
+                    d[k] = int(v)
                 elif isinstance(v, dict):
                     d[k] = _convert_to_64(v)
             return d

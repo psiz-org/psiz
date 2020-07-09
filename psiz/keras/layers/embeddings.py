@@ -233,14 +233,14 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
     def _build_embeddings_distribution(self, dtype):
         """Build embeddings distribution."""
         # Handle location variables.
-        loc = self.add_weight(
+        self.loc = self.add_weight(
             name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.loc_initializer, regularizer=self.loc_regularizer,
             trainable=self.loc_trainable, constraint=self.loc_constraint
         )
 
         # Handle scale variables.
-        untransformed_scale = self.add_weight(
+        self.untransformed_scale = self.add_weight(
             name='untransformed_scale',
             shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.scale_initializer,
@@ -248,11 +248,11 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint
         )
         scale = tfp.util.DeferredTensor(
-            untransformed_scale,
+            self.untransformed_scale,
             lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
-        dist = tfp.distributions.Normal(loc=loc, scale=scale)
+        dist = tfp.distributions.Normal(loc=self.loc, scale=scale)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -288,14 +288,14 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
     def _build_embeddings_distribution(self, dtype):
         """Build embeddings distribution."""
         # Handle location variables.
-        loc = self.add_weight(
+        self.loc = self.add_weight(
             name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.loc_initializer, regularizer=self.loc_regularizer,
             trainable=self.loc_trainable, constraint=self.loc_constraint
         )
 
         # Handle scale variables.
-        untransformed_scale = self.add_weight(
+        self.untransformed_scale = self.add_weight(
             name='untransformed_scale',
             shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.scale_initializer,
@@ -303,11 +303,11 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint
         )
         scale = tfp.util.DeferredTensor(
-            untransformed_scale,
+            self.untransformed_scale,
             lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
-        dist = tfp.distributions.Laplace(loc=loc, scale=scale)
+        dist = tfp.distributions.Laplace(loc=self.loc, scale=scale)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -351,14 +351,14 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
     def _build_embeddings_distribution(self, dtype):
         """Build embeddings distribution."""
         # Handle location variables.
-        loc = self.add_weight(
+        self.loc = self.add_weight(
             name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.loc_initializer, regularizer=self.loc_regularizer,
             trainable=self.loc_trainable, constraint=self.loc_constraint
         )
 
         # Handle scale variables.
-        untransformed_scale = self.add_weight(
+        self.untransformed_scale = self.add_weight(
             name='untransformed_scale',
             shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.scale_initializer,
@@ -366,10 +366,10 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint
         )
         scale = tfp.util.DeferredTensor(
-            untransformed_scale, lambda x: (K.epsilon() + tf.nn.softplus(x))
+            self.untransformed_scale, lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
-        dist = tfp.distributions.LogNormal(loc=loc, scale=scale)
+        dist = tfp.distributions.LogNormal(loc=self.loc, scale=scale)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -411,7 +411,7 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
     def _build_embeddings_distribution(self, dtype):
         """Build embeddings distribution."""
         # Handle location variables.
-        untransformed_loc = self.add_weight(
+        self.untransformed_loc = self.add_weight(
             name='untransformed_loc', shape=[self.input_dim, self.output_dim],
             dtype=dtype, initializer=self.loc_initializer,
             regularizer=self.loc_regularizer, trainable=self.loc_trainable,
@@ -419,7 +419,7 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         )
 
         # Handle scale variables.
-        untransformed_scale = self.add_weight(
+        self.untransformed_scale = self.add_weight(
             name='untransformed_scale',
             shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.scale_initializer,
@@ -427,11 +427,11 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint
         )
         scale = tfp.util.DeferredTensor(
-            untransformed_scale, lambda x: (K.epsilon() + tf.math.exp(x))
+            self.untransformed_scale, lambda x: (K.epsilon() + tf.math.exp(x))
         )
 
         dist = tfp.distributions.LogitNormal(
-            loc=untransformed_loc, scale=scale
+            loc=self.untransformed_loc, scale=scale
         )
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
@@ -482,14 +482,14 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
     def _build_embeddings_distribution(self, dtype):
         """Build embeddings distribution."""
         # Handle location variables.
-        loc = self.add_weight(
+        self.loc = self.add_weight(
             name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.loc_initializer, regularizer=self.loc_regularizer,
             trainable=self.loc_trainable, constraint=self.loc_constraint
         )
 
         # Handle scale variables.
-        untransformed_scale = self.add_weight(
+        self.untransformed_scale = self.add_weight(
             name='untransformed_scale',
             shape=[self.input_dim, self.output_dim], dtype=dtype,
             initializer=self.scale_initializer,
@@ -497,12 +497,12 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint
         )
         scale = tfp.util.DeferredTensor(
-            untransformed_scale,
+            self.untransformed_scale,
             lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
         dist = psiz.distributions.TruncatedNormal(
-            loc, scale, self.low, self.high
+            self.loc, scale, self.low, self.high
         )
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
@@ -651,7 +651,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
     def _build_embeddings_distribution(self, dtype):
         """Build embeddings distribution."""
         # Handle concentration variables.
-        concentration = self.add_weight(
+        self.concentration = self.add_weight(
             name='concentration', shape=[self.input_dim, self.output_dim],
             dtype=dtype, initializer=self.concentration_initializer,
             regularizer=self.concentration_regularizer,
@@ -660,7 +660,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         )
 
         # Handle rate variables.
-        rate = self.add_weight(
+        self.rate = self.add_weight(
             name='untransformed_rate', shape=[self.input_dim, self.output_dim],
             dtype=dtype, initializer=self.rate_initializer,
             regularizer=self.rate_regularizer,
@@ -668,7 +668,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             constraint=self.rate_constraint
         )
 
-        dist = psiz.distributions.Gamma(concentration, rate)
+        dist = psiz.distributions.Gamma(self.concentration, self.rate)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims

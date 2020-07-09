@@ -742,7 +742,7 @@ class PsychologicalEmbedding(tf.keras.Model):
                     else:
                         component_name = k
                     print(
-                        'WARNING: Model component {0} had type float32. Please'
+                        'WARNING: Model component `{0}` had type float32. Please'
                         ' check the corresponding get_config method for'
                         ' appropriate float casting.'.format(component_name)
                     )
@@ -753,7 +753,7 @@ class PsychologicalEmbedding(tf.keras.Model):
                     else:
                         component_name = k
                     print(
-                        'WARNING: Model component {0} had type int64. Please'
+                        'WARNING: Model component `{0}` had type int64. Please'
                         ' check the corresponding get_config method for'
                         ' appropriate int casting.'.format(component_name)
                     )

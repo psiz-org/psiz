@@ -168,56 +168,6 @@ class Proxy(object):
             d[k] = v.numpy()
         return d
 
-    def _broadcast_for_similarity(
-            self, z_q, z_r, group_id=None):
-        """Return similarity between two lists of points.
-
-        Similarity is determined using the similarity kernel and the
-        current similarity parameters. This method implements the
-        logic for handling arguments of different shapes.
-
-        Arguments:
-            z_q: A set of embedding points.
-                shape = (n_trial, n_dim, [1, n_sample])
-            z_r: A set of embedding points.
-                shape = (n_trial, n_dim, [n_reference, n_sample])
-            group_id (optional): The group ID for each sample. Can be a
-                scalar or an array of shape = (n_trial,).
-
-        Returns:
-            The corresponding similarity between rows of embedding
-                points.
-
-        """
-        n_trial = z_q.shape[0]
-
-        # Handle group_id.
-        if group_id is None:
-            group_id = np.zeros((n_trial), dtype=np.int32)
-        else:
-            if np.isscalar(group_id):
-                group_id = group_id * np.ones((n_trial), dtype=np.int32)
-            else:
-                group_id = group_id.astype(dtype=np.int32)
-
-        attention = self.phi['w'][group_id, :]
-
-        # Make sure z_q and attention have an appropriate singleton
-        # dimensions.
-        if z_r.ndim > 2:
-            if z_q.ndim == 2:
-                z_q = np.expand_dims(z_q, axis=2)
-            if attention.ndim == 2:
-                attention = np.expand_dims(attention, axis=2)
-        if z_r.ndim == 4:
-            # A fourth dimension means there are samples for each point.
-            if z_q.ndim == 3:
-                z_q = np.expand_dims(z_q, axis=3)
-            if attention.ndim == 3:
-                attention = np.expand_dims(attention, axis=3)
-
-        return (z_q, z_r, attention)
-
     def _broadcast_ready(self, z):
         """Create necessary trailing singleton dimensions for `z`."""
         if z.ndim == 2:
@@ -310,25 +260,25 @@ class Proxy(object):
         ]).numpy()
         return np.squeeze(d_qr)
 
-    def _check_obs(self, obs):
-        """Check observerations.
+    # def _check_obs(self, obs):
+    #     """Check observerations.
 
-        Arguments:
-            obs: A psiz.trials.RankObservations object.
+    #     Arguments:
+    #         obs: A psiz.trials.RankObservations object.
 
-        Raises:
-            ValueError
+    #     Raises:
+    #         ValueError
 
-        """
-        n_group_obs = np.max(obs.group_id) + 1
-        if n_group_obs > self.n_group:
-            raise ValueError(
-                "The provided observations contain data from at least {0}"
-                " groups. The present model only supports {1}"
-                " group(s).".format(
-                    n_group_obs, self.n_group
-                )
-            )
+    #     """
+    #     n_group_obs = np.max(obs.group_id) + 1
+    #     if n_group_obs > self.n_group:
+    #         raise ValueError(
+    #             "The provided observations contain data from at least {0}"
+    #             " groups. The present model only supports {1}"
+    #             " group(s).".format(
+    #                 n_group_obs, self.n_group
+    #             )
+    #         )
 
     def compile(self, **kwargs):
         """Configure the model for training.
@@ -382,7 +332,7 @@ class Proxy(object):
             batch_size_train = np.minimum(batch_size, n_obs_train)
 
         # Create TensorFlow training Dataset.
-        self._check_obs(obs_train)
+        # self._check_obs(obs_train)
         # Format as TensorFlow dataset.
         ds_obs_train = obs_train.as_dataset()
         ds_obs_train = ds_obs_train.shuffle(
@@ -394,7 +344,7 @@ class Proxy(object):
 
         # Create TensorFlow validation Dataset (if necessary).
         if validation_data is not None:
-            self._check_obs(validation_data)
+            # self._check_obs(validation_data)
             ds_obs_val = validation_data.as_dataset()
             n_obs_val = validation_data.n_trial
             # Format as TensorFlow dataset.
@@ -436,7 +386,7 @@ class Proxy(object):
                 the negative loglikelihood.
 
         """
-        self._check_obs(obs)
+        # self._check_obs(obs)
         ds_obs = obs.as_dataset()
 
         if batch_size is None:
@@ -559,6 +509,11 @@ class PsychologicalEmbedding(tf.keras.Model):
 
         self.n_sample_test = n_sample_test
 
+        if type(self.embedding) is psiz.keras.layers.EmbeddingGroup:
+            self.group_embedding = True
+        else:
+            self.group_embedding = False
+
         # Create convenience pointer to kernel parameters.
         self.theta = self.kernel.theta
 
@@ -578,7 +533,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     @property
     def n_group(self):
         """Getter method for `n_group`."""
-        return self.kernel.n_group
+        return np.max([self.embedding.n_group, self.kernel.n_group])  # TODO add behavior.n_group to list
 
     def train_step(self, data):
         """Logic for one training step.
@@ -837,13 +792,17 @@ class Rank(PsychologicalEmbedding):
         membership = inputs['membership']
 
         # Inflate coordinates.
-        z_stimulus_set = self.embedding(stimulus_set)
+        if self.group_embedding:
+            z = self.embedding([stimulus_set, membership])
+        else:
+            z = self.embedding(stimulus_set)
         # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
-        z_stimulus_set = tf.transpose(z_stimulus_set, perm=[0, 3, 1, 2])
+        z = tf.transpose(z, perm=[0, 3, 1, 2])
         # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
-        max_n_reference = tf.shape(z_stimulus_set)[2] - 1
+    
+        max_n_reference = tf.shape(z)[2] - 1
         # TODO can we always assume this split pattern?
-        z_q, z_r = tf.split(z_stimulus_set, [1, max_n_reference], 2)
+        z_q, z_r = tf.split(z, [1, max_n_reference], 2)
 
         # Pass through similarity kernel.
         sim_qr = self.kernel([z_q, z_r, membership])

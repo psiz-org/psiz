@@ -49,6 +49,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import History
 from tensorflow.python.keras.engine import data_adapter
 from tensorflow.python.eager import backprop
+import tensorflow_probability as tfp
 
 import psiz.keras.layers
 import psiz.trials
@@ -141,7 +142,16 @@ class Proxy(object):
     @property
     def z(self):
         """Getter method for `z`."""
-        return self.model.embedding.embeddings.numpy()[1:]
+        z = self.model.embedding.embeddings
+        if isinstance(z, tfp.distributions.Distribution):
+            z = z.mode()  # NOTE: This will not work for all distributions.
+        z = z.numpy()
+        if self.model.embedding.mask_zero:
+            if len(z.shape) == 2:
+                z = z[1:]
+            else:
+                z = z[:, 1:]
+        return z
 
     @property
     def w(self):

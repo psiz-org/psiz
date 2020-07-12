@@ -33,5 +33,6 @@ from psiz.keras.layers.embeddings import EmbeddingLogNormalDiag
 from psiz.keras.layers.embeddings import EmbeddingLogitNormalDiag
 from psiz.keras.layers.embeddings import EmbeddingTruncatedNormalDiag
 from psiz.keras.layers.embeddings import EmbeddingGammaDiag
+from psiz.keras.layers.embeddings import EmbeddingGroup
 from psiz.keras.layers.embeddings import EmbeddingShared
 from psiz.keras.layers.embeddings import EmbeddingVariational

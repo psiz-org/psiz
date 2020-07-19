@@ -772,7 +772,7 @@ class EmbeddingVariational(Variational):
     @property
     def embeddings(self):
         """Getter method for (posterior) embeddings."""
-        return self.posterior.embeddings  # TODO critical to test, this previously return embeddings_mode
+        return self.posterior.embeddings
     
     @property
     def embeddings_mode(self):
@@ -815,6 +815,11 @@ class EmbeddingGroup(tf.keras.layers.Layer):
         self.n_group = n_group
         self.group_level = group_level
         self._embedding = embedding
+
+    def build(self, input_shape):
+        """Build."""
+        super().build(input_shape)
+        self._embedding.build(input_shape)
 
     def call(self, inputs):
         """Call."""
@@ -867,9 +872,7 @@ class EmbeddingGroup(tf.keras.layers.Layer):
 
         Returns:
             An embedding (tf.Tensor or tfp.Distribution) that reshapes
-            source embedding appropriately. If `self.mask_zero=True`,
-            multiple copies (one for each group) are returned for the
-            zeroth stimulus.
+            source embedding appropriately.
 
         """
         z_flat = self._embedding.embeddings
@@ -921,6 +924,11 @@ class EmbeddingShared(tf.keras.layers.Layer):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.mask_zero = mask_zero
+
+    def build(self, input_shape):
+        """Build."""
+        super().build(input_shape)
+        self._embedding.build(input_shape)
 
     def call(self, inputs):
         """Call."""

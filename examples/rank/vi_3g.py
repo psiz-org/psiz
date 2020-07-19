@@ -267,7 +267,7 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=58
@@ -294,7 +294,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
             (.2, .2, 1.8, 1.8)
         ))
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 
 
@@ -334,7 +334,7 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
             loc_trainable=False
         )
     )
-    embedding = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
@@ -364,7 +364,7 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
         )
     )
     model = psiz.models.Rank(
-        embedding=embedding, kernel=kernel, n_sample_test=3
+        stimuli=stimuli, kernel=kernel, n_sample_test=3
     )
     return model
 

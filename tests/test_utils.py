@@ -38,8 +38,8 @@ def ground_truth():
     n_group = 2
 
     # Define embedding.
-    embedding = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
-    embedding.build([None, None, None])
+    stimuli = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
+    stimuli.build([None, None, None])
 
     # Define kernel.
     attention = psiz.keras.layers.GroupAttention(n_dim=n_dim, n_group=n_group)
@@ -50,7 +50,7 @@ def ground_truth():
 
     # Build model.
     model = psiz.models.Rank(
-        embedding=embedding, kernel=kernel
+        stimuli=stimuli, kernel=kernel
     )
     proxy = psiz.models.Proxy(model=model)
 

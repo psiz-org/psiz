@@ -160,7 +160,7 @@ def main():
                 loc_trainable=False,
             )
         )
-        embedding = psiz.keras.layers.EmbeddingVariational(
+        stimuli = psiz.keras.layers.EmbeddingVariational(
             posterior=embedding_posterior, prior=embedding_prior,
             kl_weight=kl_weight, kl_n_sample=30
         )
@@ -177,7 +177,7 @@ def main():
             )
         )
         model = psiz.models.Rank(
-            embedding=embedding, kernel=kernel, n_sample_test=100
+            stimuli=stimuli, kernel=kernel, n_sample_test=100
         )
         emb_inferred = psiz.models.Proxy(model=model)
 
@@ -188,7 +188,7 @@ def main():
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
 
-        dist = emb_inferred.model.embedding.prior.embeddings.distribution
+        dist = emb_inferred.model.stimuli.prior.embeddings.distribution
         print('    Inferred prior scale: {0:.4f}'.format(
             dist.distribution.distribution.scale[0, 0]
         ))
@@ -263,7 +263,7 @@ def plot_frame(
     z_limits = [-z_max, z_max]
 
     # Apply and plot Procrustes affine transformation of posterior.
-    dist = emb_inferred.model.embedding.posterior.embeddings
+    dist = emb_inferred.model.stimuli.posterior.embeddings
     loc, cov = unpack_mvn(dist)
     r, t = psiz.utils.procrustes_2d(
         emb_true.z, loc, scale=False, n_restart=30
@@ -417,13 +417,13 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58
         )
     )
-    embedding.build([None, None, None])
+    stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -435,10 +435,10 @@ def ground_truth(n_stimuli, n_dim):
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     emb = psiz.models.Proxy(model=model)
 
-    scale_sample = np.std(emb.model.embedding.embeddings.numpy())
+    scale_sample = np.std(emb.model.stimuli.embeddings.numpy())
     print(
         '\n  Requested scale: {0:.4f}'
         '\n  Sampled scale: {1:.4f}\n'.format(

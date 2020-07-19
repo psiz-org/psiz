@@ -186,8 +186,8 @@ def main():
         )
         test_loss[i_frame] = test_metrics['loss']
 
-        z = emb_inferred.model.embedding.embeddings.mode().numpy()
-        if emb_inferred.model.embedding.mask_zero:
+        z = emb_inferred.model.stimuli.embeddings.mode().numpy()
+        if emb_inferred.model.stimuli.mask_zero:
             z = z[:, 1:, :]
         z0 = z[0]
         z1 = z[1]
@@ -249,7 +249,7 @@ def main():
 def ground_truth(n_stimuli, n_group):
     """Return a ground truth embedding."""
     n_dim = 4
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=58
@@ -276,7 +276,7 @@ def ground_truth(n_stimuli, n_group):
             (.2, .2, 1.8, 1.8)
         ))
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 
 
@@ -321,7 +321,7 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    embedding = psiz.keras.layers.EmbeddingGroup(
+    stimuli = psiz.keras.layers.EmbeddingGroup(
         n_group=n_group, embedding=embedding_variational
     )
 
@@ -338,7 +338,7 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
         )
     )
     model = psiz.models.Rank(
-        embedding=embedding, kernel=kernel, n_sample_test=3
+        stimuli=stimuli, kernel=kernel, n_sample_test=3
     )
     return model
 

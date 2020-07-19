@@ -125,7 +125,7 @@ def test_select(ground_truth):
     np.testing.assert_allclose(x, prop, rtol=1e-6, atol=.005)
 
         # Old approach. TODO
-        # prob_all_2 = self.embedding.outcome_probability(
+        # prob_all_2 = self.stimuli.outcome_probability(
         #     docket, group_id=group_id
         # )
         # prob_all_old = prob_all_2.data

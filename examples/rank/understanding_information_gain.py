@@ -139,7 +139,7 @@ def draw_scenario(fig, gs, row, case_data):
 
     ax = fig.add_subplot(gs[row, 0])
     # Draw model state.
-    dist = model.embedding.embeddings
+    dist = model.stimuli.embeddings
     loc, cov = unpack_mvn(dist, mask_zero=True)
     plot_bivariate_normal(
         ax, loc, cov, c=color_arr, r=1.96, lw=lw
@@ -229,7 +229,7 @@ def build_model(case=0):
         z_circle = np.vstack((np.ones([1, 2]), z_circle))
 
     prior_scale = .17
-    embedding = psiz.keras.layers.EmbeddingNormalDiag(
+    stimuli = psiz.keras.layers.EmbeddingNormalDiag(
         n_stimuli+1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
@@ -247,8 +247,8 @@ def build_model(case=0):
             trainable=False
         )
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
-    model.embedding.build([None, None, None])
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    model.stimuli.build([None, None, None])
     
 
     if case == 0:
@@ -277,8 +277,8 @@ def build_model(case=0):
         scale[4, :] = .03
 
     # Assign scenario variables.
-    model.embedding.loc.assign(loc)
-    model.embedding.untransformed_scale.assign(
+    model.stimuli.loc.assign(loc)
+    model.stimuli.untransformed_scale.assign(
         tfp.math.softplus_inverse(scale)
     )
     return model

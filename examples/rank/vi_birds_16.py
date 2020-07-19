@@ -172,7 +172,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
             loc_trainable=False,
         )
     )
-    embedding = EmbeddingVariationalLog(
+    stimuli = EmbeddingVariationalLog(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
@@ -189,7 +189,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
         )
     )
     model = psiz.models.Rank(
-        embedding=embedding, kernel=kernel, n_sample_test=10
+        stimuli=stimuli, kernel=kernel, n_sample_test=10
     )
     return model
 
@@ -215,7 +215,7 @@ def draw_figure(fig, model, catalog):
     ax = fig.add_subplot(gs[0, 0])
 
     # Determine embedding limits.
-    dist = model.embedding.posterior.embeddings
+    dist = model.stimuli.posterior.embeddings
     loc, cov = unpack_mvn(dist)
 
     z_max = 1.3 * np.max(np.abs(loc))

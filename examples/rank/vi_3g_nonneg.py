@@ -191,7 +191,7 @@ def main():
                 concentration_trainable=False,
             )
         )
-        embedding = EmbeddingVariationalLog(
+        stimuli = EmbeddingVariationalLog(
             posterior=embedding_posterior, prior=embedding_prior,
             kl_weight=kl_weight, kl_n_sample=30,
         )
@@ -221,7 +221,7 @@ def main():
             )
         )
         model = psiz.models.Rank(
-            embedding=embedding, kernel=kernel, n_sample_test=3
+            stimuli=stimuli, kernel=kernel, n_sample_test=3
         )
         emb_inferred = psiz.models.Proxy(model=model)
 
@@ -318,7 +318,7 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
@@ -343,7 +343,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
             (.2, .2, 1.8, 1.8)
         ))
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     emb = psiz.models.Proxy(model=model)
     return emb
 
@@ -368,13 +368,13 @@ def plot_frame(
 
     f0_ax2 = fig0.add_subplot(gs[2:5, 0:2])
     psiz.visualize.heatmap_embeddings(
-        fig0, f0_ax2, emb_inferred.model.embedding
+        fig0, f0_ax2, emb_inferred.model.stimuli
     )
 
     f0_ax3 = fig0.add_subplot(gs[0:2, 3:6])
     i_dim = 0
     psiz.visualize.embedding_output_dimension(
-        fig0, f0_ax3, emb_inferred.model.embedding, i_dim
+        fig0, f0_ax3, emb_inferred.model.stimuli, i_dim
     )
     f0_ax3.set_title('Dim. {0}'.format(i_dim))
         

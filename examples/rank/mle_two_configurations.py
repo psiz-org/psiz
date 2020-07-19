@@ -103,13 +103,13 @@ def main():
     }
 
     # Define model.
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True
     )
     kernel = psiz.keras.layers.Kernel(
         similarity=psiz.keras.layers.ExponentialSimilarity()
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     emb_inferred = psiz.models.Proxy(model=model)
 
     # Infer embedding.
@@ -139,7 +139,7 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
@@ -154,7 +154,7 @@ def ground_truth(n_stimuli, n_dim):
             gamma_initializer=tf.keras.initializers.Constant(0.001),
         )
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     emb = psiz.models.Proxy(model)
     return emb
 

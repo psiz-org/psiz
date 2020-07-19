@@ -38,15 +38,15 @@ import psiz
 
 # Load observations from a predefined dataset.
 (obs, catalog) = psiz.datasets.load('birds-16')
-# Create a TensorFlow embedding layer.
+# Create a TensorFlow embedding layer for the stimuli.
 # NOTE: Since we will use masking, we increment n_stimuli by one.
-embedding = tf.keras.layers.Embedding(
+stimuli = tf.keras.layers.Embedding(
     catalog.n_stimuli+1, mask_zero=True
 )
 # Use a default kernel (exponential with p-norm).
 kernel = psiz.keras.layers.Kernel()
 # Create a Rank model that subclasses TensorFlow Keras Model.
-model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
 # Wrap the model in convenient proxy class.
 emb = psiz.models.Proxy(model)
 # Compile the model.
@@ -126,7 +126,7 @@ PsiZ is built around the TensorFlow ecosystem and strives to follow TensorFlow i
 
 Package-defined models are built by sub-classing `tf.keras.Model`. Components of a model are built using the `tf.keras.layers.Layer` API. A free parameter is implemented as a `tf.Variable`.
 
-In PsiZ, a model can be thought as having two major components. The first component is a psychological embedding which describes how the agent of interest perceives similarity between set of stimuli. This component includes a conventional embedding and a kernel that defines similarities between embedding points. The second component describes how similarities are converted into an observed behavior, such as rankings or ratings.
+In PsiZ, a model can be thought as having two major components. The first component is a psychological embedding which describes how the agent of interest perceives similarity between set of stimuli. This component includes a conventional embedding (representing the stimuli in psychological space) and a kernel that defines similarities between embedding points. The second component describes how similarities are converted into an observed behavior, such as rankings or ratings.
 
 PsiZ includes a number of predefined layers to facilitate the construction of arbitrary models. For example, there are four predefined similarity functions (implemented as subclasses of `tf.keras.layers.Layer`) which can be used to create a kernel:
 

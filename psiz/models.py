@@ -142,11 +142,11 @@ class Proxy(object):
     @property
     def z(self):
         """Getter method for `z`."""
-        z = self.model.embedding.embeddings
+        z = self.model.stimuli.embeddings
         if isinstance(z, tfp.distributions.Distribution):
             z = z.mode()  # NOTE: This will not work for all distributions.
         z = z.numpy()
-        if self.model.embedding.mask_zero:
+        if self.model.stimuli.mask_zero:
             if len(z.shape) == 2:
                 z = z[1:]
             else:
@@ -491,13 +491,13 @@ class PsychologicalEmbedding(tf.keras.Model):
     """
 
     def __init__(
-            self, embedding=None, kernel=None, behavior=None,
+            self, stimuli=None, kernel=None, behavior=None,
             n_sample_test=1, **kwargs):
         """Initialize.
 
         Arguments:
-            embedding: An embedding layer. Must agree with
-                n_stimuli, n_dim, n_group.
+            stimuli: An embedding layer representing the stimuli. Must
+                agree with n_stimuli, n_dim, n_group.
             attention (optional): An attention layer. Must agree with
                 n_stimuli, n_dim, n_group.
             distance (optional): A distance kernel function layer.
@@ -513,13 +513,13 @@ class PsychologicalEmbedding(tf.keras.Model):
         super().__init__(**kwargs)
 
         # Assign layers.
-        self.embedding = embedding
+        self.stimuli = stimuli  # TODO restruct
         self.kernel = kernel
         self.behavior = behavior
 
         self.n_sample_test = n_sample_test
 
-        if type(self.embedding) is psiz.keras.layers.EmbeddingGroup:
+        if type(self.stimuli) is psiz.keras.layers.EmbeddingGroup:
             self.group_embedding = True
         else:
             self.group_embedding = False
@@ -530,20 +530,20 @@ class PsychologicalEmbedding(tf.keras.Model):
     @property
     def n_stimuli(self):
         """Getter method for `n_stimuli`."""
-        n_stimuli = self.embedding.input_dim
-        if self.embedding.mask_zero:
+        n_stimuli = self.stimuli.input_dim
+        if self.stimuli.mask_zero:
             n_stimuli = n_stimuli - 1
         return n_stimuli
 
     @property
     def n_dim(self):
         """Getter method for `n_dim`."""
-        return self.embedding.output_dim
+        return self.stimuli.output_dim
 
     @property
     def n_group(self):
         """Getter method for `n_group`."""
-        return np.max([self.embedding.n_group, self.kernel.n_group])  # TODO add behavior.n_group to list
+        return np.max([self.stimuli.n_group, self.kernel.n_group])  # TODO add behavior.n_group to list
 
     def train_step(self, data):
         """Logic for one training step.
@@ -637,8 +637,8 @@ class PsychologicalEmbedding(tf.keras.Model):
     def get_config(self):
         """Return model configuration."""
         layer_configs = {
-            'embedding': tf.keras.utils.serialize_keras_object(
-                self.embedding
+            'stimuli': tf.keras.utils.serialize_keras_object(
+                self.stimuli
             ),
             'kernel': tf.keras.utils.serialize_keras_object(
                 self.kernel
@@ -673,6 +673,9 @@ class PsychologicalEmbedding(tf.keras.Model):
         built_layers = {}
         for layer_name, layer_config in layer_configs.items():
             layer = tf.keras.layers.deserialize(layer_config)
+            # Convert old saved models.
+            if layer_name == 'embedding':
+                layer_name = 'stimuli'
             built_layers[layer_name] = layer
 
         model_config.update(built_layers)
@@ -803,9 +806,9 @@ class Rank(PsychologicalEmbedding):
 
         # Inflate coordinates.
         if self.group_embedding:
-            z = self.embedding([stimulus_set, membership])
+            z = self.stimuli([stimulus_set, membership])
         else:
-            z = self.embedding(stimulus_set)
+            z = self.stimuli(stimulus_set)
         # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
         z = tf.transpose(z, perm=[0, 3, 1, 2])
         # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
@@ -884,7 +887,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         if compile:
             model.compile(loss=loss, optimizer=optimizer)
         # Build lazy layers in order to set weights.
-        model.embedding.build(input_shape=[None, None, None])
+        model.stimuli.build(input_shape=[None, None, None])
 
         # Load weights.
         model.load_weights(fp_weights).expect_partial()
@@ -893,86 +896,10 @@ def load_model(filepath, custom_objects={}, compile=False):
         emb = model
         
     else:
-        # Storage format for psiz_version < 0.4.0.
-        f = h5py.File(filepath, 'r')
-        # Common attributes.
-        embedding_type = f['embedding_type'][()]
-        n_stimuli = f['n_stimuli'][()]
-        n_dim = f['n_dim'][()]
-        n_group = f['n_group'][()]
-
-        # Create embedding layer.
-        z = f['z']['value'][()]
-        z_trainable = f['z']['trainable'][()]
-        embedding = psiz.keras.layers.Embedding(
-            input_dim=n_stimuli+1, output_dim=n_dim, trainable=z_trainable,
-            mask_zero=True
+        raise ValueError(
+            'The argument `filepath` must be a directory. The provided'
+            ' {0} is not a directory.'.format(filepath)
         )
-
-        # Create attention layer.
-        if 'phi_1' in f['phi']:
-            fit_group = f['phi']['phi_1']['trainable'][()]
-            w = f['phi']['phi_1']['value'][()]
-        else:
-            fit_group = f['phi']['w']['trainable'][()]
-            w = f['phi']['w']['value'][()]
-        attention = psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group, fit_group=fit_group
-        )
-        # OLD code for reference.
-        # for p_name in f['phi']:
-        #     # Patch for older models using `phi_1` variable name.
-        #     if p_name == 'phi_1':
-        #         p_name_new = 'w'
-        #     else:
-        #         p_name_new = p_name
-        #     for name in f['phi'][p_name]:
-        #         embedding._phi[p_name_new][name] = f['phi'][p_name][name][()]
-
-        # Create similarity layer.
-        theta_config = {}
-        theta_value = {}
-        for p_name in f['theta']:
-            theta_config['fit_' + p_name] = f['theta'][p_name]['trainable'][()]
-            theta_value[p_name] = f['theta'][p_name]['value'][()]
-            # for name in f['theta'][p_name]:
-            #     embedding._theta[p_name][name] = f['theta'][p_name][name][()]
-
-        dist_config = {}
-        dist_config.update({'trainable': theta_config.pop('fit_rho', True)})
-        distance = psiz.keras.layers.WeightedMinkowski(**dist_config)
-        if embedding_type == 'Exponential':
-            similarity = psiz.keras.layers.ExponentialSimilarity(
-                **theta_config
-            )
-        elif embedding_type == 'HeavyTailed':
-            similarity = psiz.keras.layers.HeavyTailedSimilarity(
-                **theta_config
-            )
-        elif embedding_type == 'StudentsT':
-            similarity = psiz.keras.layers.StudentsTSimilarity(**theta_config)
-        elif embedding_type == 'Inverse':
-            similarity = psiz.keras.layers.InverseSimilarity(**theta_config)
-        else:
-            raise ValueError(
-                'No class found matching the provided `embedding_type`.'
-            )
-
-        model = Rank(
-            embedding=embedding, attention=attention, distance=distance,
-            similarity=similarity
-        )
-        emb = Proxy(model=model)  # TODO factor this out.
-
-        # Set weights.
-        z_pad = np.vstack(
-            [np.zeros([1, n_dim]), z]
-        )
-        emb.model.embedding.embeddings.assign(z_pad)
-        emb.w = w
-        emb.theta = theta_value
-
-        f.close()
 
     return emb
 

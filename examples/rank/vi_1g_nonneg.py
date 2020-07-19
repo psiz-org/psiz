@@ -147,7 +147,7 @@ def main():
                 concentration_trainable=False,
             )
         )
-        embedding = EmbeddingVariationalLog(
+        stimuli = EmbeddingVariationalLog(
             posterior=embedding_posterior, prior=embedding_prior,
             kl_weight=kl_weight, kl_n_sample=30,
         )
@@ -165,7 +165,7 @@ def main():
             )
         )
         model = psiz.models.Rank(
-            embedding=embedding, kernel=kernel, n_sample_test=3
+            stimuli=stimuli, kernel=kernel, n_sample_test=3
         )
         emb_inferred = psiz.models.Proxy(model=model)
 
@@ -249,14 +249,14 @@ def plot_frame(
     # Visualize embedding point estimates.
     f0_ax3 = fig0.add_subplot(gs[1, 0:2])
     psiz.visualize.heatmap_embeddings(
-        fig0, f0_ax3, emb_inferred.model.embedding
+        fig0, f0_ax3, emb_inferred.model.stimuli
     )
 
     # Visualize embedding distributions for the first dimension.
     f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
     psiz.visualize.embedding_output_dimension(
-        fig0, f0_ax4, emb_inferred.model.embedding, i_dim
+        fig0, f0_ax4, emb_inferred.model.stimuli, i_dim
     )
 
     gs.tight_layout(fig0)
@@ -321,14 +321,14 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58
         ),
         trainable=False
     )
-    embedding.build([None, None, None])
+    stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -341,10 +341,10 @@ def ground_truth(n_stimuli, n_dim):
             trainable=False
         )
     )
-    model = psiz.models.Rank(embedding=embedding, kernel=kernel)
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     emb = psiz.models.Proxy(model=model)
 
-    scale_sample = np.std(emb.model.embedding.embeddings.numpy())
+    scale_sample = np.std(emb.model.stimuli.embeddings.numpy())
     return emb
 
 

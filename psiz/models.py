@@ -962,7 +962,7 @@ def load_model(filepath, custom_objects={}, compile=False):
             embedding=embedding, attention=attention, distance=distance,
             similarity=similarity
         )
-        emb = Proxy(model=model)
+        emb = Proxy(model=model)  # TODO factor this out.
 
         # Set weights.
         z_pad = np.vstack(

@@ -25,6 +25,7 @@ default, a `psiz_examples` directory is created in your home directory.
 
 """
 
+import itertools
 import os
 from pathlib import Path
 import shutil
@@ -36,7 +37,7 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-tf.config.experimental_run_functions_eagerly(True)
+# tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -45,10 +46,11 @@ def main():
     fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
-    n_dim = 3
+    n_dim = 2
     n_restart = 3
-    n_trial = 10000
-    batch_size = 100
+    n_trial = 1000
+    epochs = 1000
+    batch_size = 128
     n_frame = 1
 
     # Directory preparation.
@@ -61,7 +63,11 @@ def main():
 
     # Generate a random docket of trials.
     generator = psiz.generator.RandomRate(n_stimuli)
-    stimulus_set = generator.generate(n_trial)
+    
+    stimulus_set_0 = np.asarray(list(itertools.combinations(np.arange(n_stimuli), 2)))
+    stimulus_set_1 = generator.generate(20)
+    stimulus_set = np.vstack([stimulus_set_0, stimulus_set_1])
+    n_trial = stimulus_set.shape[0]
     group = np.ones([n_trial], dtype=int)
 
     # Simulate similarity judgments.
@@ -80,7 +86,7 @@ def main():
     # obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
     w = np.ones(n_trial)
     locs_train = np.zeros([n_trial], dtype=bool)
-    locs_train[0:9000] = True
+    locs_train[0:-20] = True
     locs_val = np.logical_not(locs_train)
 
     # Create dataset.
@@ -147,17 +153,12 @@ def main():
         )
         callbacks = [early_stop, cb_board]
 
+        model = build_model(n_stimuli, n_dim)
+
         # Infer embedding.
-        stimuli = tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
-        kernel = psiz.keras.layers.Kernel(
-            similarity=psiz.keras.layers.ExponentialSimilarity()
-        )
-        model = psiz.models.Rate(stimuli=stimuli, kernel=kernel)
         model.compile(**compile_kwargs)
         history = model.fit(
-            ds_obs_train, validation_data=ds_obs_val, epochs=50,
+            ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
             callbacks=callbacks, verbose=1
         )
 
@@ -227,7 +228,60 @@ def ground_truth(n_stimuli, n_dim):
             gamma_initializer=tf.keras.initializers.Constant(0.001),
         )
     )
-    return psiz.models.Rate(stimuli=stimuli, kernel=kernel)
+    behavior = psiz.keras.layers.RateBehavior(
+        lower_initializer=tf.keras.initializers.Constant(0.0),
+        upper_initializer=tf.keras.initializers.Constant(1.0),
+        midpoint_initializer=tf.keras.initializers.Constant(.5),
+        rate_initializer=tf.keras.initializers.Constant(5.),
+    )
+    print('Ground truth rate: {0:.2f}'.format(behavior.rate.numpy()))
+    return psiz.models.Rate(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+
+
+def build_model(n_stimuli, n_dim):
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
+    )
+    kernel = psiz.keras.layers.Kernel(
+        similarity=psiz.keras.layers.ExponentialSimilarity()
+    )
+    behavior = BehaviorLog()
+    model = psiz.models.Rate(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='BehaviorLog'
+)
+class BehaviorLog(psiz.keras.layers.RateBehavior):
+    """Sub-class for logging weight metrics."""
+
+    def call(self, inputs):
+        """Call."""
+        outputs = super().call(inputs)
+
+        # self.add_metric(
+        #     self.lower,
+        #     aggregation='mean', name='lower'
+        # )
+        # self.add_metric(
+        #     self.upper,
+        #     aggregation='mean', name='upper'
+        # )
+        self.add_metric(
+            self.midpoint,
+            aggregation='mean', name='midpoint'
+        )
+        self.add_metric(
+            self.rate,
+            aggregation='mean', name='rate'
+        )
+
+        return outputs
 
 
 if __name__ == "__main__":

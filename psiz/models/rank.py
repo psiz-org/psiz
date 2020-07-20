@@ -50,7 +50,6 @@ class Rank(PsychologicalEmbedding):
             ValueError: If arguments are invalid.
 
         """
-        behavior = kwargs.pop('behavior', None)
         # Initialize behavioral component.
         if behavior is None:
             behavior = psiz.keras.layers.RankBehavior()

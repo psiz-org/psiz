@@ -118,7 +118,7 @@ class RateBehavior(tf.keras.layers.Layer):
     def __init__(
             self, lower_initializer=None, upper_initializer=None,
             midpoint_initializer=None, rate_initializer=None,
-            lower_trainable=True, upper_trainable=True,
+            lower_trainable=False, upper_trainable=False,
             midpoint_trainable=True, rate_trainable=True, **kwargs):
         """Initialize.
 
@@ -147,7 +147,7 @@ class RateBehavior(tf.keras.layers.Layer):
         self.lower = self.add_weight(
             shape=[], initializer=self.lower_initializer,
             trainable=self.lower_trainable, name="lower", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
         self.upper_trainable = upper_trainable
@@ -157,7 +157,7 @@ class RateBehavior(tf.keras.layers.Layer):
         self.upper = self.add_weight(
             shape=[], initializer=self.upper_initializer,
             trainable=self.upper_trainable, name="upper", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+            constraint=pk_constraints.LessEqualThan(max_value=1.0)
         )
 
         self.midpoint_trainable = midpoint_trainable
@@ -170,17 +170,16 @@ class RateBehavior(tf.keras.layers.Layer):
             shape=[], initializer=self.midpoint_initializer,
             trainable=self.midpoint_trainable, name="midpoint",
             dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+            constraint=pk_constraints.MinMax(0.0, 1.0)
         )
 
         self.rate_trainable = rate_trainable
         if rate_initializer is None:
-            rate_initializer = tf.keras.initializers.Constant(10.)
+            rate_initializer = tf.keras.initializers.Constant(5.)
         self.rate_initializer = tf.keras.initializers.get(rate_initializer)
         self.rate = self.add_weight(
             shape=[], initializer=self.rate_initializer,
             trainable=self.rate_trainable, name="rate", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
         )
 
     def call(self, inputs):

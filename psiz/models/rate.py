@@ -50,7 +50,6 @@ class Rate(PsychologicalEmbedding):
             ValueError: If arguments are invalid.
 
         """
-        behavior = kwargs.pop('behavior', None)
         # Initialize behavioral component.
         if behavior is None:
             behavior = psiz.keras.layers.RateBehavior()
@@ -81,11 +80,12 @@ class Rate(PsychologicalEmbedding):
         else:
             z = self.stimuli(stimulus_set)
         # TensorShape([batch_size, 2, n_dim])
-        z_0, z_1 = tf.split(z, [1, 1], 1)
 
+        # Divide up stimuli for kernel call.
+        z_list = tf.unstack(z, axis=1)
         # Pass through similarity kernel.
-        sim_qr = self.kernel([z_0, z_1, group])
-        # TensorShape([batch_size, 1])
+        sim_qr = self.kernel([z_list[0], z_list[1], group])
+        # TensorShape([batch_size,])
 
         # Predict rating of stimulus pair.
         rating = self.behavior([sim_qr, group])

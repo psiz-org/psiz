@@ -108,9 +108,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.generator.Agent(emb_true, group_id=0)
-    agent_interm = psiz.generator.Agent(emb_true, group_id=1)
-    agent_expert = psiz.generator.Agent(emb_true, group_id=2)
+    agent_novice = psiz.generator.Agent(emb_true.model, group_id=0)
+    agent_interm = psiz.generator.Agent(emb_true.model, group_id=1)
+    agent_expert = psiz.generator.Agent(emb_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)

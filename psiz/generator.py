@@ -43,8 +43,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import NearestNeighbors
 import tensorflow as tf
 
-from psiz.trials import RankDocket, RateDocket, stack
-from psiz.simulate import Agent
+from psiz.trials import RankDocket, stack
 from psiz.preprocess import remove_catch_trials
 from psiz.utils import ProgressBarRe, choice_wo_replace
 

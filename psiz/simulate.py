@@ -41,7 +41,7 @@ class Agent(object):
 
     """
 
-    def __init__(self, embedding, group_id=0, agent_id=0):
+    def __init__(self, model, group_id=0, agent_id=0):
         """Initialize.
 
         Arguments:

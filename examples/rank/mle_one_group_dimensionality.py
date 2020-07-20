@@ -50,7 +50,7 @@ def main():
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.simulate.Agent(emb_true)
+    agent = psiz.simulate.Agent(emb_true.model)
     obs = agent.simulate(docket)
 
     simmat_true = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)

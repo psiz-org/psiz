@@ -70,7 +70,7 @@ def docket_0():
 
 def test_simulate(ground_truth, docket_0):
     """Test simulation of agent."""
-    agent = simulate.Agent(ground_truth)
+    agent = simulate.Agent(ground_truth.model)
     obs = agent.simulate(docket_0)
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], docket_0.stimulus_set[:, 0]
@@ -101,7 +101,7 @@ def test_select(ground_truth):
     n_select = 2 * np.ones(n_trial, dtype=np.int32)
     docket = RankDocket(stimulus_set, n_select=n_select)
 
-    agent = simulate.Agent(ground_truth)
+    agent = simulate.Agent(ground_truth.model)
     prob_all = np.array((
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),

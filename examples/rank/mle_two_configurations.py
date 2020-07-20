@@ -73,7 +73,7 @@ def main():
     docket = psiz.trials.stack([docket_2c1, docket_8c2])
 
     # Simulate similarity judgments.
-    agent = psiz.simulate.Agent(emb_true)
+    agent = psiz.simulate.Agent(emb_true.model)
     obs = agent.simulate(docket)
 
     # Partition observations into 80% train, 10% validation and 10% test set.

@@ -770,16 +770,16 @@ class AttentionKernel(tf.keras.layers.Layer):
                     shape = (batch_size, [n, m, ...] n_dim)
                 z_1: A tf.Tensor denoting a set of vectors.
                     shape = (batch_size, [n, m, ...] n_dim)
-                membership: A tf.Tensor denoting group assignments.
+                group: A tf.Tensor denoting group assignments.
                     shape = (batch_size, k)
 
         """
         z_0 = inputs[0]
         z_1 = inputs[1]
-        membership = inputs[2]
+        group = inputs[2]
 
         # Expand attention weights.
-        attention = self.attention(membership)
+        attention = self.attention(group)
         # Add singleton inner dimensions that are not related to batch_size
         # or vector dimensionality.
         z_shape = tf.shape(z_0)
@@ -852,7 +852,7 @@ class GroupAttentionVariational(Variational):
         Grab `group_id` only.
 
         Arguments:
-            inputs: A Tensor denoting trial `membership`.
+            inputs: A Tensor denoting a trial's group membership.
 
         """
         group_id = inputs[:, 0]

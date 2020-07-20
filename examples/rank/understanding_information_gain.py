@@ -78,11 +78,11 @@ def main():
         eligable_list = np.arange(model.n_stimuli, dtype=np.int32)
         stimulus_set = candidate_list(eligable_list, n_reference)
         n_candidate = stimulus_set.shape[0]
-        membership = np.zeros(n_candidate)
+        group = np.zeros(n_candidate)
         docket = psiz.trials.RankDocket(
             stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
         )
-        ds_docket = docket.as_dataset(membership=membership)
+        ds_docket = docket.as_dataset(group)
 
         # Compute expected information gain from prediction samples.
         y_pred = tf.stack([

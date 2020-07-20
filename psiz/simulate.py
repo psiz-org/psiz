@@ -82,8 +82,8 @@ class Agent(object):
         group_id = self.group_id * np.ones((docket.n_trial), dtype=np.int32)
 
         # Call model with TensorFlow formatted docket.
-        membership = np.stack((group_id, agent_id), axis=-1)
-        inputs = docket.as_dataset(membership, all_outcomes=True)
+        group = np.stack((group_id, agent_id), axis=-1)
+        inputs = docket.as_dataset(group, all_outcomes=True)
         probs = self.embedding.model(inputs)
         outcome_distribution = tfp.distributions.Categorical(
             probs=probs

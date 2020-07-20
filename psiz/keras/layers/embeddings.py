@@ -784,7 +784,7 @@ class EmbeddingVariational(Variational):
     package='psiz.keras.layers', name='EmbeddingGroup'
 )
 class EmbeddingGroup(tf.keras.layers.Layer):
-    """An embedding that handles membership-specific embeddings."""
+    """An embedding that handles group-specific embeddings."""
     def __init__(
             self, n_group=1, group_level=0, embedding=None, **kwargs):
         """Initialize.

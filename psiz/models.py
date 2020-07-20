@@ -797,19 +797,19 @@ class Rank(PsychologicalEmbedding):
                 is_select: dtype=tf.bool, the shape implies the
                     maximum number of selected stimuli in the data
                     shape=(batch_size, n_max_select, n_outcome)
-                membership: dtype=tf.int32, Integers indicating the
-                    group and agent membership of a trial.
-                    shape=(batch_size, 2)
+                group: dtype=tf.int32, Integers indicating the
+                    group membership of a trial.
+                    shape=(batch_size, k)
 
         """
         # Grab inputs.
         stimulus_set = inputs['stimulus_set']
         is_select = inputs['is_select'][:, 1:, :]
-        membership = inputs['membership']
+        group = inputs['group']
 
         # Inflate coordinates.
         if self.group_embedding:
-            z = self.stimuli([stimulus_set, membership])
+            z = self.stimuli([stimulus_set, group])
         else:
             z = self.stimuli(stimulus_set)
         # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
@@ -817,7 +817,7 @@ class Rank(PsychologicalEmbedding):
         z_q, z_r = tf.split(z, [1, max_n_reference], 1)
 
         # Pass through similarity kernel.
-        sim_qr = self.kernel([z_q, z_r, membership])
+        sim_qr = self.kernel([z_q, z_r, group])
         # TensorShape([batch_size, n_ref, n_outcome])
 
         # Zero out similarities involving placeholder IDs.

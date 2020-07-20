@@ -564,11 +564,11 @@ class RankDocket(RankTrials):
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
-    def as_dataset(self, membership, all_outcomes=True):
+    def as_dataset(self, group, all_outcomes=True):
         """Return TensorFlow dataset.
 
         Arguments:
-            membership: ND array indicating membership information for
+            group: ND array indicating group membership information for
                 each trial.
             all_outcomes (optional): Boolean indicating whether all
                 possible outcomes (along third dimension) should be
@@ -589,7 +589,7 @@ class RankDocket(RankTrials):
                     np.expand_dims(self.is_select(compress=False), axis=2),
                     dtype=tf.bool
                 ),
-                'membership': tf.constant(membership, dtype=tf.int32)
+                'group': tf.constant(group, dtype=tf.int32)
             }
         else:
             stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
@@ -599,7 +599,7 @@ class RankDocket(RankTrials):
                     np.expand_dims(self.is_select(compress=False), axis=2),
                     dtype=tf.bool
                 ),
-                'membership': tf.constant(membership, dtype=tf.int32)
+                'group': tf.constant(group, dtype=tf.int32)
             }
         return x
 
@@ -1006,7 +1006,7 @@ class RankObservations(RankTrials):
                 'is_select': np.expand_dims(
                     self.is_select(compress=False), axis=2
                 ),
-                'membership': np.stack(
+                'group': np.stack(
                     (self.group_id, self.agent_id), axis=-1
                 )
             }
@@ -1020,7 +1020,7 @@ class RankObservations(RankTrials):
                 'is_select': np.expand_dims(
                     self.is_select(compress=False), axis=2
                 ),
-                'membership': np.stack(
+                'group': np.stack(
                     (self.group_id, self.agent_id), axis=-1
                 )
             }

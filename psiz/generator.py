@@ -359,8 +359,8 @@ def _select_query_references(
         ref_idx_eligable, (n_candidate, n_reference), ref_prob
     )
     docket = RankDocket(stimulus_set, n_select=n_select)
-    membership = group_id * np.ones(n_candidate)
-    ds_docket = docket.as_dataset(membership=membership)
+    group = group_id * np.ones(n_candidate)
+    ds_docket = docket.as_dataset(group)
 
     # Compute expected information gain from prediction samples.
     y_pred = tf.stack([

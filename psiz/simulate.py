@@ -45,7 +45,7 @@ class Agent(object):
         """Initialize.
 
         Arguments:
-            embedding: A concrete instance of a PsychologicalEmedding
+            model: A concrete instance of a PsychologicalEmedding
                 object.
             group_id (optional): If the provided embedding was inferred
                 for more than one group, an index can be provided to
@@ -57,7 +57,7 @@ class Agent(object):
                 shape = (n_trial,)
 
         """
-        self.embedding = embedding
+        self.model = model
         self.group_id = group_id
         self.agent_id = agent_id
 
@@ -84,7 +84,7 @@ class Agent(object):
         # Call model with TensorFlow formatted docket.
         group = np.stack((group_id, agent_id), axis=-1)
         inputs = docket.as_dataset(group, all_outcomes=True)
-        probs = self.embedding.model(inputs)
+        probs = self.model(inputs)
         outcome_distribution = tfp.distributions.Categorical(
             probs=probs
         )

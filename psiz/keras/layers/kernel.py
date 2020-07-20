@@ -75,28 +75,29 @@ class WeightedMinkowski(tf.keras.layers.Layer):
 
         Arguments:
             inputs:
-                z_q: A set of embedding points.
-                    shape = (batch_size, n_dim [, n_sample])
-                z_r: A set of embedding points.
-                    shape = (batch_size, n_dim [, n_sample])
+                z_0: A tf.Tensor denoting a set of vectors.
+                    shape = (batch_size, [n, m, ...] n_dim)
+                z_1: A tf.Tensor denoting a set of vectors.
+                    shape = (batch_size, [n, m, ...] n_dim)
                 w: The weights allocated to each dimension
                     in a weighted minkowski metric.
-                    shape = (batch_size, n_dim [, n_sample])
+                    shape = (batch_size, [n, m, ...] n_dim)
+
+        Returns:
+            shape = (batch_size, [n, m, ...])
 
         """
-        z_q = inputs[0]  # Query.
-        z_r = inputs[1]  # References.
+        z_0 = inputs[0]  # Query.
+        z_1 = inputs[1]  # References.
         w = inputs[2]    # Dimension weights.
 
-        # Expand rho.
-        batch_size = tf.shape(z_q)[0]
-        n_compare = tf.shape(z_r)[2]
-        n_outcome = tf.shape(z_q)[3]
-        rho = self.rho * tf.ones([batch_size, 1, n_compare, n_outcome])
+        # Expand rho to shape=(batch_size, [n, m, ...]).
+        rho = self.rho * tf.ones(tf.shape(z_0)[0:-1])
 
         # Weighted Minkowski distance.
-        x = z_q - z_r
-        d_qr = wpnorm(x, w, rho)[:, 0]
+        x = z_0 - z_1
+        d_qr = wpnorm(x, w, rho)
+        d_qr = tf.squeeze(d_qr, [-1])
         return d_qr
 
     def get_config(self):
@@ -182,7 +183,7 @@ class GroupAttention(tf.keras.layers.Layer):
 
         if fit_group is None:
             if self.n_group == 1:
-                fit_group = False
+                fit_group = False  # TODO default should always be train
             else:
                 fit_group = True
         self.fit_group = fit_group
@@ -670,22 +671,17 @@ class Kernel(tf.keras.layers.Layer):
 
         Arguments:
             inputs:
-                z_0:
-                z_1:
-                membership: (unused)
+                z_0: A tf.Tensor denoting a set of vectors.
+                    shape = (batch_size, [n, m, ...] n_dim)
+                z_1: A tf.Tensor denoting a set of vectors.
+                    shape = (batch_size, [n, m, ...] n_dim)
 
         """
         z_0 = inputs[0]
         z_1 = inputs[1]
 
         # Create identity attention weights.
-        batch_size = tf.shape(z_0)[0]
-        n_dim = tf.shape(z_0)[1]
-        # NOTE: We must fill in the `dimensionality` dimension in order to
-        # keep shapes compatible between op input and calculated input
-        # gradient.
-        # TODO can we always assume 4D?
-        attention = tf.ones([batch_size, n_dim, 1, 1])
+        attention = tf.ones_like(z_0)
 
         # Compute distance between query and references.
         dist_qr = self.distance([z_0, z_1, attention])
@@ -770,9 +766,12 @@ class AttentionKernel(tf.keras.layers.Layer):
 
         Arguments:
             inputs:
-                z_0:
-                z_1:
-                membership:
+                z_0: A tf.Tensor denoting a set of vectors.
+                    shape = (batch_size, [n, m, ...] n_dim)
+                z_1: A tf.Tensor denoting a set of vectors.
+                    shape = (batch_size, [n, m, ...] n_dim)
+                membership: A tf.Tensor denoting group assignments.
+                    shape = (batch_size, k)
 
         """
         z_0 = inputs[0]
@@ -781,9 +780,16 @@ class AttentionKernel(tf.keras.layers.Layer):
 
         # Expand attention weights.
         attention = self.attention(membership)
-        # Add singleton dimensions for n_reference and n_outcome axis.
-        attention = tf.expand_dims(attention, axis=2)
-        attention = tf.expand_dims(attention, axis=3)
+        # Add singleton inner dimensions that are not related to batch_size
+        # or vector dimensionality.
+        z_shape = tf.shape(z_0)
+        n_expand = tf.rank(z_0) - tf.rank(attention)
+        # shape_exp = [z_shape[0], 1, 1, z_shape[-1]]
+        batch_shape = tf.expand_dims(z_shape[0], axis=0)
+        dim_shape = tf.expand_dims(z_shape[-1], axis=0)
+        shape_exp = tf.ones(n_expand, dtype=z_shape[0].dtype)
+        shape_exp = tf.concat((batch_shape, shape_exp, dim_shape), axis=0)
+        attention = tf.reshape(attention, shape_exp)
 
         # Compute distance between query and references.
         dist_qr = self.distance([z_0, z_1, attention])

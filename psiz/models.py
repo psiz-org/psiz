@@ -178,14 +178,12 @@ class Proxy(object):
             d[k] = v.numpy()
         return d
 
-    def _broadcast_ready(self, z):
-        """Create necessary trailing singleton dimensions for `z`."""
-        if z.ndim == 2:
-            z = np.expand_dims(z, axis=2)
-            z = np.expand_dims(z, axis=3)
-        elif z.ndim == 3:
-            z = np.expand_dims(z, axis=3)
-        return z
+    def _broadcast_ready(self, input, rank):
+        """Create necessary singleton dimensions for `input`."""
+        n_increase = rank - len(input.shape)
+        for i_rank in range(n_increase):
+            input.expand_dims(input, axis=1)
+        return input
 
     def similarity(self, z_q, z_r, group_id=None):
         """Return similarity between two lists of points.
@@ -194,11 +192,14 @@ class Proxy(object):
         current similarity parameters. This method implements the
         logic for handling arguments of different shapes.
 
+        The arguments `z_q` and `z_r` must be at least rank 2, and have
+        the same rank.
+
         Arguments:
             z_q: A set of embedding points.
-                shape = (n_trial, n_dim, [1, n_sample])  TODO
+                shape = (n_trial, [m, n, ...] n_dim)
             z_r: A set of embedding points.
-                shape = (n_trial, n_dim, [n_reference, n_sample])  TODO
+                shape = (n_trial, [m, n, ...] n_dim)
             group_id (optional): The group ID for each sample. Can be a
                 scalar or an array of shape = (n_trial,).
 
@@ -217,8 +218,6 @@ class Proxy(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
         group_id = np.expand_dims(group_id, axis=1)
-        z_q = self._broadcast_ready(z_q)
-        z_r = self._broadcast_ready(z_r)
 
         # Pass through kernel function.
         sim_qr = self.model.kernel([
@@ -226,7 +225,7 @@ class Proxy(object):
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(group_id, dtype=tf.int32)
         ]).numpy()
-        return np.squeeze(sim_qr)
+        return sim_qr
 
     def distance(self, z_q, z_r, group_id=None):
         """Return distance between two lists of points.
@@ -258,9 +257,7 @@ class Proxy(object):
             else:
                 group_id = group_id.astype(dtype=np.int32)
         attention = self.w[group_id, :]  # TODO brittle assumption
-        z_q = self._broadcast_ready(z_q)
-        z_r = self._broadcast_ready(z_r)
-        attention = self._broadcast_ready(attention)
+        attention = self._broadcast_ready(attention, rank=len(z_q.shape))  # TODO verify
 
         # TODO brittle assumption
         d_qr = self.model.kernel.distance([
@@ -268,7 +265,7 @@ class Proxy(object):
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ]).numpy()
-        return np.squeeze(d_qr)
+        return d_qr
 
     # def _check_obs(self, obs):
     #     """Check observerations.
@@ -513,7 +510,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         super().__init__(**kwargs)
 
         # Assign layers.
-        self.stimuli = stimuli  # TODO restruct
+        self.stimuli = stimuli
         self.kernel = kernel
         self.behavior = behavior
 
@@ -543,7 +540,13 @@ class PsychologicalEmbedding(tf.keras.Model):
     @property
     def n_group(self):
         """Getter method for `n_group`."""
-        return np.max([self.stimuli.n_group, self.kernel.n_group])  # TODO add behavior.n_group to list
+        stimuli_n_group = 1
+        if hasattr(self.stimuli, 'n_group'):
+            stimuli_n_group = self.stimuli.n_group
+        behavior_n_group = 1  # TODO add behavior.n_group to list
+        return np.max([
+            stimuli_n_group, self.kernel.n_group, behavior_n_group
+        ])
 
     def train_step(self, data):
         """Logic for one training step.
@@ -810,15 +813,12 @@ class Rank(PsychologicalEmbedding):
         else:
             z = self.stimuli(stimulus_set)
         # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
-        z = tf.transpose(z, perm=[0, 3, 1, 2])
-        # TensorShape([batch_size, n_dim, n_ref + 1, n_outcome])
-    
-        max_n_reference = tf.shape(z)[2] - 1
-        # TODO can we always assume this split pattern?
-        z_q, z_r = tf.split(z, [1, max_n_reference], 2)
+        max_n_reference = tf.shape(z)[1] - 1
+        z_q, z_r = tf.split(z, [1, max_n_reference], 1)
 
         # Pass through similarity kernel.
         sim_qr = self.kernel([z_q, z_r, membership])
+        # TensorShape([batch_size, n_ref, n_outcome])
 
         # Zero out similarities involving placeholder IDs.
         is_present = tf.math.not_equal(stimulus_set, 0)

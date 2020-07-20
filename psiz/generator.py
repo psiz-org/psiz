@@ -367,7 +367,8 @@ class RandomRate(DocketGenerator):
         stimulus_set = choice_wo_replace(
             idx_eligable, (n_trial, 2), prob
         )
-        return RateDocket(stimulus_set)
+        # return RateDocket(stimulus_set)
+        return stimulus_set
 
 
 def _select_query_references(

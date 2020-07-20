@@ -53,7 +53,7 @@ def main():
     agent = psiz.simulate.Agent(emb_true)
     obs = agent.simulate(docket)
 
-    simmat_true = psiz.utils.similarity_matrix(emb_true.similarity, emb_true.z)
+    simmat_true = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
@@ -94,7 +94,7 @@ def main():
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
-    simmat_infer = psiz.utils.similarity_matrix(
+    simmat_infer = psiz.utils.pairwise_matrix(
         emb_inferred.similarity, emb_inferred.z
     )
     r_squared = psiz.utils.matrix_comparison(

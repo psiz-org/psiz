@@ -24,8 +24,6 @@ Functions:
         distribution.
     pairwise_matrix: Return the similarity matrix characterizing
         the embedding.
-    similarity_matrix: Return the similarity matrix characterizing
-        the embedding. Deprecated use pairwise_matrix.
     matrix_comparison: Compute correlation between two matrices.
     compare_models: Compare the similarity structure between two
         embedding models.
@@ -155,11 +153,11 @@ def assess_convergence(
             emb_list[i_part] = curr_emb
 
             if not first_part:
-                simmat_0 = similarity_matrix(
+                simmat_0 = pairwise_matrix(
                     emb_list[i_part - 1].similarity,
                     emb_list[i_part - 1].z
                 )
-                simmat_1 = similarity_matrix(
+                simmat_1 = pairwise_matrix(
                     emb_list[i_part].similarity, emb_list[i_part].z
                 )
                 val[i_shuffle, i_part] = matrix_comparison(
@@ -199,9 +197,6 @@ def pairwise_matrix(kernel_fn, z):
     pmat = kernel_fn(z_a, z_b)
     pmat = pmat.reshape(n_stimuli, n_stimuli)
     return pmat
-
-
-similarity_matrix = pairwise_matrix
 
 
 def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
@@ -285,8 +280,8 @@ def compare_models(
     def sim_func_b(z_q, z_ref):
         return model_b.similarity(z_q, z_ref, group_id=group_id_b)
 
-    simmat_a = similarity_matrix(sim_func_a, model_a.z)
-    simmat_b = similarity_matrix(sim_func_b, model_b.z)
+    simmat_a = pairwise_matrix(sim_func_a, model_a.z)
+    simmat_b = pairwise_matrix(sim_func_b, model_b.z)
 
     r_squared = matrix_comparison(
         simmat_a, simmat_b, score=score, elements=elements

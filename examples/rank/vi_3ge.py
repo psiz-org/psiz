@@ -269,7 +269,7 @@ def ground_truth(n_stimuli, n_group):
             trainable=False,
         )
     )
-    kernel.attention.w.assign(
+    kernel.attention.embeddings.assign(
         np.array((
             (1.8, 1.8, .2, .2),
             (1., 1., 1., 1.),

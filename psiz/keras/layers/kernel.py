@@ -188,13 +188,14 @@ class GroupAttention(tf.keras.layers.Layer):
                 fit_group = True
         self.fit_group = fit_group
 
-        self.w = self.add_weight(
+        self.embeddings = self.add_weight(
             shape=(self.n_group, self.n_dim),
             initializer=self.embeddings_initializer,
             trainable=fit_group, name='w', dtype=K.floatx(),
             regularizer=self.embeddings_regularizer,
             constraint=self.embeddings_constraint
         )
+        self.mask_zero = False
 
     def call(self, inputs):
         """Call.
@@ -206,7 +207,7 @@ class GroupAttention(tf.keras.layers.Layer):
 
         """
         group_id = inputs[:, 0]
-        return tf.gather(self.w, group_id)
+        return tf.gather(self.embeddings, group_id)
 
     def get_config(self):
         """Return layer configuration."""
@@ -875,13 +876,12 @@ class GroupAttentionVariational(Variational):
         """Getter method for `n_group`"""
         return self.posterior.embeddings.distribution.loc.shape[1]
 
-    # TODO deprecate `w` in favor of `embeddings`?
     @property
-    def w(self):
-        """Getter method for embeddings posterior mode."""
-        return self.posterior.embeddings_mode
+    def mask_zero(self):
+        """Getter method for embeddings `mask_zero`."""
+        return self.posterior.mask_zero
 
     @property
     def embeddings(self):
         """Getter method for embeddings posterior mode."""
-        return self.posterior.embeddings_mode
+        return self.posterior.embeddings

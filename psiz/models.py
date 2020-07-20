@@ -46,7 +46,6 @@ import h5py
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.keras.callbacks import History
 from tensorflow.python.keras.engine import data_adapter
 from tensorflow.python.eager import backprop
 import tensorflow_probability as tfp
@@ -157,7 +156,18 @@ class Proxy(object):
     def w(self):
         """Getter method for `w`."""
         if hasattr(self.model.kernel, 'attention'):
-            w = self.model.kernel.attention.w.numpy()
+            w = self.model.kernel.attention.embeddings
+            if isinstance(w, tfp.distributions.Distribution):
+                if isinstance(w.distribution, tfp.distributions.LogitNormal):
+                    # For logit-normal distribution, use median instead of
+                    # mode. 
+                    # `median = logistic(loc)`.
+                    w = tf.math.sigmoid(w.distribution.loc)
+                else:
+                    w = w.mode()  # NOTE: The mode may be undefined.
+            w = w.numpy()
+            if self.model.kernel.attention.mask_zero:
+                    w = w[1:]
         else:
             w = np.ones([1, self.n_dim])
         return w

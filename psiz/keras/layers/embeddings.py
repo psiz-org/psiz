@@ -210,11 +210,6 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
         })
         return config
 
-    @property
-    def embeddings_mode(self):
-        """Getter method for mode of `embeddings`."""
-        return self.embeddings.mode()
-
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='EmbeddingNormalDiag'
@@ -449,13 +444,6 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         )
         # Reify output using samples.
         return dist_batch.sample()
-
-    @property
-    def embeddings_mode(self):
-        """Getter method for mode of `embeddings`."""
-        # Use median as approximation of mode. For logit-normal distribution,
-        # `median = logistic(loc)`. TODO
-        return tf.math.sigmoid(self.embeddings.distribution.loc)
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -725,11 +713,6 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         })
         return config
 
-    @property
-    def embeddings_mode(self):
-        """Getter method for mode of `embeddings`."""
-        return self.embeddings.mode()
-
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='EmbeddingVariational'
@@ -773,11 +756,6 @@ class EmbeddingVariational(Variational):
     def embeddings(self):
         """Getter method for (posterior) embeddings."""
         return self.posterior.embeddings
-    
-    @property
-    def embeddings_mode(self):
-        """Getter method for embeddings posterior mode."""
-        return self.posterior.embeddings_mode
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -969,11 +947,6 @@ class EmbeddingShared(tf.keras.layers.Layer):
             config['embedding']
         )
         return cls(**config)
-
-    @property
-    def embeddings_mode(self):
-        """Getter method for mode of `embeddings`."""
-        return self._embedding.embeddings.mode()
 
     @property
     def embeddings(self):

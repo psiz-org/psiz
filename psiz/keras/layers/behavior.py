@@ -18,6 +18,7 @@
 Classes:
     RankBehavior: A rank behavior layer.
     RateBehavior: A rate behavior layer.
+    SortBehavior: A sort behavior layer.
 
 """
 
@@ -183,7 +184,7 @@ class RateBehavior(tf.keras.layers.Layer):
         )
 
     def call(self, inputs):
-        """Return probability of a rating trial.
+        """Return predicted rating of a trial.
 
         Arguments:
             inputs:
@@ -225,4 +226,54 @@ class RateBehavior(tf.keras.layers.Layer):
                 self.rate_initializer
             ),
         })
+        return config
+
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.layers', name='SortBehavior'
+)
+class SortBehavior(tf.keras.layers.Layer):
+    """A sort behavior layer.
+
+    TODO
+
+    """
+
+    def __init__(
+            self, lower_initializer=None, upper_initializer=None,
+            midpoint_initializer=None, rate_initializer=None,
+            lower_trainable=True, upper_trainable=True,
+            midpoint_trainable=True, rate_trainable=True, **kwargs):
+        """Initialize.
+
+        Arguments:
+            TODO
+            kwargs (optional): Additional keyword arguments.
+
+        """
+        super(SortBehavior, self).__init__(**kwargs)
+        raise NotImplementedError
+
+    def call(self, inputs):
+        """Return probability of outcome.
+
+        Arguments:
+            inputs:
+                sim_qr: A tensor containing the precomputed
+                    similarities between the query stimuli and
+                    corresponding reference stimuli (only 1 reference).
+                    shape = (batch_size, 1, 1)
+
+        Returns:
+            probs: The probabilites as determined by a parameterized
+                logistic function.
+
+        """
+        raise NotImplementedError
+        return None
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        # config.update({})  TODO
         return config

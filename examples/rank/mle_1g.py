@@ -76,7 +76,7 @@ def main():
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_cce', patience=15, mode='min', restore_best_weights=True
+        'val_cce', patience=30, mode='min', restore_best_weights=True
     )
 
     compile_kwargs = {

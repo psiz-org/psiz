@@ -13,14 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""TensorFlow probability distributions specific initialization file.
+"""Model initialization file."""
 
-Modules:
-    inv_softplus_normal
-    gamma
-
-"""
-
-from psiz.distributions.inv_softplus_normal import InvSoftplusNormal
-from psiz.distributions.gamma import Gamma
-from psiz.distributions.truncated_normal import TruncatedNormal
+from psiz.models.base import Proxy
+from psiz.models.base import PsychologicalEmbedding
+from psiz.models.base import load_model
+from psiz.models.rank import Rank
+from psiz.models.rate import Rate
+from psiz.models.sort import Sort

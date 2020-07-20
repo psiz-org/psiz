@@ -337,6 +337,40 @@ class ActiveRank(DocketGenerator):
         return docket, expected_ig
 
 
+class RandomRate(DocketGenerator):
+    """A trial generator that blindly samples trials."""
+
+    def __init__(self, n_stimuli, n_reference=2, n_select=1):
+        """Initialize.
+
+        Arguments:
+            n_stimuli: A scalar indicating the total number of unique
+                stimuli.
+
+        """
+        DocketGenerator.__init__(self)
+
+        self.n_stimuli = n_stimuli
+
+    def generate(self, n_trial):
+        """Return generated trials based on provided arguments.
+
+        Arguments:
+            n_trial: A scalar indicating the number of trials to
+                generate.
+
+        Returns:
+            A RateDocket object.
+
+        """
+        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
+        prob = np.ones([self.n_stimuli]) / self.n_stimuli
+        stimulus_set = choice_wo_replace(
+            idx_eligable, (n_trial, 2), prob
+        )
+        return RateDocket(stimulus_set)
+
+
 def _select_query_references(
         i_query, model, group_id, query_idx_arr, query_idx_count_arr,
         n_reference, n_select, n_candidate, n_sample, priority, mask_q):

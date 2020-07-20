@@ -47,7 +47,7 @@ def main():
     n_stimuli = 30
     n_dim = 3
     n_restart = 3
-    n_trial = 2000
+    n_trial = 10000
     batch_size = 100
     n_frame = 1
 
@@ -80,7 +80,7 @@ def main():
     # obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
     w = np.ones(n_trial)
     locs_train = np.zeros([n_trial], dtype=bool)
-    locs_train[0:1800] = True
+    locs_train[0:9000] = True
     locs_val = np.logical_not(locs_train)
 
     # Create dataset.
@@ -157,7 +157,7 @@ def main():
         model = psiz.models.Rate(stimuli=stimuli, kernel=kernel)
         model.compile(**compile_kwargs)
         history = model.fit(
-            ds_obs_train, validation_data=ds_obs_val, epochs=30,
+            ds_obs_train, validation_data=ds_obs_val, epochs=50,
             callbacks=callbacks, verbose=1
         )
 

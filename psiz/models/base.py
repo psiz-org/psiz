@@ -630,8 +630,12 @@ class PsychologicalEmbedding(tf.keras.Model):
         y_pred = tf.reduce_mean(y_pred, axis=0)
 
         # Updates stateful loss metrics.
+        regularization_losses = (
+            tf.reduce_sum(self.losses) / self.n_sample_test
+        )
         self.compiled_loss(
-            y, y_pred, sample_weight, regularization_losses=self.losses
+            y, y_pred, sample_weight,
+            regularization_losses=[regularization_losses]
         )
 
         self.compiled_metrics.update_state(y, y_pred, sample_weight)

@@ -33,6 +33,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+import tensorflow_probability as tfp
 
 
 def heatmap_embeddings(fig, ax, embedding, cmap=None):
@@ -50,7 +51,7 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
 
     if hasattr(embedding, 'posterior'):
         # Handle distribution.
-        z_mode = embedding.embeddings.numpy()
+        z_mode = embedding.embeddings.mode().numpy()
         if embedding.posterior.mask_zero:
             z_mode = z_mode[1:]
     else:
@@ -93,7 +94,10 @@ def embedding_output_dimension(fig, ax, embedding, idx, c='b'):
         c (optional): Color of interval marks.
 
     """
-    point_estimate = embedding.embeddings.numpy()
+    if isinstance(embedding.embeddings, tfp.distributions.Distribution):
+        point_estimate = embedding.embeddings.mode().numpy()
+    else:
+        point_estimate = embedding.embeddings.numpy()
     y_max = np.max(point_estimate)
     point_estimate = point_estimate[:, idx]
 
@@ -175,7 +179,10 @@ def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
         c (optional): Color of interval marks.
 
     """
-    point_estimate = embedding.embeddings.numpy()
+    if isinstance(embedding.embeddings, tfp.distributions.Distribution):
+        point_estimate = embedding.embeddings.mode().numpy()
+    else:
+        point_estimate = embedding.embeddings.numpy()
     y_max = np.max(point_estimate)
     point_estimate = point_estimate[idx, :]
     

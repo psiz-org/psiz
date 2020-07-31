@@ -83,22 +83,30 @@ class Rank(PsychologicalEmbedding):
             z = self.stimuli([stimulus_set, group])
         else:
             z = self.stimuli(stimulus_set)
-        # TensorShape([batch_size, n_ref + 1, n_outcome, n_dim])
-        max_n_reference = tf.shape(z)[1] - 1
-        z_q, z_r = tf.split(z, [1, max_n_reference], 1)
+        
+        # Check `z` shape is:
+        # TensorShape([sample_size, batch_size, n_ref + 1, n_outcome, n_dim])
+        if tf.math.equal(tf.rank(z), 4):
+            z = tf.expand_dims(z, axis=0)
+        max_n_reference = tf.shape(z)[-3] - 1
+        z_q, z_r = tf.split(z, [1, max_n_reference], -3)
 
         # Pass through similarity kernel.
         sim_qr = self.kernel([z_q, z_r, group])
-        # TensorShape([batch_size, n_ref, n_outcome])
+        # TensorShape([sample_size, batch_size, n_ref, n_outcome])
 
         # Zero out similarities involving placeholder IDs.
         is_present = tf.math.not_equal(stimulus_set, 0)
-        is_present = tf.cast(is_present[:, 1:, :], dtype=K.floatx())
+        is_present = tf.expand_dims(
+            tf.cast(is_present[:, 1:, :], dtype=K.floatx()), axis=0
+        )
         sim_qr = sim_qr * is_present
 
         # Compute probability of different behavioral outcomes.
-        is_select = tf.cast(is_select, dtype=K.floatx())
-        is_outcome = tf.cast(is_present[:, 0, :], dtype=K.floatx())
+        is_select = tf.expand_dims(
+            tf.cast(is_select, dtype=K.floatx()), axis=0
+        )
+        is_outcome =tf.cast(is_present[:, :, 0, :], dtype=K.floatx())
         probs = self.behavior([sim_qr, is_select, is_outcome])
         return probs
 

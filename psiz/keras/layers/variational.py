@@ -78,18 +78,19 @@ class Variational(tf.keras.layers.Layer):
             initializer=tf.keras.initializers.Constant(1.),
             trainable=False
         )
+        self._n_sample = ()
 
     def add_kl_loss(self, posterior_dist, prior_dist):
         """Add KL divergence loss."""
         if self.kl_use_exact:
             self.add_loss(
-                lambda: kl_lib.kl_divergence(
+                kl_lib.kl_divergence(
                     posterior_dist, prior_dist
                 ) * self.kl_weight * self.kl_anneal
             )
         else:
             self.add_loss(
-                lambda: self._kl_approximation(
+                self._kl_approximation(
                     posterior_dist, prior_dist
                 ) * self.kl_weight * self.kl_anneal
             )
@@ -132,3 +133,14 @@ class Variational(tf.keras.layers.Layer):
         config['posterior'] = tf.keras.layers.deserialize(config['posterior'])
         config['prior'] = tf.keras.layers.deserialize(config['prior'])
         return cls(**config)
+
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
+        # Set n_sample of constituent layers.
+        self.posterior.n_sample = n_sample
+        self.prior.n_sample = n_sample

@@ -208,8 +208,15 @@ class Proxy(object):
                 points.
 
         """
-        # Prepare inputs to exploit broadcasting.
         n_trial = z_q.shape[0]
+
+        # Add sample_size dimension.
+        if z_q.ndim == 2:
+            # Add singleton dimension for sample size.
+            z_q = np.expand_dims(z_q, axis=0)
+            z_r = np.expand_dims(z_r, axis=0)
+
+        # Prepare inputs to exploit broadcasting.
         if group_id is None:
             group_id = np.zeros((n_trial), dtype=np.int32)
         else:
@@ -225,7 +232,7 @@ class Proxy(object):
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(group_id, dtype=tf.int32)
         ]).numpy()
-        return sim_qr
+        return np.squeeze(sim_qr)
 
     def distance(self, z_q, z_r, group_id=None):
         """Return distance between two lists of points.
@@ -265,7 +272,7 @@ class Proxy(object):
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ]).numpy()
-        return d_qr
+        return np.squeze(d_qr)
 
     # def _check_obs(self, obs):
     #     """Check observerations.
@@ -430,14 +437,6 @@ class Proxy(object):
         """Save the model."""
         self.model.save(filepath, overwrite=overwrite)
 
-    # def subset(self, idx):  TODO DELETE
-    #     """Return subset of embedding."""
-    #     emb = self.clone()
-    #     raise(NotImplementedError)
-    #     # TODO CRITICAL, must handle changes to embedding layer
-    #     emb.z = emb.z[idx, :] # must use assign
-    #     emb.n_stimuli = emb.z.shape[0]
-    #     return emb
 
     def clone(self, custom_objects={}):
         """Clone model."""
@@ -481,15 +480,16 @@ class PsychologicalEmbedding(tf.keras.Model):
         n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.
         n_group: The number of groups.
-        n_sample_test: The number of samples to use during test. This
-            attribute is only relevant if using probabilistic layers.
-            Otherwise it should be kept at the default value of 1.
+        n_sample: The number of samples to draw on probalistic layers.
+            This attribute is only relevant if using probabilistic
+            layers, otherwise it should be kept at the default
+            value of 1.
 
     """
 
     def __init__(
-            self, stimuli=None, kernel=None, behavior=None,
-            n_sample_test=1, **kwargs):
+            self, stimuli=None, kernel=None, behavior=None, n_sample=1,
+            **kwargs):
         """Initialize.
 
         Arguments:
@@ -499,8 +499,10 @@ class PsychologicalEmbedding(tf.keras.Model):
                 n_stimuli, n_dim, n_group.
             distance (optional): A distance kernel function layer.
             similarity (optional): A similarity function layer.
-            n_sample_test (optional): The number of samples from
-                posterior to use during evaluation.
+            n_sample (optional): An integer indicating the
+                number of samples to use on the forward pass. This
+                argument is only relevant for stochastic models (e.g.,
+                variational models).
             kwargs:  Additional key-word arguments.
 
         Raises:
@@ -514,8 +516,6 @@ class PsychologicalEmbedding(tf.keras.Model):
         self.kernel = kernel
         self.behavior = behavior
 
-        self.n_sample_test = n_sample_test
-
         if type(self.stimuli) is psiz.keras.layers.EmbeddingGroup:
             self.group_embedding = True
         else:
@@ -523,6 +523,8 @@ class PsychologicalEmbedding(tf.keras.Model):
 
         # Create convenience pointer to kernel parameters.
         self.theta = self.kernel.theta
+
+        self.n_sample = n_sample
 
     @property
     def n_stimuli(self):
@@ -547,6 +549,18 @@ class PsychologicalEmbedding(tf.keras.Model):
         return np.max([
             stimuli_n_group, self.kernel.n_group, behavior_n_group
         ])
+
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
+        # Set n_sample of constituent layers.
+        self.stimuli.n_sample = n_sample
+        self.kernel.n_sample = n_sample
+        self.behavior.n_sample = n_sample
 
     def train_step(self, data):
         """Logic for one training step.
@@ -574,10 +588,29 @@ class PsychologicalEmbedding(tf.keras.Model):
                 'ignore', category=UserWarning, module=r'.*indexed_slices'
             )
             with backprop.GradientTape() as tape:
-                y_pred = self(x, training=True)
+                # NOTE: It is assumed that the loss uses SUM_OVER_BATCH_SIZE.
+                # In the variational inference case, the loss is essentially
+                # loss = KL - E_cce, wehre E_cce is the expectation of CCE
+                # (i.e., an average over samples). However, the reduction
+                # strategy of SUM_OVER_BATCH_SIZE means that we effectively
+                # have:
+                # loss = KL - (E_cce / batch_size), which is wrong. We need to
+                # proportionately scale KL to correct the equation:
+                # loss = (KL / batch_size) - (E_cce / batch_size)
+                # Since KL (i.e., the prior) also needs to also be scaled to
+                # the take into account a batch update strategy, we must
+                # also divide the KL term by n_batch:
+                # loss = (KL / (batch_size * n_batch)) - (E_cce / batch_size)
+                # or more simply:
+                # loss = kl_weight * KL - (E_cce / batch_size) where,
+                # kl_weight = 1 / train_size.
+
+                # Average over samples.
+                y_pred = tf.reduce_mean(self(x, training=True), axis=0)
                 loss = self.compiled_loss(
                     y, y_pred, sample_weight, regularization_losses=self.losses
                 )
+
             # Custom training steps:
             trainable_variables = self.trainable_variables
             gradients = tape.gradient(loss, trainable_variables)
@@ -604,6 +637,13 @@ class PsychologicalEmbedding(tf.keras.Model):
     def test_step(self, data):
         """The logic for one evaluation step.
 
+        Standard prediction is performmed with one sample. To
+        accommodate variational inference, the log probability of the
+        data is computed by averaging over samples from the model:
+        p(heldout | train) = int_model p(heldout|model) p(model|train)
+                          ~= 1/n * sum_{i=1}^n p(heldout | model_i)
+        where model_i is a draw from the posterior p(model|train).
+
         Arguments:
             data: A nested structure of `Tensor`s.
 
@@ -616,28 +656,14 @@ class PsychologicalEmbedding(tf.keras.Model):
         """
         data = data_adapter.expand_1d(data)
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
-
-        # NOTE: The standard prediction is performmed with one sample. To
-        # accommodate variational inference, the log prob of the data is
-        # computed by averaging samples from the model:
-        # p(heldout | train) = int_model p(heldout|model) p(model|train)
-        #                   ~= 1/n * sum_{i=1}^n p(heldout | model_i)
-        # where model_i is a draw from the posterior p(model|train).
-        y_pred = tf.stack([
-            self(x, training=False)
-            for _ in range(self.n_sample_test)
-        ], axis=0)
-        y_pred = tf.reduce_mean(y_pred, axis=0)
-
-        # Updates stateful loss metrics.
-        regularization_losses = (
-            tf.reduce_sum(self.losses) / self.n_sample_test
-        )
+        # NOTE The first dimension of the Tensor returned from calling the
+        # model is assumed to be `sample_size`. If this is a singleton
+        # dimension, taking the mean is equivalent to a squeeze
+        # operation.
+        y_pred = tf.reduce_mean(self(x, training=False), axis=0)
         self.compiled_loss(
-            y, y_pred, sample_weight,
-            regularization_losses=[regularization_losses]
+            y, y_pred, sample_weight, regularization_losses=self.losses
         )
-
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
@@ -656,7 +682,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         config = {
             'name': self.name,
             'class_name': self.__class__.__name__,
-            'n_sample_test': self.n_sample_test,
+            'n_sample': self.n_sample,
             'layers': copy.deepcopy(layer_configs)
         }
         return config

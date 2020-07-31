@@ -68,12 +68,15 @@ class RankBehavior(tf.keras.layers.Layer):
         is_outcome = inputs[2]
 
         # Initialize sequence log-probability. Note that log(prob=1)=1.
-        batch_size = tf.shape(sim_qr)[0]
-        n_outcome = tf.shape(sim_qr)[2]
-        seq_log_prob = tf.zeros([batch_size, n_outcome], dtype=K.floatx())
+        # sample_size = tf.shape(sim_qr)[0] 
+        # batch_size = tf.shape(sim_qr)[1]
+        # n_outcome = tf.shape(sim_qr)[3]
+        # seq_log_prob = tf.zeros(
+        #     [sample_size, batch_size, n_outcome], dtype=K.floatx()
+        # )
 
         # Compute denominator based on formulation of Luce's choice rule.
-        denom = tf.cumsum(sim_qr, axis=1, reverse=True)
+        denom = tf.cumsum(sim_qr, axis=2, reverse=True)
 
         # Compute log-probability of each selection, assuming all selections
         # occurred. Add fuzz factor to avoid log(0)
@@ -85,7 +88,7 @@ class RankBehavior(tf.keras.layers.Layer):
         log_prob = is_select * log_prob
 
         # Compute sequence log-probability
-        seq_log_prob = tf.reduce_sum(log_prob, axis=1)
+        seq_log_prob = tf.reduce_sum(log_prob, axis=2)
         seq_prob = tf.math.exp(seq_log_prob)
         return is_outcome * seq_prob
 

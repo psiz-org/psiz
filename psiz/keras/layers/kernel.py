@@ -91,7 +91,7 @@ class WeightedMinkowski(tf.keras.layers.Layer):
         z_1 = inputs[1]  # References.
         w = inputs[2]    # Dimension weights.
 
-        # Expand rho to shape=(batch_size, [n, m, ...]).
+        # Expand rho to shape=(sample_size, batch_size, [n, m, ...]).
         rho = self.rho * tf.ones(tf.shape(z_0)[0:-1])
 
         # Weighted Minkowski distance.
@@ -207,7 +207,10 @@ class GroupAttention(tf.keras.layers.Layer):
 
         """
         group_id = inputs[:, 0]
-        return tf.gather(self.embeddings, group_id)
+        # Add singleton dimension for sample_size.
+        output = tf.gather(self.embeddings, group_id)
+        output = tf.expand_dims(output, axis=0)
+        return output
 
     def get_config(self):
         """Return layer configuration."""
@@ -662,6 +665,18 @@ class Kernel(tf.keras.layers.Layer):
         theta.update(self.similarity.theta)
         self.theta = theta
 
+        self._n_sample = ()
+
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
+        self.distance.n_sample = n_sample
+        self.similarity.n_sample = n_sample
+
     def call(self, inputs):
         """Call.
 
@@ -757,6 +772,8 @@ class AttentionKernel(tf.keras.layers.Layer):
         theta.update(self.similarity.theta)
         self.theta = theta
 
+        self._n_sample = ()
+
     def call(self, inputs):
         """Call.
 
@@ -781,15 +798,20 @@ class AttentionKernel(tf.keras.layers.Layer):
 
         # Expand attention weights.
         attention = self.attention(group)
-        # Add singleton inner dimensions that are not related to batch_size
-        # or vector dimensionality.
-        z_shape = tf.shape(z_0)
+    
+        # Add singleton inner dimensions that are not related to sample_size,
+        # batch_size or vector dimensionality.
+        # z_shape = tf.shape(z_0)  # TODO
+        attention_shape = tf.shape(attention)
+        sample_size = tf.expand_dims(attention_shape[0], axis=0)
+        batch_size = tf.expand_dims(attention_shape[1], axis=0)
+        dim_size = tf.expand_dims(attention_shape[-1], axis=0)
+
         n_expand = tf.rank(z_0) - tf.rank(attention)
-        # shape_exp = [z_shape[0], 1, 1, z_shape[-1]]
-        batch_shape = tf.expand_dims(z_shape[0], axis=0)
-        dim_shape = tf.expand_dims(z_shape[-1], axis=0)
-        shape_exp = tf.ones(n_expand, dtype=z_shape[0].dtype)
-        shape_exp = tf.concat((batch_shape, shape_exp, dim_shape), axis=0)
+        shape_exp = tf.ones(n_expand, dtype=attention_shape[0].dtype)
+        shape_exp = tf.concat(
+            (sample_size, batch_size, shape_exp, dim_size), axis=0
+        )
         attention = tf.reshape(attention, shape_exp)
 
         # Compute distance between query and references.
@@ -807,6 +829,17 @@ class AttentionKernel(tf.keras.layers.Layer):
     def n_group(self):
         """Getter method for n_group."""
         return self.attention.n_group
+
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
+        self.attention.n_sample = n_sample
+        self.distance.n_sample = n_sample
+        self.similarity.n_sample = n_sample
 
     def get_config(self):
         """Return layer configuration."""

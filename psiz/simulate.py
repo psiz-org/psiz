@@ -84,7 +84,7 @@ class Agent(object):
         # Call model with TensorFlow formatted docket.
         group = np.stack((group_id, agent_id), axis=-1)
         inputs = docket.as_dataset(group, all_outcomes=True)
-        probs = self.model(inputs)
+        probs = tf.reduce_mean(self.model(inputs), axis=0)
         outcome_distribution = tfp.distributions.Categorical(
             probs=probs
         )

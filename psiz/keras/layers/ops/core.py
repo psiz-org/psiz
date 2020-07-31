@@ -31,19 +31,15 @@ def wpnorm(x, w, p):
 
     Arguments:
         x: A tf.Tensor indicating the vectors. The vector can have
-            arbitrary shape, subject to the constraint that the first
-            dimension is interpretted as the `batch_size` and the last
-            dimension is interpretted as the dimensionality of the
-            vectors which the norm operation is being applied. After
-            the norm operation, the last dimension is collapsed.
-            shape=(batch_size, [n, m, ...] n_dim)
+            arbitrary shape, subject to the following constraint:
+            shape=(sample_size, batch_size, [n, m, ...] n_dim)
         w: A tf.Tensor indicating the dimension weights.
-            shape=(batch_size, [n, m, ...] n_dim)
+            shape=(sample_size, batch_size, [n, m, ...] n_dim)
         p: A parameter controlling the weighted minkowski metric.
-            shape=(batch_size, [n, m, ...])
+            shape=(sample_size, batch_size, [n, m, ...])
 
     Returns:
-        shape=(batch_size, [n, m, ...] 1)
+        shape=(sample_size, batch_size, [n, m, ...] 1)
 
     """
     abs_x = tf.abs(x)
@@ -61,9 +57,8 @@ def wpnorm(x, w, p):
         )
 
         # Gradients of weights `w`.
-        # Determine all axis other than batch_size and last axis (i.e.,
-        # dimensionality of vector). 
-        reduce_axis = tf.range(1, tf.rank(x)-1)
+        # Determine all axis other than sample_size, batch_size and n_dim. 
+        reduce_axis = tf.range(2, tf.rank(x)-1)
         dydw = dy * (
             abs_x_p / (p_exp * y**(p_exp-1) + tf.keras.backend.epsilon())
         )

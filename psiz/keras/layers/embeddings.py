@@ -99,6 +99,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
+        self._n_sample = ()
 
         # Handle initializer.
         if loc_initializer is None:
@@ -168,6 +169,14 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
     #     else:
     #         self.embeddings = self._build_embeddings_distribution(dtype)
     #     self.built = True
+
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
 
     def call(self, inputs):
         """Call."""
@@ -263,7 +272,7 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
             loc=inputs_loc, scale=inputs_scale
         )
         # Reify output using samples.
-        return dist_batch.sample()
+        return dist_batch.sample(self.n_sample)
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -318,7 +327,7 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
             loc=inputs_loc, scale=inputs_scale
         )
         # Reify output using samples.
-        return dist_batch.sample()
+        return dist_batch.sample(self.n_sample)
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -380,7 +389,7 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
             loc=inputs_loc, scale=inputs_scale
         )
         # Reify output using samples.
-        return dist_batch.sample()
+        return dist_batch.sample(self.n_sample)
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -443,7 +452,7 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
             loc=inputs_loc, scale=inputs_scale
         )
         # Reify output using samples.
-        return dist_batch.sample()
+        return dist_batch.sample(self.n_sample)
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -507,7 +516,7 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
             inputs_loc, inputs_scale, self.low, self.high
         )
         # Reify output using samples.
-        return dist_batch.sample()
+        return dist_batch.sample(self.n_sample)
 
     def get_config(self):
         """Return layer configuration."""
@@ -580,6 +589,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
+        self._n_sample = ()
 
         # Handle initializer.
         if concentration_initializer is None:
@@ -664,6 +674,14 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             dist, reinterpreted_batch_ndims=batch_ndims
         )
 
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
+
     def call(self, inputs):
         """Call."""
         dtype = K.dtype(inputs)
@@ -686,7 +704,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             inputs_concentration, inputs_rate
         )
         # Reify output using samples.
-        return dist_batch.sample()
+        return dist_batch.sample(self.n_sample)
 
     def get_config(self):
         """Return layer configuration."""

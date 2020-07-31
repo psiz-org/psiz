@@ -41,15 +41,19 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
+# Modify the following to control GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'vi_birds_16')
+    fp_example = Path.home() / Path('psiz_examples', 'rank', 'vi_birds_16')
     fp_board = fp_example / Path('logs', 'fit', 'r0')
     n_dim = 2
     n_restart = 1
-    epochs = 300
+    epochs = 1000
     batch_size = 128
 
     # Directory preparation.
@@ -100,7 +104,11 @@ def main():
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
-    callbacks = [cb_board]
+    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+        'loss', patience=100, mode='min', restore_best_weights=False,
+        verbose=1
+    )
+    callbacks = [cb_board, cb_early]
 
     # Infer embedding.
     restart_record = proxy.fit(
@@ -113,10 +121,10 @@ def main():
     train_time = restart_record.record['ms_per_epoch'][0]
     val_loss = restart_record.record['val_loss'][0]
 
-    model.n_sample_test = 100
-    test_metrics = proxy.evaluate(
-        obs_test, verbose=0, return_dict=True
-    )
+    tf.keras.backend.clear_session()
+    proxy.model.n_sample = 100
+    proxy.compile(**compile_kwargs)
+    test_metrics = proxy.evaluate(obs_test, verbose=0, return_dict=True)
     test_loss = test_metrics['loss']
     print(
         '    train_loss: {0:.2f} | val_loss: {1:.2f} | '
@@ -188,9 +196,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
             trainable=False
         )
     )
-    model = psiz.models.Rank(
-        stimuli=stimuli, kernel=kernel, n_sample_test=10
-    )
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
     return model
 
 

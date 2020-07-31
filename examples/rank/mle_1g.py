@@ -42,7 +42,7 @@ import psiz
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'mle_1g')
+    fp_example = Path.home() / Path('psiz_examples', 'rank', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 3

@@ -64,13 +64,16 @@ import tensorflow_probability as tfp
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+# tf.config.experimental_run_functions_eagerly(True)  # TODO
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'vi_3g_nonneg')
+    fp_example = Path.home() / Path('psiz_examples', 'rank', 'vi_3g_nonneg')
     fp_board = fp_example / Path('logs', 'fit', 'r0')
     n_stimuli = 30
     n_dim = 4
@@ -108,9 +111,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.generator.Agent(emb_true.model, group_id=0)
-    agent_interm = psiz.generator.Agent(emb_true.model, group_id=1)
-    agent_expert = psiz.generator.Agent(emb_true.model, group_id=2)
+    agent_novice = psiz.simulate.Agent(emb_true.model, group_id=0)
+    agent_interm = psiz.simulate.Agent(emb_true.model, group_id=1)
+    agent_expert = psiz.simulate.Agent(emb_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -170,7 +173,11 @@ def main():
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
-        callbacks = [cb_board]
+        cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+            'loss', patience=100, mode='min', restore_best_weights=False,
+            verbose=1
+        )
+        callbacks = [cb_board, cb_early]
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
@@ -220,23 +227,23 @@ def main():
                 gamma_initializer=tf.keras.initializers.Constant(0.),
             )
         )
-        model = psiz.models.Rank(
-            stimuli=stimuli, kernel=kernel, n_sample_test=3
-        )
+        model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
         emb_inferred = psiz.models.Proxy(model=model)
 
         # Infer model.
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
+            monitor='val_loss', verbose=3, compile_kwargs=compile_kwargs
         )
 
         train_loss[i_frame] = restart_record.record['loss'][0]
         val_loss[i_frame] = restart_record.record['val_loss'][0]
 
         # Test.
-        emb_inferred.model.n_sample_test = 100
+        tf.keras.backend.clear_session()
+        emb_inferred.model.n_sample = 100
+        emb_inferred.compile(**compile_kwargs)
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
@@ -245,13 +252,19 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         def infer_sim_func0(z_q, z_ref):
-            return emb_inferred.similarity(z_q, z_ref, group_id=0)
+            return np.mean(
+                emb_inferred.similarity(z_q, z_ref, group_id=0), axis=0
+            )
 
         def infer_sim_func1(z_q, z_ref):
-            return emb_inferred.similarity(z_q, z_ref, group_id=1)
+            return np.mean(
+                emb_inferred.similarity(z_q, z_ref, group_id=1), axis=0
+            )
 
         def infer_sim_func2(z_q, z_ref):
-            return emb_inferred.similarity(z_q, z_ref, group_id=2)
+            return np.mean(
+                emb_inferred.similarity(z_q, z_ref, group_id=2), axis=0
+            )
 
         simmat_infer = (
             psiz.utils.pairwise_matrix(infer_sim_func0, emb_inferred.z),
@@ -377,19 +390,19 @@ def plot_frame(
         fig0, f0_ax3, emb_inferred.model.stimuli, i_dim
     )
     f0_ax3.set_title('Dim. {0}'.format(i_dim))
-        
-    for i_group in range(n_group):
-        if i_group == 0:
-            c = 'r'
-        elif i_group == 1:
-            c = 'b'
-        elif i_group == 2:
-            c = 'g'
-        ax = fig0.add_subplot(gs[i_group + 2, 2:6])
-        psiz.visualize.embedding_input_dimension(
-            fig0, ax, emb_inferred.model.kernel.attention, i_group, c=c
-        )
-        ax.set_title(group_labels[i_group])
+    # TODO
+    # for i_group in range(n_group):
+    #     if i_group == 0:
+    #         c = 'r'
+    #     elif i_group == 1:
+    #         c = 'b'
+    #     elif i_group == 2:
+    #         c = 'g'
+    #     ax = fig0.add_subplot(gs[i_group + 2, 2:6])
+    #     psiz.visualize.embedding_input_dimension(
+    #         fig0, ax, emb_inferred.model.kernel.attention, i_group, c=c
+    #     )
+    #     ax.set_title(group_labels[i_group])
 
     gs.tight_layout(fig0)
 

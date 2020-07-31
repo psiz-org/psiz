@@ -42,18 +42,22 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
+# Modify the following to control GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'vi_1g')
+    fp_example = Path.home() / Path('psiz_examples', 'rank', 'vi_1g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 2
     n_trial = 2000
     n_restart = 1
-    batch_size = 100
-    n_frame = 7
+    batch_size = 128
+    n_frame = 1
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -134,7 +138,11 @@ def main():
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
-        callbacks = [cb_board]
+        cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+            'loss', patience=100, mode='min', restore_best_weights=False,
+            verbose=1
+        )
+        callbacks = [cb_board, cb_early]
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
@@ -176,16 +184,14 @@ def main():
                 gamma_initializer=tf.keras.initializers.Constant(0.),
             )
         )
-        model = psiz.models.Rank(
-            stimuli=stimuli, kernel=kernel, n_sample_test=100
-        )
+        model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
         emb_inferred = psiz.models.Proxy(model=model)
 
         # Infer embedding.
         restart_record = emb_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=1000,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
+            monitor='loss', verbose=2, compile_kwargs=compile_kwargs
         )
 
         dist = emb_inferred.model.stimuli.prior.embeddings.distribution
@@ -193,9 +199,16 @@ def main():
             dist.distribution.distribution.scale[0, 0]
         ))
 
+        # NOTE: The following are noisy estimates of final train/vak loss.
+        # Less noisy estimates could be obatined by running `evaluate` on
+        # the train and validation set like test in the next block.
         train_loss[i_frame] = restart_record.record['loss'][0]
         train_time[i_frame] = restart_record.record['ms_per_epoch'][0]
         val_loss[i_frame] = restart_record.record['val_loss'][0]
+
+        tf.keras.backend.clear_session()
+        emb_inferred.model.n_sample = 100
+        emb_inferred.compile(**compile_kwargs)
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )

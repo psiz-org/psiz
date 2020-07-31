@@ -42,11 +42,15 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
+# Modify the following to control GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'vi_1g_nonneg')
+    fp_example = Path.home() / Path('psiz_examples', 'rank', 'vi_1g_nonneg')
     fp_board = fp_example / Path('logs', 'fit', 'r0')
     n_stimuli = 30
     n_dim = 2
@@ -126,7 +130,11 @@ def main():
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
-        callbacks = [cb_board]
+        cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+            'loss', patience=100, mode='min', restore_best_weights=False,
+            verbose=1
+        )
+        callbacks = [cb_board, cb_early]
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
@@ -164,9 +172,7 @@ def main():
                 trainable=False
             )
         )
-        model = psiz.models.Rank(
-            stimuli=stimuli, kernel=kernel, n_sample_test=3
-        )
+        model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
         emb_inferred = psiz.models.Proxy(model=model)
 
         # Infer embedding.
@@ -181,7 +187,9 @@ def main():
         val_loss[i_frame] = restart_record.record['val_loss'][0]
         
         # Test.
-        emb_inferred.model.n_sample_test = 100
+        tf.keras.backend.clear_session()
+        emb_inferred.model.n_sample = 100
+        emb_inferred.compile(**compile_kwargs)
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )

@@ -65,11 +65,15 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
+# Modify the following to control GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'vi_3g')
+    fp_example = Path.home() / Path('psiz_examples', 'rank', 'vi_3g')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 4
@@ -77,7 +81,7 @@ def main():
     n_trial = 2000
     n_restart = 1
     batch_size = 128
-    n_frame = 4
+    n_frame = 1 # Set to 4 to see a good range.
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -107,9 +111,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.generator.Agent(emb_true.model, group_id=0)
-    agent_interm = psiz.generator.Agent(emb_true.model, group_id=1)
-    agent_expert = psiz.generator.Agent(emb_true.model, group_id=2)
+    agent_novice = psiz.simulate.Agent(emb_true.model, group_id=0)
+    agent_interm = psiz.simulate.Agent(emb_true.model, group_id=1)
+    agent_expert = psiz.simulate.Agent(emb_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -173,7 +177,11 @@ def main():
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
-        callbacks = [cb_board]
+        cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+            'loss', patience=100, mode='min', restore_best_weights=False,
+            verbose=1
+        )
+        callbacks = [cb_board, cb_early]
 
         # Infer model.
         restart_record = emb_inferred.fit(
@@ -185,7 +193,10 @@ def main():
         train_loss[i_frame] = restart_record.record['loss'][0]
         val_loss[i_frame] = restart_record.record['val_loss'][0]
 
-        emb_inferred.model.n_sample_test = 100
+
+        tf.keras.backend.clear_session()
+        emb_inferred.model.n_sample = 100
+        emb_inferred.compile(**compile_kwargs)
         test_metrics = emb_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
@@ -194,13 +205,19 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         def infer_sim_func0(z_q, z_ref):
-            return emb_inferred.similarity(z_q, z_ref, group_id=0)
+            return np.mean(
+                emb_inferred.similarity(z_q, z_ref, group_id=0), axis=0
+            )
 
         def infer_sim_func1(z_q, z_ref):
-            return emb_inferred.similarity(z_q, z_ref, group_id=1)
+            return np.mean(
+                emb_inferred.similarity(z_q, z_ref, group_id=1), axis=0
+            )
 
         def infer_sim_func2(z_q, z_ref):
-            return emb_inferred.similarity(z_q, z_ref, group_id=2)
+            return np.mean(
+                emb_inferred.similarity(z_q, z_ref, group_id=2), axis=0
+            )
 
         simmat_infer = (
             psiz.utils.pairwise_matrix(infer_sim_func0, emb_inferred.z),
@@ -364,7 +381,7 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
         )
     )
     model = psiz.models.Rank(
-        stimuli=stimuli, kernel=kernel, n_sample_test=3
+        stimuli=stimuli, kernel=kernel, n_sample=1
     )
     return model
 

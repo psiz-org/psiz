@@ -36,7 +36,7 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-# Uncomment the following to control GPU visibility.
+# Modify the following to control GPU visibility.
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 

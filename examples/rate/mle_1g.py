@@ -48,8 +48,8 @@ def main():
     n_stimuli = 30
     n_dim = 2
     n_restart = 3
-    epochs = 200
-    batch_size = 128
+    epochs = 300
+    batch_size = 32
     n_frame = 1
 
     # Directory preparation.
@@ -59,6 +59,9 @@ def main():
         shutil.rmtree(fp_board)
 
     model_true = ground_truth(n_stimuli, n_dim)
+
+    proxy = psiz.models.Proxy(model_true)
+    simmat_true = psiz.utils.pairwise_matrix(proxy.similarity, proxy.z[0])
 
     # Generate a random docket of trials.
     # generator = psiz.generator.RandomRate(n_stimuli)
@@ -70,28 +73,10 @@ def main():
     group = np.ones([n_trial], dtype=int)
     ds_docket = rate_docket_all.as_dataset(group)
     
-    # Simulate similarity judgments.
-    # # agent = psiz.simulate.Agent(model_true.model)
-    # # obs = agent.simulate(docket)
-    # inputs = {
-    #     'stimulus_set': tf.constant(stimulus_set + 1, dtype=tf.int32),
-    #     'group': tf.constant(group, dtype=tf.int32)
-    # }
+    # Simulate noiseless similarity judgments.
     output = np.mean(model_true(ds_docket).numpy(), axis=0)
 
-    proxy = psiz.models.Proxy(model_true)
-    simmat_true = psiz.utils.pairwise_matrix(proxy.similarity, proxy.z[0])
-
-    # Partition observations into 80% train, 10% validation and 10% test set.
-    # obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
-    # w = np.ones(n_trial)
-    # locs_train = np.zeros([n_trial], dtype=bool)
-    # locs_train[0:-20] = True
-    # locs_val = np.logical_not(locs_train)
-
-    obs = psiz.trials.RateObservations(
-        stimulus_set_all, output
-    )
+    obs = psiz.trials.RateObservations(stimulus_set_all, output)
     
     ds_obs_train = obs.as_dataset().shuffle(
         buffer_size=obs.n_trial, reshuffle_each_iteration=True
@@ -111,26 +96,9 @@ def main():
     }
 
     # Infer independent models with increasing amounts of data.
-    n_obs = n_trial * np.ones([n_trial], dtype=int)  # TODO
-    # if n_frame == 1:
-    #     n_obs = np.array([obs_train.n_trial], dtype=int)
-    # else:
-    #     n_obs = np.round(
-    #         np.linspace(15, obs_train.n_trial, n_frame)
-    #     ).astype(np.int64)
-    r2 = np.empty((n_frame))
-    train_mse = np.empty((n_frame))
-    for i_frame in range(n_frame):
-        # include_idx = np.arange(0, n_obs[i_frame])
-        # obs_round_train = obs_train.subset(include_idx)
-        # print(
-        #     '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
-        # )
-        # ds_obs_train = obs_train.as_dataset()
-        # ds_obs_val = obs_val.as_dataset()
-
+    for i_restart in range(30):
         # Use Tensorboard callback.
-        fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
+        fp_board_frame = fp_board / Path('restart_{0}'.format(i_restart))
         cb_board = psiz.keras.callbacks.TensorBoardRe(
             log_dir=fp_board_frame, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
@@ -138,37 +106,34 @@ def main():
         )
         callbacks = [cb_board]
 
-        for i_restart in range(30):
-            model = build_model(n_stimuli, n_dim)
+        
+        model = build_model(n_stimuli, n_dim)
 
-            # Infer embedding.
-            model.compile(**compile_kwargs)
-            history = model.fit(
-                ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0
-            )
+        # Infer embedding.
+        model.compile(**compile_kwargs)
+        history = model.fit(
+            ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0
+        )
 
-            train_mse[i_frame] = history.history['mse'][0]
-            # val_mse[i_frame] = history.history['val_mse'][0]
-            train_metrics = model.evaluate(
-                ds_obs_train, verbose=0, return_dict=True
-            )
-            train_mse[i_frame] = train_metrics['mse']
+        # train_mse = history.history['mse'][0]
+        train_metrics = model.evaluate(
+            ds_obs_train, verbose=0, return_dict=True
+        )
+        train_mse = train_metrics['mse']
 
-            # Compare the inferred model with ground truth by comparing the
-            # similarity matrices implied by each model.
-            proxy_inferred = psiz.models.Proxy(model)
-            simmat_infer = psiz.utils.pairwise_matrix(
-                proxy_inferred.similarity, proxy_inferred.z[0]
-            )
-            r2[i_frame] = psiz.utils.matrix_comparison(
-                simmat_infer, simmat_true, score='r2'
-            )
-            print(
-                '    n_obs: {0:4d} | train_mse: {1:.2f} | '
-                'Correlation (R^2): {2:.2f}'.format(
-                    n_obs[i_frame], train_mse[i_frame], r2[i_frame]
-                )
-            )
+        # Compare the inferred model with ground truth by comparing the
+        # similarity matrices implied by each model.
+        proxy_inferred = psiz.models.Proxy(model)
+        simmat_infer = psiz.utils.pairwise_matrix(
+            proxy_inferred.similarity, proxy_inferred.z[0]
+        )
+        r2 = psiz.utils.matrix_comparison(
+            simmat_infer, simmat_true, score='r2'
+        )
+        print(
+            '    n_obs: {0:4d} | train_mse: {1:.2f} | '
+            'Correlation (R^2): {2:.2f}'.format(n_trial, train_mse, r2)
+        )
 
 
 def ground_truth(n_stimuli, n_dim):

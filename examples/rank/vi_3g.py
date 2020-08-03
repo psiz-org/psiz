@@ -293,11 +293,6 @@ def ground_truth(n_stimuli, n_dim, n_group):
             )
         )
     )
-    # attention = tf.keras.layers.Embedding(
-    #     n_group, n_dim, mask_zero=False,
-    #     embeddings_initializer=tf.keras.initializers.Ones()
-    # )
-    # attention.build([None, None, None])
     kernel = psiz.keras.layers.AttentionKernel(
         group_level=1,
         distance=psiz.keras.layers.WeightedMinkowski(
@@ -307,7 +302,6 @@ def ground_truth(n_stimuli, n_dim, n_group):
         attention=psiz.keras.layers.GroupAttention(
             n_dim=n_dim, n_group=n_group
         ),
-        # attention=attention,
         similarity=psiz.keras.layers.ExponentialSimilarity(
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),

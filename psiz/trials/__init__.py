@@ -15,9 +15,9 @@
 # ============================================================================
 """Trials initialization file."""
 
-from psiz.trials.similarity.base import SimilarityTrials
-from psiz.trials.similarity.rank import stack
-from psiz.trials.similarity.rank import squeeze
-from psiz.trials.similarity.rank import load_trials
+from psiz.trials.core import stack
+from psiz.trials.core import load_trials
 from psiz.trials.similarity.rank import RankDocket
 from psiz.trials.similarity.rank import RankObservations
+from psiz.trials.similarity.rate import RateDocket
+from psiz.trials.similarity.rate import RateObservations

@@ -19,13 +19,10 @@ Classes:
     SimilarityTrials: Abstract class for similarity judgment trials.
 
 Functions:
-    stack: Combine a list of multiple SimilarityTrial objects into one.
-    squeeze: Squeeze indices to be small and consecutive.
-    load_trials: Load a hdf5 file that was saved using the `save` class
-        method.
-    load: Alias for load_trials.
 
 Notes:
+    A `stimulus_id` of `-1` is a reserved value to be used as a
+        placeholder.
     Groups are used to identify distinct populations of agents. For  TODO expand and make general
         example, similarity judgments could be collected from two
         groups: novices and experts. During inference, group
@@ -33,8 +30,6 @@ Notes:
         weights for each group while sharing all other parameters.
 
 TODO:
-    * Add RateDocket class
-    * Add RateObservations class
     * Add SortDocket class
     * Add SortObservations class
     * Add Observations "interface" which requires `as_dataset()` method
@@ -190,3 +185,21 @@ class SimilarityTrials(metaclass=ABCMeta):
         """Return a 2D Boolean array indicating a present stimulus."""
         is_present = np.not_equal(self.stimulus_set, -1)
         return is_present
+
+    def _infer_n_present(self, stimulus_set):
+        """Return the number of stimuli present in each trial.
+
+        Assumes that -1 is a placeholder value.
+
+        Arguments:
+            stimulus_set: A 2D array of stimulus IDs.
+                shape = [n_trial, None]
+
+        Returns:
+            n_present: An integer array indicating the number of
+                stimuli present in each trial.
+                shape = [n_trial, 1]
+
+        """
+        n_present = np.sum(self.is_present(), axis=1)
+        return n_present.astype(dtype=np.int32)

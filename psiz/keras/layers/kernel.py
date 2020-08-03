@@ -42,6 +42,7 @@ import psiz.keras.constraints as pk_constraints
 import psiz.keras.initializers as pk_initializers
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.ops.core import wpnorm
+from psiz.models.base import GroupLevel
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -206,9 +207,8 @@ class GroupAttention(tf.keras.layers.Layer):
             inputs: A Tensor denoting `group_id`.
 
         """
-        group_id = inputs[:, 0]
+        output = tf.gather(self.embeddings, inputs)
         # Add singleton dimension for sample_size.
-        output = tf.gather(self.embeddings, group_id)
         output = tf.expand_dims(output, axis=0)
         return output
 
@@ -645,7 +645,7 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='Kernel'
 )
-class Kernel(tf.keras.layers.Layer):
+class Kernel(GroupLevel):
     """A basic population-wide kernel."""
 
     def __init__(self, distance=None, similarity=None, **kwargs):
@@ -695,6 +695,7 @@ class Kernel(tf.keras.layers.Layer):
         """
         z_0 = inputs[0]
         z_1 = inputs[1]
+        # group = inputs[-1][:, self.group_level]
 
         # Create identity attention weights.
         attention = tf.ones_like(z_0)
@@ -704,11 +705,6 @@ class Kernel(tf.keras.layers.Layer):
         # Compute similarity.
         sim_qr = self.similarity(dist_qr)
         return sim_qr
-
-    @property
-    def n_group(self):
-        """Getter method for n_group."""
-        return 1
 
     def get_config(self):
         """Return layer configuration."""
@@ -734,7 +730,7 @@ class Kernel(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='AttentionKernel'
 )
-class AttentionKernel(tf.keras.layers.Layer):
+class AttentionKernel(GroupLevel):
     """Attention kernel container."""
 
     def __init__(
@@ -754,9 +750,7 @@ class AttentionKernel(tf.keras.layers.Layer):
         super(AttentionKernel, self).__init__(**kwargs)
 
         if attention is None:
-            attention = GroupAttention(
-                n_dim=n_dim, n_group=1
-            )
+            attention = GroupAttention(n_dim=n_dim, n_group=1)
         self.attention = attention
 
         if distance is None:
@@ -794,14 +788,13 @@ class AttentionKernel(tf.keras.layers.Layer):
         """
         z_0 = inputs[0]
         z_1 = inputs[1]
-        group = inputs[2]
+        group = inputs[-1]
 
         # Expand attention weights.
-        attention = self.attention(group)
-    
+        attention = self.attention(group[:, self.group_level])
+ 
         # Add singleton inner dimensions that are not related to sample_size,
         # batch_size or vector dimensionality.
-        # z_shape = tf.shape(z_0)  # TODO
         attention_shape = tf.shape(attention)
         sample_size = tf.expand_dims(attention_shape[0], axis=0)
         batch_size = tf.expand_dims(attention_shape[1], axis=0)
@@ -820,15 +813,10 @@ class AttentionKernel(tf.keras.layers.Layer):
         sim_qr = self.similarity(dist_qr)
         return sim_qr
 
-    @property
-    def n_dim(self):
-        """Getter method for n_dim."""
-        return self.attention.n_dim
-
-    @property
-    def n_group(self):
-        """Getter method for n_group."""
-        return self.attention.n_group
+    # @property
+    # def n_dim(self):
+    #     """Getter method for n_dim."""
+    #     return self.attention.n_dim
 
     @property
     def n_sample(self):
@@ -845,7 +833,7 @@ class AttentionKernel(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'n_dim': int(self.n_dim),
+            # 'n_dim': int(self.n_dim),
             'attention': tf.keras.utils.serialize_keras_object(self.attention),
             'distance': tf.keras.utils.serialize_keras_object(self.distance),
             'similarity': tf.keras.utils.serialize_keras_object(
@@ -889,10 +877,8 @@ class GroupAttentionVariational(Variational):
             inputs: A Tensor denoting a trial's group membership.
 
         """
-        group_id = inputs[:, 0]
-
         # Run forward pass through variational posterior layer.
-        outputs = self.posterior(group_id)
+        outputs = self.posterior(inputs)
 
         # Apply KL divergence between posterior and prior.
         self.add_kl_loss(self.posterior.embeddings, self.prior.embeddings)
@@ -902,12 +888,12 @@ class GroupAttentionVariational(Variational):
     @property
     def n_group(self):
         """Getter method for `n_group`"""
-        return self.posterior.embeddings.distribution.loc.shape[0]
+        return self.posterior.embeddings.distribution.loc.shape[0]  # TODO need better decoupling
 
     @property
     def n_dim(self):
         """Getter method for `n_group`"""
-        return self.posterior.embeddings.distribution.loc.shape[1]
+        return self.posterior.embeddings.distribution.loc.shape[1]  # TODO need better decoupling
 
     @property
     def mask_zero(self):

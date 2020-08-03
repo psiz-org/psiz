@@ -16,6 +16,7 @@
 """Custom TensorFlow layers initialization file."""
 
 from psiz.keras.layers.variational import Variational
+from psiz.keras.layers.stimuli import Stimuli
 from psiz.keras.layers.kernel import WeightedMinkowski
 from psiz.keras.layers.kernel import GroupAttention
 from psiz.keras.layers.kernel import InverseSimilarity
@@ -34,6 +35,5 @@ from psiz.keras.layers.embeddings import EmbeddingLogNormalDiag
 from psiz.keras.layers.embeddings import EmbeddingLogitNormalDiag
 from psiz.keras.layers.embeddings import EmbeddingTruncatedNormalDiag
 from psiz.keras.layers.embeddings import EmbeddingGammaDiag
-from psiz.keras.layers.embeddings import EmbeddingGroup
 from psiz.keras.layers.embeddings import EmbeddingShared
 from psiz.keras.layers.embeddings import EmbeddingVariational

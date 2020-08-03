@@ -25,8 +25,6 @@ Classes:
         embedding layer.
     EmbeddingGammaDiag: A Gamma distribution embedding layer.
     EmbeddingVariational: A variational embedding layer.
-    EmbeddingGroup: An embedding layer that encapsulates multiple
-        group-specific embeddings.
     EmbeddingShared: An embedding layer that shares weights across
         stimuli and dimensions.
 
@@ -871,14 +869,3 @@ class EmbeddingShared(tf.keras.layers.Layer):
             dist, reinterpreted_batch_ndims=batch_ndims
         )
         return dist
-
-
-def _map_embedding_indices(idx, group_id, n, mask_zero):
-    if mask_zero:
-        # Convert to problem without mask.
-        loc_0 = tf.math.not_equal(idx, 0)
-        idx_flat = idx + (group_id * (n-1))
-        idx_flat = idx_flat * tf.cast(loc_0, dtype=tf.int32)
-    else:
-        idx_flat = idx + (group_id * n)
-    return idx_flat

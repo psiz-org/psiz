@@ -21,46 +21,56 @@ Classes:
 
 """
 
+import tensorflow as tf
+import tensorflow_probability as tfp
+
+from psiz.models.base import GroupLevel
+
+
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='Stimuli'
 )
-class Stimuli(tf.keras.layers.Layer):
+class Stimuli(GroupLevel):
     """An embedding that handles group-specific embeddings."""
     def __init__(
-            self, n_group=1, group_level=0, embedding=None, **kwargs):
+            self, embedding=None, **kwargs):
         """Initialize.
         
         Arguments:
-            n_group: Integer indicating the number of groups in the
-                embedding.
-            group_level (optional): Ingeter indicating the group level
-                of the embedding. This will determine which column of
-                `group` is used to route the forward pass.
             embedding: An Embedding layer.
             kwargs: Additional key-word arguments.
  
         """
+        super(Stimuli, self).__init__(**kwargs)
+
         # Check that n_group is compatible with provided embedding layer.
         input_dim = embedding.input_dim
-        input_dim_group = input_dim / n_group
+        input_dim_group = input_dim / self.n_group
         if not input_dim_group.is_integer():
             raise ValueError(
                 'The provided `n_group`={0} is not compatible with the'
                 ' provided embedding. The provided embedding has'
                 ' input_dim={1}, which cannot be cleanly reshaped to'
-                ' (n_group, input_dim/n_group).'.format(n_group, input_dim)
+                ' (n_group, input_dim/n_group).'.format(self.n_group, input_dim)
             )
 
-        super(Stimuli, self).__init__(**kwargs)
         self.input_dim = int(input_dim_group)
-        self.n_group = n_group
-        self.group_level = group_level
-        self._embedding = embedding
+        self.embedding = embedding
+        self._n_sample = ()
+
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
+        self.embedding.n_sample = n_sample
 
     def build(self, input_shape):
         """Build."""
         super().build(input_shape)
-        self._embedding.build(input_shape)
+        self.embedding.build(input_shape)
 
     def call(self, inputs):
         """Call."""
@@ -73,16 +83,14 @@ class Stimuli(tf.keras.layers.Layer):
             indices, group_id, self.input_dim, False
         )
         # Make usual call to embedding layer.
-        return self._embedding(indices_flat)
+        return self.embedding(indices_flat)
 
     def get_config(self):
         """Return configuration."""
         config = super(Stimuli, self).get_config()
         config.update({
-            'n_group': int(self.n_group),
-            'group_level': int(self.group_level),
             'embedding': tf.keras.utils.serialize_keras_object(
-                self._embedding
+                self.embedding
             )
         })
         return config
@@ -116,7 +124,7 @@ class Stimuli(tf.keras.layers.Layer):
             source embedding appropriately.
 
         """
-        z_flat = self._embedding.embeddings
+        z_flat = self.embedding.embeddings
         if isinstance(z_flat, tfp.distributions.Distribution):
             # Assumes Independent distribution.
             z = tfp.distributions.BatchReshape(
@@ -135,15 +143,26 @@ class Stimuli(tf.keras.layers.Layer):
 
     @property
     def output_dim(self):
-        return self._embedding.output_dim
+        return self.embedding.output_dim
 
     @property
     def mask_zero(self):
-        return self._embedding.mask_zero
+        return self.embedding.mask_zero
 
     @property
     def n_stimuli(self):
         n_stimuli = self.input_dim
-        if self._embedding.mask_zero:
+        if self.embedding.mask_zero:
             n_stimuli -= 1
         return n_stimuli
+
+
+def _map_embedding_indices(idx, group_id, n, mask_zero):
+    if mask_zero:
+        # Convert to problem without mask.
+        loc_0 = tf.math.not_equal(idx, 0)
+        idx_flat = idx + (group_id * (n-1))
+        idx_flat = idx_flat * tf.cast(loc_0, dtype=tf.int32)
+    else:
+        idx_flat = idx + (group_id * n)
+    return idx_flat

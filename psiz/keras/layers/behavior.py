@@ -16,6 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
+    Behavior: An abstract behavior layer.
     RankBehavior: A rank behavior layer.
     RateBehavior: A rate behavior layer.
     SortBehavior: A sort behavior layer.
@@ -26,12 +27,34 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
+from psiz.models.base import GroupLevel
+
+
+class Behavior(GroupLevel):
+    """An abstract behavior layer."""
+
+    def __init__(self, **kwargs):
+        """Initialize.
+
+        Arguments:
+            kwargs (optional): Additional keyword arguments.
+
+        """
+        super(Behavior, self).__init__(**kwargs)
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        return config
+
+    def call(self, inputs):
+        raise NotImplementedError
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RankBehavior'
 )
-class RankBehavior(tf.keras.layers.Layer):
+class RankBehavior(Behavior):
     """A rank behavior layer.
 
     Embodies a `_tf_ranked_sequence_probability` call.
@@ -101,7 +124,7 @@ class RankBehavior(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RateBehavior'
 )
-class RateBehavior(tf.keras.layers.Layer):
+class RateBehavior(Behavior):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized
@@ -234,7 +257,7 @@ class RateBehavior(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='SortBehavior'
 )
-class SortBehavior(tf.keras.layers.Layer):
+class SortBehavior(Behavior):
     """A sort behavior layer.
 
     TODO

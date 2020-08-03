@@ -37,7 +37,7 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+tf.config.experimental_run_functions_eagerly(True)
 
 
 def main():
@@ -48,8 +48,7 @@ def main():
     n_stimuli = 30
     n_dim = 2
     n_restart = 3
-    n_trial = 1000
-    epochs = 1000
+    epochs = 200
     batch_size = 128
     n_frame = 1
 
@@ -62,52 +61,40 @@ def main():
     model_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
-    generator = psiz.generator.RandomRate(n_stimuli)
-    
-    stimulus_set_0 = np.asarray(list(itertools.combinations(np.arange(n_stimuli), 2)))
-    stimulus_set_1 = generator.generate(20)
-    stimulus_set = np.vstack([stimulus_set_0, stimulus_set_1])
-    n_trial = stimulus_set.shape[0]
-    group = np.ones([n_trial], dtype=int)
+    # generator = psiz.generator.RandomRate(n_stimuli)
+    # rate_docket_1 = generator.generate(20)
 
+    stimulus_set_all = np.asarray(list(itertools.combinations(np.arange(n_stimuli), 2)))
+    n_trial = stimulus_set_all.shape[0]
+    rate_docket_all = psiz.trials.RateDocket(stimulus_set_all)
+    group = np.ones([n_trial], dtype=int)
+    ds_docket = rate_docket_all.as_dataset(group)
+    
     # Simulate similarity judgments.
-    # agent = psiz.simulate.Agent(model_true.model)
-    # obs = agent.simulate(docket)
-    inputs = {
-        'stimulus_set': tf.constant(stimulus_set + 1, dtype=tf.int32),
-        'group': tf.constant(group, dtype=tf.int32)
-    }
-    output = model_true(inputs).numpy()
+    # # agent = psiz.simulate.Agent(model_true.model)
+    # # obs = agent.simulate(docket)
+    # inputs = {
+    #     'stimulus_set': tf.constant(stimulus_set + 1, dtype=tf.int32),
+    #     'group': tf.constant(group, dtype=tf.int32)
+    # }
+    output = np.mean(model_true(ds_docket).numpy(), axis=0)
 
     proxy = psiz.models.Proxy(model_true)
-    simmat_true = psiz.utils.pairwise_matrix(proxy.similarity, proxy.z)
+    simmat_true = psiz.utils.pairwise_matrix(proxy.similarity, proxy.z[0])
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     # obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
-    w = np.ones(n_trial)
-    locs_train = np.zeros([n_trial], dtype=bool)
-    locs_train[0:-20] = True
-    locs_val = np.logical_not(locs_train)
+    # w = np.ones(n_trial)
+    # locs_train = np.zeros([n_trial], dtype=bool)
+    # locs_train[0:-20] = True
+    # locs_val = np.logical_not(locs_train)
 
-    # Create dataset.
-    inputs_train = {
-        'stimulus_set': tf.constant(stimulus_set[locs_train] + 1, dtype=tf.int32),
-        'group': tf.constant(group[locs_train], dtype=tf.int32)
-    }
-    w_train = tf.constant(w[locs_train])
-    y_train = tf.constant(output[locs_train])
-    ds_obs_train = tf.data.Dataset.from_tensor_slices(
-        (inputs_train, y_train, w_train)
-    ).batch(batch_size, drop_remainder=False)
-
-    inputs_val = {
-        'stimulus_set': tf.constant(stimulus_set[locs_val] + 1, dtype=tf.int32),
-        'group': tf.constant(group[locs_val], dtype=tf.int32)
-    }
-    w_val = tf.constant(w[locs_val])
-    y_val = tf.constant(output[locs_val])
-    ds_obs_val = tf.data.Dataset.from_tensor_slices(
-        (inputs_val, y_val, w_val)
+    obs = psiz.trials.RateObservations(
+        stimulus_set_all, output
+    )
+    
+    ds_obs_train = obs.as_dataset().shuffle(
+        buffer_size=obs.n_trial, reshuffle_each_iteration=True
     ).batch(batch_size, drop_remainder=False)
 
     # Use early stopping.
@@ -133,8 +120,6 @@ def main():
     #     ).astype(np.int64)
     r2 = np.empty((n_frame))
     train_mse = np.empty((n_frame))
-    val_mse = np.empty((n_frame))
-    test_mse = np.empty((n_frame))
     for i_frame in range(n_frame):
         # include_idx = np.arange(0, n_obs[i_frame])
         # obs_round_train = obs_train.subset(include_idx)
@@ -151,72 +136,50 @@ def main():
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
-        callbacks = [early_stop, cb_board]
+        callbacks = [cb_board]
 
-        model = build_model(n_stimuli, n_dim)
+        for i_restart in range(30):
+            model = build_model(n_stimuli, n_dim)
 
-        # Infer embedding.
-        model.compile(**compile_kwargs)
-        history = model.fit(
-            ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
-            callbacks=callbacks, verbose=1
-        )
-
-        train_mse[i_frame] = history.history['mse'][0]
-        val_mse[i_frame] = history.history['val_mse'][0]
-        test_metrics = model.evaluate(
-            ds_obs_val, verbose=0, return_dict=True
-        )
-        test_mse[i_frame] = test_metrics['mse']
-
-        # Compare the inferred model with ground truth by comparing the
-        # similarity matrices implied by each model.
-        proxy_inferred = psiz.models.Proxy(model)
-        simmat_infer = psiz.utils.pairwise_matrix(
-            proxy_inferred.similarity, proxy_inferred.z
-        )
-        r2[i_frame] = psiz.utils.matrix_comparison(
-            simmat_infer, simmat_true, score='r2'
-        )
-        print(
-            '    n_obs: {0:4d} | train_mse: {1:.2f} | '
-            'val_mse: {2:.2f} | test_mse: {3:.2f} | '
-            'Correlation (R^2): {4:.2f}'.format(
-                n_obs[i_frame], train_mse[i_frame],
-                val_mse[i_frame], test_mse[i_frame], r2[i_frame]
+            # Infer embedding.
+            model.compile(**compile_kwargs)
+            history = model.fit(
+                ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0
             )
-        )
 
-    # Plot comparison results.
-    # fig, axes = plt.subplots(1, 2, figsize=(6.5, 3))
+            train_mse[i_frame] = history.history['mse'][0]
+            # val_mse[i_frame] = history.history['val_mse'][0]
+            train_metrics = model.evaluate(
+                ds_obs_train, verbose=0, return_dict=True
+            )
+            train_mse[i_frame] = train_metrics['mse']
 
-    # axes[0].plot(n_obs, train_mse, 'bo-', label='Train CCE')
-    # axes[0].plot(n_obs, val_mse, 'go-', label='Val. CCE')
-    # axes[0].plot(n_obs, test_mse, 'ro-', label='Test CCE')
-    # axes[0].set_title('Model Loss')
-    # axes[0].set_xlabel('Number of Judged Trials')
-    # axes[0].set_ylabel('Loss')
-    # axes[0].legend()
-
-    # axes[1].plot(n_obs, r2, 'ro-')
-    # axes[1].set_title('Model Convergence to Ground Truth')
-    # axes[1].set_xlabel('Number of Judged Trials')
-    # axes[1].set_ylabel(r'Squared Pearson Correlation ($R^2$)')
-    # axes[1].set_ylim(-0.05, 1.05)
-
-    # plt.tight_layout()
-    # fname = fp_example / Path('evolution.tiff')
-    # plt.savefig(
-    #     os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
-    # )
+            # Compare the inferred model with ground truth by comparing the
+            # similarity matrices implied by each model.
+            proxy_inferred = psiz.models.Proxy(model)
+            simmat_infer = psiz.utils.pairwise_matrix(
+                proxy_inferred.similarity, proxy_inferred.z[0]
+            )
+            r2[i_frame] = psiz.utils.matrix_comparison(
+                simmat_infer, simmat_true, score='r2'
+            )
+            print(
+                '    n_obs: {0:4d} | train_mse: {1:.2f} | '
+                'Correlation (R^2): {2:.2f}'.format(
+                    n_obs[i_frame], train_mse[i_frame], r2[i_frame]
+                )
+            )
 
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+        )
     )
+    stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -241,8 +204,10 @@ def ground_truth(n_stimuli, n_dim):
 
 
 def build_model(n_stimuli, n_dim):
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True
+        )
     )
     kernel = psiz.keras.layers.Kernel(
         similarity=psiz.keras.layers.ExponentialSimilarity()

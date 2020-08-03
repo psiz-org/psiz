@@ -37,6 +37,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from psiz.trials.similarity.base import SimilarityTrials
+from psiz.utils import pad_2d_array
 
 
 class RankTrials(SimilarityTrials, metaclass=ABCMeta):
@@ -264,7 +265,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
                 max_n_reference = i_trials.max_n_reference
 
         # Grab relevant information from first entry in list.
-        stimulus_set = _pad_2d_array(
+        stimulus_set = pad_2d_array(
             trials_list[0].stimulus_set, max_n_reference + 1
         )
         n_select = trials_list[0].n_select
@@ -282,7 +283,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         for i_trials in trials_list[1:]:
             stimulus_set = np.vstack((
                 stimulus_set,
-                _pad_2d_array(i_trials.stimulus_set, max_n_reference + 1)
+                pad_2d_array(i_trials.stimulus_set, max_n_reference + 1)
             ))
             n_select = np.hstack((n_select, i_trials.n_select))
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
@@ -512,6 +513,12 @@ class RankDocket(RankTrials):
 
     @classmethod
     def load(cls, filepath):
+        """Load trials.
+
+        Arguments:
+            filepath: The location of the hdf5 file to load.
+
+        """
         f = h5py.File(filepath, "r")
         stimulus_set = f["stimulus_set"][()]
         n_select = f["n_select"][()]
@@ -954,6 +961,12 @@ class RankObservations(RankTrials):
 
     @classmethod
     def load(cls, filepath):
+        """Load trials.
+
+        Arguments:
+            filepath: The location of the hdf5 file to load.
+
+        """
         f = h5py.File(filepath, "r")
         stimulus_set = f["stimulus_set"][()]
         n_select = f["n_select"][()]
@@ -1026,25 +1039,3 @@ def _possible_rank_outcomes(trial_configuration):
         outcomes[i_outcome, n_select:] = dummy_idx
 
     return outcomes
-
-
-def _pad_2d_array(arr, n_column, value=-1):
-    """Pad 2D array with columns composed of -1.
-
-    Argument:
-        arr: A 2D array denoting the stimulus set.
-        n_column: The total number of columns that the array should
-            have.
-        value (optional): The value to use to pad the array.
-
-    Returns:
-        Padded array.
-
-    """
-    n_trial = arr.shape[0]
-    n_pad = n_column - arr.shape[1]
-    if n_pad > 0:
-        pad_mat = value * np.ones((n_trial, n_pad), dtype=np.int32)
-        arr = np.hstack((arr, pad_mat))
-    return arr
-

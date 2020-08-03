@@ -76,10 +76,12 @@ class Rate(PsychologicalEmbedding):
 
         # Inflate coordinates.
         z = self.stimuli([stimulus_set, group])
+        if tf.math.equal(tf.rank(z), 3):
+            z = tf.expand_dims(z, axis=0)
         # TensorShape([sample_size, batch_size, 2, n_dim])
 
         # Divide up stimuli for kernel call.
-        z_list = tf.unstack(z, axis=1)
+        z_list = tf.unstack(z, axis=2)
         # Pass through similarity kernel.
         sim_qr = self.kernel([z_list[0], z_list[1], group])
         # TensorShape([sample_size, batch_size,])

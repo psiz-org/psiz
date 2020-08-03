@@ -36,6 +36,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from psiz.trials.similarity.base import SimilarityTrials
+from psiz.utils import pad_2d_array
 
 
 class RateTrials(SimilarityTrials, metaclass=ABCMeta):
@@ -47,34 +48,25 @@ class RateTrials(SimilarityTrials, metaclass=ABCMeta):
         Arguments:
             stimulus_set: An integer matrix containing indices that
                 indicate the set of stimuli used in each trial. Each
-                row indicates the stimuli used in one trial. The first
-                column is the query stimulus. The remaining columns
-                indicate reference stimuli. It is assumed that stimuli
-                indices are composed of integers from [0, N-1], where N
-                is the number of unique stimuli. The value -1 can be
-                used as a placeholder for non-existent references.
-                shape = (n_trial, max(n_reference) + 1)
-            n_select (optional): An integer array indicating the number
-                of references selected in each trial. Values must be
-                greater than zero but less than the number of
-                references for the corresponding trial.
-                shape = n_trial,)
-            is_ranked (optional): A Boolean array indicating which
-                trials require reference selections to be ranked.
-                shape = (n_trial,)
+                row indicates the stimuli used in one trial. It is
+                assumed that stimuli indices are composed of integers
+                from [0, N-1], where N is the number of unique stimuli.
+                The value -1 can be used as a placeholder for
+                non-existent stimuli.
+                shape = (n_trial, max(n_present))
 
         """
         SimilarityTrials.__init__(self, stimulus_set)
 
         n_present = self._infer_n_present(stimulus_set)
-        self.n_present = self._check_n_present(n_reference)
+        self.n_present = self._check_n_present(n_present)
 
         # Format stimulus set.
-        self.max_n_reference = np.amax(self.n_reference)
-        self.stimulus_set = self.stimulus_set[:, 0:self.max_n_reference+1]
+        self.max_n_present = np.amax(self.n_present)
+        self.stimulus_set = self.stimulus_set[:, 0:self.max_n_present]
 
     def _check_n_present(self, n_present):
-        """Check the argument `n_reference`.
+        """Check the argument `n_present`.
 
         Raises:
             ValueError
@@ -98,23 +90,18 @@ class RateDocket(RateTrials):
         n_trial: An integer indicating the number of trials.
         stimulus_set: An integer matrix containing indices that
             indicate the set of stimuli used in each trial. Each row
-            indicates the stimuli used in one trial. The first column
-            is the query stimulus. The remaining, columns indicate
-            reference stimuli. Negative integers are used as
-            placeholders to indicate non-existent references.
-            shape = (n_trial, max(n_reference) + 1)
+            indicates the stimuli used in one trial.
+            shape = (n_trial, max(n_present))
         config_idx: An integer array indicating the
             configuration of each trial. The integer is an index
-            referencing the row of config_list and the element of
-            outcome_idx_list.
+            referencing the row of config_list.
             shape = (n_trial,)
         config_list: A DataFrame object describing the unique trial
-            configurations. The columns are 'n_reference',
+            configurations. The columns are 'n_present',
             'n_select', 'is_ranked'. and 'n_outcome'.
 
     Notes:
-        stimulus_set: The order of the reference stimuli is
-            unimportant.
+        stimulus_set: The order of the stimuli is not important.
         Unique configurations and configuration IDs are determined by
             'n_present'.
 
@@ -128,8 +115,7 @@ class RateDocket(RateTrials):
         """Initialize.
 
         Arguments:
-            stimulus_set: The order of the reference indices is not
-                important. See SimilarityTrials.
+            stimulus_set: The order of the indices is not important.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
 
@@ -170,10 +156,9 @@ class RateDocket(RateTrials):
                 trial configurations.
 
         """
-        n_trial = len(n_reference)
+        n_trial = len(n_present)
 
         # Determine unique display configurations.
-        n_outcome_placeholder = np.zeros(n_select.shape[0], dtype=np.int32)
         d = {'n_present': n_present}
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
@@ -181,7 +166,6 @@ class RateDocket(RateTrials):
 
         # Assign display configuration ID for every observation.
         config_idx = np.empty(n_trial, dtype=np.int32)
-        outcome_idx_list = []
         for i_config in range(n_config):
             # Find trials matching configuration.
             a = (n_present == df_config['n_present'].iloc[i_config])
@@ -204,16 +188,12 @@ class RateDocket(RateTrials):
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.close()
 
-    # TODO
-    def as_dataset(self, group, all_outcomes=True):
+    def as_dataset(self, group):
         """Return TensorFlow dataset.
 
         Arguments:
             group: ND array indicating group membership information for
                 each trial.
-            all_outcomes (optional): Boolean indicating whether all
-                possible outcomes (along third dimension) should be
-                included in returned dataset.
 
         Returns:
             x: A TensorFlow dataset.
@@ -224,29 +204,62 @@ class RateDocket(RateTrials):
         group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)
         group = np.hstack([group_level_0, group])
         # Return tensorflow dataset.
-        if all_outcomes:
-            stimulus_set = self.all_outcomes()
-            x = {
-                'stimulus_set': tf.constant(
-                    stimulus_set + 1, dtype=tf.int32
-                ),
-                'is_select': tf.constant(
-                    np.expand_dims(self.is_select(compress=False), axis=2),
-                    dtype=tf.bool
-                ),
-                'group': tf.constant(group, dtype=tf.int32)
-            }
-        else:
-            stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
-            x = {
-                'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
-                'is_select': tf.constant(
-                    np.expand_dims(self.is_select(compress=False), axis=2),
-                    dtype=tf.bool
-                ),
-                'group': tf.constant(group, dtype=tf.int32)
-            }
+        # stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
+        stimulus_set = self.stimulus_set + 1
+        x = {
+            'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
+            'group': tf.constant(group, dtype=tf.int32)
+        }
         return x
+
+    @classmethod
+    def stack(cls, trials_list):
+        """Return a RateTrials object containing all trials.
+
+        The stimulus_set of each SimilarityTrials object is padded
+        first to match the maximum number of stimuli across all the
+        objects.
+
+        Arguments:
+            trials_list: A tuple of RateTrials objects to be stacked.
+
+        Returns:
+            A new RateTrials object.
+
+        """
+        # Determine the maximum number of stimuli present.
+        max_n_present = 0
+        for i_trials in trials_list:
+            if i_trials.max_n_present > max_n_present:
+                max_n_present = i_trials.max_n_present
+
+        # Grab relevant information from first entry in list.
+        stimulus_set = pad_2d_array(
+            trials_list[0].stimulus_set, max_n_present
+        )
+
+        for i_trials in trials_list[1:]:
+            stimulus_set = np.vstack((
+                stimulus_set,
+                pad_2d_array(i_trials.stimulus_set, max_n_present)
+            ))
+
+        trials_stacked = RateDocket(stimulus_set)
+        return trials_stacked
+
+    @classmethod
+    def load(cls, filepath):
+        """Load trials.
+
+        Arguments:
+            filepath: The location of the hdf5 file to load.
+
+        """
+        f = h5py.File(filepath, "r")
+        stimulus_set = f["stimulus_set"][()]
+        f.close()
+        trials = RateDocket(stimulus_set)
+        return trials
 
 
 class RateObservations(RateTrials):
@@ -259,18 +272,14 @@ class RateObservations(RateTrials):
         n_trial: An integer indicating the number of trials.
         stimulus_set: An integer matrix containing indices that
             indicate the set of stimuli used in each trial. Each row
-            indicates the stimuli used in one trial. The first column
-            is the query stimulus. The remaining, columns indicate
-            reference stimuli. Negative integers are used as
-            placeholders to indicate non-existent references.
-            shape = (n_trial, max(n_reference) + 1)
+            indicates the stimuli used in one trial.
+            shape = (n_trial, max(n_present))
         n_present: An integer array indicating the number of
             stimuli present in each trial.
             shape = (n_trial,)
         config_idx: An integer array indicating the
             configuration of each trial. The integer is an index
-            referencing the row of config_list and the element of
-            outcome_idx_list.
+            referencing the row of config_list.
             shape = (n_trial,)
         config_list: A DataFrame object describing the unique trial
             configurations.
@@ -308,18 +317,14 @@ class RateObservations(RateTrials):
     """
 
     def __init__(
-            self, stimulus_set, group_id=None, agent_id=None, session_id=None,
+            self, stimulus_set, rating, group_id=None, agent_id=None, session_id=None,
             weight=None, rt_ms=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
 
         Arguments:
-            stimulus_set: The order of reference indices is important.
-                An agent's selected references are listed first (in
-                order of selection if the trial is ranked) and
-                remaining unselected references are listed in any
-                order. See SimilarityTrials.
+            stimulus_set: The order of indices is not important.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
             group_id (optional): An integer array indicating the group
@@ -346,6 +351,7 @@ class RateObservations(RateTrials):
 
         """
         RateTrials.__init__(self, stimulus_set)
+        self.rating = np.asarray(rating, dtype=np.float32)  # TODO
 
         # Handle default settings.
         if group_id is None:
@@ -463,10 +469,10 @@ class RateObservations(RateTrials):
 
         """
         return RateObservatiosn(
-            self.stimulus_set[index, :], n_select=self.n_select[index],
-            is_ranked=self.is_ranked[index], group_id=self.group_id[index],
-            agent_id=self.agent_id[index], session_id=self.session_id[index],
-            weight=self.weight[index], rt_ms=self.rt_ms[index]
+            self.stimulus_set[index, :], self.rating[index, :],
+            group_id=self.group_id[index], agent_id=self.agent_id[index],
+            session_id=self.session_id[index], weight=self.weight[index],
+            rt_ms=self.rt_ms[index]
         )
 
     def _set_configuration_data(self, n_present, group_id, session_id=None):
@@ -499,13 +505,12 @@ class RateObservations(RateTrials):
                 trial configurations.
 
         """
-        n_trial = len(n_reference)
+        n_trial = len(n_present)
 
         if session_id is None:
             session_id = np.zeros((n_trial), dtype=np.int32)
 
         # Determine unique display configurations.
-        n_outcome_placeholder = np.zeros(n_select.shape[0], dtype=np.int32)
         d = {
             'n_present': n_present, 'group_id': group_id,
             'session_id': session_id
@@ -513,14 +518,12 @@ class RateObservations(RateTrials):
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
-        n_out_idx = df_config.columns.get_loc("n_outcome")
 
         # Assign display configuration index for every observation.
         config_idx = np.empty(n_trial, dtype=np.int32)
-        outcome_idx_list = []
         for i_config in range(n_config):
             # Find trials matching configuration.
-            a = (n_present == df_config['n_prsent'].iloc[i_config])
+            a = (n_present == df_config['n_present'].iloc[i_config])
             d = (group_id == df_config['group_id'].iloc[i_config])
             e = (session_id == df_config['session_id'].iloc[i_config])
             f = np.array((a, d, e))
@@ -571,6 +574,7 @@ class RateObservations(RateTrials):
         f = h5py.File(filepath, "w")
         f.create_dataset("trial_type", data="RateObservatiosn")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
+        f.create_dataset("rating", data=self.rating)
         f.create_dataset("group_id", data=self.group_id)
         f.create_dataset("agent_id", data=self.agent_id)
         f.create_dataset("session_id", data=self.session_id)
@@ -578,8 +582,7 @@ class RateObservations(RateTrials):
         f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
 
-    # TODO
-    def as_dataset(self, all_outcomes=True):
+    def as_dataset(self):
         """Format necessary data as Tensorflow.data.Dataset object.
 
         Returns:
@@ -598,36 +601,15 @@ class RateObservations(RateTrials):
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
         group_level_0 = np.zeros([self.group_id.shape[0]], dtype=np.int32)
-        if all_outcomes:
-            stimulus_set = self.all_outcomes()
-            x = {
-                'stimulus_set': stimulus_set + 1,
-                'is_select': np.expand_dims(
-                    self.is_select(compress=False), axis=2
-                ),
-                'group': np.stack(
-                    (group_level_0, self.group_id, self.agent_id), axis=-1
-                )
-            }
-            # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
-            # that occurred.
-            y = np.zeros([self.n_trial, stimulus_set.shape[2]])
-            y[:, 0] = 1
-        else:
-            x = {
-                'stimulus_set': np.expand_dims(self.stimulus_set + 1, axis=2),
-                'is_select': np.expand_dims(
-                    self.is_select(compress=False), axis=2
-                ),
-                'group': np.stack(
-                    (group_level_0, self.group_id, self.agent_id), axis=-1
-                )
-            }
-            # NOTE: The outputs `y` indicate a sparse encoding of the outcome
-            # that occurred.
-            y = np.zeros([self.n_trial])
-
-        y = tf.constant(y, dtype=K.floatx())
+        
+        x = {
+            # 'stimulus_set': np.expand_dims(self.stimulus_set + 1, axis=2),
+            'stimulus_set': self.stimulus_set + 1,
+            'group': np.stack(
+                (group_level_0, self.group_id, self.agent_id), axis=-1
+            )
+        }
+        y = tf.constant(self.rating, dtype=K.floatx())
 
         # Observation weight.
         w = tf.constant(self.weight, dtype=K.floatx())
@@ -636,3 +618,91 @@ class RateObservations(RateTrials):
         ds_obs = tf.data.Dataset.from_tensor_slices((x, y, w))
         return ds_obs
 
+    @classmethod
+    def stack(cls, trials_list):
+        """Return a RateTrials object containing all trials.
+
+        The stimulus_set of each SimilarityTrials object is padded
+        first to match the maximum number of present stimuli across all
+        the objects.
+
+        Arguments:
+            trials_list: A tuple of RateTrials objects to be stacked.
+
+        Returns:
+            A new RateTrials object.
+
+        """
+        # Determine the maximum number of stimuli present.
+        max_n_present = 0
+        for i_trials in trials_list:
+            if i_trials.max_n_present > max_n_present:
+                max_n_present = i_trials.max_n_present
+
+        # Grab relevant information from first entry in list.
+        stimulus_set = pad_2d_array(
+            trials_list[0].stimulus_set, max_n_present
+        )
+        rating = trials_list[0].rating
+        group_id = trials_list[0].group_id
+        agent_id = trials_list[0].agent_id
+        session_id = trials_list[0].session_id
+        weight = trials_list[0].weight
+        rt_ms = trials_list[0].rt_ms
+
+        for i_trials in trials_list[1:]:
+            stimulus_set = np.vstack((
+                stimulus_set,
+                pad_2d_array(i_trials.stimulus_set, max_n_present)
+            ))
+            rating = np.hstack((rating, i_trials.rating))
+            group_id = np.hstack((group_id, i_trials.group_id))
+            agent_id = np.hstack((agent_id, i_trials.agent_id))
+            session_id = np.hstack((session_id, i_trials.session_id))
+            weight = np.hstack((weight, i_trials.weight))
+            rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
+
+        
+        trials_stacked = RateObservations(
+            stimulus_set, rating, group_id=group_id, agent_id=agent_id,
+            session_id=session_id, weight=weight, rt_ms=rt_ms
+        )
+        return trials_stacked
+
+    @classmethod
+    def load(cls, filepath):
+        """Load trials.
+
+        Arguments:
+            filepath: The location of the hdf5 file to load.
+
+        """
+        f = h5py.File(filepath, "r")
+        stimulus_set = f["stimulus_set"][()]
+        rating = f["rating"][()]
+        group_id = f["group_id"][()]
+
+        # For backwards compatability.
+        if "weight" in f:
+            weight = f["weight"][()]
+        else:
+            weight = np.ones((len(n_select)))
+        if "rt_ms" in f:
+            rt_ms = f["rt_ms"][()]
+        else:
+            rt_ms = -np.ones((len(n_select)))
+        if "agent_id" in f:
+            agent_id = f["agent_id"][()]
+        else:
+            agent_id = np.zeros((len(n_select)))
+        if "session_id" in f:
+            session_id = f["session_id"][()]
+        else:
+            session_id = np.zeros((len(n_select)))
+        f.close()
+
+        trials = RateObservations(
+            stimulus_set, group_id=group_id, agent_id=agent_id,
+            session_id=session_id, weight=weight, rt_ms=rt_ms
+        )
+        return trials

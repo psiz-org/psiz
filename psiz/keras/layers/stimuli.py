@@ -78,7 +78,7 @@ class Stimuli(GroupLevel):
         indices = inputs[0]
         group_id = inputs[-1][:, self.group_level]
         group_id = tf.expand_dims(group_id, axis=-1)
-        group_id = tf.expand_dims(group_id, axis=-1)
+        # group_id = tf.expand_dims(group_id, axis=-1) TODO critical
         indices_flat = _map_embedding_indices(
             indices, group_id, self.input_dim, False
         )

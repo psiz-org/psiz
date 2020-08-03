@@ -43,7 +43,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.neighbors import NearestNeighbors
 import tensorflow as tf
 
-from psiz.trials import RankDocket, stack
+from psiz.trials import stack, RankDocket, RateDocket
 from psiz.preprocess import remove_catch_trials
 from psiz.utils import ProgressBarRe, choice_wo_replace
 
@@ -367,8 +367,7 @@ class RandomRate(DocketGenerator):
         stimulus_set = choice_wo_replace(
             idx_eligable, (n_trial, 2), prob
         )
-        # return RateDocket(stimulus_set)
-        return stimulus_set
+        return RateDocket(stimulus_set)
 
 
 def _select_query_references(

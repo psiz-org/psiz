@@ -79,10 +79,7 @@ class Sort(PsychologicalEmbedding):
         group = inputs['group']
 
         # Inflate coordinates.
-        if self.group_embedding:
-            z = self.stimuli([stimulus_set, group])
-        else:
-            z = self.stimuli(stimulus_set)
-        # TensorShape([batch_size, TODO, n_dim])
+        z = self.stimuli([stimulus_set, group])
+        # TensorShape([sample_size, batch_size, TODO, n_dim])
         raise NotImplementedError
         return None

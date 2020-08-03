@@ -79,10 +79,7 @@ class Rank(PsychologicalEmbedding):
         group = inputs['group']
 
         # Inflate coordinates.
-        if self.group_embedding:
-            z = self.stimuli([stimulus_set, group])
-        else:
-            z = self.stimuli(stimulus_set)
+        z = self.stimuli([stimulus_set, group])
         
         # Check `z` shape is:
         # TensorShape([sample_size, batch_size, n_ref + 1, n_outcome, n_dim])

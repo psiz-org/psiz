@@ -75,17 +75,14 @@ class Rate(PsychologicalEmbedding):
         group = inputs['group']
 
         # Inflate coordinates.
-        if self.group_embedding:
-            z = self.stimuli([stimulus_set, group])
-        else:
-            z = self.stimuli(stimulus_set)
-        # TensorShape([batch_size, 2, n_dim])
+        z = self.stimuli([stimulus_set, group])
+        # TensorShape([sample_size, batch_size, 2, n_dim])
 
         # Divide up stimuli for kernel call.
         z_list = tf.unstack(z, axis=1)
         # Pass through similarity kernel.
         sim_qr = self.kernel([z_list[0], z_list[1], group])
-        # TensorShape([batch_size,])
+        # TensorShape([sample_size, batch_size,])
 
         # Predict rating of stimulus pair.
         rating = self.behavior([sim_qr, group])

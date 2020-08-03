@@ -54,7 +54,7 @@ class Proxy(object):
     embedding algorithm infers a set of attention weights if there is
     more than one group.
 
-    Methods: TODO
+    Methods:
         compile: Assign a optimizer, loss and regularization function
             for the optimization procedure.
         fit: Fit the embedding model using the provided observations.
@@ -63,7 +63,6 @@ class Proxy(object):
         similarity: Return the similarity between provided points.
         distance: Return the (weighted) minkowski distance between
             provided points.
-        set_log: Adjust the TensorBoard logging behavior.
         save: Save the embedding model as an hdf5 file.
 
     Attributes: TODO
@@ -218,13 +217,14 @@ class Proxy(object):
 
         # Prepare inputs to exploit broadcasting.
         if group_id is None:
-            group_id = np.zeros((n_trial), dtype=np.int32)
+            group_id = np.zeros((n_trial, 2), dtype=np.int32)
         else:
+            group_level_0 = np.zeros([n_trial], dtype=np.int32)
             if np.isscalar(group_id):
                 group_id = group_id * np.ones((n_trial), dtype=np.int32)
             else:
                 group_id = group_id.astype(dtype=np.int32)
-        group_id = np.expand_dims(group_id, axis=1)
+            group_id = np.stack([group_level_0, group_id], axis=-1)
 
         # Pass through kernel function.
         sim_qr = self.model.kernel([
@@ -516,11 +516,6 @@ class PsychologicalEmbedding(tf.keras.Model):
         self.kernel = kernel
         self.behavior = behavior
 
-        if type(self.stimuli) is psiz.keras.layers.EmbeddingGroup:
-            self.group_embedding = True
-        else:
-            self.group_embedding = False
-
         # Create convenience pointer to kernel parameters.
         self.theta = self.kernel.theta
 
@@ -529,10 +524,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     @property
     def n_stimuli(self):
         """Getter method for `n_stimuli`."""
-        n_stimuli = self.stimuli.input_dim
-        if self.stimuli.mask_zero:
-            n_stimuli = n_stimuli - 1
-        return n_stimuli
+        return self.stimuli.n_stimuli
 
     @property
     def n_dim(self):
@@ -542,13 +534,11 @@ class PsychologicalEmbedding(tf.keras.Model):
     @property
     def n_group(self):
         """Getter method for `n_group`."""
-        stimuli_n_group = 1
-        if hasattr(self.stimuli, 'n_group'):
-            stimuli_n_group = self.stimuli.n_group
-        behavior_n_group = 1  # TODO add behavior.n_group to list
-        return np.max([
-            stimuli_n_group, self.kernel.n_group, behavior_n_group
-        ])
+        return {
+            'stimuli': [self.stimuli.n_group],
+            'kernel': [self.kernel.n_group],
+            'behavior': [self.behavior.n_group],
+        }
 
     @property
     def n_sample(self):
@@ -788,6 +778,38 @@ class PsychologicalEmbedding(tf.keras.Model):
         self.save_weights(
             fp_weights, overwrite=overwrite, save_format='tf'
         )
+
+
+class GroupLevel(tf.keras.layers.Layer):
+    """An abstract layer for managing group-specific semantics."""
+
+    def __init__(self, n_group=1, group_level=0, **kwargs):
+        """Initialize.
+
+        Arguments:
+            n_group (optional): Integer indicating the number of groups
+                in the layer.
+            group_level (optional): Ingeter indicating the group level
+                of the layer. This will determine which column of
+                `group` is used to route the forward pass.
+            kwargs (optional): Additional keyword arguments.
+
+        """
+        super(GroupLevel, self).__init__(**kwargs)
+        self.n_group = n_group
+        self.group_level = group_level
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update({
+            'n_group': int(self.n_group),
+            'group_level': int(self.group_level),
+        })
+        return config
+
+    def call(self, inputs):
+        raise NotImplementedError
 
 
 def load_model(filepath, custom_objects={}, compile=False):

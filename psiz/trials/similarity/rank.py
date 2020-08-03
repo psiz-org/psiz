@@ -13,41 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for similarity judgment trials.
+"""Rank trials module.
+
+On each similarity judgment trial, an agent judges the similarity
+between a single query stimulus and multiple reference stimuli.
 
 Classes:
-    SimilarityTrials: Abstract class for similarity judgment trials.
-    RankTrials: Abstract class for 'Rank' trials.
+    RankTrials: Abstract base class for 'Rank' trials.
     RankDocket: Unjudged 'Rank' trials.
     RankObservations: Judged 'Rank' trials.
-
-Functions:
-    stack: Combine a list of multiple SimilarityTrial objects into one.
-    squeeze: Squeeze indices to be small and consecutive.
-    load_trials: Load a hdf5 file that was saved using the `save` class
-        method.
-    load: Alias for load_trials.
-
-Notes:
-    On each similarity judgment trial, an agent judges the similarity
-        between a single query stimulus and multiple reference stimuli.
-    Groups are used to identify distinct populations of agents. For
-        example, similarity judgments could be collected from two
-        groups: novices and experts. During inference, group
-        information can be used to infer a separate set of attention
-        weights for each group while sharing all other parameters.
-
-TODO:
-    * Add RateDocket class
-    * Add RateObservations class
-    * Add SortDocket class
-    * Add SortObservations class
-    * Add Observations "interface" which requires `as_dataset()` method
-        which returns a tf.data.Dataset object, agent_id, group_id, and
-        session_id.
-    * MAYBE restructure group_id and agent_id. If we wanted to allow
-    for arbitrary hierarchical models, maybe better off making
-    group_id a 2D array of shape=(n_trial, n_group_level)
 
 """
 
@@ -62,139 +36,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-
-class SimilarityTrials(metaclass=ABCMeta):
-    """Abstract base class for similarity judgment trials.
-
-    This abstract base class is used to organize data associated with
-    similarity judgment trials. As the class name suggests, this object
-    handles data associated with multiple trials. Depending on the
-    concrete subclass, the similarity trials represent to-be-shown
-    trials (i.e., a docket) or judged trials (i.e., observations).
-
-    Attributes:
-        n_trial: An integer indicating the number of trials.
-        stimulus_set: An integer matrix containing indices that
-            indicate the set of stimuli used in each trial. Each row
-            indicates the stimuli used in one trial.
-        config_idx: An integer array indicating the
-            configuration of each trial. The integer is an index
-            referencing the row of config_list and the element of
-            outcome_idx_list.
-            shape = (n_trial,)
-        config_list: A DataFrame object describing the unique trial
-            configurations.
-        outcome_idx_list: A list of 2D arrays indicating all possible
-            outcomes for a trial configuration. Each element in the
-            list corresponds to a trial configuration in config_list.
-            Each row of the 2D array indicates one potential outcome.
-
-    Methods:
-        subset: Return a subset of similarity trials given an index.
-        save: Save the object to disk.
-        is_present: Indicate if a stimulus is present.
-
-    """
-
-    def __init__(self, stimulus_set):
-        """Initialize.
-
-        Arguments:
-            stimulus_set: An integer matrix containing indices that
-                indicate the set of stimuli used in each trial. Each
-                row indicates the stimuli used in one trial. The value
-                '-1' can be used as a masking placeholder to indicate
-                non-existent stimuli if each trial has a different
-                number of stimuli.
-                shape = (n_trial, max_n_stimuli_per_trial)
-
-        """
-        stimulus_set = self._check_stimulus_set(stimulus_set)
-        self.stimulus_set = stimulus_set
-        self.n_trial = stimulus_set.shape[0]
-
-        # Attributes determined by concrete class.
-        self.config_idx = None
-        self.config_list = None
-        self.outcome_idx_list = None
-
-    def _check_stimulus_set(self, stimulus_set):
-        """Check the argument `stimulus_set`.
-
-        Raises:
-            ValueError
-
-        """
-        # Check that provided values are integers.
-        if not issubclass(stimulus_set.dtype.type, np.integer):
-            raise ValueError((
-                "The argument `stimulus_set` must be a 2D array of "
-                "integers."
-            ))
-
-        # Check that all values are greater than or equal to -1.
-        # NOTE: The value '-1' is used as a masking placeholder.
-        if np.sum(np.less(stimulus_set, -1)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must only contain integers "
-                "greater than or equal to -1."
-            ))
-
-        # NOTE: ii32.max -1 since we will perform a +1 operation.
-        ii32 = np.iinfo(np.int32)
-        if np.sum(np.greater(stimulus_set, ii32.max - 1)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must only contain integers "
-                "in the int32 range."
-            ))
-        return stimulus_set.astype(np.int32)
-
-    @abstractmethod
-    def _set_configuration_data(self, *args):
-        """Generate a unique ID for each trial configuration.
-
-        Helper function that generates a unique ID for each of the
-        unique trial configurations in the provided data set.
-
-        Notes:
-            Sets three attributes of object.
-            config_idx: A unique index for each type of trial
-                configuration.
-            config_list: A DataFrame containing all the unique
-                trial configurations.
-            outcome_idx_list: A list of the possible outcomes for each
-                trial configuration.
-
-        """
-        pass
-
-    @abstractmethod
-    def subset(self, index):
-        """Return subset of trials as new SimilarityTrials object.
-
-        Arguments:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new SimilarityTrials object.
-
-        """
-        pass
-
-    @abstractmethod
-    def save(self, filepath):
-        """Save the SimilarityTrials object as an HDF5 file.
-
-        Arguments:
-            filepath: String specifying the path to save the data.
-
-        """
-        pass
-
-    def is_present(self):
-        """Return a 2D Boolean array indicating a present stimulus."""
-        is_present = np.not_equal(self.stimulus_set, -1)
-        return is_present
+from psiz.trials import SimilarityTrials
 
 
 class RankTrials(SimilarityTrials, metaclass=ABCMeta):
@@ -1043,16 +885,45 @@ class RankObservations(RankTrials):
         return ds_obs
 
 
-# class RateDocket():
+def _possible_rank_outcomes(trial_configuration):
+    """Return the possible outcomes of a ranked trial configuration.
 
+    Arguments:
+        trial_configuration: A trial configuration Pandas Series.
 
-# class RateObservations():
+    Returns:
+        An 2D array indicating all possible outcomes where the values
+            indicate indices of the reference stimuli. Each row
+            corresponds to one outcome. Note the indices refer to
+            references only and does not include an index for the
+            query. Also note that the unpermuted index is returned
+            first.
 
+    """
+    n_reference = int(trial_configuration['n_reference'])
+    n_select = int(trial_configuration['n_select'])
 
-# class SortDocket():
+    reference_list = range(n_reference)
 
+    # Get all permutations of length n_select.
+    perm = permutations(reference_list, n_select)
 
-# class SortObservations():
+    selection = list(perm)
+    n_outcome = len(selection)
+
+    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
+    for i_outcome in range(n_outcome):
+        # Fill in selections.
+        outcomes[i_outcome, 0:n_select] = selection[i_outcome]
+        # Fill in unselected.
+        dummy_idx = np.arange(n_reference)
+        for i_selected in range(n_select):
+            loc = dummy_idx != outcomes[i_outcome, i_selected]
+            dummy_idx = dummy_idx[loc]
+
+        outcomes[i_outcome, n_select:] = dummy_idx
+
+    return outcomes
 
 
 # TODO handle other trial types.
@@ -1267,43 +1138,3 @@ def _pad_2d_array(arr, n_column, value=-1):
         arr = np.hstack((arr, pad_mat))
     return arr
 
-
-def _possible_rank_outcomes(trial_configuration):
-    """Return the possible outcomes of a ranked trial configuration.
-
-    Arguments:
-        trial_configuration: A trial configuration Pandas Series.
-
-    Returns:
-        An 2D array indicating all possible outcomes where the values
-            indicate indices of the reference stimuli. Each row
-            corresponds to one outcome. Note the indices refer to
-            references only and does not include an index for the
-            query. Also note that the unpermuted index is returned
-            first.
-
-    """
-    n_reference = int(trial_configuration['n_reference'])
-    n_select = int(trial_configuration['n_select'])
-
-    reference_list = range(n_reference)
-
-    # Get all permutations of length n_select.
-    perm = permutations(reference_list, n_select)
-
-    selection = list(perm)
-    n_outcome = len(selection)
-
-    outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
-    for i_outcome in range(n_outcome):
-        # Fill in selections.
-        outcomes[i_outcome, 0:n_select] = selection[i_outcome]
-        # Fill in unselected.
-        dummy_idx = np.arange(n_reference)
-        for i_selected in range(n_select):
-            loc = dummy_idx != outcomes[i_outcome, i_selected]
-            dummy_idx = dummy_idx[loc]
-
-        outcomes[i_outcome, n_select:] = dummy_idx
-
-    return outcomes

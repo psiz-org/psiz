@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for testing `trials.py`.
+"""Test `trials` module.
 
 Notes:
     It is critical that the function `_possible_rank_outcomes` returns the
@@ -39,6 +39,8 @@ from psiz.generator import RandomRank
 from psiz.simulate import Agent
 import psiz.models
 import psiz.keras.layers
+
+from psiz.trials.similarity.rank import _possible_rank_outcomes
 
 
 @pytest.fixture(scope="module")
@@ -819,7 +821,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array(((0, 1), (1, 0)))
         np.testing.assert_array_equal(po, correct)
@@ -830,7 +832,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
@@ -843,7 +845,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
@@ -860,7 +862,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3, 4, 5, 6, 7),

@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials initialization file."""
+"""Rate trials module.
 
-from psiz.trials.similarity.base import SimilarityTrials
-from psiz.trials.similarity.rank import stack
-from psiz.trials.similarity.rank import squeeze
-from psiz.trials.similarity.rank import load_trials
-from psiz.trials.similarity.rank import RankDocket
-from psiz.trials.similarity.rank import RankObservations
+On each similarity judgment trial, an agent rates the similarity
+between a two stimuli.
+
+Classes:
+    RateTrials: Abstract base class for 'Rate' trials.
+    RateDocket: Unjudged 'Rate' trials.
+    RateObservations: Judged 'Rate' trials.
+
+"""

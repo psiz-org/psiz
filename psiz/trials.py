@@ -578,6 +578,10 @@ class RankDocket(RankTrials):
             x: A TensorFlow dataset.
 
         """
+        if group.ndim == 1:
+            group = np.expand_dims(group, axis=1)
+        group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)
+        group = np.hstack([group_level_0, group])
         # Return tensorflow dataset.
         if all_outcomes:
             stimulus_set = self.all_outcomes()
@@ -999,6 +1003,7 @@ class RankObservations(RankTrials):
         # NOTE: The dimensions of inputs are expanded to have an additional
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
+        group_level_0 = np.zeros([self.group_id.shape[0]], dtype=np.int32)
         if all_outcomes:
             stimulus_set = self.all_outcomes()
             x = {
@@ -1007,7 +1012,7 @@ class RankObservations(RankTrials):
                     self.is_select(compress=False), axis=2
                 ),
                 'group': np.stack(
-                    (self.group_id, self.agent_id), axis=-1
+                    (group_level_0, self.group_id, self.agent_id), axis=-1
                 )
             }
             # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
@@ -1021,7 +1026,7 @@ class RankObservations(RankTrials):
                     self.is_select(compress=False), axis=2
                 ),
                 'group': np.stack(
-                    (self.group_id, self.agent_id), axis=-1
+                    (group_level_0, self.group_id, self.agent_id), axis=-1
                 )
             }
             # NOTE: The outputs `y` indicate a sparse encoding of the outcome

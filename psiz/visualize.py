@@ -36,9 +36,11 @@ from PIL import Image
 import tensorflow_probability as tfp
 
 
-def heatmap_embeddings(fig, ax, embedding, cmap=None):
+def heatmap_embeddings(fig, ax, embedding, group_idx=0, cmap=None):
     """Visualize embeddings as a heatmap.
     
+    Intended to handle rank 2 and rank 3 embeddings.
+
     Arguments:
         fig: A Matplotlib Figure object.
         ax: A Matplotlib Axes object.
@@ -49,18 +51,20 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
     if cmap is None:
         cmap = matplotlib.cm.get_cmap('Greys')
 
-    if hasattr(embedding, 'posterior'):
+    if isinstance(embedding.embeddings, tfp.distributions.Distribution):
         # Handle distribution.
         z_mode = embedding.embeddings.mode().numpy()
-        if embedding.posterior.mask_zero:
-            z_mode = z_mode[1:]
     else:
         # Handle point estimate.
         z_mode = embedding.embeddings.numpy()
-        if embedding.mask_zero:
-            z_mode = z_mode[1:]
 
-    n_dim = z_mode.shape[1]
+    rank = z_mode.ndim
+    if rank == 3:
+        z_mode = z_mode[group_idx]
+    if embedding.mask_zero:
+        z_mode = z_mode[1:]
+
+    n_dim = z_mode.shape[-1]
     z_mode_max = np.max(z_mode)
     im = ax.imshow(
         z_mode, cmap=cmap, interpolation='none', vmin=0., vmax=z_mode_max
@@ -75,7 +79,7 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
     fig.colorbar(im, ax=ax)
 
 
-def embedding_output_dimension(fig, ax, embedding, idx, c='b'):
+def embedding_output_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
     """Visualize embedding values for a requested output dimension.
     
     Plots point estimates of embedding values for the requested
@@ -86,6 +90,8 @@ def embedding_output_dimension(fig, ax, embedding, idx, c='b'):
     and a thin linewidth interval indicating the middle 99% probability
     mass via the inverse CDF function.
 
+    Intended to handle rank 2 and rank 3 embeddings.
+
     Arguments:
         fig: A Matplotlib Figure object.
         ax: A Matplotlib Axes object.
@@ -95,26 +101,26 @@ def embedding_output_dimension(fig, ax, embedding, idx, c='b'):
 
     """
     if isinstance(embedding.embeddings, tfp.distributions.Distribution):
-        point_estimate = embedding.embeddings.mode().numpy()
+        z_mode = embedding.embeddings.mode().numpy()
     else:
-        point_estimate = embedding.embeddings.numpy()
-    y_max = np.max(point_estimate)
-    point_estimate = point_estimate[:, idx]
+        z_mode = embedding.embeddings.numpy()
+
+    rank = z_mode.ndim
+    if rank == 3:
+        z_mode = z_mode[group_idx]
+
+    y_max = np.max(z_mode)
+    z_mode = z_mode[:, idx]
 
     # Handle masking.
-    if hasattr(embedding, 'posterior'):
-        # Typically this is the mode of the posterior distribution.
-        if embedding.posterior.mask_zero:
-            point_estimate = point_estimate[1:]
-    else:
-        if embedding.mask_zero:
-            point_estimate = point_estimate[1:]
+    if embedding.mask_zero:
+        z_mode = z_mode[1:]
 
-    n_input_dim = point_estimate.shape[0]
+    n_input_dim = z_mode.shape[0]
 
     # Scatter point estimate.
     xg = np.arange(n_input_dim)
-    ax.scatter(xg, point_estimate, c=c, marker='_', linewidth=1)
+    ax.scatter(xg, z_mode, c=c, marker='_', linewidth=1)
 
     if hasattr(embedding, 'posterior'):
         dist = embedding.posterior.embeddings.distribution
@@ -160,11 +166,13 @@ def embedding_output_dimension(fig, ax, embedding, idx, c='b'):
     ax.set_yticklabels(['0', '{0:.1f}'.format(1.05 * y_max)])
 
 
-def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
+def embedding_input_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
     """Visualize embedding values for a requested input dimension.
 
     Plots point estimates of embedding values for the requested
     input dimension.
+
+    Intended to handle rank 2 and rank 3 embeddings.
 
     If the embedding layer is a distribution, also attempts to draw a
     thick linewidth interval indicating the middle 50% probability mass
@@ -180,25 +188,26 @@ def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
 
     """
     if isinstance(embedding.embeddings, tfp.distributions.Distribution):
-        point_estimate = embedding.embeddings.mode().numpy()
+        z_mode = embedding.embeddings.mode().numpy()
     else:
-        point_estimate = embedding.embeddings.numpy()
-    y_max = np.max(point_estimate)
-    point_estimate = point_estimate[idx, :]
+        z_mode = embedding.embeddings.numpy()
+    
+    rank = z_mode.ndim
+    if rank == 3:
+        z_mode = z_mode[group_idx]
+
+    y_max = np.max(z_mode)
+    z_mode = z_mode[idx, :]
     
     # Handle masking.
-    if hasattr(embedding, 'posterior'):
-        if embedding.posterior.mask_zero:
-            point_estimate = point_estimate[1:]
-    else:
-        if embedding.mask_zero:
-            point_estimate = point_estimate[1:]
+    if embedding.mask_zero:
+        z_mode = z_mode[1:]
 
-    n_output_dim = point_estimate.shape[0]
+    n_output_dim = z_mode.shape[0]
 
     # Scatter point estimate.
     xg = np.arange(n_output_dim)
-    ax.scatter(xg, point_estimate, c=c, marker='_')
+    ax.scatter(xg, z_mode, c=c, marker='_')
 
     # Add posterior quantiles if available.
     if hasattr(embedding, 'posterior'):

@@ -38,6 +38,10 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
+# Modify the following to control GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 def main():
     """Run script."""
@@ -47,9 +51,10 @@ def main():
     n_stimuli = 30
     n_dim = 3
     n_restart = 3
+    epochs = 1000
     n_trial = 2000
     batch_size = 100
-    n_frame = 8
+    n_frame = 1  # Set to 8 to observe convergence behavior.
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -57,7 +62,7 @@ def main():
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
-    emb_true = ground_truth(n_stimuli, n_dim)
+    proxy_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
     generator = psiz.generator.RandomRank(
@@ -66,10 +71,12 @@ def main():
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.simulate.Agent(emb_true.model)
+    agent = psiz.simulate.Agent(proxy_true.model)
     obs = agent.simulate(docket)
 
-    simmat_true = psiz.utils.pairwise_matrix(emb_true.similarity, emb_true.z)
+    simmat_true = psiz.utils.pairwise_matrix(
+        proxy_true.similarity, proxy_true.z[0]
+    )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
@@ -114,24 +121,19 @@ def main():
         )
         callbacks = [early_stop, cb_board]
 
+        model = build_model(n_stimuli, n_dim)
+        proxy_inferred = psiz.models.Proxy(model=model)
+
         # Infer embedding.
-        stimuli = tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
-        kernel = psiz.keras.layers.Kernel(
-            similarity=psiz.keras.layers.ExponentialSimilarity()
-        )
-        model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
-        emb_inferred = psiz.models.Proxy(model=model)
-        restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+        restart_record = proxy_inferred.fit(
+            obs_round_train, validation_data=obs_val, epochs=epochs,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_cce', verbose=1, compile_kwargs=compile_kwargs
         )
 
         train_cce[i_frame] = restart_record.record['cce'][0]
         val_cce[i_frame] = restart_record.record['val_cce'][0]
-        test_metrics = emb_inferred.evaluate(
+        test_metrics = proxy_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
         test_cce[i_frame] = test_metrics['cce']
@@ -139,7 +141,7 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = psiz.utils.pairwise_matrix(
-            emb_inferred.similarity, emb_inferred.z
+            proxy_inferred.similarity, proxy_inferred.z[0]
         )
         r2[i_frame] = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'
@@ -179,9 +181,11 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+        )
     )
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
@@ -198,6 +202,30 @@ def ground_truth(n_stimuli, n_dim):
 
     emb = psiz.models.Proxy(model=model)
     return emb
+
+
+def build_model(n_stimuli, n_dim):
+    """Build model.
+
+    Arguments:
+        n_stimuli: Integer indicating the number of stimuli in the
+            embedding.
+        n_dim: Integer indicating the dimensionality of the embedding.
+
+    Returns:
+        model: A TensorFlow Keras model.
+
+    """
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True
+        )
+    )
+    kernel = psiz.keras.layers.Kernel(
+        similarity=psiz.keras.layers.ExponentialSimilarity()
+    )
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    return model
 
 
 if __name__ == "__main__":

@@ -98,7 +98,7 @@ def main():
     plt.rc('figure', titlesize=large_size)
 
     model_true = ground_truth(n_stimuli, n_group)
-    emb_true = psiz.models.Proxy(model=model_true)
+    proxy_true = psiz.models.Proxy(model=model_true)
 
     # Generate a random docket of trials to show each group.
     generator = psiz.generator.RandomRank(
@@ -107,9 +107,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.simulate.Agent(emb_true.model, group_id=0)
-    agent_interm = psiz.simulate.Agent(emb_true.model, group_id=1)
-    agent_expert = psiz.simulate.Agent(emb_true.model, group_id=2)
+    agent_novice = psiz.simulate.Agent(proxy_true.model, group_id=0)
+    agent_interm = psiz.simulate.Agent(proxy_true.model, group_id=1)
+    agent_expert = psiz.simulate.Agent(proxy_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -119,18 +119,18 @@ def main():
 
     # Compute ground truth similarity matrices.
     def truth_sim_func0(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=0)
+        return proxy_true.similarity(z_q, z_ref, group_id=0)
 
     def truth_sim_func1(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=1)
+        return proxy_true.similarity(z_q, z_ref, group_id=1)
 
     def truth_sim_func2(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=2)
+        return proxy_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        psiz.utils.pairwise_matrix(truth_sim_func0, emb_true.z),
-        psiz.utils.pairwise_matrix(truth_sim_func1, emb_true.z),
-        psiz.utils.pairwise_matrix(truth_sim_func2, emb_true.z)
+        psiz.utils.pairwise_matrix(truth_sim_func0, proxy_true.z[0]),
+        psiz.utils.pairwise_matrix(truth_sim_func1, proxy_true.z[0]),
+        psiz.utils.pairwise_matrix(truth_sim_func2, proxy_true.z[0])
     )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
@@ -164,7 +164,7 @@ def main():
 
         # Define model.
         model = build_model(n_stimuli, n_dim, n_group, obs_round_train.n_trial)
-        emb_inferred = psiz.models.Proxy(model=model)
+        proxy_inferred = psiz.models.Proxy(model=model)
 
         # Define callbacks.
         fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
@@ -180,7 +180,7 @@ def main():
         callbacks = [cb_board, cb_early]
 
         # Infer model.
-        restart_record = emb_inferred.fit(
+        restart_record = proxy_inferred.fit(
             obs_round_train, validation_data=obs_val, epochs=epochs,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
@@ -190,29 +190,26 @@ def main():
         val_loss[i_frame] = restart_record.record['val_loss'][0]
 
         tf.keras.backend.clear_session()
-        emb_inferred.model.n_sample = 100
-        emb_inferred.compile(**compile_kwargs)
-        test_metrics = emb_inferred.evaluate(
+        proxy_inferred.model.n_sample = 100
+        proxy_inferred.compile(**compile_kwargs)
+        test_metrics = proxy_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
 
-        z = emb_inferred.model.stimuli.embeddings.mode().numpy()
-        if emb_inferred.model.stimuli.mask_zero:
+        z = proxy_inferred.model.stimuli.embeddings.mode().numpy()
+        if proxy_inferred.model.stimuli.mask_zero:
             z = z[:, 1:, :]
-        z0 = z[0]
-        z1 = z[1]
-        z2 = z[2]
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         def infer_sim_func(z_q, z_ref):
-            return emb_inferred.similarity(z_q, z_ref)
+            return proxy_inferred.similarity(z_q, z_ref)
 
         simmat_infer = (
-            psiz.utils.pairwise_matrix(infer_sim_func, z0),
-            psiz.utils.pairwise_matrix(infer_sim_func, z1),
-            psiz.utils.pairwise_matrix(infer_sim_func, z2)
+            psiz.utils.pairwise_matrix(infer_sim_func, z[0]),
+            psiz.utils.pairwise_matrix(infer_sim_func, z[1]),
+            psiz.utils.pairwise_matrix(infer_sim_func, z[2])
         )
         for i_truth in range(n_group):
             for j_infer in range(n_group):
@@ -240,8 +237,8 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(12, 5), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, i_frame
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
+            proxy_inferred, i_frame
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -260,13 +257,15 @@ def main():
 def ground_truth(n_stimuli, n_group):
     """Return a ground truth embedding."""
     n_dim = 4
-    stimuli = tf.keras.layers.Embedding(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=58
         )
     )
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
     kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
@@ -332,8 +331,8 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.EmbeddingGroup(
-        n_group=n_group, embedding=embedding_variational
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=embedding_variational, group_level=1, n_group=n_group
     )
 
     kernel = psiz.keras.layers.Kernel(
@@ -355,14 +354,14 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
 
 
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-        emb_inferred, i_frame):
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
+        proxy_inferred, i_frame):
     """Plot posteriors."""
     # Settings.
     group_labels = ['Novice', 'Intermediate', 'Expert']
 
-    n_group = emb_inferred.model.n_group
-    n_dim = emb_inferred.model.n_dim
+    n_group = proxy_inferred.model.stimuli.n_group
+    n_dim = proxy_inferred.model.n_dim
 
     gs = fig0.add_gridspec(n_group + 1, 4)
 

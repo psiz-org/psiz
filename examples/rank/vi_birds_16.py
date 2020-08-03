@@ -180,10 +180,11 @@ def build_model(n_stimuli, n_dim, n_obs_train):
             loc_trainable=False,
         )
     )
-    stimuli = EmbeddingVariationalLog(
+    embedding_variational = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
@@ -221,8 +222,13 @@ def draw_figure(fig, model, catalog):
     ax = fig.add_subplot(gs[0, 0])
 
     # Determine embedding limits.
-    dist = model.stimuli.posterior.embeddings
-    loc, cov = unpack_mvn(dist)
+    dist = model.stimuli.embeddings
+    group_idx = 0
+    loc, cov = unpack_mvn(dist, group_idx)
+    if model.stimuli.mask_zero:
+        # Drop placeholder stimulus.
+        loc = loc[1:]
+        cov = cov[1:]
 
     z_max = 1.3 * np.max(np.abs(loc))
     z_limits = [-z_max, z_max]
@@ -299,71 +305,29 @@ def plot_bvn(ax, loc, cov, c=None, r=2.576, **kwargs):
         ax.add_artist(ellipse)
 
 
-def unpack_mvn(dist):
+# TODO DRY
+def unpack_mvn(dist, group_idx):
     """Unpack multivariate normal distribution."""
-    def scale_to_cov(scale):
-        """Convert scale to covariance matrix.
+    def diag_to_full_cov(v):
+        """Convert diagonal variance to full covariance matrix.
 
-        Assumes `scale` represents diagonal elements only.
+        Assumes `v` represents diagonal variance elements only.
         """
-        n_stimuli = scale.shape[0]
-        n_dim = scale.shape[1]
+        n_stimuli = v.shape[0]
+        n_dim = v.shape[1]
         cov = np.zeros([n_stimuli, n_dim, n_dim])
         for i_stimulus in range(n_stimuli):
-            cov[i_stimulus] = np.eye(n_dim) * scale[i_stimulus]**2
+            cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
         return cov
 
-    if isinstance(dist, tfp.distributions.Independent):
-        d = dist.distribution
-    else:
-        d = dist
-
-    # Drop placeholder stimulus.
-    loc = d.loc.numpy()[1:]
-    scale = d.scale.numpy()[1:]
+    loc = dist.mean().numpy()[group_idx]
+    v = dist.variance().numpy()[group_idx]
 
     # Convert to full covariance matrix.
-    cov = scale_to_cov(scale)
+    cov = diag_to_full_cov(v)
 
     return loc, cov
 
-
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='EmbeddingVariationalLog'
-)
-class EmbeddingVariationalLog(psiz.keras.layers.EmbeddingVariational):
-    """Sub-class for logging weight metrics."""
-
-    def call(self, inputs):
-        """Call."""
-        outputs = super().call(inputs)
-
-        m = self.posterior.embeddings.mode()[1:]
-        self.add_metric(
-            tf.reduce_mean(m),
-            aggregation='mean', name='po_mode_avg'
-        )
-        self.add_metric(
-            tf.reduce_min(m),
-            aggregation='mean', name='po_mode_min'
-        )
-        self.add_metric(
-            tf.reduce_max(m),
-            aggregation='mean', name='po_mode_max'
-        )
-
-        s = self.posterior.embeddings.distribution.scale[1:]
-        self.add_metric(
-            tf.reduce_mean(s),
-            aggregation='mean', name='po_scale_avg'
-        )
-
-        s = self.prior.embeddings.distribution.distribution.distribution.scale[0, 0]
-        self.add_metric(
-            s, aggregation='mean', name='pr_scale'
-        )
-
-        return outputs
 
 
 if __name__ == "__main__":

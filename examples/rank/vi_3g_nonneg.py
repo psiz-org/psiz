@@ -81,6 +81,7 @@ def main():
     n_group = 3
     n_trial = 2000
     n_restart = 1
+    epochs = 1000
     batch_size = 200
     n_frame = 1
 
@@ -102,7 +103,7 @@ def main():
     plt.rc('legend', fontsize=small_size)
     plt.rc('figure', titlesize=large_size)
 
-    emb_true = ground_truth(n_stimuli, n_dim, n_group)
+    proxy_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
     generator = psiz.generator.RandomRank(
@@ -111,9 +112,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.simulate.Agent(emb_true.model, group_id=0)
-    agent_interm = psiz.simulate.Agent(emb_true.model, group_id=1)
-    agent_expert = psiz.simulate.Agent(emb_true.model, group_id=2)
+    agent_novice = psiz.simulate.Agent(proxy_true.model, group_id=0)
+    agent_interm = psiz.simulate.Agent(proxy_true.model, group_id=1)
+    agent_expert = psiz.simulate.Agent(proxy_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -123,18 +124,18 @@ def main():
 
     # Compute ground truth similarity matrices.
     def truth_sim_func0(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=0)
+        return proxy_true.similarity(z_q, z_ref, group_id=0)
 
     def truth_sim_func1(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=1)
+        return proxy_true.similarity(z_q, z_ref, group_id=1)
 
     def truth_sim_func2(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=2)
+        return proxy_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        psiz.utils.pairwise_matrix(truth_sim_func0, emb_true.z),
-        psiz.utils.pairwise_matrix(truth_sim_func1, emb_true.z),
-        psiz.utils.pairwise_matrix(truth_sim_func2, emb_true.z)
+        psiz.utils.pairwise_matrix(truth_sim_func0, proxy_true.z[0]),
+        psiz.utils.pairwise_matrix(truth_sim_func1, proxy_true.z[0]),
+        psiz.utils.pairwise_matrix(truth_sim_func2, proxy_true.z[0])
     )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
@@ -180,59 +181,14 @@ def main():
         callbacks = [cb_board, cb_early]
 
         # Define model.
-        kl_weight = 1. / obs_round_train.n_trial
-
-        embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
-            scale_initializer=psiz.keras.initializers.SoftplusUniform(
-                .01, .05
-            ),
+        model = build_model(
+            n_stimuli, n_dim_nonneg, n_group, obs_train.n_trial
         )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingGammaDiag(
-                1, 1,
-                concentration_initializer=tf.keras.initializers.Constant(1.),
-                rate_initializer=tf.keras.initializers.Constant(1),
-                concentration_trainable=False,
-            )
-        )
-        stimuli = EmbeddingVariationalLog(
-            posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_n_sample=30,
-        )
-
-        attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
-            n_group, n_dim_nonneg
-        )
-        attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
-            n_group, n_dim_nonneg,
-            loc_initializer=tf.keras.initializers.Constant(-4.),
-            scale_initializer=tf.keras.initializers.Constant(1.),
-            trainable=False
-        )
-        kernel = psiz.keras.layers.AttentionKernel(
-            distance=psiz.keras.layers.WeightedMinkowski(
-                rho_initializer=tf.keras.initializers.Constant(1.3),
-                trainable=False,
-            ),
-            attention=psiz.keras.layers.GroupAttentionVariational(
-                posterior=attention_posterior, prior=attention_prior,
-                kl_weight=kl_weight, kl_use_exact=True
-            ),
-            similarity=psiz.keras.layers.ExponentialSimilarity(
-                fit_tau=False, fit_gamma=False,
-                tau_initializer=tf.keras.initializers.Constant(1.),
-                gamma_initializer=tf.keras.initializers.Constant(0.),
-            )
-        )
-        model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
-        emb_inferred = psiz.models.Proxy(model=model)
+        proxy_inferred = psiz.models.Proxy(model=model)
 
         # Infer model.
-        restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+        restart_record = proxy_inferred.fit(
+            obs_round_train, validation_data=obs_val, epochs=epochs,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=3, compile_kwargs=compile_kwargs
         )
@@ -242,9 +198,9 @@ def main():
 
         # Test.
         tf.keras.backend.clear_session()
-        emb_inferred.model.n_sample = 100
-        emb_inferred.compile(**compile_kwargs)
-        test_metrics = emb_inferred.evaluate(
+        proxy_inferred.model.n_sample = 100
+        proxy_inferred.compile(**compile_kwargs)
+        test_metrics = proxy_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
@@ -253,23 +209,23 @@ def main():
         # similarity matrices implied by each model.
         def infer_sim_func0(z_q, z_ref):
             return np.mean(
-                emb_inferred.similarity(z_q, z_ref, group_id=0), axis=0
+                proxy_inferred.similarity(z_q, z_ref, group_id=0), axis=0
             )
 
         def infer_sim_func1(z_q, z_ref):
             return np.mean(
-                emb_inferred.similarity(z_q, z_ref, group_id=1), axis=0
+                proxy_inferred.similarity(z_q, z_ref, group_id=1), axis=0
             )
 
         def infer_sim_func2(z_q, z_ref):
             return np.mean(
-                emb_inferred.similarity(z_q, z_ref, group_id=2), axis=0
+                proxy_inferred.similarity(z_q, z_ref, group_id=2), axis=0
             )
 
         simmat_infer = (
-            psiz.utils.pairwise_matrix(infer_sim_func0, emb_inferred.z),
-            psiz.utils.pairwise_matrix(infer_sim_func1, emb_inferred.z),
-            psiz.utils.pairwise_matrix(infer_sim_func2, emb_inferred.z)
+            psiz.utils.pairwise_matrix(infer_sim_func0, proxy_inferred.z[0]),
+            psiz.utils.pairwise_matrix(infer_sim_func1, proxy_inferred.z[0]),
+            psiz.utils.pairwise_matrix(infer_sim_func2, proxy_inferred.z[0])
         )
         for i_truth in range(n_group):
             for j_infer in range(n_group):
@@ -280,11 +236,11 @@ def main():
 
         # Display attention weights.
         # Permute inferred dimensions to best match ground truth.
-        idx_sorted = np.argsort(-emb_inferred.w[0, :])
-        attention_weight = emb_inferred.w[:, idx_sorted]
+        idx_sorted = np.argsort(-proxy_inferred.w[0, :])
+        attention_weight = proxy_inferred.w[:, idx_sorted]
         group_labels = ["Novice", "Intermediate", "Expert"]
         print("\n    Attention weights:")
-        for i_group in range(emb_inferred.n_group):
+        for i_group in range(n_group):
             print("    {0:>12} | {1}".format(
                 group_labels[i_group],
                 np.array2string(
@@ -312,8 +268,8 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(12, 5), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, idx_sorted, i_frame
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
+            proxy_inferred, idx_sorted, i_frame
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -331,11 +287,13 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    stimuli = tf.keras.layers.Embedding(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
     kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
@@ -361,15 +319,84 @@ def ground_truth(n_stimuli, n_dim, n_group):
     return emb
 
 
+def build_model(n_stimuli, n_dim, n_group, n_obs_train):
+    """Build model.
+
+    Arguments:
+        n_stimuli: Integer indicating the number of stimuli in the
+            embedding.
+        n_dim: Integer indicating the dimensionality of the embedding.
+        n_group: Integer indicating the number of groups.
+        n_obs_train: Integer indicating the number of training
+            observations. Used to determine KL weight for variational
+            inference.
+
+    Returns:
+        model: A TensorFlow Keras model.
+
+    """
+    kl_weight = 1. / n_obs_train
+
+    embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
+        scale_initializer=psiz.keras.initializers.SoftplusUniform(
+            .01, .05
+        ),
+    )
+    embedding_prior = psiz.keras.layers.EmbeddingShared(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embedding=psiz.keras.layers.EmbeddingGammaDiag(
+            1, 1,
+            concentration_initializer=tf.keras.initializers.Constant(1.),
+            rate_initializer=tf.keras.initializers.Constant(1),
+            concentration_trainable=False,
+        )
+    )
+    embedding_variational = EmbeddingVariationalLog(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30,
+    )
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
+
+    attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
+        n_group, n_dim
+    )
+    attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
+        n_group, n_dim,
+        loc_initializer=tf.keras.initializers.Constant(-4.),
+        scale_initializer=tf.keras.initializers.Constant(1.),
+        trainable=False
+    )
+    kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(1.3),
+            trainable=False,
+        ),
+        attention=psiz.keras.layers.GroupAttentionVariational(
+            posterior=attention_posterior, prior=attention_prior,
+            kl_weight=kl_weight, kl_use_exact=True
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
+    return model
+
+
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true, proxy_inferred,
         idx_sorted, i_frame):
     """Plot posteriors."""
     # Settings.
     group_labels = ['Novice', 'Intermediate', 'Expert']
 
-    n_group = emb_inferred.model.n_group
-    n_dim = emb_inferred.model.n_dim
+    n_group = proxy_inferred.model.kernel.n_group
+    n_dim = proxy_inferred.model.n_dim
 
     gs = fig0.add_gridspec(n_group + 2, 6)
 
@@ -381,13 +408,13 @@ def plot_frame(
 
     f0_ax2 = fig0.add_subplot(gs[2:5, 0:2])
     psiz.visualize.heatmap_embeddings(
-        fig0, f0_ax2, emb_inferred.model.stimuli
+        fig0, f0_ax2, proxy_inferred.model.stimuli
     )
 
     f0_ax3 = fig0.add_subplot(gs[0:2, 3:6])
     i_dim = 0
     psiz.visualize.embedding_output_dimension(
-        fig0, f0_ax3, emb_inferred.model.stimuli, i_dim
+        fig0, f0_ax3, proxy_inferred.model.stimuli, i_dim
     )
     f0_ax3.set_title('Dim. {0}'.format(i_dim))
     # TODO
@@ -400,7 +427,7 @@ def plot_frame(
     #         c = 'g'
     #     ax = fig0.add_subplot(gs[i_group + 2, 2:6])
     #     psiz.visualize.embedding_input_dimension(
-    #         fig0, ax, emb_inferred.model.kernel.attention, i_group, c=c
+    #         fig0, ax, proxy_inferred.model.kernel.attention, i_group, c=c
     #     )
     #     ax.set_title(group_labels[i_group])
 

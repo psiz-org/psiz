@@ -37,15 +37,14 @@ import psiz
 # tf.config.experimental_run_functions_eagerly(True)
 
 # Modify the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
     """Run script."""
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'understand_ig')
-    n_sample = 1000
     n_reference = 3
     n_select = 1
     n_col = 7
@@ -85,9 +84,7 @@ def main():
         ds_docket = docket.as_dataset(group)
 
         # Compute expected information gain from prediction samples.
-        y_pred = tf.stack([
-            model(ds_docket, training=False) for _ in range(n_sample)
-        ], axis=0)
+        y_pred = model(ds_docket, training=False)
         expected_ig = psiz.generator.expected_information_gain(y_pred).numpy()
 
         # Select data to represent case in visualization.
@@ -140,7 +137,12 @@ def draw_scenario(fig, gs, row, case_data):
     ax = fig.add_subplot(gs[row, 0])
     # Draw model state.
     dist = model.stimuli.embeddings
-    loc, cov = unpack_mvn(dist, mask_zero=True)
+    group_idx = 0
+    loc, cov = unpack_mvn(dist, group_idx)
+    if model.stimuli.mask_zero:
+        # Drop placeholder stimulus.
+        loc = loc[1:]
+        cov = cov[1:]
     plot_bivariate_normal(
         ax, loc, cov, c=color_arr, r=1.96, lw=lw
     )
@@ -202,6 +204,9 @@ def build_model(case=0):
     Case 4:
 
     """
+    # Settings.
+    n_sample = 1000
+
     if case < 4:
         # Create embedding points arranged on a grid.
         x, y = np.meshgrid([.1, .2, .3, .4], [.1, .2, .3, .4])
@@ -229,10 +234,12 @@ def build_model(case=0):
         z_circle = np.vstack((np.ones([1, 2]), z_circle))
 
     prior_scale = .17
-    stimuli = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
-        scale_initializer=tf.keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=psiz.keras.layers.EmbeddingNormalDiag(
+            n_stimuli+1, n_dim, mask_zero=True,
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            )
         )
     )
     kernel = psiz.keras.layers.Kernel(
@@ -247,7 +254,9 @@ def build_model(case=0):
             trainable=False
         )
     )
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    model = psiz.models.Rank(
+        stimuli=stimuli, kernel=kernel, n_sample=n_sample
+    )
     model.stimuli.build([None, None, None])
     
 
@@ -277,8 +286,8 @@ def build_model(case=0):
         scale[4, :] = .03
 
     # Assign scenario variables.
-    model.stimuli.loc.assign(loc)
-    model.stimuli.untransformed_scale.assign(
+    model.stimuli.embedding.loc.assign(loc)
+    model.stimuli.embedding.untransformed_scale.assign(
         tfp.math.softplus_inverse(scale)
     )
     return model
@@ -330,33 +339,26 @@ def candidate_list(eligable_list, n_reference):
     return stimulus_set
 
 
-# TODO DRY (added mask_zero argument)
-def unpack_mvn(dist, mask_zero=False):
+# TODO DRY
+def unpack_mvn(dist, group_idx):
     """Unpack multivariate normal distribution."""
-    def scale_to_cov(scale):
-        """Convert scale to covariance matrix.
+    def diag_to_full_cov(v):
+        """Convert diagonal variance to full covariance matrix.
 
-        Assumes `scale` represents diagonal elements only.
+        Assumes `v` represents diagonal variance elements only.
         """
-        n_stimuli = scale.shape[0]
-        n_dim = scale.shape[1]
+        n_stimuli = v.shape[0]
+        n_dim = v.shape[1]
         cov = np.zeros([n_stimuli, n_dim, n_dim])
         for i_stimulus in range(n_stimuli):
-            cov[i_stimulus] = np.eye(n_dim) * scale[i_stimulus]**2
+            cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
         return cov
 
-    if isinstance(dist, tfp.distributions.Independent):
-        d = dist.distribution
-    else:
-        d = dist
-
-    if mask_zero:
-        # Drop placeholder stimulus.
-        loc = d.loc.numpy()[1:]
-        scale = d.scale.numpy()[1:]
+    loc = dist.mean().numpy()[group_idx]
+    v = dist.variance().numpy()[group_idx]
 
     # Convert to full covariance matrix.
-    cov = scale_to_cov(scale)
+    cov = diag_to_full_cov(v)
 
     return loc, cov
 

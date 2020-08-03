@@ -171,9 +171,9 @@ def main():
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        emb_inferred = psiz.models.Proxy(model)
+        proxy_inferred = psiz.models.Proxy(model)
         simmat_infer = psiz.utils.pairwise_matrix(
-            emb_inferred.similarity, emb_inferred.z
+            proxy_inferred.similarity, proxy_inferred.z
         )
         r2[i_frame] = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'

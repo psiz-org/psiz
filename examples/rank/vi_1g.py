@@ -54,10 +54,12 @@ def main():
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 2
+    n_group = 1
     n_trial = 2000
     n_restart = 1
+    epochs = 1000
     batch_size = 128
-    n_frame = 1
+    n_frame = 1  # Set to 7 to observe convergence behavior.
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -86,7 +88,8 @@ def main():
     gray_array[:, 0:3] = .8
     color_array = np.vstack([gray_array, color_array])
 
-    emb_true = ground_truth(n_stimuli, n_dim)
+    model_true = ground_truth(n_stimuli, n_dim)
+    proxy_true = psiz.models.Proxy(model=model_true)
 
     # Generate a random docket of trials.
     generator = psiz.generator.RandomRank(
@@ -95,11 +98,12 @@ def main():
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.simulate.Agent(emb_true.model)
+    agent = psiz.simulate.Agent(proxy_true.model)
     obs = agent.simulate(docket)
 
     simmat_true = psiz.utils.pairwise_matrix(
-        emb_true.similarity, emb_true.z)
+        proxy_true.similarity, proxy_true.z[0]
+    )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
@@ -145,56 +149,17 @@ def main():
         callbacks = [cb_board, cb_early]
 
         # Define model.
-        kl_weight = 1. / obs_round_train.n_trial
-        # Note that scale of the prior can be misspecified. The true scale
-        # is .17, but halving (.085) or doubling (.34) still works well. When
-        # the prior scale is much smaller than appropriate and there is
-        # little data, the posterior will be driven by an incorrect prior.
-        prior_scale = .2  # Mispecified to demonstrate robustness.
-        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli+1, n_dim, mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            )
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingNormalDiag(
-                1, 1,
-                loc_initializer=tf.keras.initializers.Constant(0.),
-                scale_initializer=tf.keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
-                ),
-                loc_trainable=False,
-            )
-        )
-        stimuli = psiz.keras.layers.EmbeddingVariational(
-            posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_n_sample=30
-        )
-
-        kernel = psiz.keras.layers.Kernel(
-            distance=psiz.keras.layers.WeightedMinkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.),
-                trainable=False,
-            ),
-            similarity=psiz.keras.layers.ExponentialSimilarity(
-                fit_tau=False, fit_gamma=False,
-                tau_initializer=tf.keras.initializers.Constant(1.),
-                gamma_initializer=tf.keras.initializers.Constant(0.),
-            )
-        )
-        model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
-        emb_inferred = psiz.models.Proxy(model=model)
+        model = build_model(n_stimuli, n_dim, n_group, obs_round_train.n_trial)
+        proxy_inferred = psiz.models.Proxy(model=model)
 
         # Infer embedding.
-        restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+        restart_record = proxy_inferred.fit(
+            obs_round_train, validation_data=obs_val, epochs=epochs,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='loss', verbose=2, compile_kwargs=compile_kwargs
         )
 
-        dist = emb_inferred.model.stimuli.prior.embeddings.distribution
+        dist = proxy_inferred.model.stimuli.embedding.prior.embeddings.distribution
         print('    Inferred prior scale: {0:.4f}'.format(
             dist.distribution.distribution.scale[0, 0]
         ))
@@ -207,9 +172,9 @@ def main():
         val_loss[i_frame] = restart_record.record['val_loss'][0]
 
         tf.keras.backend.clear_session()
-        emb_inferred.model.n_sample = 100
-        emb_inferred.compile(**compile_kwargs)
-        test_metrics = emb_inferred.evaluate(
+        proxy_inferred.model.n_sample = 100
+        proxy_inferred.compile(**compile_kwargs)
+        test_metrics = proxy_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
@@ -217,7 +182,7 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = psiz.utils.pairwise_matrix(
-            emb_inferred.similarity, emb_inferred.z
+            proxy_inferred.similarity, proxy_inferred.z[0]
         )
         r2[i_frame] = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'
@@ -234,8 +199,8 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, color_array, train_time
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
+            proxy_inferred, color_array, train_time
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -252,7 +217,7 @@ def main():
 
 
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true, proxy_inferred,
         color_array, train_time):
     """Plot frame."""
     # Settings.
@@ -272,14 +237,20 @@ def plot_frame(
     # Plot embeddings.
     f0_ax1 = fig0.add_subplot(gs[0, 1])
     # Determine embedding limits.
-    z_max = 1.3 * np.max(np.abs(emb_true.z))
+    z_max = 1.3 * np.max(np.abs(proxy_true.z))
     z_limits = [-z_max, z_max]
 
     # Apply and plot Procrustes affine transformation of posterior.
-    dist = emb_inferred.model.stimuli.posterior.embeddings
-    loc, cov = unpack_mvn(dist)
+    dist = proxy_inferred.model.stimuli.embeddings
+    group_idx = 0
+    loc, cov = unpack_mvn(dist, group_idx)
+    if proxy_inferred.model.stimuli.mask_zero:
+        # Drop placeholder stimulus.
+        loc = loc[1:]
+        cov = cov[1:]
+
     r, t = psiz.utils.procrustes_2d(
-        emb_true.z, loc, scale=False, n_restart=30
+        proxy_true.z, loc, scale=False, n_restart=30
     )
     loc, cov = apply_affine(loc, cov, r, t)
     # r = 1.960  # 95%
@@ -288,8 +259,8 @@ def plot_frame(
 
     # Plot true embedding.
     f0_ax1.scatter(
-        emb_true.z[:, 0], emb_true.z[:, 1], s=s, c=color_array, marker='o',
-        edgecolors='none', zorder=100
+        proxy_true.z[group_idx, :, 0], proxy_true.z[group_idx, :, 1],
+        s=s, c=color_array, marker='o', edgecolors='none', zorder=100
     )
     f0_ax1.set_xlim(z_limits)
     f0_ax1.set_ylim(z_limits)
@@ -396,31 +367,25 @@ def plot_bvn(ax, loc, cov=None, c=None, r=1.96, show_loc=True):
             ax.add_artist(ellipse)
 
 
-def unpack_mvn(dist):
+def unpack_mvn(dist, group_idx):
     """Unpack multivariate normal distribution."""
-    def scale_to_cov(scale):
-        """Convert scale to covariance matrix.
+    def diag_to_full_cov(v):
+        """Convert diagonal variance to full covariance matrix.
 
-        Assumes `scale` represents diagonal elements only.
+        Assumes `v` represents diagonal variance elements only.
         """
-        n_stimuli = scale.shape[0]
-        n_dim = scale.shape[1]
+        n_stimuli = v.shape[0]
+        n_dim = v.shape[1]
         cov = np.zeros([n_stimuli, n_dim, n_dim])
         for i_stimulus in range(n_stimuli):
-            cov[i_stimulus] = np.eye(n_dim) * scale[i_stimulus]**2
+            cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
         return cov
 
-    if isinstance(dist, tfp.distributions.Independent):
-        d = dist.distribution
-    else:
-        d = dist
-
-    # Drop placeholder stimulus.
-    loc = d.loc.numpy()[1:]
-    scale = d.scale.numpy()[1:]
+    loc = dist.mean().numpy()[group_idx]
+    v = dist.variance().numpy()[group_idx]
 
     # Convert to full covariance matrix.
-    cov = scale_to_cov(scale)
+    cov = diag_to_full_cov(v)
 
     return loc, cov
 
@@ -430,10 +395,12 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(
-            stddev=scale_request, seed=58
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(
+                stddev=scale_request, seed=58
+            )
         )
     )
     stimuli.build([None, None, None])
@@ -449,16 +416,78 @@ def ground_truth(n_stimuli, n_dim):
         )
     )
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
-    emb = psiz.models.Proxy(model=model)
+    scale_sample = model.stimuli.embeddings.numpy()[0]
+    if model.stimuli.mask_zero:
+        scale_sample = scale_sample[1:]
+    scale_sample = np.std(scale_sample)
 
-    scale_sample = np.std(emb.model.stimuli.embeddings.numpy())
     print(
         '\n  Requested scale: {0:.4f}'
         '\n  Sampled scale: {1:.4f}\n'.format(
             scale_request, scale_sample
         )
     )
-    return emb
+    return model
+
+
+def build_model(n_stimuli, n_dim, n_group, n_obs_train):
+    """Build model.
+
+    Arguments:
+        n_stimuli: Integer indicating the number of stimuli in the
+            embedding.
+        n_dim: Integer indicating the dimensionality of the embedding.
+        n_group: Integer indicating the number of groups.
+        n_obs_train: Integer indicating the number of training
+            observations. Used to determine KL weight for variational
+            inference.
+
+    Returns:
+        model: A TensorFlow Keras model.
+
+    """
+    kl_weight = 1. / n_obs_train
+    # Note that scale of the prior can be misspecified. The true scale
+    # is .17, but halving (.085) or doubling (.34) still works well. When
+    # the prior scale is much smaller than appropriate and there is
+    # little data, the posterior will be driven by an incorrect prior.
+    prior_scale = .2  # Mispecified to demonstrate robustness.
+    embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(prior_scale).numpy()
+        )
+    )
+    embedding_prior = psiz.keras.layers.EmbeddingShared(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embedding=psiz.keras.layers.EmbeddingNormalDiag(
+            1, 1,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ),
+            loc_trainable=False,
+        )
+    )
+    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
+    return model
 
 
 def apply_affine(loc, cov, r, t):

@@ -57,6 +57,7 @@ def main():
     n_dim_nonneg = 20
     n_trial = 2000
     n_restart = 1
+    epochs = 1000
     batch_size = 100
     n_frame = 1
 
@@ -78,7 +79,7 @@ def main():
     plt.rc('legend', fontsize=small_size)
     plt.rc('figure', titlesize=large_size)
 
-    emb_true = ground_truth(n_stimuli, n_dim)
+    proxy_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
     generator = psiz.generator.RandomRank(
@@ -87,11 +88,11 @@ def main():
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.simulate.Agent(emb_true.model)
+    agent = psiz.simulate.Agent(proxy_true.model)
     obs = agent.simulate(docket)
 
     simmat_true = psiz.utils.pairwise_matrix(
-        emb_true.similarity, emb_true.z)
+        proxy_true.similarity, proxy_true.z[0])
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
@@ -155,9 +156,12 @@ def main():
                 concentration_trainable=False,
             )
         )
-        stimuli = EmbeddingVariationalLog(
+        embedding_variational = EmbeddingVariationalLog(
             posterior=embedding_posterior, prior=embedding_prior,
             kl_weight=kl_weight, kl_n_sample=30,
+        )
+        stimuli = psiz.keras.layers.Stimuli(
+            embedding=embedding_variational
         )
 
         kernel = psiz.keras.layers.Kernel(
@@ -173,11 +177,11 @@ def main():
             )
         )
         model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
-        emb_inferred = psiz.models.Proxy(model=model)
+        proxy_inferred = psiz.models.Proxy(model=model)
 
         # Infer embedding.
-        restart_record = emb_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=1000,
+        restart_record = proxy_inferred.fit(
+            obs_round_train, validation_data=obs_val, epochs=epochs,
             batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
             monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
         )
@@ -188,9 +192,9 @@ def main():
         
         # Test.
         tf.keras.backend.clear_session()
-        emb_inferred.model.n_sample = 100
-        emb_inferred.compile(**compile_kwargs)
-        test_metrics = emb_inferred.evaluate(
+        proxy_inferred.model.n_sample = 100
+        proxy_inferred.compile(**compile_kwargs)
+        test_metrics = proxy_inferred.evaluate(
             obs_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
@@ -198,7 +202,7 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_infer = psiz.utils.pairwise_matrix(
-            emb_inferred.similarity, emb_inferred.z
+            proxy_inferred.similarity, proxy_inferred.z[0]
         )
         r2[i_frame] = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'
@@ -215,17 +219,17 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true,
-            emb_inferred, train_time
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
+            proxy_inferred, train_time
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
             os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
         )
 
-        print(np.max(emb_inferred.z, axis=0))
-        print(np.min(np.max(emb_inferred.z, axis=0)))
-        print(np.mean(emb_inferred.z, axis=0))
+        # print(np.max(proxy_inferred.z[0], axis=0))
+        # print(np.min(np.max(proxy_inferred.z[0], axis=0)))
+        # print(np.mean(proxy_inferred.z[0], axis=0))
 
     # Create animation.
     if n_frame > 1:
@@ -237,7 +241,7 @@ def main():
 
 
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, emb_true, emb_inferred,
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true, proxy_inferred,
         train_time):
     """Plot frame."""
     # Settings.
@@ -257,14 +261,14 @@ def plot_frame(
     # Visualize embedding point estimates.
     f0_ax3 = fig0.add_subplot(gs[1, 0:2])
     psiz.visualize.heatmap_embeddings(
-        fig0, f0_ax3, emb_inferred.model.stimuli
+        fig0, f0_ax3, proxy_inferred.model.stimuli
     )
 
     # Visualize embedding distributions for the first dimension.
     f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
     psiz.visualize.embedding_output_dimension(
-        fig0, f0_ax4, emb_inferred.model.stimuli, i_dim
+        fig0, f0_ax4, proxy_inferred.model.stimuli, i_dim
     )
 
     gs.tight_layout(fig0)
@@ -329,12 +333,14 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(
-            stddev=scale_request, seed=58
-        ),
-        trainable=False
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(
+                stddev=scale_request, seed=58
+            ),
+            trainable=False
+        )
     )
     stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(

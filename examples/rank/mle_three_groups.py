@@ -55,10 +55,11 @@ def main():
     n_dim = 4
     n_group = 3
     n_restart = 3
+    epochs = 1000
     n_trial = 2000
     batch_size = 100
 
-    emb_true = ground_truth(n_stimuli, n_dim, n_group)
+    proxy_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
     generator = psiz.generator.RandomRank(
@@ -67,9 +68,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.simulate.Agent(emb_true.model, group_id=0)
-    agent_interm = psiz.simulate.Agent(emb_true.model, group_id=1)
-    agent_expert = psiz.simulate.Agent(emb_true.model, group_id=2)
+    agent_novice = psiz.simulate.Agent(proxy_true.model, group_id=0)
+    agent_interm = psiz.simulate.Agent(proxy_true.model, group_id=1)
+    agent_expert = psiz.simulate.Agent(proxy_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -94,54 +95,46 @@ def main():
         ]
     }
 
+    model = build_model(n_stimuli, n_dim, n_group)
+    proxy_inferred = psiz.models.Proxy(model=model)
+
     # Infer a shared embedding with group-specific attention weights.
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
-    )
-    kernel = psiz.keras.layers.AttentionKernel(
-        attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity()
-    )
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
-    emb_inferred = psiz.models.Proxy(model=model)
-    restart_record = emb_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=1000, batch_size=batch_size,
-        callbacks=callbacks, monitor='val_cce', n_restart=n_restart, verbose=1,
-        compile_kwargs=compile_kwargs
+    restart_record = proxy_inferred.fit(
+        obs_train, validation_data=obs_val, epochs=epochs,
+        batch_size=batch_size, callbacks=callbacks, monitor='val_cce',
+        n_restart=n_restart, verbose=1, compile_kwargs=compile_kwargs
     )
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
     def truth_sim_func0(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=0)
+        return proxy_true.similarity(z_q, z_ref, group_id=0)
 
     def truth_sim_func1(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=1)
+        return proxy_true.similarity(z_q, z_ref, group_id=1)
 
     def truth_sim_func2(z_q, z_ref):
-        return emb_true.similarity(z_q, z_ref, group_id=2)
+        return proxy_true.similarity(z_q, z_ref, group_id=2)
 
     simmat_truth = (
-        psiz.utils.pairwise_matrix(truth_sim_func0, emb_true.z),
-        psiz.utils.pairwise_matrix(truth_sim_func1, emb_true.z),
-        psiz.utils.pairwise_matrix(truth_sim_func2, emb_true.z)
+        psiz.utils.pairwise_matrix(truth_sim_func0, proxy_true.z[0]),
+        psiz.utils.pairwise_matrix(truth_sim_func1, proxy_true.z[0]),
+        psiz.utils.pairwise_matrix(truth_sim_func2, proxy_true.z[0])
     )
 
     def infer_sim_func0(z_q, z_ref):
-        return emb_inferred.similarity(z_q, z_ref, group_id=0)
+        return proxy_inferred.similarity(z_q, z_ref, group_id=0)
 
     def infer_sim_func1(z_q, z_ref):
-        return emb_inferred.similarity(z_q, z_ref, group_id=1)
+        return proxy_inferred.similarity(z_q, z_ref, group_id=1)
 
     def infer_sim_func2(z_q, z_ref):
-        return emb_inferred.similarity(z_q, z_ref, group_id=2)
+        return proxy_inferred.similarity(z_q, z_ref, group_id=2)
 
     simmat_infer = (
-        psiz.utils.pairwise_matrix(infer_sim_func0, emb_inferred.z),
-        psiz.utils.pairwise_matrix(infer_sim_func1, emb_inferred.z),
-        psiz.utils.pairwise_matrix(infer_sim_func2, emb_inferred.z)
+        psiz.utils.pairwise_matrix(infer_sim_func0, proxy_inferred.z[0]),
+        psiz.utils.pairwise_matrix(infer_sim_func1, proxy_inferred.z[0]),
+        psiz.utils.pairwise_matrix(infer_sim_func2, proxy_inferred.z[0])
     )
 
     r_squared = np.empty((n_group, n_group))
@@ -154,11 +147,11 @@ def main():
 
     # Display attention weights.
     # Permute inferred dimensions to best match ground truth.
-    idx_sorted = np.argsort(-emb_inferred.w[0, :])
-    attention_weight = emb_inferred.w[:, idx_sorted]
+    idx_sorted = np.argsort(-proxy_inferred.w[0, :])
+    attention_weight = proxy_inferred.w[:, idx_sorted]
     group_labels = ["Novice", "Intermediate", "Expert"]
     print("\n    Attention weights:")
-    for i_group in range(emb_inferred.n_group):
+    for i_group in range(proxy_inferred.model.kernel.n_group):
         print("    {0:>12} | {1}".format(
             group_labels[i_group],
             np.array2string(
@@ -186,11 +179,14 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+        )
     )
     kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
@@ -215,6 +211,34 @@ def ground_truth(n_stimuli, n_dim, n_group):
     emb = psiz.models.Proxy(model=model)
     return emb
 
+
+def build_model(n_stimuli, n_dim, n_group):
+    """Build model.
+
+    Arguments:
+        n_stimuli: Integer indicating the number of stimuli in the
+            embedding.
+        n_dim: Integer indicating the dimensionality of the embedding.
+
+    Returns:
+        model: A TensorFlow Keras model.
+
+    """
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+        )
+    )
+    kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
+        attention=psiz.keras.layers.GroupAttention(
+            n_dim=n_dim, n_group=n_group
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity()
+    )
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+
+    return model
 
 if __name__ == "__main__":
     main()

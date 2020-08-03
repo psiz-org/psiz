@@ -16,7 +16,7 @@
 """Module for similarity judgment trials.
 
 Classes:
-    Trials: Abstract class for similarity judgment trials.
+    SimilarityTrials: Abstract class for similarity judgment trials.
     RankTrials: Abstract class for 'Rank' trials.
     RankDocket: Unjudged 'Rank' trials.
     RankObservations: Judged 'Rank' trials.
@@ -63,7 +63,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 
-class Trials(metaclass=ABCMeta):
+class SimilarityTrials(metaclass=ABCMeta):
     """Abstract base class for similarity judgment trials.
 
     This abstract base class is used to organize data associated with
@@ -170,20 +170,20 @@ class Trials(metaclass=ABCMeta):
 
     @abstractmethod
     def subset(self, index):
-        """Return subset of trials as new Trials object.
+        """Return subset of trials as new SimilarityTrials object.
 
         Arguments:
             index: The indices corresponding to the subset.
 
         Returns:
-            A new Trials object.
+            A new SimilarityTrials object.
 
         """
         pass
 
     @abstractmethod
     def save(self, filepath):
-        """Save the Trials object as an HDF5 file.
+        """Save the SimilarityTrials object as an HDF5 file.
 
         Arguments:
             filepath: String specifying the path to save the data.
@@ -197,7 +197,7 @@ class Trials(metaclass=ABCMeta):
         return is_present
 
 
-class RankTrials(Trials, metaclass=ABCMeta):
+class RankTrials(SimilarityTrials, metaclass=ABCMeta):
     """Abstract base class for rank-type trials."""
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None):
@@ -223,7 +223,7 @@ class RankTrials(Trials, metaclass=ABCMeta):
                 shape = (n_trial,)
 
         """
-        Trials.__init__(self, stimulus_set)
+        SimilarityTrials.__init__(self, stimulus_set)
 
         n_reference = self._infer_n_reference(stimulus_set)
         self.n_reference = self._check_n_reference(n_reference)
@@ -462,9 +462,9 @@ class RankDocket(RankTrials):
 
         Arguments:
             stimulus_set: The order of the reference indices is not
-                important. See Trials.
-            n_select (optional): See Trials.
-            is_ranked (optional): See Trials.
+                important. See SimilarityTrials.
+            n_select (optional): See SimilarityTrials.
+            is_ranked (optional): See SimilarityTrials.
 
         """
         RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
@@ -696,16 +696,16 @@ class RankObservations(RankTrials):
                  rt_ms=None):
         """Initialize.
 
-        Extends initialization of Trials.
+        Extends initialization of SimilarityTrials.
 
         Arguments:
             stimulus_set: The order of reference indices is important.
                 An agent's selected references are listed first (in
                 order of selection if the trial is ranked) and
                 remaining unselected references are listed in any
-                order. See Trials.
-            n_select (optional): See Trials.
-            is_ranked (optional): See Trials.
+                order. See SimilarityTrials.
+            n_select (optional): See SimilarityTrials.
+            is_ranked (optional): See SimilarityTrials.
             group_id (optional): An integer array indicating the group
                 membership of each trial. It is assumed that group_id
                 is composed of integers from [0, M-1] where M is the
@@ -1059,14 +1059,14 @@ class RankObservations(RankTrials):
 def stack(trials_list):
     """Return a RankTrials object containing all trials.
 
-    The stimulus_set of each Trials object is padded first to
+    The stimulus_set of each SimilarityTrials object is padded first to
     match the maximum number of references of all the objects.
 
     Arguments:
-        trials_list: A tuple of Trials objects to be stacked.
+        trials_list: A tuple of SimilarityTrials objects to be stacked.
 
     Returns:
-        A new Trials object.
+        A new SimilarityTrials object.
 
     """
     # Determine the maximum number of references.
@@ -1126,11 +1126,11 @@ def squeeze(sim_trials, mode="sg"):
     unique stimuli used in sim_trials.
 
     Arguments:
-        sim_trials: A Trials object.
+        sim_trials: A SimilarityTrials object.
         mode (optional): The mode in which to squeeze the indices.
 
     Returns:
-        sim_trials_sq: A Trials object.
+        sim_trials_sq: A SimilarityTrials object.
 
     """
     unique_stimuli = np.unique(sim_trials.stimulus_set)
@@ -1153,7 +1153,7 @@ def load(filepath, verbose=0):
     """Load data saved via the save method.
 
     The loaded data is instantiated as a concrete class of
-    psiz.trials.Trials.
+    psiz.trials.SimilarityTrials.
 
     Arguments:
         filepath: The location of the hdf5 file to load.

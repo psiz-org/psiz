@@ -204,7 +204,6 @@ class RateDocket(RateTrials):
         group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)
         group = np.hstack([group_level_0, group])
         # Return tensorflow dataset.
-        # stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
         stimulus_set = self.stimulus_set + 1
         x = {
             'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
@@ -351,7 +350,7 @@ class RateObservations(RateTrials):
 
         """
         RateTrials.__init__(self, stimulus_set)
-        self.rating = np.asarray(rating, dtype=np.float32)  # TODO
+        self.rating = np.asarray(rating, dtype=np.float32)  # TODO as check method
 
         # Handle default settings.
         if group_id is None:
@@ -603,7 +602,6 @@ class RateObservations(RateTrials):
         group_level_0 = np.zeros([self.group_id.shape[0]], dtype=np.int32)
         
         x = {
-            # 'stimulus_set': np.expand_dims(self.stimulus_set + 1, axis=2),
             'stimulus_set': self.stimulus_set + 1,
             'group': np.stack(
                 (group_level_0, self.group_id, self.agent_id), axis=-1

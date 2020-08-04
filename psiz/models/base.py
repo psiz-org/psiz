@@ -272,7 +272,7 @@ class Proxy(object):
             tf.constant(z_r, dtype=K.floatx()),
             tf.constant(attention, dtype=K.floatx())
         ]).numpy()
-        return np.squeze(d_qr)
+        return np.squeeze(d_qr)
 
     # def _check_obs(self, obs):
     #     """Check observerations.

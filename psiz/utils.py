@@ -32,6 +32,7 @@ Functions:
         an affine transformation.
     choice_wo_replace: Efficient sampling without replacement.
     standard_split: Standard 80-10-10 split of observations.
+    pad_2d_array: Pad a 2D array with a value.
 
 """
 
@@ -468,6 +469,27 @@ def standard_split(obs, shuffle=False, seed=None):
     obs_val = obs_holdout.subset(val_idx)
     obs_test = obs_holdout.subset(test_idx)
     return obs_train, obs_val, obs_test
+
+
+def pad_2d_array(arr, n_column, value=-1):
+    """Pad 2D array with columns composed of -1.
+
+    Argument:
+        arr: A 2D array denoting the stimulus set.
+        n_column: The total number of columns that the array should
+            have.
+        value (optional): The value to use to pad the array.
+
+    Returns:
+        Padded array.
+
+    """
+    n_trial = arr.shape[0]
+    n_pad = n_column - arr.shape[1]
+    if n_pad > 0:
+        pad_mat = value * np.ones((n_trial, n_pad), dtype=np.int32)
+        arr = np.hstack((arr, pad_mat))
+    return arr
 
 
 class ProgressBarRe(object):

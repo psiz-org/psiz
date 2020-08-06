@@ -114,7 +114,7 @@ obs = psiz.trials.RankObservations(stimulus_set, n_select=n_select)
 obs.save('path/to/obs.hdf5')
 
 # Load the observations from disk.
-obs = psiz.trials.load('path/to/obs.hdf5')
+obs = psiz.trials.load_trials('path/to/obs.hdf5')
 ```
 Note that the values in `stimulus_set` are assumed to be contiguous integers [0, N[, where N is the number of unique stimuli. Their order is also important. The query is listed in the first column, an agent's selected references are listed second (in order of selection if there are more than two) and then any remaining unselected references are listed (in any order).
 

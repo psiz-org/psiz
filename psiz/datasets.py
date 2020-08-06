@@ -166,7 +166,7 @@ def _fetch_obs(dataset_name, cache_dir, cache_subdir):
             os.path.join(dataset_name, fname), origin,
             cache_subdir=cache_subdir, extract=True, cache_dir=cache_dir
         )
-        obs = psiz.trials.load(path)
+        obs = psiz.trials.load_trials(path)
     else:
         raise ValueError(
             'The requested dataset `{0}` may not exist since the '

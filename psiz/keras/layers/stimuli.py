@@ -77,10 +77,8 @@ class Stimuli(GroupLevel):
         # Route indices by group membership.
         indices = inputs[0]
         group_id = inputs[-1][:, self.group_level]
-        group_id = tf.expand_dims(group_id, axis=-1)
-        group_id = tf.expand_dims(group_id, axis=-1)
-        indices_flat = _map_embedding_indices(
-            indices, group_id, self.input_dim, False
+        indices_flat = self._map_embedding_indices(
+            indices, group_id, self.input_dim
         )
         # Make usual call to embedding layer.
         return self.embedding(indices_flat)
@@ -156,13 +154,28 @@ class Stimuli(GroupLevel):
             n_stimuli -= 1
         return n_stimuli
 
+    def _map_embedding_indices(self, idx, group_idx, n):
+        """Map group-specific embedding indices to flat indices.
+        
+        Arguments:
+            idx: Integer tf.Tensor indicating embedding indices.
+                shape=(batch_size, [m, n, ...])
+            group_idx: Integer tf.Tensor indicating group identifiers.
+                This formulation assumes groups are consecutive,
+                zero-based indices.
+                shape=(batch_size)
+            n: Integer indicating the number of embedding points.
 
-def _map_embedding_indices(idx, group_id, n, mask_zero):
-    if mask_zero:
-        # Convert to problem without mask.
-        loc_0 = tf.math.not_equal(idx, 0)
-        idx_flat = idx + (group_id * (n-1))
-        idx_flat = idx_flat * tf.cast(loc_0, dtype=tf.int32)
-    else:
-        idx_flat = idx + (group_id * n)
-    return idx_flat
+        Returns:
+            An integer tf.Tensor with the mapped indices.
+
+        """
+        # Make `group_idx` broadcast compatible.
+        batch_size = tf.shape(group_idx)
+        diff_rank = tf.rank(idx) - tf.rank(group_idx)
+        shape_new = tf.ones(diff_rank, dtype=batch_size.dtype)
+        shape_new = tf.concat((batch_size, shape_new), axis=0)
+        group_idx = tf.reshape(group_idx, shape_new)
+
+        # Perform mapping.
+        return idx + (group_idx * n)

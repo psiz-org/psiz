@@ -76,14 +76,23 @@ class Rate(PsychologicalEmbedding):
 
         # Inflate coordinates.
         z = self.stimuli([stimulus_set, group])
-        # TensorShape([sample_size, batch_size, 2, n_dim])
 
-        # Divide up stimuli for kernel call.
-        z_list = tf.unstack(z, axis=1)
+        # Expand rank in case the first dimension is not `sample_size`, thus
+        # promising: TensorShape([sample_size, batch_size, 2, n_dim])
+        if tf.math.equal(tf.rank(z), 3):
+            z = tf.expand_dims(z, axis=0)
+
+        # Divide up stimuli sets for kernel call.
+        z_0 = z[:, :, 0, :]
+        z_1 = z[:, :, 1, :]
+
         # Pass through similarity kernel.
-        sim_qr = self.kernel([z_list[0], z_list[1], group])
+        sim_qr = self.kernel([z_0, z_1, group])
         # TensorShape([sample_size, batch_size,])
 
         # Predict rating of stimulus pair.
         rating = self.behavior([sim_qr, group])
+
+        # Add singleton trailing dimension since MSE assumes rank-2 Tensors.
+        rating = tf.expand_dims(rating, axis=-1)
         return rating

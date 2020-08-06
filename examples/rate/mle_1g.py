@@ -33,6 +33,7 @@ import shutil
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 import psiz
 
@@ -45,13 +46,22 @@ def main():
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
-    n_stimuli = 30
+    n_stimuli = 25  # 30
     n_dim = 2
-    n_restart = 3
-    n_trial = 1000
+    n_restart = 10
     epochs = 1000
-    batch_size = 128
+    lr = .001
+    batch_size = 64
     n_frame = 1
+
+    # randn 30 stim
+    # epochs = 1000 lr=.001 =>  128: .83, .76 | 64: .94, .90 | 32: .88, .86
+    # epochs = 3000 lr=.001 =>  128: .85, .82 | 64: .70 .63 | 32: .85 .79
+    # epochs = 1000 lr=.0001 => 128: .32, .30 | 64:  | 32: 
+
+    # MLE vs VI
+    # epochs = 1000 lr=.001 bs=64 =>
+    # mle: .94 .88
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -59,55 +69,29 @@ def main():
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
-    model_true = ground_truth(n_stimuli, n_dim)
-
-    # Generate a random docket of trials.
-    generator = psiz.generator.RandomRate(n_stimuli)
-    
-    stimulus_set_0 = np.asarray(list(itertools.combinations(np.arange(n_stimuli), 2)))
-    stimulus_set_1 = generator.generate(20)
-    stimulus_set = np.vstack([stimulus_set_0, stimulus_set_1])
-    n_trial = stimulus_set.shape[0]
-    group = np.ones([n_trial], dtype=int)
-
-    # Simulate similarity judgments.
-    # agent = psiz.simulate.Agent(model_true.model)
-    # obs = agent.simulate(docket)
-    inputs = {
-        'stimulus_set': tf.constant(stimulus_set + 1, dtype=tf.int32),
-        'group': tf.constant(group, dtype=tf.int32)
-    }
-    output = model_true(inputs).numpy()
+    model_true = ground_truth_randn(n_stimuli, n_dim)
+    # model_true = ground_truth_grid()
 
     proxy = psiz.models.Proxy(model_true)
-    simmat_true = psiz.utils.pairwise_matrix(proxy.similarity, proxy.z)
+    simmat_true = psiz.utils.pairwise_matrix(proxy.similarity, proxy.z[0])
 
-    # Partition observations into 80% train, 10% validation and 10% test set.
-    # obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
-    w = np.ones(n_trial)
-    locs_train = np.zeros([n_trial], dtype=bool)
-    locs_train[0:-20] = True
-    locs_val = np.logical_not(locs_train)
+    # Generate a random docket of trials.
+    # generator = psiz.generator.RandomRate(n_stimuli)
+    # rate_docket_1 = generator.generate(20)
 
-    # Create dataset.
-    inputs_train = {
-        'stimulus_set': tf.constant(stimulus_set[locs_train] + 1, dtype=tf.int32),
-        'group': tf.constant(group[locs_train], dtype=tf.int32)
-    }
-    w_train = tf.constant(w[locs_train])
-    y_train = tf.constant(output[locs_train])
-    ds_obs_train = tf.data.Dataset.from_tensor_slices(
-        (inputs_train, y_train, w_train)
-    ).batch(batch_size, drop_remainder=False)
+    stimulus_set_all = np.asarray(list(itertools.combinations(np.arange(n_stimuli), 2)))
+    n_trial = stimulus_set_all.shape[0]
+    rate_docket_all = psiz.trials.RateDocket(stimulus_set_all)
+    group = np.ones([n_trial], dtype=int)
+    ds_docket = rate_docket_all.as_dataset(group)
+    
+    # Simulate noiseless similarity judgments.
+    output = np.mean(model_true(ds_docket).numpy(), axis=0)
 
-    inputs_val = {
-        'stimulus_set': tf.constant(stimulus_set[locs_val] + 1, dtype=tf.int32),
-        'group': tf.constant(group[locs_val], dtype=tf.int32)
-    }
-    w_val = tf.constant(w[locs_val])
-    y_val = tf.constant(output[locs_val])
-    ds_obs_val = tf.data.Dataset.from_tensor_slices(
-        (inputs_val, y_val, w_val)
+    obs = psiz.trials.RateObservations(stimulus_set_all, output)
+    
+    ds_obs_train = obs.as_dataset().shuffle(
+        buffer_size=obs.n_trial, reshuffle_each_iteration=True
     ).batch(batch_size, drop_remainder=False)
 
     # Use early stopping.
@@ -117,106 +101,66 @@ def main():
 
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(lr=lr),
         'weighted_metrics': [
             tf.keras.metrics.MeanSquaredError(name='mse')
         ]
     }
 
     # Infer independent models with increasing amounts of data.
-    n_obs = n_trial * np.ones([n_trial], dtype=int)  # TODO
-    # if n_frame == 1:
-    #     n_obs = np.array([obs_train.n_trial], dtype=int)
-    # else:
-    #     n_obs = np.round(
-    #         np.linspace(15, obs_train.n_trial, n_frame)
-    #     ).astype(np.int64)
-    r2 = np.empty((n_frame))
-    train_mse = np.empty((n_frame))
-    val_mse = np.empty((n_frame))
-    test_mse = np.empty((n_frame))
-    for i_frame in range(n_frame):
-        # include_idx = np.arange(0, n_obs[i_frame])
-        # obs_round_train = obs_train.subset(include_idx)
-        # print(
-        #     '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
-        # )
-        # ds_obs_train = obs_train.as_dataset()
-        # ds_obs_val = obs_val.as_dataset()
-
+    for i_restart in range(n_restart):
         # Use Tensorboard callback.
-        fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
+        fp_board_frame = fp_board / Path('restart_{0}'.format(i_restart))
         cb_board = psiz.keras.callbacks.TensorBoardRe(
             log_dir=fp_board_frame, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
-        callbacks = [early_stop, cb_board]
+        callbacks = [cb_board]
 
-        model = build_model(n_stimuli, n_dim)
+        
+        # model = build_model(n_stimuli, n_dim)
+        model = build_model_vi(n_stimuli, n_dim, obs.n_trial)
 
         # Infer embedding.
         model.compile(**compile_kwargs)
         history = model.fit(
-            ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
-            callbacks=callbacks, verbose=1
+            ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0
         )
 
-        train_mse[i_frame] = history.history['mse'][0]
-        val_mse[i_frame] = history.history['val_mse'][0]
-        test_metrics = model.evaluate(
-            ds_obs_val, verbose=0, return_dict=True
+        # train_mse = history.history['mse'][0]
+        train_metrics = model.evaluate(
+            ds_obs_train, verbose=0, return_dict=True
         )
-        test_mse[i_frame] = test_metrics['mse']
+        train_mse = train_metrics['mse']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         proxy_inferred = psiz.models.Proxy(model)
         simmat_infer = psiz.utils.pairwise_matrix(
-            proxy_inferred.similarity, proxy_inferred.z
+            proxy_inferred.similarity, proxy_inferred.z[0]
         )
-        r2[i_frame] = psiz.utils.matrix_comparison(
+        r2 = psiz.utils.matrix_comparison(
             simmat_infer, simmat_true, score='r2'
         )
         print(
             '    n_obs: {0:4d} | train_mse: {1:.2f} | '
-            'val_mse: {2:.2f} | test_mse: {3:.2f} | '
-            'Correlation (R^2): {4:.2f}'.format(
-                n_obs[i_frame], train_mse[i_frame],
-                val_mse[i_frame], test_mse[i_frame], r2[i_frame]
-            )
+            'Correlation (R^2): {2:.2f}'.format(n_trial, train_mse, r2)
         )
 
-    # Plot comparison results.
-    # fig, axes = plt.subplots(1, 2, figsize=(6.5, 3))
 
-    # axes[0].plot(n_obs, train_mse, 'bo-', label='Train CCE')
-    # axes[0].plot(n_obs, val_mse, 'go-', label='Val. CCE')
-    # axes[0].plot(n_obs, test_mse, 'ro-', label='Test CCE')
-    # axes[0].set_title('Model Loss')
-    # axes[0].set_xlabel('Number of Judged Trials')
-    # axes[0].set_ylabel('Loss')
-    # axes[0].legend()
-
-    # axes[1].plot(n_obs, r2, 'ro-')
-    # axes[1].set_title('Model Convergence to Ground Truth')
-    # axes[1].set_xlabel('Number of Judged Trials')
-    # axes[1].set_ylabel(r'Squared Pearson Correlation ($R^2$)')
-    # axes[1].set_ylim(-0.05, 1.05)
-
-    # plt.tight_layout()
-    # fname = fp_example / Path('evolution.tiff')
-    # plt.savefig(
-    #     os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
-    # )
-
-
-def ground_truth(n_stimuli, n_dim):
+def ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+    seed = 252
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(
+                stddev=.17, seed=seed
+            )
+        )
     )
+    stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -240,13 +184,113 @@ def ground_truth(n_stimuli, n_dim):
     )
 
 
-def build_model(n_stimuli, n_dim):
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+def ground_truth_grid():
+    #  Create embedding points arranged on a grid.
+    x, y = np.meshgrid([.1, .2, .3, .4, .5], [.1, .2, .3, .4, .5])
+    x = np.expand_dims(x.flatten(), axis=1)
+    y = np.expand_dims(y.flatten(), axis=1)
+    z_grid = np.hstack((x, y))
+    (n_stimuli, n_dim) = z_grid.shape
+    # Add placeholder.
+    z_grid = np.vstack((np.ones([1, 2]), z_grid))
+
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True,
+        )
     )
     kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False
+        )
     )
+    behavior = psiz.keras.layers.RateBehavior(
+        lower_initializer=tf.keras.initializers.Constant(0.0),
+        upper_initializer=tf.keras.initializers.Constant(1.0),
+        midpoint_initializer=tf.keras.initializers.Constant(.5),
+        rate_initializer=tf.keras.initializers.Constant(5.),
+    )
+    model = psiz.models.Rate(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    model.stimuli.build([None, None, None])
+    model.stimuli.embedding.embeddings.assign(z_grid)
+    return model
+
+
+def build_model(n_stimuli, n_dim):
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True
+        )
+    )
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
+    behavior = BehaviorLog()
+    model = psiz.models.Rate(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
+
+
+def build_model_vi(n_stimuli, n_dim, n_obs_train):
+    kl_weight = 1. / n_obs_train
+
+    embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(.01).numpy()
+        )
+    )
+
+    prior_scale = .2
+    embedding_prior = psiz.keras.layers.EmbeddingShared(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embedding=psiz.keras.layers.EmbeddingNormalDiag(
+            1, 1,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ),
+            loc_trainable=False,
+        )
+    )
+    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
     behavior = BehaviorLog()
     model = psiz.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior

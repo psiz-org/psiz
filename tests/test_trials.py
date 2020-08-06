@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for testing `trials.py`.
+"""Test `trials` module.
 
 Notes:
     It is critical that the function `_possible_rank_outcomes` returns the
@@ -32,12 +32,15 @@ Todo:
 import pytest
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
 from psiz import trials
 from psiz.generator import RandomRank
 from psiz.simulate import Agent
 import psiz.models
 import psiz.keras.layers
+
+from psiz.trials.similarity.rank import _possible_rank_outcomes
 
 
 @pytest.fixture(scope="module")
@@ -183,32 +186,37 @@ def ground_truth(n_stimuli):
     n_dim = 3
     n_group = 2
 
-    stimuli = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
-    attention = psiz.keras.layers.GroupAttention(n_dim=n_dim, n_group=n_group)
-    similarity = psiz.keras.layers.ExponentialSimilarity()
-    model = psiz.models.Rank(
-        stimuli=stimuli, attention=attention, similarity=similarity
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True
+        )
     )
-    proxy = psiz.models.Proxy(model=model)
 
-    mean = np.ones((n_dim))
-    cov = np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    attention = np.array((
-        (1.9, 1., .1),
-        (.1, 1., 1.9)
-    ))
+    kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        attention=psiz.keras.layers.GroupAttention(
+            n_dim=n_dim, n_group=n_group
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False,
+        )
+    )
+    kernel.attention.embeddings.assign(
+        np.array((
+            (1.9, 1., .1),
+            (.1, 1., 1.9)
+        ))
+    )
 
-    proxy.z = z
-    proxy.theta = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 1,
-        'gamma': 0
-    }
-    proxy.w = attention
-
-    return proxy
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    return model
 
 
 class TestSimilarityTrials:
@@ -678,8 +686,8 @@ class TestStack:
         np.testing.assert_array_equal(
             double_trials.is_ranked[n_trial:], docket.is_ranked)
 
-        agent_novice = Agent(model_truth.model, group_id=0)
-        agent_expert = Agent(model_truth.model, group_id=1)
+        agent_novice = Agent(model_truth, group_id=0)
+        agent_expert = Agent(model_truth, group_id=1)
         obs_novice = agent_novice.simulate(docket)
         obs_expert = agent_expert.simulate(docket)
         obs_all = trials.stack((obs_novice, obs_expert))
@@ -813,7 +821,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array(((0, 1), (1, 0)))
         np.testing.assert_array_equal(po, correct)
@@ -824,7 +832,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
@@ -837,7 +845,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
@@ -854,7 +862,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = trials._possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3, 4, 5, 6, 7),

@@ -49,21 +49,23 @@ class Variational(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, posterior=None, prior=None, kl_weight=1., kl_use_exact=False,
-            kl_n_sample=1, **kwargs):
+            self, posterior=None, prior=None, kl_weight=0., kl_use_exact=False,
+            kl_n_sample=100, **kwargs):
         """Initialize.
 
         Arguments:
             posterior: A layer embodying the posterior.
             prior: A layer embodying the prior.
             kl_weight (optional): A scalar applied to the KL
-                divergence computation. This value should be 1 divided
-                by the total number of training examples.
+                divergence computation. This value is determined
+                theoretically. See NOTES in the `fit_step` method of
+                `PscyhologicalEmbedding`. By default, no KL loss is
+                added.
             kl_use_exact (optional): Boolean indicating if analytical
                 KL divergence should be used rather than a Monte Carlo
                 approximation.
             kl_n_sample (optional): The number of samples to use if
-                approximation KL.
+                approximating KL.
             kwargs: Additional key-word arguments.
 
         """

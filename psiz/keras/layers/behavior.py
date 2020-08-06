@@ -42,6 +42,25 @@ class Behavior(GroupLevel):
         """
         super(Behavior, self).__init__(**kwargs)
 
+        self._n_sample = 0
+        self._kl_weight = 0
+
+    @property
+    def n_sample(self):
+        return self._n_sample
+
+    @n_sample.setter
+    def n_sample(self, n_sample):
+        self._n_sample = n_sample
+
+    @property
+    def kl_weight(self):
+        return self._kl_weight
+
+    @kl_weight.setter
+    def kl_weight(self, kl_weight):
+        self._kl_weight = kl_weight
+
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()

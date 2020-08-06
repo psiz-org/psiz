@@ -666,6 +666,7 @@ class Kernel(GroupLevel):
         self.theta = theta
 
         self._n_sample = ()
+        self._kl_weight = 0
 
     @property
     def n_sample(self):
@@ -676,6 +677,17 @@ class Kernel(GroupLevel):
         self._n_sample = n_sample
         self.distance.n_sample = n_sample
         self.similarity.n_sample = n_sample
+
+    @property
+    def kl_weight(self):
+        return self._kl_weight
+
+    @kl_weight.setter
+    def kl_weight(self, kl_weight):
+        self._kl_weight = kl_weight
+        # Set kl_weight of constituent layers. # TODO MAYBE use `_layers`?
+        self.distance.kl_weight = kl_weight
+        self.similarity.kl_weight = kl_weight
 
     def call(self, inputs):
         """Call.
@@ -767,6 +779,7 @@ class AttentionKernel(GroupLevel):
         self.theta = theta
 
         self._n_sample = ()
+        self._kl_weight = 0
 
     def call(self, inputs):
         """Call.
@@ -828,6 +841,18 @@ class AttentionKernel(GroupLevel):
         self.attention.n_sample = n_sample
         self.distance.n_sample = n_sample
         self.similarity.n_sample = n_sample
+
+    @property
+    def kl_weight(self):
+        return self._kl_weight
+
+    @kl_weight.setter
+    def kl_weight(self, kl_weight):
+        self._kl_weight = kl_weight
+        # Set kl_weight of constituent layers. # TODO MAYBE use `_layers`?
+        self.attention.kl_weight = kl_weight
+        self.distance.kl_weight = kl_weight
+        self.similarity.kl_weight = kl_weight
 
     def get_config(self):
         """Return layer configuration."""

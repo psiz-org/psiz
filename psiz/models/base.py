@@ -519,6 +519,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         # Create convenience pointer to kernel parameters.
         self.theta = self.kernel.theta
 
+        self._kl_weight = 0.
         self.n_sample = n_sample
 
     @property
@@ -548,9 +549,19 @@ class PsychologicalEmbedding(tf.keras.Model):
     def n_sample(self, n_sample):
         self._n_sample = n_sample
         # Set n_sample of constituent layers.
-        self.stimuli.n_sample = n_sample
-        self.kernel.n_sample = n_sample
-        self.behavior.n_sample = n_sample
+        for layer in self.layers:
+            layer.n_sample = n_sample
+
+    @property
+    def kl_weight(self):
+        return self._kl_weight
+
+    @kl_weight.setter
+    def kl_weight(self, kl_weight):
+        self._kl_weight = kl_weight
+        # Set kl_weight of constituent layers.
+        for layer in self.layers:
+            layer.kl_weight = kl_weight
 
     def train_step(self, data):
         """Logic for one training step.

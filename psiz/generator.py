@@ -129,8 +129,8 @@ class ActiveRank(DocketGenerator):
     """A trial generator that uses approximate information gain."""
 
     def __init__(
-            self, n_stimuli, n_reference=2, n_select=1, n_sample=1000,
-            max_unique_query=None, n_candidate=1000):
+            self, n_stimuli, n_reference=2, n_select=1, max_unique_query=None,
+            n_candidate=1000):
         """Initialize.
 
         Arguments:
@@ -140,9 +140,6 @@ class ActiveRank(DocketGenerator):
                 references for each trial.
             n_select (optional): An integer indicating the number of
                 selections an agent must make.
-            n_sample (optional): The number of samples to draw from the
-                posterior distribution in order to estimate information
-                gain.
             max_unique_query (optional): A scalar parameter that
                 governs heuristic behavior. The value indicates the
                 maximum number of unique query stimuli that should be
@@ -164,7 +161,6 @@ class ActiveRank(DocketGenerator):
         self.is_ranked = True
 
         # Set heuristic parameters.
-        self.n_sample = n_sample
         if max_unique_query is None:
             max_unique_query = n_stimuli
         else:
@@ -316,7 +312,7 @@ class ActiveRank(DocketGenerator):
                 i_query, model, group_id, query_idx_arr,
                 query_idx_count_arr,
                 self.n_reference, self.n_select, self.n_candidate,
-                self.n_sample, priority, mask_q
+                priority, mask_q
             )
 
             if verbose > 0:
@@ -373,7 +369,7 @@ class RandomRate(DocketGenerator):
 
 def _select_query_references(
         i_query, model, group_id, query_idx_arr, query_idx_count_arr,
-        n_reference, n_select, n_candidate, n_sample, priority, mask_q):
+        n_reference, n_select, n_candidate, priority, mask_q):
     """Determine query references."""
     query_idx = query_idx_arr[i_query]
     n_trial_q = query_idx_count_arr[i_query]
@@ -397,9 +393,7 @@ def _select_query_references(
     ds_docket = docket.as_dataset(group)
 
     # Compute expected information gain from prediction samples.
-    y_pred = tf.stack([
-        model(ds_docket, training=False) for _ in range(n_sample)
-    ], axis=0)
+    y_pred = model(ds_docket, training=False)
     expected_ig = expected_information_gain(y_pred).numpy()
 
     # Grab the top trials as requested.

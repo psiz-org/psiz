@@ -53,9 +53,9 @@ def load_trials(filepath, verbose=0):
 
     # Handle legacy.
     if class_name == "Docket":
-        trial_type = "RankDocket"
+        class_name = "RankDocket"
     elif class_name == "Observations":
-        trial_type = "RankObservations"
+        class_name = "RankObservations"
     
     # Route to appropriate class.
     custom_objects = {

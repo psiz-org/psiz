@@ -509,7 +509,7 @@ class RankDocket(RankTrials):
                 ),
                 'group': tf.constant(group, dtype=tf.int32)
             }
-        return x
+        return tf.data.Dataset.from_tensor_slices((x))
 
     @classmethod
     def load(cls, filepath):

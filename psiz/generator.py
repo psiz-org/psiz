@@ -130,7 +130,7 @@ class ActiveRank(DocketGenerator):
 
     def __init__(
             self, n_stimuli, n_reference=2, n_select=1, max_unique_query=None,
-            n_candidate=1000):
+            n_candidate=1000, batch_size=128):
         """Initialize.
 
         Arguments:
@@ -149,6 +149,8 @@ class ActiveRank(DocketGenerator):
                 parameter determines how many candidate trials will be
                 considered. In general, more is better, but you may be
                 limited by time and RAM. Must be greater than zero.
+            batch_size (optional): The batch size to use when
+                iterating over the candidate docket.
 
         """
         DocketGenerator.__init__(self)
@@ -169,6 +171,7 @@ class ActiveRank(DocketGenerator):
 
         # TODO MAYBE np.minimum(max_candidate, n_candidate)
         self.n_candidate = n_candidate
+        self.batch_size = batch_size
 
     def generate(
             self, n_trial, model, priority=None, mask=None, group_id=0,
@@ -300,7 +303,7 @@ class ActiveRank(DocketGenerator):
 
         if verbose > 0:
             progbar = ProgressBarRe(
-                n_query, prefix='Progress:', length=50
+                n_query, prefix='Active Trials:', length=50
             )
             progbar.update(0)
 
@@ -312,7 +315,7 @@ class ActiveRank(DocketGenerator):
                 i_query, model, group_id, query_idx_arr,
                 query_idx_count_arr,
                 self.n_reference, self.n_select, self.n_candidate,
-                priority, mask_q
+                priority, mask_q, self.batch_size
             )
 
             if verbose > 0:
@@ -368,7 +371,7 @@ class RandomRate(DocketGenerator):
 
 def _select_query_references(
         i_query, model, group_id, query_idx_arr, query_idx_count_arr,
-        n_reference, n_select, n_candidate, priority, mask_q):
+        n_reference, n_select, n_candidate, priority, mask_q, batch_size):
     """Determine query references."""
     query_idx = query_idx_arr[i_query]
     n_trial_q = query_idx_count_arr[i_query]
@@ -389,11 +392,21 @@ def _select_query_references(
     )
     docket = RankDocket(stimulus_set, n_select=n_select)
     group = group_id * np.ones(n_candidate)
-    ds_docket = docket.as_dataset(group)
+    ds_docket = docket.as_dataset(group).batch(
+        batch_size, drop_remainder=False
+    )
 
-    # Compute expected information gain from prediction samples.
-    y_pred = model(ds_docket, training=False)
-    expected_ig = expected_information_gain(y_pred).numpy()
+    expected_ig = None
+    for x in ds_docket:
+        # Compute expected information gain from prediction samples.
+        batch_expected_ig = expected_information_gain(
+            model(x, training=False)
+        )
+        if expected_ig is None:
+            expected_ig = [batch_expected_ig]
+        else:
+            expected_ig.append(batch_expected_ig)
+    expected_ig = tf.concat(expected_ig, axis=0).numpy()
 
     # Grab the top trials as requested.
     top_indices = np.argsort(-expected_ig)

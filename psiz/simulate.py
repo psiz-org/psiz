@@ -107,7 +107,7 @@ class Agent(object):
                 stimulus_set = [batch_stimulus_set]
             else:
                 stimulus_set.append(batch_stimulus_set)
-        stimulus_set = tf.concat(stimulus_set, axis=0).numpy()
+        stimulus_set = tf.concat(stimulus_set, axis=0).numpy() - 1
 
         obs = RankObservations(
             stimulus_set,

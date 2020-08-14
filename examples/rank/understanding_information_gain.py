@@ -81,11 +81,20 @@ def main():
         docket = psiz.trials.RankDocket(
             stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
         )
-        ds_docket = docket.as_dataset(group)
+        ds_docket = docket.as_dataset(group).batch(
+            docket.n_trial, drop_remainder=False
+        )
 
-        # Compute expected information gain from prediction samples.
-        y_pred = model(ds_docket, training=False)
-        expected_ig = psiz.generator.expected_information_gain(y_pred).numpy()
+        expected_ig = None
+        for data in ds_docket:
+            # Compute expected information gain from prediction samples.
+            y_pred = model(data, training=False)
+            batch_expected_ig = psiz.generator.expected_information_gain(y_pred)
+            if expected_ig is None:
+                expected_ig = [batch_expected_ig]
+            else:
+                expected_ig.append(batch_expected_ig)
+        expected_ig = tf.concat(expected_ig, axis=0).numpy()
 
         # Select data to represent case in visualization.
         case_data = package_case_data(model, stimulus_set, expected_ig)

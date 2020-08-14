@@ -668,6 +668,26 @@ class PsychologicalEmbedding(tf.keras.Model):
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
+    def predict_step(self, data):
+        """The logic for one inference step.
+
+        Standard prediction is performmed with one sample. To
+        accommodate variational inference, the predictions are averaged
+        over multiple samples from the model.
+
+        Arguments:
+            data: A nested structure of `Tensor`s.
+
+        Returns:
+            The result of one inference step, typically the output of calling the
+            `Model` on data.
+
+        """
+        data = data_adapter.expand_1d(data)
+        x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
+        y_pred = tf.reduce_mean(self(x, training=False), axis=0)
+        return y_pred
+
     def get_config(self):
         """Return model configuration."""
         layer_configs = {

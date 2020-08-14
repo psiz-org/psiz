@@ -22,6 +22,7 @@ Classes:
 """
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.keras.engine import data_adapter
 import tensorflow_probability as tfp
 
 from psiz.trials import RankObservations
@@ -61,7 +62,7 @@ class Agent(object):
         self.group_id = group_id
         self.agent_id = agent_id
 
-    def simulate(self, docket, session_id=None):
+    def simulate(self, docket, session_id=None, batch_size=None):
         """Stochastically simulate similarity judgments.
 
         Arguments:
@@ -72,67 +73,74 @@ class Agent(object):
                 trial. It is assumed that all IDs are non-negative.
                 Trials with different session IDs were obtained during
                 different sessions.
+            batch_size (optional): If None, `batch_size` is equal to
+                the total number of trials.
 
         Returns:
             RankObservations object representing the judged trials. The
                 order of the stimuli is now informative.
 
         """
+        if batch_size is None:
+            batch_size = docket.n_trial
+
         agent_id = self.agent_id * np.ones((docket.n_trial), dtype=np.int32)
         group_id = self.group_id * np.ones((docket.n_trial), dtype=np.int32)
 
-        # Call model with TensorFlow formatted docket.
+        # Create TF dataset.
         group = np.stack((group_id, agent_id), axis=-1)
-        inputs = docket.as_dataset(group, all_outcomes=True)
-        probs = tf.reduce_mean(self.model(inputs), axis=0)
-        outcome_distribution = tfp.distributions.Categorical(
-            probs=probs
+        ds_docket = docket.as_dataset(group, all_outcomes=True).batch(
+            batch_size, drop_remainder=False
         )
 
-        obs = self._select(
-            docket, outcome_distribution, inputs['stimulus_set'] - 1,
-            session_id=session_id
-        )
+        # Call model with TensorFlow formatted docket and
+        # stochastically sample an outcome.
+        stimulus_set = None
+        for data in ds_docket:
+            data = data_adapter.expand_1d(data)
+            x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
 
-        return obs
+            batch_stimulus_set = _rank_sample(
+                x['stimulus_set'], self.model(x, training=False)
+            )
+            if stimulus_set is None:
+                stimulus_set = [batch_stimulus_set]
+            else:
+                stimulus_set.append(batch_stimulus_set)
+        stimulus_set = tf.concat(stimulus_set, axis=0).numpy()
 
-    def _select(
-            self, docket, outcome_distribution, stimulus_set_expand,
-            session_id=None):
-        """Stochastically select from possible outcomes.
-
-        Arguments:
-            docket: An RankDocket object.
-            outcome_distribution: A TF distribution defining the
-                outcome distribution.
-                shape=[batch_shape,]
-            stimulus_set_expand: An expanded stimulus set 3D array.
-                shape=[n_trial, n_max_reference+1, n_max_outcome]
-            session_id (optional): The session ID.
-
-        Returns:
-            A RankObservations object.
-
-        """
-        stimulus_set_expand = stimulus_set_expand.numpy()
-
-        # Sample from outcomes.
-        sample_outcomes = outcome_distribution.sample().numpy()
-
-        # Define observations.
-        stimulus_set = np.empty(stimulus_set_expand.shape[0:2], dtype=np.int32)
-        for i_trial in range(docket.n_trial):
-            stimulus_set[i_trial, :] = stimulus_set_expand[
-                i_trial, :, sample_outcomes[i_trial]
-            ]
-
-        group_id = np.full((docket.n_trial), self.group_id, dtype=np.int32)
-        agent_id = np.full((docket.n_trial), self.agent_id, dtype=np.int32)
         obs = RankObservations(
             stimulus_set,
             n_select=docket.n_select,
             is_ranked=docket.is_ranked,
-            group_id=group_id, agent_id=agent_id,
-            session_id=session_id
+            group_id=group_id, agent_id=agent_id, session_id=session_id
         )
         return obs
+
+
+def _rank_sample(stimulus_set, probs):
+    """Stochasatically select outcome.
+    
+    Arguments:
+        stimulus_set:
+            shape=(batch_size, n_reference + 1, n_outcome)
+        probs:
+            shape=(batch_size, n_outcome)
+    
+    Returns:
+        stimulus_set_selected:
+            shape=(batch_size, n_reference + 1)
+
+    """
+    probs = tf.reduce_mean(probs, axis=0)
+    outcome_distribution = tfp.distributions.Categorical(
+        probs=probs
+    )
+    idx_sample = outcome_distribution.sample()
+    idx_batch = tf.range(tf.shape(idx_sample)[0])
+    idx_batch_sample = tf.stack([idx_batch, idx_sample], axis=1)
+
+    # Retrieve stimulus set associated with particular outcome.
+    stimulus_set = tf.transpose(stimulus_set, perm=[0, 2, 1])
+    stimulus_set_selected = tf.gather_nd(stimulus_set, idx_batch_sample)
+    return stimulus_set_selected

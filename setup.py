@@ -19,7 +19,7 @@ setuptools.setup(
     packages=['psiz'],
     python_requires='>=3, <3.9',
     install_requires=[
-        'tensorflow>=2.2', 'tensorflow-probability', 'scipy', 'pandas',
+        'tensorflow==2.2', 'tensorflow-probability', 'scipy', 'pandas',
         'scikit-learn', 'matplotlib', 'pillow', 'imageio'
     ],
     include_package_data=True,

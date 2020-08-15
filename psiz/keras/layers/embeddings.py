@@ -848,24 +848,27 @@ class EmbeddingShared(tf.keras.layers.Layer):
         """Getter method for `embeddings`.
 
         Return distribution that creates copies of the source
-        distribution for each stimulus and dimension. The incoming
-        distribution has event_shape=[1, 1], but need a distribution
-        with event_shape=[input_dim, output_dim].
+        distribution for each stimulus and dimension.
+
+        The incoming distribution has,
+        batch_shape=[] event_shape=[1, 1]
+
+        We require a distribution with,
+        event_shape=[self.input_dim, self.output_dim].
+
         """
-        # First, reshape to event_shape=[] and
-        # batch_size=[input_dim, output_dim].
+        # First, reshape event_shape from [1, 1] to [].
         b = tfp.bijectors.Reshape(
             event_shape_out=tf.TensorShape([]),
             event_shape_in=tf.TensorShape([1, 1])
         )
+
+        # Second, use Sample to expand event_shape to,
+        # [self.input_dim, self.output.dim].
         dist = tfp.distributions.TransformedDistribution(
-            distribution=self._embedding.embeddings,
-            bijector=b,
-            batch_shape=[self.input_dim, self.output_dim],
-        )
-        # Second, reinterpret batch_shape as event_shape.
-        batch_ndims = tf.size(dist.batch_shape_tensor())
-        dist = tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
+            distribution=tfp.distributions.Sample(
+                self._embedding.embeddings,
+                sample_shape=[self.input_dim, self.output_dim]
+            ), bijector=b,
         )
         return dist

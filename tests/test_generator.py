@@ -23,38 +23,58 @@ Todo:
 
 import numpy as np
 import pytest
+import tensorflow as tf
+import tensorflow_probability as tfp
 
-from psiz import generator
-from psiz.models import Exponential
-from psiz.trials import stack, RankDocket
-from psiz.simulate import Agent
+import psiz
 
 
 @pytest.fixture(scope="module")
-def ground_truth():
-    """Return a ground truth embedding."""
+def rank_1g_mle_rand():
     n_stimuli = 10
     n_dim = 2
 
-    emb = Exponential(n_stimuli)
-    mean = np.zeros((n_dim))
-    cov = .1 * np.identity(n_dim)
-    emb.z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    emb.rho = 2
-    emb.tau = 1
-    emb.beta = 10
-    emb.gamma = 0
-    emb.trainable('freeze')
-    return emb
+    embedding = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(.01).numpy()
+        )
+    )
+
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            beta_initializer=tf.keras.initializers.Constant(10.),
+        )
+    )
+
+    behavior = psiz.keras.layers.behavior.RankBehavior()
+    model = psiz.models.Rank(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
 
 
 @pytest.fixture(scope="module")
-def model_true_det():
-    """Return a ground truth embedding."""
+def rank_1g_mle_det():
     n_stimuli = 10
-    emb = Exponential(n_stimuli)
+    n_dim = 2
+
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
+    )
+    embedding.build([None, None, None])
     z = np.array(
         [
+            [0.0, 0.0],
             [0.12737487, 1.3211997],
             [0.8335809, 1.5255479],
             [0.8801151, 0.6451549],
@@ -67,13 +87,28 @@ def model_true_det():
             [-0.04342473, 1.4128358]
         ], dtype=np.float32
     )
-    emb.z = z
-    emb.rho = 2
-    emb.tau = 1
-    emb.beta = 1
-    emb.gamma = 0
-    emb.trainable('freeze')
-    return emb
+    embedding.embeddings.assign(z)
+
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            beta_initializer=tf.keras.initializers.Constant(1.),
+        )
+    )
+
+    behavior = psiz.keras.layers.behavior.RankBehavior()
+    model = psiz.models.Rank(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
 
 
 def simulated_samples(z):
@@ -102,7 +137,7 @@ def test_random_generator():
     n_reference_desired = 4
     n_select_desired = 2
     is_ranked_desired = True
-    gen = generator.RandomRank(
+    gen = psiz.generator.RandomRank(
         n_stimuli_desired, n_reference=n_reference_desired,
         n_select=n_select_desired
     )
@@ -129,80 +164,84 @@ def test_random_generator():
     assert sum(docket.is_ranked == is_ranked_desired) == n_trial_desired
 
 
-def test_information_gain(ground_truth):
-    """Test expected information gain computation."""
-    z = ground_truth.z
-    samples = simulated_samples(z)
+# def test_information_gain(rank_1g_mle_rand):
+#     """Test expected information gain computation."""
+#     z = rank_1g_mle_rand.stimuli.embeddings.numpy()
+#     if rank_1g_mle_rand.stimuli.mask_zero:
+#         z = z[1:]
+#     samples = simulated_samples(z)
 
-    gen = generator.ActiveGenerator(ground_truth.n_stimuli)
-    docket_0 = RankDocket(
-        np.array([[0, 1, 2]], dtype=np.int32),
-        np.array([1], dtype=np.int32)
-        )
-    docket_1 = RankDocket(
-        np.array([[3, 1, 2]], dtype=np.int32),
-        np.array([1], dtype=np.int32)
-        )
-    # Compute expected information gain.
-    ig_0 = generator.information_gain(ground_truth, samples, docket_0)
-    ig_1 = generator.information_gain(ground_truth, samples, docket_1)
+#     gen = generator.ActiveGenerator(rank_1g_mle_rand.n_stimuli)
+#     docket_0 = psiz.trials.RankDocket(
+#         np.array([[0, 1, 2]], dtype=np.int32),
+#         np.array([1], dtype=np.int32)
+#         )
+#     docket_1 = psiz.trials.RankDocket(
+#         np.array([[3, 1, 2]], dtype=np.int32),
+#         np.array([1], dtype=np.int32)
+#         )
+#     # Compute expected information gain.
+#     ig_0 = psiz.generator.information_gain(rank_1g_mle_rand, samples, docket_0)
+#     ig_1 = psiz.generator.information_gain(rank_1g_mle_rand, samples, docket_1)
 
-    assert ig_0 > ig_1
+#     assert ig_0 > ig_1
 
-    # Check case for multiple candidate trials.
-    docket_01 = RankDocket(
-        np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
-        np.array([1, 1], dtype=np.int32)
-        )
-    ig_01 = generator.information_gain(ground_truth, samples, docket_01)
-    assert ig_01[0] == ig_0
-    assert ig_01[1] == ig_1
+#     # Check case for multiple candidate trials.
+#     docket_01 = psiz.trials.RankDocket(
+#         np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
+#         np.array([1, 1], dtype=np.int32)
+#         )
+#     ig_01 = psiz.generator.information_gain(rank_1g_mle_rand, samples, docket_01)
+#     assert ig_01[0] == ig_0
+#     assert ig_01[1] == ig_1
 
-    # Check case for multiple candidate trials with different configurations.
-    docket_23 = RankDocket(
-        np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
-        np.array([2, 2], dtype=np.int32)
-        )
-    ig_23 = generator.information_gain(ground_truth, samples, docket_23)
+#     # Check case for multiple candidate trials with different configurations.
+#     docket_23 = psiz.trials.RankDocket(
+#         np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
+#         np.array([2, 2], dtype=np.int32)
+#         )
+#     ig_23 = psiz.generator.information_gain(rank_1g_mle_rand, samples, docket_23)
 
-    docket_0123 = RankDocket(
-        np.array([
-            [0, 1, 2, -1, -1],
-            [3, 1, 2, -1, -1],
-            [0, 1, 2, 4, 9],
-            [3, 1, 5, 6, 8]
-        ], dtype=np.int32),
-        np.array([1, 1, 2, 2], dtype=np.int32)
-        )
-    ig_0123 = generator.information_gain(
-        ground_truth, samples, docket_0123)
-    np.testing.assert_almost_equal(ig_0123[0], ig_0)
-    np.testing.assert_almost_equal(ig_0123[1], ig_1)
-    np.testing.assert_almost_equal(ig_0123[2], ig_23[0])
-    np.testing.assert_almost_equal(ig_0123[3], ig_23[1])
+#     docket_0123 = psiz.trials.RankDocket(
+#         np.array([
+#             [0, 1, 2, -1, -1],
+#             [3, 1, 2, -1, -1],
+#             [0, 1, 2, 4, 9],
+#             [3, 1, 5, 6, 8]
+#         ], dtype=np.int32),
+#         np.array([1, 1, 2, 2], dtype=np.int32)
+#         )
+#     ig_0123 = psiz.generator.information_gain(
+#         rank_1g_mle_rand, samples, docket_0123
+#     )
+#     np.testing.assert_almost_equal(ig_0123[0], ig_0)
+#     np.testing.assert_almost_equal(ig_0123[1], ig_1)
+#     np.testing.assert_almost_equal(ig_0123[2], ig_23[0])
+#     np.testing.assert_almost_equal(ig_0123[3], ig_23[1])
 
 
-def test_kl_divergence():
-    """Test computation of KL divergence."""
-    mu_left = np.array([0, 0])
-    mu_right = np.array([10, 0])
+# TODO should I TF approach?
+# def test_kl_divergence():
+#     """Test computation of KL divergence."""
+#     mu_left = np.array([0, 0])
+#     mu_right = np.array([10, 0])
 
-    cov_sm = np.eye(2)
-    cov_lg = 10 * np.eye(2)
+#     cov_sm = np.eye(2)
+#     cov_lg = 10 * np.eye(2)
 
-    kl_sm_sm = generator.normal_kl_divergence(
-        mu_left, cov_sm, mu_right, cov_sm)
-    kl_sm_lg = generator.normal_kl_divergence(
-        mu_left, cov_sm, mu_right, cov_lg)
-    kl_lg_sm = generator.normal_kl_divergence(
-        mu_left, cov_lg, mu_right, cov_sm)
-    kl_lg_lg = generator.normal_kl_divergence(
-        mu_left, cov_lg, mu_right, cov_lg)
+#     kl_sm_sm = psiz.generator.normal_kl_divergence(
+#         mu_left, cov_sm, mu_right, cov_sm)
+#     kl_sm_lg = psiz.generator.normal_kl_divergence(
+#         mu_left, cov_sm, mu_right, cov_lg)
+#     kl_lg_sm = psiz.generator.normal_kl_divergence(
+#         mu_left, cov_lg, mu_right, cov_sm)
+#     kl_lg_lg = psiz.generator.normal_kl_divergence(
+#         mu_left, cov_lg, mu_right, cov_lg)
 
-    np.testing.assert_almost_equal(kl_sm_sm, 50.00000, decimal=5)
-    np.testing.assert_almost_equal(kl_sm_lg, 6.402585, decimal=5)
-    np.testing.assert_almost_equal(kl_lg_sm, 56.697415, decimal=5)
-    np.testing.assert_almost_equal(kl_lg_lg, 5.000000, decimal=5)
+#     np.testing.assert_almost_equal(kl_sm_sm, 50.00000, decimal=5)
+#     np.testing.assert_almost_equal(kl_sm_lg, 6.402585, decimal=5)
+#     np.testing.assert_almost_equal(kl_lg_sm, 56.697415, decimal=5)
+#     np.testing.assert_almost_equal(kl_lg_lg, 5.000000, decimal=5)
 
 
 def test_choice_wo_replace():
@@ -221,7 +260,7 @@ def test_choice_wo_replace():
 
     # Draw samples.
     np.random.seed(560897)
-    drawn_idx = generator.choice_wo_replace(
+    drawn_idx = psiz.generator.choice_wo_replace(
         candidate_idx, (n_trial, n_reference), candidate_prob
     )
     bin_counts, bin_edges = np.histogram(drawn_idx.flatten(), bins=n_option)
@@ -235,40 +274,40 @@ def test_choice_wo_replace():
     np.testing.assert_array_almost_equal(candidate_prob, drawn_prob, decimal=2)
 
 
-def test_select_query_references(model_true_det):
-    """Test select_query_references."""
-    max_candidate = 2000
-    max_neighbor = model_true_det.n_stimuli
+# def test_select_query_references(rank_1g_mle_det):
+#     """Test select_query_references."""
+#     max_candidate = 2000
+#     max_neighbor = rank_1g_mle_det.n_stimuli
 
-    query_idx_list = np.array([7, 1])
-    n_trial_per_query_list = np.array([max_candidate, max_candidate])
+#     query_idx_list = np.array([7, 1])
+#     n_trial_per_query_list = np.array([max_candidate, max_candidate])
 
-    samples = simulated_samples(model_true_det.z)
+#     samples = simulated_samples(rank_1g_mle_det.z)
 
-    n_reference = 8
-    n_select = 2
-    is_ranked = True
+#     n_reference = 8
+#     n_select = 2
+#     is_ranked = True
 
-    i_query = 0
-    docket, ig_top = generator._select_query_references(
-        i_query, model_true_det, samples, query_idx_list,
-        n_trial_per_query_list, n_reference, n_select, is_ranked,
-        max_candidate, max_neighbor
-    )
+#     i_query = 0
+#     docket, ig_top = psiz.generator._select_query_references(
+#         i_query, rank_1g_mle_det, samples, query_idx_list,
+#         n_trial_per_query_list, n_reference, n_select, is_ranked,
+#         max_candidate, max_neighbor
+#     )
 
-    # Check query indices in assembled docket.
-    n_mismatch = np.sum(
-        np.not_equal(
-            docket.stimulus_set[0:max_candidate, 0], query_idx_list[0]
-        )
-    )
-    assert n_mismatch == 0
+#     # Check query indices in assembled docket.
+#     n_mismatch = np.sum(
+#         np.not_equal(
+#             docket.stimulus_set[0:max_candidate, 0], query_idx_list[0]
+#         )
+#     )
+#     assert n_mismatch == 0
 
-    # Check that all stimuli used in a trial are unique. For example check
-    # that they query stimulus is not also used as a reference.
-    for i_trial in range(docket.n_trial):
-        n_unique = len(np.unique(docket.stimulus_set[i_trial]))
-        assert n_unique == (n_reference + 1)
+#     # Check that all stimuli used in a trial are unique. For example check
+#     # that they query stimulus is not also used as a reference.
+#     for i_trial in range(docket.n_trial):
+#         n_unique = len(np.unique(docket.stimulus_set[i_trial]))
+#         assert n_unique == (n_reference + 1)
 
 
 # @pytest.fixture(scope="module")
@@ -283,17 +322,17 @@ def test_select_query_references(model_true_det):
 #     n_trial_desired = 200
 #     n_reference_desired = 2
 #     n_select_desired = 1
-#     gen = generator.RandomRank(
+#     gen = psiz.generator.RandomRank(
 #         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
 #     unjudged_trials_0 = gen.generate(
 #         n_trial_desired, n_stimuli_desired)
 #     n_stimuli_desired = 10
 #     n_trial_desired = 50
-#     gen = generator.RandomRank(
+#     gen = psiz.generator.RandomRank(
 #         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
 #     unjudged_trials_1 = gen.generate(
 #         n_trial_desired, n_stimuli_desired)
-#     unjudged_trials = stack((unjudged_trials_0, unjudged_trials_1))
+#     unjudged_trials = psiz.trials.stack((unjudged_trials_0, unjudged_trials_1))
 #     return unjudged_trials

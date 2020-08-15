@@ -31,50 +31,53 @@ import psiz.keras.layers
 
 
 @pytest.fixture(scope="module")
-def ground_truth():
-    """Return a ground truth model."""
+def rank_1g_mle_det():
     n_stimuli = 3
     n_dim = 2
     n_group = 2
+    embedding = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
+    )
+    embedding.build([None, None, None])
+    z = np.array(
+        [
+            [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
+        ], dtype=np.float32
+    )
+    embedding.embeddings.assign(z)
 
-    # Define embedding.
-    stimuli = tf.keras.layers.Embedding(n_stimuli+1, n_dim, mask_zero=True)
-    stimuli.build([None, None, None])
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
 
-    # Define kernel.
-    attention = psiz.keras.layers.GroupAttention(n_dim=n_dim, n_group=n_group)
-    similarity = psiz.keras.layers.ExponentialSimilarity()
     kernel = psiz.keras.layers.AttentionKernel(
-        attention=attention, similarity=similarity
+        group_level=1,
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        attention=psiz.keras.layers.GroupAttention(
+            n_dim=n_dim, n_group=n_group
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            beta_initializer=tf.keras.initializers.Constant(10.),
+        )
+    )
+    kernel.attention.embeddings.assign(
+        np.array((
+            (1.2, .8),
+            (.7, 1.3)
+        ))
     )
 
-    # Build model.
+    behavior = psiz.keras.layers.behavior.RankBehavior()
     model = psiz.models.Rank(
-        stimuli=stimuli, kernel=kernel
+        stimuli=stimuli, kernel=kernel, behavior=behavior
     )
-    proxy = psiz.models.Proxy(model=model)
+    return model
 
-    # Set parameters.
-    z = np.array((
-        (.1, .1), (.15, .2), (.4, .5)
-    ))
-    attention = np.array((
-        (1.2, .8),
-        (.7, 1.3)
-    ))
-    proxy.z = z
-    proxy.theta = {
-        'rho': 2,
-        'tau': 1,
-        'beta': 10,
-        'gamma': 0
-    }
-    proxy.w = attention
-
-    return proxy
-
-
-def test_pairwise_matrix(ground_truth):
+def test_pairwise_matrix(rank_1g_mle_det):
     """Test similarity matrix."""
     actual_simmat1 = np.array((
         (1., 0.35035481, 0.00776613),
@@ -87,25 +90,27 @@ def test_pairwise_matrix(ground_truth):
         (0.00548485, 0.01814493, 1.)
     ))
 
+    proxy = psiz.models.Proxy(model=rank_1g_mle_det)
+
     computed_simmat0 = utils.pairwise_matrix(
-        ground_truth.similarity, ground_truth.z)
+        proxy.similarity, proxy.z[0])
 
     # Check explicit use of first set of attention weights.
     def similarity_func1(z_q, z_ref):
-        sim_func = ground_truth.similarity(z_q, z_ref, group_id=0)
+        sim_func = proxy.similarity(z_q, z_ref, group_id=0)
         return sim_func
 
     # Check without passing in explicit attention.
     computed_simmat1 = utils.pairwise_matrix(
-        similarity_func1, ground_truth.z)
+        similarity_func1, proxy.z[0])
 
     # Check explicit use of second set of attention weights.
     def similarity_func2(z_q, z_ref):
-        sim_func = ground_truth.similarity(z_q, z_ref, group_id=1)
+        sim_func = proxy.similarity(z_q, z_ref, group_id=1)
         return sim_func
 
     computed_simmat2 = utils.pairwise_matrix(
-        similarity_func2, ground_truth.z)
+        similarity_func2, proxy.z[0])
 
     np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat0)
     np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat1)

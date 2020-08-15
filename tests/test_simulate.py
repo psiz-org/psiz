@@ -25,27 +25,46 @@ Todo:
 import numpy as np
 import numpy.ma as ma
 import pytest
+import tensorflow as tf
+import tensorflow_probability as tfp
 
-from psiz import simulate
-from psiz.trials import RankDocket
-from psiz.models import Exponential
+import psiz
 
 
 @pytest.fixture(scope="module")
-def ground_truth():
-    """Return a ground truth embedding."""
+def rank_1g_mle_rand():
     n_stimuli = 10
     n_dim = 2
 
-    model = Exponential(n_stimuli)
-    mean = np.ones((n_dim))
-    cov = np.identity(n_dim)
-    z = np.random.multivariate_normal(mean, cov, (n_stimuli))
-    model.z = z
-    model.rho = 2
-    model.tau = 1
-    model.beta = 1
-    model.gamma = 0
+    embedding = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        loc_initializer=tf.keras.initializers.Constant(
+            1.
+        ),
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(1.).numpy()
+        )
+    )
+
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            beta_initializer=tf.keras.initializers.Constant(1.),
+        )
+    )
+
+    behavior = psiz.keras.layers.behavior.RankBehavior()
+    model = psiz.models.Rank(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
     return model
 
 
@@ -64,22 +83,22 @@ def docket_0():
     n_select = np.array((
         2, 2, 2, 2, 1, 1, 1
         ), dtype=np.int32)
-    docket = RankDocket(stimulus_set, n_select=n_select)
+    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
     return docket
 
 
-def test_simulate(ground_truth, docket_0):
+def test_simulate(rank_1g_mle_rand, docket_0):
     """Test simulation of agent."""
-    agent = simulate.Agent(ground_truth.model)
+    agent = psiz.simulate.Agent(rank_1g_mle_rand)
     obs = agent.simulate(docket_0)
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], docket_0.stimulus_set[:, 0]
     )
 
 
-def test_select(ground_truth):
-    """Test _select method."""
-    # TODO more cases, make assert safer
+def test_rank_sample(rank_1g_mle_rand):
+    """Test _rank_sample method."""
+    # TODO broader method test
     # stimulus_set = np.array((
     #     (0, 1, 2, 7, 3),
     #     (3, 4, 5, 9, 1),
@@ -99,15 +118,15 @@ def test_select(ground_truth):
     ))
     stimulus_set = np.tile(stimulus_set, (int(n_trial/2), 1))
     n_select = 2 * np.ones(n_trial, dtype=np.int32)
-    docket = RankDocket(stimulus_set, n_select=n_select)
+    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
 
-    agent = simulate.Agent(ground_truth.model)
-    prob_all = np.array((
+    agent = psiz.simulate.Agent(rank_1g_mle_rand)
+    probs = np.array((
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
     ))
-    prob_all = np.tile(prob_all, (int(n_trial/2), 1))
-    # prob_all = np.array((
+    probs = np.tile(probs, (int(n_trial/2), 1))
+    # probs = np.array((
     #     (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
     #     (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
     #     (.1, .8, .07, .01, .01, .01, -1, -1, -1, -1, -1, -1),
@@ -116,19 +135,14 @@ def test_select(ground_truth):
     #     (.1, .8, .1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
     #     (.1, .8, .1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
     # ))
-    prob_all = ma.masked_values(prob_all, -1)
-    (_, chosen_outcome_idx) = agent._select(docket, prob_all)
+    outcome_distribution = tfp.distributions.Categorical(
+        probs=probs
+    )
+    chosen_outcome_idx = outcome_distribution.sample().numpy()
+
+    # (_, chosen_outcome_idx) = agent._rank_sample(docket.all_outcomes(), prob_all)
     _, counts = np.unique(chosen_outcome_idx, return_counts=True)
     prop = counts / np.sum(counts)
 
-    x = np.array([.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01])
-    np.testing.assert_allclose(x, prop, rtol=1e-6, atol=.005)
-
-        # Old approach. TODO
-        # prob_all_2 = self.stimuli.outcome_probability(
-        #     docket, group_id=group_id
-        # )
-        # prob_all_old = prob_all_2.data
-        # prob_all_old[prob_all_2.mask] = 0
-        # np.testing.assert_array_almost_equal(prob_all.numpy(), prob_all_old, decimal=6)  # TODO
-        # (obs, _) = self._select_old(docket, prob_all_2, session_id=session_id)  TODO
+    prop_desired = np.array([.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01])
+    np.testing.assert_allclose(prop_desired, prop, rtol=1e-6, atol=.005)

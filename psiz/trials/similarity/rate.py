@@ -188,17 +188,19 @@ class RateDocket(RateTrials):
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.close()
 
-    def as_dataset(self, group):
+    def as_dataset(self, group=None):
         """Return TensorFlow dataset.
 
         Arguments:
-            group: ND array indicating group membership information for
-                each trial.
+            group (optional): ND array indicating group membership
+                information for each trial.
 
         Returns:
             x: A TensorFlow dataset.
 
         """
+        if group is None:
+            group = np.zeros([self.n_trial, 1], dtype=np.int32)
         if group.ndim == 1:
             group = np.expand_dims(group, axis=1)
         group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)

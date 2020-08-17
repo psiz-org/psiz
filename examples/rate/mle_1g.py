@@ -23,6 +23,11 @@ data is added.
 Results are saved in the directory specified by `fp_example`. By
 default, a `psiz_examples` directory is created in your home directory.
 
+NOTE: The midpoint value has a large impact on the ability to infer a
+correct solution. While the grid version works OK, the general case
+is not working great. Once the above issues are resolved, still need to
+experiment with noisy simulations and validation-based early stopping.
+
 """
 
 import itertools
@@ -30,6 +35,7 @@ import os
 from pathlib import Path
 import shutil
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -40,28 +46,34 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
+# Modify the following to control GPU visibility.
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 
 def main():
     """Run script."""
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
-    n_stimuli = 25  # 30
+    n_stimuli = 25
     n_dim = 2
-    n_restart = 10
+    n_restart = 1
     epochs = 1000
     lr = .001
     batch_size = 64
-    n_frame = 1
 
-    # randn 30 stim
-    # epochs = 1000 lr=.001 =>  128: .83, .76 | 64: .94, .90 | 32: .88, .86
-    # epochs = 3000 lr=.001 =>  128: .85, .82 | 64: .70 .63 | 32: .85 .79
-    # epochs = 1000 lr=.0001 => 128: .32, .30 | 64:  | 32: 
-
-    # MLE vs VI
-    # epochs = 1000 lr=.001 bs=64 =>
-    # mle: .94 .88
+    # Plot settings.
+    small_size = 6
+    medium_size = 8
+    large_size = 10
+    plt.rc('font', size=small_size)  # controls default text sizes
+    plt.rc('axes', titlesize=medium_size)
+    plt.rc('axes', labelsize=small_size)
+    plt.rc('xtick', labelsize=small_size)
+    plt.rc('ytick', labelsize=small_size)
+    plt.rc('legend', fontsize=small_size)
+    plt.rc('figure', titlesize=large_size)
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -69,35 +81,50 @@ def main():
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
-    model_true = ground_truth_randn(n_stimuli, n_dim)
-    # model_true = ground_truth_grid()
+    # Create a ground truth model.
+    model_true = ground_truth_grid()
+    # model_true = ground_truth_randn(n_stimuli, n_dim)
 
-    proxy = psiz.models.Proxy(model_true)
-    simmat_true = psiz.utils.pairwise_matrix(proxy.similarity, proxy.z[0])
+    proxy_true = psiz.models.Proxy(model_true)
+    simmat_true = psiz.utils.pairwise_matrix(
+        proxy_true.similarity, proxy_true.z[0]
+    )
+    nonself_sim = simmat_true[np.logical_not(np.eye(n_stimuli, dtype=bool))]
+    print(
+        'Ground-truth Similarity (non-self)\n'
+        '    min: {0:.2f}'
+        '    mean: {1:.2f}'
+        '    max: {2:.2f}'.format(
+            np.min(nonself_sim), np.mean(nonself_sim), np.max(nonself_sim)
+        )
+    )
 
-    # Generate a random docket of trials.
-    # generator = psiz.generator.RandomRate(n_stimuli)
-    # rate_docket_1 = generator.generate(20)
-
+    # Generate all possible pairwise combinations.
     stimulus_set_all = np.asarray(list(itertools.combinations(np.arange(n_stimuli), 2)))
     n_trial = stimulus_set_all.shape[0]
     rate_docket_all = psiz.trials.RateDocket(stimulus_set_all)
-    group = np.ones([n_trial], dtype=int)
-    ds_docket = rate_docket_all.as_dataset(group)
-    
-    # Simulate noiseless similarity judgments.
-    output = np.mean(model_true(ds_docket).numpy(), axis=0)
+    group = np.zeros([n_trial], dtype=int)
+    ds_docket = rate_docket_all.as_dataset(group).batch(
+        batch_size=batch_size, drop_remainder=False
+    )
 
+    # Simulate noise-free similarity judgments.
+    output = model_true.predict(ds_docket)
+    print(
+        'Observed Ratings\n'
+        '    min: {0:.2f}'
+        '    mean: {1:.2f}'
+        '    max: {2:.2f}'.format(
+            np.min(output),
+            np.mean(output),
+            np.max(output)
+        )
+    )
     obs = psiz.trials.RateObservations(stimulus_set_all, output)
     
     ds_obs_train = obs.as_dataset().shuffle(
         buffer_size=obs.n_trial, reshuffle_each_iteration=True
     ).batch(batch_size, drop_remainder=False)
-
-    # Use early stopping.
-    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
-        'val_mse', patience=30, mode='min', restore_best_weights=True
-    )
 
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
@@ -117,10 +144,8 @@ def main():
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
         callbacks = [cb_board]
-
         
-        # model = build_model(n_stimuli, n_dim)
-        model = build_model_vi(n_stimuli, n_dim, obs.n_trial)
+        model = build_model(n_stimuli, n_dim)
 
         # Infer embedding.
         model.compile(**compile_kwargs)
@@ -148,6 +173,14 @@ def main():
             'Correlation (R^2): {2:.2f}'.format(n_trial, train_mse, r2)
         )
 
+        # Create and save visual frame.
+        fig = plt.figure(figsize=(6.5, 4), dpi=200)
+        plot_restart(fig, proxy_true, proxy_inferred, r2)
+        fname = fp_example / Path('restart_{0}.pdf'.format(i_restart))
+        plt.savefig(
+            os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
+        )
+
 
 def ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
@@ -167,16 +200,17 @@ def ground_truth_randn(n_stimuli, n_dim):
             trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            beta_initializer=tf.keras.initializers.Constant(3.),
             tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False,
         )
     )
     behavior = psiz.keras.layers.RateBehavior(
         lower_initializer=tf.keras.initializers.Constant(0.0),
         upper_initializer=tf.keras.initializers.Constant(1.0),
-        midpoint_initializer=tf.keras.initializers.Constant(.5),
-        rate_initializer=tf.keras.initializers.Constant(5.),
+        midpoint_initializer=tf.keras.initializers.Constant(.4),
+        rate_initializer=tf.keras.initializers.Constant(15.),
     )
     print('Ground truth rate: {0:.2f}'.format(behavior.rate.numpy()))
     return psiz.models.Rate(
@@ -186,7 +220,7 @@ def ground_truth_randn(n_stimuli, n_dim):
 
 def ground_truth_grid():
     #  Create embedding points arranged on a grid.
-    x, y = np.meshgrid([.1, .2, .3, .4, .5], [.1, .2, .3, .4, .5])
+    x, y = np.meshgrid([-.2, -.1, 0., .1, .2], [-.2, -.1, 0., .1, .2])
     x = np.expand_dims(x.flatten(), axis=1)
     y = np.expand_dims(y.flatten(), axis=1)
     z_grid = np.hstack((x, y))
@@ -205,7 +239,7 @@ def ground_truth_grid():
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.),
+            beta_initializer=tf.keras.initializers.Constant(3.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
             trainable=False
@@ -214,8 +248,8 @@ def ground_truth_grid():
     behavior = psiz.keras.layers.RateBehavior(
         lower_initializer=tf.keras.initializers.Constant(0.0),
         upper_initializer=tf.keras.initializers.Constant(1.0),
-        midpoint_initializer=tf.keras.initializers.Constant(.5),
-        rate_initializer=tf.keras.initializers.Constant(5.),
+        midpoint_initializer=tf.keras.initializers.Constant(.4),  # NOTE: This value has large repercussions.
+        rate_initializer=tf.keras.initializers.Constant(15.),
     )
     model = psiz.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior
@@ -238,7 +272,8 @@ def build_model(n_stimuli, n_dim):
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            beta_initializer=tf.keras.initializers.Constant(3.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
@@ -251,51 +286,50 @@ def build_model(n_stimuli, n_dim):
     return model
 
 
-def build_model_vi(n_stimuli, n_dim, n_obs_train):
-    kl_weight = 1. / n_obs_train
+def plot_restart(fig, proxy_true, proxy_inferred, r2):
+    """Plot frame."""
+    # Settings.
+    cmap = matplotlib.cm.get_cmap('jet')
+    norm = matplotlib.colors.Normalize(vmin=0., vmax=proxy_true.n_stimuli)
+    color_array = cmap(norm(range(proxy_true.n_stimuli)))
 
-    embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
-        scale_initializer=tf.keras.initializers.Constant(
-            tfp.math.softplus_inverse(.01).numpy()
-        )
-    )
+    gs = fig.add_gridspec(1, 1)
 
-    prior_scale = .2
-    embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-            loc_trainable=False,
-        )
-    )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
-    )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
+    # Plot embeddings.
+    ax = fig.add_subplot(gs[0, 0])
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
+    # Determine embedding limits.
+    z_true_max = 1.3 * np.max(np.abs(proxy_true.z[0]))
+    z_infer_max = 1.3 * np.max(np.abs(proxy_inferred.z[0]))
+    z_max = np.max([z_true_max, z_infer_max])
+    z_limits = [-z_max, z_max]
+
+    # Align inferred embedding with true embedding (without using scaling).
+    r, t = psiz.utils.procrustes_2d(
+        proxy_true.z[0], proxy_inferred.z[0], scale=False, n_restart=30
+    )
+    z_affine = np.matmul(proxy_inferred.z[0], r) + t
+
+    # Plot true embedding.
+    ax.scatter(
+        proxy_true.z[0, :, 0], proxy_true.z[0, :, 1],
+        s=15, c=color_array, marker='x', edgecolors='none'
     )
 
-    behavior = BehaviorLog()
-    model = psiz.models.Rate(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
+    # Plot inferred embedding.
+    ax.scatter(
+        z_affine[:, 0], z_affine[:, 1],
+        s=60, marker='o', facecolors='none', edgecolors=color_array
     )
-    return model
+
+    ax.set_xlim(z_limits)
+    ax.set_ylim(z_limits)
+    ax.set_aspect('equal')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_title('Embeddings (R^2={0:.2f})'.format(r2))
+
+    gs.tight_layout(fig)
 
 
 @tf.keras.utils.register_keras_serializable(

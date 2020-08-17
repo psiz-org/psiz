@@ -209,7 +209,7 @@ class RateDocket(RateTrials):
             'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
             'group': tf.constant(group, dtype=tf.int32)
         }
-        return x
+        return tf.data.Dataset.from_tensor_slices((x))
 
     @classmethod
     def stack(cls, trials_list):

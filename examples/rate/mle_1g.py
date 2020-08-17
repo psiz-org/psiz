@@ -24,7 +24,7 @@ Results are saved in the directory specified by `fp_example`. By
 default, a `psiz_examples` directory is created in your home directory.
 
 NOTE: The midpoint value has a large impact on the ability to infer a
-correct solution. While the grid version works OK, the general case
+reasonable solution. While the grid version works OK, the MVN case
 is not working great. Once the above issues are resolved, still need to
 experiment with noisy simulations and validation-based early stopping.
 
@@ -59,7 +59,7 @@ def main():
     n_stimuli = 25
     n_dim = 2
     n_restart = 1
-    epochs = 1000
+    epochs = 10000
     lr = .001
     batch_size = 64
 
@@ -89,22 +89,18 @@ def main():
     simmat_true = psiz.utils.pairwise_matrix(
         proxy_true.similarity, proxy_true.z[0]
     )
-    nonself_sim = simmat_true[np.logical_not(np.eye(n_stimuli, dtype=bool))]
     print(
-        'Ground-truth Similarity (non-self)\n'
+        'Ground Truth Pairwise Similarity\n'
         '    min: {0:.2f}'
         '    mean: {1:.2f}'
         '    max: {2:.2f}'.format(
-            np.min(nonself_sim), np.mean(nonself_sim), np.max(nonself_sim)
+            np.min(simmat_true), np.mean(simmat_true), np.max(simmat_true)
         )
     )
 
-    # Generate all possible pairwise combinations.
-    stimulus_set_all = np.asarray(list(itertools.combinations(np.arange(n_stimuli), 2)))
-    n_trial = stimulus_set_all.shape[0]
-    rate_docket_all = psiz.trials.RateDocket(stimulus_set_all)
-    group = np.zeros([n_trial], dtype=int)
-    ds_docket = rate_docket_all.as_dataset(group).batch(
+    # Assemble an exhaustive docket of all possible pairwise combinations.
+    docket = exhaustive_docket(n_stimuli)
+    ds_docket = docket.as_dataset().batch(
         batch_size=batch_size, drop_remainder=False
     )
 
@@ -120,8 +116,8 @@ def main():
             np.max(output)
         )
     )
-    obs = psiz.trials.RateObservations(stimulus_set_all, output)
-    
+    obs = psiz.trials.RateObservations(docket.stimulus_set, output)
+
     ds_obs_train = obs.as_dataset().shuffle(
         buffer_size=obs.n_trial, reshuffle_each_iteration=True
     ).batch(batch_size, drop_remainder=False)
@@ -144,7 +140,7 @@ def main():
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
         callbacks = [cb_board]
-        
+
         model = build_model(n_stimuli, n_dim)
 
         # Infer embedding.
@@ -169,8 +165,20 @@ def main():
             simmat_infer, simmat_true, score='r2'
         )
         print(
-            '    n_obs: {0:4d} | train_mse: {1:.2f} | '
-            'Correlation (R^2): {2:.2f}'.format(n_trial, train_mse, r2)
+            '    n_obs: {0:4d} | train_mse: {1:.6f} | '
+            'Correlation (R^2): {2:.2f}'.format(obs.n_trial, train_mse, r2)
+        )
+        print(
+            'Inferred parameters\n'
+            '    sigmoid lower bound: {0:.2f}'
+            '    sigmoid upper bound: {1:.2f}'
+            '    sigmoid midpoint: {2:.2f}'
+            '    sigmoid rate: {3:.2f}'.format(
+                model.behavior.lower.numpy(),
+                model.behavior.upper.numpy(),
+                model.behavior.midpoint.numpy(),
+                model.behavior.rate.numpy()
+            )
         )
 
         # Create and save visual frame.
@@ -180,6 +188,26 @@ def main():
         plt.savefig(
             os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
         )
+
+
+def exhaustive_docket(n_stimuli):
+    """Assemble an exhausitive docket.
+
+    Arguments:
+        n_stimuli: The number of stimuli.
+
+    Returns:
+        A psiz.trials.RateDocket object.
+
+    """
+    stimulus_set_self = np.stack(
+        (np.arange(n_stimuli), np.arange(n_stimuli)), axis=1
+    )
+    stimulus_set_diff = np.asarray(
+        list(itertools.combinations(np.arange(n_stimuli), 2))
+    )
+    stimulus_set = np.vstack((stimulus_set_self, stimulus_set_diff))
+    return psiz.trials.RateDocket(stimulus_set)
 
 
 def ground_truth_randn(n_stimuli, n_dim):
@@ -219,7 +247,7 @@ def ground_truth_randn(n_stimuli, n_dim):
 
 
 def ground_truth_grid():
-    #  Create embedding points arranged on a grid.
+    """Create embedding points arranged on a grid."""
     x, y = np.meshgrid([-.2, -.1, 0., .1, .2], [-.2, -.1, 0., .1, .2])
     x = np.expand_dims(x.flatten(), axis=1)
     y = np.expand_dims(y.flatten(), axis=1)
@@ -248,7 +276,7 @@ def ground_truth_grid():
     behavior = psiz.keras.layers.RateBehavior(
         lower_initializer=tf.keras.initializers.Constant(0.0),
         upper_initializer=tf.keras.initializers.Constant(1.0),
-        midpoint_initializer=tf.keras.initializers.Constant(.4),  # NOTE: This value has large repercussions.
+        midpoint_initializer=tf.keras.initializers.Constant(.5),
         rate_initializer=tf.keras.initializers.Constant(15.),
     )
     model = psiz.models.Rate(
@@ -260,6 +288,7 @@ def ground_truth_grid():
 
 
 def build_model(n_stimuli, n_dim):
+    """Build a model to use for inference."""
     stimuli = psiz.keras.layers.Stimuli(
         embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True

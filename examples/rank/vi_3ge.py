@@ -30,7 +30,8 @@ Example output:
     Restart Summary
     n_valid_restart 1 | total_duration: 2104 s
     best | n_epoch: 999 | val_loss: 3.0700
-    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 | 2088 ±0 s | 2090 ±0 ms/epoch
+    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 |
+        2088 ±0 s | 2090 ±0 ms/epoch
 
     Model Comparison (R^2)
     ================================
@@ -40,7 +41,7 @@ Example output:
      Novice |   0.94    0.67    0.06
      Interm |   0.55    0.87    0.35
      Expert |   0.09    0.42    0.85
- 
+
 """
 
 import copy
@@ -142,7 +143,7 @@ def main():
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
-    }    
+    }
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:

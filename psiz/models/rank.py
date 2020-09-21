@@ -80,7 +80,7 @@ class Rank(PsychologicalEmbedding):
 
         # Inflate coordinates.
         z = self.stimuli([stimulus_set, group])
-        
+
         # Check `z` shape is:
         # TensorShape([sample_size, batch_size, n_ref + 1, n_outcome, n_dim])
         if tf.math.equal(tf.rank(z), 4):
@@ -103,7 +103,7 @@ class Rank(PsychologicalEmbedding):
         is_select = tf.expand_dims(
             tf.cast(is_select, dtype=K.floatx()), axis=0
         )
-        is_outcome =tf.cast(is_present[:, :, 0, :], dtype=K.floatx())
+        is_outcome = tf.cast(is_present[:, :, 0, :], dtype=K.floatx())
         probs = self.behavior([sim_qr, is_select, is_outcome])
         return probs
 

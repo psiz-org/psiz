@@ -38,7 +38,7 @@ import tensorflow_probability as tfp
 
 def heatmap_embeddings(fig, ax, embedding, group_idx=0, cmap=None):
     """Visualize embeddings as a heatmap.
-    
+
     Intended to handle rank 2 and rank 3 embeddings.
 
     Arguments:
@@ -69,6 +69,7 @@ def heatmap_embeddings(fig, ax, embedding, group_idx=0, cmap=None):
     im = ax.imshow(
         z_mode, cmap=cmap, interpolation='none', vmin=0., vmax=z_mode_max
     )
+    # TODO use matshow to fix interpolation issue.
 
     # Note: imshow displays different rows as different values of y and
     # different columns as different values of x.
@@ -81,7 +82,7 @@ def heatmap_embeddings(fig, ax, embedding, group_idx=0, cmap=None):
 
 def embedding_output_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
     """Visualize embedding values for a requested output dimension.
-    
+
     Plots point estimates of embedding values for the requested
     output dimension.
 
@@ -126,7 +127,7 @@ def embedding_output_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
         dist = embedding.posterior.embeddings.distribution
 
         # Middle 99% probability mass.
-        p=.99
+        p = .99
         v = (1 - p) / 2
         quant_lower = dist.quantile(v).numpy()[:, idx]
         quant_upper = dist.quantile(1-v).numpy()
@@ -156,7 +157,7 @@ def embedding_output_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
                 [mid_lower[i_dim], mid_upper[i_dim]]
             )
             ax.plot(xg, yg, c=c, linewidth=3)
-    
+
     ax.set_xlabel('Input Dimension')
     ax.set_xlim([-.5, n_input_dim-.5])
 
@@ -191,14 +192,14 @@ def embedding_input_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
         z_mode = embedding.embeddings.mode().numpy()
     else:
         z_mode = embedding.embeddings.numpy()
-    
+
     rank = z_mode.ndim
     if rank == 3:
         z_mode = z_mode[group_idx]
 
     y_max = np.max(z_mode)
     z_mode = z_mode[idx, :]
-    
+
     # Handle masking.
     if embedding.mask_zero:
         z_mode = z_mode[1:]
@@ -214,7 +215,7 @@ def embedding_input_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
         dist = embedding.posterior.embeddings.distribution
 
         # Middle 99% of probability mass.
-        p=.99
+        p = .99
         v = (1 - p) / 2
         quant_lower = dist.quantile(v).numpy()[idx, :]
         quant_upper = dist.quantile(1-v).numpy()
@@ -239,7 +240,7 @@ def embedding_input_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
                 [quant_lower[i_dim], quant_upper[i_dim]]
             )
             ax.plot(xg, yg, c=c, linewidth=1)
-            
+
             yg = np.array(
                 [mid_lower[i_dim], mid_upper[i_dim]]
             )

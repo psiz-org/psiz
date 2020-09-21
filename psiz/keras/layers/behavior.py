@@ -99,7 +99,7 @@ class RankBehavior(Behavior):
                 sim_qr: A tensor containing the precomputed
                     similarities between the query stimuli and
                     corresponding reference stimuli.
-                    shape = (batch_size, n_max_reference, n_outcome)
+                    shape=(sample_size, batch_size, n_max_reference, n_outcome)
                 is_select: A Boolean tensor indicating if a reference
                     was selected.
                     shape = (batch_size, n_max_reference, n_outcome)
@@ -132,7 +132,12 @@ class RankBehavior(Behavior):
         # Compute sequence log-probability
         seq_log_prob = tf.reduce_sum(log_prob, axis=2)
         seq_prob = tf.math.exp(seq_log_prob)
-        return is_outcome * seq_prob
+        seq_prob = is_outcome * seq_prob
+
+        # Clean up probabilities
+        total = tf.reduce_sum(seq_prob, axis=2, keepdims=True)
+        seq_prob = seq_prob / total
+        return seq_prob
 
     def get_config(self):
         """Return layer configuration."""

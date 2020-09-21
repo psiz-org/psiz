@@ -174,7 +174,7 @@ class ActiveRank(DocketGenerator):
         self.batch_size = batch_size
 
     def generate(
-            self, n_trial, model, priority=None, mask=None, group_id=0,
+            self, n_trial, model_list, priority=None, mask=None, group_id=0,
             verbose=0):
         """Return a docket of trials based on provided arguments.
 
@@ -191,7 +191,7 @@ class ActiveRank(DocketGenerator):
         Arguments:
             n_trial: A scalar indicating the number of trials to
                 generate.
-            model: A PsychologicalEmbedding object.
+            model_list: A list of PsychologicalEmbedding objects.
             priority (optional): An array indicating the priority of
                 sampling each stimulus. Priority is used as a heuristic
                 to guide the active selection procedure in the
@@ -248,11 +248,11 @@ class ActiveRank(DocketGenerator):
             n_trial, priority, n_unique_query
         )
         (docket, expected_ig) = self._select_references(
-            model, group_id, query_idx_arr, query_idx_count_arr,
+            model_list, group_id, query_idx_arr, query_idx_count_arr,
             priority, mask, verbose
         )
         data = {
-            'docket' : {'expected_ig': expected_ig},
+            'docket': {'expected_ig': expected_ig},
             'meta': {}
         }
 
@@ -296,7 +296,7 @@ class ActiveRank(DocketGenerator):
         return query_idx_arr, query_idx_count_arr
 
     def _select_references(
-            self, model, group_id, query_idx_arr, query_idx_count_arr,
+            self, model_list, group_id, query_idx_arr, query_idx_count_arr,
             priority, mask, verbose):
         """Determine references for all requested query stimuli."""
         n_query = query_idx_arr.shape[0]
@@ -312,7 +312,7 @@ class ActiveRank(DocketGenerator):
         for i_query in range(n_query):
             mask_q = mask[query_idx_arr[i_query]]
             docket_q, expected_ig_q = _select_query_references(
-                i_query, model, group_id, query_idx_arr,
+                i_query, model_list, group_id, query_idx_arr,
                 query_idx_count_arr,
                 self.n_reference, self.n_select, self.n_candidate,
                 priority, mask_q, self.batch_size
@@ -370,7 +370,7 @@ class RandomRate(DocketGenerator):
 
 
 def _select_query_references(
-        i_query, model, group_id, query_idx_arr, query_idx_count_arr,
+        i_query, model_list, group_id, query_idx_arr, query_idx_count_arr,
         n_reference, n_select, n_candidate, priority, mask_q, batch_size):
     """Determine query references."""
     query_idx = query_idx_arr[i_query]
@@ -379,6 +379,7 @@ def _select_query_references(
     ref_idx_eligable = np.arange(len(priority))
     ref_idx_eligable = ref_idx_eligable[mask_q]
     ref_prob = priority[mask_q]
+    # ref_prob = np.ones(np.shape(ref_idx_eligable))  # TODO?
     ref_prob = ref_prob / np.sum(ref_prob)
 
     # Create a docket full of candidate trials.
@@ -396,16 +397,18 @@ def _select_query_references(
         batch_size, drop_remainder=False
     )
 
-    expected_ig = None
+    expected_ig = []
     for x in ds_docket:
-        # Compute expected information gain from prediction samples.
-        batch_expected_ig = expected_information_gain(
-            model(x, training=False)
-        )
-        if expected_ig is None:
-            expected_ig = [batch_expected_ig]
-        else:
-            expected_ig.append(batch_expected_ig)
+        batch_expected_ig = []
+        # Compute average of ensemble of models.
+        for model in model_list:
+            # Compute expected information gain from prediction samples.
+            batch_expected_ig.append(
+                expected_information_gain(model(x, training=False))
+            )
+        batch_expected_ig = tf.stack(batch_expected_ig, axis=0)
+        batch_expected_ig = tf.reduce_mean(batch_expected_ig, axis=0)
+        expected_ig.append(batch_expected_ig)
     expected_ig = tf.concat(expected_ig, axis=0).numpy()
 
     # Grab the top trials as requested.

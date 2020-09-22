@@ -35,11 +35,11 @@ class Stimuli(GroupLevel):
     def __init__(
             self, embedding=None, **kwargs):
         """Initialize.
-        
+
         Arguments:
             embedding: An Embedding layer.
             kwargs: Additional key-word arguments.
- 
+
         """
         super(Stimuli, self).__init__(**kwargs)
 
@@ -51,7 +51,9 @@ class Stimuli(GroupLevel):
                 'The provided `n_group`={0} is not compatible with the'
                 ' provided embedding. The provided embedding has'
                 ' input_dim={1}, which cannot be cleanly reshaped to'
-                ' (n_group, input_dim/n_group).'.format(self.n_group, input_dim)
+                ' (n_group, input_dim/n_group).'.format(
+                    self.n_group, input_dim
+                )
             )
 
         self.input_dim = int(input_dim_group)
@@ -167,7 +169,7 @@ class Stimuli(GroupLevel):
 
     def _map_embedding_indices(self, idx, group_idx, n):
         """Map group-specific embedding indices to flat indices.
-        
+
         Arguments:
             idx: Integer tf.Tensor indicating embedding indices.
                 shape=(batch_size, [m, n, ...])

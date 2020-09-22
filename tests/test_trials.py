@@ -36,7 +36,7 @@ import tensorflow as tf
 
 from psiz import trials
 from psiz.generators import RandomRank
-from psiz.simulate import Agent
+from psiz.agents import RankAgent
 import psiz.models
 import psiz.keras.layers
 
@@ -686,8 +686,8 @@ class TestStack:
         np.testing.assert_array_equal(
             double_trials.is_ranked[n_trial:], docket.is_ranked)
 
-        agent_novice = Agent(model_truth, group_id=0)
-        agent_expert = Agent(model_truth, group_id=1)
+        agent_novice = RankAgent(model_truth, group_id=0)
+        agent_expert = RankAgent(model_truth, group_id=1)
         obs_novice = agent_novice.simulate(docket)
         obs_expert = agent_expert.simulate(docket)
         obs_all = trials.stack((obs_novice, obs_expert))

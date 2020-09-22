@@ -16,8 +16,8 @@
 """Module for simulating agent behavior.
 
 Classes:
-    Agent: An object that can be initialized using a psychological
-        embedding and used to simulate similarity judgments.
+    RankAgent: An object that can be initialized using a psychological
+        embedding and used to simulate Rank similarity judgments.
 
 """
 import numpy as np
@@ -25,14 +25,15 @@ import tensorflow as tf
 from tensorflow.python.keras.engine import data_adapter
 import tensorflow_probability as tfp
 
+from psiz.agents.base import Agent
 from psiz.trials import RankObservations
 
 
-class Agent(object):
-    """Agent that simulates similarity judgments.
+class RankAgent(Agent):
+    """Agent that simulates Rank similarity judgments.
 
     Attributes:
-        embedding: A PsychologicalEmbedding object that supplies a
+        model: A PsychologicalEmbedding object that supplies a
             similarity function and embedding points.
         group_id: An integer indicating which set of attention weights
             to use when simulating judgments.
@@ -120,13 +121,13 @@ class Agent(object):
 
 def _rank_sample(stimulus_set, probs):
     """Stochasatically select outcome.
-    
+
     Arguments:
         stimulus_set:
             shape=(batch_size, n_reference + 1, n_outcome)
         probs:
             shape=(batch_size, n_outcome)
-    
+
     Returns:
         stimulus_set_selected:
             shape=(batch_size, n_reference + 1)

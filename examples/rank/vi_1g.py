@@ -92,7 +92,7 @@ def main():
     proxy_true = psiz.models.Proxy(model=model_true)
 
     # Generate a random docket of trials.
-    generator = psiz.generator.RandomRank(
+    generator = psiz.generators.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)

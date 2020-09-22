@@ -15,8 +15,8 @@
 # ============================================================================
 """Generators initialization."""
 
-from psiz.generator.similarity.base import DocketGenerator
-from psiz.generator.similarity.rank.random_rank import RandomRank
-from psiz.generator.similarity.rank.active_rank import ActiveRank
-from psiz.generator.similarity.rank.active_rank import expected_information_gain_rank
-from psiz.generator.similarity.rate.random_rate import RandomRate
+from psiz.generators.similarity.base import DocketGenerator
+from psiz.generators.similarity.rank.random_rank import RandomRank
+from psiz.generators.similarity.rank.active_rank import ActiveRank
+from psiz.generators.similarity.rank.active_rank import expected_information_gain_rank
+from psiz.generators.similarity.rate.random_rate import RandomRate

@@ -34,7 +34,7 @@ import psiz.catalog
 import psiz.datasets
 import psiz.dimensionality
 import psiz.distributions
-import psiz.generator
+import psiz.generators
 import psiz.keras
 import psiz.models
 import psiz.preprocess

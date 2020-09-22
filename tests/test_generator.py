@@ -260,7 +260,7 @@ def test_choice_wo_replace():
 
     # Draw samples.
     np.random.seed(560897)
-    drawn_idx = psiz.generator.choice_wo_replace(
+    drawn_idx = psiz.utils.choice_wo_replace(
         candidate_idx, (n_trial, n_reference), candidate_prob
     )
     bin_counts, bin_edges = np.histogram(drawn_idx.flatten(), bins=n_option)

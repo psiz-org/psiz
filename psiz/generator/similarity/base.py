@@ -13,11 +13,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials initialization."""
+"""Base functionality of generators.
 
-from psiz.trials.core import stack
-from psiz.trials.core import load_trials
-from psiz.trials.similarity.rank import RankDocket
-from psiz.trials.similarity.rank import RankObservations
-from psiz.trials.similarity.rate import RateDocket
-from psiz.trials.similarity.rate import RateObservations
+Classes:
+    DocketGenerator: Base class for generating a docket of unjudged
+        similarity trials.
+
+"""
+
+from abc import ABCMeta, abstractmethod
+
+
+class DocketGenerator(object):
+    """Abstract base class for generating similarity judgment trials.
+
+    Methods:
+        generate: Generate unjudged trials.
+
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """Initialize."""
+
+    @abstractmethod
+    def generate(self, args):
+        """Return generated trials based on provided arguments.
+
+        Arguments:
+            n_stimuli
+
+        Returns:
+            A Docket object.
+
+        """
+        pass

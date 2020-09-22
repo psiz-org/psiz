@@ -13,116 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for generating unjudged similarity judgment trials.
+"""Generate rank-type unjudged similarity judgment trials.
 
 Classes:
-    DocketGenerator: Base class for generating a docket of unjudged
-        similarity trials.
-    RandomRank: Concrete class for generating random Rank similarity
-        trials.
     ActiveRank: Concrete class that produces Rank similarity trials
         that are expected to maxize expected information gain.
 
 Functions:
-    expected_information_gain: A sample-based function for computing
-        expected information gain.
+    expected_information_gain_rank: A sample-based function for computing
+        expected information gain of Rank trials.
 
 """
 
-from abc import ABCMeta, abstractmethod
-import copy
-# from functools import partial
-import itertools
-# import multiprocessing
 import time
 
 import numpy as np
-import numpy.ma as ma
-import pandas as pd
-from sklearn.mixture import GaussianMixture
-from sklearn.neighbors import NearestNeighbors
 import tensorflow as tf
 
-from psiz.trials import stack, RankDocket, RateDocket
-from psiz.preprocess import remove_catch_trials
+from psiz.generator.similarity.base import DocketGenerator
+from psiz.trials import stack, RankDocket
 from psiz.utils import ProgressBarRe, choice_wo_replace
-
-
-class DocketGenerator(object):
-    """Abstract base class for generating similarity judgment trials.
-
-    Methods:
-        generate: Generate unjudged trials.
-
-    """
-
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        """Initialize."""
-
-    @abstractmethod
-    def generate(self, args):
-        """Return generated trials based on provided arguments.
-
-        Arguments:
-            n_stimuli
-
-        Returns:
-            A Docket object.
-
-        """
-        pass
-
-
-class RandomRank(DocketGenerator):
-    """A trial generator that blindly samples trials."""
-
-    def __init__(self, n_stimuli, n_reference=2, n_select=1):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: A scalar indicating the total number of unique
-                stimuli.
-            n_reference (optional): A scalar indicating the number of
-                references for each trial.
-            n_select (optional): A scalar indicating the number of
-                selections an agent must make.
-
-        """
-        DocketGenerator.__init__(self)
-
-        self.n_stimuli = n_stimuli
-
-        # Sanitize inputs.
-        # TODO re-use sanitize methods from elsewhere
-        self.n_reference = np.int32(n_reference)
-        self.n_select = np.int32(n_select)
-        self.is_ranked = True
-
-    def generate(self, n_trial):
-        """Return generated trials based on provided arguments.
-
-        Arguments:
-            n_trial: A scalar indicating the number of trials to
-                generate.
-
-        Returns:
-            A RankDocket object.
-
-        """
-        n_reference = self.n_reference
-        n_select = np.repeat(self.n_select, n_trial)
-        is_ranked = np.repeat(self.is_ranked, n_trial)
-        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
-        prob = np.ones([self.n_stimuli]) / self.n_stimuli
-        stimulus_set = choice_wo_replace(
-            idx_eligable, (n_trial, n_reference + 1), prob
-        )
-
-        return RankDocket(
-            stimulus_set, n_select=n_select, is_ranked=is_ranked
-        )
 
 
 class ActiveRank(DocketGenerator):
@@ -335,40 +245,6 @@ class ActiveRank(DocketGenerator):
         return docket, expected_ig
 
 
-class RandomRate(DocketGenerator):
-    """A trial generator that blindly samples trials."""
-
-    def __init__(self, n_stimuli, n_reference=2, n_select=1):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: A scalar indicating the total number of unique
-                stimuli.
-
-        """
-        DocketGenerator.__init__(self)
-
-        self.n_stimuli = n_stimuli
-
-    def generate(self, n_trial):
-        """Return generated trials based on provided arguments.
-
-        Arguments:
-            n_trial: A scalar indicating the number of trials to
-                generate.
-
-        Returns:
-            A RateDocket object.
-
-        """
-        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
-        prob = np.ones([self.n_stimuli]) / self.n_stimuli
-        stimulus_set = choice_wo_replace(
-            idx_eligable, (n_trial, 2), prob
-        )
-        return RateDocket(stimulus_set)
-
-
 def _select_query_references(
         i_query, model_list, group_id, query_idx_arr, query_idx_count_arr,
         n_reference, n_select, n_candidate, priority, mask_q, batch_size):
@@ -404,7 +280,7 @@ def _select_query_references(
         for model in model_list:
             # Compute expected information gain from prediction samples.
             batch_expected_ig.append(
-                expected_information_gain(model(x, training=False))
+                expected_information_gain_rank(model(x, training=False))
             )
         batch_expected_ig = tf.stack(batch_expected_ig, axis=0)
         batch_expected_ig = tf.reduce_mean(batch_expected_ig, axis=0)
@@ -421,7 +297,7 @@ def _select_query_references(
     return docket, expected_ig
 
 
-def expected_information_gain(y_pred):
+def expected_information_gain_rank(y_pred):
     """Return expected information gain of each discrete outcome trial.
 
     A sample-based approximation of information gain is determined by
@@ -460,7 +336,7 @@ def expected_information_gain(y_pred):
         tf.math.maximum(term0, tf.keras.backend.epsilon())
     )
     # NOTE: At this point we would need to zero out place-holder outcomes,
-    # but placeholder elements will always have a value of zero  since
+    # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.
     # Sum over possible outcomes.
     term0 = -tf.reduce_sum(term0, axis=1)  # shape=(n_trial,)

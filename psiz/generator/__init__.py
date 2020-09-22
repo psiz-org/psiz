@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials initialization."""
+"""Generators initialization."""
 
-from psiz.trials.core import stack
-from psiz.trials.core import load_trials
-from psiz.trials.similarity.rank import RankDocket
-from psiz.trials.similarity.rank import RankObservations
-from psiz.trials.similarity.rate import RateDocket
-from psiz.trials.similarity.rate import RateObservations
+from psiz.generator.similarity.base import DocketGenerator
+from psiz.generator.similarity.rank.random_rank import RandomRank
+from psiz.generator.similarity.rank.active_rank import ActiveRank
+from psiz.generator.similarity.rank.active_rank import expected_information_gain_rank
+from psiz.generator.similarity.rate.random_rate import RandomRate

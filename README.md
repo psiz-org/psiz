@@ -143,15 +143,15 @@ The models in PsiZ are susceptible to local optima. While the usual tricks help,
 
 
 ## Modules
-* `keras` - A module containing Keras related classes.
+* `agents` - Simulate an agent making similarity judgments.
 * `catalog` - Class for storing stimulus information.
 * `datasets` - Functions for loading some pre-defined catalogs and observations.
 * `dimensionality` - Routine for selecting the dimensionality of the embedding.
-* `generator` - Generate new trials randomly or using active selection.
+* `generators` - Generate new trials randomly or using active selection.
+* `keras` - A module containing Keras related classes.
 * `models` - A set of pre-defined psychological embedding models.
 * `preprocess` - Functions for preprocessing observations.
 * `restart` - Classes and functionality for performing model restarts.
-* `simulate` - Simulate an agent making similarity judgments.
 * `trials` - Classes and functions for creating and managing observations.
 * `utils` - Utility functions.
 * `visualize` - Functions for visualizing embeddings.

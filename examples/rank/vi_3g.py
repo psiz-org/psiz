@@ -30,7 +30,8 @@ Example output:
     Restart Summary
     n_valid_restart 1 | total_duration: 2104 s
     best | n_epoch: 999 | val_loss: 3.0700
-    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 | 2088 ±0 s | 2090 ±0 ms/epoch
+    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 |
+        2088 ±0 s | 2090 ±0 ms/epoch
 
     Attention weights:
           Novice | [0.89 0.81 0.13 0.11]
@@ -45,7 +46,7 @@ Example output:
      Novice |   0.97    0.59    0.12
      Interm |   0.64    0.98    0.60
      Expert |   0.14    0.58    0.96
- 
+
 """
 
 import copy
@@ -82,7 +83,7 @@ def main():
     n_restart = 1
     epochs = 1000
     batch_size = 128
-    n_frame = 1 # Set to 4 to observe convergence behavior.
+    n_frame = 1  # Set to 4 to observe convergence behavior.
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -106,15 +107,15 @@ def main():
     proxy_true = psiz.models.Proxy(model=model_true)
 
     # Generate a random docket of trials to show each group.
-    generator = psiz.generator.RandomRank(
+    generator = psiz.generators.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.simulate.Agent(proxy_true.model, group_id=0)
-    agent_interm = psiz.simulate.Agent(proxy_true.model, group_id=1)
-    agent_expert = psiz.simulate.Agent(proxy_true.model, group_id=2)
+    agent_novice = psiz.agents.RankAgent(proxy_true.model, group_id=0)
+    agent_interm = psiz.agents.RankAgent(proxy_true.model, group_id=1)
+    agent_expert = psiz.agents.RankAgent(proxy_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -147,7 +148,7 @@ def main():
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
-    }    
+    }
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:
@@ -193,7 +194,6 @@ def main():
 
         train_loss[i_frame] = restart_record.record['loss'][0]
         val_loss[i_frame] = restart_record.record['val_loss'][0]
-
 
         tf.keras.backend.clear_session()
         proxy_inferred.model.n_sample = 100
@@ -393,8 +393,8 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
 
 
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true, proxy_inferred,
-        idx_sorted, i_frame):
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
+        proxy_inferred, idx_sorted, i_frame):
     """Plot posteriors."""
     # Settings.
     group_labels = ['Novice', 'Intermediate', 'Expert']
@@ -422,8 +422,9 @@ def plot_frame(
             name = 'w'
             ax = fig0.add_subplot(gs[i_group + 1, i_dim])
             curr_dim = idx_sorted[i_dim]
-            loc = proxy_inferred.model.kernel.attention.posterior.embeddings.distribution.loc[i_group, curr_dim]
-            scale = proxy_inferred.model.kernel.attention.posterior.embeddings.distribution.scale[i_group, curr_dim]
+            attn = proxy_inferred.model.kernel.attention.posterior.embeddings
+            loc = attn.distribution.loc[i_group, curr_dim]
+            scale = attn.distribution.scale[i_group, curr_dim]
             dist = tfp.distributions.LogitNormal(loc=loc, scale=scale)
             plot_logitnormal(ax, dist, name=name, c=c)
             if i_group == 0:

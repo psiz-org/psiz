@@ -89,7 +89,7 @@ def docket_0():
 
 def test_simulate(rank_1g_mle_rand, docket_0):
     """Test simulation of agent."""
-    agent = psiz.simulate.Agent(rank_1g_mle_rand)
+    agent = psiz.agents.RankAgent(rank_1g_mle_rand)
     obs = agent.simulate(docket_0)
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], docket_0.stimulus_set[:, 0]
@@ -120,7 +120,7 @@ def test_rank_sample(rank_1g_mle_rand):
     n_select = 2 * np.ones(n_trial, dtype=np.int32)
     docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
 
-    agent = psiz.simulate.Agent(rank_1g_mle_rand)
+    agent = psiz.agents.RankAgent(rank_1g_mle_rand)
     probs = np.array((
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),

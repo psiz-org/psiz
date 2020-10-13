@@ -149,14 +149,14 @@ class Proxy(object):
             if isinstance(w, tfp.distributions.Distribution):
                 if isinstance(w.distribution, tfp.distributions.LogitNormal):
                     # For logit-normal distribution, use median instead of
-                    # mode. 
+                    # mode.
                     # `median = logistic(loc)`.
                     w = tf.math.sigmoid(w.distribution.loc)
                 else:
                     w = w.mode()  # NOTE: The mode may be undefined.
             w = w.numpy()
             if self.model.kernel.attention.mask_zero:
-                    w = w[1:]
+                w = w[1:]
         else:
             w = np.ones([1, self.n_dim])
         return w
@@ -437,7 +437,6 @@ class Proxy(object):
         """Save the model."""
         self.model.save(filepath, overwrite=overwrite)
 
-
     def clone(self, custom_objects={}):
         """Clone model."""
         # TODO Test
@@ -679,8 +678,8 @@ class PsychologicalEmbedding(tf.keras.Model):
             data: A nested structure of `Tensor`s.
 
         Returns:
-            The result of one inference step, typically the output of calling the
-            `Model` on data.
+            The result of one inference step, typically the output of
+            calling the `Model` on data.
 
         """
         data = data_adapter.expand_1d(data)
@@ -764,8 +763,8 @@ class PsychologicalEmbedding(tf.keras.Model):
                     else:
                         component_name = k
                     print(
-                        'WARNING: Model component `{0}` had type float32. Please'
-                        ' check the corresponding get_config method for'
+                        'WARNING: Model component `{0}` had type float32.'
+                        ' Please check the corresponding get_config method for'
                         ' appropriate float casting.'.format(component_name)
                     )
                     d[k] = float(v)
@@ -899,7 +898,7 @@ def load_model(filepath, custom_objects={}, compile=False):
 
         # emb = Proxy(model=model)
         emb = model
-        
+
     else:
         raise ValueError(
             'The argument `filepath` must be a directory. The provided'

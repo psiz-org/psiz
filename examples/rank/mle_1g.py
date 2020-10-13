@@ -65,13 +65,13 @@ def main():
     proxy_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
-    generator = psiz.generator.RandomRank(
+    generator = psiz.generators.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.simulate.Agent(proxy_true.model)
+    agent = psiz.agents.RankAgent(proxy_true.model)
     obs = agent.simulate(docket)
 
     simmat_true = psiz.utils.pairwise_matrix(

@@ -30,7 +30,8 @@ Example output:
     Restart Summary
     n_valid_restart 1 | total_duration: 2104 s
     best | n_epoch: 999 | val_loss: 3.0700
-    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 | 2088 ±0 s | 2090 ±0 ms/epoch
+    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 |
+        2088 ±0 s | 2090 ±0 ms/epoch
 
     Model Comparison (R^2)
     ================================
@@ -40,7 +41,7 @@ Example output:
      Novice |   0.94    0.67    0.06
      Interm |   0.55    0.87    0.35
      Expert |   0.09    0.42    0.85
- 
+
 """
 
 import copy
@@ -101,15 +102,15 @@ def main():
     proxy_true = psiz.models.Proxy(model=model_true)
 
     # Generate a random docket of trials to show each group.
-    generator = psiz.generator.RandomRank(
+    generator = psiz.generators.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.simulate.Agent(proxy_true.model, group_id=0)
-    agent_interm = psiz.simulate.Agent(proxy_true.model, group_id=1)
-    agent_expert = psiz.simulate.Agent(proxy_true.model, group_id=2)
+    agent_novice = psiz.agents.RankAgent(proxy_true.model, group_id=0)
+    agent_interm = psiz.agents.RankAgent(proxy_true.model, group_id=1)
+    agent_expert = psiz.agents.RankAgent(proxy_true.model, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -142,7 +143,7 @@ def main():
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
-    }    
+    }
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:

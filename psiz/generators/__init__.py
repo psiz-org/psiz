@@ -13,33 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Top-level package initialization file.
+"""Generators initialization."""
 
-Modules:
-    agents
-    catalog
-    datasets
-    dimensionality
-    distributions
-    generator
-    keras
-    models
-    preprocess
-    trials
-    utils
-    visualize
-"""
-
-import psiz.agents
-import psiz.catalog
-import psiz.datasets
-import psiz.dimensionality
-import psiz.distributions
-import psiz.generators
-import psiz.keras
-import psiz.models
-import psiz.preprocess
-import psiz.restart
-import psiz.trials
-import psiz.utils
-import psiz.visualize
+from psiz.generators.similarity.base import DocketGenerator
+from psiz.generators.similarity.rank.random_rank import RandomRank
+from psiz.generators.similarity.rank.active_rank import ActiveRank
+from psiz.generators.similarity.rank.active_rank import expected_information_gain_rank
+from psiz.generators.similarity.rate.random_rate import RandomRate

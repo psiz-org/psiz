@@ -89,7 +89,9 @@ def main():
         for data in ds_docket:
             # Compute expected information gain from prediction samples.
             y_pred = model(data, training=False)
-            batch_expected_ig = psiz.generator.expected_information_gain(y_pred)
+            batch_expected_ig = psiz.generators.expected_information_gain_rank(
+                y_pred
+            )
             if expected_ig is None:
                 expected_ig = [batch_expected_ig]
             else:

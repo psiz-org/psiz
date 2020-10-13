@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials initialization file."""
+"""Trials initialization."""
 
 from psiz.trials.core import stack
 from psiz.trials.core import load_trials

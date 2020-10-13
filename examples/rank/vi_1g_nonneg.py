@@ -82,13 +82,13 @@ def main():
     proxy_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
-    generator = psiz.generator.RandomRank(
+    generator = psiz.generators.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.simulate.Agent(proxy_true.model)
+    agent = psiz.agents.RankAgent(proxy_true.model)
     obs = agent.simulate(docket)
 
     simmat_true = psiz.utils.pairwise_matrix(
@@ -251,7 +251,7 @@ def plot_frame(
 
     f0_ax0 = fig0.add_subplot(gs[0, 0:2])
     plot_loss(f0_ax0, n_obs, train_loss, val_loss, test_loss)
- 
+
     f0_ax1 = fig0.add_subplot(gs[0, 2:4])
     plot_convergence(f0_ax1, n_obs, r2)
 

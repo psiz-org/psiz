@@ -13,116 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for generating unjudged similarity judgment trials.
+"""Generate rank-type unjudged similarity judgment trials.
 
 Classes:
-    DocketGenerator: Base class for generating a docket of unjudged
-        similarity trials.
-    RandomRank: Concrete class for generating random Rank similarity
-        trials.
     ActiveRank: Concrete class that produces Rank similarity trials
         that are expected to maxize expected information gain.
 
 Functions:
-    expected_information_gain: A sample-based function for computing
-        expected information gain.
+    expected_information_gain_rank: A sample-based function for computing
+        expected information gain of Rank trials.
 
 """
 
-from abc import ABCMeta, abstractmethod
-import copy
-# from functools import partial
-import itertools
-# import multiprocessing
 import time
 
 import numpy as np
-import numpy.ma as ma
-import pandas as pd
-from sklearn.mixture import GaussianMixture
-from sklearn.neighbors import NearestNeighbors
 import tensorflow as tf
 
-from psiz.trials import stack, RankDocket, RateDocket
-from psiz.preprocess import remove_catch_trials
+from psiz.generators.similarity.base import DocketGenerator
+from psiz.trials import stack, RankDocket
 from psiz.utils import ProgressBarRe, choice_wo_replace
-
-
-class DocketGenerator(object):
-    """Abstract base class for generating similarity judgment trials.
-
-    Methods:
-        generate: Generate unjudged trials.
-
-    """
-
-    __metaclass__ = ABCMeta
-
-    def __init__(self):
-        """Initialize."""
-
-    @abstractmethod
-    def generate(self, args):
-        """Return generated trials based on provided arguments.
-
-        Arguments:
-            n_stimuli
-
-        Returns:
-            A Docket object.
-
-        """
-        pass
-
-
-class RandomRank(DocketGenerator):
-    """A trial generator that blindly samples trials."""
-
-    def __init__(self, n_stimuli, n_reference=2, n_select=1):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: A scalar indicating the total number of unique
-                stimuli.
-            n_reference (optional): A scalar indicating the number of
-                references for each trial.
-            n_select (optional): A scalar indicating the number of
-                selections an agent must make.
-
-        """
-        DocketGenerator.__init__(self)
-
-        self.n_stimuli = n_stimuli
-
-        # Sanitize inputs.
-        # TODO re-use sanitize methods from elsewhere
-        self.n_reference = np.int32(n_reference)
-        self.n_select = np.int32(n_select)
-        self.is_ranked = True
-
-    def generate(self, n_trial):
-        """Return generated trials based on provided arguments.
-
-        Arguments:
-            n_trial: A scalar indicating the number of trials to
-                generate.
-
-        Returns:
-            A RankDocket object.
-
-        """
-        n_reference = self.n_reference
-        n_select = np.repeat(self.n_select, n_trial)
-        is_ranked = np.repeat(self.is_ranked, n_trial)
-        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
-        prob = np.ones([self.n_stimuli]) / self.n_stimuli
-        stimulus_set = choice_wo_replace(
-            idx_eligable, (n_trial, n_reference + 1), prob
-        )
-
-        return RankDocket(
-            stimulus_set, n_select=n_select, is_ranked=is_ranked
-        )
 
 
 class ActiveRank(DocketGenerator):
@@ -174,7 +84,7 @@ class ActiveRank(DocketGenerator):
         self.batch_size = batch_size
 
     def generate(
-            self, n_trial, model, priority=None, mask=None, group_id=0,
+            self, n_trial, model_list, priority=None, mask=None, group_id=0,
             verbose=0):
         """Return a docket of trials based on provided arguments.
 
@@ -191,7 +101,7 @@ class ActiveRank(DocketGenerator):
         Arguments:
             n_trial: A scalar indicating the number of trials to
                 generate.
-            model: A PsychologicalEmbedding object.
+            model_list: A list of PsychologicalEmbedding objects.
             priority (optional): An array indicating the priority of
                 sampling each stimulus. Priority is used as a heuristic
                 to guide the active selection procedure in the
@@ -248,11 +158,11 @@ class ActiveRank(DocketGenerator):
             n_trial, priority, n_unique_query
         )
         (docket, expected_ig) = self._select_references(
-            model, group_id, query_idx_arr, query_idx_count_arr,
+            model_list, group_id, query_idx_arr, query_idx_count_arr,
             priority, mask, verbose
         )
         data = {
-            'docket' : {'expected_ig': expected_ig},
+            'docket': {'expected_ig': expected_ig},
             'meta': {}
         }
 
@@ -296,7 +206,7 @@ class ActiveRank(DocketGenerator):
         return query_idx_arr, query_idx_count_arr
 
     def _select_references(
-            self, model, group_id, query_idx_arr, query_idx_count_arr,
+            self, model_list, group_id, query_idx_arr, query_idx_count_arr,
             priority, mask, verbose):
         """Determine references for all requested query stimuli."""
         n_query = query_idx_arr.shape[0]
@@ -312,7 +222,7 @@ class ActiveRank(DocketGenerator):
         for i_query in range(n_query):
             mask_q = mask[query_idx_arr[i_query]]
             docket_q, expected_ig_q = _select_query_references(
-                i_query, model, group_id, query_idx_arr,
+                i_query, model_list, group_id, query_idx_arr,
                 query_idx_count_arr,
                 self.n_reference, self.n_select, self.n_candidate,
                 priority, mask_q, self.batch_size
@@ -335,42 +245,8 @@ class ActiveRank(DocketGenerator):
         return docket, expected_ig
 
 
-class RandomRate(DocketGenerator):
-    """A trial generator that blindly samples trials."""
-
-    def __init__(self, n_stimuli, n_reference=2, n_select=1):
-        """Initialize.
-
-        Arguments:
-            n_stimuli: A scalar indicating the total number of unique
-                stimuli.
-
-        """
-        DocketGenerator.__init__(self)
-
-        self.n_stimuli = n_stimuli
-
-    def generate(self, n_trial):
-        """Return generated trials based on provided arguments.
-
-        Arguments:
-            n_trial: A scalar indicating the number of trials to
-                generate.
-
-        Returns:
-            A RateDocket object.
-
-        """
-        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
-        prob = np.ones([self.n_stimuli]) / self.n_stimuli
-        stimulus_set = choice_wo_replace(
-            idx_eligable, (n_trial, 2), prob
-        )
-        return RateDocket(stimulus_set)
-
-
 def _select_query_references(
-        i_query, model, group_id, query_idx_arr, query_idx_count_arr,
+        i_query, model_list, group_id, query_idx_arr, query_idx_count_arr,
         n_reference, n_select, n_candidate, priority, mask_q, batch_size):
     """Determine query references."""
     query_idx = query_idx_arr[i_query]
@@ -379,6 +255,7 @@ def _select_query_references(
     ref_idx_eligable = np.arange(len(priority))
     ref_idx_eligable = ref_idx_eligable[mask_q]
     ref_prob = priority[mask_q]
+    # ref_prob = np.ones(np.shape(ref_idx_eligable))  # TODO?
     ref_prob = ref_prob / np.sum(ref_prob)
 
     # Create a docket full of candidate trials.
@@ -396,16 +273,18 @@ def _select_query_references(
         batch_size, drop_remainder=False
     )
 
-    expected_ig = None
+    expected_ig = []
     for x in ds_docket:
-        # Compute expected information gain from prediction samples.
-        batch_expected_ig = expected_information_gain(
-            model(x, training=False)
-        )
-        if expected_ig is None:
-            expected_ig = [batch_expected_ig]
-        else:
-            expected_ig.append(batch_expected_ig)
+        batch_expected_ig = []
+        # Compute average of ensemble of models.
+        for model in model_list:
+            # Compute expected information gain from prediction samples.
+            batch_expected_ig.append(
+                expected_information_gain_rank(model(x, training=False))
+            )
+        batch_expected_ig = tf.stack(batch_expected_ig, axis=0)
+        batch_expected_ig = tf.reduce_mean(batch_expected_ig, axis=0)
+        expected_ig.append(batch_expected_ig)
     expected_ig = tf.concat(expected_ig, axis=0).numpy()
 
     # Grab the top trials as requested.
@@ -418,7 +297,7 @@ def _select_query_references(
     return docket, expected_ig
 
 
-def expected_information_gain(y_pred):
+def expected_information_gain_rank(y_pred):
     """Return expected information gain of each discrete outcome trial.
 
     A sample-based approximation of information gain is determined by
@@ -457,7 +336,7 @@ def expected_information_gain(y_pred):
         tf.math.maximum(term0, tf.keras.backend.epsilon())
     )
     # NOTE: At this point we would need to zero out place-holder outcomes,
-    # but placeholder elements will always have a value of zero  since
+    # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.
     # Sum over possible outcomes.
     term0 = -tf.reduce_sum(term0, axis=1)  # shape=(n_trial,)

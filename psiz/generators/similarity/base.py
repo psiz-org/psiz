@@ -13,33 +13,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Top-level package initialization file.
+"""Base functionality of generators.
 
-Modules:
-    agents
-    catalog
-    datasets
-    dimensionality
-    distributions
-    generator
-    keras
-    models
-    preprocess
-    trials
-    utils
-    visualize
+Classes:
+    DocketGenerator: Base class for generating a docket of unjudged
+        similarity trials.
+
 """
 
-import psiz.agents
-import psiz.catalog
-import psiz.datasets
-import psiz.dimensionality
-import psiz.distributions
-import psiz.generators
-import psiz.keras
-import psiz.models
-import psiz.preprocess
-import psiz.restart
-import psiz.trials
-import psiz.utils
-import psiz.visualize
+from abc import ABCMeta, abstractmethod
+
+
+class DocketGenerator(object):
+    """Abstract base class for generating similarity judgment trials.
+
+    Methods:
+        generate: Generate unjudged trials.
+
+    """
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """Initialize."""
+
+    @abstractmethod
+    def generate(self, args):
+        """Return generated trials based on provided arguments.
+
+        Arguments:
+            n_stimuli
+
+        Returns:
+            A Docket object.
+
+        """
+        pass

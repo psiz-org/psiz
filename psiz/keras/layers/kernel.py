@@ -805,7 +805,7 @@ class AttentionKernel(GroupLevel):
 
         # Expand attention weights.
         attention = self.attention(group[:, self.group_level])
- 
+
         # Add singleton inner dimensions that are not related to sample_size,
         # batch_size or vector dimensionality.
         attention_shape = tf.shape(attention)

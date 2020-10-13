@@ -254,8 +254,11 @@ def _select_query_references(
 
     ref_idx_eligable = np.arange(len(priority))
     ref_idx_eligable = ref_idx_eligable[mask_q]
-    ref_prob = priority[mask_q]
-    # ref_prob = np.ones(np.shape(ref_idx_eligable))  # TODO?
+    # TODO Use different priority for references, although mask to preserve
+    # semantics promised above (priority=0 won't be sampled at all.)
+    ref_priority = np.not_equal(priority, 0.0, dtype=np.float32)
+    ref_prob = ref_priority[mask_q]
+    # ref_prob = priority[mask_q]  # TODO old
     ref_prob = ref_prob / np.sum(ref_prob)
 
     # Create a docket full of candidate trials.

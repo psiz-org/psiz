@@ -28,6 +28,7 @@ default, a `psiz_examples` directory is created in your home directory.
 import os
 from pathlib import Path
 import shutil
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -229,4 +230,7 @@ def build_model(n_stimuli, n_dim):
 
 
 if __name__ == "__main__":
+    start_time_s = time.time()
     main()
+    total_time_s = time.time() - start_time_s
+    print('Total script time: {0:.0f} s'.format(total_time_s))

@@ -1,0 +1,12 @@
+CHANGES.txt
+CODE.md
+CONTRIBUTING.md
+LICENSE
+MANIFEST.in
+README.md
+delete.txt
+examples
+psiz
+setup.cfg
+setup.py
+tests

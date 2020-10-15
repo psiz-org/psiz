@@ -22,7 +22,7 @@ Classes:
     AttentionKernel: A kernel that uses group-specific attention
         weights and allows the user to separately specify a distance
         and similarity function.
-    GroupAttentionVariational: A variation group attention layer.
+    GroupAttentionVariational: A variational group attention layer.
 
 """
 

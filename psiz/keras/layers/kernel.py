@@ -17,13 +17,6 @@
 
 Classes:
     GroupAttention: A simple group-specific attention layer.
-    InverseSimilarity: A parameterized inverse similarity layer.
-    ExponentialSimilarity: A parameterized exponential similarity
-        layer.
-    HeavyTailedSimilarity: A parameterized heavy-tailed similarity
-        layer.
-    StudentsTSimilarity: A parameterized Student's t-distribution
-        similarity layer.
     Kernel: A kernel that allows the user to separately specify a
         distance and similarity function.
     AttentionKernel: A kernel that uses group-specific attention

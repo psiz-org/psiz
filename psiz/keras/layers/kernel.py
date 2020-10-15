@@ -16,7 +16,6 @@
 """Module of TensorFlow kernel layers.
 
 Classes:
-    WeightedMinkowski: A weighted distance layer.
     GroupAttention: A simple group-specific attention layer.
     InverseSimilarity: A parameterized inverse similarity layer.
     ExponentialSimilarity: A parameterized exponential similarity
@@ -41,75 +40,8 @@ from tensorflow.python.keras import backend as K
 import psiz.keras.constraints as pk_constraints
 import psiz.keras.initializers as pk_initializers
 from psiz.keras.layers.variational import Variational
-from psiz.keras.layers.ops.core import wpnorm
+from psiz.keras.layers.distances.minkowski import WeightedMinkowski
 from psiz.models.base import GroupLevel
-
-
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='WeightedMinkowski'
-)
-class WeightedMinkowski(tf.keras.layers.Layer):
-    """Weighted Minkowski distance."""
-
-    def __init__(self, rho_initializer=None, **kwargs):
-        """Initialize.
-
-        Arguments:
-            rho_initializer (optional): Initializer for rho.
-
-        """
-        super(WeightedMinkowski, self).__init__(**kwargs)
-
-        if rho_initializer is None:
-            rho_initializer = tf.random_uniform_initializer(1.01, 3.)
-        self.rho_initializer = tf.keras.initializers.get(rho_initializer)
-        self.rho = self.add_weight(
-            shape=[], initializer=self.rho_initializer,
-            trainable=self.trainable, name="rho", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterThan(min_value=1.0)
-        )
-
-        self.theta = {'rho': self.rho}
-
-    def call(self, inputs):
-        """Call.
-
-        Arguments:
-            inputs:
-                z_0: A tf.Tensor denoting a set of vectors.
-                    shape = (batch_size, [n, m, ...] n_dim)
-                z_1: A tf.Tensor denoting a set of vectors.
-                    shape = (batch_size, [n, m, ...] n_dim)
-                w: The weights allocated to each dimension
-                    in a weighted minkowski metric.
-                    shape = (batch_size, [n, m, ...] n_dim)
-
-        Returns:
-            shape = (batch_size, [n, m, ...])
-
-        """
-        z_0 = inputs[0]  # Query.
-        z_1 = inputs[1]  # References.
-        w = inputs[2]    # Dimension weights.
-
-        # Expand rho to shape=(sample_size, batch_size, [n, m, ...]).
-        rho = self.rho * tf.ones(tf.shape(z_0)[0:-1])
-
-        # Weighted Minkowski distance.
-        x = z_0 - z_1
-        d_qr = wpnorm(x, w, rho)
-        d_qr = tf.squeeze(d_qr, [-1])
-        return d_qr
-
-    def get_config(self):
-        """Return layer configuration."""
-        config = super().get_config()
-        config.update({
-            'rho_initializer': tf.keras.initializers.serialize(
-                self.rho_initializer
-            )
-        })
-        return config
 
 
 @tf.keras.utils.register_keras_serializable(

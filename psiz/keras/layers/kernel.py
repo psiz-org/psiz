@@ -913,12 +913,14 @@ class GroupAttentionVariational(Variational):
     @property
     def n_group(self):
         """Getter method for `n_group`"""
-        return self.posterior.embeddings.distribution.loc.shape[0]  # TODO need better decoupling
+        # TODO need better decoupling, not all distributions will have loc.
+        return self.posterior.embeddings.distribution.loc.shape[0]
 
     @property
     def n_dim(self):
         """Getter method for `n_group`"""
-        return self.posterior.embeddings.distribution.loc.shape[1]  # TODO need better decoupling
+        # TODO need better decoupling, not all distributions will have loc.
+        return self.posterior.embeddings.distribution.loc.shape[1]
 
     @property
     def mask_zero(self):

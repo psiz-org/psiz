@@ -39,7 +39,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
+#import tensorflow_probability as tfp
 
 import psiz
 
@@ -199,29 +199,6 @@ def main():
     )
     
     print(model)    
-        
-def exhaustive_docket(n_stimuli):
-    """Assemble an exhausitive docket.
-
-    Arguments:
-        n_stimuli: The number of stimuli.
-
-    Returns:
-        A psiz.trials.RateDocket object.
-
-    """
-    #pairs all the stimuli together ex: 0,0 1,1 etc
-    stimulus_set_self = np.stack(
-        (np.arange(n_stimuli), np.arange(n_stimuli)), axis=1
-    )
-    #itertools - iterator that will give all possibile combinations of 2 things from list of n_stimuli without duplicates
-    stimulus_set_diff = np.asarray(
-        list(itertools.combinations(np.arange(n_stimuli), 2))
-    )
-    #concatenate two previous lines
-    stimulus_set = np.vstack((stimulus_set_self, stimulus_set_diff))
-    #(n stimuli)^2 x 2
-    return psiz.trials.RateDocket(stimulus_set)
 
 def exhaustive_docket_real_data(data):
     data = data[["odor_1st", "odor_2nd"]]
@@ -325,7 +302,7 @@ def build_model(n_stimuli, n_dim):
         )
     )
 
-    behavior = BehaviorLog()
+    behavior = BehaviorLog(upper_trainable=True, lower_trainable=True)
     model = psiz.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
@@ -388,14 +365,14 @@ class BehaviorLog(psiz.keras.layers.RateBehavior):
         """Call."""
         outputs = super().call(inputs)
 
-        # self.add_metric(
-        #     self.lower,
-        #     aggregation='mean', name='lower'
-        # )
-        # self.add_metric(
-        #     self.upper,
-        #     aggregation='mean', name='upper'
-        # )
+        self.add_metric(
+            self.lower,
+            aggregation='mean', name='lower'
+        )
+        self.add_metric(
+            self.upper,
+            aggregation='mean', name='upper'
+        )
         self.add_metric(
             self.midpoint,
             aggregation='mean', name='midpoint'

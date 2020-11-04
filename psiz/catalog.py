@@ -161,6 +161,10 @@ class Catalog(object):
         ]
         return file_path_list
 
+    def filepath(self):
+        """Return filepaths."""
+        return self.file_path()
+
     def id(self):
         """Return stimulus id."""
         return self.stimuli.id.values

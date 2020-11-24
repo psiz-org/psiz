@@ -10,7 +10,7 @@ PsiZ provides the computational tools to infer a continuous, multivariate stimul
 
 ## Installation
 
-There is not yet a stable version (nor an official release of this library). All APIs are subject to change and all releases are alpha.
+There is not yet a stable version. All APIs are subject to change and all releases are alpha.
 
 To install the latest development version, clone from GitHub and instal the local repo using pip.
 1. Use `git` to clone the latest version to your local machine: `git clone https://github.com/roads/psiz.git`

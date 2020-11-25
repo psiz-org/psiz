@@ -263,8 +263,10 @@ class Proxy(object):
                 group_id = group_id * np.ones((n_trial), dtype=np.int32)
             else:
                 group_id = group_id.astype(dtype=np.int32)
-        attention = self.w[group_id, :]  # TODO brittle assumption
-        attention = self._broadcast_ready(attention, rank=len(z_q.shape))  # TODO verify
+        # TODO brittle assumption
+        attention = self.w[group_id, :]
+        # TODO verify
+        attention = self._broadcast_ready(attention, rank=len(z_q.shape))
 
         # TODO brittle assumption
         d_qr = self.model.kernel.distance([

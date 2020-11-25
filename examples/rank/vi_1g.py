@@ -250,7 +250,7 @@ def plot_frame(
         cov = cov[1:]
 
     r, t = psiz.utils.procrustes_2d(
-        proxy_true.z, loc, scale=False, n_restart=30
+        proxy_true.z[0], loc, scale=False, n_restart=30
     )
     loc, cov = apply_affine(loc, cov, r, t)
     # r = 1.960  # 95%

@@ -77,6 +77,7 @@ def rank_1g_mle_det():
     )
     return model
 
+
 def test_pairwise_matrix(rank_1g_mle_det):
     """Test similarity matrix."""
     actual_simmat1 = np.array((

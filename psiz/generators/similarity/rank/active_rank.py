@@ -84,39 +84,39 @@ class ActiveRank(DocketGenerator):
         self.batch_size = batch_size
 
     def generate(
-            self, n_trial, model_list, priority=None, mask=None, group_id=0,
-            verbose=0):
+            self, n_trial, model_list, q_priority=None, r_priority=None,
+            group_id=0, verbose=0):
         """Return a docket of trials based on provided arguments.
 
         Trials are selected in order to maximize expected information
         gain given a specific group. Expected information gain is
         approximated using posterior samples.
 
-        The docket is assembled in two steps, first the query stimuli
-        are chosen. The values in `priority` are used to select query
-        stimuli that the user considers promising. Second, reference
-        stimuli for the queries are chosen. References are selected by
-        favoring the current neighbors of the query.
+        The docket is assembled in two steps. First the query stimuli
+        are chosen based on the values in `q_priority`. Second, the
+        reference stimuli for the queries are chosen based on
+        `r_priority`.
 
         Arguments:
             n_trial: A scalar indicating the number of trials to
                 generate.
             model_list: A list of PsychologicalEmbedding objects.
-            priority (optional): An array indicating the priority of
-                sampling each stimulus. Priority is used as a heuristic
-                to guide the active selection procedure in the
-                typically vast search space. It is assumed that
-                priorities are nonnegative and sum to one. If you want
-                a particular stimulus to be excluded from the generated
-                trials, set its corresponding priority to zero. The
-                default behavior allocates equal priority to each
-                stimulus.
+            q_priority (optional): A 1D array indicating the priority
+                of sampling each stimulus to serve as a query. Priority
+                is used as a heuristic to guide the active selection
+                procedure in the typically vast search space. All
+                priority values should be nonnegative. If you want a
+                particular stimulus to be excluded as query stimulus,
+                set its corresponding priority to zero. The default
+                behavior allocates equal priority to each stimulus.
                 shape=[n_stimuli,]
-            mask (optional): A Boolean array indicating which
-                references are eligable for each query. Element
-                `mask_ij` indicates if stimulus `j` can be used as a
-                references for query stimulus `i`. If you provide a
-                mask, the diagonal elements must be `False`.
+            r_priority (optional): A 2D array indicating the priority
+                of sampling a stimulus to serve as a reference given a
+                particular query. Element `r_priority`_{i,j} indicates
+                the priority of sampling stimulus `j` as a reference
+                given query stimulus `i`. All elements should be
+                non-negative. Values on the diagonal elements are
+                ignored.
                 shape=[n_stimuli, n_stimuli]
             group_id (optional): An integer indicating the group ID to
                 target for active selection.
@@ -135,31 +135,47 @@ class ActiveRank(DocketGenerator):
 
         """
         # Normalize priorities.
-        if priority is None:
-            priority = np.ones([n_stimuli]) / self.n_stimuli
-        if np.sum(np.less(priority, 0)) > 0:
+        if q_priority is None:
+            q_priority = np.ones([n_stimuli]) / self.n_stimuli
+
+        # Check that `q_priority` is non-negative.
+        if np.sum(np.less(q_priority, 0)) > 0:
             raise ValueError(
-                "The `priority` argument must only contain non-negative"
+                "The `q_priority` argument must only contain non-negative"
                 " values."
             )
 
-        # Handle mask.
-        if mask is None:
-            # Make all stimuli (except self) eligable to be a reference.
-            mask = np.logical_not(np.eye(self.n_stimuli, dtype=bool))
+        # Handle r_priority.
+        if r_priority is None:
+            # Uniform sampling probability.
+            # NOTE: We divide by `n_stimuli - 1` because we will set the
+            # diagonal element in each row to zero.
+            r_priority = np.ones(
+                [n_stimuli, n_stimuli], dtype=np.float32
+            ) / (self.n_stimuli - 1)
         else:
-            mask = mask.astype(bool)
+            r_priority = r_priority.astype(np.float32)
+
+        # Set diagonal to zero to prohibit sampling query as reference.
+        r_priority[np.eye(self.n_stimuli, dtype=bool)] = 0
+
+        # Check that `r_priority` is non-negative.
+        if np.sum(np.less(r_priority, 0)) > 0:
+            raise ValueError(
+                "The `r_priority` argument must only contain non-negative"
+                " values."
+            )
 
         # Determine number of unique query stimuli to use in the docket.
         n_unique_query = np.minimum(n_trial, self.max_unique_query)
 
         # Assemble docket in two stages.
         (query_idx_arr, query_idx_count_arr) = self._select_query(
-            n_trial, priority, n_unique_query
+            n_trial, q_priority, n_unique_query
         )
         (docket, expected_ig) = self._select_references(
             model_list, group_id, query_idx_arr, query_idx_count_arr,
-            priority, mask, verbose
+            q_priority, r_priority, verbose
         )
         data = {
             'docket': {'expected_ig': expected_ig},
@@ -168,12 +184,12 @@ class ActiveRank(DocketGenerator):
 
         return docket, data
 
-    def _select_query(self, n_trial, priority, n_unique_query):
+    def _select_query(self, n_trial, q_priority, n_unique_query):
         """Select which stimuli should serve as queries and how often.
 
         Arguments:
             n_trial: Integer indicating the total number of trials.
-            priority: An array indicating stimulus priorities.
+            q_priority: An array indicating stimulus priorities.
             n_unique_query: Scalar indicating the number of unique queries.
 
         Returns:
@@ -187,8 +203,8 @@ class ActiveRank(DocketGenerator):
         query_idx_arr = np.arange(0, self.n_stimuli)
 
         # If necessary, stochastically select subset of query stimuli
-        # based on priority.
-        query_priority = priority / np.sum(priority)
+        # based on `q_priority`.
+        query_priority = q_priority / np.sum(q_priority)
         if n_unique_query < self.n_stimuli:
             query_idx_arr = np.random.choice(
                 query_idx_arr, n_unique_query, replace=False, p=query_priority
@@ -207,7 +223,7 @@ class ActiveRank(DocketGenerator):
 
     def _select_references(
             self, model_list, group_id, query_idx_arr, query_idx_count_arr,
-            priority, mask, verbose):
+            q_priority, r_priority, verbose):
         """Determine references for all requested query stimuli."""
         n_query = query_idx_arr.shape[0]
 
@@ -220,12 +236,12 @@ class ActiveRank(DocketGenerator):
         docket = None
         expected_ig = None
         for i_query in range(n_query):
-            mask_q = mask[query_idx_arr[i_query]]
+            r_priority_q = r_priority[query_idx_arr[i_query]]
             docket_q, expected_ig_q = _select_query_references(
                 i_query, model_list, group_id, query_idx_arr,
                 query_idx_count_arr,
                 self.n_reference, self.n_select, self.n_candidate,
-                priority, mask_q, self.batch_size
+                r_priority_q, self.batch_size
             )
 
             if verbose > 0:
@@ -247,15 +263,15 @@ class ActiveRank(DocketGenerator):
 
 def _select_query_references(
         i_query, model_list, group_id, query_idx_arr, query_idx_count_arr,
-        n_reference, n_select, n_candidate, priority, mask_q, batch_size):
+        n_reference, n_select, n_candidate, r_priority_q, batch_size):
     """Determine query references."""
     query_idx = query_idx_arr[i_query]
     n_trial_q = query_idx_count_arr[i_query]
 
-    ref_idx_eligable = np.arange(len(priority))
-    ref_idx_eligable = ref_idx_eligable[mask_q]
-    ref_prob = priority[mask_q]
-    # ref_prob = np.ones(np.shape(ref_idx_eligable))  # TODO?
+    ref_idx_eligable = np.arange(len(r_priority_q))
+    bidx_eligable = np.greater(r_priority_q, 0)
+    ref_idx_eligable = ref_idx_eligable[bidx_eligable]
+    ref_prob = r_priority_q[bidx_eligable]
     ref_prob = ref_prob / np.sum(ref_prob)
 
     # Create a docket full of candidate trials.
@@ -282,6 +298,12 @@ def _select_query_references(
             batch_expected_ig.append(
                 expected_information_gain_rank(model(x, training=False))
             )
+        # TODO Should IG be computed on ensemble samples collectively?
+        # for model in model_list:
+        #     batch_pred.append(model(x, training=False))
+        # batch_pred = tf.stack(batch_pred, axis=TODO)
+        # batch_expected_ig = expected_information_gain_rank(batch_pred)
+
         batch_expected_ig = tf.stack(batch_expected_ig, axis=0)
         batch_expected_ig = tf.reduce_mean(batch_expected_ig, axis=0)
         expected_ig.append(batch_expected_ig)

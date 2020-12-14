@@ -258,6 +258,8 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             A new RankTrials object.
 
         """
+        # TODO remove any occurence of None from trials_list
+
         # Determine the maximum number of references.
         max_n_reference = 0
         for i_trials in trials_list:

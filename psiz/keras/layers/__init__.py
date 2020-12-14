@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Custom TensorFlow layers initialization file."""
+"""Keras layers initialization file."""
 
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.stimuli import Stimuli
-from psiz.keras.layers.kernel import WeightedMinkowski
+from psiz.keras.layers.distances.minkowski import WeightedMinkowski
+from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
+from psiz.keras.layers.similarities.heavy_tailed import HeavyTailedSimilarity
+from psiz.keras.layers.similarities.inverse import InverseSimilarity
+from psiz.keras.layers.similarities.students_t import StudentsTSimilarity
 from psiz.keras.layers.kernel import GroupAttention
-from psiz.keras.layers.kernel import InverseSimilarity
-from psiz.keras.layers.kernel import ExponentialSimilarity
-from psiz.keras.layers.kernel import HeavyTailedSimilarity
-from psiz.keras.layers.kernel import StudentsTSimilarity
 from psiz.keras.layers.kernel import Kernel
 from psiz.keras.layers.kernel import AttentionKernel
 from psiz.keras.layers.kernel import GroupAttentionVariational

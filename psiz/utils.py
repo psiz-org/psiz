@@ -47,6 +47,7 @@ from scipy.stats import pearsonr
 from sklearn.metrics import r2_score
 from sklearn.model_selection import StratifiedKFold
 
+
 def affine_mvn(loc, cov, r=None, t=None):
     """Affine transformation of multivariate normal.
 

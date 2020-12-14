@@ -37,7 +37,6 @@ import time
 from urllib import request
 import zipfile
 
-import h5py
 import numpy as np
 import pandas as pd
 import six
@@ -48,8 +47,6 @@ from six.moves.urllib.request import urlretrieve
 
 import psiz.catalog
 import psiz.trials
-
-HOST_URL = "https://www.psiz.org/datasets/"
 
 
 def load(
@@ -107,13 +104,17 @@ def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
 
     dataset_exists = True
     if dataset_name == "birds-12":
-        origin = HOST_URL + "birds-12/" + fname
+        origin = "https://osf.io/xek89/download"
     elif dataset_name == "birds-16":
-        origin = HOST_URL + "birds-16/" + fname
-    elif dataset_name == "lesions":
-        origin = HOST_URL + "lesions/" + fname
+        origin = "https://osf.io/473vh/download"
+    elif dataset_name == "skin_lesions":
+        origin = "https://osf.io/5grsp/download"
     elif dataset_name == "rocks_Nosofsky_etal_2016":
-        origin = HOST_URL + "rocks_Nosofsky_etal_2016/" + fname
+        origin = "https://osf.io/vw28u/download"
+    elif dataset_name == "ilsvrc_val_v0_1":
+        origin = "https://osf.io/bf3e2/download"
+    elif dataset_name == "ilsvrc_val_v0_2":
+        origin = "https://osf.io/bf3e2/download"
     else:
         dataset_exists = False
 
@@ -151,13 +152,17 @@ def _fetch_obs(dataset_name, cache_dir, cache_subdir):
 
     dataset_exists = True
     if dataset_name == "birds-12":
-        origin = HOST_URL + "birds-12/" + fname
+        origin = "https://osf.io/apd3g/download"
     elif dataset_name == "birds-16":
-        origin = HOST_URL + "birds-16/" + fname
-    elif dataset_name == "lesions":
-        origin = HOST_URL + "lesions/" + fname
+        origin = "https://osf.io/nz4gy/download"
+    elif dataset_name == "skin_lesions":
+        origin = "https://osf.io/nbps4/download"
     elif dataset_name == "rocks_Nosofsky_etal_2016":
-        origin = HOST_URL + "rocks_Nosofsky_etal_2016/" + fname
+        origin = "https://osf.io/jauvh/download"
+    elif dataset_name == "ilsvrc_val_v0_1":
+        origin = "https://osf.io/ej6sz/download"
+    elif dataset_name == "ilsvrc_val_v0_2":
+        origin = "https://osf.io/x6dht/download"
     else:
         dataset_exists = False
 

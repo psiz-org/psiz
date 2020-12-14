@@ -149,14 +149,14 @@ class Proxy(object):
             if isinstance(w, tfp.distributions.Distribution):
                 if isinstance(w.distribution, tfp.distributions.LogitNormal):
                     # For logit-normal distribution, use median instead of
-                    # mode.
+                    # mode. 
                     # `median = logistic(loc)`.
                     w = tf.math.sigmoid(w.distribution.loc)
                 else:
                     w = w.mode()  # NOTE: The mode may be undefined.
             w = w.numpy()
             if self.model.kernel.attention.mask_zero:
-                w = w[1:]
+                    w = w[1:]
         else:
             w = np.ones([1, self.n_dim])
         return w
@@ -263,10 +263,8 @@ class Proxy(object):
                 group_id = group_id * np.ones((n_trial), dtype=np.int32)
             else:
                 group_id = group_id.astype(dtype=np.int32)
-        # TODO brittle assumption
-        attention = self.w[group_id, :]
-        # TODO verify
-        attention = self._broadcast_ready(attention, rank=len(z_q.shape))
+        attention = self.w[group_id, :]  # TODO brittle assumption
+        attention = self._broadcast_ready(attention, rank=len(z_q.shape))  # TODO verify
 
         # TODO brittle assumption
         d_qr = self.model.kernel.distance([
@@ -439,6 +437,7 @@ class Proxy(object):
         """Save the model."""
         self.model.save(filepath, overwrite=overwrite)
 
+
     def clone(self, custom_objects={}):
         """Clone model."""
         # TODO Test
@@ -572,76 +571,11 @@ class PsychologicalEmbedding(tf.keras.Model):
 
         Returns:
             A `dict` containing values that will be passed to
-            `tf.keras.callbacks.CallbackList.on_train_batch_end`.
-            Typically, the values of the `Model`'s metrics are
-            returned. Example: `{'loss': 0.2, 'accuracy': 0.7}`.
-
-        Notes:
-            It is assumed that the loss uses SUM_OVER_BATCH_SIZE.
-            In the variational inference case, the loss for the entire
-            training set is essentially
-
-                loss = KL - CCE,                                (Eq. 1)
-
-            where CCE denotes the sum of the CCE for all observations.
-            It should be noted that CCE_all is also an expectation over
-            posterior samples.
-
-            There are two issues:
-
-            1) We are using a *batch* update strategy, which slightly
-            alters the equation and means we need to be careful not to
-            overcount the KL contribution. The `b` subscript indicates
-            an arbitrary batch:
-
-                loss_b = (KL / n_batch) - CCE_b.                (Eq. 2)
-
-            2) The default TF reduction strategy `SUM_OVER_BATCH_SIZE`
-            means that we are not actually computing a sum `CCE_b`, but
-            an average: CCE_bavg = CCE_b / batch_size. To fix this, we
-            need to proportionately scale the KL term,
-
-                loss_b = KL / (n_batch * batch_size) - CCE_bavg (Eq. 3)
-
-            Expressed more simply,
-
-            loss_batch = kl_weight * KL - CCE_bavg              (Eq. 4)
-
-            where kl_weight = 1 / train_size.
-
-            TODO ISSUE
-            But wait, there's more! Observations may be weighted
-            differently, which yields a Frankensteinian CCE_bavg since
-            a proper average would divide by `effective_batch_size`
-            (i.e., the sum of the weights) not `batch_size`. There are
-            a few imperfect remedies:
-            1) Do not use `SUM_OVER_BATCH_SIZE`. This has many
-            side-effects: must manually handle regularization and
-            computation of mean loss. Mean loss is desirable for
-            optimization stability reasons, although it is not strictly
-            necessary.
-            2) Require the weights sum to n_sample. Close, but
-            not actually correct. To be correct you would actually
-            need the weights of each batch to sum to `batch_size`,
-            which means the semantics of the weights changes from batch
-            to batch.
-            3) Multiply Eq. 3 by (batch_size / effective_batch_size).
-            This is tricky since this must be done before non-KL
-            regularization is applied, which is handled inside
-            TF's `compiled_loss`. Could hack this by writing a custom
-            CCE that "pre-applies" correction term.
-
-                loss_b = KL / (n_batch * effective_batch_size) -
-                        (batch_size / effective_batch_size) * CCE_bavg
-
-                loss_b = KL / (effective_train_size) -
-                        (batch_size / effective_batch_size) * CCE_bavg
-
-            4) Pretend it's not a problem since both terms are being
-            divided by the same incorrect `effective_batch_size`.
+            `tf.keras.callbacks.CallbackList.on_train_batch_end`. Typically,
+            the values of the `Model`'s metrics are returned. Example:
+            `{'loss': 0.2, 'accuracy': 0.7}`.
 
         """
-
         data = data_adapter.expand_1d(data)
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
 
@@ -655,6 +589,23 @@ class PsychologicalEmbedding(tf.keras.Model):
                 'ignore', category=UserWarning, module=r'.*indexed_slices'
             )
             with backprop.GradientTape() as tape:
+                # NOTE: It is assumed that the loss uses SUM_OVER_BATCH_SIZE.
+                # In the variational inference case, the loss is essentially
+                # loss = KL - E_cce, wehre E_cce is the expectation of CCE
+                # (i.e., an average over samples). However, the reduction
+                # strategy of SUM_OVER_BATCH_SIZE means that we effectively
+                # have:
+                # loss = KL - (E_cce / batch_size), which is wrong. We need to
+                # proportionately scale KL to correct the equation:
+                # loss = (KL / batch_size) - (E_cce / batch_size)
+                # Since KL (i.e., the prior) also needs to also be scaled to
+                # the take into account a batch update strategy, we must
+                # also divide the KL term by n_batch:
+                # loss = (KL / (batch_size * n_batch)) - (E_cce / batch_size)
+                # or more simply:
+                # loss = kl_weight * KL - (E_cce / batch_size) where,
+                # kl_weight = 1 / train_size.
+
                 # Average over samples.
                 y_pred = tf.reduce_mean(self(x, training=True), axis=0)
                 loss = self.compiled_loss(
@@ -728,8 +679,8 @@ class PsychologicalEmbedding(tf.keras.Model):
             data: A nested structure of `Tensor`s.
 
         Returns:
-            The result of one inference step, typically the output of
-            calling the `Model` on data.
+            The result of one inference step, typically the output of calling the
+            `Model` on data.
 
         """
         data = data_adapter.expand_1d(data)
@@ -813,8 +764,8 @@ class PsychologicalEmbedding(tf.keras.Model):
                     else:
                         component_name = k
                     print(
-                        'WARNING: Model component `{0}` had type float32.'
-                        ' Please check the corresponding get_config method for'
+                        'WARNING: Model component `{0}` had type float32. Please'
+                        ' check the corresponding get_config method for'
                         ' appropriate float casting.'.format(component_name)
                     )
                     d[k] = float(v)
@@ -948,7 +899,7 @@ def load_model(filepath, custom_objects={}, compile=False):
 
         # emb = Proxy(model=model)
         emb = model
-
+        
     else:
         raise ValueError(
             'The argument `filepath` must be a directory. The provided'

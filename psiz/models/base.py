@@ -784,7 +784,9 @@ class PsychologicalEmbedding(tf.keras.Model):
         model_config.update(built_layers)
         return cls(**model_config)
 
-    def save(self, filepath, overwrite=False):
+    # Deprecated in favor of TF 2.4 default `save` method. This method was
+    # previousely called `save`.
+    def save_model(self, filepath, overwrite=False):
         """Save the PsychologialEmbedding model.
 
         Ideally we would use TensorFlow model's defualt save
@@ -913,9 +915,11 @@ def load_model(filepath, custom_objects={}, compile=False):
         # NOTE: Ideally we could call TensorFlow's `load_model` method as used
         # in the snippet below, but our sub-classed model does not play
         # nice.
+        #
         # with tf.keras.utils.custom_object_scope(custom_objects):
         #     model = tf.keras.models.load_model(filepath, compile=compile)
         # return Proxy(model=model)
+        #
         # Storage format for psiz_version >= 0.4.0
         fp_config = os.path.join(filepath, 'config.h5')
         fp_weights = os.path.join(filepath, 'weights')
@@ -946,13 +950,10 @@ def load_model(filepath, custom_objects={}, compile=False):
         # Load weights.
         model.load_weights(fp_weights).expect_partial()
 
-        # emb = Proxy(model=model)
-        emb = model
-
     else:
         raise ValueError(
             'The argument `filepath` must be a directory. The provided'
             ' {0} is not a directory.'.format(filepath)
         )
 
-    return emb
+    return model

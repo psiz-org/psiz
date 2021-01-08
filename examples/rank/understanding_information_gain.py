@@ -176,7 +176,8 @@ def draw_scenario(fig, gs, row, case_data):
         )
 
 
-def candidate_subplot(fig, ax, z, stimulus_set, expected_ig, v, color_array, fontdict):
+def candidate_subplot(
+        fig, ax, z, stimulus_set, expected_ig, v, color_array, fontdict):
     """Plot subplot of candidate trial."""
     ax.scatter(
         z[stimulus_set[0], 0],
@@ -204,10 +205,10 @@ def candidate_subplot(fig, ax, z, stimulus_set, expected_ig, v, color_array, fon
 
 def build_model(case=0):
     """Return a ground truth embedding.
-    
+
     Arguments:
         case: Integer indicating the model case.
-    
+
     Case 0:
     Case 1:
     Case 2:
@@ -269,7 +270,6 @@ def build_model(case=0):
         stimuli=stimuli, kernel=kernel, n_sample=n_sample
     )
     model.stimuli.build([None, None, None])
-    
 
     if case == 0:
         # One stimulus with relatively high uncertainty.
@@ -314,14 +314,18 @@ def package_case_data(model, stimulus_set, expected_ig):
     stimulus_set = stimulus_set[sorted_indices]
     standardized_ig = expected_ig - np.min(expected_ig)
     standardized_ig = standardized_ig / np.max(standardized_ig)
-    
+
     # Select the N best trials and a M trials evenly spaced from best to
     # worst.
     n_best = 3
     n_total = 6
-    intermediate_trial_idx = np.linspace(n_best, n_candidate-1, n_total-n_best, dtype=np.int32)
-    trial_idx = np.concatenate((np.arange(n_best), intermediate_trial_idx), axis=0)
-    
+    intermediate_trial_idx = np.linspace(
+        n_best, n_candidate-1, n_total-n_best, dtype=np.int32
+    )
+    trial_idx = np.concatenate(
+        (np.arange(n_best), intermediate_trial_idx), axis=0
+    )
+
     # Filter trials.
     stimulus_set_viz = stimulus_set[trial_idx]
     expected_ig_viz = expected_ig[trial_idx]

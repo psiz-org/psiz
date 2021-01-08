@@ -147,7 +147,7 @@ class RateDocket(RateTrials):
             n_present: An integer array indicating the number of
                 stimuli present in each trial.
                 shape = (n_trial,)
-            
+
         Notes:
             Sets two attributes of object.
             config_idx: A unique index for each type of trial
@@ -318,8 +318,8 @@ class RateObservations(RateTrials):
     """
 
     def __init__(
-            self, stimulus_set, rating, group_id=None, agent_id=None, session_id=None,
-            weight=None, rt_ms=None):
+            self, stimulus_set, rating, group_id=None, agent_id=None,
+            session_id=None, weight=None, rt_ms=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -352,7 +352,8 @@ class RateObservations(RateTrials):
 
         """
         RateTrials.__init__(self, stimulus_set)
-        self.rating = np.asarray(rating, dtype=np.float32)  # TODO as check method
+        self.rating = np.asarray(rating, dtype=np.float32)
+        # TODO May want to move this enforcement elsewhere.
 
         # Handle default settings.
         if group_id is None:
@@ -469,7 +470,7 @@ class RateObservations(RateTrials):
             A new RateObservatiosn object.
 
         """
-        return RateObservatiosn(
+        return RateObservations(
             self.stimulus_set[index, :], self.rating[index, :],
             group_id=self.group_id[index], agent_id=self.agent_id[index],
             session_id=self.session_id[index], weight=self.weight[index],
@@ -602,7 +603,7 @@ class RateObservations(RateTrials):
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
         group_level_0 = np.zeros([self.group_id.shape[0]], dtype=np.int32)
-        
+
         x = {
             'stimulus_set': self.stimulus_set + 1,
             'group': np.stack(
@@ -662,7 +663,6 @@ class RateObservations(RateTrials):
             weight = np.hstack((weight, i_trials.weight))
             rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
 
-        
         trials_stacked = RateObservations(
             stimulus_set, rating, group_id=group_id, agent_id=agent_id,
             session_id=session_id, weight=weight, rt_ms=rt_ms
@@ -686,19 +686,19 @@ class RateObservations(RateTrials):
         if "weight" in f:
             weight = f["weight"][()]
         else:
-            weight = np.ones((len(n_select)))
+            weight = np.ones((stimulus_set.shape[0]))
         if "rt_ms" in f:
             rt_ms = f["rt_ms"][()]
         else:
-            rt_ms = -np.ones((len(n_select)))
+            rt_ms = -np.ones((stimulus_set.shape[0]))
         if "agent_id" in f:
             agent_id = f["agent_id"][()]
         else:
-            agent_id = np.zeros((len(n_select)))
+            agent_id = np.zeros((stimulus_set.shape[0]))
         if "session_id" in f:
             session_id = f["session_id"][()]
         else:
-            session_id = np.zeros((len(n_select)))
+            session_id = np.zeros((stimulus_set.shape[0]))
         f.close()
 
         trials = RateObservations(

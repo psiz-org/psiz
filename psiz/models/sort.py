@@ -32,6 +32,9 @@ from psiz.models.base import PsychologicalEmbedding
 import psiz.keras.layers
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.models', name='Sort'
+)
 class Sort(PsychologicalEmbedding):
     """Psychological embedding inferred from ranked similarity judgments.
 

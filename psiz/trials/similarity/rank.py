@@ -240,7 +240,9 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
                         self.max_n_reference + 1
                     )
                 ])
-                curr_stimulus_set_expand[:, :, i_outcome] = curr_stimulus_set_copy[:, curr_idx]
+                curr_stimulus_set_expand[:, :, i_outcome] = (
+                    curr_stimulus_set_copy[:, curr_idx]
+                )
             stimulus_set_expand[trial_locs] = curr_stimulus_set_expand
         return stimulus_set_expand
 

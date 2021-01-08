@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='psiz',
-    version='0.4.1',
+    version='0.4.2',
     description='Toolbox for inferring psychological embeddings.',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -19,7 +19,7 @@ setuptools.setup(
     packages=['psiz'],
     python_requires='>=3.5, <3.9',
     install_requires=[
-        'tensorflow==2.3.1', 'tensorflow-probability==0.11.0', 'pandas',
+        'tensorflow==2.4', 'tensorflow-probability==0.11.0', 'pandas',
         'scikit-learn', 'matplotlib', 'pillow', 'imageio'
     ],
     include_package_data=True,

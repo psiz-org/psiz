@@ -185,7 +185,9 @@ def ground_truth(n_stimuli, n_dim):
     stimuli = psiz.keras.layers.Stimuli(
         embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+            embeddings_initializer=tf.keras.initializers.RandomNormal(
+                stddev=.17
+            )
         )
     )
     kernel = psiz.keras.layers.Kernel(

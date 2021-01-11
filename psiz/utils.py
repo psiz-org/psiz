@@ -46,6 +46,7 @@ from scipy.optimize import minimize
 from scipy.stats import pearsonr
 from sklearn.metrics import r2_score
 from sklearn.model_selection import StratifiedKFold
+import tensorflow as tf
 
 
 def affine_mvn(loc, cov, r=None, t=None):
@@ -448,7 +449,7 @@ def choice_wo_replace(a, size, p):
 
 def standard_split(obs, shuffle=False, seed=None):
     """Creata a standard 80-10-10 split of the observations.
-    
+
     Arguments:
         obs: A set of observations.
         shuffle (optional): Boolean indicating if the data should be
@@ -568,3 +569,78 @@ class ProgressBarRe(object):
         if iteration == self.total:
             self._stop()
             print()
+
+
+# TODO add tests
+# NOTE: this method is similar to imagenet version, except has expanded
+# docstrings and mask_zero optional argument.
+def pairwise_index_dataset(
+        n_data, group_idx=0, batch_size=None, elements='upper',
+        mask_zero=False, subsample=None, seed=252):
+    """Assemble pairwise combinations.
+
+    Arguments:
+        n_data: A scalar indicating the number of unique concepts.
+        group_idx (optional): The group index.
+        batch_size (optional): Determines the batch size. By default,
+            the batch size will be set to the number of combinations.
+        elements (optional): Determines which combinations in the pairwise
+            matrix will be used. Can be one of 'all', 'upper', 'lower'.
+        mask_zero (optional): Whether the zero index should be masked
+            and all indices incremented by one.
+        subsample: TODO
+        seed: TODO
+
+    Returns:
+        Tensorflow Dataset.
+
+    """
+    if elements == 'upper':
+        idx = np.triu_indices(n_data, 1)
+    elif elements == 'lower':
+        idx = np.triu_indices(n_data, 1)
+    elif elements == 'all':
+        idx_upper = np.triu_indices(n_data, 1)
+        idx_lower = np.triu_indices(n_data, 1)
+        idx = (
+            np.hstack((idx_upper[0], idx_lower[0])),
+            np.hstack((idx_upper[1], idx_lower[1])),
+        )
+    idx_0 = idx[0]
+    idx_1 = idx[1]
+    del idx
+
+    n_pair = len(idx_0)
+    if subsample is not None:
+        np.random.seed(seed)
+        idx_rand = np.random.permutation(n_pair)
+        n_pair = int(np.ceil(n_pair * subsample))
+        idx_rand = idx_rand[0:n_pair]
+        idx_0 = idx_0[idx_rand]
+        idx_1 = idx_1[idx_rand]
+
+    if mask_zero:
+        idx_0 = idx_0 + 1
+        idx_1 = idx_1 + 1
+
+    idx_0 = tf.constant(idx_0, dtype=tf.int32)
+    idx_1 = tf.constant(idx_1, dtype=tf.int32)
+
+    if batch_size is None:
+        batch_size = np.minimum(10000, n_pair)
+
+    ds_info = {
+        'n_pair': len(idx_0),
+        'batch_size': batch_size,
+        'n_batch': np.ceil(len(idx_0) / batch_size),
+        'mask_zero': mask_zero
+    }
+
+    group_idx = tf.constant(group_idx * np.ones([n_pair, 1], dtype=np.int32))
+
+    ds = tf.data.Dataset.from_tensor_slices(
+        ((idx_0, idx_1, group_idx))
+    ).batch(
+        batch_size, drop_remainder=False
+    )
+    return ds, ds_info

@@ -21,6 +21,7 @@ import numpy as np
 
 import psiz.datasets
 
+
 @pytest.mark.slow
 def test_birds_12(tmpdir):
     dataset_name = 'birds-12'

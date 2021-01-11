@@ -20,6 +20,7 @@ Todo:
     - test resultant group_id of judged trials
     - test simulate and _select for a Trial object with different
         configurations.
+
 """
 
 import numpy as np
@@ -140,9 +141,13 @@ def test_rank_sample(rank_1g_mle_rand):
     )
     chosen_outcome_idx = outcome_distribution.sample().numpy()
 
-    # (_, chosen_outcome_idx) = agent._rank_sample(docket.all_outcomes(), prob_all)
+    # (_, chosen_outcome_idx) = agent._rank_sample(
+    #     docket.all_outcomes(), prob_all
+    # )
     _, counts = np.unique(chosen_outcome_idx, return_counts=True)
     prop = counts / np.sum(counts)
 
-    prop_desired = np.array([.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01])
+    prop_desired = np.array(
+        [.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01]
+    )
     np.testing.assert_allclose(prop_desired, prop, rtol=1e-6, atol=.005)

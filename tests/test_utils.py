@@ -20,65 +20,12 @@ Todo:
 
 """
 
-
 import numpy as np
-import pytest
-import tensorflow as tf
-
 from psiz import utils
 import psiz.models
-import psiz.keras.layers
 
 
-@pytest.fixture(scope="module")
-def rank_1g_mle_det():
-    n_stimuli = 3
-    n_dim = 2
-    n_group = 2
-    embedding = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
-    )
-    embedding.build([None, None, None])
-    z = np.array(
-        [
-            [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
-        ], dtype=np.float32
-    )
-    embedding.embeddings.assign(z)
-
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
-
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=False,
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            beta_initializer=tf.keras.initializers.Constant(10.),
-        )
-    )
-    kernel.attention.embeddings.assign(
-        np.array((
-            (1.2, .8),
-            (.7, 1.3)
-        ))
-    )
-
-    behavior = psiz.keras.layers.behavior.RankBehavior()
-    model = psiz.models.Rank(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
-    )
-    return model
-
-
-def test_pairwise_matrix(rank_1g_mle_det):
+def test_pairwise_matrix(rank_2g_mle_determ):
     """Test similarity matrix."""
     actual_simmat1 = np.array((
         (1., 0.35035481, 0.00776613),
@@ -91,7 +38,7 @@ def test_pairwise_matrix(rank_1g_mle_det):
         (0.00548485, 0.01814493, 1.)
     ))
 
-    proxy = psiz.models.Proxy(model=rank_1g_mle_det)
+    proxy = psiz.models.Proxy(model=rank_2g_mle_determ)
 
     computed_simmat0 = utils.pairwise_matrix(
         proxy.similarity, proxy.z[0])
@@ -150,11 +97,54 @@ def test_procrustean_solution():
     t = np.expand_dims(t, axis=0)
 
     # Create random set of points.
-    x = np.random.rand(10, 2)
+    x = np.array([
+        [0.46472851, 0.09534286],
+        [0.90612827, 0.21031482],
+        [0.46595517, 0.92022067],
+        [0.51457351, 0.88226988],
+        [0.24506303, 0.75287697],
+        [0.69773745, 0.25095083],
+        [0.71550351, 0.14846334],
+        [0.24825323, 0.96021703],
+        [0.85497989, 0.9114596],
+        [0.35982138, 0.85040905]
+    ])
+
     # Apply affine transformation.
     y = np.matmul(x, r) + t
+
     # Attempt to recover original set of points.
-    r_recov, t_recov = utils.procrustes_2d(x, y, n_restart=10)
+    r_recov, t_recov = utils.procrustes_2d(x, y, n_restart=10, seed=252)
     x_recov = np.matmul(y, r_recov) + t_recov
 
     np.testing.assert_almost_equal(x, x_recov, decimal=2)
+
+
+def test_choice_wo_replace():
+    """Test choice_wo_replace."""
+    n_trial = 10000
+    n_reference = 8
+    n_option = 20
+
+    candidate_idx = np.arange(n_option)
+    candidate_prob = np.array([
+        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
+        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
+        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
+        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
+    ])
+
+    # Draw samples.
+    np.random.seed(560897)
+    drawn_idx = psiz.utils.choice_wo_replace(
+        candidate_idx, (n_trial, n_reference), candidate_prob
+    )
+    bin_counts, bin_edges = np.histogram(drawn_idx.flatten(), bins=n_option)
+    drawn_prob = bin_counts / np.sum(bin_counts)
+
+    # Check that sampling was done without replacement for all trials.
+    for i_trial in range(n_trial):
+        assert len(np.unique(drawn_idx[i_trial])) == n_reference
+
+    # Check that sampling distribution matches original probabilites.
+    np.testing.assert_array_almost_equal(candidate_prob, drawn_prob, decimal=2)

@@ -181,8 +181,12 @@ def test_random_generator():
 #         np.array([1], dtype=np.int32)
 #         )
 #     # Compute expected information gain.
-#     ig_0 = psiz.generators.information_gain(rank_1g_mle_rand, samples, docket_0)
-#     ig_1 = psiz.generators.information_gain(rank_1g_mle_rand, samples, docket_1)
+#     ig_0 = psiz.generators.information_gain(
+#         rank_1g_mle_rand, samples, docket_0
+#     )
+#     ig_1 = psiz.generators.information_gain(
+#         rank_1g_mle_rand, samples, docket_1
+#     )
 
 #     assert ig_0 > ig_1
 
@@ -191,7 +195,9 @@ def test_random_generator():
 #         np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
 #         np.array([1, 1], dtype=np.int32)
 #         )
-#     ig_01 = psiz.generators.information_gain(rank_1g_mle_rand, samples, docket_01)
+#     ig_01 = psiz.generators.information_gain(
+#         rank_1g_mle_rand, samples, docket_01
+#     )
 #     assert ig_01[0] == ig_0
 #     assert ig_01[1] == ig_1
 
@@ -200,7 +206,9 @@ def test_random_generator():
 #         np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
 #         np.array([2, 2], dtype=np.int32)
 #         )
-#     ig_23 = psiz.generators.information_gain(rank_1g_mle_rand, samples, docket_23)
+    # ig_23 = psiz.generators.information_gain(
+    #     rank_1g_mle_rand, samples, docket_23
+    # )
 
 #     docket_0123 = psiz.trials.RankDocket(
 #         np.array([
@@ -242,36 +250,6 @@ def test_random_generator():
 #     np.testing.assert_almost_equal(kl_sm_lg, 6.402585, decimal=5)
 #     np.testing.assert_almost_equal(kl_lg_sm, 56.697415, decimal=5)
 #     np.testing.assert_almost_equal(kl_lg_lg, 5.000000, decimal=5)
-
-
-def test_choice_wo_replace():
-    """Test choice_wo_replace."""
-    n_trial = 10000
-    n_reference = 8
-    n_option = 20
-
-    candidate_idx = np.arange(n_option)
-    candidate_prob = np.array([
-        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
-        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
-        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
-        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
-    ])
-
-    # Draw samples.
-    np.random.seed(560897)
-    drawn_idx = psiz.utils.choice_wo_replace(
-        candidate_idx, (n_trial, n_reference), candidate_prob
-    )
-    bin_counts, bin_edges = np.histogram(drawn_idx.flatten(), bins=n_option)
-    drawn_prob = bin_counts / np.sum(bin_counts)
-
-    # Check that sampling was done without replacement for all trials.
-    for i_trial in range(n_trial):
-        assert len(np.unique(drawn_idx[i_trial])) == n_reference
-
-    # Check that sampling distribution matches original probabilites.
-    np.testing.assert_array_almost_equal(candidate_prob, drawn_prob, decimal=2)
 
 
 # def test_select_query_references(rank_1g_mle_det):
@@ -334,5 +312,7 @@ def test_choice_wo_replace():
 #         n_select=n_select_desired)
 #     unjudged_trials_1 = gen.generate(
 #         n_trial_desired, n_stimuli_desired)
-#     unjudged_trials = psiz.trials.stack((unjudged_trials_0, unjudged_trials_1))
+    # unjudged_trials = psiz.trials.stack(
+    #     (unjudged_trials_0, unjudged_trials_1)
+    # )
 #     return unjudged_trials

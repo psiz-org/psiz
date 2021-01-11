@@ -21,7 +21,7 @@ import numpy as np
 
 import psiz.datasets
 
-
+@pytest.mark.slow
 def test_birds_12(tmpdir):
     dataset_name = 'birds-12'
     obs, catalog = psiz.datasets.load(
@@ -51,6 +51,7 @@ def test_birds_12(tmpdir):
     assert row_10.class_id == 2
 
 
+@pytest.mark.slow
 def test_birds_16(tmpdir):
     dataset_name = 'birds-16'
     obs, catalog = psiz.datasets.load(
@@ -83,6 +84,7 @@ def test_birds_16(tmpdir):
     assert row_10.class_id == 2
 
 
+@pytest.mark.slow
 def test_skin_lesions(tmpdir):
     dataset_name = 'skin_lesions'
     obs, catalog = psiz.datasets.load(
@@ -112,6 +114,7 @@ def test_skin_lesions(tmpdir):
     assert row_10.class_id == 2
 
 
+@pytest.mark.slow
 def test_rocks(tmpdir):
     dataset_name = 'rocks_Nosofsky_etal_2016'
     obs, catalog = psiz.datasets.load(
@@ -141,6 +144,7 @@ def test_rocks(tmpdir):
     assert row_10.class_id == 2
 
 
+@pytest.mark.slow
 def test_ilscrc_val_v1(tmpdir):
     dataset_name = 'ilsvrc_val_v0_1'
     obs, catalog = psiz.datasets.load(
@@ -170,6 +174,7 @@ def test_ilscrc_val_v1(tmpdir):
     assert row_10.class_id == 10
 
 
+@pytest.mark.slow
 def test_ilscrc_val_v2(tmpdir):
     dataset_name = 'ilsvrc_val_v0_2'
     obs, catalog = psiz.datasets.load(

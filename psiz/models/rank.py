@@ -86,6 +86,7 @@ class Rank(PsychologicalEmbedding):
 
         # Check `z` shape is:
         # TensorShape([sample_size, batch_size, n_ref + 1, n_outcome, n_dim])
+        # TODO is this if ok for save_traces?
         if tf.math.equal(tf.rank(z), 4):
             z = tf.expand_dims(z, axis=0)
         max_n_reference = tf.shape(z)[-3] - 1

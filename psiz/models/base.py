@@ -894,6 +894,7 @@ class GroupLevel(tf.keras.layers.Layer):
         raise NotImplementedError
 
 
+# This function is deprecated and should only be used to load old models.
 def load_model(filepath, custom_objects={}, compile=False):
     """Load embedding model saved via the save method.
 

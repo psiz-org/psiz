@@ -82,6 +82,7 @@ class Rate(PsychologicalEmbedding):
 
         # Expand rank in case the first dimension is not `sample_size`, thus
         # promising: TensorShape([sample_size, batch_size, 2, n_dim])
+        # TODO is this if statement ok for save_traces?
         if tf.math.equal(tf.rank(z), 3):
             z = tf.expand_dims(z, axis=0)
 

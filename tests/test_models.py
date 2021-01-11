@@ -13,19 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for testing models.py.
-
-Todo
-    * attention
-    * heavy-tailed similarity
-    * Student's t similarity
-    * test subset method
-    * test layers
-    * test inflate points
-    * test FitRecord sort
-    * remove ProjectAttention, test NonNegNorm
-
-"""
+"""Module for testing models.py."""
 
 
 import numpy as np
@@ -293,7 +281,7 @@ def test_save_load_rank(rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
 
     # Save the model.
     fn = tmpdir.join('embedding_test')
-    # TODO test with and without save_traces
+    # TODO test with save_traces
     # model.save(fn, overwrite=True)
     model.save(fn, overwrite=True, save_traces=False)
     # Load the saved model.
@@ -365,7 +353,7 @@ def test_save_load_rate(rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs):
 
     # Save the model.
     fn = tmpdir.join('embedding_test')
-    # TODO test with and without save_traces
+    # TODO test with save_traces
     # model.save(fn, overwrite=True)
     model.save(fn, overwrite=True, save_traces=False)
 
@@ -1085,7 +1073,9 @@ def test_save_load_rate(rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs):
 #         )), dtype=tf.float32, name='z_r'
 #     )
 
-#     s_actual = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
+#     s_actual = model._tf_similarity(
+#         z_q, z_ref, sim_params, attention_weights
+#     )
 #     s_desired = np.array([0.60972816, 0.10853130])
 #     np.testing.assert_allclose(s_actual, s_desired)
 
@@ -1127,7 +1117,9 @@ def test_save_load_rate(rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs):
 #         z_ref_in, dtype=tf.float32, name='z_ref'
 #     )
 
-#     s_actual = model._tf_similarity(z_q, z_ref, sim_params, attention_weights)
+#     s_actual = model._tf_similarity(
+#         z_q, z_ref, sim_params, attention_weights
+#     )
 #     s_desired = np.array((
 #         [0.60972816, 0.48281544],
 #         [0.10853130, 0.16589911]
@@ -1352,8 +1344,8 @@ def test_save_load_rate(rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs):
 #     d_qr_0 = np.multiply(d_qr_0, attention)
 #     d_qr_0 = np.sum(d_qr_0, axis=1)**(1. / rho)
 
-#     # Note: The weight matrix is 3D tensor, first dimension corresponds to the
-#     # pair being compared.
+#     # Note: The weight matrix is 3D tensor, first dimension corresponds to
+#     # the pair being compared.
 #     # Note: matmul treats the last two dimensions as the actual matrices and
 #     # broadcasts appropriately.
 

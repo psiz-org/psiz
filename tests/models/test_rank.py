@@ -15,216 +15,11 @@
 # ============================================================================
 """Module for testing models.py."""
 
-
 import numpy as np
 import pytest
 import tensorflow as tf
-import tensorflow_probability as tfp
-# TODO convert to appropriate module once TF updates their docs.
-# from tensorflow.compat.v2.test import TestCase
 
 import psiz
-
-
-@pytest.fixture(scope="module")
-def ds_rank_docket():
-    """Rank docket dataset."""
-    stimulus_set = np.array((
-        (0, 1, 2, -1, -1, -1, -1, -1, -1),
-        (9, 12, 7, -1, -1, -1, -1, -1, -1),
-        (3, 4, 5, 6, 7, -1, -1, -1, -1),
-        (3, 4, 5, 6, 13, 14, 15, 16, 17)
-    ), dtype=np.int32)
-
-    n_trial = 4
-    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
-
-    ds_docket = docket.as_dataset(
-        np.zeros([n_trial, 1])
-    ).batch(n_trial, drop_remainder=False)
-
-    return ds_docket
-
-
-@pytest.fixture(scope="module")
-def ds_rank_obs():
-    """Rank observations dataset."""
-    stimulus_set = np.array((
-        (0, 1, 2, -1, -1, -1, -1, -1, -1),
-        (9, 12, 7, -1, -1, -1, -1, -1, -1),
-        (3, 4, 5, 6, 7, -1, -1, -1, -1),
-        (3, 4, 5, 6, 13, 14, 15, 16, 17)
-    ), dtype=np.int32)
-
-    n_trial = 4
-    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
-    is_ranked = np.array((True, True, True, True))
-    group_id = np.array((0, 0, 1, 1), dtype=np.int32)
-
-    obs = psiz.trials.RankObservations(
-        stimulus_set, n_select=n_select, group_id=group_id
-    )
-    ds_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
-
-    return ds_obs
-
-
-@pytest.fixture(scope="module")
-def rank_1g_vi():
-    n_stimuli = 30
-    n_dim = 10
-    kl_weight = 0.
-
-    embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
-        scale_initializer=tf.keras.initializers.Constant(
-            tfp.math.softplus_inverse(.01).numpy()
-        )
-    )
-
-    prior_scale = .2
-    embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
-        embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-            loc_trainable=False,
-        )
-    )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
-    )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
-
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
-    )
-
-    behavior = psiz.keras.layers.behavior.RankBehavior()
-    model = psiz.models.Rank(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
-    )
-    return model
-
-
-@pytest.fixture(scope="module")
-def rank_1g_mle():
-    """A MLE rank model."""
-    n_stimuli = 30
-    n_dim = 10
-
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
-    )
-
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
-    )
-
-    behavior = psiz.keras.layers.behavior.RankBehavior()
-
-    model = psiz.models.Rank(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
-    )
-    return model
-
-
-@pytest.fixture(scope="module")
-def ds_rate_docket():
-    """Rate docket dataset."""
-    stimulus_set = np.array((
-        (0, 1),
-        (9, 12),
-        (3, 4),
-        (3, 17)
-    ), dtype=np.int32)
-
-    n_trial = 4
-    docket = psiz.trials.RateDocket(stimulus_set)
-
-    ds_docket = docket.as_dataset(
-        np.zeros([n_trial, 1])
-    ).batch(n_trial, drop_remainder=False)
-
-    return ds_docket
-
-
-@pytest.fixture(scope="module")
-def ds_rate_obs():
-    """Rate observations dataset."""
-    n_trial = 4
-    stimulus_set = np.array((
-        (0, 1),
-        (9, 12),
-        (3, 4),
-        (3, 17)
-    ), dtype=np.int32)
-    rating = np.array([0.1, .4, .8, .9])
-    group_id = np.array((0, 0, 1, 1), dtype=np.int32)
-
-    obs = psiz.trials.RateObservations(
-        stimulus_set, rating, group_id=group_id
-    )
-    ds_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
-
-    return ds_obs
-
-
-@pytest.fixture(scope="module")
-def rate_1g_mle():
-    """A MLE rate model."""
-    n_stimuli = 30
-    n_dim = 10
-
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
-    )
-
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=False,
-            beta_initializer=tf.keras.initializers.Constant(3.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
-    )
-
-    behavior = psiz.keras.layers.behavior.RateBehavior()
-
-    model = psiz.models.Rate(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
-    )
-    return model
 
 
 def test_propogation_properties(rank_1g_vi):
@@ -251,6 +46,7 @@ def test_propogation_properties(rank_1g_vi):
     assert rank_1g_vi.behavior.kl_weight == .001
     assert rank_1g_vi.stimuli.embedding.kl_weight == .001
 
+    # TODO
     # # Test invalid support.
     # with pytest.raises(ValueError):
     #     emb.rho = .1
@@ -260,7 +56,46 @@ def test_propogation_properties(rank_1g_vi):
     #     emb.mu = 0
 
 
-def test_save_load_rank(rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
+def test_save_load_rank_wtrace(
+        rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
+    """Test loading and saving of embedding model."""
+    model = rank_1g_mle
+    # Compile
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
+
+    # Fit one epoch.
+    model.fit(ds_rank_obs, epochs=1)
+
+    # Predict.
+    output_0 = model.predict(ds_rank_docket)
+
+    # Save the model.
+    fn = tmpdir.join('embedding_test')
+    model.save(fn, overwrite=True, save_traces=True)
+    # Load the saved model.
+    reconstructed_model = tf.keras.models.load_model(fn)
+    # Predict using loaded model.
+    output_1 = reconstructed_model.predict(ds_rank_docket)
+
+    # Test for equality.
+    np.testing.assert_allclose(output_0, output_1)
+    assert reconstructed_model.n_stimuli == model.n_stimuli
+    assert reconstructed_model.n_dim == model.n_dim
+    assert reconstructed_model.n_group == model.n_group
+
+    # Continue training without recompiling.
+    reconstructed_model.fit(ds_rank_obs, epochs=1)
+
+
+def test_save_load_rank_wotrace(
+        rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
     """Test loading and saving of embedding model."""
     model = rank_1g_mle
     # Compile
@@ -330,47 +165,6 @@ def test_save_load_rank(rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
     #         loaded_embedding._phi[param_name]['trainable'],
     #         rank_1g_vi._phi[param_name]['trainable']
     #     )
-
-
-def test_save_load_rate(rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs):
-    """Test loading and saving of embedding model."""
-    model = rate_1g_mle
-    # Compile
-    compile_kwargs = {
-        'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
-        'weighted_metrics': [
-            tf.keras.metrics.MeanSquaredError(name='mse')
-        ]
-    }
-    model.compile(**compile_kwargs)
-
-    # Fit one epoch.
-    model.fit(ds_rate_obs, epochs=1)
-
-    # Predict using original model.
-    output_0 = model.predict(ds_rate_docket)
-
-    # Save the model.
-    fn = tmpdir.join('embedding_test')
-    # TODO test with save_traces
-    # model.save(fn, overwrite=True)
-    model.save(fn, overwrite=True, save_traces=False)
-
-    # Load the saved model.
-    reconstructed_model = tf.keras.models.load_model(fn)
-
-    # Predict using loaded model.
-    output_1 = reconstructed_model.predict(ds_rate_docket)
-
-    # Test for equality.
-    np.testing.assert_allclose(output_0, output_1)
-    assert reconstructed_model.n_stimuli == model.n_stimuli
-    assert reconstructed_model.n_dim == model.n_dim
-    assert reconstructed_model.n_group == model.n_group
-
-    # Continue training without recompiling.
-    reconstructed_model.fit(ds_rate_obs, epochs=1)
 
 
 # def test_inverse_get_and_set():

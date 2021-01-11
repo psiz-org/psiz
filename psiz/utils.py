@@ -304,7 +304,7 @@ def rotation_matrix(theta):
     ))
 
 
-def procrustes_2d(x, y, n_restart=10, scale=True):
+def procrustes_2d(x, y, n_restart=10, scale=True, seed=None):
     """Align two sets of coordinates using an affine transformation.
 
     Attempts to find the affine transformation (composed of a rotation
@@ -324,6 +324,7 @@ def procrustes_2d(x, y, n_restart=10, scale=True):
             restarts for the optimization routine.
         scale (optional): Boolean indicating if scaling is permitted
             in the affine transformation.
+        seed (optional): Seed for random number generator.
 
     Returns:
         r: A rotation matrix.
@@ -333,6 +334,9 @@ def procrustes_2d(x, y, n_restart=10, scale=True):
 
     """
     n_dim = 2
+
+    if seed is not None:
+        np.random.seed(seed)
 
     def assemble_r_t(params):
         # Assemble valid rotation matrix.
@@ -364,9 +368,9 @@ def procrustes_2d(x, y, n_restart=10, scale=True):
     loss_best = np.inf
     for _ in range(n_restart):
         (x0, y0) = np.random.rand(2) - .5
-        theta0 = 2 * np.pi * np.random.rand(1)
+        theta0 = 2 * np.pi * np.random.rand(1)[0]
         if scale:
-            s0 = np.random.rand(1) + .5
+            s0 = np.random.rand(1)[0] + .5
             s_bnds = (0., None)
         else:
             s0 = 1

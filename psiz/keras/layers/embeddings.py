@@ -34,6 +34,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 from tensorflow.python.eager import context
 from tensorflow.python.keras.utils import tf_utils
+from tensorflow.python.framework import ops
 from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import math_ops
 import tensorflow_probability as tfp
@@ -143,7 +144,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
         # the presence of GPUs to avoid complicating the TPU codepaths
         # which can handle sparse optimizers.
         if context.executing_eagerly() and context.context().num_gpus():
-            with tf.python.framework.ops.device('cpu:0'):
+            with ops.device('cpu:0'):
                 self.embeddings = self._build_embeddings_distribution(dtype)
         else:
             self.embeddings = self._build_embeddings_distribution(dtype)
@@ -162,7 +163,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
     #     # the presence of GPUs to avoid complicating the TPU codepaths
     #     # which can handle sparse optimizers.
     #     if context.executing_eagerly() and context.context().num_gpus():
-    #         with tf.python.framework.ops.device('cpu:0'):
+    #         with ops.device('cpu:0'):
     #             self.embeddings = self._build_embeddings_distribution(dtype)
     #     else:
     #         self.embeddings = self._build_embeddings_distribution(dtype)
@@ -642,7 +643,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         # the presence of GPUs to avoid complicating the TPU codepaths
         # which can handle sparse optimizers.
         if context.executing_eagerly() and context.context().num_gpus():
-            with tf.python.framework.ops.device('cpu:0'):
+            with ops.device('cpu:0'):
                 self.embeddings = self._build_embeddings_distribution(dtype)
         else:
             self.embeddings = self._build_embeddings_distribution(dtype)

@@ -21,10 +21,7 @@ setuptools.setup(
     install_requires=[
         'tensorflow==2.4', 'tensorflow-probability==0.11.0', 'pandas',
         'scikit-learn', 'matplotlib', 'pillow', 'imageio'
-    ],
-    tests_requires=[
-        'pytest', 'pytest-cov'
-    ],
+    ]
     include_package_data=True,
     url='https://github.com/roads/psiz',
     download_url='https://github.com/roads/psiz/archive/v0.4.2.tar.gz'

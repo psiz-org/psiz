@@ -17,11 +17,8 @@
 
 Classes:
     EarlyStoppingRe:
-    TensorBoardRe:
 
 """
-
-import os
 
 from tensorflow.keras import callbacks
 
@@ -52,35 +49,3 @@ class EarlyStoppingRe(callbacks.EarlyStopping):
 
         """
         self.best_weights = None
-
-
-class TensorBoardRe(callbacks.TensorBoard):
-    """Custom TensorBoard callback."""
-
-    def __init__(self, **kwargs):
-        """Initialize.
-
-        Arguments:
-            kwargs: See tf.keras.callbacks.Tensorboard.
-
-        """
-        super().__init__(**kwargs)
-        self.log_dir_init = self.log_dir
-
-    def reset(self, restart=None):
-        """Reset callback.
-
-        Arguments:
-            restart (optional): An integer indicating the restart
-                number. If provided, results for each restart will be
-                saved separately to allow joint viewing on TensorBoard.
-
-        """
-        # if retart == 0:
-        #     self.write_graph = True
-        # else:
-        #     self.write_graph = False
-
-        if restart is not None:
-            # Distinguish between restart by setting log_dir for TensorBoard.
-            self.log_dir = os.path.join(self.log_dir_init, str(restart))

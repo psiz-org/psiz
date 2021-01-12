@@ -16,35 +16,11 @@
 """Module of custom TensorFlow regularizers.
 
 Classes:
-    StimulusNormedL1:
     AttentionEntropy:
-    Squeeze:
 
 """
 
 import tensorflow as tf
-
-
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
-class StimulusNormedL1(tf.keras.regularizers.Regularizer):
-    """Stimulus-normed L1 regularization."""
-
-    def __init__(self, l1=0.):
-        """Initialize.
-
-        Arguments:
-            l1: Rate of L1 regularization.
-
-        """
-        self.l1 = l1
-
-    def __call__(self, z):
-        """Call."""
-        return self.l1 * (tf.reduce_sum(tf.abs(z)) / z.shape[0])
-
-    def get_config(self):
-        """Return config."""
-        return {'l1': float(self.l1)}
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
@@ -70,30 +46,6 @@ class AttentionEntropy(tf.keras.regularizers.Regularizer):
         return self.rate * (tf.reduce_mean(
             t
         ))
-
-    def get_config(self):
-        """Return config."""
-        return {'rate': float(self.rate)}
-
-
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
-class Squeeze(tf.keras.regularizers.Regularizer):
-    """Squeeze representation into a low number of dimensions."""
-
-    def __init__(self, rate=0.):
-        """Initialize.
-
-        Arguments:
-            rate: Rate at which regularization is applied.
-
-        """
-        self.rate = rate
-
-    def __call__(self, z):
-        """Call."""
-        # Sum across stimuli, but within a dimension.
-        dimension_usage = tf.reduce_max(tf.math.abs(z), axis=0)
-        return self.rate * tf.reduce_sum(dimension_usage)
 
     def get_config(self):
         """Return config."""

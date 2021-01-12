@@ -13,8 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras initializers initialization file."""
+"""Module of custom TensorFlow regularizers.
 
-from psiz.keras.initializers.random_scale_mvn import RandomScaleMVN
-from psiz.keras.initializers.random_attention import RandomAttention
-from psiz.keras.initializers.softplus_uniform import SoftplusUniform
+Classes:
+    StimulusNormedL1:
+
+"""
+
+import tensorflow as tf
+
+
+@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
+class StimulusNormedL1(tf.keras.regularizers.Regularizer):
+    """Stimulus-normed L1 regularization."""
+
+    def __init__(self, l1=0.):
+        """Initialize.
+
+        Arguments:
+            l1: Rate of L1 regularization.
+
+        """
+        self.l1 = l1
+
+    def __call__(self, z):
+        """Call."""
+        return self.l1 * (tf.reduce_sum(tf.abs(z)) / z.shape[0])
+
+    def get_config(self):
+        """Return config."""
+        return {'l1': float(self.l1)}

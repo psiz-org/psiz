@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras initializers initialization file."""
+"""Keras regularizers initialization file."""
 
-from psiz.keras.initializers.random_scale_mvn import RandomScaleMVN
-from psiz.keras.initializers.random_attention import RandomAttention
-from psiz.keras.initializers.softplus_uniform import SoftplusUniform
+from psiz.keras.regularizers.attention_entropy import AttentionEntropy
+from psiz.keras.regularizers.squeeze import Squeeze
+from psiz.keras.regularizers.stimulus_normed_l1 import StimulusNormedL1

@@ -50,11 +50,16 @@ class Restarter(object):
     Methods:
         fit: Fit the provided model to the observations.
 
+    Note:
+        To minimize memory consumption, model weights for each restart
+        are stored on disk in a tempory file.
+
     """
 
     def __init__(
             self, model, compile_kwargs={}, monitor='loss', n_restart=10,
-            n_record=1, do_init=False, custom_objects={}, weight_dir=None):
+            n_record=None, do_init=False, custom_objects={},
+            weight_dir='/tmp/psiz/restarts'):
         """Initialize.
 
         Arguments:
@@ -65,18 +70,24 @@ class Restarter(object):
                 for selecting the best restarts.
             n_restart (optional): An integer indicating the number of
                 independent restarts to perform.
-            n_record (optional): An integer indicating the number of
-                best performing restarts to record.
+            n_record (optional): A positive integer indicating the
+                number of best performing restarts to record. By
+                default, all restarts will be recorded. In general,
+                the default value is the best.
             do_init (optional): A Boolean variable indicating whether
-                the initial model and it's corresponding performance
-                should be included as a candidate in the set of
-                restarts.
+                the initial model state  should be included as a
+                candidate in the set of restarts. This is useful if
+                you are performing online training and want to
+                "lock-in" past progress.
             custom_objects (optional): Custom objects for model
                 creation.
 
         """
-        # Make sure n_record is not greater than n_restart.
-        n_record = np.minimum(n_record, n_restart)
+        if n_record is None:
+            n_record = n_restart
+        else:
+            # Make sure `n_record` is not greater than `n_restart`.
+            n_record = np.minimum(n_record, n_restart)
 
         self.model = model
         self.optimizer = compile_kwargs.pop(
@@ -88,8 +99,6 @@ class Restarter(object):
         self.n_record = n_record
         self.do_init = do_init
         self.custom_objects = custom_objects
-        if weight_dir is None:
-            weight_dir = '/tmp/psiz/restarts'
         self.weight_dir = weight_dir
 
     def fit(
@@ -104,7 +113,8 @@ class Restarter(object):
             **kwargs: Any additional keyword arguments.
 
         Returns:
-            tracker: A record of the best restarts.
+            tracker: A psiz.restart.FitTracker object that contains a
+                record of the best restarts.
 
         """
         start_time_s = time.time()
@@ -112,6 +122,9 @@ class Restarter(object):
 
         # Initial evaluation.
         if self.do_init:
+            # Set restart model to the model that was passed in.
+            model_re = self.model
+
             # Create new optimizer.
             optimizer_re = _new_optimizer(self.optimizer)
 
@@ -326,9 +339,13 @@ class FitTracker(object):
             if loss_monitor < self.init_loss:
                 self.beat_init = True
 
-    def sort(self):
+    def sort(self, ascending=True):
         """Sort the records from best to worst."""
-        idx_sort = np.argsort(self.record[self.monitor])
+        if ascending:
+            idx_sort = np.argsort(self.record[self.monitor])
+        else:
+            idx_sort = np.argsort(-self.record[self.monitor])
+
         for k, v in self.record.items():
             if k == 'weights':
                 self.record['weights'] = [

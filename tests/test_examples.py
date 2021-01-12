@@ -92,13 +92,22 @@ def evaluate_pairs(stimuli, kernel, ds_pairs):
     return simmat_unr
 
 
+def generate_callbacks():
+    """Generate callbacks."""
+    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
+        'val_cce', patience=30, mode='min', restore_best_weights=True
+    )
+    callbacks = [early_stop]
+    return callbacks
+
+
 @pytest.mark.slow
 def test_example_0_execution():
     # Settings.
     n_stimuli = 30
     n_dim = 3
     n_restart = 3
-    epochs = 1000
+    epochs = 30  # 1000
     n_trial = 2000
     batch_size = 128
     n_frame = 2
@@ -156,15 +165,12 @@ def test_example_0_execution():
             np.linspace(15, obs_train.n_trial, n_frame)
         ).astype(np.int64)
     r2 = np.empty((n_frame))
-    train_cce = np.empty((n_frame))
-    val_cce = np.empty((n_frame))
-    test_cce = np.empty((n_frame))
+    # train_cce = np.empty((n_frame))
+    # val_cce = np.empty((n_frame))
+    # test_cce = np.empty((n_frame))
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
-        print(
-            '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
-        )
 
         # Convert obs to dataset.
         ds_obs_train = obs_round_train.as_dataset().shuffle(
@@ -174,17 +180,17 @@ def test_example_0_execution():
         # Use Tensorboard callback.
         callbacks = [early_stop]
 
+        # Handle restarts.
         model_inferred = build_model(n_stimuli, n_dim)
-        model_inferred.compile(**compile_kwargs)
-
-        model_inferred.fit(
-            ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
+        restarter = psiz.restart.Restarter(
+            model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
+            n_restart=n_restart
+        )
+        restart_record = restarter.fit(
+            x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
-
-        # d_train = model_inferred.evaluate(ds_obs_train, return_dict=True)
-        # d_val = model_inferred.evaluate(ds_obs_val, return_dict=True)
-        # d_test = model_inferred.evaluate(ds_obs_test, return_dict=True)
+        model_inferred = restarter.model
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
@@ -201,3 +207,23 @@ def test_example_0_execution():
     # than .9. This indicates that inference has found a model that closely
     # matches the ground truth (which is never directly observed).
     assert r2[-1] > .9
+
+
+        # model_inferred_best = {}
+        # val_loss_best = np.inf
+        # for i_restart in range(n_restart):
+        #     model_inferred = build_model(n_stimuli, n_dim)
+        #     model_inferred.compile(**compile_kwargs)
+
+        #     model_inferred.fit(
+        #         ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
+        #         callbacks=callbacks, verbose=0
+        #     )
+
+        #     # d_train = model_inferred.evaluate(ds_obs_train, return_dict=True)
+        #     d_val = model_inferred.evaluate(ds_obs_val, return_dict=True)
+        #     # d_test = model_inferred.evaluate(ds_obs_test, return_dict=True)
+
+        #     if d_val['loss'] < val_loss_best:
+        #         val_loss_best = d_val['loss']
+        #         model_inferred_best = model_inferred

@@ -64,7 +64,7 @@ def rank_2g_mle_determ():
         ))
     )
 
-    behavior = psiz.keras.layers.behavior.RankBehavior()
+    behavior = psiz.keras.layers.RankBehavior()
 
     model = psiz.models.Rank(
         stimuli=stimuli, kernel=kernel, behavior=behavior

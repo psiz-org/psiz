@@ -16,10 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    Behavior: An abstract behavior layer.
-    RankBehavior: A rank behavior layer.
     RateBehavior: A rate behavior layer.
-    SortBehavior: A sort behavior layer.
 
 """
 
@@ -27,122 +24,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
-from psiz.models.base import GroupLevel
-
-
-class Behavior(GroupLevel):
-    """An abstract behavior layer."""
-
-    def __init__(self, **kwargs):
-        """Initialize.
-
-        Arguments:
-            kwargs (optional): Additional keyword arguments.
-
-        """
-        super(Behavior, self).__init__(**kwargs)
-
-        self._n_sample = 0
-        self._kl_weight = 0
-
-    @property
-    def n_sample(self):
-        return self._n_sample
-
-    @n_sample.setter
-    def n_sample(self, n_sample):
-        self._n_sample = n_sample
-
-    @property
-    def kl_weight(self):
-        return self._kl_weight
-
-    @kl_weight.setter
-    def kl_weight(self, kl_weight):
-        self._kl_weight = kl_weight
-
-    def get_config(self):
-        """Return layer configuration."""
-        config = super().get_config()
-        return config
-
-    def call(self, inputs):
-        raise NotImplementedError
-
-
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RankBehavior'
-)
-class RankBehavior(Behavior):
-    """A rank behavior layer.
-
-    Embodies a `_tf_ranked_sequence_probability` call.
-
-    """
-
-    def __init__(self, **kwargs):
-        """Initialize.
-
-        Arguments:
-            kwargs (optional): Additional keyword arguments.
-
-        """
-        super(RankBehavior, self).__init__(**kwargs)
-
-    def call(self, inputs):
-        """Return probability of a ranked selection sequence.
-
-        See: _ranked_sequence_probability for NumPy implementation.
-
-        Arguments:
-            inputs:
-                sim_qr: A tensor containing the precomputed
-                    similarities between the query stimuli and
-                    corresponding reference stimuli.
-                    shape=(sample_size, batch_size, n_max_reference, n_outcome)
-                is_select: A Boolean tensor indicating if a reference
-                    was selected.
-                    shape = (batch_size, n_max_reference, n_outcome)
-
-        """
-        sim_qr = inputs[0]
-        is_select = inputs[1]
-        is_outcome = inputs[2]
-
-        # Initialize sequence log-probability. Note that log(prob=1)=1.
-        # sample_size = tf.shape(sim_qr)[0] 
-        # batch_size = tf.shape(sim_qr)[1]
-        # n_outcome = tf.shape(sim_qr)[3]
-        # seq_log_prob = tf.zeros(
-        #     [sample_size, batch_size, n_outcome], dtype=K.floatx()
-        # )
-
-        # Compute denominator based on formulation of Luce's choice rule.
-        denom = tf.cumsum(sim_qr, axis=2, reverse=True)
-
-        # Compute log-probability of each selection, assuming all selections
-        # occurred. Add fuzz factor to avoid log(0)
-        sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
-        denom = tf.maximum(denom, tf.keras.backend.epsilon())
-        log_prob = tf.math.log(sim_qr) - tf.math.log(denom)
-
-        # Mask non-existent selections.
-        log_prob = is_select * log_prob
-
-        # Compute sequence log-probability
-        seq_log_prob = tf.reduce_sum(log_prob, axis=2)
-        seq_prob = tf.math.exp(seq_log_prob)
-        seq_prob = is_outcome * seq_prob
-
-        # Clean up probabilities
-        total = tf.reduce_sum(seq_prob, axis=2, keepdims=True)
-        seq_prob = seq_prob / total
-        return seq_prob
-
-    def get_config(self):
-        """Return layer configuration."""
-        config = super().get_config()
-        return config
+from psiz.keras.layers.behaviors.base import Behavior
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -275,54 +157,4 @@ class RateBehavior(Behavior):
                 self.rate_initializer
             ),
         })
-        return config
-
-
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='SortBehavior'
-)
-class SortBehavior(Behavior):
-    """A sort behavior layer.
-
-    TODO
-
-    """
-
-    def __init__(
-            self, lower_initializer=None, upper_initializer=None,
-            midpoint_initializer=None, rate_initializer=None,
-            lower_trainable=True, upper_trainable=True,
-            midpoint_trainable=True, rate_trainable=True, **kwargs):
-        """Initialize.
-
-        Arguments:
-            TODO
-            kwargs (optional): Additional keyword arguments.
-
-        """
-        super(SortBehavior, self).__init__(**kwargs)
-        raise NotImplementedError
-
-    def call(self, inputs):
-        """Return probability of outcome.
-
-        Arguments:
-            inputs:
-                sim_qr: A tensor containing the precomputed
-                    similarities between the query stimuli and
-                    corresponding reference stimuli (only 1 reference).
-                    shape = (batch_size, 1, 1)
-
-        Returns:
-            probs: The probabilites as determined by a parameterized
-                logistic function.
-
-        """
-        raise NotImplementedError
-        return None
-
-    def get_config(self):
-        """Return layer configuration."""
-        config = super().get_config()
-        # config.update({})  TODO
         return config

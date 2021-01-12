@@ -111,7 +111,7 @@ def rank_1g_vi():
         )
     )
 
-    behavior = psiz.keras.layers.behavior.RankBehavior()
+    behavior = psiz.keras.layers.RankBehavior()
     model = psiz.models.Rank(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
@@ -142,7 +142,7 @@ def rank_1g_mle():
         )
     )
 
-    behavior = psiz.keras.layers.behavior.RankBehavior()
+    behavior = psiz.keras.layers.RankBehavior()
 
     model = psiz.models.Rank(
         stimuli=stimuli, kernel=kernel, behavior=behavior
@@ -216,7 +216,7 @@ def rate_1g_mle():
         )
     )
 
-    behavior = psiz.keras.layers.behavior.RateBehavior()
+    behavior = psiz.keras.layers.RateBehavior()
 
     model = psiz.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior

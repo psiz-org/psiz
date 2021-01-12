@@ -62,7 +62,7 @@ def rank_1g_mle_rand():
         )
     )
 
-    behavior = psiz.keras.layers.behavior.RankBehavior()
+    behavior = psiz.keras.layers.RankBehavior()
     model = psiz.models.Rank(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )

@@ -7,6 +7,7 @@ Please note we have a code of conduct, please follow it in all your interactions
 PsiZ's scope is restricted to computational modeling of *similarity* data. This includes ratings, rankings, and sorts of stimuli. Not all of this functionality is implemented. Contributions that support this functionality are welcome.
 
 ## Issues
+
 * Please tag your issue with `bug`, `enhancement`, or `question` to help us effectively respond.
 * Please include the versions of TensorFlow and PsiZ you are running.
 * Please provide the command line you ran as well as the log output.
@@ -15,9 +16,15 @@ PsiZ's scope is restricted to computational modeling of *similarity* data. This 
 
 Please send in fixes and feature additions through Pull Requests.
 
+## Testing
+
+* PsiZ uses `pytest` for testing and `pytest-cov` for coverage analytics. These packages are not listed in `install_requires` but in `tests_require` and should be installed separately using `python setup.py test`.
+* Tests that take more than a few seconds are marked as `slow` and can be skipped by running `pytest -m "not slow"`.
+* All pytest markers must be registered, unregistered markers will generate an error.
+
 # Additional Guidance
 
-PsiZ attempts to closely adhere to TensorFlow and Keras idioms. Model components are implemented as layers. All custom Keras objects places in `psiz.keras` and intentionally mirror the module structure of `tensorflow.keras` in order to leverage developers pre-existing knowledge of TensorFlow's organization.
+PsiZ closely adheres to TensorFlow and Keras idioms. Model components are implemented as layers. Custom Keras objects (with the exception of models) are placed in `psiz.keras` and intentionally mirror the module structure of `tensorflow.keras` in order to leverage developers pre-existing knowledge of TensorFlow's organization.
 
 ## Module: trials
 * Code to the appropriate interface.

@@ -370,7 +370,8 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint
         )
         scale = tfp.util.DeferredTensor(
-            self.untransformed_scale, lambda x: (K.epsilon() + tf.nn.softplus(x))
+            self.untransformed_scale,
+            lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
         dist = tfp.distributions.LogNormal(loc=self.loc, scale=scale)
@@ -713,11 +714,15 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             'mask_zero': self.mask_zero,
             'input_length': int(self.input_length),
             'concentration_initializer':
-                tf.keras.initializers.serialize(self.concentration_initializer),
+                tf.keras.initializers.serialize(
+                    self.concentration_initializer
+                ),
             'rate_initializer':
                 tf.keras.initializers.serialize(self.rate_initializer),
             'concentration_regularizer':
-                tf.keras.regularizers.serialize(self.concentration_regularizer),
+                tf.keras.regularizers.serialize(
+                    self.concentration_regularizer
+                ),
             'rate_regularizer':
                 tf.keras.regularizers.serialize(self.rate_regularizer),
             'concentration_constraint':

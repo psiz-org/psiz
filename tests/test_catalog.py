@@ -21,6 +21,8 @@ Todo:
 
 """
 
+from pathlib import Path
+
 import pytest
 import numpy as np
 
@@ -143,3 +145,36 @@ class TestCatalog:
         np.testing.assert_array_equal(
             catalog.stimuli.filepath.values,
             loaded_catalog.stimuli.filepath.values)
+
+    def test_subset(self):
+        """Test subset method of Catalog object."""
+        stimulus_id = np.array([0, 1, 2, 3, 4, 5])
+        stimulus_filepath = [
+            Path('rex/a.jpg'), Path('rex/b.jpg'), Path('rex/c.jpg'),
+            Path('rex/d.jpg'), Path('rex/e.jpg'), Path('rex/f.jpg')
+        ]
+        catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
+
+        # Use integer indexing.
+        idx = np.array([0, 2, 3, 5])
+        stimulus_filepath_sub = [
+            Path('rex/a.jpg'), Path('rex/c.jpg'),
+            Path('rex/d.jpg'), Path('rex/f.jpg')
+        ]
+        catalog_b = catalog.subset(idx)
+
+        assert catalog_b.n_stimuli == 4
+        assert catalog_b.filepath() == stimulus_filepath_sub
+        np.testing.assert_array_equal(
+            catalog_b.id(), stimulus_id[idx]
+        )
+
+        # Use boolean indexing.
+        idx = np.array([1, 0, 1, 1, 0, 1], dtype=bool)
+        catalog_b = catalog.subset(idx)
+
+        assert catalog_b.n_stimuli == 4
+        assert catalog_b.filepath() == stimulus_filepath_sub
+        np.testing.assert_array_equal(
+            catalog_b.id(), stimulus_id[idx]
+        )

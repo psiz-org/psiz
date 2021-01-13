@@ -32,6 +32,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import pearsonr
 import tensorflow as tf
 
 import psiz
@@ -63,7 +64,12 @@ def main():
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
-    proxy_true = ground_truth(n_stimuli, n_dim)
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
+        n_stimuli, mask_zero=True
+    )
+
+    model_true = ground_truth(n_stimuli, n_dim)
 
     # Generate a random docket of trials.
     generator = psiz.generators.RandomRank(
@@ -72,15 +78,25 @@ def main():
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.agents.RankAgent(proxy_true.model)
+    agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
 
-    simmat_true = psiz.utils.pairwise_matrix(
-        proxy_true.similarity, proxy_true.z[0]
+    simmat_true = np.squeeze(
+        psiz.utils.pairwise_similarity(
+            model_true.stimuli, model_true.kernel, ds_pairs
+        ).numpy()
     )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
+    # Convert validation and test to dataset. Convert train dataset
+    # inside frame loop.
+    ds_obs_val = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
+    ds_obs_test = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
@@ -109,6 +125,10 @@ def main():
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
+        ds_obs_round_train = obs_round_train.as_dataset().shuffle(
+            buffer_size=obs_round_train.n_trial, reshuffle_each_iteration=True
+        ).batch(batch_size, drop_remainder=False)
+
         print(
             '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
         )
@@ -123,30 +143,35 @@ def main():
         callbacks = [early_stop, cb_board]
 
         model = build_model(n_stimuli, n_dim)
-        proxy_inferred = psiz.models.Proxy(model=model)
 
-        # Infer embedding.
-        restart_record = proxy_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=epochs,
-            batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_cce', verbose=1, compile_kwargs=compile_kwargs
+        # Infer embedding with restarts.
+        restarter = psiz.restart.Restarter(
+            model, compile_kwargs=compile_kwargs, monitor='val_loss',
+            n_restart=n_restart
         )
+        restart_record = restarter.fit(
+            x=ds_obs_round_train, validation_data=ds_obs_val, epochs=epochs,
+            callbacks=callbacks, verbose=0
+        )
+        model = restarter.model
 
         train_cce[i_frame] = restart_record.record['cce'][0]
         val_cce[i_frame] = restart_record.record['val_cce'][0]
-        test_metrics = proxy_inferred.evaluate(
-            obs_test, verbose=0, return_dict=True
+        test_metrics = model.evaluate(
+            ds_obs_test, verbose=0, return_dict=True
         )
         test_cce[i_frame] = test_metrics['cce']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = psiz.utils.pairwise_matrix(
-            proxy_inferred.similarity, proxy_inferred.z[0]
+        simmat_infer = np.squeeze(
+            psiz.utils.pairwise_similarity(
+                model.stimuli, model.kernel, ds_pairs
+            ).numpy()
         )
-        r2[i_frame] = psiz.utils.matrix_comparison(
-            simmat_infer, simmat_true, score='r2'
-        )
+        rho, _ = pearsonr(simmat_true, simmat_infer)
+        r2[i_frame] = rho**2
+
         print(
             '    n_obs: {0:4d} | train_cce: {1:.2f} | '
             'val_cce: {2:.2f} | test_cce: {3:.2f} | '
@@ -203,8 +228,7 @@ def ground_truth(n_stimuli, n_dim):
     )
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
 
-    emb = psiz.models.Proxy(model=model)
-    return emb
+    return model
 
 
 def build_model(n_stimuli, n_dim):

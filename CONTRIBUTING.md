@@ -44,7 +44,7 @@ PsiZ closely adheres to TensorFlow and Keras idioms. Model components are implem
 
 ## Contributing to psiz.keras
 
-Since the models used in this package are prone to find sub-optimal solutions, multiple restarts are necessary. This results in a point of divergence from typical TensorFlow projects. TensorFlow does not provide a great strategy for 'resetting' a model. To accommodate this need, restart functionality is provided by the Proxy class.
+Since the models used in this package are prone to find sub-optimal solutions, multiple restarts are necessary. This results in a point of divergence from typical TensorFlow projects. TensorFlow does not provide a pre-packaged strategy for performing multiple restarts of a model. To accommodate this need, some basic restart functionality is provided by the Restarter class.
 
 Register the class via the decorator @tf.keras.utils.register_keras_serializable in order to facilitate model loading.
 

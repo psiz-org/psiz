@@ -607,7 +607,8 @@ def pairwise_index_dataset(
         batch_size (optional): Determines the batch size. By default,
             the batch size will be set to the number of combinations.
         elements (optional): Determines which combinations in the pairwise
-            matrix will be used. Can be one of 'all', 'upper', 'lower'.
+            matrix will be used. Can be one of 'all', 'upper', 'lower',
+            or 'off'.
         group_idx (optional): Array-like integers indicating
             hierarchical group index information. For example, `[4,3]`
             indicates that the first hierarchical level has `group_id`
@@ -622,10 +623,18 @@ def pairwise_index_dataset(
         Tensorflow Dataset.
 
     """
-    if elements == 'upper':
+    if elements == 'all':
+        idx = np.meshgrid(np.arange(n_data), np.arange(n_data))
+        idx_0 = idx[0].flatten()
+        idx_1 = idx[1].flatten()
+    elif elements == 'upper':
         idx = np.triu_indices(n_data, 1)
+        idx_0 = idx[0]
+        idx_1 = idx[1]
     elif elements == 'lower':
         idx = np.triu_indices(n_data, 1)
+        idx_0 = idx[0]
+        idx_1 = idx[1]
     elif elements == 'off':
         idx_upper = np.triu_indices(n_data, 1)
         idx_lower = np.triu_indices(n_data, 1)
@@ -633,8 +642,8 @@ def pairwise_index_dataset(
             np.hstack((idx_upper[0], idx_lower[0])),
             np.hstack((idx_upper[1], idx_lower[1])),
         )
-    idx_0 = idx[0]
-    idx_1 = idx[1]
+        idx_0 = idx[0]
+        idx_1 = idx[1]
     del idx
 
     n_pair = len(idx_0)

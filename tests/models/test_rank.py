@@ -1290,23 +1290,6 @@ def test_save_load_rank_wotrace(
 #     return w
 
 
-# TODO
-# emb_inferred.save('tmp_emb', overwrite=True)
-# emb_inferred2 = psiz.models.Proxy(psiz.models.load_model('tmp_emb'))
-# simmat_infer = psiz.utils.pairwise_matrix(
-#     emb_inferred2.similarity, emb_inferred2.z
-# )
-# r_squared = psiz.utils.matrix_comparison(
-#     simmat_truth, simmat_infer, score='r2'
-# )
-# np.testing.assert_array_equal(emb_inferred.z, emb_inferred2.z)
-# np.testing.assert_array_equal(emb_inferred.w, emb_inferred2.w)
-
-# print(
-#     '\n    R^2 Model Comparison: {0: >6.2f}\n'.format(r_squared)
-# )
-
-
 # TODO move elsewhere
 # def test_weight_projections():
 #     """Test projection of attention weights."""

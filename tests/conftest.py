@@ -29,15 +29,15 @@ def rank_2g_mle_determ():
     n_dim = 2
     n_group = 2
     embedding = psiz.keras.layers.EmbeddingDeterministic(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.Constant(
+            np.array(
+                [
+                    [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
+                ], dtype=np.float32
+            )
+        )
     )
-    embedding.build([None, None, None])
-    z = np.array(
-        [
-            [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
-        ], dtype=np.float32
-    )
-    embedding.embeddings.assign(z)
 
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
 

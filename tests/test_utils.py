@@ -75,59 +75,40 @@ def test_generate_group_matrix():
 def test_pairwise_matrix(rank_2g_mle_determ):
     """Test similarity matrix."""
     n_stimuli = 3
-    actual_simmat1 = np.array((
+    desired_simmat0 = np.array((
         (1., 0.35035481, 0.00776613),
         (0.35035481, 1., 0.0216217),
         (0.00776613, 0.0216217, 1.)
     ))
-    actual_simmat2 = np.array((
+    desired_simmat1 = np.array((
         (1., 0.29685964, 0.00548485),
         (0.29685964, 1., 0.01814493),
         (0.00548485, 0.01814493, 1.)
     ))
 
-    # TODO
-    # ds_pairs_0, ds_info_0 = psiz.utils.pairwise_index_dataset(
-    #     n_stimuli, mask_zero=True, group_idx=[0]
-    # )
+    ds_pairs_0, ds_info_0 = psiz.utils.pairwise_index_dataset(
+        n_stimuli, elements='all', mask_zero=True, group_idx=[0]
+    )
 
-    # ds_pairs_1, ds_info_1 = psiz.utils.pairwise_index_dataset(
-    #     n_stimuli, mask_zero=True, group_idx=[1]
-    # )
+    ds_pairs_1, ds_info_1 = psiz.utils.pairwise_index_dataset(
+        n_stimuli, elements='all', mask_zero=True, group_idx=[1]
+    )
 
-    # s_0 = psiz.utils.pairwise_similarity(
-    #     rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0
-    # ).numpy()
+    computed_simmat0 = psiz.utils.pairwise_similarity(
+        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0
+    ).numpy()
 
-    # s_1 = psiz.utils.pairwise_similarity(
-    #     rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1
-    # ).numpy()
+    computed_simmat1 = psiz.utils.pairwise_similarity(
+        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1
+    ).numpy()
 
-    proxy = psiz.models.Proxy(model=rank_2g_mle_determ)
+    # Use fact that n_sample=1 and elements='all' to take advantage of
+    # np.reshape.
+    computed_simmat0 = np.reshape(computed_simmat0, [n_stimuli, n_stimuli])
+    computed_simmat1 = np.reshape(computed_simmat1, [n_stimuli, n_stimuli])
 
-    computed_simmat0 = utils.pairwise_matrix(
-        proxy.similarity, proxy.z[0])
-
-    # Check explicit use of first set of attention weights.
-    def similarity_func1(z_q, z_ref):
-        sim_func = proxy.similarity(z_q, z_ref, group_id=0)
-        return sim_func
-
-    # Check without passing in explicit attention.
-    computed_simmat1 = utils.pairwise_matrix(
-        similarity_func1, proxy.z[0])
-
-    # Check explicit use of second set of attention weights.
-    def similarity_func2(z_q, z_ref):
-        sim_func = proxy.similarity(z_q, z_ref, group_id=1)
-        return sim_func
-
-    computed_simmat2 = utils.pairwise_matrix(
-        similarity_func2, proxy.z[0])
-
-    np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat0)
-    np.testing.assert_array_almost_equal(actual_simmat1, computed_simmat1)
-    np.testing.assert_array_almost_equal(actual_simmat2, computed_simmat2)
+    np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
+    np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
 def test_matrix_comparison():

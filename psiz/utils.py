@@ -571,25 +571,56 @@ class ProgressBarRe(object):
             print()
 
 
+def generate_group_matrix(n_row, group_idx=[]):
+    """Generate group ID data structure.
+
+    The first column is reserved and is composed of all zeros.
+    Additional columns are optional and determined by the user.
+
+    Arguments:
+        n_row: The number of rows.
+        group_idx (optional): Array-like integers indicating
+            hierarchical group index information. For example, `[4,3]`
+            indicates that the first hierarchical level has `group_id`
+            4 and the second hierarchical level has `group_id` 3.
+
+    Returns:
+        group_matrix: The completed group matrix where each column
+            corresponds to a group level and each row a datum.
+            shape=(n_row,1+len(group_id))
+
+    """
+    group_matrix = np.hstack(([0], group_idx))
+    group_matrix = np.expand_dims(group_matrix, axis=0)
+    group_matrix = np.repeat(group_matrix, n_row, axis=0)
+    return group_matrix
+
+
 # TODO add tests
 # NOTE: this method is similar to imagenet version, except has expanded
 # docstrings and mask_zero optional argument.
+# 'all' has been renamed the more accurate 'off' for "off diagonal"
+# TODO inject more sophisticated group_idx
 def pairwise_index_dataset(
-        n_data, group_idx=0, batch_size=None, elements='upper',
+        n_data, batch_size=None, elements='upper', group_idx=[],
         mask_zero=False, subsample=None, seed=252):
     """Assemble pairwise combinations.
 
     Arguments:
         n_data: A scalar indicating the number of unique concepts.
-        group_idx (optional): The group index.
         batch_size (optional): Determines the batch size. By default,
             the batch size will be set to the number of combinations.
         elements (optional): Determines which combinations in the pairwise
             matrix will be used. Can be one of 'all', 'upper', 'lower'.
+        group_idx (optional): Array-like integers indicating
+            hierarchical group index information. For example, `[4,3]`
+            indicates that the first hierarchical level has `group_id`
+            4 and the second hierarchical level has `group_id` 3.
         mask_zero (optional): Whether the zero index should be masked
             and all indices incremented by one.
-        subsample: TODO
-        seed: TODO
+        subsample: A float ]0,1] indicating the proportion of all pairs
+            that should be retained. By default all pairs are retained.
+        seed: Integer controlling which pairs are subsampled.
 
     Returns:
         Tensorflow Dataset.
@@ -599,7 +630,7 @@ def pairwise_index_dataset(
         idx = np.triu_indices(n_data, 1)
     elif elements == 'lower':
         idx = np.triu_indices(n_data, 1)
-    elif elements == 'all':
+    elif elements == 'off':
         idx_upper = np.triu_indices(n_data, 1)
         idx_lower = np.triu_indices(n_data, 1)
         idx = (
@@ -630,16 +661,21 @@ def pairwise_index_dataset(
         batch_size = np.minimum(10000, n_pair)
 
     ds_info = {
-        'n_pair': len(idx_0),
+        'n_pair': n_pair,
         'batch_size': batch_size,
-        'n_batch': np.ceil(len(idx_0) / batch_size),
+        'n_batch': np.ceil(n_pair / batch_size),
+        'elements': elements,
         'mask_zero': mask_zero
     }
 
-    group_idx = tf.constant(group_idx * np.ones([n_pair, 1], dtype=np.int32))
+    # group_matrix = tf.constant(
+    #     group_idx * np.ones([n_pair, 1], dtype=np.int32)
+    # ) TODO delete
+    group_matrix = generate_group_matrix(n_pair, group_idx=group_idx)
+    group_matrix = tf.constant(group_matrix, dtype=np.int32)
 
     ds = tf.data.Dataset.from_tensor_slices(
-        ((idx_0, idx_1, group_idx))
+        ((idx_0, idx_1, group_matrix))
     ).batch(
         batch_size, drop_remainder=False
     )

@@ -25,8 +25,56 @@ from psiz import utils
 import psiz.models
 
 
+def test_generate_group_matrix():
+    """Test generate_group_matrix."""
+    n_row = 3
+
+    # Test no hierarchy.
+    group_idx = []
+    group_matrix = psiz.utils.generate_group_matrix(
+        n_row, group_idx=group_idx
+    )
+    desired_group_matrix = np.array([
+        [0],
+        [0],
+        [0]
+    ])
+    np.testing.assert_array_equal(
+        group_matrix, desired_group_matrix
+    )
+
+    # Test one-level hierarchy.
+    group_idx = [0]
+    group_matrix = psiz.utils.generate_group_matrix(
+        n_row, group_idx=group_idx
+    )
+    desired_group_matrix = np.array([
+        [0, 0],
+        [0, 0],
+        [0, 0]
+    ])
+    np.testing.assert_array_equal(
+        group_matrix, desired_group_matrix
+    )
+
+    # Test three-level hierarchy.
+    group_idx = [6, 7, 3]
+    group_matrix = psiz.utils.generate_group_matrix(
+        n_row, group_idx=group_idx
+    )
+    desired_group_matrix = np.array([
+        [0, 6, 7, 3],
+        [0, 6, 7, 3],
+        [0, 6, 7, 3]
+    ])
+    np.testing.assert_array_equal(
+        group_matrix, desired_group_matrix
+    )
+
+
 def test_pairwise_matrix(rank_2g_mle_determ):
     """Test similarity matrix."""
+    n_stimuli = 3
     actual_simmat1 = np.array((
         (1., 0.35035481, 0.00776613),
         (0.35035481, 1., 0.0216217),
@@ -37,6 +85,23 @@ def test_pairwise_matrix(rank_2g_mle_determ):
         (0.29685964, 1., 0.01814493),
         (0.00548485, 0.01814493, 1.)
     ))
+
+    # TODO
+    # ds_pairs_0, ds_info_0 = psiz.utils.pairwise_index_dataset(
+    #     n_stimuli, mask_zero=True, group_idx=[0]
+    # )
+
+    # ds_pairs_1, ds_info_1 = psiz.utils.pairwise_index_dataset(
+    #     n_stimuli, mask_zero=True, group_idx=[1]
+    # )
+
+    # s_0 = psiz.utils.pairwise_similarity(
+    #     rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0
+    # ).numpy()
+
+    # s_1 = psiz.utils.pairwise_similarity(
+    #     rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1
+    # ).numpy()
 
     proxy = psiz.models.Proxy(model=rank_2g_mle_determ)
 

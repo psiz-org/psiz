@@ -187,7 +187,7 @@ def ground_truth(n_stimuli):
     n_group = 2
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )

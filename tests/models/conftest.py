@@ -125,7 +125,7 @@ def rank_1g_mle():
     n_dim = 10
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
@@ -198,7 +198,7 @@ def rate_1g_mle():
     n_dim = 10
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )

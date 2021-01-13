@@ -597,10 +597,6 @@ def generate_group_matrix(n_row, group_idx=[]):
 
 
 # TODO add tests
-# NOTE: this method is similar to imagenet version, except has expanded
-# docstrings and mask_zero optional argument.
-# 'all' has been renamed the more accurate 'off' for "off diagonal"
-# TODO inject more sophisticated group_idx
 def pairwise_index_dataset(
         n_data, batch_size=None, elements='upper', group_idx=[],
         mask_zero=False, subsample=None, seed=252):
@@ -668,9 +664,6 @@ def pairwise_index_dataset(
         'mask_zero': mask_zero
     }
 
-    # group_matrix = tf.constant(
-    #     group_idx * np.ones([n_pair, 1], dtype=np.int32)
-    # ) TODO delete
     group_matrix = generate_group_matrix(n_pair, group_idx=group_idx)
     group_matrix = tf.constant(group_matrix, dtype=np.int32)
 
@@ -696,6 +689,11 @@ def pairwise_similarity(stimuli, kernel, ds_pairs):
         s: A tf.Tensor of similarities between stimulus i and stimulus
             j (using the requested group-level parameters from the
             stimuli layer and the kernel layer).
+            shape=([sample_size,] n_pair)
+
+    Notes:
+        The `n_sample` property of the Stimuli layer and Kernel layer
+            must agree.
 
     """
     s = []
@@ -705,5 +703,7 @@ def pairwise_similarity(stimuli, kernel, ds_pairs):
         s.append(
             kernel([z_0, z_1, x_batch[2]])
         )
-    s = tf.concat(s, axis=0)
+
+    # Concatenate along pairs dimension (i.e., the last dimension).
+    s = tf.concat(s, axis=-1)
     return s

@@ -226,6 +226,7 @@ class Kernel(GroupLevel):
 
         # Compute distance between query and references.
         dist_qr = self.distance([z_0, z_1, attention])
+
         # Compute similarity.
         sim_qr = self.similarity(dist_qr)
         return sim_qr

@@ -28,7 +28,7 @@ def rank_2g_mle_determ():
     n_stimuli = 3
     n_dim = 2
     n_group = 2
-    embedding = tf.keras.layers.Embedding(
+    embedding = psiz.keras.layers.EmbeddingDeterministic(
         n_stimuli+1, n_dim, mask_zero=True
     )
     embedding.build([None, None, None])

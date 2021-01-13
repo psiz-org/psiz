@@ -27,7 +27,7 @@ import psiz
 def ground_truth(n_stimuli, n_dim, similarity_func):
     """Return a ground truth embedding."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17, seed=4
@@ -87,7 +87,7 @@ def build_model(n_stimuli, n_dim, similarity_func):
 
     """
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
@@ -139,9 +139,11 @@ def test_rate_1g_mle_execution(similarity_func):
     agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
 
-    simmat_true = psiz.utils.pairwise_similarity(
-        model_true.stimuli, model_true.kernel, ds_pairs
-    ).numpy()
+    simmat_true = np.squeeze(
+        psiz.utils.pairwise_similarity(
+            model_true.stimuli, model_true.kernel, ds_pairs
+        ).numpy()
+    )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
@@ -204,9 +206,11 @@ def test_rate_1g_mle_execution(similarity_func):
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = psiz.utils.pairwise_similarity(
-            model_inferred.stimuli, model_inferred.kernel, ds_pairs
-        ).numpy()
+        simmat_infer = np.squeeze(
+            psiz.utils.pairwise_similarity(
+                model_inferred.stimuli, model_inferred.kernel, ds_pairs
+            ).numpy()
+        )
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2
 

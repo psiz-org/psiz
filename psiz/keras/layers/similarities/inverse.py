@@ -71,7 +71,7 @@ class InverseSimilarity(tf.keras.layers.Layer):
         self.mu_initializer = tf.keras.initializers.get(tau_initializer)
         mu_trainable = self.trainable and self.fit_mu
         self.mu = self.add_weight(
-            shape=[], initializer=self.tau_int, trainable=mu_trainable,
+            shape=[], initializer=self.tau_initializer, trainable=mu_trainable,
             name="mu", dtype=K.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16)
         )

@@ -38,8 +38,9 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
     as:
         s(x,y) = (1 + (((d(x,y)^tau)/alpha))^(-(alpha + 1)/2),
     where x and y are n-dimensional vectors. The original Student-t
-    kernel proposed by van der Maaten [1] uses a L2 distane, tau=2, and
-    alpha=n_dim-1. By default, all variables are fit to the data.
+    kernel proposed by van der Maaten [1] uses a L2 distance (which is
+    governed by the distance kernel), tau=2, and alpha=n_dim-1. By
+    default, all variables are fit to the data.
 
     References:
     [1] van der Maaten, L., & Weinberger, K. (2012, Sept). Stochastic
@@ -50,13 +51,11 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, n_dim=None, fit_tau=True, fit_alpha=True,
+            self, fit_tau=True, fit_alpha=True,
             tau_initializer=None, alpha_initializer=None, **kwargs):
         """Initialize.
 
         Arguments:
-            n_dim:  Integer indicating the dimensionality of the
-                embedding.
             fit_tau (optional): Boolean indicating if variable is
                 trainable.
             fit_alpha (optional): Boolean indicating if variable is
@@ -64,8 +63,6 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
 
         """
         super(StudentsTSimilarity, self).__init__(**kwargs)
-
-        self.n_dim = n_dim
 
         self.fit_tau = fit_tau
         if tau_initializer is None:
@@ -80,9 +77,7 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
 
         self.fit_alpha = fit_alpha
         if alpha_initializer is None:
-            alpha_initializer = tf.random_uniform_initializer(
-                np.max((1, self.n_dim - 2.)), self.n_dim + 2.
-            )
+            alpha_initializer = tf.random_uniform_initializer(1., 10.)
         self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
         alpha_trainable = self.trainable and self.fit_alpha
         self.alpha = self.add_weight(

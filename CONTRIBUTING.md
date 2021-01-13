@@ -20,6 +20,7 @@ Please send in fixes and feature additions through Pull Requests.
 
 * PsiZ uses `pytest` for testing and `pytest-cov` for coverage analytics. These packages should be installed separtely by the user.
 * Tests that take more than a few seconds are marked as `slow` and can be skipped by running `pytest -m "not slow"`.
+* A coverage report can be generated using `pytest --cov`
 * All pytest markers must be registered, unregistered markers will generate an error.
 
 # Additional Guidance

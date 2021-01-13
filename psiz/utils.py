@@ -644,3 +644,30 @@ def pairwise_index_dataset(
         batch_size, drop_remainder=False
     )
     return ds, ds_info
+
+
+def pairwise_similarity(stimuli, kernel, ds_pairs):
+    """Return the similarity between stimulus pairs.
+
+    Arguments:
+        stimuli: A psiz.keras.layers.Stimuli object.
+        kernel: A psiz.keras.layers.Kernel object.
+        ds_pairs: A TF dataset object that yields a 3-tuple composed
+            of stimulus index i, sitmulus index j, and group
+            membership indices.
+
+    Returns:
+        s: A tf.Tensor of similarities between stimulus i and stimulus
+            j (using the requested group-level parameters from the
+            stimuli layer and the kernel layer).
+
+    """
+    s = []
+    for x_batch in ds_pairs:
+        z_0 = stimuli([x_batch[0], x_batch[2]])
+        z_1 = stimuli([x_batch[1], x_batch[2]])
+        s.append(
+            kernel([z_0, z_1, x_batch[2]])
+        )
+    s = tf.concat(s, axis=0)
+    return s

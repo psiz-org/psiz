@@ -107,19 +107,6 @@ def build_model(n_stimuli, n_dim, similarity_func):
     return model
 
 
-def evaluate_pairs(stimuli, kernel, ds_pairs):
-    """Evaluate similarity pairs."""
-    simmat_unr = []
-    for x_batch in ds_pairs:
-        z_0 = stimuli([x_batch[0], x_batch[2]])
-        z_1 = stimuli([x_batch[1], x_batch[2]])
-        simmat_unr.append(
-            kernel([z_0, z_1, x_batch[2]])
-        )
-    simmat_unr = tf.concat(simmat_unr, axis=0)
-    return simmat_unr
-
-
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "similarity_func",
@@ -152,7 +139,7 @@ def test_rate_1g_mle_execution(similarity_func):
     agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
 
-    simmat_true = evaluate_pairs(
+    simmat_true = psiz.utils.pairwise_similarity(
         model_true.stimuli, model_true.kernel, ds_pairs
     ).numpy()
 
@@ -217,7 +204,7 @@ def test_rate_1g_mle_execution(similarity_func):
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = evaluate_pairs(
+        simmat_infer = psiz.utils.pairwise_similarity(
             model_inferred.stimuli, model_inferred.kernel, ds_pairs
         ).numpy()
         rho, _ = pearsonr(simmat_true, simmat_infer)

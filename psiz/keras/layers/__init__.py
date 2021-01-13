@@ -29,11 +29,12 @@ from psiz.keras.layers.kernel import GroupAttentionVariational
 from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.sort import SortBehavior
-from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
+from psiz.keras.layers.embeddings.deterministic import EmbeddingDeterministic
+from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
 from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
 from psiz.keras.layers.embeddings.logit_normal_diag import EmbeddingLogitNormalDiag
-from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag
-from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
+from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
 from psiz.keras.layers.embeddings.shared import EmbeddingShared
+from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag
 from psiz.keras.layers.embeddings.variational import EmbeddingVariational

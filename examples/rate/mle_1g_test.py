@@ -52,17 +52,9 @@ import pandas as pd
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-#Questions:
-#How is the ground truth model made without data?
-#What do the proxy lines means?
-#What is the definition of a docket?
-#How indetailed would we have to know everything in order to be good at/understand this?
-#Do the features come fromt the Proxy object, compile_kwargs variabele, or something else?
-######
-#When you call the model you are infering the embedding? So all the similarity functions, kernanals, and behavior functionalities happen in this function
 import pickle
-def main():
-    """Run script."""        
+def main(**trainable_parameters_kwargs):
+    """Run script.""" 
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
@@ -98,35 +90,11 @@ def main():
     data_values = pd.concat(data["data"])
     #data_values = data_values.iloc[:100]
     data_values.loc[:,["odor_1st", "odor_2nd"]] -= 1
-    
-    #steps:
-    #Make new exhaustive docket: takes in dataframe(real_data), subtract one from first two columns, then extract those columns, then pass to rate docket class
-    #keep ds_docket lines
-    #create output  from response column
-    #then run rat observations line
-    #Get rid of the loop around line 158
-    #comment out tensor board for now
-    #Get rid of chunck of code around lines 216
-    ############################################
 
     docket = exhaustive_docket_real_data(data_values)
     ds_docket = docket.as_dataset().batch(
         batch_size=batch_size, drop_remainder=False
     )
-    
-#     # Simulate noise-free similarity judgments.
-#     output = model_true.predict(ds_docket) #similarity judgement model; predicts how similar the data values are
-#     print(
-#         'Observed Ratings\n'
-#         '    min: {0:.2f}'
-#         '    mean: {1:.2f}'
-#         '    max: {2:.2f}'.format(
-#             np.min(output),
-#             np.mean(output),
-#             np.max(output)
-#         )
-#     )
-
 
     #our ouptput should just be the response column 
     #create observations based on stimulus set
@@ -148,23 +116,11 @@ def main():
         ]
     }
     
-    # Use Tensorboard callback.
-    #this tensor board helps to visualize the models along with its metrics
-    #comment out tensor flow board for now
-#     fp_board_frame = fp_board / Path('restart_{0}'.format(i_restart))
-#     cb_board = psiz.keras.callbacks.TensorBoardRe(
-#         log_dir=fp_board_frame, histogram_freq=0,
-#         write_graph=False, write_images=False, update_freq='epoch',
-#         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
-#         )
-#         callbacks = [cb_board]
-    
     columnOne = data_values["odor_1st"].unique()
     columnTwo = data_values["odor_2nd"].unique()
     stimuli = columnOne + columnTwo
-    model = build_model(len(stimuli), n_dim)
+    model = build_model(len(stimuli), n_dim, **trainable_parameters_kwargs)
 
-    #we commented out callbacks = callbacks
     # Infer embedding.
     model.compile(**compile_kwargs)
     history = model.fit(
@@ -177,14 +133,6 @@ def main():
     )
     train_mse = train_metrics['mse']
 
-#Not sure if we need 183 through 200
-#     r2 = psiz.utils.matrix_comparison(
-#         simmat_infer, simmat_true, score='r2' 
-#     )
-#     print(
-#         '    n_obs: {0:4d} | train_mse: {1:.6f} | '
-#         'Correlation (R^2): {2:.2f}'.format(obs.n_trial, train_mse, r2)
-#     )
     print(
             'Inferred parameters\n'
             '    sigmoid lower bound: {0:.2f}'
@@ -206,7 +154,7 @@ def exhaustive_docket_real_data(data):
     
     return psiz.trials.RateDocket(data.values)
 
-def build_model(n_stimuli, n_dim):
+def build_model(n_stimuli, n_dim, **trainable_parameters_kwargs):
     """Build a model to use for inference."""
     stimuli = psiz.keras.layers.Stimuli(
         embedding=tf.keras.layers.Embedding(
@@ -217,10 +165,12 @@ def build_model(n_stimuli, n_dim):
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=True,
+            trainable=trainable_parameters_kwargs['rho_trainable'],
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=True, fit_gamma=True, fit_beta=True,
+            fit_tau=trainable_parameters_kwargs['tau_trainable'], 
+            fit_gamma=trainable_parameters_kwargs['gamma_trainable'],
+            fit_beta=trainable_parameters_kwargs['beta_trainable'],
             beta_initializer=tf.keras.initializers.Constant(3.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
@@ -232,7 +182,6 @@ def build_model(n_stimuli, n_dim):
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
     return model
-
 
 def plot_restart(fig, proxy_true, proxy_inferred, r2):
     """Plot frame."""

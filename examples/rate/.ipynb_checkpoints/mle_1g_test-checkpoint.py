@@ -53,12 +53,12 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 import pickle
-def main():
-    """Run script."""        
+def main(**trainable_parameters_kwargs):
+    """Run script.""" 
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
-    #n_stimuli = 25
+    n_stimuli = 25
     n_dim = 2
     n_restart = 1
     epochs = 10000
@@ -86,16 +86,15 @@ def main():
     #start of testing:
     with open('DMTS_8odors_5acids_allMice_raw_PerceptualData_forRick_122319.pkl', 'rb') as f:
         data = pickle.load(f)
-    
+        
     data_values = pd.concat(data["data"])
     #data_values = data_values.iloc[:100]
-    #data_values.loc[:,["odor_1st", "odor_2nd"]] -=1
+    data_values.loc[:,["odor_1st", "odor_2nd"]] -= 1
 
     docket = exhaustive_docket_real_data(data_values)
     ds_docket = docket.as_dataset().batch(
         batch_size=batch_size, drop_remainder=False
     )
-
 
     #our ouptput should just be the response column 
     #create observations based on stimulus set
@@ -117,29 +116,18 @@ def main():
         ]
     }
     
-    # Use Tensorboard callback.
-    #this tensor board helps to visualize the models along with its metrics
-    #comment out tensor flow board for now
-#     fp_board_frame = fp_board / Path('restart_{0}'.format(i_restart))
-#     cb_board = psiz.keras.callbacks.TensorBoardRe(
-#         log_dir=fp_board_frame, histogram_freq=0,
-#         write_graph=False, write_images=False, update_freq='epoch',
-#         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
-#         )
-#         callbacks = [cb_board]
-    
     columnOne = data_values["odor_1st"].unique()
     columnTwo = data_values["odor_2nd"].unique()
     stimuli = columnOne + columnTwo
-    model = build_model(len(stimuli), n_dim)
+    model = build_model(len(stimuli), n_dim, **trainable_parameters_kwargs)
 
-    #we commented out callbacks = callbacks
     # Infer embedding.
     model.compile(**compile_kwargs)
     history = model.fit(
         ds_obs_train, epochs=epochs, verbose=0
     )
 
+    # train_mse = history.history['mse'][0]
     train_metrics = model.evaluate(
         ds_obs_train, verbose=0, return_dict=True
     )
@@ -163,23 +151,26 @@ def main():
 
 def exhaustive_docket_real_data(data):
     data = data[["odor_1st", "odor_2nd"]]
+    
     return psiz.trials.RateDocket(data.values)
 
-def build_model(n_stimuli, n_dim):
+def build_model(n_stimuli, n_dim, **trainable_parameters_kwargs):
     """Build a model to use for inference."""
     stimuli = psiz.keras.layers.Stimuli(
         embedding=tf.keras.layers.Embedding(
-            n_stimuli, n_dim, mask_zero=True
+            n_stimuli+1, n_dim, mask_zero=True
         )
     )
 
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            trainable=trainable_parameters_kwargs['rho_trainable'],
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=True,
+            fit_tau=trainable_parameters_kwargs['tau_trainable'], 
+            fit_gamma=trainable_parameters_kwargs['gamma_trainable'],
+            fit_beta=trainable_parameters_kwargs['beta_trainable'],
             beta_initializer=tf.keras.initializers.Constant(3.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
@@ -191,7 +182,6 @@ def build_model(n_stimuli, n_dim):
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
     return model
-
 
 def plot_restart(fig, proxy_true, proxy_inferred, r2):
     """Plot frame."""

@@ -1,0 +1,2 @@
+model_checkpoint_path: "only_beta_true_tf"
+all_model_checkpoint_paths: "only_beta_true_tf"

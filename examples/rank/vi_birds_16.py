@@ -41,9 +41,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-# Modify the following to control GPU visibility.
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -85,9 +85,19 @@ def main():
         )
     )
 
-    # Build model and wrap in Proxy.
+    # Convert observations to TF dataset.
+    ds_obs_train = obs_train.as_dataset().shuffle(
+        buffer_size=obs_train.n_trial, reshuffle_each_iteration=True
+    ).batch(batch_size, drop_remainder=False)
+    ds_obs_val = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
+    ds_obs_test = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
+
+    # Build VI model.
     model = build_model(catalog.n_stimuli, n_dim, obs_train.n_trial)
-    proxy = psiz.models.Proxy(model=model)
 
     # Compile settings.
     compile_kwargs = {
@@ -104,27 +114,28 @@ def main():
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
-    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-        'loss', patience=100, mode='min', restore_best_weights=False,
-        verbose=1
-    )
-    callbacks = [cb_board, cb_early]
+    callbacks = [cb_board]
 
-    # Infer embedding.
-    restart_record = proxy.fit(
-        obs_train, validation_data=obs_val, epochs=epochs,
-        batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-        monitor='val_loss', verbose=2, compile_kwargs=compile_kwargs
+    # Infer embedding with restarts.
+    restarter = psiz.restart.Restarter(
+        model, compile_kwargs=compile_kwargs, monitor='val_loss',
+        n_restart=n_restart
     )
+    restart_record = restarter.fit(
+        x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
+        callbacks=callbacks, verbose=0
+    )
+    model = restarter.model
 
     train_loss = restart_record.record['loss'][0]
     train_time = restart_record.record['ms_per_epoch'][0]
     val_loss = restart_record.record['val_loss'][0]
 
+    # Evaluate test set by taking multiple samples.
     tf.keras.backend.clear_session()
-    proxy.model.n_sample = 100
-    proxy.compile(**compile_kwargs)
-    test_metrics = proxy.evaluate(obs_test, verbose=0, return_dict=True)
+    model.n_sample = 100
+    model.compile(**compile_kwargs)
+    test_metrics = model.evaluate(ds_obs_test, verbose=0, return_dict=True)
     test_loss = test_metrics['loss']
     print(
         '    train_loss: {0:.2f} | val_loss: {1:.2f} | '
@@ -134,7 +145,7 @@ def main():
     # Create visual.
     fig = plt.figure(figsize=(6.5, 4), dpi=200)
     draw_figure(
-        fig, proxy.model, catalog
+        fig, model, catalog
     )
     fname = fp_example / Path('visual.tiff')
     plt.savefig(
@@ -327,7 +338,6 @@ def unpack_mvn(dist, group_idx):
     cov = diag_to_full_cov(v)
 
     return loc, cov
-
 
 
 if __name__ == "__main__":

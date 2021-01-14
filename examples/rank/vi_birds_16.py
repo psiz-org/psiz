@@ -80,7 +80,8 @@ def main():
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
     print(
-        '\nData Split\n  obs_train: {0}\n  obs_val: {1}\n  obs_test: {2}'.format(
+        '\nData Split\n  obs_train:'
+        ' {0}\n  obs_val: {1}\n  obs_test: {2}'.format(
             obs_train.n_trial, obs_val.n_trial, obs_test.n_trial
         )
     )
@@ -243,7 +244,7 @@ def draw_figure(fig, model, catalog):
 
     z_max = 1.3 * np.max(np.abs(loc))
     z_limits = [-z_max, z_max]
-    
+
     # Draw stimuli 95% probability mass ellipses.
     exemplar_color_array = class_color_array[squeeze_indices(class_arr)]
     plot_bvn(

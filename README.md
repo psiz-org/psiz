@@ -36,28 +36,43 @@ The following minimalist example uses a `Rank` psychological embedding to model 
 ```python
 import psiz
 
-# Load observations from a predefined dataset.
+# Load observations (and corresponding catalog) for a predefined dataset.
 (obs, catalog) = psiz.datasets.load('birds-16')
-# Create a TensorFlow embedding layer for the stimuli.
+n_stimuli = catalog.n_stimuli
+
+# Create a 2-dimensional embedding layer for the stimuli.
 # NOTE: Since we will use masking, we increment n_stimuli by one.
-stimuli = tf.keras.layers.Embedding(
-    catalog.n_stimuli+1, mask_zero=True
+n_dim = 2
+stimuli = psiz.keras.layers.Stimuli(
+    embedding=psiz.keras.layers.EmbeddingDeterministic(
+        catalog.n_stimuli+1, n_dim, mask_zero=True
+    )
 )
-# Use a default kernel (exponential with p-norm).
+
+# Use a default similarity kernel (exponential with Euclidean distance).
 kernel = psiz.keras.layers.Kernel()
+
 # Create a Rank model that subclasses TensorFlow Keras Model.
 model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
-# Wrap the model in convenient proxy class.
-emb = psiz.models.Proxy(model)
+
 # Compile the model.
-emb.compile()
-# Fit the psychological embedding using observations.
-emb.fit(obs)
-# Optionally save the fitted model.
-emb.save('my_embedding')
+model.compile(
+    'loss': tf.keras.losses.CategoricalCrossentropy(),
+    'optimizer': tf.keras.optimizers.Adam(lr=.001),
+    'weighted_metrics': [
+        tf.keras.metrics.CategoricalCrossentropy(name='cce')
+    ]
+)
+
+# Fit the psychological embedding using all observations.
+model.fit(obs.as_dataset(), epochs=10)
+
+# Save and load the fitted model.
+model.save('my_embedding')
+reconstructed_model = tf.keras.models.load_model('my_embedding')
 ```
 
-Check out the [examples](examples/) directory to explore examples that take advantage of the various features that PsiZ offers.
+Check out the [examples](examples/) directory to explore other ways to take advantage of the various features that PsiZ offers.
 
 
 ## Trials and Observations

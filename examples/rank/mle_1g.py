@@ -40,9 +40,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-# Modify the following to control GPU visibility.
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -71,6 +71,12 @@ def main():
 
     model_true = ground_truth(n_stimuli, n_dim)
 
+    simmat_true = np.squeeze(
+        psiz.utils.pairwise_similarity(
+            model_true.stimuli, model_true.kernel, ds_pairs
+        ).numpy()
+    )
+
     # Generate a random docket of trials.
     generator = psiz.generators.RandomRank(
         n_stimuli, n_reference=8, n_select=2
@@ -80,12 +86,6 @@ def main():
     # Simulate similarity judgments.
     agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
-
-    simmat_true = np.squeeze(
-        psiz.utils.pairwise_similarity(
-            model_true.stimuli, model_true.kernel, ds_pairs
-        ).numpy()
-    )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
@@ -208,7 +208,7 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17
@@ -244,7 +244,7 @@ def build_model(n_stimuli, n_dim):
 
     """
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )

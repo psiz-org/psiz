@@ -40,12 +40,17 @@ Example output:
 """
 
 import numpy as np
+from scipy.stats import pearsonr
 import tensorflow as tf
 
 import psiz
 
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
+
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -59,7 +64,7 @@ def main():
     n_trial = 2000
     batch_size = 100
 
-    proxy_true = ground_truth(n_stimuli, n_dim, n_group)
+    model_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
     generator = psiz.generators.RandomRank(
@@ -68,9 +73,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.agents.RankAgent(proxy_true.model, group_id=0)
-    agent_interm = psiz.agents.RankAgent(proxy_true.model, group_id=1)
-    agent_expert = psiz.agents.RankAgent(proxy_true.model, group_id=2)
+    agent_novice = psiz.agents.RankAgent(model_true, group_id=0)
+    agent_interm = psiz.agents.RankAgent(model_true, group_id=1)
+    agent_expert = psiz.agents.RankAgent(model_true, group_id=2)
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -80,6 +85,16 @@ def main():
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
+    # Convert to TF dataset.
+    ds_obs_train = obs_train.as_dataset().shuffle(
+        buffer_size=obs_train.n_trial, reshuffle_each_iteration=True
+    ).batch(batch_size, drop_remainder=False)
+    ds_obs_val = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
+    ds_obs_test = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
@@ -95,63 +110,47 @@ def main():
         ]
     }
 
-    model = build_model(n_stimuli, n_dim, n_group)
-    proxy_inferred = psiz.models.Proxy(model=model)
+    model_inferred = build_model(n_stimuli, n_dim, n_group)
 
-    # Infer a shared embedding with group-specific attention weights.
-    restart_record = proxy_inferred.fit(
-        obs_train, validation_data=obs_val, epochs=epochs,
-        batch_size=batch_size, callbacks=callbacks, monitor='val_cce',
-        n_restart=n_restart, verbose=1, compile_kwargs=compile_kwargs
+    # Infer embedding with restarts.
+    restarter = psiz.restart.Restarter(
+        model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
+        n_restart=n_restart
     )
+    restart_record = restarter.fit(
+        x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
+        callbacks=callbacks, verbose=0
+    )
+    model_inferred = restarter.model
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
-    def truth_sim_func0(z_q, z_ref):
-        return proxy_true.similarity(z_q, z_ref, group_id=0)
-
-    def truth_sim_func1(z_q, z_ref):
-        return proxy_true.similarity(z_q, z_ref, group_id=1)
-
-    def truth_sim_func2(z_q, z_ref):
-        return proxy_true.similarity(z_q, z_ref, group_id=2)
-
     simmat_truth = (
-        psiz.utils.pairwise_matrix(truth_sim_func0, proxy_true.z[0]),
-        psiz.utils.pairwise_matrix(truth_sim_func1, proxy_true.z[0]),
-        psiz.utils.pairwise_matrix(truth_sim_func2, proxy_true.z[0])
+        model_similarity(model_true, group_idx=[0]),
+        model_similarity(model_true, group_idx=[1]),
+        model_similarity(model_true, group_idx=[2])
     )
 
-    def infer_sim_func0(z_q, z_ref):
-        return proxy_inferred.similarity(z_q, z_ref, group_id=0)
-
-    def infer_sim_func1(z_q, z_ref):
-        return proxy_inferred.similarity(z_q, z_ref, group_id=1)
-
-    def infer_sim_func2(z_q, z_ref):
-        return proxy_inferred.similarity(z_q, z_ref, group_id=2)
-
-    simmat_infer = (
-        psiz.utils.pairwise_matrix(infer_sim_func0, proxy_inferred.z[0]),
-        psiz.utils.pairwise_matrix(infer_sim_func1, proxy_inferred.z[0]),
-        psiz.utils.pairwise_matrix(infer_sim_func2, proxy_inferred.z[0])
+    simmat_inferred = (
+        model_similarity(model_inferred, group_idx=[0]),
+        model_similarity(model_inferred, group_idx=[1]),
+        model_similarity(model_inferred, group_idx=[2])
     )
 
     r_squared = np.empty((n_group, n_group))
     for i_truth in range(n_group):
         for j_infer in range(n_group):
-            r_squared[i_truth, j_infer] = psiz.utils.matrix_comparison(
-                simmat_truth[i_truth], simmat_infer[j_infer],
-                score='r2'
-            )
+            rho, _ = pearsonr(simmat_truth[i_truth], simmat_inferred[j_infer])
+            r_squared[i_truth, j_infer] = rho**2
 
     # Display attention weights.
     # Permute inferred dimensions to best match ground truth.
-    idx_sorted = np.argsort(-proxy_inferred.w[0, :])
-    attention_weight = proxy_inferred.w[:, idx_sorted]
+    attention_weight = model_inferred.kernel.attention.embeddings.numpy()
+    idx_sorted = np.argsort(-attention_weight[0, :])
+    attention_weight = attention_weight[:, idx_sorted]
     group_labels = ["Novice", "Intermediate", "Expert"]
     print("\n    Attention weights:")
-    for i_group in range(proxy_inferred.model.kernel.n_group):
+    for i_group in range(attention_weight.shape[0]):
         print("    {0:>12} | {1}".format(
             group_labels[i_group],
             np.array2string(
@@ -180,9 +179,11 @@ def main():
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
+            embeddings_initializer=tf.keras.initializers.RandomNormal(
+                stddev=.17
+            )
         )
     )
     kernel = psiz.keras.layers.AttentionKernel(
@@ -208,8 +209,8 @@ def ground_truth(n_stimuli, n_dim, n_group):
         ))
     )
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
-    emb = psiz.models.Proxy(model=model)
-    return emb
+
+    return model
 
 
 def build_model(n_stimuli, n_dim, n_group):
@@ -225,7 +226,7 @@ def build_model(n_stimuli, n_dim, n_group):
 
     """
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
         )
     )
@@ -239,6 +240,19 @@ def build_model(n_stimuli, n_dim, n_group):
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
 
     return model
+
+
+def model_similarity(model, group_idx=[]):
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
+        model.stimuli.n_stimuli, mask_zero=True, group_idx=group_idx
+    )
+    simmat = np.squeeze(
+        psiz.utils.pairwise_similarity(
+            model.stimuli, model.kernel, ds_pairs
+        ).numpy()
+    )
+    return simmat
+
 
 if __name__ == "__main__":
     main()

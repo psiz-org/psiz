@@ -58,7 +58,7 @@ class NonNegNorm(constraints.Constraint):
             w / (
                 K.epsilon() + tf.pow(
                     tf.reduce_sum(w**self.p, axis=self.axis, keepdims=True),
-                    tf.divide(1, self.p)
+                    tf.divide(1.0, self.p)
                 )
             )
         )

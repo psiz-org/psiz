@@ -44,6 +44,7 @@ import psiz.keras.layers
 import psiz.trials
 
 
+# Proxy is DEPRECATED
 class Proxy(object):
     """Convenient proxy class for a psychological embedding model.
 

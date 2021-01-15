@@ -1,5 +1,7 @@
 # PsiZ: A Psychological Embedding Package
 
+WARNING: This package is pre-release and the API is not stable.
+
 ## What's in a name?
 
 The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.

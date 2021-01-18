@@ -305,26 +305,30 @@ def rotation_matrix(theta):
     ))
 
 
-def procrustes_2d(x, y, n_restart=10, scale=True, seed=None):
-    """Align two sets of coordinates using an affine transformation.
+def procrustes_2d(z0, z1, n_restart=10, scale=True, seed=None):
+    """Perform Procrustes superimposition.
+
+    Align two sets of coordinates using an affine transformation.
 
     Attempts to find the affine transformation (composed of a rotation
-    matrix `r` and a transformation vector `t`) for `y` such that
-    `y_affine` closely matches `x`. Closeness is measures using MSE.
+    matrix `r` and a transformation vector `t`) for `z1` such that
+    `z1_affine` closely matches `z0`. Closeness is measured using MSE.
 
-        y_affine = np.matmul(y, r) + t
+        z1_affine = np.matmul(z1, r) + t
 
     This algorithm only works with 2D coordinates (i.e., n_dim=2).
 
     Arguments:
-        x: The first set of points.
+        z0: The first set of points.
             shape = (n_point, n_dim)
-        y: The second set of points.
+        z1: The second set of points.
             shape = (n_point, n_dim)
         n_restart (optional): A scalar indicating the number of
             restarts for the optimization routine.
         scale (optional): Boolean indicating if scaling is permitted
-            in the affine transformation.
+            in the affine transformation. By default scaling is
+            allowed, generating a full Procrustes superimposition. Set
+            to false to yield a partial Procrustes superimposition.
         seed (optional): Seed for random number generator.
 
     Returns:
@@ -334,75 +338,178 @@ def procrustes_2d(x, y, n_restart=10, scale=True, seed=None):
             shape=(1, n_dim)
 
     """
+    # Settings
     n_dim = 2
+    flip_list_2d = [
+        [1, 1], [-1, 1], [1, -1], [-1, -1]
+    ]
+
+    # Center matrices.
+    z0 = z0 - np.mean(z0, axis=0, keepdims=True)
+    z1 = z1 - np.mean(z1, axis=0, keepdims=True)
+
+    # Scale for stability
+    stability_scaling = 10. / (np.max(z0) - np.min(z0))
+    z0 = stability_scaling * z0
+    z1 = stability_scaling * z1
 
     if seed is not None:
         np.random.seed(seed)
 
     def assemble_r_t(params):
-        # Assemble valid rotation matrix.
+        """Assemble.
+
+        Arguments
+            params:
+                trans_x: Translation in x.
+                trans_y: Translation in y.
+                s: Scaling factor.
+                r: Rotation matrix, in terms of theta radians.
+                f: Flip (reflection).
+
+        Returns:
+            fsr: Compined flip, scale, and rotation matrix.
+                shape=(2, 2)
+            t: A translation vector.
+                shape=(1, 2)
+
+        """
+        # Convert scale, rotation and flip parameters to matrices.
         s = params[3] * np.eye(n_dim)
         r = rotation_matrix(params[2])
-        r = np.matmul(s, r)
         f = np.array([[np.sign(params[4]), 0], [0, np.sign(params[5])]])
-        r = np.matmul(f, r)
 
-        # Assemble translation vector.
+        # Combined scale, rotation, and flip into one matrix.
+        fsr = np.matmul(f, np.matmul(s, r))
+
+        # Convert translation parameters to vector.
         t = np.array([params[0], params[1]])
         t = np.expand_dims(t, axis=0)
-        return r, t
+
+        return fsr, t
 
     # In order to avoid impossible rotation matrices, perform optimization
     # on rotation components separately (theta, scaling, mirror).
-    def objective_fn(params, x, y):
-        r, t = assemble_r_t(params)
-        # Apply affine transformation.
-        y_affine = np.matmul(y, r) + t
-        # loss = np.mean(np.sum((x - y_affine)**2, axis=1))  TODO
-        # Loss is defined as MAE, since MSE chases outliers and can result
-        # in rediculous solutions.
-        loss = np.mean(np.sum(np.abs(x - y_affine), axis=1))
+    def objective_fn(params, z0, z1):
+        if np.any(np.isnan(params)):
+            loss = -np.inf
+        else:
+            r, t = assemble_r_t(params)
+            # Apply affine transformation.
+            z1_affine = np.matmul(z1, r) + t
+            loss = np.mean(
+                    np.sum(
+                        (z0 - z1_affine)**2, axis=1
+                    )
+            )
+            # Could also define loass as MAE, since MSE may chase
+            # outliers.
+            # loss = np.mean(np.sum(np.abs(z0 - z1_affine), axis=1))
+
+        # print(
+        #     'loss: {3} | {0:.2g} {1:.2g} {2:.2g}'.format(
+        #         params[0], params[1], params[2], loss
+        #     )
+        # )
+
         return loss
 
     # t_0, t_1, theta, scaling, flip
     params_best = np.array((0., 0., 0., 1.))
     loss_best = np.inf
     for _ in range(n_restart):
-        (x0, y0) = np.random.rand(2) - .5
-        theta0 = 2 * np.pi * np.random.rand(1)[0]
-        if scale:
-            s0 = np.random.rand(1)[0] + .5
-            s_bnds = (0., None)
-        else:
-            s0 = 1
-            s_bnds = (1., 1.)
-        # Perform a flip on some restarts.
-        if np.random.rand(1) < .5:
-            fx0 = -.1
-        else:
-            fx0 = .1
-        if np.random.rand(1) < .5:
-            fy0 = -.1
-        else:
-            fy0 = .1
-        params0 = np.array((x0, y0, theta0, s0, fx0, fy0))
-        bnds = (
-            (None, None),
-            (None, None),
-            (0., 2*np.pi),
-            s_bnds,
-            (-.1, .1),
-            (-.1, .1)
-        )
-        res = minimize(objective_fn, params0, args=(x, y), bounds=bnds)
-        params_candidate = res.x
-        loss_candidate = res.fun
-        if loss_candidate < loss_best:
-            loss_best = loss_candidate
-            params_best = params_candidate
+        # Perform a restart for each possible axis flip combination.
+        for flip in flip_list_2d:
+            # Make initial translation vector one that aligns the two
+            # centroids.
+            (tr_x0, tr_y0) = np.mean(z1, axis=0) - np.mean(z0, axis=0)
+            theta0 = 2 * np.pi * np.random.rand(1)[0]
+            if scale:
+                s0 = np.random.rand(1)[0] + .5
+                s_bnds = (0., None)
+            else:
+                s0 = 1
+                s_bnds = (1., 1.)
+            fx0 = flip[0]
+            fy0 = flip[1]
+
+            params0 = np.array((tr_x0, tr_y0, theta0, s0, fx0, fy0))
+            bnds = (
+                (None, None),
+                (None, None),
+                (0., 2.01 * np.pi),
+                s_bnds,
+                (fx0, fx0),
+                (fy0, fy0)
+            )
+            res = minimize(
+                objective_fn, params0, args=(z0, z1), bounds=bnds
+                # method='SLSQP'
+                # method='L-BFGS-B'
+                )
+            params_candidate = res.x
+            loss_candidate = res.fun
+            if loss_candidate < loss_best:
+                loss_best = loss_candidate
+                params_best = params_candidate
 
     r, t = assemble_r_t(params_best)
-    return r, t
+    return r, t/stability_scaling
+
+
+def procrustes_rotation(z0, z1, scale=True):
+    """Perform Procrustes superimposition.
+
+    Align two sets of coordinates (`z0` and `z1`) by finding the
+    optimal rotation matrix `r` that rotates `z0` into `z1`. Both `z0`
+    and `z1` are centered first.
+
+    `z0_rot = z0 @ r`
+
+    Arguments:
+        z0: The first set of points.
+            shape = (n_point, n_dim)
+        z1: The second set of points. The data matrices `z0` and `z1`
+            must have the same shape.
+            shape = (n_point, n_dim)
+        n_restart (optional): A scalar indicating the number of
+            restarts for the optimization routine.
+        scale (optional): Boolean indicating if scaling is permitted
+            in the affine transformation. By default scaling is
+            allowed, generating a full Procrustes superimposition. Set
+            to false to yield a partial Procrustes superimposition.
+
+    Returns:
+        r: A rotation matrix that operates on the *centered* data.
+            shape=(n_dim, n_dim)
+
+    """
+    n_dim = z0.shape[1]
+
+    # Ensure data matrices are centered.
+    z0 = z0 - np.mean(z0, axis=0, keepdims=True)
+    z1 = z1 - np.mean(z1, axis=0, keepdims=True)
+
+    # Compute cross-covariance matrix.
+    m = np.matmul(np.transpose(z0), z1)
+
+    # Compute SVD of covariance matrix.
+    # NOTE: h = u @ np.diag(s) @ vh = (u * s) @ vh
+    u, s, vh = np.linalg.svd(m, hermitian=False)
+
+    # Aseemble rotation matrix (does not include scaling).
+    r = u @ vh
+
+    if scale:
+        # Determine scaling factor.
+        z0_rot = np.matmul(z0, r)
+        norm_z0 = np.sqrt(np.sum((z0_rot**2), axis=1))
+        norm_z1 = np.sqrt(np.sum((z1**2), axis=1))
+        scale_factor = norm_z1 / norm_z0
+        scale_factor = np.mean(scale_factor)
+        r = r @ (np.eye(n_dim) * scale_factor)
+
+    return r
 
 
 def choice_wo_replace(a, size, p):

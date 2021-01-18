@@ -34,6 +34,7 @@ import imageio
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import pearsonr
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -59,7 +60,7 @@ def main():
     n_restart = 1
     epochs = 1000
     batch_size = 128
-    n_frame = 1  # Set to 7 to observe convergence behavior.
+    n_frame = 7  # Set to 7 to observe convergence behavior.
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -88,8 +89,18 @@ def main():
     gray_array[:, 0:3] = .8
     color_array = np.vstack([gray_array, color_array])
 
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
+        n_stimuli, mask_zero=True
+    )
+
     model_true = ground_truth(n_stimuli, n_dim)
-    proxy_true = psiz.models.Proxy(model=model_true)
+
+    simmat_true = np.squeeze(
+        psiz.utils.pairwise_similarity(
+            model_true.stimuli, model_true.kernel, ds_pairs
+        ).numpy()
+    )
 
     # Generate a random docket of trials.
     generator = psiz.generators.RandomRank(
@@ -98,15 +109,19 @@ def main():
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.agents.RankAgent(proxy_true.model)
+    agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
-
-    simmat_true = psiz.utils.pairwise_matrix(
-        proxy_true.similarity, proxy_true.z[0]
-    )
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
+
+    # Convert observations to TF dataset.
+    ds_obs_val = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
+    ds_obs_test = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -131,6 +146,9 @@ def main():
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
+        ds_obs_round_train = obs_round_train.as_dataset().shuffle(
+            buffer_size=obs_round_train.n_trial, reshuffle_each_iteration=True
+        ).batch(batch_size, drop_remainder=False)
         print(
             '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
         )
@@ -149,17 +167,22 @@ def main():
         callbacks = [cb_board, cb_early]
 
         # Define model.
-        model = build_model(n_stimuli, n_dim, n_group, obs_round_train.n_trial)
-        proxy_inferred = psiz.models.Proxy(model=model)
-
-        # Infer embedding.
-        restart_record = proxy_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=epochs,
-            batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='loss', verbose=2, compile_kwargs=compile_kwargs
+        model_inferred = build_model(
+            n_stimuli, n_dim, n_group, obs_round_train.n_trial
         )
 
-        dist = proxy_inferred.model.stimuli.embedding.prior.embeddings.distribution
+        # Infer embedding with restarts.
+        restarter = psiz.restart.Restarter(
+            model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
+            n_restart=n_restart
+        )
+        restart_record = restarter.fit(
+            x=ds_obs_round_train, validation_data=ds_obs_val, epochs=epochs,
+            callbacks=callbacks, verbose=0
+        )
+        model_inferred = restarter.model
+
+        dist = model_inferred.stimuli.embedding.prior.embeddings.distribution
         print('    Inferred prior scale: {0:.4f}'.format(
             dist.distribution.distribution.scale[0, 0]
         ))
@@ -172,21 +195,24 @@ def main():
         val_loss[i_frame] = restart_record.record['val_loss'][0]
 
         tf.keras.backend.clear_session()
-        proxy_inferred.model.n_sample = 100
-        proxy_inferred.compile(**compile_kwargs)
-        test_metrics = proxy_inferred.evaluate(
-            obs_test, verbose=0, return_dict=True
+        model_inferred.n_sample = 100
+        model_inferred.compile(**compile_kwargs)
+        test_metrics = model_inferred.evaluate(
+            ds_obs_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = psiz.utils.pairwise_matrix(
-            proxy_inferred.similarity, proxy_inferred.z[0]
+        simmat_infer = np.mean(
+            psiz.utils.pairwise_similarity(
+                model_inferred.stimuli, model_inferred.kernel, ds_pairs
+            ).numpy(), axis=0
         )
-        r2[i_frame] = psiz.utils.matrix_comparison(
-            simmat_infer, simmat_true, score='r2'
-        )
+
+        rho, _ = pearsonr(simmat_true, simmat_infer)
+        r2[i_frame] = rho**2
+
         print(
             '    n_obs: {0:4d} | train_loss: {1:.2f} | '
             'val_loss: {2:.2f} | test_loss: {3:.2f} | '
@@ -199,8 +225,8 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
-            proxy_inferred, color_array, train_time
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
+            model_inferred, color_array, train_time
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -217,11 +243,15 @@ def main():
 
 
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true, proxy_inferred,
-        color_array, train_time):
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
+        model_inferred, color_array, train_time):
     """Plot frame."""
     # Settings.
     s = 10
+
+    z_true = model_true.stimuli.embeddings.numpy()[0]
+    if model_true.stimuli.mask_zero:
+        z_true = z_true[1:]
 
     gs = fig0.add_gridspec(2, 2)
 
@@ -237,29 +267,34 @@ def plot_frame(
     # Plot embeddings.
     f0_ax1 = fig0.add_subplot(gs[0, 1])
     # Determine embedding limits.
-    z_max = 1.3 * np.max(np.abs(proxy_true.z))
+    z_max = 1.3 * np.max(np.abs(z_true))
     z_limits = [-z_max, z_max]
 
     # Apply and plot Procrustes affine transformation of posterior.
-    dist = proxy_inferred.model.stimuli.embeddings
+    dist = model_inferred.stimuli.embeddings
     group_idx = 0
     loc, cov = unpack_mvn(dist, group_idx)
-    if proxy_inferred.model.stimuli.mask_zero:
+    if model_inferred.stimuli.mask_zero:
         # Drop placeholder stimulus.
         loc = loc[1:]
         cov = cov[1:]
 
-    r, t = psiz.utils.procrustes_2d(
-        proxy_true.z[0], loc, scale=False, n_restart=30
+    # Center points.
+    loc = loc - np.mean(loc, axis=0, keepdims=True)
+    z_true = z_true - np.mean(z_true, axis=0, keepdims=True)
+
+    r = psiz.utils.procrustes_rotation(
+        loc, z_true, scale=False
     )
-    loc, cov = apply_affine(loc, cov, r, t)
+
+    loc, cov = apply_affine(loc, cov, r)
     # r = 1.960  # 95%
     r = 2.576  # 99%
     plot_bvn(f0_ax1, loc, cov=cov, c=color_array, r=r, show_loc=False)
 
     # Plot true embedding.
     f0_ax1.scatter(
-        proxy_true.z[group_idx, :, 0], proxy_true.z[group_idx, :, 1],
+        z_true[:, 0], z_true[:, 1],
         s=s, c=color_array, marker='o', edgecolors='none', zorder=100
     )
     f0_ax1.set_xlim(z_limits)
@@ -396,7 +431,7 @@ def ground_truth(n_stimuli, n_dim):
     scale_request = .17
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=scale_request, seed=58
@@ -490,7 +525,7 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
     return model
 
 
-def apply_affine(loc, cov, r, t):
+def apply_affine(loc, cov, r=None, t=None):
     """Apply affine transformation to set of MVN."""
     n_dist = loc.shape[0]
     loc_a = copy.copy(loc)

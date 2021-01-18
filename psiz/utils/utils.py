@@ -16,9 +16,6 @@
 # ============================================================================
 """Module of utility functions.
 
-Classes:
-    ProgressBarRe: A progress bar displayed in the terminal.
-
 Functions:
     affine_mvn: Affine transformation of multivariate normal
         distribution.
@@ -30,7 +27,6 @@ Functions:
     rotation_matrix: Returns a two-dimensional rotation matrix.
     procrustes_2d: Attempt to allign two sets of 2D points by finding
         an affine transformation.
-    choice_wo_replace: Efficient sampling without replacement.
     standard_split: Standard 80-10-10 split of observations.
     pad_2d_array: Pad a 2D array with a value.
 
@@ -305,6 +301,7 @@ def rotation_matrix(theta):
     ))
 
 
+# DEPRECATED
 def procrustes_2d(z0, z1, n_restart=10, scale=True, seed=None):
     """Perform Procrustes superimposition.
 
@@ -457,103 +454,6 @@ def procrustes_2d(z0, z1, n_restart=10, scale=True, seed=None):
     return r, t/stability_scaling
 
 
-def procrustes_rotation(z0, z1, scale=True):
-    """Perform Procrustes superimposition.
-
-    Align two sets of coordinates (`z0` and `z1`) by finding the
-    optimal rotation matrix `r` that rotates `z0` into `z1`. Both `z0`
-    and `z1` are centered first.
-
-    `z0_rot = z0 @ r`
-
-    Arguments:
-        z0: The first set of points.
-            shape = (n_point, n_dim)
-        z1: The second set of points. The data matrices `z0` and `z1`
-            must have the same shape.
-            shape = (n_point, n_dim)
-        n_restart (optional): A scalar indicating the number of
-            restarts for the optimization routine.
-        scale (optional): Boolean indicating if scaling is permitted
-            in the affine transformation. By default scaling is
-            allowed, generating a full Procrustes superimposition. Set
-            to false to yield a partial Procrustes superimposition.
-
-    Returns:
-        r: A rotation matrix that operates on the *centered* data.
-            shape=(n_dim, n_dim)
-
-    """
-    n_dim = z0.shape[1]
-
-    # Ensure data matrices are centered.
-    z0 = z0 - np.mean(z0, axis=0, keepdims=True)
-    z1 = z1 - np.mean(z1, axis=0, keepdims=True)
-
-    # Compute cross-covariance matrix.
-    m = np.matmul(np.transpose(z0), z1)
-
-    # Compute SVD of covariance matrix.
-    # NOTE: h = u @ np.diag(s) @ vh = (u * s) @ vh
-    u, s, vh = np.linalg.svd(m, hermitian=False)
-
-    # Aseemble rotation matrix (does not include scaling).
-    r = u @ vh
-
-    if scale:
-        # Determine scaling factor.
-        z0_rot = np.matmul(z0, r)
-        norm_z0 = np.sqrt(np.sum((z0_rot**2), axis=1))
-        norm_z1 = np.sqrt(np.sum((z1**2), axis=1))
-        scale_factor = norm_z1 / norm_z0
-        scale_factor = np.mean(scale_factor)
-        r = r @ (np.eye(n_dim) * scale_factor)
-
-    return r
-
-
-def choice_wo_replace(a, size, p):
-    """Fast sampling without replacement.
-
-    Arguments:
-        a: An array indicating the eligable elements.
-        size: A tuple indicating the number of independent samples and
-            the number of draws (without replacement) for each sample.
-            The tuple is ordered such that
-            size = (n_sample, sample_size).
-        p: An array indicating the probabilites associated with drawing
-            a particular element. User provided probabilities are
-            already assumed to sum to one. Probability p[i] indicates
-            the probability of drawing index a[i].
-
-    Returns:
-        result: A 2D array containing the drawn elements.
-            shape=(n_sample, sample_size)
-
-    See: https://medium.com/ibm-watson/
-        incredibly-fast-random-sampling-in-python-baf154bd836a
-
-    """
-    n_sample = size[0]
-    sample_size = size[1]
-
-    # Replicate probabilities as many times as `n_sample`
-    replicated_probabilities = np.tile(p, (n_sample, 1))
-
-    # Get random shifting numbers & scale them correctly.
-    random_shifts = np.random.random(replicated_probabilities.shape)
-    random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
-
-    # Shift by numbers and find largest (by finding the smallest of the
-    # negative).
-    shifted_probabilities = random_shifts - replicated_probabilities
-    samples = np.argpartition(
-        shifted_probabilities, sample_size, axis=1
-    )[:, :sample_size]
-
-    return a[samples]
-
-
 def standard_split(obs, shuffle=False, seed=None):
     """Creata a standard 80-10-10 split of the observations.
 
@@ -603,192 +503,6 @@ def pad_2d_array(arr, n_column, value=-1):
         pad_mat = value * np.ones((n_trial, n_pad), dtype=np.int32)
         arr = np.hstack((arr, pad_mat))
     return arr
-
-
-class ProgressBarRe(object):
-    """Display a progress bar in terminal."""
-
-    def __init__(
-            self, total, prefix='', decimals=1, length=100,
-            fill='█'):
-        """Initialize.
-
-        Arguments:
-            iteration: Integer indicating current iteration.
-            total: Integer indicating total iterations.
-            prefix (optional): String that is used as prefix.
-            suffix (optional): String that is used as suffix.
-            decimals (optional): Integer indicating a positive number
-                of decimals in percent complete.
-            length (optional): Integer indicating the character length
-                of the progress bar.
-            fill (optional): String indicating the bar fill character.
-
-        """
-        self.total = total
-        self.prefix = prefix
-        self.decimals = decimals
-        self.length = length
-        self.fill = fill
-        self.n_call = 0
-        self.start_s = 0
-        self.total_s = 0
-
-    def _start(self):
-        """Start timer."""
-        self.start_s = time.time()
-
-    def _stop(self):
-        """Stop time."""
-        self.total_s = time.time() - self.start_s
-
-    def update(self, iteration):
-        """Update progress bar to display current iteration."""
-        # Start time if this is the first call.
-        if self.n_call == 0:
-            self._start()
-        self.n_call = self.n_call + 1
-
-        percent = ("{0:." + str(self.decimals) + "f}").format(
-            100 * (iteration / float(self.total))
-        )
-
-        elapsed_time = time.time() - self.start_s
-        if iteration == 0:
-            time_per_iter = 0.0
-        else:
-            time_per_iter = elapsed_time / iteration
-
-        eta_s = np.round((self.total - iteration) * time_per_iter)
-        ett_s = np.round(self.total * time_per_iter)
-
-        eta_str = str(datetime.timedelta(seconds=eta_s))
-        ett_str = str(datetime.timedelta(seconds=ett_s))
-
-        filledLength = int(self.length * iteration // self.total)
-        bar = self.fill * filledLength + '-' * (self.length - filledLength)
-        print(
-            '\r    {0} |{1}| {2}% | ETA: {3} | ETT: {4}'.format(
-                self.prefix, bar, percent, eta_str, ett_str
-            ), end='\r'
-        )
-        # Print a new line on completion.
-        if iteration == self.total:
-            self._stop()
-            print()
-
-
-def generate_group_matrix(n_row, group_idx=[]):
-    """Generate group ID data structure.
-
-    The first column is reserved and is composed of all zeros.
-    Additional columns are optional and determined by the user.
-
-    Arguments:
-        n_row: The number of rows.
-        group_idx (optional): Array-like integers indicating
-            hierarchical group index information. For example, `[4,3]`
-            indicates that the first hierarchical level has `group_id`
-            4 and the second hierarchical level has `group_id` 3.
-
-    Returns:
-        group_matrix: The completed group matrix where each column
-            corresponds to a group level and each row a datum.
-            shape=(n_row,1+len(group_id))
-
-    """
-    group_matrix = np.hstack(([0], group_idx))
-    group_matrix = np.expand_dims(group_matrix, axis=0)
-    group_matrix = np.repeat(group_matrix, n_row, axis=0)
-    return group_matrix
-
-
-# TODO add tests
-def pairwise_index_dataset(
-        n_data, batch_size=None, elements='upper', group_idx=[],
-        mask_zero=False, subsample=None, seed=252):
-    """Assemble pairwise combinations.
-
-    Arguments:
-        n_data: A scalar indicating the number of unique concepts.
-        batch_size (optional): Determines the batch size. By default,
-            the batch size will be set to the number of combinations.
-        elements (optional): Determines which combinations in the pairwise
-            matrix will be used. Can be one of 'all', 'upper', 'lower',
-            or 'off'.
-        group_idx (optional): Array-like integers indicating
-            hierarchical group index information. For example, `[4,3]`
-            indicates that the first hierarchical level has `group_id`
-            4 and the second hierarchical level has `group_id` 3.
-        mask_zero (optional): Whether the zero index should be masked
-            and all indices incremented by one.
-        subsample: A float ]0,1] indicating the proportion of all pairs
-            that should be retained. By default all pairs are retained.
-        seed: Integer controlling which pairs are subsampled.
-
-    Returns:
-        Tensorflow Dataset.
-
-    """
-    if elements == 'all':
-        idx = np.meshgrid(np.arange(n_data), np.arange(n_data))
-        idx_0 = idx[0].flatten()
-        idx_1 = idx[1].flatten()
-    elif elements == 'upper':
-        idx = np.triu_indices(n_data, 1)
-        idx_0 = idx[0]
-        idx_1 = idx[1]
-    elif elements == 'lower':
-        idx = np.triu_indices(n_data, 1)
-        idx_0 = idx[0]
-        idx_1 = idx[1]
-    elif elements == 'off':
-        idx_upper = np.triu_indices(n_data, 1)
-        idx_lower = np.triu_indices(n_data, 1)
-        idx = (
-            np.hstack((idx_upper[0], idx_lower[0])),
-            np.hstack((idx_upper[1], idx_lower[1])),
-        )
-        idx_0 = idx[0]
-        idx_1 = idx[1]
-    del idx
-
-    n_pair = len(idx_0)
-    if subsample is not None:
-        np.random.seed(seed)
-        idx_rand = np.random.permutation(n_pair)
-        n_pair = int(np.ceil(n_pair * subsample))
-        idx_rand = idx_rand[0:n_pair]
-        idx_0 = idx_0[idx_rand]
-        idx_1 = idx_1[idx_rand]
-
-    if mask_zero:
-        idx_0 = idx_0 + 1
-        idx_1 = idx_1 + 1
-
-    idx_0 = tf.constant(idx_0, dtype=tf.int32)
-    idx_1 = tf.constant(idx_1, dtype=tf.int32)
-
-    if batch_size is None:
-        batch_size = np.minimum(10000, n_pair)
-
-    ds_info = {
-        'n_pair': n_pair,
-        'batch_size': batch_size,
-        'n_batch': np.ceil(n_pair / batch_size),
-        'elements': elements,
-        'mask_zero': mask_zero
-    }
-
-    group_matrix = generate_group_matrix(n_pair, group_idx=group_idx)
-    group_matrix = tf.constant(group_matrix, dtype=np.int32)
-
-    ds = tf.data.Dataset.from_tensor_slices(
-        ((idx_0, idx_1, group_matrix))
-    ).batch(
-        batch_size, drop_remainder=False
-    )
-    return ds, ds_info
 
 
 def pairwise_similarity(stimuli, kernel, ds_pairs):

@@ -115,7 +115,11 @@ def main():
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
-    callbacks = [cb_board]
+    cb_early = psiz.keras.callbacks.EarlyStoppingRe(
+        'loss', patience=100, mode='min', restore_best_weights=False,
+        verbose=1
+    )
+    callbacks = [cb_board, cb_early]
 
     # Infer embedding with restarts.
     restarter = psiz.restart.Restarter(

@@ -105,6 +105,7 @@ def main():
 
     model_true = ground_truth(n_stimuli, n_dim, n_group)
 
+    # Compute ground truth similarity matrices.
     simmat_truth = (
         model_similarity(model_true, group_idx=[0]),
         model_similarity(model_true, group_idx=[1]),
@@ -127,8 +128,6 @@ def main():
     obs_interm = agent_interm.simulate(docket)
     obs_expert = agent_expert.simulate(docket)
     obs = psiz.trials.stack((obs_novice, obs_interm, obs_expert))
-
-    # Compute ground truth similarity matrices.
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
@@ -213,7 +212,6 @@ def main():
             model_similarity(model_inferred, group_idx=[2])
         )
 
-        r_squared = np.empty((n_group, n_group))
         for i_truth in range(n_group):
             for j_infer in range(n_group):
                 rho, _ = pearsonr(
@@ -409,7 +407,6 @@ def plot_frame(
         elif i_group == 2:
             c = 'g'
         for i_dim in range(n_dim):
-            # name = 'w_{{{0},{1}}}'.format(i_group, i_dim)
             name = 'w'
             ax = fig0.add_subplot(gs[i_group + 1, i_dim])
             curr_dim = idx_sorted[i_dim]
@@ -420,8 +417,6 @@ def plot_frame(
             plot_logitnormal(ax, dist, name=name, c=c)
             if i_group == 0:
                 ax.set_title('Dimension {0}'.format(i_dim))
-            # if i_dim == 0:
-            #     ax.set_ylabel(group_labels[i_group])
 
     gs.tight_layout(fig0)
 
@@ -494,7 +489,7 @@ def plot_convergence(fig, ax, n_obs, r2):
 def model_similarity(model, group_idx=[]):
     """Compute model similarity.
 
-    In the deterministic case, there is one one sample and mean is 
+    In the deterministic case, there is one one sample and mean is
     equivalent to squeeze. In the probabilistic case, mean takes an
     average across samples.
 

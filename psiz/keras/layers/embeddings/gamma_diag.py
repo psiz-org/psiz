@@ -28,6 +28,7 @@ from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import math_ops
 import tensorflow_probability as tfp
 
+import psiz.distributions
 import psiz.keras.constraints
 
 

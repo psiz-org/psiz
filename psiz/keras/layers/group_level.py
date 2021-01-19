@@ -13,50 +13,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of TensorFlow behavior layers.
+"""Module of psychological embedding models.
 
 Classes:
-    Behavior: An abstract behavior layer.
+    GroupLevel: An abstract TF Keras layer that handles group
+        membership boilerplate.
 
 """
 
-from psiz.keras.layers.group_level import GroupLevel
+import copy
+
+import tensorflow as tf
 
 
-class Behavior(GroupLevel):
-    """An abstract behavior layer."""
+class GroupLevel(tf.keras.layers.Layer):
+    """An abstract layer for managing group-specific semantics."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, n_group=1, group_level=0, **kwargs):
         """Initialize.
 
         Arguments:
+            n_group (optional): Integer indicating the number of groups
+                in the layer.
+            group_level (optional): Ingeter indicating the group level
+                of the layer. This will determine which column of
+                `group` is used to route the forward pass.
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(Behavior, self).__init__(**kwargs)
-
-        self._n_sample = 0
-        self._kl_weight = 0
-
-    @property
-    def n_sample(self):
-        return self._n_sample
-
-    @n_sample.setter
-    def n_sample(self, n_sample):
-        self._n_sample = n_sample
-
-    @property
-    def kl_weight(self):
-        return self._kl_weight
-
-    @kl_weight.setter
-    def kl_weight(self, kl_weight):
-        self._kl_weight = kl_weight
+        super(GroupLevel, self).__init__(**kwargs)
+        self.n_group = n_group
+        self.group_level = group_level
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update({
+            'n_group': int(self.n_group),
+            'group_level': int(self.group_level),
+        })
         return config
 
     def call(self, inputs):

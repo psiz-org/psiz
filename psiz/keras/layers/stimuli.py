@@ -24,7 +24,7 @@ Classes:
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from psiz.models.base import GroupLevel
+from psiz.keras.layers.group_level import GroupLevel
 
 
 @tf.keras.utils.register_keras_serializable(

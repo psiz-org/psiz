@@ -15,9 +15,9 @@
 # ============================================================================
 """Model initialization file."""
 
-from psiz.models.base import Proxy
 from psiz.models.base import PsychologicalEmbedding
 from psiz.models.base import load_model
+from psiz.models.proxy import Proxy
 from psiz.models.rank import Rank
 from psiz.models.rate import Rate
 from psiz.models.sort import Sort

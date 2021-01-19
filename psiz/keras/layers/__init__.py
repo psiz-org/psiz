@@ -16,6 +16,7 @@
 """Keras layers initialization file."""
 
 from psiz.keras.layers.variational import Variational
+from psiz.keras.layers.group_level import GroupLevel
 from psiz.keras.layers.stimuli import Stimuli
 from psiz.keras.layers.distances.minkowski import WeightedMinkowski
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity

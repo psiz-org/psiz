@@ -26,6 +26,7 @@ from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
+from psiz.distributions.truncated_normal import TruncatedNormal
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -73,7 +74,7 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
             lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
-        dist = psiz.distributions.TruncatedNormal(
+        dist = TruncatedNormal(
             self.loc, scale, self.low, self.high
         )
         batch_ndims = tf.size(dist.batch_shape_tensor())
@@ -85,7 +86,7 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
         """Call."""
         [inputs_loc, inputs_scale] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = psiz.distributions.TruncatedNormal(
+        dist_batch = TruncatedNormal(
             inputs_loc, inputs_scale, self.low, self.high
         )
         # Reify output using samples.

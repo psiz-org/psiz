@@ -16,7 +16,6 @@
 """Module of psychological embedding models.
 
 Classes:
-    Proxy: Proxy class for embedding model.
     PsychologicalEmbedding: Abstract base class for a psychological
         embedding model.
 
@@ -463,9 +462,9 @@ def load_model(filepath, custom_objects={}, compile=False):
         #
         # with tf.keras.utils.custom_object_scope(custom_objects):
         #     model = tf.keras.models.load_model(filepath, compile=compile)
-        # return Proxy(model=model)
+        # return model
         #
-        # Storage format for psiz_version >= 0.4.0
+        # Storage format for psiz_version == 0.4.0
         fp_config = os.path.join(filepath, 'config.h5')
         fp_weights = os.path.join(filepath, 'weights')
 

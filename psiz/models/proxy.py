@@ -17,8 +17,6 @@
 
 Classes:
     Proxy: Proxy class for embedding model.
-    PsychologicalEmbedding: Abstract base class for a psychological
-        embedding model.
 
 Functions:
     load_model: Load a hdf5 file, that was saved with the `save`

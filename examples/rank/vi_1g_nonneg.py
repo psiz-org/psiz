@@ -34,6 +34,7 @@ import imageio
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import pearsonr
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -42,7 +43,7 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-# Modify the following to control GPU visibility.
+# Uncomment and edit the following to control GPU visibility. TODO
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -54,12 +55,12 @@ def main():
     fp_board = fp_example / Path('logs', 'fit', 'r0')
     n_stimuli = 30
     n_dim = 2
+    n_group = 1
     n_dim_nonneg = 20
     n_trial = 2000
-    n_restart = 1
     epochs = 1000
     batch_size = 100
-    n_frame = 1
+    n_frame = 1  # Set to 7 to observe convergence behavior.
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -79,7 +80,18 @@ def main():
     plt.rc('legend', fontsize=small_size)
     plt.rc('figure', titlesize=large_size)
 
-    proxy_true = ground_truth(n_stimuli, n_dim)
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
+        n_stimuli, mask_zero=True
+    )
+
+    model_true = ground_truth(n_stimuli, n_dim)
+
+    simmat_true = np.squeeze(
+        psiz.utils.pairwise_similarity(
+            model_true.stimuli, model_true.kernel, ds_pairs
+        ).numpy()
+    )
 
     # Generate a random docket of trials.
     generator = psiz.generators.RandomRank(
@@ -88,14 +100,19 @@ def main():
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    agent = psiz.agents.RankAgent(proxy_true.model)
+    agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
-
-    simmat_true = psiz.utils.pairwise_matrix(
-        proxy_true.similarity, proxy_true.z[0])
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
+
+    # Convert observations to TF dataset.
+    ds_obs_val = obs_val.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
+    ds_obs_test = obs_test.as_dataset().batch(
+        batch_size, drop_remainder=False
+    )
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -120,6 +137,9 @@ def main():
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
+        ds_obs_round_train = obs_round_train.as_dataset().shuffle(
+            buffer_size=obs_round_train.n_trial, reshuffle_each_iteration=True
+        ).batch(batch_size, drop_remainder=False)
         print(
             '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
         )
@@ -139,74 +159,39 @@ def main():
 
         # Define model.
         kl_weight = 1. / obs_round_train.n_trial
-
-        embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
-            scale_initializer=psiz.keras.initializers.SoftplusUniform(
-                .01, .05
-            ),
+        model_inferred = build_model(
+            n_stimuli, n_dim_nonneg, n_group, kl_weight
         )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli+1, n_dim_nonneg, mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingGammaDiag(
-                1, 1,
-                concentration_initializer=tf.keras.initializers.Constant(1.),
-                rate_initializer=tf.keras.initializers.Constant(1),
-                concentration_trainable=False,
-            )
-        )
-        embedding_variational = EmbeddingVariationalLog(
-            posterior=embedding_posterior, prior=embedding_prior,
-            kl_weight=kl_weight, kl_n_sample=30,
-        )
-        stimuli = psiz.keras.layers.Stimuli(
-            embedding=embedding_variational
-        )
-
-        kernel = psiz.keras.layers.Kernel(
-            distance=psiz.keras.layers.WeightedMinkowski(
-                rho_initializer=tf.keras.initializers.Constant(1.3),
-                trainable=False,
-            ),
-            similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(1.),
-                tau_initializer=tf.keras.initializers.Constant(1.),
-                gamma_initializer=tf.keras.initializers.Constant(0.),
-                trainable=False
-            )
-        )
-        model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
-        proxy_inferred = psiz.models.Proxy(model=model)
+        model_inferred.compile(**compile_kwargs)
 
         # Infer embedding.
-        restart_record = proxy_inferred.fit(
-            obs_round_train, validation_data=obs_val, epochs=epochs,
-            batch_size=batch_size, callbacks=callbacks, n_restart=n_restart,
-            monitor='val_loss', verbose=1, compile_kwargs=compile_kwargs
+        history = model_inferred.fit(
+            ds_obs_round_train, validation_data=ds_obs_val, epochs=epochs,
+            callbacks=callbacks, verbose=0
         )
 
-        train_loss[i_frame] = restart_record.record['loss'][0]
-        train_time[i_frame] = restart_record.record['ms_per_epoch'][0]
-        val_loss[i_frame] = restart_record.record['val_loss'][0]
-        
+        train_loss[i_frame] = history.history['loss'][-1]
+        val_loss[i_frame] = history.history['val_loss'][-1]
+
         # Test.
         tf.keras.backend.clear_session()
-        proxy_inferred.model.n_sample = 100
-        proxy_inferred.compile(**compile_kwargs)
-        test_metrics = proxy_inferred.evaluate(
-            obs_test, verbose=0, return_dict=True
+        model_inferred.n_sample = 100
+        model_inferred.compile(**compile_kwargs)
+        test_metrics = model_inferred.evaluate(
+            ds_obs_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = psiz.utils.pairwise_matrix(
-            proxy_inferred.similarity, proxy_inferred.z[0]
+        simmat_infer = np.mean(
+            psiz.utils.pairwise_similarity(
+                model_inferred.stimuli, model_inferred.kernel, ds_pairs
+            ).numpy(), axis=0
         )
-        r2[i_frame] = psiz.utils.matrix_comparison(
-            simmat_infer, simmat_true, score='r2'
-        )
+
+        rho, _ = pearsonr(simmat_true, simmat_infer)
+        r2[i_frame] = rho**2
         print(
             '    n_obs: {0:4d} | train_loss: {1:.2f} | '
             'val_loss: {2:.2f} | test_loss: {3:.2f} | '
@@ -219,17 +204,13 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true,
-            proxy_inferred, train_time
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
+            model_inferred
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
             os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
         )
-
-        # print(np.max(proxy_inferred.z[0], axis=0))
-        # print(np.min(np.max(proxy_inferred.z[0], axis=0)))
-        # print(np.mean(proxy_inferred.z[0], axis=0))
 
     # Create animation.
     if n_frame > 1:
@@ -241,8 +222,8 @@ def main():
 
 
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, proxy_true, proxy_inferred,
-        train_time):
+        fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
+        model_inferred):
     """Plot frame."""
     # Settings.
     s = 10
@@ -255,20 +236,17 @@ def plot_frame(
     f0_ax1 = fig0.add_subplot(gs[0, 2:4])
     plot_convergence(f0_ax1, n_obs, r2)
 
-    f0_ax2 = fig0.add_subplot(gs[0, 4:6])
-    plot_time(f0_ax2, n_obs, train_time)
-
     # Visualize embedding point estimates.
     f0_ax3 = fig0.add_subplot(gs[1, 0:2])
     psiz.visualize.heatmap_embeddings(
-        fig0, f0_ax3, proxy_inferred.model.stimuli
+        fig0, f0_ax3, model_inferred.stimuli
     )
 
     # Visualize embedding distributions for the first dimension.
     f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
     psiz.visualize.embedding_output_dimension(
-        fig0, f0_ax4, proxy_inferred.model.stimuli, i_dim
+        fig0, f0_ax4, model_inferred.stimuli, i_dim
     )
 
     gs.tight_layout(fig0)
@@ -312,22 +290,6 @@ def plot_convergence(ax, n_obs, r2):
     ax.set_ylim(-0.05, 1.05)
 
 
-def plot_time(ax, n_obs, train_time):
-    # Settings.
-    ms = 2
-
-    ax.plot(n_obs, train_time, 'o-',  ms=ms,)
-    ax.set_title('Train Time')
-
-    ax.set_xlabel('Trials')
-    limits = [0, np.max(n_obs) + 10]
-    ax.set_xlim(limits)
-    ticks = [np.min(n_obs), np.max(n_obs)]
-    ax.set_xticks(ticks)
-
-    ax.set_ylabel('ms')
-
-
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     # Settings.
@@ -349,17 +311,70 @@ def ground_truth(n_stimuli, n_dim):
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.), 
+            beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
             trainable=False
         )
     )
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
-    emb = psiz.models.Proxy(model=model)
 
-    scale_sample = np.std(emb.model.stimuli.embeddings.numpy())
-    return emb
+    return model
+
+
+def build_model(n_stimuli, n_dim, n_group, kl_weight):
+    """Build model.
+
+    Arguments:
+        n_stimuli: Integer indicating the number of stimuli in the
+            embedding.
+        n_dim: Integer indicating the dimensionality of the embedding.
+        n_group: Integer indicating the number of groups.
+        kl_weight: Float indicating KL weight for variational
+            inference. Typically this is 1/n_train_obs.
+
+    Returns:
+        model: A TensorFlow Keras model.
+
+    """
+    embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
+        scale_initializer=psiz.keras.initializers.SoftplusUniform(
+            .01, .05
+        ),
+    )
+    embedding_prior = psiz.keras.layers.EmbeddingShared(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embedding=psiz.keras.layers.EmbeddingGammaDiag(
+            1, 1,
+            concentration_initializer=tf.keras.initializers.Constant(1.),
+            rate_initializer=tf.keras.initializers.Constant(1),
+            concentration_trainable=False,
+        )
+    )
+    embedding_variational = EmbeddingVariationalLog(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30,
+    )
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=embedding_variational
+    )
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(1.3),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False
+        )
+    )
+    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
+    return model
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -391,10 +406,10 @@ class EmbeddingVariationalLog(psiz.keras.layers.EmbeddingVariational):
             aggregation='mean', name='po_mode_max'
         )
 
-        l = self.posterior.embeddings.distribution.loc[1:]
+        loc = self.posterior.embeddings.distribution.loc[1:]
         s = self.posterior.embeddings.distribution.scale[1:]
         self.add_metric(
-            tf.reduce_mean(l),
+            tf.reduce_mean(loc),
             aggregation='mean', name='po_loc_avg'
         )
         self.add_metric(
@@ -402,8 +417,9 @@ class EmbeddingVariationalLog(psiz.keras.layers.EmbeddingVariational):
             aggregation='mean', name='po_scale_avg'
         )
 
-        c = self.prior.embeddings.distribution.distribution.distribution.concentration
-        r = self.prior.embeddings.distribution.distribution.distribution.rate
+        prior_dist = self.prior.embeddings.distribution.distribution
+        c = prior_dist.distribution.concentration
+        r = prior_dist.distribution.rate
         self.add_metric(
             tf.reduce_mean(c),
             aggregation='mean', name='pr_con'

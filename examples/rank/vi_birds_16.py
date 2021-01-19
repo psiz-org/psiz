@@ -93,7 +93,7 @@ def main():
     ds_obs_val = obs_val.as_dataset().batch(
         batch_size, drop_remainder=False
     )
-    ds_obs_test = obs_val.as_dataset().batch(
+    ds_obs_test = obs_test.as_dataset().batch(
         batch_size, drop_remainder=False
     )
 

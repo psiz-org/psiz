@@ -38,6 +38,7 @@ import shutil
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import pearsonr
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -46,9 +47,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-# Modify the following to control GPU visibility.
+# Uncomment and edit the following to control GPU visibility.
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -81,14 +82,23 @@ def main():
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
+        n_stimuli, mask_zero=True
+    )
+
     # Create a ground truth model.
+    # You can choose a grid arrangement of Gaussian arrangement by
+    # commenting/uncommenting the following two lines.
     model_true = ground_truth_grid()
     # model_true = ground_truth_randn(n_stimuli, n_dim)
 
-    proxy_true = psiz.models.Proxy(model_true)
-    simmat_true = psiz.utils.pairwise_matrix(
-        proxy_true.similarity, proxy_true.z[0]
+    simmat_true = np.squeeze(
+        psiz.utils.pairwise_similarity(
+            model_true.stimuli, model_true.kernel, ds_pairs
+        ).numpy()
     )
+
     print(
         'Ground Truth Pairwise Similarity\n'
         '    min: {0:.2f}'
@@ -141,29 +151,29 @@ def main():
         )
         callbacks = [cb_board]
 
-        model = build_model(n_stimuli, n_dim)
+        model_inferred = build_model(n_stimuli, n_dim)
 
         # Infer embedding.
-        model.compile(**compile_kwargs)
-        history = model.fit(
+        model_inferred.compile(**compile_kwargs)
+        history = model_inferred.fit(
             ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0
         )
 
         # train_mse = history.history['mse'][0]
-        train_metrics = model.evaluate(
+        train_metrics = model_inferred.evaluate(
             ds_obs_train, verbose=0, return_dict=True
         )
         train_mse = train_metrics['mse']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        proxy_inferred = psiz.models.Proxy(model)
-        simmat_infer = psiz.utils.pairwise_matrix(
-            proxy_inferred.similarity, proxy_inferred.z[0]
+        simmat_infer = np.squeeze(
+            psiz.utils.pairwise_similarity(
+                model_inferred.stimuli, model_inferred.kernel, ds_pairs
+            ).numpy()
         )
-        r2 = psiz.utils.matrix_comparison(
-            simmat_infer, simmat_true, score='r2'
-        )
+        rho, _ = pearsonr(simmat_true, simmat_infer)
+        r2 = rho**2
         print(
             '    n_obs: {0:4d} | train_mse: {1:.6f} | '
             'Correlation (R^2): {2:.2f}'.format(obs.n_trial, train_mse, r2)
@@ -174,16 +184,16 @@ def main():
             '    sigmoid upper bound: {1:.2f}'
             '    sigmoid midpoint: {2:.2f}'
             '    sigmoid rate: {3:.2f}'.format(
-                model.behavior.lower.numpy(),
-                model.behavior.upper.numpy(),
-                model.behavior.midpoint.numpy(),
-                model.behavior.rate.numpy()
+                model_inferred.behavior.lower.numpy(),
+                model_inferred.behavior.upper.numpy(),
+                model_inferred.behavior.midpoint.numpy(),
+                model_inferred.behavior.rate.numpy()
             )
         )
 
         # Create and save visual frame.
         fig = plt.figure(figsize=(6.5, 4), dpi=200)
-        plot_restart(fig, proxy_true, proxy_inferred, r2)
+        plot_restart(fig, model_true, model_inferred, r2)
         fname = fp_example / Path('restart_{0}.pdf'.format(i_restart))
         plt.savefig(
             os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
@@ -257,7 +267,7 @@ def ground_truth_grid():
     z_grid = np.vstack((np.ones([1, 2]), z_grid))
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
         )
     )
@@ -290,7 +300,7 @@ def ground_truth_grid():
 def build_model(n_stimuli, n_dim):
     """Build a model to use for inference."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
@@ -315,39 +325,49 @@ def build_model(n_stimuli, n_dim):
     return model
 
 
-def plot_restart(fig, proxy_true, proxy_inferred, r2):
+def plot_restart(fig, model_true, model_inferred, r2):
     """Plot frame."""
     # Settings.
     cmap = matplotlib.cm.get_cmap('jet')
-    norm = matplotlib.colors.Normalize(vmin=0., vmax=proxy_true.n_stimuli)
-    color_array = cmap(norm(range(proxy_true.n_stimuli)))
+    norm = matplotlib.colors.Normalize(vmin=0., vmax=model_true.n_stimuli)
+    color_array = cmap(norm(range(model_true.n_stimuli)))
 
     gs = fig.add_gridspec(1, 1)
 
     # Plot embeddings.
     ax = fig.add_subplot(gs[0, 0])
 
+    # Grab stimuli embeddings.
+    z_true = model_true.stimuli.embeddings.numpy()[0]
+    if model_true.stimuli.mask_zero:
+        z_true = z_true[1:]
+    z_inferred = model_inferred.stimuli.embeddings.numpy()[0]
+    if model_inferred.stimuli.mask_zero:
+        z_inferred = z_inferred[1:]
+
+    # Center coordinates.
+    z_true = z_true - np.mean(z_true, axis=0, keepdims=True)
+    z_inferred = z_inferred - np.mean(z_inferred, axis=0, keepdims=True)
+
     # Determine embedding limits.
-    z_true_max = 1.3 * np.max(np.abs(proxy_true.z[0]))
-    z_infer_max = 1.3 * np.max(np.abs(proxy_inferred.z[0]))
+    z_true_max = 1.3 * np.max(np.abs(z_true))
+    z_infer_max = 1.3 * np.max(np.abs(z_inferred))
     z_max = np.max([z_true_max, z_infer_max])
     z_limits = [-z_max, z_max]
 
     # Align inferred embedding with true embedding (without using scaling).
-    r, t = psiz.utils.procrustes_2d(
-        proxy_true.z[0], proxy_inferred.z[0], scale=False, n_restart=30
-    )
-    z_affine = np.matmul(proxy_inferred.z[0], r) + t
+    r = psiz.utils.procrustes_rotation(z_inferred, z_true, scale=False)
+    z_inferred = np.matmul(z_inferred, r)
 
     # Plot true embedding.
     ax.scatter(
-        proxy_true.z[0, :, 0], proxy_true.z[0, :, 1],
+        z_true[:, 0], z_true[:, 1],
         s=15, c=color_array, marker='x', edgecolors='none'
     )
 
     # Plot inferred embedding.
     ax.scatter(
-        z_affine[:, 0], z_affine[:, 1],
+        z_inferred[:, 0], z_inferred[:, 1],
         s=60, marker='o', facecolors='none', edgecolors=color_array
     )
 

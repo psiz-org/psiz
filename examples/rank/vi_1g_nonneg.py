@@ -296,7 +296,7 @@ def ground_truth(n_stimuli, n_dim):
     scale_request = .17
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=scale_request, seed=58

@@ -26,7 +26,6 @@ from psiz.utils.utils import pairwise_matrix
 from psiz.utils.utils import matrix_comparison
 from psiz.utils.utils import compare_models
 from psiz.utils.utils import rotation_matrix
-from psiz.utils.utils import procrustes_2d
 from psiz.utils.utils import standard_split
 from psiz.utils.utils import pad_2d_array
 from psiz.utils.utils import pairwise_similarity

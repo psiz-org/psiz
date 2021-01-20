@@ -21,7 +21,6 @@ Classes:
     AttentionKernel: A kernel that uses group-specific attention
         weights and allows the user to separately specify a distance
         and similarity function.
-    GroupAttentionVariational: A variational group attention layer.
 
 """
 
@@ -284,58 +283,3 @@ class AttentionKernel(GroupLevel):
             config['similarity']
         )
         return cls(**config)
-
-
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='GroupAttentionVariational'
-)
-class GroupAttentionVariational(Variational):
-    """Variational analog of group-specific attention weights."""
-
-    def __init__(self, **kwargs):
-        """Initialize.
-
-        Arguments:
-            kwargs: Additional key-word arguments.
-
-        """
-        super(GroupAttentionVariational, self).__init__(**kwargs)
-
-    def call(self, inputs):
-        """Call.
-
-        Grab `group_id` only.
-
-        Arguments:
-            inputs: A Tensor denoting a trial's group membership.
-
-        """
-        # Run forward pass through variational posterior layer.
-        outputs = self.posterior(inputs)
-
-        # Apply KL divergence between posterior and prior.
-        self.add_kl_loss(self.posterior.embeddings, self.prior.embeddings)
-
-        return outputs
-
-    @property
-    def n_group(self):
-        """Getter method for `n_group`"""
-        # TODO need better decoupling, not all distributions will have loc.
-        return self.posterior.embeddings.distribution.loc.shape[0]
-
-    @property
-    def n_dim(self):
-        """Getter method for `n_group`"""
-        # TODO need better decoupling, not all distributions will have loc.
-        return self.posterior.embeddings.distribution.loc.shape[1]
-
-    @property
-    def mask_zero(self):
-        """Getter method for embeddings `mask_zero`."""
-        return self.posterior.mask_zero
-
-    @property
-    def embeddings(self):
-        """Getter method for embeddings posterior mode."""
-        return self.posterior.embeddings

@@ -25,13 +25,13 @@ from psiz.keras.layers.similarities.inverse import InverseSimilarity
 from psiz.keras.layers.similarities.students_t import StudentsTSimilarity
 from psiz.keras.layers.kernel import Kernel
 from psiz.keras.layers.kernel import AttentionKernel
-from psiz.keras.layers.kernel import GroupAttentionVariational
 from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.sort import SortBehavior
 from psiz.keras.layers.embeddings.deterministic import EmbeddingDeterministic
 from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
 from psiz.keras.layers.embeddings.group_attention import GroupAttention
+from psiz.keras.layers.embeddings.group_attn_variational import GroupAttentionVariational
 from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
 from psiz.keras.layers.embeddings.logit_normal_diag import EmbeddingLogitNormalDiag

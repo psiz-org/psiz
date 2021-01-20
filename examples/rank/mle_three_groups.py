@@ -39,6 +39,8 @@ Example output:
 
 """
 
+import os
+
 import numpy as np
 from scipy.stats import pearsonr
 import tensorflow as tf
@@ -193,7 +195,14 @@ def ground_truth(n_stimuli, n_dim, n_group):
             trainable=False,
         ),
         attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
+            n_dim=n_dim, n_group=n_group,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array((
+                    (1.8, 1.8, .2, .2),
+                    (1., 1., 1., 1.),
+                    (.2, .2, 1.8, 1.8)
+                ))
+            )
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             fit_tau=False, fit_gamma=False,
@@ -201,13 +210,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
             gamma_initializer=tf.keras.initializers.Constant(0.001),
         )
     )
-    kernel.attention.embeddings.assign(
-        np.array((
-            (1.8, 1.8, .2, .2),
-            (1., 1., 1., 1.),
-            (.2, .2, 1.8, 1.8)
-        ))
-    )
+
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
 
     return model

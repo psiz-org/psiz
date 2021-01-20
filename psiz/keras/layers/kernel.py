@@ -233,11 +233,6 @@ class AttentionKernel(GroupLevel):
         sim_qr = self.similarity(dist_qr)
         return sim_qr
 
-    # @property
-    # def n_dim(self):
-    #     """Getter method for n_dim."""
-    #     return self.attention.n_dim
-
     @property
     def n_sample(self):
         return self._n_sample

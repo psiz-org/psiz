@@ -25,6 +25,7 @@ import tensorflow as tf
 from psiz.keras.layers.variational import Variational
 
 
+# DEPRECATED
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='GroupAttentionVariational'
 )

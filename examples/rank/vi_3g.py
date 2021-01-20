@@ -360,7 +360,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.GroupAttentionVariational(
+        attention=psiz.keras.layers.EmbeddingVariational(
             posterior=attention_posterior, prior=attention_prior,
             kl_weight=kl_weight, kl_use_exact=True
         ),

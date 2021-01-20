@@ -48,7 +48,13 @@ def rank_2g_mle_determ():
             trainable=False,
         ),
         attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
+            n_dim=n_dim, n_group=n_group,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array((
+                    (1.2, .8),
+                    (.7, 1.3)
+                ))
+            )
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             fit_tau=False, fit_gamma=False, fit_beta=False,
@@ -56,12 +62,6 @@ def rank_2g_mle_determ():
             gamma_initializer=tf.keras.initializers.Constant(0.),
             beta_initializer=tf.keras.initializers.Constant(10.),
         )
-    )
-    kernel.attention.embeddings.assign(
-        np.array((
-            (1.2, .8),
-            (.7, 1.3)
-        ))
     )
 
     behavior = psiz.keras.layers.RankBehavior()

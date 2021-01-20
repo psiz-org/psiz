@@ -20,20 +20,14 @@ default, a `psiz_examples` directory is created in your home directory.
 
 Example output:
 
-    Restart Summary
-    n_valid_restart 1 | total_duration: 2104 s
-    best | n_epoch: 999 | val_loss: 3.0700
-    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.0700 ±0.0000 |
-        2088 ±0 s | 2090 ±0 ms/epoch
-
     Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.94    0.67    0.06
-     Interm |   0.55    0.87    0.35
-     Expert |   0.09    0.42    0.85
+     Novice |   0.90    0.58    0.04
+     Interm |   0.43    0.67    0.31
+     Expert |   0.05    0.30    0.84
 
 """
 
@@ -56,8 +50,8 @@ import psiz
 # tf.config.experimental_run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -70,8 +64,7 @@ def main():
     n_dim_inferred = 2
     n_group = 3
     n_trial = 2000
-    epochs = 1000  # 1000 TODO
-    n_restart = 1
+    epochs = 1000
     batch_size = 128
     n_frame = 1
 
@@ -273,7 +266,14 @@ def ground_truth(n_stimuli, n_group):
             trainable=False,
         ),
         attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
+            n_dim=n_dim, n_group=n_group,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array((
+                    (1.8, 1.8, .2, .2),
+                    (1., 1., 1., 1.),
+                    (.2, .2, 1.8, 1.8)
+                ))
+            )
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             tau_initializer=tf.keras.initializers.Constant(1.),
@@ -281,13 +281,7 @@ def ground_truth(n_stimuli, n_group):
             trainable=False,
         )
     )
-    kernel.attention.embeddings.assign(
-        np.array((
-            (1.8, 1.8, .2, .2),
-            (1., 1., 1., 1.),
-            (.2, .2, 1.8, 1.8)
-        ))
-    )
+
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 
@@ -419,11 +413,6 @@ def plot_embeddings(fig, ax, model_inferred, color_array):
     n_group = 3
     marker_list = ['o', '<', 'p']
     markersize = 20
-
-    # TODO visualize embeddings
-    # z = model_inferred.stimuli.embeddings.mode().numpy()
-    #     if model_inferred.stimuli.mask_zero:
-    #         z = z[:, 1:, :]
 
     # Apply and plot Procrustes affine transformation of posterior.
     loc_list = []

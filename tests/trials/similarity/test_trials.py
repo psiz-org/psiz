@@ -199,7 +199,13 @@ def ground_truth(n_stimuli):
             trainable=False,
         ),
         attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
+            n_dim=n_dim, n_group=n_group,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array((
+                    (1.9, 1., .1),
+                    (.1, 1., 1.9)
+                ))
+            )
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(1.),
@@ -207,12 +213,6 @@ def ground_truth(n_stimuli):
             gamma_initializer=tf.keras.initializers.Constant(0.),
             trainable=False,
         )
-    )
-    kernel.attention.embeddings.assign(
-        np.array((
-            (1.9, 1., .1),
-            (.1, 1., 1.9)
-        ))
     )
 
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)

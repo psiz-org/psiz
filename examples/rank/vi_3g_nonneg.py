@@ -27,12 +27,6 @@ default, a `psiz_examples` directory is created in your home directory.
 
 Example output:
 
-    Restart Summary
-    n_valid_restart 1 | total_duration: 2597 s
-    best | n_epoch: 999 | val_loss: 3.2250
-    mean ±stddev | n_epoch: 999 ±0 | val_loss: 3.2250 ±0.0000 |
-        2593 ±0 s | 2595 ±0 ms/epoch
-
     Attention weights:
           Novice | [0.91 0.84 0.56 0.45 0.09 0.05 0.04 0.02 0.01 0.01]
     Intermediate | [0.45 0.53 0.35 0.21 0.50 0.38 0.37 0.27 0.01 0.01]
@@ -49,7 +43,6 @@ Example output:
 
 """
 
-import copy
 import os
 from pathlib import Path
 import shutil
@@ -69,8 +62,8 @@ import psiz
 # tf.config.experimental_run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -293,7 +286,14 @@ def ground_truth(n_stimuli, n_dim, n_group):
             trainable=False,
         ),
         attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
+            n_dim=n_dim, n_group=n_group,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array((
+                    (1.8, 1.8, .2, .2),
+                    (1., 1., 1., 1.),
+                    (.2, .2, 1.8, 1.8)
+                ))
+            )
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             fit_tau=False, fit_gamma=False,
@@ -301,13 +301,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
-    kernel.attention.embeddings.assign(
-        np.array((
-            (1.8, 1.8, .2, .2),
-            (1., 1., 1., 1.),
-            (.2, .2, 1.8, 1.8)
-        ))
-    )
+
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 

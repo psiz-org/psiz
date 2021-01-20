@@ -47,7 +47,7 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.
+# Uncomment and edit the following to control GPU visibility.  TODO
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -60,7 +60,7 @@ def main():
     n_stimuli = 25
     n_dim = 2
     n_restart = 1
-    epochs = 10000
+    epochs = 1000
     lr = .001
     batch_size = 64
 
@@ -269,6 +269,9 @@ def ground_truth_grid():
     stimuli = psiz.keras.layers.Stimuli(
         embedding=psiz.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                z_grid
+            )
         )
     )
     kernel = psiz.keras.layers.Kernel(
@@ -292,8 +295,7 @@ def ground_truth_grid():
     model = psiz.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
-    model.stimuli.build([None, None, None])
-    model.stimuli.embedding.embeddings.assign(z_grid)
+
     return model
 
 

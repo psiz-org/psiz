@@ -194,8 +194,8 @@ def ground_truth(n_stimuli, n_dim, n_group):
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group,
+        attention=psiz.keras.layers.EmbeddingDeterministic(
+            n_group, n_dim, mask_zero=False,
             embeddings_initializer=tf.keras.initializers.Constant(
                 np.array((
                     (1.8, 1.8, .2, .2),
@@ -233,10 +233,19 @@ def build_model(n_stimuli, n_dim, n_group):
             n_stimuli+1, n_dim, mask_zero=True,
         )
     )
+
+    scale = n_dim
+    alpha = np.ones((n_dim))
     kernel = psiz.keras.layers.AttentionKernel(
         group_level=1,
-        attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group
+        attention=psiz.keras.layers.EmbeddingDeterministic(
+            n_group, n_dim, mask_zero=False,
+            embeddings_initializer=psiz.keras.initializers.RandomAttention(
+                alpha, scale
+            ),
+            embeddings_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim
+            ),
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity()
     )

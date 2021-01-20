@@ -240,8 +240,8 @@ class PsychologicalEmbedding(tf.keras.Model):
             trainable_variables = self.trainable_variables
             gradients = tape.gradient(loss, trainable_variables)
             # NOTE: There is an open issue for using constraints with
-            # embedding-like layers (e.g., tf.keras.layers.Embedding,
-            # psiz.keras.layers.GroupAttention), see
+            # embedding-like layers (e.g., tf.keras.layers.Embedding)
+            # see:
             # https://github.com/tensorflow/tensorflow/issues/33755.
             # There are also issues when using Eager Execution. A
             # work-around is to convert the problematic gradients, which

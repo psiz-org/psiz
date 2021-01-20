@@ -198,8 +198,8 @@ def ground_truth(n_stimuli):
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.GroupAttention(
-            n_dim=n_dim, n_group=n_group,
+        attention=psiz.keras.layers.EmbeddingDeterministic(
+            n_group, n_dim, mask_zero=False,
             embeddings_initializer=tf.keras.initializers.Constant(
                 np.array((
                     (1.9, 1., .1),

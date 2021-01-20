@@ -47,9 +47,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.experimental_run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.  TODO
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -224,14 +224,13 @@ def ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     seed = 252
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+        embedding=tf.keras.layers.EmbeddingDeterministic(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17, seed=seed
             )
         )
     )
-    stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),

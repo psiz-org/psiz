@@ -44,8 +44,8 @@ import psiz
 # tf.config.experimental_run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -304,7 +304,6 @@ def ground_truth(n_stimuli, n_dim):
             trainable=False
         )
     )
-    stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),

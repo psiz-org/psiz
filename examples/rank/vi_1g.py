@@ -44,8 +44,8 @@ import psiz
 # tf.config.experimental_run_functions_eagerly(True)
 
 # Modify the following to control GPU visibility.
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -60,7 +60,7 @@ def main():
     n_restart = 1
     epochs = 1000
     batch_size = 128
-    n_frame = 7  # Set to 7 to observe convergence behavior.
+    n_frame = 1  # Set to 7 to observe convergence behavior.
 
     # Directory preparation.
     fp_example.mkdir(parents=True, exist_ok=True)
@@ -438,7 +438,6 @@ def ground_truth(n_stimuli, n_dim):
             )
         )
     )
-    stimuli.build([None, None, None])
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -451,17 +450,23 @@ def ground_truth(n_stimuli, n_dim):
         )
     )
     model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
-    scale_sample = model.stimuli.embeddings.numpy()[0]
-    if model.stimuli.mask_zero:
-        scale_sample = scale_sample[1:]
-    scale_sample = np.std(scale_sample)
 
-    print(
-        '\n  Requested scale: {0:.4f}'
-        '\n  Sampled scale: {1:.4f}\n'.format(
-            scale_request, scale_sample
-        )
-    )
+    # If you want to inspect the embedding before it sees any data, you must
+    # manually build it.
+    # stimuli.build([None, None, None])
+
+    # Now you can inspect the embedding.
+    # scale_sample = model.stimuli.embeddings.numpy()[0]
+    # if model.stimuli.mask_zero:
+    #     scale_sample = scale_sample[1:]
+    # scale_sample = np.std(scale_sample)
+    # print(
+    #     '\n  Requested scale: {0:.4f}'
+    #     '\n  Sampled scale: {1:.4f}\n'.format(
+    #         scale_request, scale_sample
+    #     )
+    # )
+
     return model
 
 

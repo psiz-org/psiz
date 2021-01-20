@@ -44,7 +44,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'understand_ig')
+    fp_example = Path.home() / Path(
+        'psiz_examples', 'rank', 'information_gain'
+    )
     n_reference = 3
     n_select = 1
     n_col = 7

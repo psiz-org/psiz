@@ -20,6 +20,7 @@ from psiz.utils.generate_group_matrix import generate_group_matrix
 from psiz.utils.pairwise_index_dataset import pairwise_index_dataset
 from psiz.utils.procrustes import procrustes_rotation
 from psiz.utils.progress_bar_re import ProgressBarRe
+from psiz.utils.stratified_group_kfold import StratifiedGroupKFold
 from psiz.utils.utils import affine_mvn
 from psiz.utils.utils import assess_convergence
 from psiz.utils.utils import pairwise_matrix

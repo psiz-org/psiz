@@ -16,8 +16,6 @@
 """Module of visualization tools.
 
 Functions:
-    bvn_ellipse: Create an ellipse representing a bivariate normal
-        distribution.
     heatmap_embeddings: Create a heatmap of embeddings.
     embedding_output_dimension: Visualize embedding values for a
         requested output dimension.
@@ -28,7 +26,6 @@ Functions:
 
 import os
 
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -633,38 +630,3 @@ def image_2d(
         # in plot.
         for i_handle in lgnd.legendHandles:
             i_handle._sizes = [30]
-
-
-def bvn_ellipse(loc, cov, r=1.96, **kwargs):
-    """Return ellipse object representing bivariate normal.
-
-    This code was inspired by a solution posted on Stack Overflow:
-    https://stackoverflow.com/a/25022642/1860294
-
-    Arguments:
-        loc: A 1D array denoting the mean.
-        cov: A 2D array denoting the covariance matrix.
-        r (optional): The radius (specified in standard deviations) at
-            which to draw the ellipse. The default value corresponds to
-            an ellipse indicating a region containing 95% of the
-            probability mass.
-        kwargs (optional): Additional key-word arguments to pass to
-            `matplotlib.patches.Ellipse` constructor.
-
-    Returns:
-        ellipse: A `matplotlib.patches.Ellipse` artist object.
-
-    """
-    def eig_sorted(cov):
-        """Sort eigenvalues."""
-        vals, vecs = np.linalg.eigh(cov)
-        order = vals.argsort()[::-1]
-        return vals[order], vecs[:, order]
-
-    vals, vecs = eig_sorted(cov)
-    theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
-    w, h = 2 * r * np.sqrt(vals)
-    ellipse = matplotlib.patches.Ellipse(
-        xy=(loc[0], loc[1]), width=w, height=h, angle=theta, **kwargs
-    )
-    return ellipse

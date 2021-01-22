@@ -288,9 +288,9 @@ def plot_frame(
     )
 
     loc, cov = apply_affine(loc, cov, r)
-    # r = 1.960  # 95%
-    r = 2.576  # 99%
-    plot_bvn(f0_ax1, loc, cov=cov, c=color_array, r=r, show_loc=False)
+    psiz.mplot.hdi_bvn(
+        loc, cov, f0_ax1, p=.99, edgecolor=color_array, fill=False
+    )
 
     # Plot true embedding.
     f0_ax1.scatter(
@@ -359,47 +359,6 @@ def plot_time(ax, n_obs, train_time):
     ax.set_xticks(ticks)
 
     ax.set_ylabel('ms')
-
-
-def plot_bvn(ax, loc, cov=None, c=None, r=1.96, show_loc=True):
-    """Plot bivariate normal embeddings.
-
-    If covariances are supplied, ellipses are drawn to indicate regions
-    of highest probability mass.
-
-    Arguments:
-        ax: A 'matplotlib' axes object.
-        loc: Array denoting the means of bivariate normal
-            distributions.
-        cov (optional): Array denoting the covariance matrices of
-            bivariate normal distributions.
-        c (optional): color array
-        limits (optional): Limits of axes.
-        r (optional): The radius (specified in standard deviations) at
-            which to draw the ellipse. The default value corresponds to
-            an ellipse indicating a region containing 95% of the
-            probability mass.
-
-    """
-    # Settings.
-    s = 10
-
-    n_stimuli = loc.shape[0]
-
-    # Plot means.
-    if show_loc:
-        ax.scatter(
-            loc[:, 0], loc[:, 1], s=s, c=c, marker='o', edgecolors='none'
-        )
-
-    if cov is not None:
-        # Draw regions of highest probability mass.
-        for i_stimulus in range(n_stimuli):
-            ellipse = psiz.visualize.bvn_ellipse(
-                loc[i_stimulus], cov[i_stimulus], r=r, fill=False,
-                edgecolor=c[i_stimulus]
-            )
-            ax.add_artist(ellipse)
 
 
 def unpack_mvn(dist, group_idx):

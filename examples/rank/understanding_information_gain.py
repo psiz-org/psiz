@@ -409,7 +409,7 @@ def plot_bivariate_normal(ax, loc, cov, c=None, r=2.576, **kwargs):
     for i_stimulus in range(n_stimuli):
         if c is not None:
             edgecolor = c[i_stimulus]
-        ellipse = psiz.visualize.bvn_ellipse(
+        ellipse = psiz.mplot.bvn_ellipse(
             loc[i_stimulus], cov[i_stimulus], r=r, fill=False,
             edgecolor=edgecolor, **kwargs
         )

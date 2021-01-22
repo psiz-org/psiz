@@ -249,10 +249,11 @@ def draw_figure(fig, model, catalog):
     z_max = 1.3 * np.max(np.abs(loc))
     z_limits = [-z_max, z_max]
 
-    # Draw stimuli 95% probability mass ellipses.
+    # Draw stimuli 95% HDI ellipses.
     exemplar_color_array = class_color_array[squeeze_indices(class_arr)]
-    plot_bvn(
-        ax, loc, cov, c=exemplar_color_array, r=1.96, lw=lw, alpha=alpha
+    psiz.mplot.hdi_bvn(
+        loc, cov, ax, p=.95, edgecolor=exemplar_color_array, lw=lw,
+        alpha=alpha, fill=False
     )
 
     # Draw stimuli modes.
@@ -270,7 +271,7 @@ def draw_figure(fig, model, catalog):
     ax.set_aspect('equal')
     ax.set_xticks([])
     ax.set_yticks([])
-    ax.set_title('Embeddings (95%)')
+    ax.set_title('Embeddings (95% HDI)')
     ax.legend(bbox_to_anchor=(1.35, 0.9), shadow=True, title="Bird Species")
 
     gs.tight_layout(fig)
@@ -284,41 +285,6 @@ def squeeze_indices(idx_arr):
         loc = np.equal(idx_arr, uniq_idx)
         idx_arr_2[loc] = counter
     return idx_arr_2
-
-
-def plot_bvn(ax, loc, cov, c=None, r=2.576, **kwargs):
-    """Plot bivariate normal embeddings.
-
-    If covariances are supplied, ellipses are drawn to indicate regions
-    of highest probability mass.
-
-    Arguments:
-        ax: A 'matplotlib' axes object.
-        loc: Array denoting the means of bivariate normal
-            distributions.
-        cov: Array denoting the covariance matrices of
-            bivariate normal distributions.
-        c (optional): color array
-        r (optional): The radius (specified in standard deviations) at
-            which to draw the ellipse. The default value (2.576)
-            corresponds to an ellipse indicating a region containing
-            99% of the probability mass. Another common value is
-            1.960, which indicates 95%.
-        kwargs (optional): Additional key-word arguments that will be
-            passed to a `matplotlib.patches.Ellipse` constructor.
-
-    """
-    n_stimuli = loc.shape[0]
-
-    # Draw ellipsoids for each stimulus.
-    for i_stimulus in range(n_stimuli):
-        if c is not None:
-            edgecolor = c[i_stimulus]
-        ellipse = psiz.visualize.bvn_ellipse(
-            loc[i_stimulus], cov[i_stimulus], r=r, fill=False,
-            edgecolor=edgecolor, **kwargs
-        )
-        ax.add_artist(ellipse)
 
 
 # TODO DRY

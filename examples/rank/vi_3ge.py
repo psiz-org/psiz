@@ -449,10 +449,6 @@ def plot_embeddings(fig, ax, model_inferred, color_array):
     loc_list[1], cov_list[1] = apply_affine(loc_list[1], cov_list[1], r10)
     loc_list[2], cov_list[2] = apply_affine(loc_list[2], cov_list[2], r10)
 
-    # r = 1.960  # 95%
-    # r = 2.576  # 99%
-    # plot_bvn(f0_ax1, loc, cov=cov, c=color_array, r=r, show_loc=False)
-
     # Plot inferred embeddings.
     for i_group in range(n_group):
         ax.scatter(

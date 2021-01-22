@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2021 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,35 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Top-level package initialization file.
+"""Initialization of `mplot` module."""
 
-Modules:
-    agents
-    catalog
-    datasets
-    dimensionality
-    distributions
-    generator
-    keras
-    models
-    mplot
-    preprocess
-    trials
-    utils
-    visualize
-"""
-
-import psiz.agents
-import psiz.catalog
-import psiz.datasets
-import psiz.dimensionality
-import psiz.distributions
-import psiz.generators
-import psiz.keras
-import psiz.models
-import psiz.mplot
-import psiz.preprocess
-import psiz.restart
-import psiz.trials
-import psiz.utils
-import psiz.visualize
+from psiz.mplot.bvn_ellipse import bvn_ellipse
+from psiz.mplot.hdi_bvn import hdi_bvn

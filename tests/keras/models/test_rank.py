@@ -122,9 +122,9 @@ def test_save_load_rank_wotrace(
     model.save(fn, overwrite=True, save_traces=False)
     # Load the saved model.
     # TODO clean up
-    # reconstructed_model = psiz.models.load_model(fn, compile=True)
+    # reconstructed_model = psiz.keras.models.load_model(fn, compile=True)
     # reconstructed_model = tf.keras.models.load_model(
-    #     fn, custom_objects={'Rank': psiz.models.Rank}
+    #     fn, custom_objects={'Rank': psiz.keras.models.Rank}
     # )
     reconstructed_model = tf.keras.models.load_model(fn)
     # Predict using loaded model.
@@ -1009,7 +1009,7 @@ def test_save_load_rank_wotrace(
 #     )
 
 #     z = model_true_det.z
-#     (z_q, z_r) = psiz.models._inflate_points(
+#     (z_q, z_r) = psiz.keras.models._inflate_points(
 #         docket_0.stimulus_set[trial_locs], n_reference,
 #         np.expand_dims(z, axis=2)
 #     )
@@ -1062,7 +1062,7 @@ def test_save_load_rank_wotrace(
 #     for i_ref in range(n_reference):
 #         z_r_desired[:, :, i_ref, :] = z[stimulus_set[:, 1+i_ref], :]
 
-#     (z_q, z_r) = psiz.models._inflate_points(
+#     (z_q, z_r) = psiz.keras.models._inflate_points(
 #         stimulus_set, n_reference, z)
 
 #     np.testing.assert_allclose(z_q, z_q_desired, rtol=1e-6)
@@ -1092,19 +1092,19 @@ def test_save_load_rank_wotrace(
 #     attention = model_true._phi["w"]["value"][0, :]
 #     attention = np.tile(attention, (docket_0.n_trial, 1))
 
-#     (z_q, z_r) = psiz.models._inflate_points(
+#     (z_q, z_r) = psiz.keras.models._inflate_points(
 #         docket.stimulus_set[trial_locs], n_reference,
 #         np.expand_dims(z, axis=2)
 #     )
 #     s_qr = model_true.similarity(z_q, z_r, group_id=0)
-#     prob_1 = psiz.models._ranked_sequence_probability(s_qr, n_select)
+#     prob_1 = psiz.keras.models._ranked_sequence_probability(s_qr, n_select)
 #     prob_1 = prob_1[:, 0]
 
 #     # NOTE: tf_ranked_sequence_probability is not implemented to handle
 #     # samples.
 #     tf_n_select = tf.constant(n_select, dtype=tf.int32)
 #     tf_s_qr = tf.constant(s_qr[:, :, 0], dtype=tf.float32)
-#     prob_2 = psiz.models._tf_ranked_sequence_probability(
+#     prob_2 = psiz.keras.models._tf_ranked_sequence_probability(
 #         tf_s_qr, tf_n_select
 #     )
 #     np.testing.assert_allclose(prob_1, prob_2, rtol=1e-6)

@@ -57,7 +57,7 @@ def rank_1g_mle_rand():
     )
 
     behavior = psiz.keras.layers.RankBehavior()
-    model = psiz.models.Rank(
+    model = psiz.keras.models.Rank(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
     return model
@@ -104,7 +104,7 @@ def rank_1g_mle_det():
     )
 
     behavior = psiz.keras.layers.RankBehavior()
-    model = psiz.models.Rank(
+    model = psiz.keras.models.Rank(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
     return model

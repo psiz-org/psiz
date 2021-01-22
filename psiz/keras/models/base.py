@@ -480,7 +480,7 @@ def load_model(filepath, custom_objects={}, compile=False):
         if model_class_name in custom_objects:
             model_class = custom_objects[model_class_name]
         else:
-            model_class = getattr(psiz.models, model_class_name)
+            model_class = getattr(psiz.keras.models, model_class_name)
         with tf.keras.utils.custom_object_scope(custom_objects):
             model = model_class.from_config(config)
             loss = tf.keras.losses.deserialize(loss_config)

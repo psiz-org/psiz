@@ -54,8 +54,8 @@ stimuli = psiz.keras.layers.Stimuli(
 # Use a default similarity kernel (exponential with Euclidean distance).
 kernel = psiz.keras.layers.Kernel()
 
-# Create a Rank model that subclasses TensorFlow Keras Model.
-model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+# Create a `Rank` model.
+model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
 
 # Compile the model.
 model.compile(

@@ -28,12 +28,12 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from psiz.models.base import PsychologicalEmbedding
+from psiz.keras.models.base import PsychologicalEmbedding
 import psiz.keras.layers
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.models', name='Rank'
+    package='psiz.keras.models', name='Rank'
 )
 class Rank(PsychologicalEmbedding):
     """Psychological embedding inferred from ranked similarity judgments.

@@ -21,8 +21,9 @@ Todo:
 """
 
 import numpy as np
+
 from psiz import utils
-import psiz.models
+import psiz.keras.models
 
 
 def test_generate_group_matrix():

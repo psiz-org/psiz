@@ -226,7 +226,7 @@ def ground_truth(n_stimuli, n_dim):
             gamma_initializer=tf.keras.initializers.Constant(0.001),
         )
     )
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
 
     return model
 
@@ -251,7 +251,7 @@ def build_model(n_stimuli, n_dim):
     kernel = psiz.keras.layers.Kernel(
         similarity=psiz.keras.layers.ExponentialSimilarity()
     )
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 
 

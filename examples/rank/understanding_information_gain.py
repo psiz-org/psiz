@@ -268,7 +268,7 @@ def build_model(case=0):
             trainable=False
         )
     )
-    model = psiz.models.Rank(
+    model = psiz.keras.models.Rank(
         stimuli=stimuli, kernel=kernel, n_sample=n_sample
     )
     model.stimuli.build([None, None, None])

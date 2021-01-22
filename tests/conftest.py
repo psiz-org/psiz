@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-import psiz.models
+import psiz.keras.models
 import psiz.keras.layers
 
 
@@ -66,7 +66,7 @@ def rank_2g_mle_determ():
 
     behavior = psiz.keras.layers.RankBehavior()
 
-    model = psiz.models.Rank(
+    model = psiz.keras.models.Rank(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
     return model

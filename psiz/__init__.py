@@ -23,7 +23,6 @@ Modules:
     distributions
     generator
     keras
-    models
     mplot
     preprocess
     trials
@@ -38,10 +37,11 @@ import psiz.dimensionality
 import psiz.distributions
 import psiz.generators
 import psiz.keras
-import psiz.models
 import psiz.mplot
 import psiz.preprocess
 import psiz.restart
 import psiz.trials
 import psiz.utils
 import psiz.visualize
+
+psiz.models = psiz.keras.models  # TEMPORARY For backwards compatability.

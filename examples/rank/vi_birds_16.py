@@ -213,7 +213,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
             trainable=False
         )
     )
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
     return model
 
 

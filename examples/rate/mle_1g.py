@@ -250,7 +250,7 @@ def ground_truth_randn(n_stimuli, n_dim):
         rate_initializer=tf.keras.initializers.Constant(15.),
     )
     print('Ground truth rate: {0:.2f}'.format(behavior.rate.numpy()))
-    return psiz.models.Rate(
+    return psiz.keras.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
 
@@ -291,7 +291,7 @@ def ground_truth_grid():
         midpoint_initializer=tf.keras.initializers.Constant(.5),
         rate_initializer=tf.keras.initializers.Constant(15.),
     )
-    model = psiz.models.Rate(
+    model = psiz.keras.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
 
@@ -320,7 +320,7 @@ def build_model(n_stimuli, n_dim):
     )
 
     behavior = BehaviorLog()
-    model = psiz.models.Rate(
+    model = psiz.keras.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
     return model

@@ -373,7 +373,7 @@ def set_from_record(model, tracker, idx):
 
     Arguments:
         model: An appropriate TensorFlow model.
-        tracker: An appropriate psiz.models.FitTracker object.
+        tracker: An appropriate psiz.restart.FitTracker object.
         idx: An integer indicating which record to use.
 
     """

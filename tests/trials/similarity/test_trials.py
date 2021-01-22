@@ -37,7 +37,7 @@ import tensorflow as tf
 from psiz import trials
 from psiz.generators import RandomRank
 from psiz.agents import RankAgent
-import psiz.models
+import psiz.keras.models
 import psiz.keras.layers
 
 from psiz.trials.similarity.rank import _possible_rank_outcomes
@@ -215,7 +215,7 @@ def ground_truth(n_stimuli):
         )
     )
 
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 
 

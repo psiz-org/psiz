@@ -302,7 +302,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
         )
     )
 
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel)
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 
 
@@ -368,7 +368,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
-    model = psiz.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
     return model
 
 

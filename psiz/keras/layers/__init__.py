@@ -35,6 +35,7 @@ from psiz.keras.layers.embeddings.group_attn_variational import GroupAttentionVa
 from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
 from psiz.keras.layers.embeddings.logit_normal_diag import EmbeddingLogitNormalDiag
+from psiz.keras.layers.embeddings.nd import EmbeddingND
 from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
 from psiz.keras.layers.embeddings.shared import EmbeddingShared
 from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag

@@ -88,7 +88,7 @@ class EmbeddingND(tf.keras.layers.Layer):
     # def kl_weight(self, kl_weight):
     #     self._kl_weight = kl_weight
     #     # Set kl_weight of constituent layers.
-    #     self.embedding.kl_weight = kl_weight  # TODO MAYBE use `_layers`?
+    #     self.embedding.kl_weight = kl_weight  # MAYBE use `_layers`?
 
     def build(self, input_shape):
         """Build."""

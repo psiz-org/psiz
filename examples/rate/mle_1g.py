@@ -57,6 +57,7 @@ def main():
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
+    fp_model = fp_example / Path('inferred_model')
     n_stimuli = 25
     n_dim = 2
     n_restart = 1
@@ -198,6 +199,19 @@ def main():
         plt.savefig(
             os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
         )
+
+    # Save and load the model.
+    model_inferred.save(fp_model, save_traces=False, overwrite=True)
+    loaded_model = tf.keras.models.load_model(fp_model)
+
+    # Check similarity matrix of loaded model.
+    simmat_loaded = np.squeeze(
+            psiz.utils.pairwise_similarity(
+                loaded_model.stimuli, loaded_model.kernel, ds_pairs
+            ).numpy()
+        )
+    rho, _ = pearsonr(simmat_loaded, simmat_infer)
+    print('Inferred vs Saved/loaded R^2: {0:.2f}'.format(rho**2))
 
 
 def exhaustive_docket(n_stimuli):
@@ -382,9 +396,6 @@ def plot_restart(fig, model_true, model_inferred, r2):
     gs.tight_layout(fig)
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='BehaviorLog'
-)
 class BehaviorLog(psiz.keras.layers.RateBehavior):
     """Sub-class for logging weight metrics."""
 

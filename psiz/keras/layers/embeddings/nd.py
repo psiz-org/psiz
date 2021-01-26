@@ -16,7 +16,7 @@
 """Module for a TensorFlow EmbeddingND.
 
 Classes:
-    EmbeddingND: An embedding layer that accepts 2-dimensional inputs.
+    EmbeddingND: An embedding layer that accepts n-dimensional inputs.
 
 """
 
@@ -95,19 +95,18 @@ class EmbeddingND(tf.keras.layers.Layer):
         super().build(input_shape)
         self.embedding.build(input_shape)
 
-    def call(self, inputs):
+    def call(self, multi_index):
         """Call.
 
         Arguments:
-            inputs: A 2-tuple where the components are the indices into
-                the embedding.
+            multi_index: A muti-index TF tensor where the first
+                dimension corresponds to the n-dimensional indices.
 
         Returns:
             The embedding coordinates of the 2-dimensional indices.
 
         """
-        # Flatten other dimensions to prepare for mapping.
-        multi_index = tf.stack(inputs, axis=0)
+        # Reshape input into a 2D Tensor to prepare for linear mapping.
         mi_shape = tf.shape(multi_index)
         multi_index = tf.reshape(
             multi_index, (mi_shape[0], tf.math.reduce_prod(mi_shape[1:]))

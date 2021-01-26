@@ -91,7 +91,8 @@ def test_standard_2d_call(flat_embeddings):
         tf.constant(np.array(2, dtype=np.int32)),
         tf.constant(np.array(1, dtype=np.int32))
     ]
-    output = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output = nd_emb(multi_index).numpy()
     desired_output = reshaped_embeddings[2, 1]
     np.testing.assert_array_almost_equal(output, desired_output)
 
@@ -99,7 +100,8 @@ def test_standard_2d_call(flat_embeddings):
         tf.constant(np.array(5, dtype=np.int32)),
         tf.constant(np.array(1, dtype=np.int32))
     ]
-    output = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output = nd_emb(multi_index).numpy()
     desired_output = reshaped_embeddings[5, 1]
     np.testing.assert_array_almost_equal(output, desired_output)
 
@@ -116,7 +118,8 @@ def test_standard_2d_call(flat_embeddings):
         ], dtype=np.int32)
     )
     inputs = [inputs_0, inputs_1]
-    output = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output = nd_emb(multi_index).numpy()
 
     desired_output = np.array([
         [[2.0, 2.1, 2.2], [4.0, 4.1, 4.2]],
@@ -147,7 +150,8 @@ def test_standard_3d_call(flat_embeddings):
         tf.constant(np.array(0, dtype=np.int32)),
         tf.constant(np.array(0, dtype=np.int32))
     ]
-    output = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output = nd_emb(multi_index).numpy()
     desired_output = reshaped_embeddings[0, 0, 0]
     np.testing.assert_array_almost_equal(output, desired_output)
 
@@ -156,7 +160,8 @@ def test_standard_3d_call(flat_embeddings):
         tf.constant(np.array(1, dtype=np.int32)),
         tf.constant(np.array(1, dtype=np.int32))
     ]
-    output = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output = nd_emb(multi_index).numpy()
     desired_output = reshaped_embeddings[2, 1, 1]
     np.testing.assert_array_almost_equal(output, desired_output)
 
@@ -165,7 +170,8 @@ def test_standard_3d_call(flat_embeddings):
         tf.constant(np.array(1, dtype=np.int32)),
         tf.constant(np.array(0, dtype=np.int32))
     ]
-    output = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output = nd_emb(multi_index).numpy()
     desired_output = reshaped_embeddings[1, 1, 0]
     np.testing.assert_array_almost_equal(output, desired_output)
 
@@ -188,7 +194,8 @@ def test_standard_3d_call(flat_embeddings):
         ], dtype=np.int32)
     )
     inputs = (inputs_0, inputs_1, inputs_2)
-    output = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output = nd_emb(multi_index).numpy()
 
     desired_output = np.array([
         [[4.0, 4.1, 4.2], [9.0, 9.1, 9.2]],
@@ -228,6 +235,7 @@ def test_serialization(flat_embeddings):
         tf.constant(np.array(1, dtype=np.int32)),
         tf.constant(np.array(0, dtype=np.int32))
     ]
-    output_orig = nd_emb(inputs).numpy()
+    multi_index = tf.stack(inputs, axis=0)
+    output_orig = nd_emb(multi_index).numpy()
     output_recon = nd_emb_reconstructed(inputs).numpy()
     np.testing.assert_array_almost_equal(output_orig, output_recon)

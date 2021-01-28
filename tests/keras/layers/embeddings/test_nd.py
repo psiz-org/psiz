@@ -24,31 +24,15 @@ from tensorflow.keras.layers import Embedding
 from psiz.keras.layers import EmbeddingND
 
 
-@pytest.fixture
-def flat_embeddings():
-    z = np.array([
-        [0.0, 0.1, 0.2],  # 0, 0, 0
-        [1.0, 1.1, 1.2],  # 1, 0, 0
-        [2.0, 2.1, 2.2],  # 2, 0, 0
-        [3.0, 3.1, 3.2],  # 0, 1, 0
-        [4.0, 4.1, 4.2],  # 1, 1, 0
-        [5.0, 5.1, 5.2],  # 2, 1, 0
-        [6.0, 6.1, 6.2],  # 0, 0, 1
-        [7.0, 7.1, 7.2],  # 1, 0, 1
-        [8.0, 8.1, 8.2],  # 2, 0, 1
-        [9.0, 9.1, 9.2],  # 0, 1, 1
-        [10.0, 10.1, 10.2],  # 1, 1, 1
-        [11.0, 11.1, 11.2],  # 2, 1, 1
-    ])
-    return z
-
-
 def test_init():
     phys_emb = Embedding(
         input_dim=12, output_dim=3
     )
 
     # Raise no error, since shapes are compatible.
+    nd_emb = EmbeddingND(
+        embedding=phys_emb
+    )
     nd_emb = EmbeddingND(
         embedding=phys_emb, input_dims=[12]
     )

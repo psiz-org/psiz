@@ -38,7 +38,7 @@ class EmbeddingND(tf.keras.layers.Layer):
     only the semantics associated with `input_dim` changes.
 
     """
-    def __init__(self, embedding=None, input_dims=[], **kwargs):
+    def __init__(self, embedding=None, input_dims=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -53,6 +53,10 @@ class EmbeddingND(tf.keras.layers.Layer):
 
         """
         super(EmbeddingND, self).__init__(**kwargs)
+
+        # If no `input_dims` provided, do not reshape.
+        if input_dims is None:
+            input_dims = [embedding.input_dim]
 
         # Check that `input_dims` is compatible with provided embedding
         # layer.

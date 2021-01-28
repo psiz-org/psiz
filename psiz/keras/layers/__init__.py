@@ -30,6 +30,7 @@ from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.sort import SortBehavior
 from psiz.keras.layers.embeddings.deterministic import EmbeddingDeterministic
 from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
+from psiz.keras.layers.embeddings.group import EmbeddingGroup
 from psiz.keras.layers.embeddings.group_attention import GroupAttention
 from psiz.keras.layers.embeddings.group_attn_variational import GroupAttentionVariational
 from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag

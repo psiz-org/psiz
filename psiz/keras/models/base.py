@@ -92,9 +92,6 @@ class PsychologicalEmbedding(tf.keras.Model):
         self.kernel = kernel
         self.behavior = behavior
 
-        # Create convenience pointer to kernel parameters.
-        self.theta = self.kernel.theta
-
         self._kl_weight = 0.
         self.n_sample = n_sample
 

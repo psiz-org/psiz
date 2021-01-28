@@ -52,8 +52,6 @@ class WeightedMinkowski(tf.keras.layers.Layer):
             constraint=pk_constraints.GreaterThan(min_value=1.0)
         )
 
-        self.theta = {'rho': self.rho}
-
     def call(self, inputs):
         """Call.
 

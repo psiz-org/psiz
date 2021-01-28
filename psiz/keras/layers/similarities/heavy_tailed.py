@@ -90,12 +90,6 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
         )
 
-        self.theta = {
-            'tau': self.tau,
-            'kappa': self.kappa,
-            'alpha': self.alpha
-        }
-
     def call(self, inputs):
         """Call.
 

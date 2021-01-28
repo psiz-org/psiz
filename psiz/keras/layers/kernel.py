@@ -55,11 +55,6 @@ class Kernel(GroupLevel):
             similarity = ExponentialSimilarity()
         self.similarity = similarity
 
-        # Gather all pointers to theta-associated variables.
-        theta = self.distance.theta
-        theta.update(self.similarity.theta)
-        self.theta = theta
-
         self._n_sample = ()
         self._kl_weight = 0
 
@@ -179,11 +174,6 @@ class AttentionKernel(GroupLevel):
         if similarity is None:
             similarity = ExponentialSimilarity()
         self.similarity = similarity
-
-        # Gather all pointers to theta-associated variables.
-        theta = self.distance.theta
-        theta.update(self.similarity.theta)
-        self.theta = theta
 
         self._n_sample = ()
         self._kl_weight = 0

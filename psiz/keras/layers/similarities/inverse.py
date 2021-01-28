@@ -76,11 +76,6 @@ class InverseSimilarity(tf.keras.layers.Layer):
             constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16)
         )
 
-        self.theta = {
-            'tau': self.tau,
-            'mu': self.mu
-        }
-
     def call(self, inputs):
         """Call.
 

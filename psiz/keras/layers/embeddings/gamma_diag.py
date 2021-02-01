@@ -93,7 +93,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
-        self._n_sample = ()
+        self.n_sample = ()
 
         # Handle initializer.
         if concentration_initializer is None:
@@ -177,14 +177,6 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )
-
-    @property
-    def n_sample(self):
-        return self._n_sample
-
-    @n_sample.setter
-    def n_sample(self, n_sample):
-        self._n_sample = n_sample
 
     def call(self, inputs):
         """Call."""

@@ -35,16 +35,6 @@ class Behavior(GroupLevel):
         """
         super(Behavior, self).__init__(**kwargs)
 
-        self._n_sample = 0
-
-    @property
-    def n_sample(self):
-        return self._n_sample
-
-    @n_sample.setter
-    def n_sample(self, n_sample):
-        self._n_sample = n_sample
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()

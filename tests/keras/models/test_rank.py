@@ -30,10 +30,8 @@ def test_n_sample_propogation(rank_1g_vi):
     rank_1g_vi.n_sample = 100
     # Test property propagated to all relevant layers.
     assert rank_1g_vi.n_sample == 100
-    assert rank_1g_vi.stimuli.n_sample == 100
-    assert rank_1g_vi.kernel.n_sample == 100
-    assert rank_1g_vi.behavior.n_sample == 100
-    assert rank_1g_vi.stimuli.embedding.n_sample == 100
+    assert rank_1g_vi.stimuli.embedding.posterior.n_sample == 100
+    assert rank_1g_vi.stimuli.embedding.prior._embedding.n_sample == 100
 
 
 def test_kl_weight_propogation(rank_1g_vi):

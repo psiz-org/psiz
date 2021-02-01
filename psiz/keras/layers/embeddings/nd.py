@@ -72,16 +72,6 @@ class EmbeddingND(tf.keras.layers.Layer):
 
         self.input_dims = input_dims
         self.embedding = embedding
-        # self._n_sample = ()
-
-    # @property
-    # def n_sample(self):
-    #     return self._n_sample
-
-    # @n_sample.setter
-    # def n_sample(self, n_sample):
-    #     self._n_sample = n_sample
-    #     self.embedding.n_sample = n_sample
 
     def build(self, input_shape):
         """Build."""

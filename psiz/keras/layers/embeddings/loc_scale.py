@@ -86,7 +86,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
-        self._n_sample = ()
+        self.n_sample = ()
 
         # Handle initializer.
         if loc_initializer is None:
@@ -156,14 +156,6 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
     #     else:
     #         self.embeddings = self._build_embeddings_distribution(dtype)
     #     self.built = True
-
-    @property
-    def n_sample(self):
-        return self._n_sample
-
-    @n_sample.setter
-    def n_sample(self, n_sample):
-        self._n_sample = n_sample
 
     def call(self, inputs):
         """Call."""

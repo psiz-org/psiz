@@ -122,8 +122,9 @@ class PsychologicalEmbedding(tf.keras.Model):
     def n_sample(self, n_sample):
         self._n_sample = n_sample
         # Set n_sample of constituent layers.
-        for layer in self.layers:
-            layer.n_sample = n_sample
+        for sub in self.submodules:
+            if hasattr(sub, 'n_sample'):
+                setattr(sub, 'n_sample', n_sample)
 
     @property
     def kl_weight(self):

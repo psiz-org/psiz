@@ -55,18 +55,6 @@ class Kernel(GroupLevel):
             similarity = ExponentialSimilarity()
         self.similarity = similarity
 
-        self._n_sample = ()
-
-    @property
-    def n_sample(self):
-        return self._n_sample
-
-    @n_sample.setter
-    def n_sample(self, n_sample):
-        self._n_sample = n_sample
-        self.distance.n_sample = n_sample
-        self.similarity.n_sample = n_sample
-
     def call(self, inputs):
         """Call.
 
@@ -163,8 +151,6 @@ class AttentionKernel(GroupLevel):
             similarity = ExponentialSimilarity()
         self.similarity = similarity
 
-        self._n_sample = ()
-
     def call(self, inputs):
         """Call.
 
@@ -209,17 +195,6 @@ class AttentionKernel(GroupLevel):
         # Compute similarity.
         sim_qr = self.similarity(dist_qr)
         return sim_qr
-
-    @property
-    def n_sample(self):
-        return self._n_sample
-
-    @n_sample.setter
-    def n_sample(self, n_sample):
-        self._n_sample = n_sample
-        self.attention.n_sample = n_sample
-        self.distance.n_sample = n_sample
-        self.similarity.n_sample = n_sample
 
     def get_config(self):
         """Return layer configuration."""

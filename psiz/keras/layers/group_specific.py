@@ -82,8 +82,6 @@ class GroupSpecific(tf.keras.layers.Layer):
         idx_group = inputs[-1][:, self.group_col]
         idx_group = tf.one_hot(idx_group, self.n_subnet)
 
-        # Handle input reshaping. TODO
-
         # Run inputs through group-specific dispatcher.
         dispatcher = SparseDispatcher(self.n_subnet, idx_group)
         subnet_inputs = dispatcher.dispatch(inputs_less_group)

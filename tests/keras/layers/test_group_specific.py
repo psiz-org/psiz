@@ -189,11 +189,11 @@ def group_v0():
     group = tf.constant(
         np.array(
             [
-                [0, 0],
-                [1, 0],
-                [2, 0],
-                [1, 1],
-                [2, 1]
+                [0, 0, 0],
+                [0, 1, 0],
+                [0, 2, 0],
+                [0, 1, 1],
+                [0, 2, 1]
             ], dtype=np.int32
         )
     )
@@ -237,12 +237,12 @@ def inputs_v1():
 
 
 def test_init(subnets_determ):
-    group_layer = GroupSpecific(subnets=subnets_determ)
+    group_layer = GroupSpecific(subnets=subnets_determ, group_col=1)
 
 
 def test_call_determ_2d_input(subnets_determ, inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupSpecific(subnets=subnets_determ)
+    group_layer = GroupSpecific(subnets=subnets_determ, group_col=1)
 
     outputs = group_layer([inputs_v0, group_v0])
 
@@ -258,7 +258,7 @@ def test_call_determ_2d_input(subnets_determ, inputs_v0, group_v0):
 
 def test_call_determ_3d_input(subnets_determ, inputs_v1, group_v0):
     """Test call with data inputs larger than 2D."""
-    group_layer = GroupSpecific(subnets=subnets_determ)
+    group_layer = GroupSpecific(subnets=subnets_determ, group_col=1)
 
     outputs = group_layer([inputs_v1, group_v0])
 
@@ -320,7 +320,7 @@ def test_call_determ_3d_input(subnets_determ, inputs_v1, group_v0):
 
 def test_call_dist_2d_input_rank0(subnets_dist_rank0, inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupSpecific(subnets=subnets_dist_rank0)
+    group_layer = GroupSpecific(subnets=subnets_dist_rank0, group_col=1)
 
     outputs = group_layer([inputs_v0, group_v0])
 
@@ -338,7 +338,7 @@ def test_call_dist_2d_input_rank0(subnets_dist_rank0, inputs_v0, group_v0):
 
 def test_call_dist_2d_input_rank1(subnets_dist_rank1, inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupSpecific(subnets=subnets_dist_rank1)
+    group_layer = GroupSpecific(subnets=subnets_dist_rank1, group_col=1)
 
     outputs = group_layer([inputs_v0, group_v0])
     outputs_avg = tf.reduce_mean(outputs, axis=0)
@@ -357,7 +357,7 @@ def test_call_dist_2d_input_rank1(subnets_dist_rank1, inputs_v0, group_v0):
 
 def test_serialization(subnets_dist_rank1, inputs_v0, group_v0):
     # Build group-specific layer.
-    group_layer = GroupSpecific(subnets=subnets_dist_rank1)
+    group_layer = GroupSpecific(subnets=subnets_dist_rank1, group_col=1)
 
     # Get configuration.
     config = group_layer.get_config()

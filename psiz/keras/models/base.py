@@ -132,9 +132,9 @@ class PsychologicalEmbedding(tf.keras.Model):
     @kl_weight.setter
     def kl_weight(self, kl_weight):
         self._kl_weight = kl_weight
-        # Set kl_weight of constituent layers.
-        for layer in self.layers:
-            layer.kl_weight = kl_weight
+        for sub in self.submodules:
+            if hasattr(sub, 'kl_weight'):
+                setattr(sub, 'kl_weight', kl_weight)
 
     def train_step(self, data):
         """Logic for one training step.
@@ -498,3 +498,12 @@ def load_model(filepath, custom_objects={}, compile=False):
         )
 
     return model
+
+
+def _recursive_module_set(layers, attribute, value):
+    """Recurse and set property of layer."""
+    for layer in layers:
+        if hasattr(layer, attribute):
+            setattr(layer, attribute, value)
+        if hasattr(layer, 'layers'):
+            _recursive_module_set(layer.layers, attribute, value)

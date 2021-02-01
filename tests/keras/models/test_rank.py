@@ -22,38 +22,29 @@ import tensorflow as tf
 import psiz
 
 
-def test_propogation_properties(rank_1g_vi):
+def test_n_sample_propogation(rank_1g_vi):
     """Test propogation properties."""
     assert rank_1g_vi.n_sample == 1
 
     # Set n_sample at model level.
     rank_1g_vi.n_sample = 100
-    # Test property propagated to all consituent layers.
+    # Test property propagated to all relevant layers.
     assert rank_1g_vi.n_sample == 100
     assert rank_1g_vi.stimuli.n_sample == 100
     assert rank_1g_vi.kernel.n_sample == 100
     assert rank_1g_vi.behavior.n_sample == 100
     assert rank_1g_vi.stimuli.embedding.n_sample == 100
 
+
+def test_kl_weight_propogation(rank_1g_vi):
+    """Test propogation properties."""
     assert rank_1g_vi.kl_weight == 0.
 
     # Set kl_weight at model level.
     rank_1g_vi.kl_weight = .001
-    # Test property propagated to all consituent layers.
+    # Test property propagated to all relevant layers.
     assert rank_1g_vi.kl_weight == .001
-    assert rank_1g_vi.stimuli.kl_weight == .001
-    assert rank_1g_vi.kernel.kl_weight == .001
-    assert rank_1g_vi.behavior.kl_weight == .001
     assert rank_1g_vi.stimuli.embedding.kl_weight == .001
-
-    # TODO
-    # # Test invalid support.
-    # with pytest.raises(ValueError):
-    #     emb.rho = .1
-    # with pytest.raises(ValueError):
-    #     emb.tau = .1
-    # with pytest.raises(ValueError):
-    #     emb.mu = 0
 
 
 @pytest.mark.xfail

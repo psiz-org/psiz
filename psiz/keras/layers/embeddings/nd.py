@@ -73,7 +73,6 @@ class EmbeddingND(tf.keras.layers.Layer):
         self.input_dims = input_dims
         self.embedding = embedding
         # self._n_sample = ()
-        # self._kl_weight = 0
 
     # @property
     # def n_sample(self):
@@ -83,16 +82,6 @@ class EmbeddingND(tf.keras.layers.Layer):
     # def n_sample(self, n_sample):
     #     self._n_sample = n_sample
     #     self.embedding.n_sample = n_sample
-
-    # @property
-    # def kl_weight(self):
-    #     return self._kl_weight
-
-    # @kl_weight.setter
-    # def kl_weight(self, kl_weight):
-    #     self._kl_weight = kl_weight
-    #     # Set kl_weight of constituent layers.
-    #     self.embedding.kl_weight = kl_weight  # MAYBE use `_layers`?
 
     def build(self, input_shape):
         """Build."""

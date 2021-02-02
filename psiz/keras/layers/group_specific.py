@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for a TensorFlow GroupEmbedding.
+"""Module for a TensorFlow GroupSpecific.
 
 Classes:
     EmbeddingGroup: A layer that manages group-specific subnetworks.

@@ -27,7 +27,7 @@ from psiz.keras.layers.group_specific import GroupSpecific
 
 
 @pytest.fixture
-def subnets_determ():
+def emb_subnets_determ():
     """A list of subnets"""
     base_array = np.array([
         [0.0, 0.1, 0.2],
@@ -61,7 +61,7 @@ def subnets_determ():
 
 
 @pytest.fixture
-def subnets_dist_rank0():
+def emb_subnets_dist_rank0():
     """A list of subnets"""
     # Settings.
     prior_scale = .0000000001
@@ -122,7 +122,7 @@ def subnets_dist_rank0():
 
 
 @pytest.fixture
-def subnets_dist_rank1():
+def emb_subnets_dist_rank1():
     """A list of subnets"""
     # Settings.
     prior_scale = .0000000001
@@ -201,7 +201,7 @@ def group_v0():
 
 
 @pytest.fixture
-def inputs_v0():
+def emb_inputs_v0():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
     inputs = tf.constant(
@@ -219,7 +219,7 @@ def inputs_v0():
 
 
 @pytest.fixture
-def inputs_v1():
+def emb_inputs_v1():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
     inputs = tf.constant(
@@ -236,8 +236,8 @@ def inputs_v1():
     return inputs
 
 
-def test_subnet_method(subnets_determ):
-    group_layer = GroupSpecific(subnets=subnets_determ, group_col=1)
+def test_subnet_method(emb_subnets_determ):
+    group_layer = GroupSpecific(subnets=emb_subnets_determ, group_col=1)
     group_layer.build([[None, None], [None, None]])
 
     subnet_0 = group_layer.subnet(0)
@@ -245,21 +245,21 @@ def test_subnet_method(subnets_determ):
     subnet_2 = group_layer.subnet(2)
 
     tf.debugging.assert_equal(
-        subnet_0.embeddings, subnets_determ[0].embeddings
+        subnet_0.embeddings, emb_subnets_determ[0].embeddings
     )
     tf.debugging.assert_equal(
-        subnet_1.embeddings, subnets_determ[1].embeddings
+        subnet_1.embeddings, emb_subnets_determ[1].embeddings
     )
     tf.debugging.assert_equal(
-        subnet_2.embeddings, subnets_determ[2].embeddings
+        subnet_2.embeddings, emb_subnets_determ[2].embeddings
     )
 
 
-def test_call_determ_2d_input(subnets_determ, inputs_v0, group_v0):
+def test_call_determ_2d_input(emb_subnets_determ, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupSpecific(subnets=subnets_determ, group_col=1)
+    group_layer = GroupSpecific(subnets=emb_subnets_determ, group_col=1)
 
-    outputs = group_layer([inputs_v0, group_v0])
+    outputs = group_layer([emb_inputs_v0, group_v0])
 
     desired_outputs = np.array([
         [[0.0, 0.1, 0.2], [1.0, 1.1, 1.2], [2.0, 2.1, 2.2]],
@@ -271,11 +271,11 @@ def test_call_determ_2d_input(subnets_determ, inputs_v0, group_v0):
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs)
 
 
-def test_call_determ_3d_input(subnets_determ, inputs_v1, group_v0):
+def test_call_determ_3d_input(emb_subnets_determ, emb_inputs_v1, group_v0):
     """Test call with data inputs larger than 2D."""
-    group_layer = GroupSpecific(subnets=subnets_determ, group_col=1)
+    group_layer = GroupSpecific(subnets=emb_subnets_determ, group_col=1)
 
-    outputs = group_layer([inputs_v1, group_v0])
+    outputs = group_layer([emb_inputs_v1, group_v0])
 
     desired_outputs = np.array([
         [
@@ -333,11 +333,11 @@ def test_call_determ_3d_input(subnets_determ, inputs_v1, group_v0):
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs)
 
 
-def test_call_dist_2d_input_rank0(subnets_dist_rank0, inputs_v0, group_v0):
+def test_call_dist_2d_input_rank0(emb_subnets_dist_rank0, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupSpecific(subnets=subnets_dist_rank0, group_col=1)
+    group_layer = GroupSpecific(subnets=emb_subnets_dist_rank0, group_col=1)
 
-    outputs = group_layer([inputs_v0, group_v0])
+    outputs = group_layer([emb_inputs_v0, group_v0])
 
     desired_outputs = np.array([
         [[0.0, 0.1, 0.2], [1.0, 1.1, 1.2], [2.0, 2.1, 2.2]],
@@ -351,11 +351,11 @@ def test_call_dist_2d_input_rank0(subnets_dist_rank0, inputs_v0, group_v0):
     )
 
 
-def test_call_dist_2d_input_rank1(subnets_dist_rank1, inputs_v0, group_v0):
+def test_call_dist_2d_input_rank1(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupSpecific(subnets=subnets_dist_rank1, group_col=1)
+    group_layer = GroupSpecific(subnets=emb_subnets_dist_rank1, group_col=1)
 
-    outputs = group_layer([inputs_v0, group_v0])
+    outputs = group_layer([emb_inputs_v0, group_v0])
     outputs_avg = tf.reduce_mean(outputs, axis=0)
 
     desired_outputs = np.array([
@@ -370,9 +370,9 @@ def test_call_dist_2d_input_rank1(subnets_dist_rank1, inputs_v0, group_v0):
     )
 
 
-def test_serialization(subnets_dist_rank1, inputs_v0, group_v0):
+def test_serialization(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     # Build group-specific layer.
-    group_layer = GroupSpecific(subnets=subnets_dist_rank1, group_col=1)
+    group_layer = GroupSpecific(subnets=emb_subnets_dist_rank1, group_col=1)
 
     # Get configuration.
     config = group_layer.get_config()
@@ -388,10 +388,10 @@ def test_serialization(subnets_dist_rank1, inputs_v0, group_v0):
     assert group_layer.n_subnet == group_layer_recon.n_subnet
     assert group_layer.group_col == group_layer_recon.group_col
 
-    outputs = group_layer([inputs_v0, group_v0])
+    outputs = group_layer([emb_inputs_v0, group_v0])
     outputs_avg = tf.reduce_mean(outputs, axis=0)
 
-    outputs_recon = group_layer_recon([inputs_v0, group_v0])
+    outputs_recon = group_layer_recon([emb_inputs_v0, group_v0])
     outputs_avg_recon = tf.reduce_mean(outputs_recon, axis=0)
 
     # Assert calls are roughly equal (given constant initializer).

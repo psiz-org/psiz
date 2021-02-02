@@ -19,11 +19,11 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.keras.layers.distances.mink import Minkowski
+from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
 
 
 def test_call(pw_inputs_v0):
-    mink_layer = Minkowski(
+    mink_layer = MinkowskiVariational(
         rho_initializer=tf.keras.initializers.Constant(2.),
         w_initializer=tf.keras.initializers.Constant(1.),
         trainable=False

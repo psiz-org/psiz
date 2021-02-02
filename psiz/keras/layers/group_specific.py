@@ -75,6 +75,9 @@ class GroupSpecific(tf.keras.layers.Layer):
         self._perm_order = perm_order
         self._unperm_order = unperm_order
 
+        for subnet in self.subnets:
+            subnet.build(input_shape_less_group)
+
     def call(self, inputs):
         """Call."""
         # Split inputs.

@@ -236,8 +236,23 @@ def inputs_v1():
     return inputs
 
 
-def test_init(subnets_determ):
+def test_subnet_method(subnets_determ):
     group_layer = GroupSpecific(subnets=subnets_determ, group_col=1)
+    group_layer.build([[None, None], [None, None]])
+
+    subnet_0 = group_layer.subnet(0)
+    subnet_1 = group_layer.subnet(1)
+    subnet_2 = group_layer.subnet(2)
+
+    tf.debugging.assert_equal(
+        subnet_0.embeddings, subnets_determ[0].embeddings
+    )
+    tf.debugging.assert_equal(
+        subnet_1.embeddings, subnets_determ[1].embeddings
+    )
+    tf.debugging.assert_equal(
+        subnet_2.embeddings, subnets_determ[2].embeddings
+    )
 
 
 def test_call_determ_2d_input(subnets_determ, inputs_v0, group_v0):

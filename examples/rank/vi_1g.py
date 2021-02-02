@@ -57,7 +57,6 @@ def main():
     n_dim = 2
     n_group = 1
     n_trial = 2000
-    n_restart = 1
     epochs = 1000
     batch_size = 128
     n_frame = 1  # Set to 7 to observe convergence behavior.
@@ -142,7 +141,6 @@ def main():
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
-    train_time = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
@@ -171,28 +169,23 @@ def main():
             n_stimuli, n_dim, n_group, obs_round_train.n_trial
         )
 
-        # Infer embedding with restarts.
-        restarter = psiz.restart.Restarter(
-            model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
-            n_restart=n_restart
-        )
-        restart_record = restarter.fit(
+        # Infer embedding.
+        model_inferred.compile(**compile_kwargs)
+        history = model_inferred.fit(
             x=ds_obs_round_train, validation_data=ds_obs_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
-        model_inferred = restarter.model
 
         dist = model_inferred.stimuli.embedding.prior.embeddings.distribution
         print('    Inferred prior scale: {0:.4f}'.format(
             dist.distribution.distribution.scale[0, 0]
         ))
 
-        # NOTE: The following are noisy estimates of final train/vak loss.
+        # NOTE: The following are noisy estimates of final train/val loss.
         # Less noisy estimates could be obatined by running `evaluate` on
         # the train and validation set like test in the next block.
-        train_loss[i_frame] = restart_record.record['loss'][0]
-        train_time[i_frame] = restart_record.record['ms_per_epoch'][0]
-        val_loss[i_frame] = restart_record.record['val_loss'][0]
+        train_loss[i_frame] = history.history['loss'][-1]
+        val_loss[i_frame] = history.history['val_loss'][-1]
 
         tf.keras.backend.clear_session()
         model_inferred.n_sample = 100
@@ -226,7 +219,7 @@ def main():
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
             fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
-            model_inferred, color_array, train_time
+            model_inferred, color_array
         )
         fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -244,7 +237,7 @@ def main():
 
 def plot_frame(
         fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
-        model_inferred, color_array, train_time):
+        model_inferred, color_array):
     """Plot frame."""
     # Settings.
     s = 10
@@ -261,11 +254,8 @@ def plot_frame(
     f0_ax2 = fig0.add_subplot(gs[1, 0])
     plot_convergence(f0_ax2, n_obs, r2)
 
-    f0_ax3 = fig0.add_subplot(gs[1, 1])
-    plot_time(f0_ax3, n_obs, train_time)
-
     # Plot embeddings.
-    f0_ax1 = fig0.add_subplot(gs[0, 1])
+    f0_ax1 = fig0.add_subplot(gs[0:2, 1])
     # Determine embedding limits.
     z_max = 1.3 * np.max(np.abs(z_true))
     z_limits = [-z_max, z_max]
@@ -302,7 +292,7 @@ def plot_frame(
     f0_ax1.set_aspect('equal')
     f0_ax1.set_xticks([])
     f0_ax1.set_yticks([])
-    f0_ax1.set_title('Embeddings')
+    f0_ax1.set_title('Embeddings (99% HDI)')
 
     gs.tight_layout(fig0)
 
@@ -343,22 +333,6 @@ def plot_convergence(ax, n_obs, r2):
 
     ax.set_ylabel(r'$R^2$')
     ax.set_ylim(-0.05, 1.05)
-
-
-def plot_time(ax, n_obs, train_time):
-    # Settings.
-    ms = 2
-
-    ax.plot(n_obs, train_time, 'o-',  ms=ms,)
-    ax.set_title('Train Time')
-
-    ax.set_xlabel('Trials')
-    limits = [0, np.max(n_obs) + 10]
-    ax.set_xlim(limits)
-    ticks = [np.min(n_obs), np.max(n_obs)]
-    ax.set_xticks(ticks)
-
-    ax.set_ylabel('ms')
 
 
 def unpack_mvn(dist, group_idx):

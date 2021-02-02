@@ -161,20 +161,8 @@ class SparseDispatcher(object):
                 `[expert_batch_size_i, <extra_input_dims>]`.
 
         """
-        inp_dispatch = []
-        for tup in inp:
-            tup = tf.gather(tup, self._batch_index)
-            inp_dispatch.append(
-                tf.split(
-                    tup, self._part_sizes_tensor, 0, num=self._num_experts
-                )
-            )
-        if len(inp_dispatch) == 1:
-            inp_dispatch = inp_dispatch[0]
-        return inp_dispatch
-        # TODO
-        # inp = tf.gather(inp, self._batch_index)
-        # return tf.split(inp, self._part_sizes_tensor, 0, num=self._num_experts)
+        inp = tf.gather(inp, self._batch_index)
+        return tf.split(inp, self._part_sizes_tensor, 0, num=self._num_experts)
 
     # @add_name_scope()
     def combine(self, expert_out, multiply_by_gates=True):

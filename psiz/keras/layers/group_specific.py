@@ -34,6 +34,9 @@ class GroupSpecific(tf.keras.layers.Layer):
     The output shape must be the same for all subnetworks, this
     includes the sample shape (if any).
 
+    This layer requires that the subnetworks take a single Tensor as
+    input.
+
     """
     def __init__(self, subnets=None, group_col=0, **kwargs):
         """Initialize."""
@@ -79,7 +82,15 @@ class GroupSpecific(tf.keras.layers.Layer):
             subnet.build(input_shape_less_group)
 
     def call(self, inputs):
-        """Call."""
+        """Call.
+
+        Arguments:
+            inputs: a 2-tuple containing a data Tensor and a group
+                Tensor.
+                data Tensor: shape=(batch, m, [n, ...])
+                group Tensor: shape=(batch, g)
+
+        """
         # Split inputs.
         inputs_less_group = inputs[0]
         idx_group = inputs[-1][:, self.group_col]
@@ -140,7 +151,7 @@ class GroupSpecific(tf.keras.layers.Layer):
             x: Data Tensor.
 
         Returns:
-            x_2d: Transformed data Tensor.
+            x: Transformed data Tensor.
             lost_shape: The original (i.e., lost) shape of the non-batch
                 dimensions.
 

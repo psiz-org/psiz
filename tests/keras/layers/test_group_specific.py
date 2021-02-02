@@ -333,7 +333,8 @@ def test_call_determ_3d_input(emb_subnets_determ, emb_inputs_v1, group_v0):
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs)
 
 
-def test_call_dist_2d_input_rank0(emb_subnets_dist_rank0, emb_inputs_v0, group_v0):
+def test_call_dist_2d_input_rank0(
+        emb_subnets_dist_rank0, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
     group_layer = GroupSpecific(subnets=emb_subnets_dist_rank0, group_col=1)
 
@@ -351,7 +352,8 @@ def test_call_dist_2d_input_rank0(emb_subnets_dist_rank0, emb_inputs_v0, group_v
     )
 
 
-def test_call_dist_2d_input_rank1(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
+def test_call_dist_2d_input_rank1(
+        emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
     group_layer = GroupSpecific(subnets=emb_subnets_dist_rank1, group_col=1)
 

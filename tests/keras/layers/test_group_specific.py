@@ -23,7 +23,11 @@ from tensorflow.keras.layers import Embedding
 import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingNormalDiag
-from psiz.keras.layers.group_specific import GroupSpecific
+# from psiz.keras.layers import WeightedMinkowski  # TODO
+from psiz.keras.layers.distances.mink import Minkowski
+from psiz.keras.layers import ExponentialSimilarity
+from psiz.keras.layers import GroupSpecific
+from psiz.keras.layers.kernels.distance_based import DistanceBased
 
 
 @pytest.fixture
@@ -236,6 +240,87 @@ def emb_inputs_v1():
     return inputs
 
 
+@pytest.fixture
+def pw_subnets():
+    """A list of subnets"""
+    pw_0 = DistanceBased(
+        distance=Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=tf.keras.initializers.Constant(.1),
+        )
+    )
+    pw_1 = DistanceBased(
+        distance=Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=tf.keras.initializers.Constant(.1),
+        )
+    )
+
+    pw_2 = DistanceBased(
+        distance=Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=tf.keras.initializers.Constant(.1),
+        )
+    )
+
+    subnets = [pw_0, pw_1, pw_2]
+    return subnets
+
+
+@pytest.fixture
+def pw_inputs_v0():
+    """A minibatch of non-gate inupts."""
+    # Create a simple batch (batch_size=5).
+
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [0.0, 0.1, 0.2],
+                [1.0, 1.1, 1.2],
+                [2.0, 2.1, 2.2],
+                [3.0, 3.1, 3.2],
+                [4.0, 4.1, 4.2]
+            ], dtype=np.float32
+        )
+    )
+
+    inputs_1 = tf.constant(
+        np.array(
+            [
+                [5.0, 5.1, 5.2],
+                [6.0, 6.1, 6.2],
+                [7.0, 7.1, 7.2],
+                [8.0, 8.1, 8.2],
+                [9.0, 9.1, 9.2]
+            ], dtype=np.float32
+        )
+    )
+
+    inputs = tf.stack([inputs_0, inputs_1], axis=-1)
+    return inputs
+
+
 def test_subnet_method(emb_subnets_determ):
     group_layer = GroupSpecific(subnets=emb_subnets_determ, group_col=1)
     group_layer.build([[None, None], [None, None]])
@@ -400,3 +485,19 @@ def test_emb_serialization(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     np.testing.assert_array_almost_equal(
         outputs_avg.numpy(), outputs_avg_recon.numpy(), decimal=1
     )
+
+
+def test_pairwise_call(pw_subnets, pw_inputs_v0, group_v0):
+    group_layer = GroupSpecific(subnets=pw_subnets, group_col=1)
+    outputs = group_layer([pw_inputs_v0, group_v0])
+
+    # x = np.exp(-.1 * np.sqrt(3*(5**2)))
+    desired_outputs = np.array([
+        0.4206200260541147,
+        0.4206200260541147,
+        0.4206200260541147,
+        0.4206200260541147,
+        0.4206200260541147
+    ])
+
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())

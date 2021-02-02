@@ -50,7 +50,7 @@ def test_save_load_rank_wtrace(
         rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
     """Test loading and saving of embedding model."""
     model = rank_1g_mle
-    n_submodule = len(model.submodules)
+    # n_submodule = len(model.submodules)
 
     # Compile
     compile_kwargs = {
@@ -95,7 +95,7 @@ def test_save_load_rank_wotrace(
         rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
     """Test loading and saving of embedding model."""
     model = rank_1g_mle
-    n_submodule = len(model.submodules)
+    # n_submodule = len(model.submodules)
 
     # Compile
     compile_kwargs = {

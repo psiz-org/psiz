@@ -16,7 +16,7 @@
 """Module for a TensorFlow GroupSpecific.
 
 Classes:
-    EmbeddingGroup: A layer that manages group-specific subnetworks.
+    GroupSpecific: A layer that manages group-specific subnetworks.
 
 """
 

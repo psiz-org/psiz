@@ -50,6 +50,8 @@ def test_save_load_rank_wtrace(
         rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
     """Test loading and saving of embedding model."""
     model = rank_1g_mle
+    n_submodule = len(model.submodules)
+
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -71,6 +73,11 @@ def test_save_load_rank_wtrace(
     model.save(fn, overwrite=True, save_traces=True)
     # Load the saved model.
     reconstructed_model = tf.keras.models.load_model(fn)
+
+    # Check submodule agreement. TODO
+    # n_submodule_recon = len(reconstructed_model.submodules)
+    # assert n_submodule == n_submodule_recon
+
     # Predict using loaded model.
     output_1 = reconstructed_model.predict(ds_rank_docket)
 
@@ -88,6 +95,8 @@ def test_save_load_rank_wotrace(
         rank_1g_mle, tmpdir, ds_rank_docket, ds_rank_obs):
     """Test loading and saving of embedding model."""
     model = rank_1g_mle
+    n_submodule = len(model.submodules)
+
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -106,16 +115,15 @@ def test_save_load_rank_wotrace(
 
     # Save the model.
     fn = tmpdir.join('embedding_test')
-    # TODO test with save_traces
-    # model.save(fn, overwrite=True)
     model.save(fn, overwrite=True, save_traces=False)
     # Load the saved model.
-    # TODO clean up
-    # reconstructed_model = psiz.keras.models.load_model(fn, compile=True)
-    # reconstructed_model = tf.keras.models.load_model(
-    #     fn, custom_objects={'Rank': psiz.keras.models.Rank}
-    # )
     reconstructed_model = tf.keras.models.load_model(fn)
+
+    # Check submodule agreement. TODO
+    # TODO Why are submodules destroyed during save/load?
+    # n_submodule_recon = len(reconstructed_model.submodules)
+    # assert n_submodule == n_submodule_recon
+
     # Predict using loaded model.
     output_1 = reconstructed_model.predict(ds_rank_docket)
 

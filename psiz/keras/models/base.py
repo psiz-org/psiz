@@ -121,10 +121,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     @n_sample.setter
     def n_sample(self, n_sample):
         self._n_sample = n_sample
-        # Set n_sample of constituent layers.
-        for sub in self.submodules:
-            if hasattr(sub, 'n_sample'):
-                setattr(sub, 'n_sample', n_sample)
+        _submodule_setattr(self.layers, 'n_sample', n_sample)
 
     @property
     def kl_weight(self):
@@ -133,9 +130,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     @kl_weight.setter
     def kl_weight(self, kl_weight):
         self._kl_weight = kl_weight
-        for sub in self.submodules:
-            if hasattr(sub, 'kl_weight'):
-                setattr(sub, 'kl_weight', kl_weight)
+        _submodule_setattr(self.layers, 'kl_weight', kl_weight)
 
     def train_step(self, data):
         """Logic for one training step.
@@ -501,10 +496,9 @@ def load_model(filepath, custom_objects={}, compile=False):
     return model
 
 
-def _recursive_module_set(layers, attribute, value):
-    """Recurse and set property of layer."""
+def _submodule_setattr(layers, attribute, val):
+    """Iterate over layers and submodules to set attribute."""
     for layer in layers:
-        if hasattr(layer, attribute):
-            setattr(layer, attribute, value)
-        if hasattr(layer, 'layers'):
-            _recursive_module_set(layer.layers, attribute, value)
+        for sub in layer.submodules:
+            if hasattr(sub, attribute):
+                setattr(sub, attribute, val)

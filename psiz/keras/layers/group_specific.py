@@ -92,7 +92,8 @@ class GroupSpecific(tf.keras.layers.Layer):
 
         """
         # Split inputs.
-        inputs_less_group = inputs[0]
+        # inputs_less_group = inputs[0]  # TODO
+        inputs_less_group = inputs[0:-1]
         idx_group = inputs[-1][:, self.group_col]
         idx_group = tf.one_hot(idx_group, self.n_subnet)
 

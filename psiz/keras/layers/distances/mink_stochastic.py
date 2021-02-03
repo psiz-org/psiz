@@ -28,6 +28,7 @@ from psiz.distributions.truncated_normal import TruncatedNormal
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.ops.core import wpnorm
 
+
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='MinkowskiStochastic'
 )
@@ -197,10 +198,10 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
 
         Arguments:
             inputs: A tf.Tensor denoting a set of vectors.
-                shape = ([n_sample,] batch_size, [n, m, ...] n_dim, 2)
+                shape=([n_sample,] batch_size, [n, m, ...] n_dim, 2)
 
         Returns:
-            shape = ([n_sample,] batch_size, [n, m, ...])
+            shape=([n_sample,] batch_size, [n, m, ...])
 
         """
         z_0, z_1 = tf.unstack(inputs, num=2, axis=-1)

@@ -24,7 +24,6 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
 
-from psiz.keras.layers.stochastic import Stochastic
 from psiz.distributions.truncated_normal import TruncatedNormal
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.ops.core import wpnorm
@@ -32,7 +31,7 @@ from psiz.keras.layers.ops.core import wpnorm
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='MinkowskiStochastic'
 )
-class MinkowskiStochastic(Stochastic):
+class MinkowskiStochastic(tf.keras.layers.Layer):
     """A stochastic Minkowski distance layer."""
     def __init__(self, **kwargs):
         """Initialize."""
@@ -198,17 +197,19 @@ class MinkowskiStochastic(Stochastic):
 
         Arguments:
             inputs: A tf.Tensor denoting a set of vectors.
-                shape = (batch_size, [n, m, ...] n_dim, 2)
+                shape = ([n_sample,] batch_size, [n, m, ...] n_dim, 2)
 
         Returns:
-            shape = (n_sample, batch_size, [n, m, ...])
+            shape = ([n_sample,] batch_size, [n, m, ...])
 
         """
         z_0, z_1 = tf.unstack(inputs, num=2, axis=-1)
         x = z_0 - z_1
 
-        rho = self.rho.sample(self.n_sample)
-        w = self.w.sample(self.n_sample)
+        # Sample free parameters.
+        x_shape = tf.shape(x)
+        rho = self.rho.sample(x_shape[0:-1])
+        w = self.w.sample(x_shape[0:-1])
 
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)

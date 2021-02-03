@@ -51,3 +51,21 @@ def pw_inputs_v0():
 
     inputs = tf.stack([inputs_0, inputs_1], axis=-1)
     return inputs
+
+
+@pytest.fixture
+def group_v0():
+    """A minibatch of group indices."""
+    # Create a simple batch (batch_size=5).
+    group = tf.constant(
+        np.array(
+            [
+                [0, 0, 0],
+                [0, 1, 0],
+                [0, 2, 0],
+                [0, 1, 1],
+                [0, 2, 1]
+            ], dtype=np.int32
+        )
+    )
+    return group

@@ -21,6 +21,8 @@ Classes:
 """
 
 import tensorflow as tf
+from tensorflow.python.eager import context
+from tensorflow.python.framework import ops
 from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
 
@@ -34,36 +36,33 @@ from psiz.keras.layers.ops.core import wpnorm
 )
 class MinkowskiStochastic(tf.keras.layers.Layer):
     """A stochastic Minkowski distance layer."""
-    def __init__(self, **kwargs):
+    def __init__(
+            self,
+            rho_loc_trainable=True,
+            rho_loc_initializer=None,
+            rho_loc_constraint=None,
+            rho_loc_regularizer=None,
+            rho_scale_trainable=True,
+            rho_scale_initializer=None,
+            rho_scale_constraint=None,
+            rho_scale_regularizer=None,
+            w_loc_trainable=True,
+            w_loc_initializer=None,
+            w_loc_constraint=None,
+            w_loc_regularizer=None,
+            w_scale_trainable=True,
+            w_scale_initializer=None,
+            w_scale_constraint=None,
+            w_scale_regularizer=None,
+            **kwargs):
         """Initialize."""
         super(MinkowskiStochastic, self).__init__(**kwargs)
 
-        # TODO
+        # Additional defaults. TODO
         self.rho_low = 1.0
-        self.rho_high = 1000000
-
-        rho_loc_initializer = None
-        rho_loc_constraint = None
-        rho_loc_regularizer = None
-        rho_loc_trainable = None
-
-        rho_scale_initializer = None
-        rho_scale_constraint = None
-        rho_scale_regularizer = None
-        rho_scale_trainable = None
-
+        self.rho_high = 1000000.
         self.w_low = 0.0
-        self.w_high = 1000000
-
-        w_loc_initializer = None
-        w_loc_constraint = None
-        w_loc_regularizer = None
-        w_loc_trainable = None
-
-        w_scale_initializer = None
-        w_scale_constraint = None
-        w_scale_trainable = None
-        w_scale_regularizer = None
+        self.w_high = 1000000.
 
         if rho_loc_initializer is None:
             rho_loc_initializer = tf.keras.initializers.Constant(2.)
@@ -127,7 +126,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         dtype = tf.as_dtype(self.dtype or K.floatx())
         self.rho = self._build_rho(input_shape, dtype)
         self.w = self._build_w(input_shape, dtype)
-        # self.built = True  # TODO is this necessary?
+        self.built = True  # TODO is this necessary?
 
     def _build_rho(self, input_shape, dtype):
         self.rho_loc = self.add_weight(

@@ -50,6 +50,25 @@ def test_call(pw_inputs_v0):
     )
 
 
+def test_output_shape(pw_inputs_v0):
+    """Test output_shape method."""
+    kl_weight = .1
+
+    mink_posterior = MinkowskiStochastic()
+    mink_prior = MinkowskiStochastic()
+
+    mink_layer = MinkowskiVariational(
+        posterior=mink_posterior,
+        prior=mink_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+
+    input_shape = tf.shape(pw_inputs_v0).numpy().tolist()
+    output_shape = mink_layer.compute_output_shape(input_shape)
+    desired_output_shape = tf.TensorShape([5])
+    tf.debugging.assert_equal(output_shape, desired_output_shape)
+
+
 def test_serialization():
     """Test serialization."""
     kl_weight = .1

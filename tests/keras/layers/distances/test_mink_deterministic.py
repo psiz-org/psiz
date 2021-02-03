@@ -40,6 +40,15 @@ def test_call(pw_inputs_v0):
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
 
 
+def test_output_shape(pw_inputs_v0):
+    """Test output_shape method."""
+    mink_layer = Minkowski()
+    input_shape = tf.shape(pw_inputs_v0).numpy().tolist()
+    output_shape = mink_layer.compute_output_shape(input_shape)
+    desired_output_shape = tf.TensorShape([5])
+    tf.debugging.assert_equal(output_shape, desired_output_shape)
+
+
 def test_serialization():
     mink_layer = Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.),

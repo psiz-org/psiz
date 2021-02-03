@@ -186,24 +186,6 @@ def emb_subnets_dist_rank1():
 
 
 @pytest.fixture
-def group_v0():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    group = tf.constant(
-        np.array(
-            [
-                [0, 0, 0],
-                [0, 1, 0],
-                [0, 2, 0],
-                [0, 1, 1],
-                [0, 2, 1]
-            ], dtype=np.int32
-        )
-    )
-    return group
-
-
-@pytest.fixture
 def emb_inputs_v0():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
@@ -467,3 +449,15 @@ def test_kernel_call(pw_subnets, pw_inputs_v0, group_v0):
     ])
 
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+
+
+def test_kernel_output_shape(pw_subnets, pw_inputs_v0, group_v0):
+    """Test output_shape method."""
+    group_layer = GroupSpecific(subnets=pw_subnets, group_col=1)
+
+    input_shape_x = tf.shape(pw_inputs_v0).numpy().tolist()
+    input_shape_group = tf.shape(group_v0).numpy().tolist()
+    input_shape = [input_shape_x, input_shape_group]
+    output_shape = group_layer.compute_output_shape(input_shape)
+    desired_output_shape = tf.TensorShape([5])
+    tf.debugging.assert_equal(output_shape, desired_output_shape)

@@ -30,6 +30,7 @@ from psiz.keras.layers.similarities.students_t import StudentsTSimilarity
 from psiz.keras.layers.kernel import Kernel
 from psiz.keras.layers.kernel import AttentionKernel
 from psiz.keras.layers.kernels.distance_based import DistanceBased
+from psiz.keras.layers.kernels.kernel_adapter import KernelAdapter
 from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.sort import SortBehavior

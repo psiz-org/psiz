@@ -17,6 +17,7 @@
 
 import numpy as np
 import pytest
+import tensorflow as tf
 
 from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
 
@@ -36,3 +37,12 @@ def test_call(pw_inputs_v0):
     np.testing.assert_array_almost_equal(
         desired_outputs, outputs.numpy(), decimal=4
     )
+
+
+def test_output_shape(pw_inputs_v0):
+    """Test output_shape method."""
+    mink_layer = MinkowskiStochastic()
+    input_shape = tf.shape(pw_inputs_v0).numpy().tolist()
+    output_shape = mink_layer.compute_output_shape(input_shape)
+    desired_output_shape = tf.TensorShape([5])
+    tf.debugging.assert_equal(output_shape, desired_output_shape)

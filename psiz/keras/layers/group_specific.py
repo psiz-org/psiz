@@ -39,7 +39,16 @@ class GroupSpecific(tf.keras.layers.Layer):
 
     """
     def __init__(self, subnets=None, group_col=0, **kwargs):
-        """Initialize."""
+        """Initialize.
+
+        Arguments:
+            subnets: A non-empty list of sub-networks. It is assumed
+                that all subnetworks have the same `input_shape` and
+                `output_shape`.
+            group_col: The group column on which to gate inputs to the
+                subnetworks.
+
+        """
         super(GroupSpecific, self).__init__(**kwargs)
         self.subnets = subnets
         self.n_subnet = len(subnets)
@@ -136,6 +145,28 @@ class GroupSpecific(tf.keras.layers.Layer):
             )
         config['subnets'] = subnets
         return super().from_config(config)
+
+    def compute_output_shape(self, input_shape):
+        """Computes the output shape of the layer.
+
+        Arguments:
+            input_shape: Shape tuple (tuple of integers) or list of
+                shape tuples (one per output tensor of the layer).
+                Shape tuples can include None for free dimensions,
+                instead of an integer.
+
+        Returns:
+            A tf.TensorShape representing the output shape.
+
+        NOTE: This method overrides the TF default, since the default
+        cannot infer the correct output shape.
+
+        """
+
+        # Compute output shape for a subnetwork without passing in group
+        # information.
+        output_shape = self.subnets[0].compute_output_shape(input_shape[0])
+        return output_shape
 
     def subnet(self, subnet_idx):
         return self.subnets[subnet_idx]

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Minkowski layer."""
+"""Test deterministic Minkowski layer."""
 
 import numpy as np
 import pytest

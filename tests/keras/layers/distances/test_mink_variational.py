@@ -20,9 +20,21 @@ import pytest
 import tensorflow as tf
 
 from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
+from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
 
 
 def test_call(pw_inputs_v0):
+    kl_weight = .1
+    n_sample = 3
+
+    mink_posterior = MinkowskiStochastic(n_sample=n_sample)
+    mink_prior = MinkowskiStochastic(n_sample=n_sample)
+
+    mink_layer = MinkowskiVariational(
+        posterior=mink_posterior,
+        prior=mink_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
     mink_layer = MinkowskiVariational(
         rho_initializer=tf.keras.initializers.Constant(2.),
         w_initializer=tf.keras.initializers.Constant(1.),

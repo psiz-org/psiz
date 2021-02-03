@@ -24,22 +24,18 @@ from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
 
 
 def test_call(pw_inputs_v0):
+    """Test call."""
     kl_weight = .1
-    n_sample = 3
 
-    mink_posterior = MinkowskiStochastic(n_sample=n_sample)
-    mink_prior = MinkowskiStochastic(n_sample=n_sample)
+    mink_posterior = MinkowskiStochastic()
+    mink_prior = MinkowskiStochastic()
 
     mink_layer = MinkowskiVariational(
         posterior=mink_posterior,
         prior=mink_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    mink_layer = MinkowskiVariational(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
-        trainable=False
-    )
+    mink_layer.build([None, 3, 2])
     outputs = mink_layer(pw_inputs_v0)
 
     desired_outputs = np.array([
@@ -49,20 +45,38 @@ def test_call(pw_inputs_v0):
         8.660254037844387,
         8.660254037844387
     ])
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(
+        desired_outputs, outputs.numpy(), decimal=4
+    )
 
 
 def test_serialization():
-    mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
-        trainable=False
+    """Test serialization."""
+    kl_weight = .1
+
+    mink_posterior = MinkowskiStochastic()
+    mink_prior = MinkowskiStochastic()
+
+    mink_layer = MinkowskiVariational(
+        posterior=mink_posterior,
+        prior=mink_prior,
+        kl_weight=kl_weight, kl_n_sample=30
     )
     mink_layer.build([None, 3, 2])
     config = mink_layer.get_config()
 
-    recon_layer = Minkowski.from_config(config)
+    recon_layer = MinkowskiVariational.from_config(config)
     recon_layer.build([None, 3, 2])
 
-    tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
-    tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
+    tf.debugging.assert_equal(
+        mink_layer.posterior.rho.mode(), recon_layer.posterior.rho.mode()
+    )
+    tf.debugging.assert_equal(
+        mink_layer.prior.rho.mode(), recon_layer.prior.rho.mode()
+    )
+    tf.debugging.assert_equal(
+        mink_layer.posterior.w.mode(), recon_layer.posterior.w.mode()
+    )
+    tf.debugging.assert_equal(
+        mink_layer.prior.w.mode(), recon_layer.prior.w.mode()
+    )

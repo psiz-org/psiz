@@ -206,8 +206,10 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         z_0, z_1 = tf.unstack(inputs, num=2, axis=-1)
         x = z_0 - z_1
 
-        # Sample free parameters.
+        # Sample free parameters based on input shape.
         x_shape = tf.shape(x)
+        # Note that `wpnorm` expects `rho` to have one less rank thank
+        # `x` and `w`, i.e., it does not have a trailing `n_dim`.
         rho = self.rho.sample(x_shape[0:-1])
         w = self.w.sample(x_shape[0:-1])
 

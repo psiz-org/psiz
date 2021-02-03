@@ -57,24 +57,22 @@ class DistanceBased(tf.keras.layers.Layer):
         Compute k(z_0, z_1), where `k` is the pairwise function.
 
         Arguments:
-            inputs: A tf.Tensor denoting coordinates. Note that the
-                tensor is assumed be at least rank 3 and the last two
-                dimensions have kernel-specific semantics (i.e, the
-                dimensionality of the space and the element-wise
-                pairs).
-                shape = (n, [m, ...] n_dim, 2)
+            inputs: A tf.Tensor representing coordinates. The tensor is
+                assumed be at least rank 3, where the last two
+                dimensions have specific semantics: the dimensionality
+                of the space and the element-wise pairs.
+                shape=([n_sample,] batch_size, [n, m, ...] n_dim, 2)
 
         Returns:
             sim_qr: A tf.Tensor of similarites.
-                shape = ([s,] n [m, ...])
+                shape=([n_sample,] batch_size, [n, m, ...])
 
         """
         # Compute distances (element-wise between last dimension)
         dist_qr = self.distance(inputs)
 
         # Compute similarity.
-        sim_qr = self.similarity(dist_qr)
-        return sim_qr
+        return self.similarity(dist_qr)
 
     def get_config(self):
         """Return layer configuration."""

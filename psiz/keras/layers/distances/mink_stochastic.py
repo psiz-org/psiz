@@ -197,7 +197,10 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         """Call.
 
         Arguments:
-            inputs: A tf.Tensor denoting a set of vectors.
+            inputs: A tf.Tensor representing coordinates. The tensor is
+                assumed be at least rank 3, where the last two
+                dimensions have specific semantics: the dimensionality
+                of the space and the element-wise pairs.
                 shape=([n_sample,] batch_size, [n, m, ...] n_dim, 2)
 
         Returns:

@@ -42,7 +42,19 @@ class MinkowskiVariational(Variational):
         super(MinkowskiVariational, self).__init__(**kwargs)
 
     def call(self, inputs):
-        """Call."""
+        """Call.
+
+        Arguments:
+            inputs: A tf.Tensor representing coordinates. The tensor is
+                assumed be at least rank 3, where the last two
+                dimensions have specific semantics: the dimensionality
+                of the space and the element-wise pairs.
+                shape=([n_sample,] batch_size, [n, m, ...] n_dim, 2)
+
+        Returns:
+            shape=([n_sample,] batch_size, [n, m, ...])
+
+        """
         # Run forward pass through variational posterior layer.
         outputs = self.posterior(inputs)
         # Apply KL divergence between posterior and prior.

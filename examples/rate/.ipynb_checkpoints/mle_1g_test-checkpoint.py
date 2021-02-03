@@ -83,6 +83,9 @@ def main(**trainable_parameters_kwargs):
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
+        
+    #create function get_data()
+    
     #start of testing:
     with open('DMTS_8odors_5acids_allMice_raw_PerceptualData_forRick_122319.pkl', 'rb') as f:
         data = pickle.load(f)

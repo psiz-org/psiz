@@ -74,6 +74,11 @@ class DistanceBased(tf.keras.layers.Layer):
         # Compute similarity.
         return self.similarity(dist_qr)
 
+    def build(self, input_shape):
+        """Build."""
+        self.distance.build(input_shape)
+        self.similarity.build(input_shape)
+
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()

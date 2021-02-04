@@ -54,6 +54,39 @@ def pw_inputs_v0():
 
 
 @pytest.fixture
+def pw_inputs_v1():
+    """A minibatch of non-gate inupts."""
+    # Create a simple batch (batch_size=5).
+
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [0.0, 0.1, 0.2],
+                [1.0, 1.1, 1.2],
+                [2.0, 2.1, 2.2],
+                [3.0, 3.1, 3.2],
+                [4.0, 4.1, 4.2]
+            ], dtype=np.float32
+        )
+    )
+
+    inputs_1 = tf.constant(
+        np.array(
+            [
+                [5.0, 5.1, 5.2],
+                [6.0, 6.1, 6.2],
+                [7.0, 7.1, 7.2],
+                [8.0, 8.1, 8.2],
+                [9.0, 9.1, 9.2]
+            ], dtype=np.float32
+        )
+    )
+
+    inputs = tf.stack([inputs_0, inputs_1], axis=-1)
+    return inputs
+
+
+@pytest.fixture
 def group_v0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).

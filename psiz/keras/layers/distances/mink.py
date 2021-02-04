@@ -34,7 +34,8 @@ class Minkowski(tf.keras.layers.Layer):
     """Minkowski distance."""
 
     def __init__(
-            self, rho_initializer=None, w_initializer=None, **kwargs):
+            self, rho_initializer=None, w_initializer=None, w_constraint=None,
+            **kwargs):
         """Initialize.
 
         Arguments:
@@ -57,14 +58,20 @@ class Minkowski(tf.keras.layers.Layer):
             w_initializer = tf.random_uniform_initializer(1.01, 3.)
         self.w_initializer = tf.keras.initializers.get(w_initializer)
 
-        # TODO w constraint
+        if w_constraint is None:
+            w_constraint = tf.keras.constraints.NonNeg()
+        self.w_constraint = tf.keras.constraints.get(
+            w_constraint
+        )
+
+        # TODO other injections
 
     def build(self, input_shape):
         """Build."""
         self.w = self.add_weight(
             shape=[input_shape[-2]], initializer=self.w_initializer,
             trainable=self.trainable, name="w", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+            constraint=self.w_constraint
         )
 
     def call(self, inputs):
@@ -84,10 +91,11 @@ class Minkowski(tf.keras.layers.Layer):
         rho = self.rho * tf.ones(tf.shape(z_0)[0:-1])
 
         # Expand `w` to shape. TODO
+        w = tf.broadcast_to(self.w, tf.shape(z_0))
 
         # Weighted Minkowski distance.
         x = z_0 - z_1
-        d_qr = wpnorm(x, self.w, rho)
+        d_qr = wpnorm(x, w, rho)
         d_qr = tf.squeeze(d_qr, [-1])
         return d_qr
 

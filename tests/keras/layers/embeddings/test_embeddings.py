@@ -22,11 +22,12 @@ import tensorflow as tf
 
 import psiz
 
+# TODO
+# psiz.keras.layers.EmbeddingDeterministic,
 
 @pytest.mark.parametrize("n_sample", [(None), (1), (3), (10)])
 @pytest.mark.parametrize(
     'embedding_class', [
-        psiz.keras.layers.EmbeddingDeterministic,
         psiz.keras.layers.EmbeddingGammaDiag,
         psiz.keras.layers.EmbeddingLaplaceDiag,
         psiz.keras.layers.EmbeddingLogNormalDiag,
@@ -43,30 +44,25 @@ def test_call_return_shape(n_sample, embedding_class):
     a sample dimension.
 
     """
+    batch_size = 3
     n_stimuli = 3
     n_dim = 2
 
     if n_sample is None:
         # Test default.
-        n_sample = 1
-
-        embedding = psiz.keras.layers.EmbeddingDeterministic(
+        embedding = embedding_class(
             n_stimuli+1, n_dim, mask_zero=True
         )
+        desired_output_shape = np.array([batch_size, n_dim])
     else:
-        embedding = psiz.keras.layers.EmbeddingDeterministic(
+        embedding = embedding_class(
             n_stimuli+1, n_dim, mask_zero=True, n_sample=n_sample
         )
+        desired_output_shape = np.array([n_sample, batch_size, n_dim])
 
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
-
-    batch_size = 3
-    input_batch = [
-        tf.constant(np.array([0, 1, 2])),
-        tf.constant(np.array([[0], [0], [0]])),
-    ]
-    output = stimuli(input_batch)
+    input_batch = tf.constant(np.array([0, 1, 2]))
+    output = embedding(input_batch)
     np.testing.assert_array_equal(
         np.shape(output.numpy()),
-        np.array([n_sample, batch_size, n_dim])
+        desired_output_shape
     )

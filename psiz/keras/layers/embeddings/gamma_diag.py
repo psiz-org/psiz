@@ -46,7 +46,8 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             concentration_initializer=None, rate_initializer=None,
             concentration_regularizer=None, rate_regularizer=None,
             concentration_constraint=None, rate_constraint=None,
-            concentration_trainable=True, rate_trainable=True, **kwargs):
+            concentration_trainable=True, rate_trainable=True,
+            n_sample=(), **kwargs):
         """Initialize.
 
         Arguments:
@@ -93,7 +94,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
-        self.n_sample = ()
+        self.n_sample = n_sample
 
         # Handle initializer.
         if concentration_initializer is None:

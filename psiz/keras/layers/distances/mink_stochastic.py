@@ -126,7 +126,6 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         dtype = tf.as_dtype(self.dtype or K.floatx())
         self.rho = self._build_rho(input_shape, dtype)
         self.w = self._build_w(input_shape, dtype)
-        self.built = True  # TODO is this necessary?
 
     def _build_rho(self, input_shape, dtype):
         self.rho_loc = self.add_weight(

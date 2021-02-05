@@ -42,6 +42,8 @@ from sklearn.metrics import r2_score
 from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 
+from psiz.utils.expand_dim_repeat import expand_dim_repeat
+
 
 def affine_mvn(loc, cov, r=None, t=None):
     """Affine transformation of multivariate normal.
@@ -350,7 +352,7 @@ def pad_2d_array(arr, n_column, value=-1):
     return arr
 
 
-def pairwise_similarity(stimuli, kernel, ds_pairs):
+def pairwise_similarity(stimuli, kernel, ds_pairs, n_sample=None):
     """Return the similarity between stimulus pairs.
 
     Arguments:
@@ -359,24 +361,33 @@ def pairwise_similarity(stimuli, kernel, ds_pairs):
         ds_pairs: A TF dataset object that yields a 3-tuple composed
             of stimulus index i, sitmulus index j, and group
             membership indices.
+        n_sample (optional): The size of an additional "sample" axis.
 
     Returns:
         s: A tf.Tensor of similarities between stimulus i and stimulus
             j (using the requested group-level parameters from the
             stimuli layer and the kernel layer).
-            shape=([sample_size,] n_pair)
-
-    Notes:
-        The `n_sample` property of the Stimuli layer and Kernel layer
-            must agree.
+            shape=(n_pair, [n_sample])
 
     """
     s = []
     for x_batch in ds_pairs:
-        z_0 = stimuli([x_batch[0], x_batch[2]])
-        z_1 = stimuli([x_batch[1], x_batch[2]])
+        idx_0 = x_batch[0]
+        idx_1 = x_batch[1]
+        group = x_batch[2]
+
+        if n_sample is not None:
+            idx_0 = expand_dim_repeat(
+                idx_0, n_sample, axis=1
+            )
+            idx_1 = expand_dim_repeat(
+                idx_1, n_sample, axis=1
+            )
+
+        z_0 = stimuli([idx_0, group])
+        z_1 = stimuli([idx_1, group])
         s.append(
-            kernel([z_0, z_1, x_batch[2]])
+            kernel([z_0, z_1, group])
         )
 
     # Concatenate along pairs dimension (i.e., the last dimension).

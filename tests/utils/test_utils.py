@@ -13,12 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for testing utils.py.
-
-Todo:
-    - test compare_models
-
-"""
+"""Module for testing utils.py."""
 
 import numpy as np
 

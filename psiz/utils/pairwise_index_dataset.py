@@ -62,12 +62,12 @@ def pairwise_index_dataset(
         idx_0 = idx[0]
         idx_1 = idx[1]
     elif elements == 'lower':
-        idx = np.triu_indices(n_data, 1)
+        idx = np.tril_indices(n_data, -1)
         idx_0 = idx[0]
         idx_1 = idx[1]
     elif elements == 'off':
         idx_upper = np.triu_indices(n_data, 1)
-        idx_lower = np.triu_indices(n_data, 1)
+        idx_lower = np.tril_indices(n_data, -1)
         idx = (
             np.hstack((idx_upper[0], idx_lower[0])),
             np.hstack((idx_upper[1], idx_lower[1])),

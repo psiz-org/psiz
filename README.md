@@ -46,7 +46,7 @@ n_stimuli = catalog.n_stimuli
 # NOTE: Since we will use masking, we increment n_stimuli by one.
 n_dim = 2
 stimuli = psiz.keras.layers.Stimuli(
-    embedding=psiz.keras.layers.EmbeddingDeterministic(
+    embedding=tf.keras.layers.Embedding(
         catalog.n_stimuli+1, n_dim, mask_zero=True
     )
 )

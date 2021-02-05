@@ -41,7 +41,7 @@ import tensorflow_probability as tfp
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+# tf.config.run_functions_eagerly(True)
 
 # Modify the following to control GPU visibility.
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -95,11 +95,9 @@ def main():
 
     model_true = ground_truth(n_stimuli, n_dim)
 
-    simmat_true = np.squeeze(
-        psiz.utils.pairwise_similarity(
-            model_true.stimuli, model_true.kernel, ds_pairs
-        ).numpy()
-    )
+    simmat_true = psiz.utils.pairwise_similarity(
+        model_true.stimuli, model_true.kernel, ds_pairs
+    ).numpy()
 
     # Generate a random docket of trials.
     generator = psiz.generators.RandomRank(
@@ -197,11 +195,12 @@ def main():
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = np.mean(
+        simmat_infer = tf.reduce_mean(
             psiz.utils.pairwise_similarity(
-                model_inferred.stimuli, model_inferred.kernel, ds_pairs
-            ).numpy(), axis=0
-        )
+                model_inferred.stimuli, model_inferred.kernel, ds_pairs,
+                n_sample=100
+            ), axis=1
+        ).numpy()
 
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2
@@ -364,7 +363,7 @@ def ground_truth(n_stimuli, n_dim):
     scale_request = .17
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=scale_request, seed=58

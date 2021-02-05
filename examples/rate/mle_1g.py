@@ -45,7 +45,7 @@ import tensorflow_probability as tfp
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+# tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -238,7 +238,7 @@ def ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     seed = 252
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17, seed=seed
@@ -280,7 +280,7 @@ def ground_truth_grid():
     z_grid = np.vstack((np.ones([1, 2]), z_grid))
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.Constant(
                 z_grid
@@ -315,7 +315,7 @@ def ground_truth_grid():
 def build_model(n_stimuli, n_dim):
     """Build a model to use for inference."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )

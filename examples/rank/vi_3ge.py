@@ -47,7 +47,7 @@ import tensorflow_probability as tfp
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+# tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -201,9 +201,9 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_inferred = (
-            model_similarity(model_inferred, group_idx=[0]),
-            model_similarity(model_inferred, group_idx=[1]),
-            model_similarity(model_inferred, group_idx=[2])
+            model_similarity(model_inferred, group_idx=[0], n_sample=100),
+            model_similarity(model_inferred, group_idx=[1], n_sample=100),
+            model_similarity(model_inferred, group_idx=[2], n_sample=100)
         )
 
         for i_truth in range(n_group):
@@ -252,7 +252,7 @@ def main():
 def ground_truth(n_stimuli, n_group):
     """Return a ground truth embedding."""
     n_dim = 4
-    embedding = psiz.keras.layers.EmbeddingDeterministic(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=58
@@ -265,7 +265,7 @@ def ground_truth(n_stimuli, n_group):
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.EmbeddingDeterministic(
+        attention=tf.keras.layers.Embedding(
             n_group, n_dim, mask_zero=False,
             embeddings_initializer=tf.keras.initializers.Constant(
                 np.array((
@@ -464,7 +464,7 @@ def plot_embeddings(fig, ax, model_inferred, color_array):
     ax.set_title('Embeddings')
 
 
-def model_similarity(model, group_idx=[]):
+def model_similarity(model, group_idx=[], n_sample=None):
     """Compute model similarity.
 
     In the deterministic case, there is one one sample and mean is
@@ -479,13 +479,14 @@ def model_similarity(model, group_idx=[]):
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
         model.stimuli.n_stimuli, mask_zero=True, group_idx=group_idx
     )
-    simmat = np.mean(
-        psiz.utils.pairwise_similarity(
-            model.stimuli, model.kernel, ds_pairs
-        ).numpy(),
-        axis=0
+    simmat = psiz.utils.pairwise_similarity(
+        model.stimuli, model.kernel, ds_pairs, n_sample=n_sample
     )
-    return simmat
+
+    if n_sample is not None:
+        simmat = tf.reduce_mean(simmat, axis=1)
+
+    return simmat.numpy()
 
 
 def unpack_mvn(dist, group_idx):

@@ -42,7 +42,8 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
             self, input_dim, output_dim, mask_zero=False, input_length=1,
             loc_initializer=None, scale_initializer=None, loc_regularizer=None,
             scale_regularizer=None, loc_constraint=None, scale_constraint=None,
-            loc_trainable=True, scale_trainable=True, n_sample=(), **kwargs):
+            loc_trainable=True, scale_trainable=True, sample_shape=(),
+            **kwargs):
         """Initialize.
 
         Arguments:
@@ -86,7 +87,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
-        self.n_sample = n_sample
+        self.sample_shape = sample_shape
 
         # Handle initializer.
         if loc_initializer is None:

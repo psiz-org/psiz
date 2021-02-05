@@ -81,33 +81,51 @@ class Rank(PsychologicalEmbedding):
         is_select = inputs['is_select'][:, 1:, :]
         group = inputs['group']
 
-        # Inflate coordinates.
+        # Define some useful variables before manipulating inputs.
+        max_n_reference = tf.shape(stimulus_set)[-2] - 1
+
+        # Repeat `stimulus_set` `n_sample` times in a newly inserted
+        # axis (axis=1).
+        # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome])
+        stimulus_set = psiz.utils.expand_dim_repeat(
+            stimulus_set, self.n_sample, axis=1
+        )
+
+        # Enbed stimuli indices in n-dimensional space:
+        # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome, n_dim])
         z = self.stimuli([stimulus_set, group])
 
-        # Check `z` shape is:
-        # TensorShape([sample_size, batch_size, n_ref + 1, n_outcome, n_dim])
-        # TODO is this if ok for save_traces?
-        if tf.math.equal(tf.rank(z), 4):
-            z = tf.expand_dims(z, axis=0)
-        max_n_reference = tf.shape(z)[-3] - 1
+        # Split query and reference embeddings:
+        # z_q: TensorShape([batch_size, sample_size, 1, n_outcome, n_dim]
+        # z_r: TensorShape([batch_size, sample_size, n_ref, n_outcome, n_dim]
         z_q, z_r = tf.split(z, [1, max_n_reference], -3)
 
         # Pass through similarity kernel.
-        sim_qr = self.kernel([z_q, z_r, group])
         # TensorShape([sample_size, batch_size, n_ref, n_outcome])
+        sim_qr = self.kernel([z_q, z_r, group])
 
-        # Zero out similarities involving placeholder IDs.
-        is_present = tf.math.not_equal(stimulus_set, 0)
-        is_present = tf.expand_dims(
-            tf.cast(is_present[:, 1:, :], dtype=K.floatx()), axis=0
+        # Zero out similarities involving placeholder IDs by creating
+        # a mask based on reference indices. We drop the query indices
+        # because they have effectively been "consumed" by the similarity
+        # operation.
+        is_present = tf.cast(
+            tf.math.not_equal(stimulus_set[:, :, 1:], 0),
+            dtype=K.floatx()
         )
         sim_qr = sim_qr * is_present
 
-        # Compute probability of different behavioral outcomes.
+        # Prepare for efficient probability computation by adding
+        # singleton dimension for `n_sample`.
         is_select = tf.expand_dims(
-            tf.cast(is_select, dtype=K.floatx()), axis=0
+            tf.cast(is_select, dtype=K.floatx()), axis=1
         )
-        is_outcome = tf.cast(is_present[:, :, 0, :], dtype=K.floatx())
+        # Determine if outcome is legitamate by checking if at least one
+        # reference is present. This is important because not all trials have
+        # the same number of possible outcomes and we need to infer the
+        # "zero-padding" of the outcome axis.
+        is_outcome = is_present[:, :, 0, :]
+
+        # Compute probability of different behavioral outcomes.
         probs = self.behavior([sim_qr, is_select, is_outcome])
         return probs
 

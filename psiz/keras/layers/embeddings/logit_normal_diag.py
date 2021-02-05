@@ -88,4 +88,4 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
             loc=inputs_loc, scale=inputs_scale
         )
         # Reify output using samples.
-        return dist_batch.sample(self.n_sample)
+        return dist_batch.sample(self.sample_shape)

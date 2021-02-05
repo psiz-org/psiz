@@ -34,7 +34,6 @@ from psiz.keras.layers.distances.minkowski import WeightedMinkowski
 from psiz.keras.layers.group_level import GroupLevel
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
 from psiz.keras.layers.variational import Variational
-from psiz.keras.layers.embeddings.deterministic import EmbeddingDeterministic
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -132,7 +131,7 @@ class AttentionKernel(GroupLevel):
             n_group = 1
             scale = n_dim
             alpha = np.ones((n_dim))
-            attention = EmbeddingDeterministic(
+            attention = tf.keras.layers.Embedding(
                 n_group, n_dim, mask_zero=False,
                 embeddings_initializer=pk_initializers.RandomAttention(
                     alpha, scale
@@ -173,22 +172,24 @@ class AttentionKernel(GroupLevel):
         z_1 = inputs[1]
         group = inputs[-1]
 
-        # Expand attention weights.
-        attention = self.attention(group[:, self.group_level])
+        group_idx = group[:, self.group_level]
+        # NOTE: The remainder of the method assumes that `group_idx` is a
+        # rank-1 tensor.
 
-        # Add singleton inner dimensions that are not related to sample_size,
-        # batch_size or vector dimensionality.
-        attention_shape = tf.shape(attention)
-        sample_size = tf.expand_dims(attention_shape[0], axis=0)
-        batch_size = tf.expand_dims(attention_shape[1], axis=0)
-        dim_size = tf.expand_dims(attention_shape[-1], axis=0)
+        # Adjust rank of group_idx by adding singleton axis to match rank of
+        # z[1:-1], i.e., omitting batch axis and n_dim axis.
+        reshape_shape = tf.ones([tf.rank(z_1) - 2], dtype=tf.int32)
+        reshape_shape = tf.concat((tf.shape(group_idx), reshape_shape), axis=0)
+        group_idx = tf.reshape(group_idx, reshape_shape)
 
-        n_expand = tf.rank(z_0) - tf.rank(attention)
-        shape_exp = tf.ones(n_expand, dtype=attention_shape[0].dtype)
-        shape_exp = tf.concat(
-            (sample_size, batch_size, shape_exp, dim_size), axis=0
-        )
-        attention = tf.reshape(attention, shape_exp)
+        # Tile group_idx to be compatible with `z_1`, again omitting batch
+        # axis and n_dim axis.
+        repeats = tf.shape(z_1)[1:-1]
+        repeats = tf.concat([tf.constant([1]), repeats], axis=0)
+        group_idx = tf.tile(group_idx, repeats)
+
+        # Embed group indices as attention weights.
+        attention = self.attention(group_idx)
 
         # Compute distance between query and references.
         dist_qr = self.distance([z_0, z_1, attention])

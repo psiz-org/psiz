@@ -47,7 +47,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             concentration_regularizer=None, rate_regularizer=None,
             concentration_constraint=None, rate_constraint=None,
             concentration_trainable=True, rate_trainable=True,
-            n_sample=(), **kwargs):
+            sample_shape=(), **kwargs):
         """Initialize.
 
         Arguments:
@@ -94,7 +94,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self._supports_ragged_inputs = True
-        self.n_sample = n_sample
+        self.sample_shape = sample_shape
 
         # Handle initializer.
         if concentration_initializer is None:
@@ -201,7 +201,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             inputs_concentration, inputs_rate
         )
         # Reify output using samples.
-        return dist_batch.sample(self.n_sample)
+        return dist_batch.sample(self.sample_shape)
 
     def get_config(self):
         """Return layer configuration."""

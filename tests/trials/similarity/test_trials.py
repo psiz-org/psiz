@@ -187,7 +187,7 @@ def ground_truth(n_stimuli):
     n_group = 2
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
@@ -198,7 +198,7 @@ def ground_truth(n_stimuli):
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.EmbeddingDeterministic(
+        attention=tf.keras.layers.Embedding(
             n_group, n_dim, mask_zero=False,
             embeddings_initializer=tf.keras.initializers.Constant(
                 np.array((

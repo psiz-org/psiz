@@ -28,14 +28,14 @@ import tensorflow as tf
 )
 class Stochastic(tf.keras.layers.Layer):
     """A stochastic layer."""
-    def __init__(self, n_sample=(), **kwargs):
+    def __init__(self, sample_shape=(), **kwargs):
         """Initialize."""
         super(Stochastic, self).__init__(**kwargs)
-        self.n_sample = n_sample
+        self.sample_shape = sample_shape
 
     def get_config(self):
         config = super().get_config()
         config.update({
-            'n_sample': int(self.n_sample)
+            'sample_shape': int(self.sample_shape)
         })
         return config

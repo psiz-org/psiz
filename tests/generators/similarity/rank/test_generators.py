@@ -84,7 +84,7 @@ def rank_1g_mle_det():
         ], dtype=np.float32
     )
 
-    embedding = psiz.keras.layers.EmbeddingDeterministic(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(z)
     )

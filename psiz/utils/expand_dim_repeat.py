@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test Stochastic."""
+"""Module of utility functions.
 
-import pytest
+Functions:
+    expand_dim_repeat: Repeat Tensor along a newly inserted axis.
 
-from psiz.keras.layers.stochastic import Stochastic
+"""
+
+import tensorflow as tf
 
 
-def test_init():
-    stoch_0 = Stochastic()
-    assert stoch_0.sample_shape == ()
-
-    stoch_1 = Stochastic(sample_shape=1)
-    assert stoch_1.sample_shape == 1
-
-    stoch_2 = Stochastic(sample_shape=3)
-    assert stoch_2.sample_shape == 3
+def expand_dim_repeat(x, n_repeat, axis=1):
+    """Repeat Tensor along a newly inserted axis."""
+    x = tf.expand_dims(x, axis=axis)
+    return tf.repeat(x, n_repeat, axis=axis)

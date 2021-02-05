@@ -57,8 +57,8 @@ class GroupSpecific(tf.keras.layers.Layer):
     def build(self, inputs_shape):
         """Build."""
         # Probe first subnet for `sample_shape` information.
-        if hasattr(self.subnets[0], 'n_sample'):
-            self.sample_shape = tf.TensorShape(self.subnets[0].n_sample)
+        if hasattr(self.subnets[0], 'sample_shape'):
+            self.sample_shape = tf.TensorShape(self.subnets[0].sample_shape)
         else:
             self.sample_shape = tf.TensorShape(())
 

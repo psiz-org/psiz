@@ -19,14 +19,60 @@
 import numpy as np
 import pytest
 import tensorflow as tf
-import tensorflow_probability as tfp
+from tensorflow.python.keras.engine import data_adapter
 
 import psiz
 
 
-@pytest.mark.xfail
+def test_n_sample_propogation(rate_1g_vi):
+    """Test propogation properties."""
+    assert rate_1g_vi.n_sample == 1
+
+    # Set n_sample at model level.
+    rate_1g_vi.n_sample = 100
+    assert rate_1g_vi.n_sample == 100
+
+
+def test_kl_weight_propogation(rate_1g_vi):
+    """Test propogation properties."""
+    assert rate_1g_vi.kl_weight == 0.
+
+    # Set kl_weight at model level.
+    rate_1g_vi.kl_weight = .001
+    # Test property propagated to all relevant layers.
+    assert rate_1g_vi.kl_weight == .001
+    assert rate_1g_vi.stimuli.embedding.kl_weight == .001
+
+
+@pytest.mark.parametrize(
+    "is_eager", [True, False]
+)
+def test_call_2groups(
+        rate_2g_mle, ds_rate_docket_2g, ds_rate_obs_2g, is_eager):
+    """Test call with group-specific kernels."""
+    tf.config.run_functions_eagerly(is_eager)
+    model = rate_2g_mle
+    n_trial = 4
+    # n_submodule = len(model.submodules)
+
+    # Compile
+    compile_kwargs = {
+        'loss': tf.keras.losses.MeanSquaredError(),
+        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.MeanSquaredError(name='mse')
+        ]
+    }
+    model.compile(**compile_kwargs)
+
+    for data in ds_rate_docket_2g:
+        data = data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        output = model(x, training=False)
+
+
 def test_save_load_rate_wtrace(
-        rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs):
+        rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs_2g):
     """Test loading and saving of embedding model."""
     model = rate_1g_mle
     # Compile
@@ -40,7 +86,7 @@ def test_save_load_rate_wtrace(
     model.compile(**compile_kwargs)
 
     # Fit one epoch.
-    model.fit(ds_rate_obs, epochs=1)
+    model.fit(ds_rate_obs_2g, epochs=1)
 
     # Predict using original model.
     output_0 = model.predict(ds_rate_docket)
@@ -62,11 +108,11 @@ def test_save_load_rate_wtrace(
     assert reconstructed_model.n_group == model.n_group
 
     # Continue training without recompiling.
-    reconstructed_model.fit(ds_rate_obs, epochs=1)
+    reconstructed_model.fit(ds_rate_obs_2g, epochs=1)
 
 
 def test_save_load_rate_wotrace(
-        rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs):
+        rate_1g_mle, tmpdir, ds_rate_docket, ds_rate_obs_2g):
     """Test loading and saving of embedding model."""
     model = rate_1g_mle
     # Compile
@@ -80,7 +126,7 @@ def test_save_load_rate_wotrace(
     model.compile(**compile_kwargs)
 
     # Fit one epoch.
-    model.fit(ds_rate_obs, epochs=1)
+    model.fit(ds_rate_obs_2g, epochs=1)
 
     # Predict using original model.
     output_0 = model.predict(ds_rate_docket)
@@ -102,4 +148,4 @@ def test_save_load_rate_wotrace(
     assert reconstructed_model.n_group == model.n_group
 
     # Continue training without recompiling.
-    reconstructed_model.fit(ds_rate_obs, epochs=1)
+    reconstructed_model.fit(ds_rate_obs_2g, epochs=1)

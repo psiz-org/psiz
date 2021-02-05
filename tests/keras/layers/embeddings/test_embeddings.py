@@ -37,7 +37,7 @@ def emb_input_2d():
     return batch
 
 
-@pytest.mark.parametrize("n_sample", [(None), (1), (3), (10)])
+@pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
     'embedding_class', [
         psiz.keras.layers.EmbeddingGammaDiag,
@@ -48,39 +48,39 @@ def emb_input_2d():
         psiz.keras.layers.EmbeddingTruncatedNormalDiag
     ]
 )
-def test_call_1d_input(emb_input_1d, n_sample, embedding_class):
+def test_call_1d_input(emb_input_1d, sample_shape, embedding_class):
     """Test call() return shape.
 
-    Returned shape must include a `n_sample` dimension." Using
-    tf.keras.layers.Embedding will fail because it does not include
-    a sample dimension.
+    Returned shape must include appropriate `sample_shape`."
 
     """
     input = emb_input_1d
-    batch_shape_0 = 3
+    input_shape = [3]
     n_stimuli = 10
     n_dim = 2
 
-    if n_sample is None:
-        # Test default.
+    if sample_shape is None:
+        # Test default `sample_shape`.
+        sample_shape = ()
         embedding = embedding_class(
             n_stimuli, n_dim, mask_zero=True
         )
-        desired_output_shape = np.array([batch_shape_0, n_dim])
     else:
         embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=True, n_sample=n_sample
+            n_stimuli, n_dim, mask_zero=True, sample_shape=sample_shape
         )
-        desired_output_shape = np.array([n_sample, batch_shape_0, n_dim])
+
+    desired_output_shape = np.hstack(
+        [sample_shape, input_shape, n_dim]
+    ).astype(int)
 
     output = embedding(input)
     np.testing.assert_array_equal(
-        np.shape(output.numpy()),
-        desired_output_shape
+        desired_output_shape, np.shape(output.numpy())
     )
 
 
-@pytest.mark.parametrize("n_sample", [(None), (1), (3), (10)])
+@pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
     'embedding_class', [
         psiz.keras.layers.EmbeddingGammaDiag,
@@ -91,38 +91,33 @@ def test_call_1d_input(emb_input_1d, n_sample, embedding_class):
         psiz.keras.layers.EmbeddingTruncatedNormalDiag
     ]
 )
-def test_call_2d_input(emb_input_2d, n_sample, embedding_class):
+def test_call_2d_input(emb_input_2d, sample_shape, embedding_class):
     """Test call() return shape.
 
-    Returned shape must include a `n_sample` dimension." Using
-    tf.keras.layers.Embedding will fail because it does not include
-    a sample dimension.
+    Returned shape must include appropriate `sample_shape`."
 
     """
     input = emb_input_2d
-    batch_shape_0 = 3
-    batch_shape_1 = 2
+    input_shape = [3, 2]
     n_stimuli = 10
     n_dim = 2
 
-    if n_sample is None:
-        # Test default.
+    if sample_shape is None:
+        # Test default `sample_shape`.
+        sample_shape = ()
         embedding = embedding_class(
             n_stimuli, n_dim, mask_zero=True
         )
-        desired_output_shape = np.array([
-            batch_shape_0, batch_shape_1, n_dim
-        ])
     else:
         embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=True, n_sample=n_sample
+            n_stimuli, n_dim, mask_zero=True, sample_shape=sample_shape
         )
-        desired_output_shape = np.array([
-            n_sample, batch_shape_0, batch_shape_1, n_dim
-        ])
+
+    desired_output_shape = np.hstack(
+        [sample_shape, input_shape, n_dim]
+    ).astype(int)
 
     output = embedding(input)
     np.testing.assert_array_equal(
-        np.shape(output.numpy()),
-        desired_output_shape
+        desired_output_shape, np.shape(output.numpy())
     )

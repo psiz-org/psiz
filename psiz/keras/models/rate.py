@@ -77,22 +77,24 @@ class Rate(PsychologicalEmbedding):
         stimulus_set = inputs['stimulus_set']
         group = inputs['group']
 
-        # Inflate coordinates.
+        # Repeat `stimulus_set` `n_sample` times in a newly inserted
+        # axis (axis=1).
+        # TensorShape([batch_size, n_sample, 2])
+        stimulus_set = psiz.utils.expand_dim_repeat(
+            stimulus_set, self.n_sample, axis=1
+        )
+
+        # Enbed stimuli indices in n-dimensional space.
+        # TensorShape([batch_size, n_sample, 2, n_dim])
         z = self.stimuli([stimulus_set, group])
 
-        # Expand rank in case the first dimension is not `sample_size`, thus
-        # promising: TensorShape([sample_size, batch_size, 2, n_dim])
-        # TODO is this if statement ok for save_traces?
-        if tf.math.equal(tf.rank(z), 3):
-            z = tf.expand_dims(z, axis=0)
-
         # Divide up stimuli sets for kernel call.
-        z_0 = z[:, :, 0, :]
-        z_1 = z[:, :, 1, :]
+        z_0 = z[:, :, 0]
+        z_1 = z[:, :, 1]
 
         # Pass through similarity kernel.
         sim_qr = self.kernel([z_0, z_1, group])
-        # TensorShape([sample_size, batch_size,])
+        # TensorShape([batch_size, n_sample,])
 
         # Predict rating of stimulus pair.
         rating = self.behavior([sim_qr, group])

@@ -102,7 +102,11 @@ class RankAgent(Agent):
             x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
 
             batch_stimulus_set = _rank_sample(
-                x['stimulus_set'], self.model(x, training=False)
+                x['stimulus_set'],
+                tf.reduce_mean(
+                    self.model(x, training=False),
+                    axis=1
+                )
             )
             if stimulus_set is None:
                 stimulus_set = [batch_stimulus_set]
@@ -133,7 +137,6 @@ def _rank_sample(stimulus_set, probs):
             shape=(batch_size, n_reference + 1)
 
     """
-    probs = tf.reduce_mean(probs, axis=0)
     outcome_distribution = tfp.distributions.Categorical(
         probs=probs
     )

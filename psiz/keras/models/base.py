@@ -121,7 +121,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     @n_sample.setter
     def n_sample(self, n_sample):
         self._n_sample = n_sample
-        _submodule_setattr(self.layers, 'n_sample', n_sample)
+        # _submodule_setattr(self.layers, 'n_sample', n_sample)  # TODO
 
     @property
     def kl_weight(self):
@@ -224,7 +224,7 @@ class PsychologicalEmbedding(tf.keras.Model):
             )
             with backprop.GradientTape() as tape:
                 # Average over samples.
-                y_pred = tf.reduce_mean(self(x, training=True), axis=0)
+                y_pred = tf.reduce_mean(self(x, training=True), axis=1)
                 loss = self.compiled_loss(
                     y, y_pred, sample_weight, regularization_losses=self.losses
                 )
@@ -278,7 +278,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         # model is assumed to be `sample_size`. If this is a singleton
         # dimension, taking the mean is equivalent to a squeeze
         # operation.
-        y_pred = tf.reduce_mean(self(x, training=False), axis=0)
+        y_pred = tf.reduce_mean(self(x, training=False), axis=1)
         self.compiled_loss(
             y, y_pred, sample_weight, regularization_losses=self.losses
         )
@@ -302,7 +302,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         """
         data = data_adapter.expand_1d(data)
         x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
-        y_pred = tf.reduce_mean(self(x, training=False), axis=0)
+        y_pred = tf.reduce_mean(self(x, training=False), axis=1)
         return y_pred
 
     def get_config(self):

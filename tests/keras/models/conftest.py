@@ -45,7 +45,30 @@ def ds_rank_docket():
 
 
 @pytest.fixture(scope="module")
-def ds_rank_obs():
+def ds_rank_docket_2g():
+    """Rank docket dataset."""
+    stimulus_set = np.array((
+        (0, 1, 2, -1, -1, -1, -1, -1, -1),
+        (9, 12, 7, -1, -1, -1, -1, -1, -1),
+        (3, 4, 5, 6, 7, -1, -1, -1, -1),
+        (3, 4, 5, 6, 13, 14, 15, 16, 17)
+    ), dtype=np.int32)
+
+    n_trial = 4
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
+
+    ds_docket = docket.as_dataset(
+        np.array([
+            [0], [0], [1], [1],
+        ])
+    ).batch(n_trial, drop_remainder=False)
+
+    return ds_docket
+
+
+@pytest.fixture(scope="module")
+def ds_rank_obs_2g():
     """Rank observations dataset."""
     stimulus_set = np.array((
         (0, 1, 2, -1, -1, -1, -1, -1, -1),
@@ -125,7 +148,7 @@ def rank_1g_mle():
     n_dim = 10
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
@@ -139,6 +162,50 @@ def rank_1g_mle():
             fit_tau=False, fit_gamma=False,
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
+    behavior = psiz.keras.layers.RankBehavior()
+
+    model = psiz.keras.models.Rank(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
+
+
+@pytest.fixture(scope="module")
+def rank_2g_mle():
+    """A MLE rank model for two groups."""
+    n_stimuli = 30
+    n_dim = 10
+    n_group = 2
+
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True
+        )
+    )
+
+    kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        attention=tf.keras.layers.Embedding(
+            n_group, n_dim, mask_zero=False,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array((
+                    (1.2, 1., .1, .1, .1, .1, .1, .1, .1, .1,),
+                    (.1, .1, .1, .1, .1, .1, .1, .1, 1., 1.2)
+                ))
+            )
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False,
         )
     )
 
@@ -171,7 +238,29 @@ def ds_rate_docket():
 
 
 @pytest.fixture(scope="module")
-def ds_rate_obs():
+def ds_rate_docket_2g():
+    """Rate docket dataset."""
+    stimulus_set = np.array((
+        (0, 1),
+        (9, 12),
+        (3, 4),
+        (3, 17)
+    ), dtype=np.int32)
+
+    n_trial = 4
+    docket = psiz.trials.RateDocket(stimulus_set)
+
+    ds_docket = docket.as_dataset(
+        np.array([
+            [0], [0], [1], [1],
+        ])
+    ).batch(n_trial, drop_remainder=False)
+
+    return ds_docket
+
+
+@pytest.fixture(scope="module")
+def ds_rate_obs_2g():
     """Rate observations dataset."""
     n_trial = 4
     stimulus_set = np.array((
@@ -198,10 +287,107 @@ def rate_1g_mle():
     n_dim = 10
 
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
+
+    kernel = psiz.keras.layers.Kernel(
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            beta_initializer=tf.keras.initializers.Constant(3.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
+    behavior = psiz.keras.layers.RateBehavior()
+
+    model = psiz.keras.models.Rate(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
+
+
+@pytest.fixture(scope="module")
+def rate_2g_mle():
+    """A MLE rate model with group-specific kernel."""
+    n_stimuli = 30
+    n_dim = 10
+    n_group = 2
+
+    stimuli = psiz.keras.layers.Stimuli(
+        embedding=tf.keras.layers.Embedding(
+            n_stimuli+1, n_dim, mask_zero=True
+        )
+    )
+
+    kernel = psiz.keras.layers.AttentionKernel(
+        group_level=1,
+        distance=psiz.keras.layers.WeightedMinkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            trainable=False,
+        ),
+        attention=tf.keras.layers.Embedding(
+            n_group, n_dim, mask_zero=False,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array((
+                    (1.2, 1., .1, .1, .1, .1, .1, .1, .1, .1,),
+                    (.1, .1, .1, .1, .1, .1, .1, .1, 1., 1.2)
+                ))
+            )
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+            trainable=False,
+        )
+    )
+
+    behavior = psiz.keras.layers.RateBehavior()
+
+    model = psiz.keras.models.Rate(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
+
+
+@pytest.fixture(scope="module")
+def rate_1g_vi():
+    """A VI rate model."""
+    n_stimuli = 30
+    n_dim = 10
+    kl_weight = 0.
+
+    embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(.01).numpy()
+        )
+    )
+
+    prior_scale = .2
+    embedding_prior = psiz.keras.layers.EmbeddingShared(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embedding=psiz.keras.layers.EmbeddingNormalDiag(
+            1, 1,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ),
+            loc_trainable=False,
+        )
+    )
+    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(

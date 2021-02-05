@@ -28,7 +28,7 @@ def rank_2g_mle_determ():
     n_stimuli = 3
     n_dim = 2
     n_group = 2
-    embedding = psiz.keras.layers.EmbeddingDeterministic(
+    embedding = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
@@ -47,7 +47,7 @@ def rank_2g_mle_determ():
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.EmbeddingDeterministic(
+        attention=tf.keras.layers.Embedding(
             n_group, n_dim, mask_zero=False,
             embeddings_initializer=tf.keras.initializers.Constant(
                 np.array((

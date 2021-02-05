@@ -30,7 +30,6 @@ from psiz.keras.layers.distances.mink import Minkowski
 from psiz.keras.layers.group_level import GroupLevel
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
 from psiz.keras.layers.variational import Variational
-from psiz.keras.layers.embeddings.deterministic import EmbeddingDeterministic
 
 
 @tf.keras.utils.register_keras_serializable(

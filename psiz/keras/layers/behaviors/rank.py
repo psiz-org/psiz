@@ -51,49 +51,50 @@ class RankBehavior(Behavior):
         See: _ranked_sequence_probability for NumPy implementation.
 
         Arguments:
-            inputs:
-                sim_qr: A tensor containing the precomputed
-                    similarities between the query stimuli and
-                    corresponding reference stimuli.
-                    shape=(sample_size, batch_size, n_max_reference, n_outcome)
-                is_select: A Boolean tensor indicating if a reference
-                    was selected.
-                    shape = (batch_size, n_max_reference, n_outcome)
+            inputs[0]: i.e., sim_qr: A tensor containing the
+                precomputed similarities between the query stimuli and
+                corresponding reference stimuli.
+                shape=(batch_size, n_sample, n_max_reference, n_outcome)
+            inputs[1]: i.e., is_select: A float tensor indicating if a
+                reference was selected, which indicates a true event.
+                shape = (batch_size, 1, n_max_reference, n_outcome)
+            inputs[2]: i.e., is_outcome: A float tensor indicating if
+                an outcome is real or a padded placeholder.
+                shape = (batch_size, 1, n_outcome)
+
+        NOTE: This computation takes advantage of log-probability
+            space, exploiting the fact that log(prob=1)=1 to make
+            vectorization cleaner.
 
         """
         sim_qr = inputs[0]
         is_select = inputs[1]
         is_outcome = inputs[2]
 
-        # Initialize sequence log-probability. Note that log(prob=1)=1.
-        # sample_size = tf.shape(sim_qr)[0]
-        # batch_size = tf.shape(sim_qr)[1]
-        # n_outcome = tf.shape(sim_qr)[3]
-        # seq_log_prob = tf.zeros(
-        #     [sample_size, batch_size, n_outcome], dtype=K.floatx()
-        # )
-
-        # Compute denominator based on formulation of Luce's choice rule.
+        # Compute denominator based on formulation of Luce's choice rule by
+        # summing over the different references present in a trial. Note that
+        # the similarity for placeholder references will be zero since they
+        # were zeroed out by the caller.
         denom = tf.cumsum(sim_qr, axis=2, reverse=True)
 
         # Compute log-probability of each selection, assuming all selections
         # occurred. Add fuzz factor to avoid log(0)
         sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
         denom = tf.maximum(denom, tf.keras.backend.epsilon())
-        log_prob = tf.math.log(sim_qr) - tf.math.log(denom)
+        event_logprob = tf.math.log(sim_qr) - tf.math.log(denom)
 
-        # Mask non-existent selections.
-        log_prob = is_select * log_prob
+        # Mask non-existent events (i.e, reference selections).
+        event_logprob = is_select * event_logprob
 
-        # Compute sequence log-probability
-        seq_log_prob = tf.reduce_sum(log_prob, axis=2)
-        seq_prob = tf.math.exp(seq_log_prob)
-        seq_prob = is_outcome * seq_prob
+        # Compute log-probability of outcome (i.e., a sequence of events).
+        outcome_logprob = tf.reduce_sum(event_logprob, axis=2)
+        outcome_prob = tf.math.exp(outcome_logprob)
+        outcome_prob = is_outcome * outcome_prob
 
-        # Clean up probabilities
-        total = tf.reduce_sum(seq_prob, axis=2, keepdims=True)
-        seq_prob = seq_prob / total
-        return seq_prob
+        # Clean up numerical errors in probabilities.
+        total_outcome_prob = tf.reduce_sum(outcome_prob, axis=2, keepdims=True)
+        outcome_prob = outcome_prob / total_outcome_prob
+        return outcome_prob
 
     def get_config(self):
         """Return layer configuration."""

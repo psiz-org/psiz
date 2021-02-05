@@ -27,7 +27,7 @@ import psiz
 def ground_truth(n_stimuli, n_dim, similarity_func):
     """Return a ground truth embedding."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17, seed=4
@@ -87,7 +87,7 @@ def build_model(n_stimuli, n_dim, similarity_func):
 
     """
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
@@ -212,6 +212,8 @@ def test_rate_1g_mle_execution(similarity_func):
             ).numpy()
         )
         rho, _ = pearsonr(simmat_true, simmat_infer)
+        if np.isnan(rho):
+            rho = 0
         r2[i_frame] = rho**2
 
     # Assert that more data helps inference.

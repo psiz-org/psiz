@@ -90,7 +90,7 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
             inputs_loc, inputs_scale, self.low, self.high
         )
         # Reify output using samples.
-        return dist_batch.sample(self.n_sample)
+        return dist_batch.sample(self.sample_shape)
 
     def get_config(self):
         """Return layer configuration."""

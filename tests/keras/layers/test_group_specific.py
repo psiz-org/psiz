@@ -70,7 +70,7 @@ def emb_subnets_dist_rank0():
     prior_scale = .0000000001
     n_stimuli = 12
     n_dim = 3
-    n_sample = ()
+    sample_shape = ()
 
     base_array = np.array([
         [0.0, 0.1, 0.2],
@@ -96,7 +96,7 @@ def emb_subnets_dist_rank0():
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
-    emb_0.n_sample = n_sample
+    emb_0.sample_shape = sample_shape
 
     emb_1 = EmbeddingNormalDiag(
         n_stimuli, n_dim, mask_zero=True,
@@ -107,7 +107,7 @@ def emb_subnets_dist_rank0():
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
-    emb_1.n_sample = n_sample
+    emb_1.sample_shape = sample_shape
 
     emb_2 = EmbeddingNormalDiag(
         n_stimuli, n_dim, mask_zero=True,
@@ -118,7 +118,7 @@ def emb_subnets_dist_rank0():
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
-    emb_2.n_sample = n_sample
+    emb_2.sample_shape = sample_shape
 
     subnets = [emb_0, emb_1, emb_2]
     return subnets
@@ -131,7 +131,7 @@ def emb_subnets_dist_rank1():
     prior_scale = .0000000001
     n_stimuli = 12
     n_dim = 3
-    n_sample = 11
+    sample_shape = 11
 
     base_array = np.array([
         [0.0, 0.1, 0.2],
@@ -157,7 +157,7 @@ def emb_subnets_dist_rank1():
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
-    emb_0.n_sample = n_sample
+    emb_0.sample_shape = sample_shape
 
     emb_1 = EmbeddingNormalDiag(
         n_stimuli, n_dim, mask_zero=True,
@@ -168,7 +168,7 @@ def emb_subnets_dist_rank1():
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
-    emb_1.n_sample = n_sample
+    emb_1.sample_shape = sample_shape
 
     emb_2 = EmbeddingNormalDiag(
         n_stimuli, n_dim, mask_zero=True,
@@ -179,7 +179,7 @@ def emb_subnets_dist_rank1():
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
-    emb_2.n_sample = n_sample
+    emb_2.sample_shape = sample_shape
 
     subnets = [emb_0, emb_1, emb_2]
     return subnets
@@ -415,9 +415,9 @@ def test_emb_serialization(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     # Reconstruct layer from configuration.
     group_layer_recon = GroupSpecific.from_config(config)
 
-    # Must set `n_sample` since this is not saved.
+    # Must set `sample_shape` since this is not saved.
     for subnet in group_layer_recon.subnets:
-        subnet.n_sample = 11
+        subnet.sample_shape = 11
 
     # Assert reconstructed attributes are the same as original.
     assert group_layer.n_subnet == group_layer_recon.n_subnet

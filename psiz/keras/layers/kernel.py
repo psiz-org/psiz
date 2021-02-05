@@ -33,7 +33,6 @@ import psiz.keras.initializers as pk_initializers
 from psiz.keras.layers.distances.minkowski import WeightedMinkowski
 from psiz.keras.layers.group_level import GroupLevel
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
-from psiz.keras.layers.variational import Variational
 
 
 @tf.keras.utils.register_keras_serializable(

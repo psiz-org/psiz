@@ -48,7 +48,7 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+# tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -181,7 +181,7 @@ def main():
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17
@@ -194,7 +194,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.EmbeddingDeterministic(
+        attention=tf.keras.layers.Embedding(
             n_group, n_dim, mask_zero=False,
             embeddings_initializer=tf.keras.initializers.Constant(
                 np.array((
@@ -229,7 +229,7 @@ def build_model(n_stimuli, n_dim, n_group):
 
     """
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
         )
     )
@@ -238,7 +238,7 @@ def build_model(n_stimuli, n_dim, n_group):
     alpha = np.ones((n_dim))
     kernel = psiz.keras.layers.AttentionKernel(
         group_level=1,
-        attention=psiz.keras.layers.EmbeddingDeterministic(
+        attention=tf.keras.layers.Embedding(
             n_group, n_dim, mask_zero=False,
             embeddings_initializer=psiz.keras.initializers.RandomAttention(
                 alpha, scale

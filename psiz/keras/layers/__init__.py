@@ -34,7 +34,6 @@ from psiz.keras.layers.kernels.kernel_adapter import KernelAdapter
 from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.sort import SortBehavior
-from psiz.keras.layers.embeddings.deterministic import EmbeddingDeterministic
 from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
 from psiz.keras.layers.embeddings.group_attention import GroupAttention
 from psiz.keras.layers.embeddings.group_attn_variational import GroupAttentionVariational

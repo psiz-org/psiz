@@ -90,7 +90,7 @@ class Minkowski(tf.keras.layers.Layer):
         # Expand `rho` to shape=(sample_size, batch_size, [n, m, ...]).
         rho = self.rho * tf.ones(tf.shape(z_0)[0:-1])
 
-        # Expand `w` to shape. TODO
+        # Expand `w` to shape.
         w = tf.broadcast_to(self.w, tf.shape(z_0))
 
         # Weighted Minkowski distance.

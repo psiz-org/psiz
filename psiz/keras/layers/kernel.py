@@ -182,10 +182,10 @@ class AttentionKernel(GroupLevel):
         group_idx = tf.reshape(group_idx, reshape_shape)
 
         # Tile group_idx to be compatible with `z_1`, again omitting batch
-        # axis and n_dim axis.
-        repeats = tf.shape(z_1)[1:-1]
-        repeats = tf.concat([tf.constant([1]), repeats], axis=0)
-        group_idx = tf.tile(group_idx, repeats)
+        # axis and n_dim axis. TODO
+        # repeats = tf.shape(z_1)[1:-1]
+        # repeats = tf.concat([tf.constant([1]), repeats], axis=0)
+        # group_idx = tf.tile(group_idx, repeats)
 
         # Embed group indices as attention weights.
         attention = self.attention(group_idx)

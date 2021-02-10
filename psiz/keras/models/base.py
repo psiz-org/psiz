@@ -93,7 +93,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         self.behavior = behavior
 
         self._kl_weight = 0.
-        self.n_sample = n_sample
+        self._n_sample = n_sample
 
     @property
     def n_stimuli(self):
@@ -121,7 +121,6 @@ class PsychologicalEmbedding(tf.keras.Model):
     @n_sample.setter
     def n_sample(self, n_sample):
         self._n_sample = n_sample
-        # _submodule_setattr(self.layers, 'n_sample', n_sample)  # TODO
 
     @property
     def kl_weight(self):
@@ -177,7 +176,6 @@ class PsychologicalEmbedding(tf.keras.Model):
 
             where kl_weight = 1 / train_size.
 
-            TODO ISSUE
             But wait, there's more! Observations may be weighted
             differently, which yields a Frankensteinian CCE_bavg since
             a proper average would divide by `effective_batch_size`
@@ -373,8 +371,8 @@ class PsychologicalEmbedding(tf.keras.Model):
         fp_config = os.path.join(filepath, 'config.h5')
         fp_weights = os.path.join(filepath, 'weights')
 
-        # TODO Guarantee types during get_config() method call, making
-        # this recursive check unnecessary.
+        # Ideally, we could guarantee types during get_config() method call,
+        # making this recursive check unnecessary.
         def _convert_to_64(d):
             for k, v in d.items():
                 if isinstance(v, np.float32):

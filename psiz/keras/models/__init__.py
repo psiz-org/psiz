@@ -15,8 +15,8 @@
 # ============================================================================
 """Model initialization file."""
 
-from psiz.keras.models.base import PsychologicalEmbedding
-from psiz.keras.models.base import load_model
+from psiz.keras.models.psych_embedding import PsychologicalEmbedding
+from psiz.keras.models.psych_embedding import load_model
 from psiz.keras.models.rank import Rank
 from psiz.keras.models.rate import Rate
 from psiz.keras.models.sort import Sort

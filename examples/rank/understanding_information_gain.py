@@ -36,9 +36,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility. TODO
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -91,6 +91,7 @@ def main():
         for data in ds_docket:
             # Compute expected information gain from prediction samples.
             y_pred = model(data, training=False)
+            y_pred = tf.transpose(y_pred, perm=[1, 0, 2])
             batch_expected_ig = psiz.generators.expected_information_gain_rank(
                 y_pred
             )
@@ -256,18 +257,20 @@ def build_model(case=0):
             )
         )
     )
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
             beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False
         )
     )
+
     model = psiz.keras.models.Rank(
         stimuli=stimuli, kernel=kernel, n_sample=n_sample
     )

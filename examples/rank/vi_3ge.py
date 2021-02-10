@@ -259,30 +259,62 @@ def ground_truth(n_stimuli, n_group):
         )
     )
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        attention=tf.keras.layers.Embedding(
-            n_group, n_dim, mask_zero=False,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array((
-                    (1.8, 1.8, .2, .2),
-                    (1., 1., 1., 1.),
-                    (.2, .2, 1.8, 1.8)
-                ))
-            )
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False,
-        )
+
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        trainable=False,
+        beta_initializer=tf.keras.initializers.Constant(10.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.)
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
+    # Define group-specific kernels.
+    kernel_0 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [1.8, 1.8, .2, .2]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_1 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [1., 1., 1., 1.]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_2 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [.2, .2, 1.8, 1.8]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_group = psiz.keras.layers.GroupGateMulti(
+        [kernel_0, kernel_1, kernel_2], group_col=1
+    )
+
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
     return model
 
 
@@ -301,17 +333,47 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
         model: A TensorFlow Keras model.
 
     """
+
+    # Define group-specific stimuli embeddings.
+    stim_0 = build_vi_group_stimuli(n_stimuli, n_dim, kl_weight)
+    stim_1 = build_vi_group_stimuli(n_stimuli, n_dim, kl_weight)
+    stim_2 = build_vi_group_stimuli(n_stimuli, n_dim, kl_weight)
+    stim_group = psiz.keras.layers.GroupGate(
+        [stim_0, stim_1, stim_2], group_col=1
+    )
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
+    model = psiz.keras.models.Rank(
+        stimuli=stim_group, kernel=kernel, n_sample=1
+    )
+    return model
+
+
+def build_vi_group_stimuli(n_stimuli, n_dim, kl_weight):
+    """Build VI group-specific stimuli embedding."""
     prior_scale = .2
 
-    n_source_embeddings = n_group * (n_stimuli + 1)
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_source_embeddings, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_source_embeddings, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),
@@ -325,26 +387,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=embedding_variational, group_level=1, n_group=n_group
-    )
-
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False
-        )
-    )
-    model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel, n_sample=1
-    )
-    return model
+    return embedding_variational
 
 
 def plot_frame(
@@ -354,7 +397,7 @@ def plot_frame(
     # Settings.
     group_labels = ['Novice', 'Intermediate', 'Expert']
 
-    n_group = model_inferred.stimuli.n_group
+    n_group = model_inferred.stimuli.n_subnet
     n_dim = model_inferred.n_dim
 
     gs = fig0.add_gridspec(2, 3)
@@ -419,9 +462,9 @@ def plot_embeddings(fig, ax, model_inferred, color_array):
     cov_list = []
     z_max = 0
     for group_idx in range(n_group):
-        dist = model_inferred.stimuli.embeddings
-        loc, cov = unpack_mvn(dist, group_idx)
-        if model_inferred.stimuli.mask_zero:
+        dist = model_inferred.stimuli.subnets[group_idx].embeddings
+        loc, cov = unpack_mvn(dist)
+        if model_inferred.stimuli.subnets[group_idx].mask_zero:
             # Drop placeholder stimulus.
             loc = loc[1:]
             cov = cov[1:]
@@ -476,8 +519,10 @@ def model_similarity(model, group_idx=[], n_sample=None):
         group_idx:
 
     """
+    n_stimuli = model.n_stimuli
+
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        model.stimuli.n_stimuli, mask_zero=True, group_idx=group_idx
+        n_stimuli, mask_zero=True, group_idx=group_idx
     )
     simmat = psiz.utils.pairwise_similarity(
         model.stimuli, model.kernel, ds_pairs, n_sample=n_sample
@@ -489,7 +534,7 @@ def model_similarity(model, group_idx=[], n_sample=None):
     return simmat.numpy()
 
 
-def unpack_mvn(dist, group_idx):
+def unpack_mvn(dist):
     """Unpack multivariate normal distribution."""
     def diag_to_full_cov(v):
         """Convert diagonal variance to full covariance matrix.
@@ -503,8 +548,8 @@ def unpack_mvn(dist, group_idx):
             cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
         return cov
 
-    loc = dist.mean().numpy()[group_idx]
-    v = dist.variance().numpy()[group_idx]
+    loc = dist.mean().numpy()
+    v = dist.variance().numpy()
 
     # Convert to full covariance matrix.
     cov = diag_to_full_cov(v)

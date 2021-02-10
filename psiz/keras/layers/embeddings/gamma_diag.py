@@ -193,7 +193,6 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         inputs_rate = embedding_ops.embedding_lookup(
             self.embeddings.distribution.rate, inputs
         )
-        # return [inputs_concentration, inputs_rate]
 
         # [inputs_concetration, inputs_rate] = super().call(inputs)
         # Use reparameterization trick.

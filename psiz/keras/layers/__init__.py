@@ -28,9 +28,9 @@ from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
 from psiz.keras.layers.similarities.heavy_tailed import HeavyTailedSimilarity
 from psiz.keras.layers.similarities.inverse import InverseSimilarity
 from psiz.keras.layers.similarities.students_t import StudentsTSimilarity
-from psiz.keras.layers.kernel import Kernel
-from psiz.keras.layers.kernel import AttentionKernel
 from psiz.keras.layers.kernels.distance_based import DistanceBased
+from psiz.keras.layers.kernels.kernel import Kernel
+from psiz.keras.layers.kernels.kernel import AttentionKernel
 from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.sort import SortBehavior

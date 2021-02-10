@@ -57,7 +57,6 @@ class Rank(PsychologicalEmbedding):
         if behavior is None:
             behavior = psiz.keras.layers.RankBehavior()
         kwargs.update({'behavior': behavior})
-
         super().__init__(**kwargs)
 
     def call(self, inputs):
@@ -99,6 +98,10 @@ class Rank(PsychologicalEmbedding):
         # z_q: TensorShape([batch_size, sample_size, 1, n_outcome, n_dim]
         # z_r: TensorShape([batch_size, sample_size, n_ref, n_outcome, n_dim]
         z_q, z_r = tf.split(z, [1, max_n_reference], -3)
+        # The tf.split op does not infer split dimension shape. We know that
+        # z_q will always have shape=1, but we don't know `max_n_reference`
+        # ahead of time.
+        z_q.set_shape([None, None, 1, None, None])
 
         # Pass through similarity kernel.
         # TensorShape([sample_size, batch_size, n_ref, n_outcome])

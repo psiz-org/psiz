@@ -97,13 +97,41 @@ class PsychologicalEmbedding(tf.keras.Model):
 
     @property
     def n_stimuli(self):
-        """Getter method for `n_stimuli`."""
-        return self.stimuli.n_stimuli
+        """Convenience method for `n_stimuli`."""
+        try:
+            # Assume Stimuli layer.
+            n_stimuli = self.stimuli.input_dim
+            if self.stimuli.mask_zero:
+                n_stimuli -= 1
+        except AttributeError:
+            try:
+                # Assume peel.
+                n_stimuli = self.stimuli.net.input_dim
+                if self.stimuli.net.mask_zero:
+                    n_stimuli -= 1
+            except AttributeError:
+                # Assume gate.
+                n_stimuli = self.stimuli.subnets[0].input_dim
+                if self.stimuli.subnets[0].mask_zero:
+                    n_stimuli -= 1
+
+        return n_stimuli
 
     @property
     def n_dim(self):
-        """Getter method for `n_dim`."""
-        return self.stimuli.output_dim
+        """Convenience method for `n_dim`."""
+        try:
+            # Assume Stimuli layer.
+            output_dim = self.stimuli.output_dim
+        except AttributeError:
+            try:
+                # Assume peel.
+                output_dim = self.stimuli.net.output_dim
+            except AttributeError:
+                # Assume gate.
+                output_dim = self.stimuli.subnets[0].output_dim
+
+        return output_dim
 
     @property
     def n_group(self):

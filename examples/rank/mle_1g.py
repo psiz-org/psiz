@@ -215,13 +215,15 @@ def ground_truth(n_stimuli, n_dim):
             )
         )
     )
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
             trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.001),
         )
@@ -248,9 +250,21 @@ def build_model(n_stimuli, n_dim):
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
-    kernel = psiz.keras.layers.Kernel(
-        similarity=psiz.keras.layers.ExponentialSimilarity()
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+        )
     )
+
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 

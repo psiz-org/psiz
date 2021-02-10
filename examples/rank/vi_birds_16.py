@@ -202,15 +202,17 @@ def build_model(n_stimuli, n_dim, n_obs_train):
     )
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False
         )
     )
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
@@ -287,7 +289,6 @@ def squeeze_indices(idx_arr):
     return idx_arr_2
 
 
-# TODO DRY
 def unpack_mvn(dist, group_idx):
     """Unpack multivariate normal distribution."""
     def diag_to_full_cov(v):

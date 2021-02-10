@@ -303,10 +303,12 @@ def ground_truth(n_stimuli, n_dim):
             trainable=False
         )
     )
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(10.),
@@ -315,6 +317,7 @@ def ground_truth(n_stimuli, n_dim):
             trainable=False
         )
     )
+
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
 
     return model
@@ -359,18 +362,23 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
         embedding=embedding_variational
     )
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    # We use rho=1.3 because we want something that is like L1 since we are
+    # inferring non-negative embedding, but doesn't suffer from the
+    # optimization challenges of L1.
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(1.3),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
             beta_initializer=tf.keras.initializers.Constant(1.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False
         )
     )
+
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
     return model
 

@@ -61,9 +61,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.  TODO
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 def main():
@@ -252,16 +252,16 @@ def main():
             r2[i_frame, 2, 0], r2[i_frame, 2, 1], r2[i_frame, 2, 2]))
         print('\n')
 
-        # Create and save visual frame. TODO
-        # fig0 = plt.figure(figsize=(12, 5), dpi=200)
-        # plot_frame(
-        #     fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
-        #     model_inferred, idx_sorted, i_frame
-        # )
-        # fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
-        # plt.savefig(
-        #     os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
-        # )
+        # Create and save visual frame.
+        fig0 = plt.figure(figsize=(12, 5), dpi=200)
+        plot_frame(
+            fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
+            model_inferred, idx_sorted, i_frame
+        )
+        fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
+        plt.savefig(
+            os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
+        )
 
     # Create animation.
     if n_frame > 1:
@@ -282,30 +282,62 @@ def ground_truth(n_stimuli, n_dim, n_group):
             )
         )
     )
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        attention=tf.keras.layers.Embedding(
-            n_group, n_dim, mask_zero=False,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array((
-                    (1.8, 1.8, .2, .2),
-                    (1., 1., 1., 1.),
-                    (.2, .2, 1.8, 1.8)
-                ))
-            )
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False,
-        )
+
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        trainable=False,
+        beta_initializer=tf.keras.initializers.Constant(10.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.)
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
+    # Define group-specific kernels.
+    kernel_0 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [1.8, 1.8, .2, .2]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_1 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [1., 1., 1., 1.]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_2 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [.2, .2, 1.8, 1.8]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_group = psiz.keras.layers.GroupGateMulti(
+        [kernel_0, kernel_1, kernel_2], group_col=1
+    )
+
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
     return model
 
 
@@ -381,7 +413,10 @@ def build_vi_kernel(similarity, n_dim, kl_weight):
     mink_posterior = psiz.keras.layers.MinkowskiStochastic(
         rho_loc_trainable=False, rho_scale_trainable=True,
         w_loc_trainable=True, w_scale_trainable=True,
-        w_scale_initializer=tf.keras.initializers.Constant(.1)
+        w_scale_initializer=tf.keras.initializers.Constant(.1),
+        w_loc_constraint=psiz.keras.constraints.NonNegNorm(
+            scale=n_dim, p=1.
+        )
     )
 
     mink = psiz.keras.layers.MinkowskiVariational(
@@ -425,18 +460,18 @@ def plot_frame(
             name = 'w'
             ax = fig0.add_subplot(gs[i_group + 1, i_dim])
             curr_dim = idx_sorted[i_dim]
-            attn = model_inferred.kernel.attention.posterior.embeddings
-            loc = attn.distribution.loc[i_group, curr_dim]
-            scale = attn.distribution.scale[i_group, curr_dim]
-            dist = tfp.distributions.LogitNormal(loc=loc, scale=scale)
-            plot_logitnormal(ax, dist, name=name, c=c)
+            dist_w = model_inferred.kernel.subnets[i_group].distance.w
+            loc = dist_w.distribution.loc[curr_dim]
+            scale = dist_w.distribution.scale[curr_dim]
+            dist_wi = tfp.distributions.Normal(loc=loc, scale=scale)
+            plot_normal(ax, dist_wi, name=name, c=c)
             if i_group == 0:
                 ax.set_title('Dimension {0}'.format(i_dim))
 
     gs.tight_layout(fig0)
 
 
-def plot_logitnormal(ax, dist, name=None, c=None):
+def plot_normal(ax, dist, name=None, c=None):
     """Plot univariate distribution.
 
     Arguments:
@@ -445,23 +480,27 @@ def plot_logitnormal(ax, dist, name=None, c=None):
         name:
 
     """
+    # Settings.
+    x_min = 0
+    x_max = 4
+
     if name is None:
         name = 'x'
 
-    x = np.linspace(.001, .999, 1000)
-    y = dist.prob(x)
-
     # Determine mode from samples.
-    idx = np.argmax(y)
-    x_mode = x[idx]
+    x_mode = dist.mode().numpy()
+    x_std = dist.stddev().numpy()
+
+    x = np.linspace(x_min, x_max, 1000)
+    y = dist.prob(x).numpy()
 
     ax.plot(x, y, c=c)
     ax.text(x_mode, .75 * np.max(y), '{0:.2f}'.format(x_mode))
     ax.set_xlabel(r'${0}$'.format(name))
     ax.set_ylabel(r'$p({0})$'.format(name))
-    ax.set_xlim([0, 1])
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels([0, 1])
+    ax.set_xlim([x_min, x_max])
+    ax.set_xticks([x_min, x_max])
+    ax.set_xticklabels([x_min, x_max])
 
 
 def plot_loss(ax, n_obs, train_loss, val_loss, test_loss):
@@ -524,28 +563,6 @@ def model_similarity(model, group_idx=[], n_sample=None):
         simmat = tf.reduce_mean(simmat, axis=1)
 
     return simmat.numpy()
-
-
-def logit_normal_median(distribution):
-    """Return median of logit-normal distribution.
-
-    For logit-normal distribution:
-    `median = logistic(loc)`
-
-    Arguments:
-        distribution: A logit-normal distribution.
-
-    Returns:
-        median
-
-    """
-    if isinstance(distribution, tfp.distributions.Distribution):
-        is_logit_normal = isinstance(
-            distribution.distribution, tfp.distributions.LogitNormal
-        )
-        if is_logit_normal:
-            m = tf.math.sigmoid(distribution.distribution.loc)
-    return m
 
 
 if __name__ == "__main__":

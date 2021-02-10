@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for a TensorFlow GroupSpecific.
+"""Module for a TensorFlow layers.
 
 Classes:
-    GroupSpecific: A layer that manages group-specific subnetworks.
+    GroupGateMulti: A layer that manages group-specific subnetworks
+        that consume a list of inputs.
 
 """
 
@@ -26,9 +27,9 @@ from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='GroupSpecific'
+    package='psiz.keras', name='GroupGateMulti'
 )
-class GroupSpecific(tf.keras.layers.Layer):
+class GroupGateMulti(tf.keras.layers.Layer):
     """A layer that manages group-specific subnetworks.
 
     The subnetworks can take a list of inputs, but each subnetwork must
@@ -68,7 +69,7 @@ class GroupSpecific(tf.keras.layers.Layer):
             fully defined.
 
         """
-        super(GroupSpecific, self).__init__(**kwargs)
+        super(GroupGateMulti, self).__init__(**kwargs)
         self.subnets = subnets
         self.n_subnet = len(subnets)
         self.group_col = group_col

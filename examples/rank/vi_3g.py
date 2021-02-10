@@ -360,7 +360,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
     kernel_0 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
-    kernel_group = psiz.keras.layers.GroupSpecific(
+    kernel_group = psiz.keras.layers.GroupGateMulti(
         [kernel_0, kernel_1, kernel_2], group_col=1
     )
 

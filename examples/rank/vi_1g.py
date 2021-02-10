@@ -433,13 +433,12 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
     )
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
-    mink = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
-        trainable=False
-    )
     kernel = psiz.keras.layers.DistanceBased(
-        distance=mink,
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
             beta_initializer=tf.keras.initializers.Constant(10.),

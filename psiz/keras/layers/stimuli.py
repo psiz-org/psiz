@@ -61,8 +61,8 @@ class Stimuli(GroupLevel):
 
     def build(self, input_shape):
         """Build."""
-        super().build(input_shape)
         self.embedding.build(input_shape)
+        super().build(input_shape)
 
     def call(self, inputs):
         """Call."""

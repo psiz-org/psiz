@@ -16,20 +16,15 @@
 """Module of TensorFlow kernel layers.
 
 Classes:
-    DistanceBased: A distance-based kernel.
+    DistanceBased: A distance-based similarity kernel.
 
 """
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
 
-import psiz.keras.constraints as pk_constraints
-import psiz.keras.initializers as pk_initializers
 from psiz.keras.layers.distances.mink import Minkowski
-from psiz.keras.layers.group_level import GroupLevel
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
-from psiz.keras.layers.variational import Variational
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -53,18 +48,24 @@ class DistanceBased(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call.
 
-        Compute k(z_0, z_1), where `k` is the pairwise function.
+        Compute k(z_0, z_1), where `k` is the pairwise kernel function.
 
         Arguments:
-            inputs: A tf.Tensor representing coordinates. The tensor is
-                assumed be at least rank 3, where the last two
-                dimensions have specific semantics: the dimensionality
-                of the space and the element-wise pairs.
-                shape=([n_sample,] batch_size, [n, m, ...] n_dim, 2)
+            inputs: A list of two tf.Tensor's, plus an optional third
+                Tensor. The first two tensors representing coordinates
+                the pairwise coordinates for which to compute
+                similarity. The coordinate tensors are assumed be at
+                least rank 2, where the first axis indicates the batch
+                size and the last axis indicates the dimensionality of
+                the coordinate space.
+                shape=(batch_size, [n, m, ...] n_dim)
+                The optional third tensor is assumed to be rank-2 and
+                indicates group membership.
+                shape=(batch_size, n_col)
 
         Returns:
-            sim_qr: A tf.Tensor of similarites.
-                shape=([n_sample,] batch_size, [n, m, ...])
+            sim_qr: A tf.Tensor of pairwise similarites.
+                shape=(batch_size, [n, m, ...])
 
         """
         # Compute distances (element-wise between last dimension)
@@ -76,7 +77,11 @@ class DistanceBased(tf.keras.layers.Layer):
     def build(self, input_shape):
         """Build."""
         self.distance.build(input_shape)
-        self.similarity.build(input_shape)
+        distance_output_shape = self.distance.compute_output_shape(input_shape)
+        # Clear any losses that were created during `compute_output_shape`.
+        self.distance._clear_losses()
+        self.similarity.build(distance_output_shape)
+        super().build(input_shape)
 
     def get_config(self):
         """Return layer configuration."""
@@ -97,3 +102,10 @@ class DistanceBased(tf.keras.layers.Layer):
             config['similarity']
         )
         return cls(**config)
+
+    def compute_output_shape(self, input_shape):
+        dist_output_shape = self.distance.compute_output_shape(input_shape)
+        kernel_output_shape = self.similarity.compute_output_shape(
+            dist_output_shape
+        )
+        return kernel_output_shape

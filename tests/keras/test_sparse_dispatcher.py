@@ -87,7 +87,7 @@ def test_basic(gates_v0,  inputs_v0):
 
     # Initialize and run inputs through dispatcher.
     dispatcher = SparseDispatcher(n_expert, gates_v0)
-    expert_inputs = dispatcher.dispatch(inputs_v0)
+    expert_inputs = dispatcher.dispatch_single(inputs_v0)
     expert_outputs = [experts[i](expert_inputs[i]) for i in range(n_expert)]
 
     # Test `multiply_by_gates=True`.

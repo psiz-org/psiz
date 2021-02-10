@@ -61,9 +61,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.  TODO
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 def main():
@@ -214,9 +214,13 @@ def main():
                 r2[i_frame, i_truth, j_infer] = rho**2
 
         # Display attention weights.
-        # For logit-normal distribution, use median instead of mode.
-        attention_weight = logit_normal_median(
-            model_inferred.kernel.attention.embeddings
+        attention_weight = tf.stack(
+            [
+                model_inferred.kernel.subnets[0].distance.w.mode(),
+                model_inferred.kernel.subnets[1].distance.w.mode(),
+                model_inferred.kernel.subnets[2].distance.w.mode()
+            ],
+            axis=0
         ).numpy()
         # Permute inferred dimensions to best match ground truth.
         idx_sorted = np.argsort(-attention_weight[0, :])
@@ -248,16 +252,16 @@ def main():
             r2[i_frame, 2, 0], r2[i_frame, 2, 1], r2[i_frame, 2, 2]))
         print('\n')
 
-        # Create and save visual frame.
-        fig0 = plt.figure(figsize=(12, 5), dpi=200)
-        plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
-            model_inferred, idx_sorted, i_frame
-        )
-        fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
-        plt.savefig(
-            os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
-        )
+        # Create and save visual frame. TODO
+        # fig0 = plt.figure(figsize=(12, 5), dpi=200)
+        # plot_frame(
+        #     fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
+        #     model_inferred, idx_sorted, i_frame
+        # )
+        # fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
+        # plt.savefig(
+        #     os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
+        # )
 
     # Create animation.
     if n_frame > 1:
@@ -345,35 +349,51 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
     )
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
-    attention_posterior = psiz.keras.layers.EmbeddingLogitNormalDiag(
-        n_group, n_dim
-    )
-    attention_prior = psiz.keras.layers.EmbeddingLogitNormalDiag(
-        n_group, n_dim,
-        loc_initializer=tf.keras.initializers.Constant(-4.),
-        scale_initializer=tf.keras.initializers.Constant(1.),
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        beta_initializer=tf.keras.initializers.Constant(10.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.),
         trainable=False
     )
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        attention=psiz.keras.layers.EmbeddingVariational(
-            posterior=attention_posterior, prior=attention_prior,
-            kl_weight=kl_weight, kl_use_exact=True
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False
-        )
+
+    # Define group-specific kernels.
+    kernel_0 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
+    kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
+    kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
+    kernel_group = psiz.keras.layers.GroupSpecific(
+        [kernel_0, kernel_1, kernel_2], group_col=1
     )
+
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel, n_sample=1
+        stimuli=stimuli, kernel=kernel_group, n_sample=1
     )
     return model
+
+
+def build_vi_kernel(similarity, n_dim, kl_weight):
+    """Build kernel for single group."""
+    mink_prior = psiz.keras.layers.MinkowskiStochastic(
+        rho_loc_trainable=False, rho_scale_trainable=True,
+        w_loc_trainable=False, w_scale_trainable=False,
+        w_scale_initializer=tf.keras.initializers.Constant(.1)
+    )
+
+    mink_posterior = psiz.keras.layers.MinkowskiStochastic(
+        rho_loc_trainable=False, rho_scale_trainable=True,
+        w_loc_trainable=True, w_scale_trainable=True,
+        w_scale_initializer=tf.keras.initializers.Constant(.1)
+    )
+
+    mink = psiz.keras.layers.MinkowskiVariational(
+        prior=mink_prior, posterior=mink_posterior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=mink,
+        similarity=similarity
+    )
+    return kernel
 
 
 def plot_frame(

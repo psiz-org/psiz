@@ -45,18 +45,19 @@ class MinkowskiVariational(Variational):
         """Call.
 
         Arguments:
-            inputs: A tf.Tensor representing coordinates. The tensor is
-                assumed be at least rank 3, where the last two
-                dimensions have specific semantics: the dimensionality
-                of the space and the element-wise pairs.
-                shape=([n_sample,] batch_size, [n, m, ...] n_dim, 2)
+            inputs: A list of two tf.Tensor's denoting a the set of
+                vectors to compute pairwise distance. Each tensor is
+                assumed to have the same shape and be at least rank-2.
+                Any additional tensors in the list are ignored.
+                shape = (batch_size, [n, m, ...] n_dim)
 
         Returns:
-            shape=([n_sample,] batch_size, [n, m, ...])
+            shape=(batch_size, [n, m, ...])
 
         """
         # Run forward pass through variational posterior layer.
         outputs = self.posterior(inputs)
+
         # Apply KL divergence between posterior and prior.
         self.add_kl_loss(self.posterior.w, self.prior.w)
         self.add_kl_loss(self.posterior.rho, self.prior.rho)

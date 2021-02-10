@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for a TensorFlow GroupSpecific.
+"""Module for a TensorFlow GroupGate.
 
 Classes:
-    GroupSpecific: A layer that manages group-specific subnetworks.
+    GroupGate: A layer that manages group-specific subnetworks.
 
 """
 
@@ -26,14 +26,14 @@ from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='GroupSpecific'
+    package='psiz.keras', name='GroupGate'
 )
-class GroupSpecific(tf.keras.layers.Layer):
+class GroupGate(tf.keras.layers.Layer):
     """A layer that manages group-specific subnetworks.
 
-    The subnetworks can take a list of inputs, but each subnetwork must
-    output a single tensor.The output shape must be the same for
-    all subnetworks.
+    Each subnetworks is assumed to take a single tensor as input and
+    output a single tensor. The output shape must be the same for all
+    subnetworks.
 
     Note: All subnetworks must be able to handle batch_size=0 calls. If
     a subnetwork cannot handle this, wierd error messages may be
@@ -53,7 +53,9 @@ class GroupSpecific(tf.keras.layers.Layer):
     ```
 
     """
-    def __init__(self, subnets=None, group_col=0, **kwargs):
+    def __init__(
+            self, subnets=None, group_col=0, subnet_output_shape=None,
+            **kwargs):
         """Initialize.
 
         Arguments:
@@ -63,20 +65,17 @@ class GroupSpecific(tf.keras.layers.Layer):
             group_col: The group column on which to gate inputs to the
                 subnetworks.
 
-        Raises:
-            ValueError if subnetwork's non-batch output shape is not
-            fully defined.
-
         """
-        super(GroupSpecific, self).__init__(**kwargs)
+        super(GroupGate, self).__init__(**kwargs)
         self.subnets = subnets
         self.n_subnet = len(subnets)
         self.group_col = group_col
+        self.subnet_output_shape = subnet_output_shape
 
     def build(self, inputs_shape):
         """Build."""
         # Pop group tensor.
-        input_shape_less_group = inputs_shape[0:-1]
+        input_shape_less_group = inputs_shape[1]
 
         # Build subnets.
         for subnet in self.subnets:
@@ -95,13 +94,13 @@ class GroupSpecific(tf.keras.layers.Layer):
 
         """
         # Split inputs.
-        inputs_less_group = inputs[0:-1]
+        inputs_less_group = inputs[0]
         idx_group = inputs[-1][:, self.group_col]
         idx_group = tf.one_hot(idx_group, self.n_subnet)
 
         # Run inputs through group-specific dispatcher.
         dispatcher = SparseDispatcher(self.n_subnet, idx_group)
-        subnet_inputs = dispatcher.dispatch_multi(inputs_less_group)
+        subnet_inputs = dispatcher.dispatch_single(inputs_less_group)
         subnet_outputs = []
         max_size = 0
         for i in range(self.n_subnet):
@@ -159,7 +158,7 @@ class GroupSpecific(tf.keras.layers.Layer):
         """
         # Compute output shape for a subnetwork without passing in group
         # information.
-        return self.subnets[0].compute_output_shape(input_shape[0:-1])
+        return self.subnets[0].compute_output_shape(input_shape[0])
 
     def subnet(self, subnet_idx):
         return self.subnets[subnet_idx]

@@ -47,8 +47,8 @@ import tensorflow as tf
 
 import psiz
 
-# Uncomment the following line to force eager execution. TODO
-tf.config.experimental_run_functions_eagerly(True)
+# Uncomment the following line to force eager execution.
+# tf.config.experimental_run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility. TODO
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -62,7 +62,7 @@ def main():
     n_dim = 4
     n_group = 3
     n_restart = 1
-    epochs = 3  # 1000  TODO
+    epochs = 1000  # 1000  TODO
     n_trial = 2000
     batch_size = 128
 
@@ -134,9 +134,9 @@ def main():
     )
 
     simmat_inferred = (
-        model_similarity_alt(model_inferred, group_idx=[0]),
-        model_similarity_alt(model_inferred, group_idx=[1]),
-        model_similarity_alt(model_inferred, group_idx=[2])
+        model_similarity(model_inferred, group_idx=[0]),
+        model_similarity(model_inferred, group_idx=[1]),
+        model_similarity(model_inferred, group_idx=[2])
     )
 
     r_squared = np.empty((n_group, n_group))
@@ -147,7 +147,14 @@ def main():
 
     # Display attention weights.
     # Permute inferred dimensions to best match ground truth.
-    attention_weight = model_inferred.kernel.attention.embeddings.numpy()
+    attention_weight = tf.stack(
+        [
+            model_inferred.kernel.subnets[0].distance.w,
+            model_inferred.kernel.subnets[1].distance.w,
+            model_inferred.kernel.subnets[2].distance.w
+        ],
+        axis=0
+    ).numpy()
     idx_sorted = np.argsort(-attention_weight[0, :])
     attention_weight = attention_weight[:, idx_sorted]
     group_labels = ["Novice", "Intermediate", "Expert"]
@@ -181,7 +188,7 @@ def main():
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17
@@ -194,7 +201,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
             rho_initializer=tf.keras.initializers.Constant(2.),
             trainable=False,
         ),
-        attention=psiz.keras.layers.EmbeddingDeterministic(
+        attention=tf.keras.layers.Embedding(
             n_group, n_dim, mask_zero=False,
             embeddings_initializer=tf.keras.initializers.Constant(
                 np.array((
@@ -229,56 +236,39 @@ def build_model(n_stimuli, n_dim, n_group):
 
     """
     stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingDeterministic(
+        embedding=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
         )
     )
 
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        trainable=False,
+        beta_initializer=tf.keras.initializers.Constant(10.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.)
+    )
+
     # Define group-specific kernels.
-    kernel_0 = build_kernel()
-    kernel_1 = build_kernel()
-    kernel_2 = build_kernel()
+    kernel_0 = build_kernel(shared_similarity, n_dim)
+    kernel_1 = build_kernel(shared_similarity, n_dim)
+    kernel_2 = build_kernel(shared_similarity, n_dim)
     kernel_group = psiz.keras.layers.GroupSpecific(
         [kernel_0, kernel_1, kernel_2], group_col=1
     )
 
-    model = psiz.keras.models.RankAlt(stimuli=stimuli, kernel=kernel_group)
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
 
     return model
 
 
-def build_kernel():
+def build_kernel(similarity, n_dim):
     """Build kernel for single group."""
-    # TODO
-    # scale = n_dim
-    # alpha = np.ones((n_dim))
-    # kernel = psiz.keras.layers.AttentionKernel(
-    #     group_level=1,
-    #     attention=psiz.keras.layers.EmbeddingDeterministic(
-    #         n_group, n_dim, mask_zero=False,
-    #         embeddings_initializer=psiz.keras.initializers.RandomAttention(
-    #             alpha, scale
-    #         ),
-    #         embeddings_constraint=psiz.keras.constraints.NonNegNorm(
-    #             scale=n_dim
-    #         ),
-    #     ),
-    #     similarity=psiz.keras.layers.ExponentialSimilarity()
-    # )
-
-    similarity = psiz.keras.layers.ExponentialSimilarity(
-        tau_initializer=tf.keras.initializers.Constant(1.),
-        gamma_initializer=tf.keras.initializers.Constant(0.),
-        trainable=False
-    )
-
-    # mink = psiz.keras.layers.MinkowskiStochastic(
-    #     rho_loc_trainable=False, rho_scale_trainable=False,
-    #     w_loc_trainable=True, w_scale_trainable=False
-    # )
     mink = psiz.keras.layers.Minkowski(
-        # rho_trainable=False,
-        # rho_initializer=tf.keras.initializers.Constant(2.)
+        rho_trainable=False,
+        rho_initializer=tf.keras.initializers.Constant(2.),
+        w_constraint=psiz.keras.constraints.NonNegNorm(
+            scale=n_dim, p=1.
+        ),
     )
 
     kernel = psiz.keras.layers.DistanceBased(
@@ -300,52 +290,59 @@ def model_similarity(model, group_idx=[]):
     return simmat
 
 
-def model_similarity_alt(model, group_idx=[]):
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        model.stimuli.n_stimuli, mask_zero=True, group_idx=group_idx
-    )
-    simmat = np.squeeze(
-        pairwise_similarity_alt(
-            model.stimuli, model.kernel, ds_pairs
-        ).numpy()
-    )
-    return simmat
+# TODO
+# def model_similarity_alt(model, group_idx=[]):
+#     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
+#         model.stimuli.n_stimuli, mask_zero=True, group_idx=group_idx
+#     )
+#     simmat = np.squeeze(
+#         pairwise_similarity_alt(
+#             model.stimuli, model.kernel, ds_pairs
+#         ).numpy()
+#     )
+#     return simmat
 
 
-def pairwise_similarity_alt(stimuli, kernel, ds_pairs):
-    """Return the similarity between stimulus pairs.
+# def pairwise_similarity_alt(stimuli, kernel, ds_pairs):
+#     """Return the similarity between stimulus pairs.
 
-    Arguments:
-        stimuli: A psiz.keras.layers.Stimuli object.
-        kernel: A psiz.keras.layers.Kernel object.
-        ds_pairs: A TF dataset object that yields a 3-tuple composed
-            of stimulus index i, sitmulus index j, and group
-            membership indices.
+#     Arguments:
+#         stimuli: A psiz.keras.layers.Stimuli object.
+#         kernel: A psiz.keras.layers.Kernel object.
+#         ds_pairs: A TF dataset object that yields a 3-tuple composed
+#             of stimulus index i, sitmulus index j, and group
+#             membership indices.
 
-    Returns:
-        s: A tf.Tensor of similarities between stimulus i and stimulus
-            j (using the requested group-level parameters from the
-            stimuli layer and the kernel layer).
-            shape=([sample_size,] n_pair)
+#     Returns:
+#         s: A tf.Tensor of similarities between stimulus i and stimulus
+#             j (using the requested group-level parameters from the
+#             stimuli layer and the kernel layer).
+#             shape=([sample_size,] n_pair)
 
-    Notes:
-        The `n_sample` property of the Stimuli layer and Kernel layer
-            must agree.
+#     Notes:
+#         The `n_sample` property of the Stimuli layer and Kernel layer
+#             must agree.
 
-    """
-    s = []
-    for x_batch in ds_pairs:
-        z_0 = stimuli([x_batch[0], x_batch[2]])
-        z_1 = stimuli([x_batch[1], x_batch[2]])
-        z_01 = tf.stack([z_0, z_1], axis=-1)
-        z_01 = tf.squeeze(z_01, axis=0)
-        s.append(
-            kernel([z_01, x_batch[2]])
-        )
+#     """
+#     s = []
+#     for x_batch in ds_pairs:
+#         idx_0 = x_batch[0]
+#         idx_1 = x_batch[1]
+#         group = x_batch[2]
 
-    # Concatenate along pairs dimension (i.e., the last dimension).
-    s = tf.concat(s, axis=-1)
-    return s
+#         z_0 = stimuli([idx_0, group])
+#         z_1 = stimuli([idx_1, group])
+#         # z_01 = tf.stack([z_0, z_1], axis=-1)
+#         # s.append(
+#         #     kernel([z_01, group])
+#         # )
+#         s.append(
+#             kernel([z_0, z_1, group])
+#         )
+
+#     # Concatenate along pairs dimension (i.e., the last dimension).
+#     s = tf.concat(s, axis=-1)
+#     return s
 
 
 if __name__ == "__main__":

@@ -16,12 +16,11 @@
 """Module of TensorFlow distance layers.
 
 Classes:
-    MinkowskiStochastic: A stochastic Minkowski layer.
+    MinkowskiStochastic: A stochastic Minkowski distance layer.
 
 """
 
 import tensorflow as tf
-from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
 from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
@@ -58,7 +57,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         """Initialize."""
         super(MinkowskiStochastic, self).__init__(**kwargs)
 
-        # Additional defaults. TODO
+        # Additional defaults.
         self.rho_low = 1.0
         self.rho_high = 1000000.
         self.w_low = 0.0
@@ -162,7 +161,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
     def _build_w(self, input_shape, dtype):
         self.w_loc = self.add_weight(
             name='w_loc',
-            shape=[input_shape[-2]], dtype=dtype,
+            shape=[input_shape[0][-1]], dtype=dtype,
             initializer=self.w_loc_initializer,
             regularizer=self.w_loc_regularizer,
             trainable=self.w_loc_trainable,
@@ -172,7 +171,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         # Handle scale variables.
         self.w_untransformed_scale = self.add_weight(
             name='w_untransformed_scale',
-            shape=[input_shape[-2]], dtype=dtype,
+            shape=[input_shape[0][-1]], dtype=dtype,
             initializer=self.w_scale_initializer,
             regularizer=self.w_scale_regularizer,
             trainable=self.w_scale_trainable,
@@ -195,25 +194,37 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         """Call.
 
         Arguments:
-            inputs: A tf.Tensor representing coordinates. The tensor is
-                assumed be at least rank 3, where the last two
-                dimensions have specific semantics: the dimensionality
-                of the space and the element-wise pairs.
-                shape=([n_sample,] batch_size, [n, m, ...] n_dim, 2)
+            inputs: A list of two tf.Tensor's denoting a the set of
+                vectors to compute pairwise distance. Each tensor is
+                assumed to have the same shape and be at least rank-2.
+                Any additional tensors in the list are ignored.
+                shape = (batch_size, [n, m, ...] n_dim)
 
         Returns:
-            shape=([n_sample,] batch_size, [n, m, ...])
+            shape=(batch_size, [n, m, ...])
 
         """
-        z_0, z_1 = tf.unstack(inputs, num=2, axis=-1)
+        z_0 = inputs[0]
+        z_1 = inputs[1]
         x = z_0 - z_1
+        x_shape = tf.shape(x)
 
         # Sample free parameters based on input shape.
-        x_shape = tf.shape(x)
-        # Note that `wpnorm` expects `rho` to have one less rank thank
+        # Note that `wpnorm` expects `rho` to have one less rank than
         # `x` and `w`, i.e., it does not have a trailing `n_dim`.
-        rho = self.rho.sample(x_shape[0:-1])
-        w = self.w.sample(x_shape[0:-1])
+        # We wrap the sample call in a conditional to protect against
+        # batch_size=0.
+        batch_size = x_shape[0]
+        rho = tf.cond(
+            batch_size == 0,
+            lambda: tf.zeros(x_shape[0:-1]),
+            lambda: self.rho.sample(x_shape[0:-1])
+        )
+        w = tf.cond(
+            batch_size == 0,
+            lambda: tf.zeros(x_shape),
+            lambda:  self.w.sample(x_shape[0:-1])
+        )
 
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)
@@ -222,5 +233,34 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
 
     def get_config(self):
         config = super().get_config()
-        # config.update({})  # TODO
+        config.update({
+            'rho_loc_initializer':
+                tf.keras.initializers.serialize(self.rho_loc_initializer),
+            'rho_scale_initializer':
+                tf.keras.initializers.serialize(self.rho_scale_initializer),
+            'w_loc_initializer':
+                tf.keras.initializers.serialize(self.w_loc_initializer),
+            'w_scale_initializer':
+                tf.keras.initializers.serialize(self.w_scale_initializer),
+            'rho_loc_regularizer':
+                tf.keras.regularizers.serialize(self.rho_loc_regularizer),
+            'rho_scale_regularizer':
+                tf.keras.regularizers.serialize(self.rho_scale_regularizer),
+            'w_loc_regularizer':
+                tf.keras.regularizers.serialize(self.w_loc_regularizer),
+            'w_scale_regularizer':
+                tf.keras.regularizers.serialize(self.w_scale_regularizer),
+            'rho_loc_constraint':
+                tf.keras.constraints.serialize(self.rho_loc_constraint),
+            'rho_scale_constraint':
+                tf.keras.constraints.serialize(self.rho_scale_constraint),
+            'w_loc_constraint':
+                tf.keras.constraints.serialize(self.w_loc_constraint),
+            'w_scale_constraint':
+                tf.keras.constraints.serialize(self.w_scale_constraint),
+            'rho_loc_trainable': self.rho_loc_trainable,
+            'rho_scale_trainable': self.rho_scale_trainable,
+            'w_loc_trainable': self.w_loc_trainable,
+            'w_scale_trainable': self.w_scale_trainable,
+        })
         return config

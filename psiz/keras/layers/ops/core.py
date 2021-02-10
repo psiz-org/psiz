@@ -32,44 +32,51 @@ def wpnorm(x, w, p):
     Arguments:
         x: A tf.Tensor indicating the vectors. The vector can have
             arbitrary shape, subject to the following constraint:
-            shape=(sample_size, batch_size, [n, m, ...] n_dim)
+            shape=(batch_size, [n, m, ...] n_dim)
         w: A tf.Tensor indicating the dimension weights.
-            shape=(sample_size, batch_size, [n, m, ...] n_dim)
+            shape=(batch_size, [n, m, ...] n_dim)
         p: A parameter controlling the weighted minkowski metric.
-            shape=(sample_size, batch_size, [n, m, ...])
+            shape=(batch_size, [n, m, ...])
 
     Returns:
-        shape=(sample_size, batch_size, [n, m, ...] 1)
+        shape=(batch_size, [n, m, ...] 1)
 
     """
     abs_x = tf.abs(x)
+    # Add singleton axis to end of p for `n_dim`.
     p_exp = tf.expand_dims(p, axis=-1)
     abs_x_p = tf.pow(abs_x, p_exp)
     w_abs_x_p = tf.multiply(abs_x_p, w)
+    # Sum over last axis (i.e., `n_dim`).
     sum_x = tf.reduce_sum(w_abs_x_p, axis=-1, keepdims=True)
     y = tf.pow(sum_x, 1. / p_exp)
 
     def grad(dy):
-        # Gradients of coordinates `x`.
+        # Gradients of coordinates `x` with fudge factor to avoid problematic
+        # gradients.
+        # shape=(batch_size, [n, m, ...] n_dim)
         dydx = dy * (
             (w * x * tf.math.divide_no_nan(abs_x_p, abs_x**2)) /
             (y**(p_exp-1) + tf.keras.backend.epsilon())
         )
 
-        # Gradients of weights `w`.
-        # Determine all axis other than sample_size, batch_size and n_dim. 
-        reduce_axis = tf.range(2, tf.rank(x)-1)
+        # Gradients of weights `w` with fudge factor to avoid problematic
+        # gradients.
+        # shape=(batch_size, [n, m, ...] n_dim)
         dydw = dy * (
             abs_x_p / (p_exp * y**(p_exp-1) + tf.keras.backend.epsilon())
         )
-        dydw = tf.reduce_sum(dydw, axis=reduce_axis, keepdims=True)
 
-        # Gradients of `p`.
+        # Gradients of `p` with fudge factor and to avoid problematic
+        # gradients.
+        # shape=(batch_size, [n, m, ...])
         p_0 = (1. / p_exp) * tf.math.divide_no_nan(y, sum_x) * tf.reduce_sum(
             w_abs_x_p * tf.math.log(abs_x + tf.keras.backend.epsilon()),
             axis=-1, keepdims=True
         )
-        p_1 = (1. / p_exp**2) * y * tf.math.log(sum_x + tf.keras.backend.epsilon())
+        p_1 = (1. / p_exp**2) * y * tf.math.log(
+            sum_x + tf.keras.backend.epsilon()
+        )
         dydp = dy * (p_0 - p_1)
         dydp = tf.squeeze(dydp, [-1])
         return dydx, dydw, dydp

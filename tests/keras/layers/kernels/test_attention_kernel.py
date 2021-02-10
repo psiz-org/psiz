@@ -60,9 +60,10 @@ def kernel_ak_v0():
     return kernel
 
 
-def test_call(pw_inputs_v0, group_v0, kernel_ak_v0):
+def test_call(paired_inputs_v0, group_v0, kernel_ak_v0):
     """Test call."""
-    inputs_0, inputs_1 = tf.unstack(pw_inputs_v0, num=2, axis=-1)
+    inputs_0 = paired_inputs_v0[0]
+    inputs_1 = paired_inputs_v0[1]
     kernel = kernel_ak_v0
     outputs = kernel([inputs_0, inputs_1, group_v0])
 
@@ -78,10 +79,10 @@ def test_call(pw_inputs_v0, group_v0, kernel_ak_v0):
     )
 
 
-def test_output_shape(pw_inputs_v0, group_v0, kernel_ak_v0):
+def test_output_shape(paired_inputs_v0, group_v0, kernel_ak_v0):
     """Test output_shape method."""
-
-    inputs_0, inputs_1 = tf.unstack(pw_inputs_v0, num=2, axis=-1)
+    inputs_0 = paired_inputs_v0[0]
+    inputs_1 = paired_inputs_v0[1]
     kernel = kernel_ak_v0
 
     input_shape_0 = tf.shape(inputs_0).numpy().tolist()

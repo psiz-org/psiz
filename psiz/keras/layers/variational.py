@@ -85,6 +85,7 @@ class Variational(tf.keras.layers.Layer):
         """Build."""
         self.prior.build(input_shape)
         self.posterior.build(input_shape)
+        super().build(input_shape)
 
     def add_kl_loss(self, posterior_dist, prior_dist):
         """Add KL divergence loss."""

@@ -65,6 +65,8 @@ from tensorflow.python.framework import function
 class SparseDispatcher(object):
     """Helper for implementing a mixture of experts.
 
+    TODO: update doc strings for arbitrary length inputs
+
     The purpose of this class is to create input minibatches for the
     experts and to combine the results of the experts to form a unified
     output tensor.
@@ -146,23 +148,54 @@ class SparseDispatcher(object):
             self._batch_index * num_experts + self._expert_index
         )
 
+    # TODO maybe dispatch_multi vs dispatch single
     # @add_name_scope()
-    def dispatch(self, inp):
+    def dispatch_single(self, inputs):
         """Create one input Tensor for each expert.
 
         The `Tensor` for a expert `i` contains the slices of `inp`
         corresponding to the batch elements `b` where `gates[b, i] > 0`.
 
         Args:
-            inp: a `Tensor` of shape "[batch_size, <extra_input_dims>]`
+            inputs: a `Tensor` of shape "[batch_size, <extra_input_dims>]`
 
         Returns:
             a list of `num_experts` `Tensor`s with shapes
                 `[expert_batch_size_i, <extra_input_dims>]`.
 
         """
-        inp = tf.gather(inp, self._batch_index)
-        return tf.split(inp, self._part_sizes_tensor, 0, num=self._num_experts)
+        inputs = tf.gather(inputs, self._batch_index)
+        return tf.split(
+            inputs, self._part_sizes_tensor, 0, num=self._num_experts
+        )
+
+    # @add_name_scope()
+    def dispatch_multi(self, inputs):
+        """Create one input Tensor for each expert.
+
+        The `Tensor` for a expert `i` contains the slices of `inp`
+        corresponding to the batch elements `b` where `gates[b, i] > 0`.
+
+        Args:
+            inputs: a `Tensor` of shape "[batch_size, <extra_input_dims>]`
+
+        Returns:
+            a list of `num_experts` `Tensor`s with shapes
+                `[expert_batch_size_i, <extra_input_dims>]`.
+
+        """
+        # Initialize empty list for each expert.
+        expert_list = [[] for _ in range(self._num_experts)]
+        # Loop over inputs, creating expert-specific list of `inputs`.
+        for inp in inputs:
+            inp = tf.gather(inp, self._batch_index)
+            inp = tf.split(
+                inp, self._part_sizes_tensor, 0, num=self._num_experts
+            )
+            for i_expert in range(self._num_experts):
+                expert_list[i_expert].append(inp[i_expert])
+
+        return expert_list
 
     # @add_name_scope()
     def combine(self, expert_out, multiply_by_gates=True):

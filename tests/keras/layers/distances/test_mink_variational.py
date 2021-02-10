@@ -23,7 +23,7 @@ from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
 from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
 
 
-def test_call(pw_inputs_v0):
+def test_call(paired_inputs_v0):
     """Test call."""
     kl_weight = .1
 
@@ -35,8 +35,8 @@ def test_call(pw_inputs_v0):
         prior=mink_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    mink_layer.build([None, 3, 2])
-    outputs = mink_layer(pw_inputs_v0)
+    mink_layer.build([[None, 3], [None, 3]])
+    outputs = mink_layer(paired_inputs_v0)
 
     desired_outputs = np.array([
         8.660254037844387,
@@ -50,7 +50,7 @@ def test_call(pw_inputs_v0):
     )
 
 
-def test_output_shape(pw_inputs_v0):
+def test_output_shape(paired_inputs_v0):
     """Test output_shape method."""
     kl_weight = .1
 
@@ -63,7 +63,10 @@ def test_output_shape(pw_inputs_v0):
         kl_weight=kl_weight, kl_n_sample=30
     )
 
-    input_shape = tf.shape(pw_inputs_v0).numpy().tolist()
+    input_shape = [
+        tf.TensorShape(tf.shape(paired_inputs_v0[0])),
+        tf.TensorShape(tf.shape(paired_inputs_v0[1]))
+    ]
     output_shape = mink_layer.compute_output_shape(input_shape)
     desired_output_shape = tf.TensorShape([5])
     tf.debugging.assert_equal(output_shape, desired_output_shape)
@@ -81,11 +84,11 @@ def test_serialization():
         prior=mink_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    mink_layer.build([None, 3, 2])
+    mink_layer.build([[None, 3], [None, 3]])
     config = mink_layer.get_config()
 
     recon_layer = MinkowskiVariational.from_config(config)
-    recon_layer.build([None, 3, 2])
+    recon_layer.build([[None, 3], [None, 3]])
 
     tf.debugging.assert_equal(
         mink_layer.posterior.rho.mode(), recon_layer.posterior.rho.mode()

@@ -44,8 +44,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Modify the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -370,34 +370,20 @@ def ground_truth(n_stimuli, n_dim):
             )
         )
     )
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
-
-    # If you want to inspect the embedding before it sees any data, you must
-    # manually build it.
-    # stimuli.build([None, None, None])
-
-    # Now you can inspect the embedding.
-    # scale_sample = model.stimuli.embeddings.numpy()[0]
-    # if model.stimuli.mask_zero:
-    #     scale_sample = scale_sample[1:]
-    # scale_sample = np.std(scale_sample)
-    # print(
-    #     '\n  Requested scale: {0:.4f}'
-    #     '\n  Sampled scale: {1:.4f}\n'.format(
-    #         scale_request, scale_sample
-    #     )
-    # )
 
     return model
 
@@ -447,17 +433,21 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
     )
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
+    mink = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.),
+        w_initializer=tf.keras.initializers.Constant(1.),
+        trainable=False
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=mink,
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
+
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
     return model
 

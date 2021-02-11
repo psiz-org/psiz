@@ -310,7 +310,7 @@ def ground_truth(n_stimuli, n_group):
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.GroupGateMulti(
+    kernel_group = psiz.keras.layers.GateMulti(
         [kernel_0, kernel_1, kernel_2], group_col=1
     )
 
@@ -338,7 +338,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
     stim_0 = build_vi_group_stimuli(n_stimuli, n_dim, kl_weight)
     stim_1 = build_vi_group_stimuli(n_stimuli, n_dim, kl_weight)
     stim_2 = build_vi_group_stimuli(n_stimuli, n_dim, kl_weight)
-    stim_group = psiz.keras.layers.GroupGate(
+    stim_group = psiz.keras.layers.Gate(
         [stim_0, stim_1, stim_2], group_col=1
     )
 

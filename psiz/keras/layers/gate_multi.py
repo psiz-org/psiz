@@ -16,7 +16,7 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    GroupGateMulti: A layer that manages group-specific subnetworks
+    GateMulti: A layer that manages group-specific subnetworks
         that consume a list of inputs.
 
 """
@@ -27,9 +27,9 @@ from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='GroupGateMulti'
+    package='psiz.keras', name='GateMulti'
 )
-class GroupGateMulti(tf.keras.layers.Layer):
+class GateMulti(tf.keras.layers.Layer):
     """A layer that manages group-specific subnetworks.
 
     The subnetworks can take a list of inputs, but each subnetwork must
@@ -69,7 +69,7 @@ class GroupGateMulti(tf.keras.layers.Layer):
             fully defined.
 
         """
-        super(GroupGateMulti, self).__init__(**kwargs)
+        super(GateMulti, self).__init__(**kwargs)
         self.subnets = subnets
         self.n_subnet = len(subnets)
         self.group_col = group_col

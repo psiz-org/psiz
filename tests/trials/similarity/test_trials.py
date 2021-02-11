@@ -222,7 +222,7 @@ def ground_truth(n_stimuli):
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.GroupGateMulti(
+    kernel_group = psiz.keras.layers.GateMulti(
         [kernel_0, kernel_1], group_col=1
     )
 

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test GroupGate."""
+"""Test Gate."""
 
 import numpy as np
 import pytest
@@ -24,7 +24,7 @@ import tensorflow_probability as tfp
 from psiz.keras.layers import EmbeddingNormalDiag
 from psiz.keras.layers.distances.mink import Minkowski
 from psiz.keras.layers import ExponentialSimilarity
-from psiz.keras.layers import GroupGate
+from psiz.keras.layers import Gate
 from psiz.keras.layers.kernels.distance_based import DistanceBased
 
 
@@ -213,7 +213,7 @@ def emb_inputs_v1():
 
 
 def test_subnet_method(emb_subnets_determ):
-    group_layer = GroupGate(subnets=emb_subnets_determ, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_determ, group_col=1)
     group_layer.build([[None, None], [None, None]])
 
     subnet_0 = group_layer.subnets[0]
@@ -233,7 +233,7 @@ def test_subnet_method(emb_subnets_determ):
 
 def test_emb_call_determ_2d_input(emb_subnets_determ, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupGate(subnets=emb_subnets_determ, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_determ, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -249,7 +249,7 @@ def test_emb_call_determ_2d_input(emb_subnets_determ, emb_inputs_v0, group_v0):
 
 def test_emb_call_determ_3d_input(emb_subnets_determ, emb_inputs_v1, group_v0):
     """Test call with data inputs larger than 2D."""
-    group_layer = GroupGate(subnets=emb_subnets_determ, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_determ, group_col=1)
 
     outputs = group_layer([emb_inputs_v1, group_v0])
 
@@ -312,7 +312,7 @@ def test_emb_call_determ_3d_input(emb_subnets_determ, emb_inputs_v1, group_v0):
 def test_emb_call_dist_2d_input_rank0(
         emb_subnets_dist_rank0, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupGate(subnets=emb_subnets_dist_rank0, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_dist_rank0, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -331,7 +331,7 @@ def test_emb_call_dist_2d_input_rank0(
 def test_emb_call_dist_2d_input_rank1(
         emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupGate(subnets=emb_subnets_dist_rank1, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_dist_rank1, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -350,7 +350,7 @@ def test_emb_call_dist_2d_input_rank1(
 def test_emb_call_empty_branch(
         emb_subnets_dist_rank0, emb_inputs_v0, group_3g_empty_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = GroupGate(subnets=emb_subnets_dist_rank0, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_dist_rank0, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_3g_empty_v0])
 
@@ -368,13 +368,13 @@ def test_emb_call_empty_branch(
 
 def test_emb_serialization(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     # Build group-specific layer.
-    group_layer = GroupGate(subnets=emb_subnets_dist_rank1, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_dist_rank1, group_col=1)
 
     # Get configuration.
     config = group_layer.get_config()
 
     # Reconstruct layer from configuration.
-    group_layer_recon = GroupGate.from_config(config)
+    group_layer_recon = Gate.from_config(config)
 
     # Assert reconstructed attributes are the same as original.
     assert group_layer.n_subnet == group_layer_recon.n_subnet

@@ -17,8 +17,8 @@
 
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.group_level import GroupLevel
-from psiz.keras.layers.group_gate_multi import GroupGateMulti
-from psiz.keras.layers.group_gate import GroupGate
+from psiz.keras.layers.gate_multi import GateMulti
+from psiz.keras.layers.gate import Gate
 from psiz.keras.layers.select import Select
 from psiz.keras.layers.stimuli import Stimuli
 from psiz.keras.layers.distances.minkowski import WeightedMinkowski

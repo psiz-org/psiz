@@ -187,8 +187,8 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+    stimuli = psiz.keras.layers.Select(
+        subnet=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17
@@ -266,8 +266,8 @@ def build_model(n_stimuli, n_dim, n_group):
         model: A TensorFlow Keras model.
 
     """
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+    stimuli = psiz.keras.layers.Select(
+        subnet=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
         )
     )

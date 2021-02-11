@@ -101,12 +101,12 @@ class PsychologicalEmbedding(tf.keras.Model):
                 n_stimuli -= 1
         except AttributeError:
             try:
-                # Assume peel.
-                n_stimuli = self.stimuli.net.input_dim
-                if self.stimuli.net.mask_zero:
+                # Assume Select layer.
+                n_stimuli = self.stimuli.subnet.input_dim
+                if self.stimuli.subnet.mask_zero:
                     n_stimuli -= 1
             except AttributeError:
-                # Assume gate.
+                # Assume Gate or GateMulti layer.
                 n_stimuli = self.stimuli.subnets[0].input_dim
                 if self.stimuli.subnets[0].mask_zero:
                     n_stimuli -= 1
@@ -121,10 +121,10 @@ class PsychologicalEmbedding(tf.keras.Model):
             output_dim = self.stimuli.output_dim
         except AttributeError:
             try:
-                # Assume peel.
-                output_dim = self.stimuli.net.output_dim
+                # Assume Select layer.
+                output_dim = self.stimuli.subnet.output_dim
             except AttributeError:
-                # Assume gate.
+                # Assume Gate or GateMulti layer.
                 output_dim = self.stimuli.subnets[0].output_dim
 
         return output_dim

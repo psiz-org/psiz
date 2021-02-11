@@ -28,10 +28,10 @@ import tensorflow as tf
 )
 class Select(tf.keras.layers.Layer):
     """A layer."""
-    def __init__(self, net=None, idx=0, **kwargs):
+    def __init__(self, subnet=None, idx=0, **kwargs):
         """Initialize."""
         super(Select, self).__init__(**kwargs)
-        self.net = net
+        self.subnet = subnet
         self.idx = idx
 
     def call(self, inputs):
@@ -40,13 +40,13 @@ class Select(tf.keras.layers.Layer):
         Select from n-tuple inputs.
 
         """
-        return self.net(inputs[self.idx])
+        return self.subnet(inputs[self.idx])
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
-            'net': tf.keras.utils.serialize_keras_object(self.net),
+            'subnet': tf.keras.utils.serialize_keras_object(self.subnet),
             'idx': int(self.idx)
         })
         return config
@@ -54,5 +54,5 @@ class Select(tf.keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         """Create from configuration."""
-        config['net'] = tf.keras.layers.deserialize(config['net'])
+        config['subnet'] = tf.keras.layers.deserialize(config['subnet'])
         return cls(**config)

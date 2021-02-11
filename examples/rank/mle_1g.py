@@ -208,7 +208,7 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     stimuli = psiz.keras.layers.Select(
-        net=tf.keras.layers.Embedding(
+        subnet=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17
@@ -246,7 +246,7 @@ def build_model(n_stimuli, n_dim):
 
     """
     stimuli = psiz.keras.layers.Select(
-        net=tf.keras.layers.Embedding(
+        subnet=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )

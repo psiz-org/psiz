@@ -130,15 +130,6 @@ class PsychologicalEmbedding(tf.keras.Model):
         return output_dim
 
     @property
-    def n_group(self):
-        """Getter method for `n_group`."""
-        return {
-            'stimuli': [self.stimuli.n_group],
-            'kernel': [self.kernel.n_group],
-            'behavior': [self.behavior.n_group],
-        }
-
-    @property
     def n_sample(self):
         return self._n_sample
 

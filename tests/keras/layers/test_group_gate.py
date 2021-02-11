@@ -216,9 +216,9 @@ def test_subnet_method(emb_subnets_determ):
     group_layer = GroupGate(subnets=emb_subnets_determ, group_col=1)
     group_layer.build([[None, None], [None, None]])
 
-    subnet_0 = group_layer.subnet(0)
-    subnet_1 = group_layer.subnet(1)
-    subnet_2 = group_layer.subnet(2)
+    subnet_0 = group_layer.subnets[0]
+    subnet_1 = group_layer.subnets[1]
+    subnet_2 = group_layer.subnets[2]
 
     tf.debugging.assert_equal(
         subnet_0.embeddings, emb_subnets_determ[0].embeddings

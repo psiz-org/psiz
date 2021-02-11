@@ -160,9 +160,6 @@ class GroupGate(tf.keras.layers.Layer):
         # information.
         return self.subnets[0].compute_output_shape(input_shape[0])
 
-    def subnet(self, subnet_idx):
-        return self.subnets[subnet_idx]
-
     def _pre_combine(self, x):
         """Prepare Tensor for combine operation.
 

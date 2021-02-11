@@ -108,9 +108,9 @@ def test_subnet_method(kernel_subnets):
     group_layer = GroupGateMulti(subnets=kernel_subnets, group_col=1)
     group_layer.build([[None, 3], [None, 3], [None, 3]])
 
-    subnet_0 = group_layer.subnet(0)
-    subnet_1 = group_layer.subnet(1)
-    subnet_2 = group_layer.subnet(2)
+    subnet_0 = group_layer.subnets[0]
+    subnet_1 = group_layer.subnets[1]
+    subnet_2 = group_layer.subnets[2]
 
     tf.debugging.assert_equal(
         subnet_0.distance.rho, kernel_subnets[0].distance.rho

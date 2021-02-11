@@ -40,9 +40,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.  TODO
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -207,8 +207,8 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+    stimuli = psiz.keras.layers.Select(
+        net=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=.17
@@ -245,8 +245,8 @@ def build_model(n_stimuli, n_dim):
         model: A TensorFlow Keras model.
 
     """
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+    stimuli = psiz.keras.layers.Select(
+        net=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )

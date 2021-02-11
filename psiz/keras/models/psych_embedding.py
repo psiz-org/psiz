@@ -55,11 +55,9 @@ class PsychologicalEmbedding(tf.keras.Model):
         behavior: A behavior layer.
         n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.
-        n_group: The number of groups.
         n_sample: The number of samples to draw on probalistic layers.
-            This attribute is only relevant if using probabilistic
-            layers, otherwise it should be kept at the default
-            value of 1.
+            This attribute is only advantageous if using probabilistic
+            layers.
 
     """
 
@@ -71,14 +69,12 @@ class PsychologicalEmbedding(tf.keras.Model):
         Arguments:
             stimuli: An embedding layer representing the stimuli. Must
                 agree with n_stimuli, n_dim, n_group.
-            attention (optional): An attention layer. Must agree with
-                n_stimuli, n_dim, n_group.
-            distance (optional): A distance kernel function layer.
-            similarity (optional): A similarity function layer.
+            kernel (optional): A kernel layer.
+            behavior (optional): A behavior layer.
             n_sample (optional): An integer indicating the
                 number of samples to use on the forward pass. This
-                argument is only relevant for stochastic models (e.g.,
-                variational models).
+                argument is only advantageous if using stochastic
+                layers (e.g., variational models).
             kwargs:  Additional key-word arguments.
 
         Raises:

@@ -296,7 +296,9 @@ def _select_query_references(
         for model in model_list:
             # Compute expected information gain from prediction samples.
             batch_expected_ig.append(
-                expected_information_gain_rank(model(x, training=False))
+                expected_information_gain_rank(
+                    tf.transpose(model(x, training=False), perm=[1, 0, 2])
+                )
             )
         # TODO Should IG be computed on ensemble samples collectively?
         # for model in model_list:

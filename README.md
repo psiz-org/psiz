@@ -51,8 +51,8 @@ stimuli = psiz.keras.layers.Stimuli(
     )
 )
 
-# Use a default similarity kernel (exponential with Euclidean distance).
-kernel = psiz.keras.layers.Kernel()
+# Use a default similarity kernel (a fully trainable exponential with weighted Minkowski distance).
+kernel = psiz.keras.layers.DistanceBased()
 
 # Create a `Rank` model.
 model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)

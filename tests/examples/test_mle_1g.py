@@ -62,9 +62,10 @@ def ground_truth(n_stimuli, n_dim, similarity_func):
             mu_initializer=tf.keras.initializers.Constant(0.000001)
         )
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
             trainable=False
         ),
         similarity=similarity
@@ -102,7 +103,10 @@ def build_model(n_stimuli, n_dim, similarity_func):
     elif similarity_func == "Inverse":
         similarity = psiz.keras.layers.InverseSimilarity()
 
-    kernel = psiz.keras.layers.Kernel(similarity=similarity)
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(),
+        similarity=similarity
+    )
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
     return model
 

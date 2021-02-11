@@ -357,7 +357,7 @@ def pairwise_similarity(stimuli, kernel, ds_pairs, n_sample=None):
 
     Arguments:
         stimuli: A psiz.keras.layers.Stimuli object.
-        kernel: A psiz.keras.layers.Kernel object.
+        kernel: A psiz.keras.layers.kernels object.
         ds_pairs: A TF dataset object that yields a 3-tuple composed
             of stimulus index i, sitmulus index j, and group
             membership indices.

@@ -105,7 +105,6 @@ def test_save_load_rate_wtrace(
     np.testing.assert_allclose(output_0, output_1)
     assert reconstructed_model.n_stimuli == model.n_stimuli
     assert reconstructed_model.n_dim == model.n_dim
-    assert reconstructed_model.n_group == model.n_group
 
     # Continue training without recompiling.
     reconstructed_model.fit(ds_rate_obs_2g, epochs=1)
@@ -145,7 +144,6 @@ def test_save_load_rate_wotrace(
     np.testing.assert_allclose(output_0, output_1)
     assert reconstructed_model.n_stimuli == model.n_stimuli
     assert reconstructed_model.n_dim == model.n_dim
-    assert reconstructed_model.n_group == model.n_group
 
     # Continue training without recompiling.
     reconstructed_model.fit(ds_rate_obs_2g, epochs=1)

@@ -122,13 +122,15 @@ def rank_1g_vi():
     )
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
@@ -153,13 +155,15 @@ def rank_1g_mle():
         )
     )
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
@@ -186,33 +190,43 @@ def rank_2g_mle():
         )
     )
 
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        beta_initializer=tf.keras.initializers.Constant(1.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.),
+        trainable=False
+    )
+    # Define group-specific kernels.
+    kernel_0 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(
+                [1.2, 1., .1, .1, .1, .1, .1, .1, .1, .1]
+            ),
         ),
-        attention=tf.keras.layers.Embedding(
-            n_group, n_dim, mask_zero=False,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array((
-                    (1.2, 1., .1, .1, .1, .1, .1, .1, .1, .1,),
-                    (.1, .1, .1, .1, .1, .1, .1, .1, 1., 1.2)
-                ))
-            )
+        similarity=shared_similarity
+    )
+
+    kernel_1 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [.1, .1, .1, .1, .1, .1, .1, .1, 1., 1.2]
+            ),
         ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(1.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False,
-        )
+        similarity=shared_similarity
+    )
+
+    kernel_group = psiz.keras.layers.GroupGateMulti(
+        [kernel_0, kernel_1], group_col=1
     )
 
     behavior = psiz.keras.layers.RankBehavior()
 
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
+        stimuli=stimuli, kernel=kernel_group, behavior=behavior
     )
     return model
 
@@ -292,13 +306,14 @@ def rate_1g_mle():
         )
     )
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=False,
+            trainable=False,
             beta_initializer=tf.keras.initializers.Constant(3.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),
@@ -326,33 +341,43 @@ def rate_2g_mle():
         )
     )
 
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        beta_initializer=tf.keras.initializers.Constant(1.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.),
+        trainable=False
+    )
+    # Define group-specific kernels.
+    kernel_0 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(
+                [1.2, 1., .1, .1, .1, .1, .1, .1, .1, .1]
+            ),
         ),
-        attention=tf.keras.layers.Embedding(
-            n_group, n_dim, mask_zero=False,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array((
-                    (1.2, 1., .1, .1, .1, .1, .1, .1, .1, .1,),
-                    (.1, .1, .1, .1, .1, .1, .1, .1, 1., 1.2)
-                ))
-            )
+        similarity=shared_similarity
+    )
+
+    kernel_1 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [.1, .1, .1, .1, .1, .1, .1, .1, 1., 1.2]
+            ),
         ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(1.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False,
-        )
+        similarity=shared_similarity
+    )
+
+    kernel_group = psiz.keras.layers.GroupGateMulti(
+        [kernel_0, kernel_1], group_col=1
     )
 
     behavior = psiz.keras.layers.RateBehavior()
 
     model = psiz.keras.models.Rate(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
+        stimuli=stimuli, kernel=kernel_group, behavior=behavior
     )
     return model
 
@@ -389,13 +414,14 @@ def rate_1g_vi():
     )
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
-    kernel = psiz.keras.layers.Kernel(
-        distance=psiz.keras.layers.WeightedMinkowski(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=False,
+            trainable=False,
             beta_initializer=tf.keras.initializers.Constant(3.),
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.),

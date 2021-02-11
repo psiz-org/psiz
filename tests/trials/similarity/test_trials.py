@@ -192,30 +192,41 @@ def ground_truth(n_stimuli):
         )
     )
 
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
-        ),
-        attention=tf.keras.layers.Embedding(
-            n_group, n_dim, mask_zero=False,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array((
-                    (1.9, 1., .1),
-                    (.1, 1., 1.9)
-                ))
-            )
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(1.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            trainable=False,
-        )
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        trainable=False,
+        beta_initializer=tf.keras.initializers.Constant(1.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.)
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
+    # Define group-specific kernels.
+    kernel_0 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [1.9, 1., .1]
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_1 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [.1, 1., 1.9]
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    kernel_group = psiz.keras.layers.GroupGateMulti(
+        [kernel_0, kernel_1], group_col=1
+    )
+
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
     return model
 
 

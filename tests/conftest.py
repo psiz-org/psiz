@@ -41,32 +41,49 @@ def rank_2g_mle_determ():
 
     stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
 
-    kernel = psiz.keras.layers.AttentionKernel(
-        group_level=1,
-        distance=psiz.keras.layers.WeightedMinkowski(
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        trainable=False,
+        beta_initializer=tf.keras.initializers.Constant(10.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.)
+    )
+
+    # Define group-specific kernels.
+    kernel_0 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
             rho_initializer=tf.keras.initializers.Constant(2.),
-            trainable=False,
+            w_initializer=tf.keras.initializers.Constant(
+                [1.2, .8]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
         ),
-        attention=tf.keras.layers.Embedding(
-            n_group, n_dim, mask_zero=False,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array((
-                    (1.2, .8),
-                    (.7, 1.3)
-                ))
-            )
+        similarity=shared_similarity
+    )
+
+    kernel_1 = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [.7, 1.3]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
         ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=False,
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-            beta_initializer=tf.keras.initializers.Constant(10.),
-        )
+        similarity=shared_similarity
+    )
+
+    kernel_group = psiz.keras.layers.GroupGateMulti(
+        [kernel_0, kernel_1], group_col=1
     )
 
     behavior = psiz.keras.layers.RankBehavior()
 
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
+        stimuli=stimuli, kernel=kernel_group, behavior=behavior
     )
     return model

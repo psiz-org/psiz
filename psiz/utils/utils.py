@@ -348,7 +348,9 @@ def pad_2d_array(arr, n_column, value=-1):
     return arr
 
 
-def pairwise_similarity(stimuli, kernel, ds_pairs, n_sample=None):
+def pairwise_similarity(
+        stimuli, kernel, ds_pairs, use_group_stimuli=False,
+        use_group_kernel=False, n_sample=None):
     """Return the similarity between stimulus pairs.
 
     Arguments:
@@ -358,6 +360,7 @@ def pairwise_similarity(stimuli, kernel, ds_pairs, n_sample=None):
             of stimulus index i, sitmulus index j, and group
             membership indices.
         n_sample (optional): The size of an additional "sample" axis.
+        TODO
 
     Returns:
         s: A tf.Tensor of similarities between stimulus i and stimulus
@@ -370,7 +373,8 @@ def pairwise_similarity(stimuli, kernel, ds_pairs, n_sample=None):
     for x_batch in ds_pairs:
         idx_0 = x_batch[0]
         idx_1 = x_batch[1]
-        group = x_batch[2]
+        if use_group_stimuli or use_group_kernel:
+            group = x_batch[2]
 
         if n_sample is not None:
             idx_0 = expand_dim_repeat(
@@ -380,11 +384,21 @@ def pairwise_similarity(stimuli, kernel, ds_pairs, n_sample=None):
                 idx_1, n_sample, axis=1
             )
 
-        z_0 = stimuli([idx_0, group])
-        z_1 = stimuli([idx_1, group])
-        s.append(
-            kernel([z_0, z_1, group])
-        )
+        if use_group_stimuli:
+            z_0 = stimuli([idx_0, group])
+            z_1 = stimuli([idx_1, group])
+        else:
+            z_0 = stimuli(idx_0)
+            z_1 = stimuli(idx_1)
+
+        if use_group_kernel:
+            s.append(
+                kernel([z_0, z_1, group])
+            )
+        else:
+            s.append(
+                kernel([z_0, z_1])
+            )
 
     # Concatenate along pairs dimension (i.e., the last dimension).
     s = tf.concat(s, axis=-1)

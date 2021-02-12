@@ -28,7 +28,7 @@ from psiz.utils.generate_group_matrix import generate_group_matrix
 
 # TODO add tests
 def pairwise_index_dataset(
-        n_data, batch_size=None, elements='upper', group_idx=[],
+        n_data, batch_size=None, elements='upper', group_idx=None,
         mask_zero=False, subsample=None, seed=252):
     """Assemble pairwise combinations.
 
@@ -103,12 +103,19 @@ def pairwise_index_dataset(
         'mask_zero': mask_zero
     }
 
-    group_matrix = generate_group_matrix(n_pair, group_idx=group_idx)
-    group_matrix = tf.constant(group_matrix, dtype=np.int32)
+    if group_idx is not None:
+        group_matrix = generate_group_matrix(n_pair, group_idx=group_idx)
+        group_matrix = tf.constant(group_matrix, dtype=np.int32)
 
-    ds = tf.data.Dataset.from_tensor_slices(
-        ((idx_0, idx_1, group_matrix))
-    ).batch(
-        batch_size, drop_remainder=False
-    )
+        ds = tf.data.Dataset.from_tensor_slices(
+            ((idx_0, idx_1, group_matrix))
+        ).batch(
+            batch_size, drop_remainder=False
+        )
+    else:
+        ds = tf.data.Dataset.from_tensor_slices(
+            ((idx_0, idx_1))
+        ).batch(
+            batch_size, drop_remainder=False
+        )
     return ds, ds_info

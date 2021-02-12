@@ -1,5 +1,7 @@
 # PsiZ Examples
 
+If you are looking for a place to start, we recomend `rank/mle_1g.py`. This example demonstrates the simplest use case.
+
 The examples are organized into separate directories based on trial type.
 * `rank`
 * `rate`

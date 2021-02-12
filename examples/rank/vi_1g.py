@@ -27,6 +27,7 @@ default, a `psiz_examples` directory is created in your home directory.
 
 import copy
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 import shutil
 
@@ -174,7 +175,7 @@ def main():
             callbacks=callbacks, verbose=0
         )
 
-        dist = model_inferred.stimuli.embedding.prior.embeddings.distribution
+        dist = model_inferred.stimuli.subnet.prior.embeddings.distribution
         print('    Inferred prior scale: {0:.4f}'.format(
             dist.distribution.distribution.scale[0, 0]
         ))
@@ -241,8 +242,8 @@ def plot_frame(
     # Settings.
     s = 10
 
-    z_true = model_true.stimuli.embeddings.numpy()[0]
-    if model_true.stimuli.mask_zero:
+    z_true = model_true.stimuli.subnet.embeddings.numpy()
+    if model_true.stimuli.subnet.mask_zero:
         z_true = z_true[1:]
 
     gs = fig0.add_gridspec(2, 2)
@@ -260,10 +261,9 @@ def plot_frame(
     z_limits = [-z_max, z_max]
 
     # Apply and plot Procrustes affine transformation of posterior.
-    dist = model_inferred.stimuli.embeddings
-    group_idx = 0
-    loc, cov = unpack_mvn(dist, group_idx)
-    if model_inferred.stimuli.mask_zero:
+    dist = model_inferred.stimuli.subnet.embeddings
+    loc, cov = unpack_mvn(dist)
+    if model_inferred.stimuli.subnet.mask_zero:
         # Drop placeholder stimulus.
         loc = loc[1:]
         cov = cov[1:]
@@ -334,7 +334,7 @@ def plot_convergence(ax, n_obs, r2):
     ax.set_ylim(-0.05, 1.05)
 
 
-def unpack_mvn(dist, group_idx):
+def unpack_mvn(dist):
     """Unpack multivariate normal distribution."""
     def diag_to_full_cov(v):
         """Convert diagonal variance to full covariance matrix.
@@ -348,8 +348,8 @@ def unpack_mvn(dist, group_idx):
             cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
         return cov
 
-    loc = dist.mean().numpy()[group_idx]
-    v = dist.variance().numpy()[group_idx]
+    loc = dist.mean().numpy()
+    v = dist.variance().numpy()
 
     # Convert to full covariance matrix.
     cov = diag_to_full_cov(v)
@@ -362,8 +362,8 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
+    stimuli = psiz.keras.layers.Select(
+        subnet=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True,
             embeddings_initializer=tf.keras.initializers.RandomNormal(
                 stddev=scale_request, seed=58
@@ -405,11 +405,14 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
 
     """
     kl_weight = 1. / n_obs_train
+
     # Note that scale of the prior can be misspecified. The true scale
     # is .17, but halving (.085) or doubling (.34) still works well. When
     # the prior scale is much smaller than appropriate and there is
-    # little data, the posterior will be driven by an incorrect prior.
+    # little data, the posterior *will* be driven by the incorrect prior.
     prior_scale = .2  # Mispecified to demonstrate robustness.
+
+    # Create variational stimuli layer.
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
         n_stimuli+1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
@@ -431,7 +434,7 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
+    stimuli = psiz.keras.layers.Select(subnet=embedding_variational)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(

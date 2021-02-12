@@ -310,7 +310,7 @@ def build_kernel(similarity, n_dim):
 
 def model_similarity(model, group_idx=[]):
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        model.stimuli.n_stimuli, mask_zero=True, group_idx=group_idx
+        model.n_stimuli, mask_zero=True, group_idx=group_idx
     )
     simmat = np.squeeze(
         psiz.utils.pairwise_similarity(

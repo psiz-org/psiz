@@ -26,6 +26,7 @@ default, a `psiz_examples` directory is created in your home directory.
 """
 
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 import shutil
 import time
@@ -40,9 +41,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.  TODO
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -245,12 +246,14 @@ def build_model(n_stimuli, n_dim):
         model: A TensorFlow Keras model.
 
     """
+    # Create a group-agnostic stimuli layer.
     stimuli = psiz.keras.layers.Select(
         subnet=tf.keras.layers.Embedding(
             n_stimuli+1, n_dim, mask_zero=True
         )
     )
 
+    # Create a group-agnostic kernel.
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),

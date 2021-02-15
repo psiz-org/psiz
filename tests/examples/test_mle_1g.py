@@ -26,12 +26,10 @@ import psiz
 
 def ground_truth(n_stimuli, n_dim, similarity_func):
     """Return a ground truth embedding."""
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=.17, seed=4
-            )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17, seed=4
         )
     )
 
@@ -87,10 +85,8 @@ def build_model(n_stimuli, n_dim, similarity_func):
         model: A TensorFlow Keras model.
 
     """
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     # Set similarity function.
@@ -227,5 +223,5 @@ def test_rate_1g_mle_execution(similarity_func):
     # greater than 0.9. This indicates that inference has found a model that
     # closely matches the ground truth (which is never directly observed).
     # assert r2[-1] > .9
-    # TODO I think the coordiante space needs to be scaled so that it is
+    # I think the coordiante space needs to be scaled so that it is
     # "learnable" by the selected similarity function.

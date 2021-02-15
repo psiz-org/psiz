@@ -35,9 +35,8 @@ class Minkowski(tf.keras.layers.Layer):
     """Minkowski pairwise distance.
 
     A pairwise distance layer that consumes the last axis of the input
-        tensor (see `call` method).
+        tensors (see `call` method).
 
-    TODO
     NOTE: It is assumed that both tensors have the same rank, are
     broadcast-compatible, and have the same size for the last axis.
 
@@ -100,7 +99,7 @@ class Minkowski(tf.keras.layers.Layer):
 
         Arguments:
             inputs: A list of two tf.Tensor's denoting a the set of
-                vectors to compute pairwise distance. Each tensor is
+                vectors to compute pairwise distances. Each tensor is
                 assumed to have the same shape and be at least rank-2.
                 Any additional tensors in the list are ignored.
                 shape = (batch_size, [n, m, ...] n_dim)

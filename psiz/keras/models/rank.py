@@ -92,7 +92,10 @@ class Rank(PsychologicalEmbedding):
 
         # Enbed stimuli indices in n-dimensional space:
         # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome, n_dim])
-        z = self.stimuli([stimulus_set, group])
+        if self._use_group['stimuli']:
+            z = self.stimuli([stimulus_set, group])
+        else:
+            z = self.stimuli(stimulus_set)
 
         # Split query and reference embeddings:
         # z_q: TensorShape([batch_size, sample_size, 1, n_outcome, n_dim]
@@ -104,8 +107,11 @@ class Rank(PsychologicalEmbedding):
         z_q.set_shape([None, None, 1, None, None])
 
         # Pass through similarity kernel.
-        # TensorShape([sample_size, batch_size, n_ref, n_outcome])
-        sim_qr = self.kernel([z_q, z_r, group])
+        # TensorShape([batch_size, sample_size, n_ref, n_outcome])
+        if self._use_group['kernel']:
+            sim_qr = self.kernel([z_q, z_r, group])
+        else:
+            sim_qr = self.kernel([z_q, z_r])
 
         # Zero out similarities involving placeholder IDs by creating
         # a mask based on reference indices. We drop the query indices
@@ -129,7 +135,11 @@ class Rank(PsychologicalEmbedding):
         is_outcome = is_present[:, :, 0, :]
 
         # Compute probability of different behavioral outcomes.
-        probs = self.behavior([sim_qr, is_select, is_outcome])
+        if self._use_group['behavior']:
+            probs = self.behavior([sim_qr, is_select, is_outcome, group])
+        else:
+            probs = self.behavior([sim_qr, is_select, is_outcome])
+
         return probs
 
 

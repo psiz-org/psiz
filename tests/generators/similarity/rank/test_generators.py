@@ -34,14 +34,12 @@ def rank_1g_mle_rand():
     n_stimuli = 10
     n_dim = 2
 
-    embedding = psiz.keras.layers.EmbeddingNormalDiag(
+    stimuli = psiz.keras.layers.EmbeddingNormalDiag(
         n_stimuli+1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(.01).numpy()
         )
     )
-
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
@@ -85,11 +83,10 @@ def rank_1g_mle_det():
         ], dtype=np.float32
     )
 
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(z)
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(

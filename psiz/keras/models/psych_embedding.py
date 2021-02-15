@@ -63,7 +63,8 @@ class PsychologicalEmbedding(tf.keras.Model):
 
     def __init__(
             self, stimuli=None, kernel=None, behavior=None, n_sample=1,
-            **kwargs):
+            use_group_stimuli=False, use_group_kernel=False,
+            use_group_behavior=False, **kwargs):
         """Initialize.
 
         Arguments:
@@ -75,6 +76,12 @@ class PsychologicalEmbedding(tf.keras.Model):
                 number of samples to use on the forward pass. This
                 argument is only advantageous if using stochastic
                 layers (e.g., variational models).
+            use_group_stimuli (optional): Boolean indicating if group
+                information should be piped to `stimuli` layer.
+            use_group_kernel (optional): Boolean indicating if group
+                information should be piped to `kernel` layer.
+            use_group_behavior (optional): Boolean indicating if group
+                information should be piped to `behavior` layer.
             kwargs:  Additional key-word arguments.
 
         Raises:
@@ -88,6 +95,13 @@ class PsychologicalEmbedding(tf.keras.Model):
         self.kernel = kernel
         self.behavior = behavior
 
+        # Handle layer switches.
+        self._use_group = {
+            'stimuli': use_group_stimuli,
+            'kernel': use_group_kernel,
+            'behavior': use_group_behavior
+        }
+
         self._kl_weight = 0.
         self._n_sample = n_sample
 
@@ -95,15 +109,12 @@ class PsychologicalEmbedding(tf.keras.Model):
     def n_stimuli(self):
         """Convenience method for `n_stimuli`."""
         try:
-            # Assume Stimuli layer.
-            n_stimuli = self.stimuli.input_dim
-            if self.stimuli.mask_zero:
-                n_stimuli -= 1
+            n_stimuli = self.stimuli.n_stimuli
         except AttributeError:
             try:
-                # Assume Select layer.
-                n_stimuli = self.stimuli.subnet.input_dim
-                if self.stimuli.subnet.mask_zero:
+                # Assume embedding layer.
+                n_stimuli = self.stimuli.input_dim
+                if self.stimuli.mask_zero:
                     n_stimuli -= 1
             except AttributeError:
                 # Assume Gate or GateMulti layer.
@@ -117,15 +128,11 @@ class PsychologicalEmbedding(tf.keras.Model):
     def n_dim(self):
         """Convenience method for `n_dim`."""
         try:
-            # Assume Stimuli layer.
+            # Assume embedding layer.
             output_dim = self.stimuli.output_dim
         except AttributeError:
-            try:
-                # Assume Select layer.
-                output_dim = self.stimuli.subnet.output_dim
-            except AttributeError:
-                # Assume Gate or GateMulti layer.
-                output_dim = self.stimuli.subnets[0].output_dim
+            # Assume Gate or GateMulti layer.
+            output_dim = self.stimuli.subnets[0].output_dim
 
         return output_dim
 
@@ -334,7 +341,10 @@ class PsychologicalEmbedding(tf.keras.Model):
             'name': self.name,
             'class_name': self.__class__.__name__,
             'n_sample': self.n_sample,
-            'layers': copy.deepcopy(layer_configs)
+            'layers': copy.deepcopy(layer_configs),
+            'use_group_stimuli': self._use_group['stimuli'],
+            'use_group_kernel': self._use_group['kernel'],
+            'use_group_behavior': self._use_group['behavior'],
         }
         return config
 

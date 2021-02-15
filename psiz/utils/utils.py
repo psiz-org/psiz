@@ -354,11 +354,11 @@ def pairwise_similarity(
     """Return the similarity between stimulus pairs.
 
     Arguments:
-        stimuli: A psiz.keras.layers.Stimuli object.
-        kernel: A psiz.keras.layers.kernels object.
+        stimuli: A tf.keras.layers.Layer with stimuli semantics.
+        kernel: A tf.keras.layers.Layer with kernel sematnics.
         ds_pairs: A TF dataset object that yields a 3-tuple composed
-            of stimulus index i, sitmulus index j, and group
-            membership indices.
+            of stimulus index i, sitmulus index j, and (optionally)
+            group membership indices.
         n_sample (optional): The size of an additional "sample" axis.
         TODO
 

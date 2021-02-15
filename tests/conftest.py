@@ -24,11 +24,11 @@ import psiz.keras.layers
 
 
 @pytest.fixture(scope="module")
-def rank_2g_mle_determ():
+def rank_1g_mle_determ():
     n_stimuli = 3
     n_dim = 2
     n_group = 2
-    embedding = tf.keras.layers.Embedding(
+    stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
@@ -39,7 +39,50 @@ def rank_2g_mle_determ():
         )
     )
 
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding)
+    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+        trainable=False,
+        beta_initializer=tf.keras.initializers.Constant(10.),
+        tau_initializer=tf.keras.initializers.Constant(1.),
+        gamma_initializer=tf.keras.initializers.Constant(0.)
+    )
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(
+                [1.2, .8]
+            ),
+            w_constraint=psiz.keras.constraints.NonNegNorm(
+                scale=n_dim, p=1.
+            ),
+        ),
+        similarity=shared_similarity
+    )
+
+    behavior = psiz.keras.layers.RankBehavior()
+
+    model = psiz.keras.models.Rank(
+        stimuli=stimuli, kernel=kernel, behavior=behavior
+    )
+    return model
+
+
+@pytest.fixture(scope="module")
+def rank_2g_mle_determ():
+    n_stimuli = 3
+    n_dim = 2
+    n_group = 2
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.Constant(
+            np.array(
+                [
+                    [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
+                ], dtype=np.float32
+            )
+        )
+    )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
         trainable=False,
@@ -84,6 +127,7 @@ def rank_2g_mle_determ():
     behavior = psiz.keras.layers.RankBehavior()
 
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel_group, behavior=behavior
+        stimuli=stimuli, kernel=kernel_group, behavior=behavior,
+        use_group_kernel=True
     )
     return model

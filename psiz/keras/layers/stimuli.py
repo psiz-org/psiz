@@ -16,7 +16,7 @@
 """Module for a TensorFlow Stimuli layer.
 
 Classes:
-    Stimuli: An embedding layer with (group-specific) stimuli
+    Stimuli: DEPRECATED An embedding layer with (group-specific) stimuli
         semantics.
 
 """

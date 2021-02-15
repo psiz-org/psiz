@@ -21,6 +21,25 @@ from psiz.utils import pairwise_index_dataset
 from psiz.utils import pairwise_similarity
 
 
+def test_1g_default_all_nosample(rank_1g_mle_determ):
+    """Test similarity matrix."""
+    n_stimuli = 3
+    desired_simmat0 = np.array([
+        1., 0.35035481, 0.00776613, 0.35035481, 1., 0.0216217, 0.00776613,
+        0.0216217, 1.
+    ])
+
+    ds_pairs_0, ds_info_0 = pairwise_index_dataset(
+        n_stimuli, elements='all', mask_zero=True
+    )
+
+    computed_simmat0 = pairwise_similarity(
+        rank_1g_mle_determ.stimuli, rank_1g_mle_determ.kernel, ds_pairs_0
+    ).numpy()
+
+    np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
+
+
 def test_all_nosample(rank_2g_mle_determ):
     """Test similarity matrix."""
     n_stimuli = 3
@@ -42,11 +61,13 @@ def test_all_nosample(rank_2g_mle_determ):
     )
 
     computed_simmat0 = pairwise_similarity(
-        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0
+        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
+        use_group_kernel=True
     ).numpy()
 
     computed_simmat1 = pairwise_similarity(
-        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1
+        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
+        use_group_kernel=True
     ).numpy()
 
     np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
@@ -77,12 +98,12 @@ def test_all_1sample(rank_2g_mle_determ):
 
     computed_simmat0 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
-        n_sample=1
+        n_sample=1, use_group_kernel=True
     ).numpy()
 
     computed_simmat1 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
-        n_sample=1
+        n_sample=1, use_group_kernel=True
     ).numpy()
 
     np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
@@ -127,12 +148,12 @@ def test_all_3sample(rank_2g_mle_determ):
 
     computed_simmat0 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     computed_simmat1 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
@@ -165,12 +186,12 @@ def test_upper_3sample(rank_2g_mle_determ):
 
     computed_simmat0 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     computed_simmat1 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
@@ -203,12 +224,12 @@ def test_lower_3sample(rank_2g_mle_determ):
 
     computed_simmat0 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     computed_simmat1 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
@@ -247,12 +268,12 @@ def test_off_3sample(rank_2g_mle_determ):
 
     computed_simmat0 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     computed_simmat1 = pairwise_similarity(
         rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
-        n_sample=3
+        n_sample=3, use_group_kernel=True
     ).numpy()
 
     np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)

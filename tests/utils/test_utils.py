@@ -91,11 +91,13 @@ def test_pairwise_matrix(rank_2g_mle_determ):
     )
 
     computed_simmat0 = psiz.utils.pairwise_similarity(
-        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0
+        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
+        use_group_kernel=True
     ).numpy()
 
     computed_simmat1 = psiz.utils.pairwise_similarity(
-        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1
+        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
+        use_group_kernel=True
     ).numpy()
 
     # Use fact that n_sample=1 and elements='all' to take advantage of

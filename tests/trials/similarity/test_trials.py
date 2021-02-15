@@ -186,10 +186,8 @@ def ground_truth(n_stimuli):
     n_dim = 3
     n_group = 2
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -226,7 +224,9 @@ def ground_truth(n_stimuli):
         [kernel_0, kernel_1], group_col=1
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
+    model = psiz.keras.models.Rank(
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
+    )
     return model
 
 
@@ -668,6 +668,7 @@ class TestStack:
 
     def test_stack_same_config(self):
         """Test stack method with same configuration."""
+        tf.config.run_functions_eagerly(True)  # TODO
         n_stimuli = 10
         model_truth = ground_truth(n_stimuli)
 

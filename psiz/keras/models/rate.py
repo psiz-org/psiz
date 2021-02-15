@@ -57,7 +57,6 @@ class Rate(PsychologicalEmbedding):
         if behavior is None:
             behavior = psiz.keras.layers.RateBehavior()
         kwargs.update({'behavior': behavior})
-
         super().__init__(**kwargs)
 
     def call(self, inputs):
@@ -86,18 +85,27 @@ class Rate(PsychologicalEmbedding):
 
         # Enbed stimuli indices in n-dimensional space.
         # TensorShape([batch_size, n_sample, 2, n_dim])
-        z = self.stimuli([stimulus_set, group])
+        if self._use_group['stimuli']:
+            z = self.stimuli([stimulus_set, group])
+        else:
+            z = self.stimuli(stimulus_set)
 
         # Divide up stimuli sets for kernel call.
         z_0 = z[:, :, 0]
         z_1 = z[:, :, 1]
 
         # Pass through similarity kernel.
-        sim_qr = self.kernel([z_0, z_1, group])
         # TensorShape([batch_size, n_sample,])
+        if self._use_group['kernel']:
+            sim_01 = self.kernel([z_0, z_1, group])
+        else:
+            sim_01 = self.kernel([z_0, z_1])
 
         # Predict rating of stimulus pair.
-        rating = self.behavior([sim_qr, group])
+        if self._use_group['behavior']:
+            rating = self.behavior([sim_01, group])
+        else:
+            rating = self.behavior([sim_01])
 
         # Add singleton trailing dimension since MSE assumes rank-2 Tensors.
         rating = tf.expand_dims(rating, axis=-1)

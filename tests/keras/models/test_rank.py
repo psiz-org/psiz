@@ -97,10 +97,8 @@ def rank_1g_mle_v2():
     n_stimuli = 20
     n_dim = 3
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
@@ -126,10 +124,8 @@ def rank_3g_mle_v2():
     n_stimuli = 20
     n_dim = 3
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -147,7 +143,9 @@ def rank_3g_mle_v2():
         [kernel_0, kernel_1, kernel_2], group_col=1
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
+    model = psiz.keras.models.Rank(
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
+    )
     return model
 
 
@@ -176,11 +174,10 @@ def rank_1g_vi_v2():
             loc_trainable=False,
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     mink = psiz.keras.layers.Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.),
@@ -226,11 +223,10 @@ def rank_1g_emb_w_vi_v2():
             loc_trainable=False,
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     mink_prior = psiz.keras.layers.MinkowskiStochastic(
         rho_loc_trainable=False, rho_scale_trainable=True,
@@ -289,11 +285,10 @@ def rank_3g_vi_v2():
             loc_trainable=False
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
         beta_initializer=tf.keras.initializers.Constant(10.),
@@ -311,7 +306,7 @@ def rank_3g_vi_v2():
     )
 
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel_group, n_sample=1
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
     )
     return model
 
@@ -342,11 +337,10 @@ def rank_3g_vi_v3():
             loc_trainable=False
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
         beta_initializer=tf.keras.initializers.Constant(10.),
@@ -364,7 +358,7 @@ def rank_3g_vi_v3():
     )
 
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel_group, n_sample=1
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
     )
     return model
 
@@ -386,7 +380,6 @@ def test_kl_weight_propogation(rank_1g_vi):
     rank_1g_vi.kl_weight = .001
     # Test property propagated to all relevant layers.
     assert rank_1g_vi.kl_weight == .001
-    assert rank_1g_vi.stimuli.embedding.kl_weight == .001
 
 
 @pytest.mark.parametrize(

@@ -41,7 +41,6 @@ def test_kl_weight_propogation(rate_1g_vi):
     rate_1g_vi.kl_weight = .001
     # Test property propagated to all relevant layers.
     assert rate_1g_vi.kl_weight == .001
-    assert rate_1g_vi.stimuli.embedding.kl_weight == .001
 
 
 @pytest.mark.parametrize(

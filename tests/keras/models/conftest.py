@@ -116,11 +116,10 @@ def rank_1g_vi():
             loc_trainable=False,
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
@@ -149,10 +148,8 @@ def rank_1g_mle():
     n_stimuli = 30
     n_dim = 10
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     kernel = psiz.keras.layers.DistanceBased(
@@ -184,10 +181,8 @@ def rank_2g_mle():
     n_dim = 10
     n_group = 2
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -226,7 +221,8 @@ def rank_2g_mle():
     behavior = psiz.keras.layers.RankBehavior()
 
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel_group, behavior=behavior
+        stimuli=stimuli, kernel=kernel_group, behavior=behavior,
+        use_group_kernel=True
     )
     return model
 
@@ -300,10 +296,8 @@ def rate_1g_mle():
     n_stimuli = 30
     n_dim = 10
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     kernel = psiz.keras.layers.DistanceBased(
@@ -335,10 +329,8 @@ def rate_2g_mle():
     n_dim = 10
     n_group = 2
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -377,7 +369,8 @@ def rate_2g_mle():
     behavior = psiz.keras.layers.RateBehavior()
 
     model = psiz.keras.models.Rate(
-        stimuli=stimuli, kernel=kernel_group, behavior=behavior
+        stimuli=stimuli, kernel=kernel_group, behavior=behavior,
+        use_group_kernel=True
     )
     return model
 
@@ -408,11 +401,10 @@ def rate_1g_vi():
             loc_trainable=False,
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(

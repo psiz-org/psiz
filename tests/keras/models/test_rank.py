@@ -583,9 +583,13 @@ def test_save_load_rank_wtrace(
     # Predict.
     output_0 = model.predict(ds_rank_docket)
 
+    model_n_stimuli = model.n_stimuli
+    model_n_dim = model.n_dim
+
     # Save the model.
     fn = tmpdir.join('embedding_test')
     model.save(fn, overwrite=True, save_traces=True)
+    del model
     # Load the saved model.
     reconstructed_model = tf.keras.models.load_model(fn)
 
@@ -594,8 +598,8 @@ def test_save_load_rank_wtrace(
 
     # Test for equality.
     np.testing.assert_allclose(output_0, output_1)
-    assert reconstructed_model.n_stimuli == model.n_stimuli
-    assert reconstructed_model.n_dim == model.n_dim
+    assert reconstructed_model.n_stimuli == model_n_stimuli
+    assert reconstructed_model.n_dim == model_n_dim
 
     # Continue training without recompiling.
     reconstructed_model.fit(ds_rank_obs_2g, epochs=1)
@@ -622,9 +626,13 @@ def test_save_load_rank_wotrace(
     # Predict.
     output_0 = model.predict(ds_rank_docket)
 
+    model_n_stimuli = model.n_stimuli
+    model_n_dim = model.n_dim
+
     # Save the model.
     fn = tmpdir.join('embedding_test')
     model.save(fn, overwrite=True, save_traces=False)
+    del model
     # Load the saved model.
     reconstructed_model = tf.keras.models.load_model(fn)
 
@@ -633,8 +641,8 @@ def test_save_load_rank_wotrace(
 
     # Test for equality.
     np.testing.assert_allclose(output_0, output_1)
-    assert reconstructed_model.n_stimuli == model.n_stimuli
-    assert reconstructed_model.n_dim == model.n_dim
+    assert reconstructed_model.n_stimuli == model_n_stimuli
+    assert reconstructed_model.n_dim == model_n_dim
 
     # Continue training without recompiling.
     reconstructed_model.fit(ds_rank_obs_2g, epochs=1)

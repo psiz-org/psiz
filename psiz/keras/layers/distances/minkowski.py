@@ -16,8 +16,8 @@
 """Weighted Minkowski distance layer.
 
 Classes:
-    WeightedMinkowski: A TensorFlow layer for computing weighted
-        minkowski distance.
+    WeightedMinkowski: DEPRECATED A TensorFlow layer for computing
+        weighted minkowski distance.
 
 """
 

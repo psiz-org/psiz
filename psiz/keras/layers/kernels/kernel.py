@@ -16,11 +16,11 @@
 """Module of TensorFlow kernel layers.
 
 Classes:
-    Kernel: A kernel that allows the user to separately specify a
+    Kernel: DEPRECATED A kernel that allows the user to separately
+        specify a distance and similarity function.
+    AttentionKernel: DEPRECATED A kernel that uses group-specific
+        attention weights and allows the user to separately specify a
         distance and similarity function.
-    AttentionKernel: A kernel that uses group-specific attention
-        weights and allows the user to separately specify a distance
-        and similarity function.
 
 """
 

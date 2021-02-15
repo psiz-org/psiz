@@ -16,8 +16,8 @@
 """Module of psychological embedding models.
 
 Classes:
-    GroupLevel: An abstract TF Keras layer that handles group
-        membership boilerplate.
+    GroupLevel: DEPRECATED An abstract TF Keras layer that handles
+        group membership boilerplate.
 
 """
 

@@ -237,12 +237,10 @@ def exhaustive_docket(n_stimuli):
 def ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     seed = 252
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=.17, seed=seed
-            )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17, seed=seed
         )
     )
 
@@ -282,12 +280,10 @@ def ground_truth_grid():
     # Add placeholder.
     z_grid = np.vstack((np.ones([1, 2]), z_grid))
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                z_grid
-            )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.Constant(
+            z_grid
         )
     )
 
@@ -320,10 +316,8 @@ def ground_truth_grid():
 
 def build_model(n_stimuli, n_dim):
     """Build a model to use for inference."""
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     kernel = psiz.keras.layers.DistanceBased(

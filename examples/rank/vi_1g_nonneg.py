@@ -294,14 +294,12 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=scale_request, seed=58
-            ),
-            trainable=False
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=scale_request, seed=58
+        ),
+        trainable=False
     )
 
     kernel = psiz.keras.layers.DistanceBased(
@@ -354,12 +352,9 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
             concentration_trainable=False,
         )
     )
-    embedding_variational = EmbeddingVariationalLog(
+    stimuli = EmbeddingVariationalLog(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30,
-    )
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=embedding_variational
     )
 
     # We use rho=1.3 because we want something that is like L1 since we are

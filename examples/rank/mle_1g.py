@@ -72,11 +72,9 @@ def main():
 
     model_true = ground_truth(n_stimuli, n_dim)
 
-    simmat_true = np.squeeze(
-        psiz.utils.pairwise_similarity(
-            model_true.stimuli, model_true.kernel, ds_pairs
-        ).numpy()
-    )
+    simmat_true = psiz.utils.pairwise_similarity(
+        model_true.stimuli, model_true.kernel, ds_pairs
+    ).numpy()
 
     # Generate a random docket of trials.
     generator = psiz.generators.RandomRank(
@@ -165,11 +163,9 @@ def main():
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = np.squeeze(
-            psiz.utils.pairwise_similarity(
-                model.stimuli, model.kernel, ds_pairs
-            ).numpy()
-        )
+        simmat_infer = psiz.utils.pairwise_similarity(
+            model.stimuli, model.kernel, ds_pairs
+        ).numpy()
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2
 
@@ -208,14 +204,13 @@ def main():
 
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    stimuli = psiz.keras.layers.Select(
-        subnet=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=.17
-            )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17
         )
     )
+
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -229,6 +224,7 @@ def ground_truth(n_stimuli, n_dim):
             gamma_initializer=tf.keras.initializers.Constant(0.001),
         )
     )
+
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
 
     return model
@@ -247,10 +243,8 @@ def build_model(n_stimuli, n_dim):
 
     """
     # Create a group-agnostic stimuli layer.
-    stimuli = psiz.keras.layers.Select(
-        subnet=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True
     )
 
     # Create a group-agnostic kernel.

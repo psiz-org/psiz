@@ -175,7 +175,7 @@ def main():
             callbacks=callbacks, verbose=0
         )
 
-        dist = model_inferred.stimuli.subnet.prior.embeddings.distribution
+        dist = model_inferred.stimuli.prior.embeddings.distribution
         print('    Inferred prior scale: {0:.4f}'.format(
             dist.distribution.distribution.scale[0, 0]
         ))
@@ -242,8 +242,8 @@ def plot_frame(
     # Settings.
     s = 10
 
-    z_true = model_true.stimuli.subnet.embeddings.numpy()
-    if model_true.stimuli.subnet.mask_zero:
+    z_true = model_true.stimuli.embeddings.numpy()
+    if model_true.stimuli.mask_zero:
         z_true = z_true[1:]
 
     gs = fig0.add_gridspec(2, 2)
@@ -261,9 +261,9 @@ def plot_frame(
     z_limits = [-z_max, z_max]
 
     # Apply and plot Procrustes affine transformation of posterior.
-    dist = model_inferred.stimuli.subnet.embeddings
+    dist = model_inferred.stimuli.embeddings
     loc, cov = unpack_mvn(dist)
-    if model_inferred.stimuli.subnet.mask_zero:
+    if model_inferred.stimuli.mask_zero:
         # Drop placeholder stimulus.
         loc = loc[1:]
         cov = cov[1:]
@@ -362,14 +362,13 @@ def ground_truth(n_stimuli, n_dim):
     # Settings.
     scale_request = .17
 
-    stimuli = psiz.keras.layers.Select(
-        subnet=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=scale_request, seed=58
-            )
+    stimuli = embedding=tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=scale_request, seed=58
         )
     )
+
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -383,6 +382,7 @@ def ground_truth(n_stimuli, n_dim):
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
+
     model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
 
     return model
@@ -430,11 +430,10 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
             loc_trainable=False,
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Select(subnet=embedding_variational)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(

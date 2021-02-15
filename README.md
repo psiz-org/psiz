@@ -45,10 +45,8 @@ n_stimuli = catalog.n_stimuli
 # Create a 2-dimensional embedding layer for the stimuli.
 # NOTE: Since we will use masking, we increment n_stimuli by one.
 n_dim = 2
-stimuli = psiz.keras.layers.Stimuli(
-    embedding=tf.keras.layers.Embedding(
-        catalog.n_stimuli+1, n_dim, mask_zero=True
-    )
+stimuli = tf.keras.layers.Embedding(
+    catalog.n_stimuli+1, n_dim, mask_zero=True
 )
 
 # Use a default similarity kernel (a fully trainable exponential with weighted Minkowski distance).

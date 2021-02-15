@@ -43,8 +43,8 @@ Example output:
 
 """
 
-import copy
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 import shutil
 
@@ -63,7 +63,7 @@ import psiz
 
 # Uncomment and edit the following to control GPU visibility.
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = ""
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -175,7 +175,7 @@ def main():
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
         cb_early = psiz.keras.callbacks.EarlyStoppingRe(
-            'loss', patience=100, mode='min', restore_best_weights=False,
+            'loss', patience=10, mode='min', restore_best_weights=False,
             verbose=1
         )
         callbacks = [cb_board, cb_early]
@@ -274,12 +274,10 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=.17, seed=58
-            )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17, seed=58
         )
     )
 
@@ -337,7 +335,9 @@ def ground_truth(n_stimuli, n_dim, n_group):
         [kernel_0, kernel_1, kernel_2], group_col=1
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
+    model = psiz.keras.models.Rank(
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
+    )
     return model
 
 
@@ -375,11 +375,10 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
             loc_trainable=False
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
         beta_initializer=tf.keras.initializers.Constant(10.),
@@ -397,7 +396,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
     )
 
     model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel_group, n_sample=1
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
     )
     return model
 
@@ -550,13 +549,15 @@ def model_similarity(model, group_idx=[], n_sample=None):
     Arguments:
         model:
         group_idx:
+        n_sample:
 
     """
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        model.stimuli.n_stimuli, mask_zero=True, group_idx=group_idx
+        model.n_stimuli, mask_zero=True, group_idx=group_idx
     )
     simmat = psiz.utils.pairwise_similarity(
-        model.stimuli, model.kernel, ds_pairs, n_sample=n_sample
+        model.stimuli, model.kernel, ds_pairs, n_sample=n_sample,
+        use_group_kernel=True
     )
 
     if n_sample is not None:

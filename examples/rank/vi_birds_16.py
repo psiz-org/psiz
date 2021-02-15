@@ -196,11 +196,10 @@ def build_model(n_stimuli, n_dim, n_obs_train):
             loc_trainable=False,
         )
     )
-    embedding_variational = psiz.keras.layers.EmbeddingVariational(
+    stimuli = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-    stimuli = psiz.keras.layers.Stimuli(embedding=embedding_variational)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
@@ -241,8 +240,7 @@ def draw_figure(fig, model, catalog):
 
     # Determine embedding limits.
     dist = model.stimuli.embeddings
-    group_idx = 0
-    loc, cov = unpack_mvn(dist, group_idx)
+    loc, cov = unpack_mvn(dist)
     if model.stimuli.mask_zero:
         # Drop placeholder stimulus.
         loc = loc[1:]
@@ -289,7 +287,7 @@ def squeeze_indices(idx_arr):
     return idx_arr_2
 
 
-def unpack_mvn(dist, group_idx):
+def unpack_mvn(dist):
     """Unpack multivariate normal distribution."""
     def diag_to_full_cov(v):
         """Convert diagonal variance to full covariance matrix.
@@ -303,8 +301,8 @@ def unpack_mvn(dist, group_idx):
             cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
         return cov
 
-    loc = dist.mean().numpy()[group_idx]
-    v = dist.variance().numpy()[group_idx]
+    loc = dist.mean().numpy()
+    v = dist.variance().numpy()
 
     # Convert to full covariance matrix.
     cov = diag_to_full_cov(v)

@@ -22,6 +22,7 @@ default, a `psiz_examples` directory is created in your home directory.
 
 import itertools
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 import shutil
 
@@ -36,9 +37,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility. TODO
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -151,8 +152,7 @@ def draw_scenario(fig, gs, row, case_data):
     ax = fig.add_subplot(gs[row, 0])
     # Draw model state.
     dist = model.stimuli.embeddings
-    group_idx = 0
-    loc, cov = unpack_mvn(dist, group_idx)
+    loc, cov = unpack_mvn(dist)
     if model.stimuli.mask_zero:
         # Drop placeholder stimulus.
         loc = loc[1:]
@@ -160,10 +160,7 @@ def draw_scenario(fig, gs, row, case_data):
     plot_bivariate_normal(
         ax, loc, cov, c=color_arr, r=1.96, lw=lw
     )
-    # ax1.scatter(
-    #     loc[:, 0], loc[:, 1], c=color_arr, marker='o', edgecolors='none',
-    #     zorder=100
-    # )
+
     ax.set_title('Posterior')
     ax.set_aspect('equal')
     ax.set_xlim(.05, .45)
@@ -249,14 +246,13 @@ def build_model(case=0):
         z_circle = np.vstack((np.ones([1, 2]), z_circle))
 
     prior_scale = .17
-    stimuli = psiz.keras.layers.Stimuli(
-        embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli+1, n_dim, mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            )
+    stimuli = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli+1, n_dim, mask_zero=True,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
+
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -302,8 +298,8 @@ def build_model(case=0):
         scale[4, :] = .03
 
     # Assign scenario variables.
-    model.stimuli.embedding.loc.assign(loc)
-    model.stimuli.embedding.untransformed_scale.assign(
+    model.stimuli.loc.assign(loc)
+    model.stimuli.untransformed_scale.assign(
         tfp.math.softplus_inverse(scale)
     )
     return model
@@ -359,8 +355,7 @@ def candidate_list(eligable_list, n_reference):
     return stimulus_set
 
 
-# TODO DRY
-def unpack_mvn(dist, group_idx):
+def unpack_mvn(dist):
     """Unpack multivariate normal distribution."""
     def diag_to_full_cov(v):
         """Convert diagonal variance to full covariance matrix.
@@ -374,8 +369,8 @@ def unpack_mvn(dist, group_idx):
             cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
         return cov
 
-    loc = dist.mean().numpy()[group_idx]
-    v = dist.variance().numpy()[group_idx]
+    loc = dist.mean().numpy()
+    v = dist.variance().numpy()
 
     # Convert to full covariance matrix.
     cov = diag_to_full_cov(v)
@@ -383,7 +378,6 @@ def unpack_mvn(dist, group_idx):
     return loc, cov
 
 
-# TODO move to visualization
 def plot_bivariate_normal(ax, loc, cov, c=None, r=2.576, **kwargs):
     """Plot set of bivariate normals.
 

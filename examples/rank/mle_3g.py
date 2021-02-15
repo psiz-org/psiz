@@ -40,6 +40,7 @@ Example output:
 """
 
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 
 import numpy as np
 from scipy.stats import pearsonr
@@ -48,7 +49,7 @@ import tensorflow as tf
 import psiz
 
 # Uncomment the following line to force eager execution.
-# tf.config.experimental_run_functions_eagerly(True)
+# tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -187,14 +188,13 @@ def main():
 
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
-    stimuli = psiz.keras.layers.Select(
-        subnet=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=.17
-            )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17
         )
     )
+
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
         trainable=False,
         beta_initializer=tf.keras.initializers.Constant(10.),
@@ -249,7 +249,9 @@ def ground_truth(n_stimuli, n_dim, n_group):
         [kernel_0, kernel_1, kernel_2], group_col=1
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
+    model = psiz.keras.models.Rank(
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
+    )
 
     return model
 
@@ -266,10 +268,8 @@ def build_model(n_stimuli, n_dim, n_group):
         model: A TensorFlow Keras model.
 
     """
-    stimuli = psiz.keras.layers.Select(
-        subnet=tf.keras.layers.Embedding(
-            n_stimuli+1, n_dim, mask_zero=True,
-        )
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli+1, n_dim, mask_zero=True,
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -286,7 +286,9 @@ def build_model(n_stimuli, n_dim, n_group):
         [kernel_0, kernel_1, kernel_2], group_col=1
     )
 
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel_group)
+    model = psiz.keras.models.Rank(
+        stimuli=stimuli, kernel=kernel_group, use_group_kernel=True
+    )
 
     return model
 
@@ -312,11 +314,10 @@ def model_similarity(model, group_idx=[]):
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
         model.n_stimuli, mask_zero=True, group_idx=group_idx
     )
-    simmat = np.squeeze(
-        psiz.utils.pairwise_similarity(
-            model.stimuli, model.kernel, ds_pairs
-        ).numpy()
-    )
+    simmat = psiz.utils.pairwise_similarity(
+        model.stimuli, model.kernel, ds_pairs, use_group_kernel=True
+    ).numpy()
+
     return simmat
 
 

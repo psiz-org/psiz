@@ -340,6 +340,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         config = {
             'name': self.name,
             'class_name': self.__class__.__name__,
+            'psiz_version': '0.4.2',
             'n_sample': self.n_sample,
             'layers': copy.deepcopy(layer_configs),
             'use_group_stimuli': self._use_group['stimuli'],
@@ -361,6 +362,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         """
         model_config = copy.deepcopy(config)
         model_config.pop('class_name', None)
+        model_config.pop('psiz_version', None)
 
         # Deserialize layers.
         layer_configs = model_config.pop('layers', None)

@@ -26,7 +26,7 @@ from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='Gate'
+    package='psiz.keras.layers', name='Gate'
 )
 class Gate(tf.keras.layers.Layer):
     """A layer that manages group-specific subnetworks.

@@ -58,6 +58,9 @@ class MinkowskiVariational(Variational):
         # Run forward pass through variational posterior layer.
         outputs = self.posterior(inputs)
 
+        # Call prior in case it is a variational layer as well.
+        _ = self.prior(inputs)
+
         # Apply KL divergence between posterior and prior.
         self.add_kl_loss(self.posterior.w, self.prior.w)
         self.add_kl_loss(self.posterior.rho, self.prior.rho)

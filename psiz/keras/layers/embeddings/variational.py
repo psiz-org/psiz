@@ -45,6 +45,11 @@ class EmbeddingVariational(Variational):
         """Call."""
         # Run forward pass through variational posterior layer.
         outputs = self.posterior(inputs)
+
+        # Also call prior in case prior is a variational layer itself that
+        # needs to have it's VI losses registered.
+        _ = self.prior(inputs)
+
         # Apply KL divergence between posterior and prior.
         self.add_kl_loss(self.posterior.embeddings, self.prior.embeddings)
         return outputs

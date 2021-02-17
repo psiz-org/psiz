@@ -101,9 +101,9 @@ def main():
 
     # Compute ground truth similarity matrices.
     simmat_truth = (
-        model_similarity(model_true, group_idx=[0]),
-        model_similarity(model_true, group_idx=[1]),
-        model_similarity(model_true, group_idx=[2])
+        model_similarity(model_true, groups=[0]),
+        model_similarity(model_true, groups=[1]),
+        model_similarity(model_true, groups=[2])
     )
 
     # Generate a random docket of trials to show each group.
@@ -201,9 +201,9 @@ def main():
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
         simmat_inferred = (
-            model_similarity(model_inferred, group_idx=[0], n_sample=100),
-            model_similarity(model_inferred, group_idx=[1], n_sample=100),
-            model_similarity(model_inferred, group_idx=[2], n_sample=100)
+            model_similarity(model_inferred, groups=[0], n_sample=100),
+            model_similarity(model_inferred, groups=[1], n_sample=100),
+            model_similarity(model_inferred, groups=[2], n_sample=100)
         )
 
         for i_truth in range(n_group):
@@ -539,7 +539,7 @@ def plot_convergence(fig, ax, n_obs, r2):
     ax.set_title(r'$R^2$ Convergence')
 
 
-def model_similarity(model, group_idx=[], n_sample=None):
+def model_similarity(model, groups=[], n_sample=None):
     """Compute model similarity.
 
     In the deterministic case, there is one one sample and mean is
@@ -548,12 +548,12 @@ def model_similarity(model, group_idx=[], n_sample=None):
 
     Arguments:
         model:
-        group_idx:
+        groups:
         n_sample:
 
     """
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        model.n_stimuli, mask_zero=True, group_idx=group_idx
+        model.n_stimuli, mask_zero=True, groups=groups
     )
     simmat = psiz.utils.pairwise_similarity(
         model.stimuli, model.kernel, ds_pairs, n_sample=n_sample,

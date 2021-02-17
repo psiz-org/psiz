@@ -100,9 +100,9 @@ def main():
 
     # Compute ground truth similarity matrices.
     simmat_truth = (
-        model_similarity(model_true, group_idx=[0], use_group_stimuli=True),
-        model_similarity(model_true, group_idx=[1], use_group_stimuli=True),
-        model_similarity(model_true, group_idx=[2], use_group_stimuli=True)
+        model_similarity(model_true, groups=[0], use_group_stimuli=True),
+        model_similarity(model_true, groups=[1], use_group_stimuli=True),
+        model_similarity(model_true, groups=[2], use_group_stimuli=True)
     )
 
     # Generate a random docket of trials to show each group.
@@ -224,15 +224,15 @@ def main():
         # similarity matrices implied by each model.
         simmat_inferred = (
             model_similarity(
-                model_inferred, group_idx=[0], n_sample=100,
+                model_inferred, groups=[0], n_sample=100,
                 use_group_stimuli=True
             ),
             model_similarity(
-                model_inferred, group_idx=[1], n_sample=100,
+                model_inferred, groups=[1], n_sample=100,
                 use_group_stimuli=True
             ),
             model_similarity(
-                model_inferred, group_idx=[2], n_sample=100,
+                model_inferred, groups=[2], n_sample=100,
                 use_group_stimuli=True
             )
         )
@@ -541,9 +541,9 @@ def plot_embeddings_true(fig, ax, model_true, color_array):
     loc_list = []
     cov_list = []
     z_max = 0
-    for group_idx in range(n_group):
-        loc = model_true.stimuli.subnets[group_idx].embeddings
-        if model_true.stimuli.subnets[group_idx].mask_zero:
+    for i_group in range(n_group):
+        loc = model_true.stimuli.subnets[i_group].embeddings
+        if model_true.stimuli.subnets[i_group].mask_zero:
             # Drop placeholder stimulus.
             loc = loc[1:]
         # Center coordinates.
@@ -585,10 +585,10 @@ def plot_embeddings(fig, ax, model_true, model_inferred, color_array):
     loc_list = []
     cov_list = []
     z_max = 0
-    for group_idx in range(n_group):
-        dist = model_inferred.stimuli.subnets[group_idx].embeddings
+    for i_group in range(n_group):
+        dist = model_inferred.stimuli.subnets[i_group].embeddings
         loc, cov = unpack_mvn(dist)
-        if model_inferred.stimuli.subnets[group_idx].mask_zero:
+        if model_inferred.stimuli.subnets[i_group].mask_zero:
             # Drop placeholder stimulus.
             loc = loc[1:]
             cov = cov[1:]
@@ -629,7 +629,7 @@ def plot_embeddings(fig, ax, model_true, model_inferred, color_array):
 
 
 def model_similarity(
-        model, group_idx=[], n_sample=None, use_group_stimuli=False,
+        model, groups=[], n_sample=None, use_group_stimuli=False,
         use_group_kernel=False):
     """Compute model similarity.
 
@@ -639,13 +639,13 @@ def model_similarity(
 
     Arguments:
         model:
-        group_idx:
+        groups:
 
     """
     n_stimuli = model.n_stimuli
 
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, mask_zero=True, group_idx=group_idx
+        n_stimuli, mask_zero=True, groups=groups
     )
     simmat = psiz.utils.pairwise_similarity(
         model.stimuli, model.kernel, ds_pairs, n_sample=n_sample,

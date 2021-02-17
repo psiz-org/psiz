@@ -220,7 +220,8 @@ class SimilarityTrials(metaclass=ABCMeta):
         n_present = np.sum(self.is_present(), axis=1)
         return n_present.astype(dtype=np.int32)
 
-    def _split_groups_columns(self, groups):
+    @classmethod
+    def _split_groups_columns(cls, groups):
         """Split 2D `groups` into separate columns."""
         d = {}
         n_col = groups.shape[1]

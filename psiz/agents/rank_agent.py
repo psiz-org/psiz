@@ -96,10 +96,7 @@ class RankAgent(Agent):
 
             batch_stimulus_set = _rank_sample(
                 x['stimulus_set'],
-                tf.reduce_mean(
-                    self.model(x, training=False),
-                    axis=1
-                )
+                tf.reduce_mean(self.model(x, training=False), axis=1)
             )
             if stimulus_set is None:
                 stimulus_set = [batch_stimulus_set]

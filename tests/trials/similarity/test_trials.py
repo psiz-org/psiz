@@ -221,7 +221,7 @@ def ground_truth(n_stimuli):
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1], group_col=1
+        subnets=[kernel_0, kernel_1], group_col=1
     )
 
     model = psiz.keras.models.Rank(

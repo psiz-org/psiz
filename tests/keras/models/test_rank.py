@@ -140,7 +140,7 @@ def rank_3g_mle_v2():
     kernel_1 = build_mle_kernel(shared_similarity, n_dim)
     kernel_2 = build_mle_kernel(shared_similarity, n_dim)
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
     )
 
     model = psiz.keras.models.Rank(
@@ -302,7 +302,7 @@ def rank_3g_vi_v2():
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
     )
 
     model = psiz.keras.models.Rank(
@@ -354,7 +354,7 @@ def rank_3g_vi_v3():
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
     )
 
     model = psiz.keras.models.Rank(

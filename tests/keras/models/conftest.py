@@ -215,7 +215,7 @@ def rank_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1], group_col=1
+        subnets=[kernel_0, kernel_1], group_col=1
     )
 
     behavior = psiz.keras.layers.RankBehavior()
@@ -363,7 +363,7 @@ def rate_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1], group_col=1
+        subnets=[kernel_0, kernel_1], group_col=1
     )
 
     behavior = psiz.keras.layers.RateBehavior()

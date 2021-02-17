@@ -246,7 +246,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
     )
 
     model = psiz.keras.models.Rank(
@@ -283,7 +283,7 @@ def build_model(n_stimuli, n_dim, n_group):
     kernel_1 = build_kernel(shared_similarity, n_dim)
     kernel_2 = build_kernel(shared_similarity, n_dim)
     kernel_group = psiz.keras.layers.GateMulti(
-        [kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
     )
 
     model = psiz.keras.models.Rank(

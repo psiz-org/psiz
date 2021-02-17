@@ -169,7 +169,7 @@ def test_call_kernel_empty_branch(paired_inputs_v0, group_3g_empty_v0):
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = GateMulti(
-        [kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
     )
 
     outputs = kernel_group(

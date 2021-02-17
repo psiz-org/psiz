@@ -237,14 +237,14 @@ def plot_frame(
 
     # Visualize embedding point estimates.
     f0_ax3 = fig0.add_subplot(gs[1, 0:2])
-    psiz.visualize.heatmap_embeddings(
+    psiz.mplot.heatmap_embeddings(
         fig0, f0_ax3, model_inferred.stimuli
     )
 
     # Visualize embedding distributions for the first dimension.
     f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
-    psiz.visualize.embedding_output_dimension(
+    psiz.mplot.embedding_output_dimension(
         fig0, f0_ax4, model_inferred.stimuli, i_dim
     )
 

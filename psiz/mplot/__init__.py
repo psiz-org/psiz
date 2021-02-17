@@ -17,3 +17,6 @@
 
 from psiz.mplot.bvn_ellipse import bvn_ellipse
 from psiz.mplot.hdi_bvn import hdi_bvn
+from psiz.mplot.heatmap_embeddings import heatmap_embeddings
+from psiz.mplot.embedding_input_dimension import embedding_input_dimension
+from psiz.mplot.embedding_output_dimension import embedding_output_dimension

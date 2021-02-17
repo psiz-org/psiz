@@ -33,7 +33,7 @@ from PIL import Image
 import tensorflow_probability as tfp
 
 
-def heatmap_embeddings(fig, ax, embedding, group_idx=0, cmap=None):
+def heatmap_embeddings(fig, ax, embedding, cmap=None):
     """Visualize embeddings as a heatmap.
 
     Intended to handle rank 2 and rank 3 embeddings.
@@ -56,8 +56,6 @@ def heatmap_embeddings(fig, ax, embedding, group_idx=0, cmap=None):
         z_mode = embedding.embeddings.numpy()
 
     rank = z_mode.ndim
-    if rank == 3:
-        z_mode = z_mode[group_idx]
     if embedding.mask_zero:
         z_mode = z_mode[1:]
 
@@ -77,7 +75,7 @@ def heatmap_embeddings(fig, ax, embedding, group_idx=0, cmap=None):
     fig.colorbar(im, ax=ax)
 
 
-def embedding_output_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
+def embedding_output_dimension(fig, ax, embedding, idx, c='b'):
     """Visualize embedding values for a requested output dimension.
 
     Plots point estimates of embedding values for the requested
@@ -104,8 +102,6 @@ def embedding_output_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
         z_mode = embedding.embeddings.numpy()
 
     rank = z_mode.ndim
-    if rank == 3:
-        z_mode = z_mode[group_idx]
 
     y_max = np.max(z_mode)
     z_mode = z_mode[:, idx]
@@ -164,7 +160,7 @@ def embedding_output_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
     ax.set_yticklabels(['0', '{0:.1f}'.format(1.05 * y_max)])
 
 
-def embedding_input_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
+def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
     """Visualize embedding values for a requested input dimension.
 
     Plots point estimates of embedding values for the requested
@@ -191,8 +187,6 @@ def embedding_input_dimension(fig, ax, embedding, idx, group_idx=0, c='b'):
         z_mode = embedding.embeddings.numpy()
 
     rank = z_mode.ndim
-    if rank == 3:
-        z_mode = z_mode[group_idx]
 
     y_max = np.max(z_mode)
     z_mode = z_mode[idx, :]

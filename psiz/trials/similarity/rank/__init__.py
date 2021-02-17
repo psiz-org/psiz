@@ -14,11 +14,3 @@
 # limitations under the License.
 # ============================================================================
 """Trials initialization."""
-
-from psiz.trials.core import stack
-from psiz.trials.core import load_trials
-from psiz.trials.similarity.rank.rank_trials import RankTrials
-from psiz.trials.similarity.rank.rank_docket import RankDocket
-from psiz.trials.similarity.rank.rank_observations import RankObservations
-from psiz.trials.similarity.rate import RateDocket
-from psiz.trials.similarity.rate import RateObservations

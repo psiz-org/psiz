@@ -23,7 +23,7 @@ Functions:
 Notes:
     A `stimulus_id` of `-1` is a reserved value to be used as a
         placeholder.
-    Groups are used to identify distinct populations of agents. For  TODO expand and make general
+    Groups are used to identify distinct populations of agents. For
         example, similarity judgments could be collected from two
         groups: novices and experts. During inference, group
         information can be used to infer a separate set of attention

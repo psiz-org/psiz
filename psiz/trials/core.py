@@ -23,8 +23,8 @@ Functions:
 """
 import h5py
 
-from psiz.trials.similarity.rank import RankDocket
-from psiz.trials.similarity.rank import RankObservations
+from psiz.trials.similarity.rank.rank_docket import RankDocket
+from psiz.trials.similarity.rank.rank_observations import RankObservations
 from psiz.trials.similarity.rate import RateDocket
 from psiz.trials.similarity.rate import RateObservations
 

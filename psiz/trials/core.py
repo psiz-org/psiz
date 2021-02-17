@@ -25,8 +25,8 @@ import h5py
 
 from psiz.trials.similarity.rank.rank_docket import RankDocket
 from psiz.trials.similarity.rank.rank_observations import RankObservations
-from psiz.trials.similarity.rate import RateDocket
-from psiz.trials.similarity.rate import RateObservations
+from psiz.trials.similarity.rate.rate_docket import RateDocket
+from psiz.trials.similarity.rate.rate_observations import RateObservations
 
 
 def load_trials(filepath, verbose=0):

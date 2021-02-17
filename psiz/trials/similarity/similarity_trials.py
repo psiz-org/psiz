@@ -139,6 +139,26 @@ class SimilarityTrials(metaclass=ABCMeta):
             ))
         return stimulus_set.astype(np.int32)
 
+    def _check_group_id(self, group_id):
+        """Check the argument group_id."""
+        group_id = group_id.astype(np.int32)
+        if not (group_id.ndim == 2):
+            raise ValueError((
+                "The argument 'group_id' must be a rank 2 ND array."))
+        # Check n_trial shape agreement.
+        if not (group_id.shape[0] == self.n_trial):
+            raise ValueError((
+                "The argument 'group_id' must have the same length as the "
+                "number of rows in the argument 'stimulus_set'."))
+        # Check lowerbound support limit.
+        bad_locs = group_id < 0
+        n_bad = np.sum(bad_locs)
+        if n_bad != 0:
+            raise ValueError((
+                "The parameter 'group_id' contains integers less than 0. "
+                "Found {0} bad trial(s).").format(n_bad))
+        return group_id
+
     @abstractmethod
     def _set_configuration_data(self, *args):
         """Generate a unique ID for each trial configuration.
@@ -203,3 +223,33 @@ class SimilarityTrials(metaclass=ABCMeta):
         """
         n_present = np.sum(self.is_present(), axis=1)
         return n_present.astype(dtype=np.int32)
+
+    def _split_group_id_columns(self, group_id):
+        """Split 2D `group_id` into separate columns."""
+        d = {}
+        n_col = group_id.shape[1]
+        for i_col in range(n_col):
+            dkey = 'group_id_{0}'.format(i_col)
+            d[dkey] = group_id[:, i_col]
+        return d
+
+    def _find_trials_matching_config(self, row):
+        """Find trials matching configuration.
+
+        Arguments:
+            row: A pandas.Series object representing a trial
+                configuration.
+
+        """
+        bidx = np.ones([self.n_trial], dtype=bool)
+        for index, value in row.items():
+            if 'group_id' in index:
+                # Must handle group_id separately.
+                parts = index.split('_')
+                group_col = int(parts[-1])
+                bidx_key = np.equal(self.group_id[:, group_col], value)
+            else:
+                bidx_key = np.equal(getattr(self, index), value)
+            # Determine intersection.
+            bidx = np.logical_and(bidx, bidx_key)
+        return bidx

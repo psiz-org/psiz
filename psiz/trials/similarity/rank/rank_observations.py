@@ -32,7 +32,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from psiz.trials.similarity.rank.rank_trials import RankTrials
-from psiz.utils import pad_2d_array
+from psiz.utils import pad_2d_array, generate_group_matrix
 
 
 class RankObservations(RankTrials):
@@ -155,7 +155,7 @@ class RankObservations(RankTrials):
 
         # Handle default settings.
         if group_id is None:
-            group_id = np.zeros((self.n_trial), dtype=np.int32)  # TODO
+            group_id = np.zeros([self.n_trial, 1], dtype=np.int32)
         else:
             group_id = self._check_group_id(group_id)
         self.group_id = group_id
@@ -186,24 +186,7 @@ class RankObservations(RankTrials):
 
         # Determine unique display configurations.
         self._set_configuration_data(
-            self.n_reference, self.n_select, self.is_ranked, group_id)
-
-    def _check_group_id(self, group_id):
-        """Check the argument group_id."""
-        group_id = group_id.astype(np.int32)
-        # Check shape agreement.
-        if not (group_id.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument 'group_id' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
-        # Check lowerbound support limit.
-        bad_locs = group_id < 0
-        n_bad = np.sum(bad_locs)
-        if n_bad != 0:
-            raise ValueError((
-                "The parameter 'group_id' contains integers less than 0. "
-                "Found {0} bad trial(s).").format(n_bad))
-        return group_id
+            self.n_reference, self.n_select, self.is_ranked, self.group_id)
 
     def _check_agent_id(self, agent_id):
         """Check the argument agent_id."""
@@ -277,8 +260,8 @@ class RankObservations(RankTrials):
         )
 
     def _set_configuration_data(
-                self, n_reference, n_select, is_ranked, group_id,
-                session_id=None):
+            self, n_reference, n_select, is_ranked, group_id,
+            session_id=None):
         """Generate a unique ID for each trial configuration.
 
         Helper function that generates a unique ID for each of the
@@ -321,20 +304,24 @@ class RankObservations(RankTrials):
         if session_id is None:
             session_id = np.zeros((n_trial), dtype=np.int32)
 
-        # Determine unique display configurations.
-        n_outcome_placeholder = np.zeros(n_select.shape[0], dtype=np.int32)
+        # Determine unique display configurations by create a dictionary on
+        # which to determine distinct configurations.
         d = {
             'n_reference': n_reference, 'n_select': n_select,
-            'is_ranked': is_ranked, 'group_id': group_id,
-            'session_id': session_id, 'n_outcome': n_outcome_placeholder
-            }
+            'is_ranked': is_ranked, 'session_id': session_id
+        }
+        d_group_id = self._split_group_id_columns(group_id)
+        d.update(d_group_id)
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
-        n_out_idx = df_config.columns.get_loc("n_outcome")
+
+        # Loop over distinct configurations in order to determine
+        # configuration index for all trials.
+        n_outcome = np.zeros(n_config, dtype=np.int32)
 
         # Assign display configuration index for every observation.
-        config_idx = np.empty(n_trial, dtype=np.int32)
+        config_idx = np.zeros(n_trial, dtype=np.int32)
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
@@ -342,17 +329,13 @@ class RankObservations(RankTrials):
                 df_config.iloc[i_config]
             )
             outcome_idx_list.append(outcome_idx)
-            n_outcome = outcome_idx.shape[0]
-            df_config.iloc[i_config, n_out_idx] = n_outcome
-            # Find trials matching configuration.
-            a = (n_reference == df_config['n_reference'].iloc[i_config])
-            b = (n_select == df_config['n_select'].iloc[i_config])
-            c = (is_ranked == df_config['is_ranked'].iloc[i_config])
-            d = (group_id == df_config['group_id'].iloc[i_config])
-            e = (session_id == df_config['session_id'].iloc[i_config])
-            f = np.array((a, b, c, d, e))
-            display_type_locs = np.all(f, axis=0)
-            config_idx[display_type_locs] = i_config
+            n_outcome[i_config] = outcome_idx.shape[0]
+
+            bidx = self._find_trials_matching_config(df_config.iloc[i_config])
+            config_idx[bidx] = i_config
+
+        # Add n_outcome to `df_config`.
+        df_config['n_outcome'] = n_outcome
 
         self.config_idx = config_idx
         self.config_list = df_config
@@ -362,19 +345,17 @@ class RankObservations(RankTrials):
         """Override the existing group_ids.
 
         Arguments:
-            group_id: The new group IDs. Can be an integer or an array
-                of integers with shape=(self.n_trial,).
+            group_id: The new group IDs.
+                shape=(n_trial, n_col)
 
         """
-        if np.isscalar(group_id):
-            group_id = group_id * np.ones((self.n_trial), dtype=np.int32)
-        else:
-            group_id = self._check_group_id(group_id)
+        group_id = self._check_group_id(group_id)
         self.group_id = copy.copy(group_id)
 
         # Re-derive unique display configurations.
         self._set_configuration_data(
-            self.n_reference, self.n_select, self.is_ranked, group_id)
+            self.n_reference, self.n_select, self.is_ranked, group_id
+        )
 
     def set_weight(self, weight):
         """Override the existing weights.
@@ -427,7 +408,6 @@ class RankObservations(RankTrials):
         # NOTE: The dimensions of inputs are expanded to have an additional
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
-        group_level_0 = np.zeros([self.group_id.shape[0]], dtype=np.int32)
         if all_outcomes:
             stimulus_set = self.all_outcomes()
             x = {
@@ -435,9 +415,7 @@ class RankObservations(RankTrials):
                 'is_select': np.expand_dims(
                     self.is_select(compress=False), axis=2
                 ),
-                'group': np.stack(
-                    (group_level_0, self.group_id, self.agent_id), axis=-1
-                )
+                'group': self.group_id
             }
             # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
             # that occurred.
@@ -449,9 +427,7 @@ class RankObservations(RankTrials):
                 'is_select': np.expand_dims(
                     self.is_select(compress=False), axis=2
                 ),
-                'group': np.stack(
-                    (group_level_0, self.group_id, self.agent_id), axis=-1
-                )
+                'group': self.group_id
             }
             # NOTE: The outputs `y` indicate a sparse encoding of the outcome
             # that occurred.
@@ -479,6 +455,10 @@ class RankObservations(RankTrials):
         n_select = f["n_select"][()]
         is_ranked = f["is_ranked"][()]
         group_id = f["group_id"][()]
+
+        # Patch for old saving assumptions.
+        if group_id.ndim == 1:
+            group_id = np.expand_dims(group_id, axis=1)
 
         # For backwards compatability.
         if "weight" in f:
@@ -531,7 +511,7 @@ class RankObservations(RankTrials):
             trials_list[0].stimulus_set, max_n_reference + 1
         )
         n_select = trials_list[0].n_select
-        is_ranked = trials_list[0].is_ranked        
+        is_ranked = trials_list[0].is_ranked
         group_id = trials_list[0].group_id
         agent_id = trials_list[0].agent_id
         session_id = trials_list[0].session_id
@@ -545,7 +525,7 @@ class RankObservations(RankTrials):
             ))
             n_select = np.hstack((n_select, i_trials.n_select))
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
-            group_id = np.hstack((group_id, i_trials.group_id))
+            group_id = np.vstack((group_id, i_trials.group_id))
             agent_id = np.hstack((agent_id, i_trials.agent_id))
             session_id = np.hstack((session_id, i_trials.session_id))
             weight = np.hstack((weight, i_trials.weight))

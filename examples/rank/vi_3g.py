@@ -113,9 +113,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.agents.RankAgent(model_true, group_id=0)
-    agent_interm = psiz.agents.RankAgent(model_true, group_id=1)
-    agent_expert = psiz.agents.RankAgent(model_true, group_id=2)
+    agent_novice = psiz.agents.RankAgent(model_true, groups=[0])
+    agent_interm = psiz.agents.RankAgent(model_true, groups=[1])
+    agent_expert = psiz.agents.RankAgent(model_true, groups=[2])
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -332,7 +332,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
     model = psiz.keras.models.Rank(
@@ -392,7 +392,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
     model = psiz.keras.models.Rank(

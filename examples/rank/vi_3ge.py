@@ -54,9 +54,9 @@ import psiz
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility. TODO
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Uncomment and edit the following to control GPU visibility.
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -112,9 +112,9 @@ def main():
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
-    agent_novice = psiz.agents.RankAgent(model_true, group_id=0)
-    agent_interm = psiz.agents.RankAgent(model_true, group_id=1)
-    agent_expert = psiz.agents.RankAgent(model_true, group_id=2)
+    agent_novice = psiz.agents.RankAgent(model_true, groups=[0])
+    agent_interm = psiz.agents.RankAgent(model_true, groups=[1])
+    agent_expert = psiz.agents.RankAgent(model_true, groups=[2])
 
     # Simulate similarity judgments for each group.
     obs_novice = agent_novice.simulate(docket)
@@ -329,7 +329,7 @@ def ground_truth(n_stimuli, n_group):
         class_mean_full, exemplar_locs_centered, exemplar_scale[2]
     )
     stim_group = psiz.keras.layers.Gate(
-        subnets=[stim_0, stim_1, stim_2], group_col=1
+        subnets=[stim_0, stim_1, stim_2], group_col=0
     )
 
     # Define group-specific kernels.
@@ -395,7 +395,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
         n_stimuli, n_dim, shared_prior, kl_weight, 'vi_stim_group_2'
     )
     stim_group = psiz.keras.layers.Gate(
-        subnets=[stim_0, stim_1, stim_2], group_col=1,
+        subnets=[stim_0, stim_1, stim_2], group_col=0,
     )
 
     # Define a simple (non-trainable) kernel.

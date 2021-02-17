@@ -121,7 +121,7 @@ def rank_2g_mle_determ():
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1], group_col=1
+        subnets=[kernel_0, kernel_1], group_col=0
     )
 
     behavior = psiz.keras.layers.RankBehavior()

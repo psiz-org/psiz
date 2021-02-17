@@ -201,10 +201,9 @@ class RateDocket(RateTrials):
         """
         if group is None:
             group = np.zeros([self.n_trial, 1], dtype=np.int32)
-        if group.ndim == 1:
-            group = np.expand_dims(group, axis=1)
-        group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)
-        group = np.hstack([group_level_0, group])
+        else:
+            group = self._check_group_id(group)
+
         # Return tensorflow dataset.
         stimulus_set = self.stimulus_set + 1
         x = {
@@ -353,11 +352,10 @@ class RateObservations(RateTrials):
         """
         RateTrials.__init__(self, stimulus_set)
         self.rating = np.asarray(rating, dtype=np.float32)
-        # TODO May want to move this enforcement elsewhere.
 
         # Handle default settings.
         if group_id is None:
-            group_id = np.zeros((self.n_trial), dtype=np.int32)
+            group_id = np.zeros([self.n_trial, 1], dtype=np.int32)
         else:
             group_id = self._check_group_id(group_id)
         self.group_id = group_id
@@ -388,23 +386,6 @@ class RateObservations(RateTrials):
 
         # Determine unique display configurations.
         self._set_configuration_data(self.n_present, group_id)
-
-    def _check_group_id(self, group_id):
-        """Check the argument group_id."""
-        group_id = group_id.astype(np.int32)
-        # Check shape agreement.
-        if not (group_id.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument 'group_id' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
-        # Check lowerbound support limit.
-        bad_locs = group_id < 0
-        n_bad = np.sum(bad_locs)
-        if n_bad != 0:
-            raise ValueError((
-                "The parameter 'group_id' contains integers less than 0. "
-                "Found {0} bad trial(s).").format(n_bad))
-        return group_id
 
     def _check_agent_id(self, agent_id):
         """Check the argument agent_id."""
@@ -514,9 +495,10 @@ class RateObservations(RateTrials):
 
         # Determine unique display configurations.
         d = {
-            'n_present': n_present, 'group_id': group_id,
-            'session_id': session_id
+            'n_present': n_present, 'session_id': session_id
             }
+        d_group_id = self._split_group_id_columns(group_id)
+        d.update(d_group_id)
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
@@ -524,13 +506,8 @@ class RateObservations(RateTrials):
         # Assign display configuration index for every observation.
         config_idx = np.empty(n_trial, dtype=np.int32)
         for i_config in range(n_config):
-            # Find trials matching configuration.
-            a = (n_present == df_config['n_present'].iloc[i_config])
-            d = (group_id == df_config['group_id'].iloc[i_config])
-            e = (session_id == df_config['session_id'].iloc[i_config])
-            f = np.array((a, d, e))
-            display_type_locs = np.all(f, axis=0)
-            config_idx[display_type_locs] = i_config
+            bidx = self._find_trials_matching_config(df_config.iloc[i_config])
+            config_idx[bidx] = i_config
 
         self.config_idx = config_idx
         self.config_list = df_config
@@ -539,21 +516,18 @@ class RateObservations(RateTrials):
         """Override the existing group_ids.
 
         Arguments:
-            group_id: The new group IDs. Can be an integer or an array
-                of integers with shape=(self.n_trial,).
+            group_id: The new group IDs.
+                shape=(n_trial, n_col)
 
         """
-        if np.isscalar(group_id):
-            group_id = group_id * np.ones((self.n_trial), dtype=np.int32)
-        else:
-            group_id = self._check_group_id(group_id)
+        group_id = self._check_group_id(group_id)
         self.group_id = copy.copy(group_id)
 
         # Re-derive unique display configurations.
         self._set_configuration_data(self.m_present, group_id)
 
     def set_weight(self, weight):
-        """Override the existing group_ids.
+        """Override the existing weights.
 
         Arguments:
             weight: The new weight. Can be an float or an array
@@ -606,9 +580,7 @@ class RateObservations(RateTrials):
 
         x = {
             'stimulus_set': self.stimulus_set + 1,
-            'group': np.stack(
-                (group_level_0, self.group_id, self.agent_id), axis=-1
-            )
+            'group': self.group_id
         }
         y = tf.constant(self.rating, dtype=K.floatx())
 
@@ -681,6 +653,10 @@ class RateObservations(RateTrials):
         stimulus_set = f["stimulus_set"][()]
         rating = f["rating"][()]
         group_id = f["group_id"][()]
+
+        # Patch for old saving assumptions.
+        if group_id.ndim == 1:
+            group_id = np.expand_dims(group_id, axis=1)
 
         # For backwards compatability.
         if "weight" in f:

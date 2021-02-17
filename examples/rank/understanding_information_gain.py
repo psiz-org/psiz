@@ -80,7 +80,7 @@ def main():
         eligable_list = np.arange(model.n_stimuli, dtype=np.int32)
         stimulus_set = candidate_list(eligable_list, n_reference)
         n_candidate = stimulus_set.shape[0]
-        group = np.zeros(n_candidate)
+        group = np.zeros([n_candidate, 1])
         docket = psiz.trials.RankDocket(
             stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
         )

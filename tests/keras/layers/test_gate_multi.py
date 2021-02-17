@@ -105,7 +105,7 @@ def kernel_subnets():
 
 
 def test_subnet_method(kernel_subnets):
-    group_layer = GateMulti(subnets=kernel_subnets, group_col=1)
+    group_layer = GateMulti(subnets=kernel_subnets, group_col=0)
     group_layer.build([[None, 3], [None, 3], [None, 3]])
 
     subnet_0 = group_layer.subnets[0]
@@ -135,7 +135,7 @@ def test_subnet_method(kernel_subnets):
 
 
 def test_kernel_call(kernel_subnets, paired_inputs_v0, group_v0):
-    group_layer = GateMulti(subnets=kernel_subnets, group_col=1)
+    group_layer = GateMulti(subnets=kernel_subnets, group_col=0)
     outputs = group_layer(
         [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
     )
@@ -169,7 +169,7 @@ def test_call_kernel_empty_branch(paired_inputs_v0, group_3g_empty_v0):
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = GateMulti(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
     outputs = kernel_group(
@@ -179,7 +179,7 @@ def test_call_kernel_empty_branch(paired_inputs_v0, group_3g_empty_v0):
 
 def test_kernel_output_shape(kernel_subnets, paired_inputs_v0, group_v0):
     """Test output_shape method."""
-    group_layer = GateMulti(subnets=kernel_subnets, group_col=1)
+    group_layer = GateMulti(subnets=kernel_subnets, group_col=0)
 
     input_shape = [
         tf.TensorShape(tf.shape(paired_inputs_v0[0])),

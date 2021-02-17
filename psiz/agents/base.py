@@ -37,12 +37,11 @@ class Agent(object):
         """Initialize."""
 
     @abstractmethod
-    def simulate(self, docket, session_id=None, batch_size=None):
+    def simulate(self, docket, batch_size=None):
         """Return simulated trials.
 
         Arguments:
             docket: A trial docket.
-            session_id (optional): A session ID.
             batch_size (optional): The batch size.
 
         Returns:

@@ -214,10 +214,8 @@ class RankDocket(RankTrials):
         if group is None:
             group = np.zeros([self.n_trial, 1], dtype=np.int32)
         else:
-            if group.ndim == 1:
-                group = np.expand_dims(group, axis=1)
-            group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)
-            group = np.hstack([group_level_0, group])
+            group = self._check_group_id(group)
+
         # Return tensorflow dataset.
         if all_outcomes:
             stimulus_set = self.all_outcomes()

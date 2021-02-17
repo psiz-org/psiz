@@ -25,10 +25,9 @@ def test_generate_group_matrix():
     """Test generate_group_matrix."""
     n_row = 3
 
-    # Test no hierarchy.
-    groups = []
+    # Test default.
     group_matrix = psiz.utils.generate_group_matrix(
-        n_row, groups=groups
+        n_row
     )
     desired_group_matrix = np.array([
         [0],
@@ -40,7 +39,7 @@ def test_generate_group_matrix():
     )
 
     # Test one-level hierarchy.
-    groups = [0]
+    groups = [0, 0]
     group_matrix = psiz.utils.generate_group_matrix(
         n_row, groups=groups
     )
@@ -54,7 +53,7 @@ def test_generate_group_matrix():
     )
 
     # Test three-level hierarchy.
-    groups = [6, 7, 3]
+    groups = [0, 6, 7, 3]
     group_matrix = psiz.utils.generate_group_matrix(
         n_row, groups=groups
     )

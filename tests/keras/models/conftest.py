@@ -81,7 +81,7 @@ def ds_rank_obs_2g():
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.array((0, 0, 1, 1), dtype=np.int32)
+    group_id = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     obs = psiz.trials.RankObservations(
         stimulus_set, n_select=n_select, group_id=group_id
@@ -215,7 +215,7 @@ def rank_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1], group_col=1
+        subnets=[kernel_0, kernel_1], group_col=0
     )
 
     behavior = psiz.keras.layers.RankBehavior()
@@ -280,7 +280,7 @@ def ds_rate_obs_2g():
         (3, 17)
     ), dtype=np.int32)
     rating = np.array([0.1, .4, .8, .9])
-    group_id = np.array((0, 0, 1, 1), dtype=np.int32)
+    group_id = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     obs = psiz.trials.RateObservations(
         stimulus_set, rating, group_id=group_id
@@ -363,7 +363,7 @@ def rate_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1], group_col=1
+        subnets=[kernel_0, kernel_1], group_col=0
     )
 
     behavior = psiz.keras.layers.RateBehavior()

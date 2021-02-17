@@ -81,7 +81,7 @@ def ds_rank_obs_3g():
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.array((0, 0, 1, 2), dtype=np.int32)
+    group_id = np.array(([0], [0], [1], [2]), dtype=np.int32)
 
     obs = psiz.trials.RankObservations(
         stimulus_set, n_select=n_select, group_id=group_id
@@ -140,7 +140,7 @@ def rank_3g_mle_v2():
     kernel_1 = build_mle_kernel(shared_similarity, n_dim)
     kernel_2 = build_mle_kernel(shared_similarity, n_dim)
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
     model = psiz.keras.models.Rank(
@@ -302,7 +302,7 @@ def rank_3g_vi_v2():
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
     model = psiz.keras.models.Rank(
@@ -354,7 +354,7 @@ def rank_3g_vi_v3():
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=1
+        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
     model = psiz.keras.models.Rank(

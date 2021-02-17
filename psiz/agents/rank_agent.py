@@ -35,45 +35,36 @@ class RankAgent(Agent):
     Attributes:
         model: A PsychologicalEmbedding object that supplies a
             similarity function and embedding points.
-        group_id: An integer indicating which set of attention weights
-            to use when simulating judgments.
+        groups: Array of integers indicating group membership
+            information.
 
     Methods:
         simulate: Stochastically simulate similarity judgments.
 
     """
 
-    def __init__(self, model, group_id=0, agent_id=0):
+    def __init__(self, model, groups=[]):
         """Initialize.
 
         Arguments:
             model: A concrete instance of a PsychologicalEmedding
                 object.
-            group_id (optional): If the provided embedding was inferred
-                for more than one group, an index can be provided to
-                indicate which set of attention weights should be used.
-            agent_id: An integer array indicating the agent ID of a
-                trial. It is assumed that all IDs are non-negative and
-                that observations with the same agent ID were judged by
-                a single agent.
-                shape = (n_trial,)
+            groups (optional): Array-like integers indicating group
+                membership information. For example, `[4, 3]` indicates
+                that the first optional column has the value 4 and the
+                second optional column has the value 3.
 
         """
         self.model = model
-        self.group_id = group_id
-        self.agent_id = agent_id
+        self.groups = groups
 
-    def simulate(self, docket, session_id=None, batch_size=None):
+    def simulate(self, docket, batch_size=None):
         """Stochastically simulate similarity judgments.
 
         Arguments:
             docket: A RankDocket object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
-            session_id: An integer array indicating the session ID of a
-                trial. It is assumed that all IDs are non-negative.
-                Trials with different session IDs were obtained during
-                different sessions.
             batch_size (optional): If None, `batch_size` is equal to
                 the total number of trials.
 
@@ -85,12 +76,14 @@ class RankAgent(Agent):
         if batch_size is None:
             batch_size = docket.n_trial
 
-        agent_id = self.agent_id * np.ones((docket.n_trial), dtype=np.int32)
-        group_id = self.group_id * np.ones((docket.n_trial), dtype=np.int32)
+        if len(self.groups) == 0:
+            group_matrix = None
+        else:
+            group_matrix = np.expand_dims(self.groups, axis=0)
+            group_matrix = np.repeat(group_matrix, docket.n_trial, axis=0)
 
         # Create TF dataset.
-        group = np.stack((group_id, agent_id), axis=-1)
-        ds_docket = docket.as_dataset(group, all_outcomes=True).batch(
+        ds_docket = docket.as_dataset(group_matrix, all_outcomes=True).batch(
             batch_size, drop_remainder=False
         )
 
@@ -118,7 +111,7 @@ class RankAgent(Agent):
             stimulus_set,
             n_select=docket.n_select,
             is_ranked=docket.is_ranked,
-            group_id=group_id, agent_id=agent_id, session_id=session_id
+            group_id=group_matrix
         )
         return obs
 

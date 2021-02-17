@@ -29,7 +29,7 @@ def test_birds_12(tmpdir):
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
-    assert type(obs) is psiz.trials.similarity.rank.RankObservations
+    assert type(obs) is psiz.trials.similarity.rank.rank_observations.RankObservations
     assert obs.n_trial == 12253
     assert obs.max_n_reference == 8
     # Spot check obs.
@@ -59,7 +59,7 @@ def test_birds_16(tmpdir):
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
-    assert type(obs) is psiz.trials.similarity.rank.RankObservations
+    assert type(obs) is psiz.trials.similarity.rank.rank_observations.RankObservations
     assert obs.n_trial == 16292
     assert obs.max_n_reference == 8
     # Spot check obs.
@@ -92,7 +92,7 @@ def test_skin_lesions(tmpdir):
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
-    assert type(obs) is psiz.trials.similarity.rank.RankObservations
+    assert type(obs) is psiz.trials.similarity.rank.rank_observations.RankObservations
     assert obs.n_trial == 6726
     assert obs.max_n_reference == 8
     # Spot check obs.
@@ -122,7 +122,7 @@ def test_rocks(tmpdir):
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
-    assert type(obs) is psiz.trials.similarity.rank.RankObservations
+    assert type(obs) is psiz.trials.similarity.rank.rank_observations.RankObservations
     assert obs.n_trial == 10798
     assert obs.max_n_reference == 8
     # Spot check obs.
@@ -152,7 +152,7 @@ def test_ilscrc_val_v1(tmpdir):
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
-    assert type(obs) is psiz.trials.similarity.rank.RankObservations
+    assert type(obs) is psiz.trials.similarity.rank.rank_observations.RankObservations
     assert obs.n_trial == 25273
     assert obs.max_n_reference == 8
     # Spot check obs.
@@ -182,7 +182,7 @@ def test_ilscrc_val_v2(tmpdir):
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
-    assert type(obs) is psiz.trials.similarity.rank.RankObservations
+    assert type(obs) is psiz.trials.similarity.rank.rank_observations.RankObservations
     assert obs.n_trial == 384277
     assert obs.max_n_reference == 8
     # Spot check obs.

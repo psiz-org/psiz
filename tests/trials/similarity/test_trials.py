@@ -25,7 +25,6 @@ Todo:
         saved file.
     * Test `weights` initialization, subset, stacking, saving, loading
     * Test `rt_ms` initialization, subset, stacking, saving, loading
-    * Test `agent_id` initialization, subset, stacking, saving, loading
 
 """
 
@@ -40,7 +39,9 @@ from psiz.agents import RankAgent
 import psiz.keras.models
 import psiz.keras.layers
 
-from psiz.trials.similarity.rank import _possible_rank_outcomes
+from psiz.trials.similarity.rank.rank_docket import RankDocket
+from psiz.trials.similarity.rank.rank_observations import RankObservations
+from psiz.trials.similarity.rank.rank_trials import RankTrials
 
 
 @pytest.fixture(scope="module")
@@ -80,10 +81,14 @@ def setup_docket_0():
 def setup_docket_1():
     """
     """
-    stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
-                            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        ), dtype=np.int32
+    )
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
@@ -113,22 +118,26 @@ def setup_docket_1():
 def setup_obs_0():
     """
     """
-    stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
-                            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        ), dtype=np.int32
+    )
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.array([0, 0, 0, 0], dtype=np.int32)
+    group_id = np.zeros([n_trial, 1], dtype=np.int32)
     configurations = pd.DataFrame(
         {
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
             'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'group_id': np.array([0, 0, 0], dtype=np.int32),
             'session_id': np.array([0, 0, 0], dtype=np.int32),
+            'group_id_0': np.array([0, 0, 0], dtype=np.int32),
             'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
@@ -148,23 +157,27 @@ def setup_obs_0():
 def setup_obs_1():
     """
     """
-    stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
-                            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        ), dtype=np.int32
+    )
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.array((0, 0, 1, 1), dtype=np.int32)
+    group_id = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     configurations = pd.DataFrame(
         {
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
             'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'group_id': np.array([0, 1, 1], dtype=np.int32),
             'session_id': np.array([0, 0, 0], dtype=np.int32),
+            'group_id_0': np.array([0, 1, 1], dtype=np.int32),
             'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
@@ -221,7 +234,7 @@ def ground_truth(n_stimuli):
     )
 
     kernel_group = psiz.keras.layers.GateMulti(
-        subnets=[kernel_0, kernel_1], group_col=1
+        subnets=[kernel_0, kernel_1], group_col=0
     )
 
     model = psiz.keras.models.Rank(
@@ -578,7 +591,8 @@ class TestObservations:
     def test_configurations_0(self, setup_obs_0):
         pd.testing.assert_frame_equal(
             setup_obs_0['configurations'],
-            setup_obs_0['obs'].config_list)
+            setup_obs_0['obs'].config_list
+        )
 
     def test_configuration_id_0(self, setup_obs_0):
         np.testing.assert_array_equal(
@@ -621,17 +635,17 @@ class TestObservations:
         np.testing.assert_array_equal(
             setup_obs_1['group_id'], obs.group_id)
         # Test setting group_id using scalar.
-        new_group_id_0 = 3
+        new_group_id_0 = np.array(([3], [3], [3], [3]), dtype=np.int32)
         obs.set_group_id(new_group_id_0)
-        expected_group_id_0 = np.array((3, 3, 3, 3), dtype=np.int32)
+        expected_group_id_0 = np.array(([3], [3], [3], [3]), dtype=np.int32)
         np.testing.assert_array_equal(expected_group_id_0, obs.group_id)
         # Test setting group_id using correct-sized array.
-        new_group_id_1 = np.array((1, 1, 2, 2), dtype=np.int32)
+        new_group_id_1 = np.array(([1], [1], [2], [2]), dtype=np.int32)
         obs.set_group_id(new_group_id_1)
-        expected_group_id_1 = np.array((1, 1, 2, 2), dtype=np.int32)
+        expected_group_id_1 = np.array(([1], [1], [2], [2]), dtype=np.int32)
         np.testing.assert_array_equal(expected_group_id_1, obs.group_id)
         # Test setting group_id using incorrect-sized array.
-        new_group_id_2 = np.array((1, 1, 2), dtype=np.int32)
+        new_group_id_2 = np.array(([1], [1], [2]), dtype=np.int32)
         with pytest.raises(Exception) as e_info:
             obs.set_group_id(new_group_id_2)
 
@@ -668,7 +682,6 @@ class TestStack:
 
     def test_stack_same_config(self):
         """Test stack method with same configuration."""
-        tf.config.run_functions_eagerly(True)  # TODO
         n_stimuli = 10
         model_truth = ground_truth(n_stimuli)
 
@@ -698,8 +711,8 @@ class TestStack:
         np.testing.assert_array_equal(
             double_trials.is_ranked[n_trial:], docket.is_ranked)
 
-        agent_novice = RankAgent(model_truth, group_id=0)
-        agent_expert = RankAgent(model_truth, group_id=1)
+        agent_novice = RankAgent(model_truth, groups=[0])
+        agent_expert = RankAgent(model_truth, groups=[1])
         obs_novice = agent_novice.simulate(docket)
         obs_expert = agent_expert.simulate(docket)
         obs_all = trials.stack((obs_novice, obs_expert))
@@ -833,7 +846,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = RankTrials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array(((0, 1), (1, 0)))
         np.testing.assert_array_equal(po, correct)
@@ -844,7 +857,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = RankTrials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
@@ -857,7 +870,7 @@ class TestPossibleOutcomes:
         n_select = 2 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = RankTrials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
@@ -874,7 +887,7 @@ class TestPossibleOutcomes:
         n_select = 1 * np.ones((2))
         tasks = trials.RankDocket(stimulus_set, n_select=n_select)
 
-        po = _possible_rank_outcomes(tasks.config_list.iloc[0])
+        po = RankTrials._possible_rank_outcomes(tasks.config_list.iloc[0])
 
         correct = np.array((
             (0, 1, 2, 3, 4, 5, 6, 7),

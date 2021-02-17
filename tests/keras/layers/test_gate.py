@@ -213,7 +213,7 @@ def emb_inputs_v1():
 
 
 def test_subnet_method(emb_subnets_determ):
-    group_layer = Gate(subnets=emb_subnets_determ, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_determ, group_col=0)
     group_layer.build([[None, None], [None, None]])
 
     subnet_0 = group_layer.subnets[0]
@@ -368,7 +368,7 @@ def test_emb_call_empty_branch(
 
 def test_emb_serialization(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     # Build group-specific layer.
-    group_layer = Gate(subnets=emb_subnets_dist_rank1, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_dist_rank1, group_col=0)
 
     # Get configuration.
     config = group_layer.get_config()

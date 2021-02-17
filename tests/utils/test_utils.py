@@ -83,11 +83,11 @@ def test_pairwise_matrix(rank_2g_mle_determ):
     ))
 
     ds_pairs_0, ds_info_0 = psiz.utils.pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[0]
+        n_stimuli, elements='all', mask_zero=True, groups=[0]
     )
 
     ds_pairs_1, ds_info_1 = psiz.utils.pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[1]
+        n_stimuli, elements='all', mask_zero=True, groups=[1]
     )
 
     computed_simmat0 = psiz.utils.pairwise_similarity(

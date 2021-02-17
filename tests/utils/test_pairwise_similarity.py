@@ -53,11 +53,11 @@ def test_all_nosample(rank_2g_mle_determ):
     ])
 
     ds_pairs_0, ds_info_0 = pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[0]
+        n_stimuli, elements='all', mask_zero=True, groups=[0]
     )
 
     ds_pairs_1, ds_info_1 = pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[1]
+        n_stimuli, elements='all', mask_zero=True, groups=[1]
     )
 
     computed_simmat0 = pairwise_similarity(
@@ -89,11 +89,11 @@ def test_all_1sample(rank_2g_mle_determ):
     ])
 
     ds_pairs_0, ds_info_0 = pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[0]
+        n_stimuli, elements='all', mask_zero=True, groups=[0]
     )
 
     ds_pairs_1, ds_info_1 = pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[1]
+        n_stimuli, elements='all', mask_zero=True, groups=[1]
     )
 
     computed_simmat0 = pairwise_similarity(
@@ -139,11 +139,11 @@ def test_all_3sample(rank_2g_mle_determ):
     ])
 
     ds_pairs_0, ds_info_0 = pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[0]
+        n_stimuli, elements='all', mask_zero=True, groups=[0]
     )
 
     ds_pairs_1, ds_info_1 = pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, group_idx=[1]
+        n_stimuli, elements='all', mask_zero=True, groups=[1]
     )
 
     computed_simmat0 = pairwise_similarity(
@@ -177,11 +177,11 @@ def test_upper_3sample(rank_2g_mle_determ):
     ])
 
     ds_pairs_0, ds_info_0 = pairwise_index_dataset(
-        n_stimuli, elements='upper', mask_zero=True, group_idx=[0]
+        n_stimuli, elements='upper', mask_zero=True, groups=[0]
     )
 
     ds_pairs_1, ds_info_1 = pairwise_index_dataset(
-        n_stimuli, elements='upper', mask_zero=True, group_idx=[1]
+        n_stimuli, elements='upper', mask_zero=True, groups=[1]
     )
 
     computed_simmat0 = pairwise_similarity(
@@ -215,11 +215,11 @@ def test_lower_3sample(rank_2g_mle_determ):
     ])
 
     ds_pairs_0, ds_info_0 = pairwise_index_dataset(
-        n_stimuli, elements='lower', mask_zero=True, group_idx=[0]
+        n_stimuli, elements='lower', mask_zero=True, groups=[0]
     )
 
     ds_pairs_1, ds_info_1 = pairwise_index_dataset(
-        n_stimuli, elements='lower', mask_zero=True, group_idx=[1]
+        n_stimuli, elements='lower', mask_zero=True, groups=[1]
     )
 
     computed_simmat0 = pairwise_similarity(
@@ -259,11 +259,11 @@ def test_off_3sample(rank_2g_mle_determ):
     ])
 
     ds_pairs_0, ds_info_0 = pairwise_index_dataset(
-        n_stimuli, elements='off', mask_zero=True, group_idx=[0]
+        n_stimuli, elements='off', mask_zero=True, groups=[0]
     )
 
     ds_pairs_1, ds_info_1 = pairwise_index_dataset(
-        n_stimuli, elements='off', mask_zero=True, group_idx=[1]
+        n_stimuli, elements='off', mask_zero=True, groups=[1]
     )
 
     computed_simmat0 = pairwise_similarity(

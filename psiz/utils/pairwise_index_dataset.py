@@ -26,9 +26,8 @@ import tensorflow as tf
 from psiz.utils.generate_group_matrix import generate_group_matrix
 
 
-# TODO add tests
 def pairwise_index_dataset(
-        n_data, batch_size=None, elements='upper', group_idx=None,
+        n_data, batch_size=None, elements='upper', groups=None,
         mask_zero=False, subsample=None, seed=252):
     """Assemble pairwise combinations.
 
@@ -39,10 +38,10 @@ def pairwise_index_dataset(
         elements (optional): Determines which combinations in the pairwise
             matrix will be used. Can be one of 'all', 'upper', 'lower',
             or 'off'.
-        group_idx (optional): Array-like integers indicating
-            hierarchical group index information. For example, `[4,3]`
-            indicates that the first hierarchical level has `group_id`
-            4 and the second hierarchical level has `group_id` 3.
+        groups (optional): Array-like integers indicating group
+            membership information. For example, `[4,3]`
+            indicates that the first optional column has a value of 4
+            and the second optional column has a value of 3.
         mask_zero (optional): Whether the zero index should be masked
             and all indices incremented by one.
         subsample: A float ]0,1] indicating the proportion of all pairs
@@ -103,8 +102,8 @@ def pairwise_index_dataset(
         'mask_zero': mask_zero
     }
 
-    if group_idx is not None:
-        group_matrix = generate_group_matrix(n_pair, groups=group_idx)
+    if groups is not None:
+        group_matrix = generate_group_matrix(n_pair, groups=groups)
         group_matrix = tf.constant(group_matrix, dtype=np.int32)
 
         ds = tf.data.Dataset.from_tensor_slices(

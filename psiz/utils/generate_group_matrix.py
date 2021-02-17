@@ -31,10 +31,10 @@ def generate_group_matrix(n_row, groups=[]):
 
     Arguments:
         n_row: The number of rows.
-        groups (optional): Array-like integers indicating
-            hierarchical group index information. For example, `[4, 3]`
-            indicates that the first optional column has the value
-            4 and the second optional column has the value 3.
+        groups (optional): Array-like integers indicating group
+            membership information. For example, `[4, 3]` indicates
+            that the first optional column has the value 4 and the
+            second optional column has the value 3.
 
     Returns:
         group_matrix: The completed group matrix where each column

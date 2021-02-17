@@ -486,10 +486,13 @@ class RankDocket(RankTrials):
             x: A TensorFlow dataset.
 
         """
-        if group.ndim == 1:
-            group = np.expand_dims(group, axis=1)
-        group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)
-        group = np.hstack([group_level_0, group])
+        if group is None:
+            group = np.zeros([self.n_trial, 1], dtype=np.int32)
+        else:
+            if group.ndim == 1:
+                group = np.expand_dims(group, axis=1)
+            group_level_0 = np.zeros([group.shape[0], 1], dtype=np.int32)
+            group = np.hstack([group_level_0, group])
         # Return tensorflow dataset.
         if all_outcomes:
             stimulus_set = self.all_outcomes()
@@ -571,11 +574,11 @@ class RankObservations(RankTrials):
             Each row of the 2D array indicates one potential outcome.
             The values in the rows are the indices of the the reference
             stimuli (as specified in the attribute `stimulus_set`.
-        group_id: An integer array indicating the group membership of
-            each trial. It is assumed that group_id is composed of
+        group_id: An integer 2D array indicating the group membership
+            of each trial. It is assumed that group_id is composed of
             integers from [0, M-1] where M is the total number of
             groups.
-            shape = (n_trial,)
+            shape = (n_trial, n_col)
         agent_id: An integer array indicating the agent ID of a trial.
             It is assumed that all IDs are non-negative and that
             observations with the same agent ID were judged by a single
@@ -627,11 +630,11 @@ class RankObservations(RankTrials):
                 order. See SimilarityTrials.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
-            group_id (optional): An integer array indicating the group
-                membership of each trial. It is assumed that group_id
-                is composed of integers from [0, M-1] where M is the
-                total number of groups.
-                shape = (n_trial,)
+            group_id (optional): An integer 2D array indicating the
+                group membership of each trial. It is assumed that
+                `group_id` is composed of integers from [0, M-1] where
+                M is the total number of groups.
+                shape = (n_trial, n_col)
             agent_id: An integer array indicating the agent ID of a
                 trial. It is assumed that all IDs are non-negative and
                 that observations with the same agent ID were judged by
@@ -654,7 +657,7 @@ class RankObservations(RankTrials):
 
         # Handle default settings.
         if group_id is None:
-            group_id = np.zeros((self.n_trial), dtype=np.int32)
+            group_id = np.zeros((self.n_trial), dtype=np.int32)  # TODO
         else:
             group_id = self._check_group_id(group_id)
         self.group_id = group_id
@@ -874,7 +877,7 @@ class RankObservations(RankTrials):
             self.n_reference, self.n_select, self.is_ranked, group_id)
 
     def set_weight(self, weight):
-        """Override the existing group_ids.
+        """Override the existing weights.
 
         Arguments:
             weight: The new weight. Can be an float or an array

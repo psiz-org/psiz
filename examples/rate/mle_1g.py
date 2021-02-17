@@ -200,19 +200,6 @@ def main():
             os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
         )
 
-    # Save and load the model.
-    model_inferred.save(fp_model, save_traces=False, overwrite=True)
-    loaded_model = tf.keras.models.load_model(fp_model)
-
-    # Check similarity matrix of loaded model.
-    simmat_loaded = np.squeeze(
-            psiz.utils.pairwise_similarity(
-                loaded_model.stimuli, loaded_model.kernel, ds_pairs
-            ).numpy()
-        )
-    rho, _ = pearsonr(simmat_loaded, simmat_infer)
-    print('Inferred vs Saved/loaded R^2: {0:.2f}'.format(rho**2))
-
 
 def exhaustive_docket(n_stimuli):
     """Assemble an exhausitive docket.
@@ -354,10 +341,10 @@ def plot_restart(fig, model_true, model_inferred, r2):
     ax = fig.add_subplot(gs[0, 0])
 
     # Grab stimuli embeddings.
-    z_true = model_true.stimuli.embeddings.numpy()[0]
+    z_true = model_true.stimuli.embeddings.numpy()
     if model_true.stimuli.mask_zero:
         z_true = z_true[1:]
-    z_inferred = model_inferred.stimuli.embeddings.numpy()[0]
+    z_inferred = model_inferred.stimuli.embeddings.numpy()
     if model_inferred.stimuli.mask_zero:
         z_inferred = z_inferred[1:]
 

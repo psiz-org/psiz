@@ -120,7 +120,7 @@ def search(obs, model_spec, search_spec=None, verbose=0):
     # Instantiate the balanced k-fold cross-validation object.
     skf = StratifiedKFold(n_splits=n_split)
     split_list = list(
-        skf.split(obs.stimulus_set, obs.group_id)
+        skf.split(obs.stimulus_set, obs.groups)
     )
 
     # Sweep over the list of candidate dimensions.
@@ -244,7 +244,7 @@ def dimension_search(
                 function.
 
     """
-    n_group = len(np.unique(obs.group_id))
+    n_group = len(np.unique(obs.groups))
 
     if dim_list is None:
         dim_list = range(2, 51)
@@ -265,7 +265,7 @@ def dimension_search(
     # Instantiate the balanced k-fold cross-validation object.
     skf = StratifiedKFold(n_splits=n_split)
     split_list = list(
-        skf.split(obs.stimulus_set, obs.group_id)
+        skf.split(obs.stimulus_set, obs.groups)
     )
 
     # Sweep over the list of candidate dimensions.

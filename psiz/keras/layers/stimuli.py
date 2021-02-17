@@ -68,9 +68,9 @@ class Stimuli(GroupLevel):
         """Call."""
         # Route indices by group membership.
         indices = inputs[0]
-        group_id = inputs[-1][:, self.group_level]
+        groups = inputs[-1][:, self.group_level]
         indices_flat = self._map_embedding_indices(
-            indices, group_id, self.input_dim
+            indices, groups, self.input_dim
         )
         # Make usual call to embedding layer.
         return self.embedding(indices_flat)

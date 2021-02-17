@@ -79,7 +79,7 @@ class Sort(PsychologicalEmbedding):
         # Grab inputs.
         stimulus_set = inputs['stimulus_set']
         is_select = inputs['is_select'][:, 1:, :]
-        group = inputs['group']
+        groups = inputs['groups']
 
         # Inflate coordinates.
         z = self.stimuli([stimulus_set, group])

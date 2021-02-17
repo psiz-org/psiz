@@ -85,7 +85,7 @@ class ActiveRank(DocketGenerator):
 
     def generate(
             self, n_trial, model_list, q_priority=None, r_priority=None,
-            group_id=0, verbose=0):
+            groups=[0], verbose=0):
         """Return a docket of trials based on provided arguments.
 
         Trials are selected in order to maximize expected information
@@ -118,8 +118,8 @@ class ActiveRank(DocketGenerator):
                 non-negative. Values on the diagonal elements are
                 ignored.
                 shape=[n_stimuli, n_stimuli]
-            group_id (optional): An integer indicating the group ID to
-                target for active selection.
+            groups (optional): An integer array indicating the group
+                membership to target for active selection.
             verbose (optional): An integer specifying the verbosity of
                 printed output. If zero, nothing is printed. Increasing
                 integers display an increasing amount of information.
@@ -174,7 +174,7 @@ class ActiveRank(DocketGenerator):
             n_trial, q_priority, n_unique_query
         )
         (docket, expected_ig) = self._select_references(
-            model_list, group_id, query_idx_arr, query_idx_count_arr,
+            model_list, groups, query_idx_arr, query_idx_count_arr,
             q_priority, r_priority, verbose
         )
         data = {
@@ -222,7 +222,7 @@ class ActiveRank(DocketGenerator):
         return query_idx_arr, query_idx_count_arr
 
     def _select_references(
-            self, model_list, group_id, query_idx_arr, query_idx_count_arr,
+            self, model_list, groups, query_idx_arr, query_idx_count_arr,
             q_priority, r_priority, verbose):
         """Determine references for all requested query stimuli."""
         n_query = query_idx_arr.shape[0]
@@ -238,7 +238,7 @@ class ActiveRank(DocketGenerator):
         for i_query in range(n_query):
             r_priority_q = r_priority[query_idx_arr[i_query]]
             docket_q, expected_ig_q = _select_query_references(
-                i_query, model_list, group_id, query_idx_arr,
+                i_query, model_list, groups, query_idx_arr,
                 query_idx_count_arr,
                 self.n_reference, self.n_select, self.n_candidate,
                 r_priority_q, self.batch_size
@@ -262,7 +262,7 @@ class ActiveRank(DocketGenerator):
 
 
 def _select_query_references(
-        i_query, model_list, group_id, query_idx_arr, query_idx_count_arr,
+        i_query, model_list, groups, query_idx_arr, query_idx_count_arr,
         n_reference, n_select, n_candidate, r_priority_q, batch_size):
     """Determine query references."""
     query_idx = query_idx_arr[i_query]
@@ -284,8 +284,11 @@ def _select_query_references(
         ref_idx_eligable, (n_candidate, n_reference), ref_prob
     )
     docket = RankDocket(stimulus_set, n_select=n_select)
-    group = group_id * np.ones(n_candidate)
-    ds_docket = docket.as_dataset(group).batch(
+
+    group_matrix = np.expand_dims(groups, axis=0)
+    group_matrix = np.repeat(group_matrix, n_row, axis=0)
+
+    ds_docket = docket.as_dataset(group_matrix).batch(
         batch_size, drop_remainder=False
     )
 

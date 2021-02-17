@@ -197,11 +197,11 @@ class RankDocket(RankTrials):
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
-    def as_dataset(self, group, all_outcomes=True):
+    def as_dataset(self, groups, all_outcomes=True):
         """Return TensorFlow dataset.
 
         Arguments:
-            group: ND array indicating group membership information for
+            groups: ND array indicating group membership information for
                 each trial.
             all_outcomes (optional): Boolean indicating whether all
                 possible outcomes (along third dimension) should be
@@ -211,10 +211,10 @@ class RankDocket(RankTrials):
             x: A TensorFlow dataset.
 
         """
-        if group is None:
-            group = np.zeros([self.n_trial, 1], dtype=np.int32)
+        if groups is None:
+            groups = np.zeros([self.n_trial, 1], dtype=np.int32)
         else:
-            group = self._check_group_id(group)
+            groups = self._check_groups(groups)
 
         # Return tensorflow dataset.
         if all_outcomes:
@@ -227,7 +227,7 @@ class RankDocket(RankTrials):
                     np.expand_dims(self.is_select(compress=False), axis=2),
                     dtype=tf.bool
                 ),
-                'group': tf.constant(group, dtype=tf.int32)
+                'groups': tf.constant(groups, dtype=tf.int32)
             }
         else:
             stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
@@ -237,7 +237,7 @@ class RankDocket(RankTrials):
                     np.expand_dims(self.is_select(compress=False), axis=2),
                     dtype=tf.bool
                 ),
-                'group': tf.constant(group, dtype=tf.int32)
+                'groups': tf.constant(groups, dtype=tf.int32)
             }
         return tf.data.Dataset.from_tensor_slices((x))
 

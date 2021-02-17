@@ -81,10 +81,10 @@ def ds_rank_obs_3g():
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.array(([0], [0], [1], [2]), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [2]), dtype=np.int32)
 
     obs = psiz.trials.RankObservations(
-        stimulus_set, n_select=n_select, group_id=group_id
+        stimulus_set, n_select=n_select, groups=groups
     )
     ds_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
 

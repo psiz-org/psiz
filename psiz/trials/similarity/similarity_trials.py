@@ -33,11 +33,7 @@ TODO:
     * Add SortDocket class
     * Add SortObservations class
     * Add Observations "interface" which requires `as_dataset()` method
-        which returns a tf.data.Dataset object, agent_id, group_id, and
-        session_id.
-    * MAYBE restructure group_id and agent_id. If we wanted to allow
-    for arbitrary hierarchical models, maybe better off making
-    group_id a 2D array of shape=(n_trial, n_group_level)
+        which returns a tf.data.Dataset object.
 
 """
 
@@ -139,25 +135,25 @@ class SimilarityTrials(metaclass=ABCMeta):
             ))
         return stimulus_set.astype(np.int32)
 
-    def _check_group_id(self, group_id):
-        """Check the argument group_id."""
-        group_id = group_id.astype(np.int32)
-        if not (group_id.ndim == 2):
+    def _check_groups(self, groups):
+        """Check the argument groups."""
+        groups = groups.astype(np.int32)
+        if not (groups.ndim == 2):
             raise ValueError((
-                "The argument 'group_id' must be a rank 2 ND array."))
+                "The argument 'groups' must be a rank 2 ND array."))
         # Check n_trial shape agreement.
-        if not (group_id.shape[0] == self.n_trial):
+        if not (groups.shape[0] == self.n_trial):
             raise ValueError((
-                "The argument 'group_id' must have the same length as the "
+                "The argument 'groups' must have the same length as the "
                 "number of rows in the argument 'stimulus_set'."))
         # Check lowerbound support limit.
-        bad_locs = group_id < 0
+        bad_locs = groups < 0
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
             raise ValueError((
-                "The parameter 'group_id' contains integers less than 0. "
+                "The parameter 'groups' contains integers less than 0. "
                 "Found {0} bad trial(s).").format(n_bad))
-        return group_id
+        return groups
 
     @abstractmethod
     def _set_configuration_data(self, *args):
@@ -224,13 +220,13 @@ class SimilarityTrials(metaclass=ABCMeta):
         n_present = np.sum(self.is_present(), axis=1)
         return n_present.astype(dtype=np.int32)
 
-    def _split_group_id_columns(self, group_id):
-        """Split 2D `group_id` into separate columns."""
+    def _split_groups_columns(self, groups):
+        """Split 2D `groups` into separate columns."""
         d = {}
-        n_col = group_id.shape[1]
+        n_col = groups.shape[1]
         for i_col in range(n_col):
-            dkey = 'group_id_{0}'.format(i_col)
-            d[dkey] = group_id[:, i_col]
+            dkey = 'groups_{0}'.format(i_col)
+            d[dkey] = groups[:, i_col]
         return d
 
     def _find_trials_matching_config(self, row):
@@ -243,11 +239,11 @@ class SimilarityTrials(metaclass=ABCMeta):
         """
         bidx = np.ones([self.n_trial], dtype=bool)
         for index, value in row.items():
-            if 'group_id' in index:
-                # Must handle group_id separately.
+            if 'groups' in index:
+                # Must handle groups separately.
                 parts = index.split('_')
                 group_col = int(parts[-1])
-                bidx_key = np.equal(self.group_id[:, group_col], value)
+                bidx_key = np.equal(self.groups[:, group_col], value)
             else:
                 bidx_key = np.equal(getattr(self, index), value)
             # Determine intersection.

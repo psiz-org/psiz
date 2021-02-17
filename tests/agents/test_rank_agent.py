@@ -17,7 +17,7 @@
 
 Todo:
     - test outcome_idx_list
-    - test resultant group_id of judged trials
+    - test resultant groups of judged trials
     - test simulate and _select for a Trial object with different
         configurations.
 

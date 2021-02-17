@@ -70,7 +70,7 @@ class Rank(PsychologicalEmbedding):
                 is_select: dtype=tf.bool, the shape implies the
                     maximum number of selected stimuli in the data
                     shape=(batch_size, n_max_select, n_outcome)
-                group: dtype=tf.int32, Integers indicating the
+                groups: dtype=tf.int32, Integers indicating the
                     group membership of a trial.
                     shape=(batch_size, k)
 
@@ -78,7 +78,7 @@ class Rank(PsychologicalEmbedding):
         # Grab inputs.
         stimulus_set = inputs['stimulus_set']
         is_select = inputs['is_select'][:, 1:, :]
-        group = inputs['group']
+        groups = inputs['groups']
 
         # Define some useful variables before manipulating inputs.
         max_n_reference = tf.shape(stimulus_set)[-2] - 1
@@ -93,7 +93,7 @@ class Rank(PsychologicalEmbedding):
         # Enbed stimuli indices in n-dimensional space:
         # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome, n_dim])
         if self._use_group['stimuli']:
-            z = self.stimuli([stimulus_set, group])
+            z = self.stimuli([stimulus_set, groups])
         else:
             z = self.stimuli(stimulus_set)
 
@@ -109,7 +109,7 @@ class Rank(PsychologicalEmbedding):
         # Pass through similarity kernel.
         # TensorShape([batch_size, sample_size, n_ref, n_outcome])
         if self._use_group['kernel']:
-            sim_qr = self.kernel([z_q, z_r, group])
+            sim_qr = self.kernel([z_q, z_r, groups])
         else:
             sim_qr = self.kernel([z_q, z_r])
 
@@ -136,7 +136,7 @@ class Rank(PsychologicalEmbedding):
 
         # Compute probability of different behavioral outcomes.
         if self._use_group['behavior']:
-            probs = self.behavior([sim_qr, is_select, is_outcome, group])
+            probs = self.behavior([sim_qr, is_select, is_outcome, groups])
         else:
             probs = self.behavior([sim_qr, is_select, is_outcome])
 

@@ -58,11 +58,11 @@ class RateObservations(RateTrials):
             shape = (n_trial,)
         config_list: A DataFrame object describing the unique trial
             configurations.
-        group_id: An integer array indicating the group membership of
-            each trial. It is assumed that group_id is composed of
+        groups: An integer 2D array indicating the group membership
+            of each trial. It is assumed that `groups` is composed of
             integers from [0, M-1] where M is the total number of
-            groups.
-            shape = (n_trial,)
+            groups for a particular column.
+            shape = (n_trial, n_col)
         agent_id: An integer array indicating the agent ID of a trial.
             It is assumed that all IDs are non-negative and that
             observations with the same agent ID were judged by a single
@@ -81,18 +81,18 @@ class RateObservations(RateTrials):
 
     Notes:
         Unique configurations and configuration IDs are determined by
-            'group_id' in addition to the usual 'n_present'.
+            'groups' in addition to the usual 'n_present'.
 
     Methods:
         subset: Return a subset of judged trials given an index.
-        set_group_id: Override the group ID of all trials.
+        set_groups: Override the group ID of all trials.
         set_weight: Override the weight of all trials.
         save: Save the observations data structure to disk.
 
     """
 
     def __init__(
-            self, stimulus_set, rating, group_id=None, agent_id=None,
+            self, stimulus_set, rating, groups=None, agent_id=None,
             session_id=None, weight=None, rt_ms=None):
         """Initialize.
 
@@ -102,11 +102,11 @@ class RateObservations(RateTrials):
             stimulus_set: The order of indices is not important.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
-            group_id (optional): An integer array indicating the group
-                membership of each trial. It is assumed that group_id
-                is composed of integers from [0, M-1] where M is the
-                total number of groups.
-                shape = (n_trial,)
+            groups (optional): An integer 2D array indicating the
+                group membership of each trial. It is assumed that
+                `groups` is composed of integers from [0, M-1] where
+                M is the total number of groups.
+                shape = (n_trial, n_col)
             agent_id: An integer array indicating the agent ID of a
                 trial. It is assumed that all IDs are non-negative and
                 that observations with the same agent ID were judged by
@@ -129,11 +129,11 @@ class RateObservations(RateTrials):
         self.rating = np.asarray(rating, dtype=np.float32)
 
         # Handle default settings.
-        if group_id is None:
-            group_id = np.zeros([self.n_trial, 1], dtype=np.int32)
+        if groups is None:
+            groups = np.zeros([self.n_trial, 1], dtype=np.int32)
         else:
-            group_id = self._check_group_id(group_id)
-        self.group_id = group_id
+            groups = self._check_groups(groups)
+        self.groups = groups
 
         if agent_id is None:
             agent_id = np.zeros((self.n_trial), dtype=np.int32)
@@ -160,7 +160,7 @@ class RateObservations(RateTrials):
         self.rt_ms = rt_ms
 
         # Determine unique display configurations.
-        self._set_configuration_data(self.n_present, group_id)
+        self._set_configuration_data(self.n_present, groups)
 
     def _check_agent_id(self, agent_id):
         """Check the argument agent_id."""
@@ -228,12 +228,12 @@ class RateObservations(RateTrials):
         """
         return RateObservations(
             self.stimulus_set[index, :], self.rating[index, :],
-            group_id=self.group_id[index], agent_id=self.agent_id[index],
+            groups=self.groups[index], agent_id=self.agent_id[index],
             session_id=self.session_id[index], weight=self.weight[index],
             rt_ms=self.rt_ms[index]
         )
 
-    def _set_configuration_data(self, n_present, group_id, session_id=None):
+    def _set_configuration_data(self, n_present, groups, session_id=None):
         """Generate a unique ID for each trial configuration.
 
         Helper function that generates a unique ID for each of the
@@ -243,12 +243,8 @@ class RateObservations(RateTrials):
             n_present: An integer array indicating the number of
                 stimuli present in each trial.
                 shape = (n_trial,)
-            group_id: An integer array indicating the group membership
-                of each trial. It is assumed that group is composed of
-                integers from [0, M-1] where M is the total number of
-                groups. Separate attention weights are inferred for
-                each group.
-                shape = (n_trial,)
+            groups:
+                shape = (n_trial, n_col)
             session_id: An integer array indicating the session ID of
                 a trial. It is assumed that observations with the same
                 session ID were judged by a single agent. A single
@@ -272,8 +268,8 @@ class RateObservations(RateTrials):
         d = {
             'n_present': n_present, 'session_id': session_id
             }
-        d_group_id = self._split_group_id_columns(group_id)
-        d.update(d_group_id)
+        d_groups = self._split_groups_columns(groups)
+        d.update(d_groups)
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
@@ -287,19 +283,19 @@ class RateObservations(RateTrials):
         self.config_idx = config_idx
         self.config_list = df_config
 
-    def set_group_id(self, group_id):
-        """Override the existing group_ids.
+    def set_groups(self, groups):
+        """Override the existing group IDs.
 
         Arguments:
-            group_id: The new group IDs.
+            groups: The new group IDs.
                 shape=(n_trial, n_col)
 
         """
-        group_id = self._check_group_id(group_id)
-        self.group_id = copy.copy(group_id)
+        groups = self._check_groups(groups)
+        self.groups = copy.copy(groups)
 
         # Re-derive unique display configurations.
-        self._set_configuration_data(self.m_present, group_id)
+        self._set_configuration_data(self.m_present, groups)
 
     def set_weight(self, weight):
         """Override the existing weights.
@@ -326,7 +322,7 @@ class RateObservations(RateTrials):
         f.create_dataset("trial_type", data="RateObservatiosn")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.create_dataset("rating", data=self.rating)
-        f.create_dataset("group_id", data=self.group_id)
+        f.create_dataset("groups", data=self.groups)
         f.create_dataset("agent_id", data=self.agent_id)
         f.create_dataset("session_id", data=self.session_id)
         f.create_dataset("weight", data=self.weight)
@@ -351,11 +347,9 @@ class RateObservations(RateTrials):
         # NOTE: The dimensions of inputs are expanded to have an additional
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
-        group_level_0 = np.zeros([self.group_id.shape[0]], dtype=np.int32)
-
         x = {
             'stimulus_set': self.stimulus_set + 1,
-            'group': self.group_id
+            'groups': self.groups
         }
         y = tf.constant(self.rating, dtype=K.floatx())
 
@@ -392,7 +386,7 @@ class RateObservations(RateTrials):
             trials_list[0].stimulus_set, max_n_present
         )
         rating = trials_list[0].rating
-        group_id = trials_list[0].group_id
+        groups = trials_list[0].groups
         agent_id = trials_list[0].agent_id
         session_id = trials_list[0].session_id
         weight = trials_list[0].weight
@@ -404,14 +398,14 @@ class RateObservations(RateTrials):
                 pad_2d_array(i_trials.stimulus_set, max_n_present)
             ))
             rating = np.hstack((rating, i_trials.rating))
-            group_id = np.hstack((group_id, i_trials.group_id))
+            groups = np.hstack((groups, i_trials.groups))
             agent_id = np.hstack((agent_id, i_trials.agent_id))
             session_id = np.hstack((session_id, i_trials.session_id))
             weight = np.hstack((weight, i_trials.weight))
             rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
 
         trials_stacked = RateObservations(
-            stimulus_set, rating, group_id=group_id, agent_id=agent_id,
+            stimulus_set, rating, groups=groups, agent_id=agent_id,
             session_id=session_id, weight=weight, rt_ms=rt_ms
         )
         return trials_stacked
@@ -427,11 +421,13 @@ class RateObservations(RateTrials):
         f = h5py.File(filepath, "r")
         stimulus_set = f["stimulus_set"][()]
         rating = f["rating"][()]
-        group_id = f["group_id"][()]
-
-        # Patch for old saving assumptions.
-        if group_id.ndim == 1:
-            group_id = np.expand_dims(group_id, axis=1)
+        try:
+            groups = f["groups"][()]
+        except KeyError:
+            groups = f["group_id"][()]
+            # Patch for old saving assumptions.
+            if groups.ndim == 1:
+                groups = np.expand_dims(groups, axis=1)
 
         # For backwards compatability.
         if "weight" in f:
@@ -453,7 +449,7 @@ class RateObservations(RateTrials):
         f.close()
 
         trials = RateObservations(
-            stimulus_set, group_id=group_id, agent_id=agent_id,
+            stimulus_set, groups=groups, agent_id=agent_id,
             session_id=session_id, weight=weight, rt_ms=rt_ms
         )
         return trials

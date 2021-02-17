@@ -252,16 +252,16 @@ def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
 
 
 def compare_models(
-        model_a, model_b, group_id_a=0, group_id_b=0, score='r2',
+        model_a, model_b, groups_a=0, groups_b=0, score='r2',
         elements='upper'):
     """Compare two psychological embeddings.
 
     Arguments:
         model_a:  A psychological embedding model.
         model_b:  A psychological embedding model.
-        group_id_a (optional):  A particular group ID to use when
+        groups_a (optional):  A particular group ID to use when
             computing the similarity matrix for model_a.
-        group_id_b (optional):  A particular group ID to use when
+        groups_b (optional):  A particular group ID to use when
             computing the similarity matrix for model_b.
 
     Returns:
@@ -270,10 +270,10 @@ def compare_models(
 
     """
     def sim_func_a(z_q, z_ref):
-        return model_a.similarity(z_q, z_ref, group_id=group_id_a)
+        return model_a.similarity(z_q, z_ref, groups=groups_a)
 
     def sim_func_b(z_q, z_ref):
-        return model_b.similarity(z_q, z_ref, group_id=group_id_b)
+        return model_b.similarity(z_q, z_ref, groups=groups_b)
 
     simmat_a = pairwise_matrix(sim_func_a, model_a.z)
     simmat_b = pairwise_matrix(sim_func_b, model_b.z)

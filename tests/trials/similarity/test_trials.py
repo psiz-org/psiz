@@ -130,14 +130,14 @@ def setup_obs_0():
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.zeros([n_trial, 1], dtype=np.int32)
+    groups = np.zeros([n_trial, 1], dtype=np.int32)
     configurations = pd.DataFrame(
         {
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
             'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
             'session_id': np.array([0, 0, 0], dtype=np.int32),
-            'group_id_0': np.array([0, 0, 0], dtype=np.int32),
+            'groups_0': np.array([0, 0, 0], dtype=np.int32),
             'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
@@ -147,7 +147,7 @@ def setup_obs_0():
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_select': n_select,
-        'is_ranked': is_ranked, 'group_id': group_id, 'obs': obs,
+        'is_ranked': is_ranked, 'groups': groups, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
         }
@@ -169,7 +169,7 @@ def setup_obs_1():
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
     is_ranked = np.array((True, True, True, True))
-    group_id = np.array(([0], [0], [1], [1]), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     configurations = pd.DataFrame(
         {
@@ -177,18 +177,18 @@ def setup_obs_1():
             'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
             'session_id': np.array([0, 0, 0], dtype=np.int32),
-            'group_id_0': np.array([0, 1, 1], dtype=np.int32),
+            'groups_0': np.array([0, 1, 1], dtype=np.int32),
             'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
         index=[0, 2, 3])
     configuration_id = np.array((0, 0, 1, 2), dtype=np.int32)
 
     obs = trials.RankObservations(
-        stimulus_set, n_select=n_select, group_id=group_id)
+        stimulus_set, n_select=n_select, groups=groups)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_reference': n_reference, 'n_select': n_select,
-        'is_ranked': is_ranked, 'group_id': group_id, 'obs': obs,
+        'is_ranked': is_ranked, 'groups': groups, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
         }
@@ -503,8 +503,8 @@ class TestObservations:
         with pytest.raises(Exception) as e_info:
             obs = trials.RankObservations(stimulus_set)
 
-    def test_invalid_group_id(self):
-        """Test handling of invalid `group_id` argument."""
+    def test_invalid_groups(self):
+        """Test handling of invalid `groups` argument."""
         stimulus_set = np.array((
             (0, 1, 2, -1, -1, -1, -1, -1, -1),
             (9, 12, 7, -1, -1, -1, -1, -1, -1),
@@ -512,14 +512,14 @@ class TestObservations:
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
 
         # Mismatch in number of trials
-        group_id = np.array((0, 0, 1))
+        groups = np.array(([0], [0], [1]))
         with pytest.raises(Exception) as e_info:
-            obs = trials.RankObservations(stimulus_set, group_id=group_id)
+            obs = trials.RankObservations(stimulus_set, groups=groups)
 
         # Below support.
-        group_id = np.array((0, -1, 1, 0))
+        groups = np.array(([0], [-1], [1], [0]))
         with pytest.raises(Exception) as e_info:
-            obs = trials.RankObservations(stimulus_set, group_id=group_id)
+            obs = trials.RankObservations(stimulus_set, groups=groups)
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -629,25 +629,25 @@ class TestObservations:
             setup_obs_1['obs'].config_idx
         )
 
-    def test_set_group_id(self, setup_obs_1):
+    def test_set_groups(self, setup_obs_1):
         obs = setup_obs_1['obs']
         # Test initial configuration.
         np.testing.assert_array_equal(
-            setup_obs_1['group_id'], obs.group_id)
-        # Test setting group_id using scalar.
-        new_group_id_0 = np.array(([3], [3], [3], [3]), dtype=np.int32)
-        obs.set_group_id(new_group_id_0)
-        expected_group_id_0 = np.array(([3], [3], [3], [3]), dtype=np.int32)
-        np.testing.assert_array_equal(expected_group_id_0, obs.group_id)
-        # Test setting group_id using correct-sized array.
-        new_group_id_1 = np.array(([1], [1], [2], [2]), dtype=np.int32)
-        obs.set_group_id(new_group_id_1)
-        expected_group_id_1 = np.array(([1], [1], [2], [2]), dtype=np.int32)
-        np.testing.assert_array_equal(expected_group_id_1, obs.group_id)
-        # Test setting group_id using incorrect-sized array.
-        new_group_id_2 = np.array(([1], [1], [2]), dtype=np.int32)
+            setup_obs_1['groups'], obs.groups)
+        # Test setting groups using scalar.
+        new_groups_0 = np.array(([3], [3], [3], [3]), dtype=np.int32)
+        obs.set_groups(new_groups_0)
+        expected_groups_0 = np.array(([3], [3], [3], [3]), dtype=np.int32)
+        np.testing.assert_array_equal(expected_groups_0, obs.groups)
+        # Test setting groups using correct-sized array.
+        new_groups_1 = np.array(([1], [1], [2], [2]), dtype=np.int32)
+        obs.set_groups(new_groups_1)
+        expected_groups_1 = np.array(([1], [1], [2], [2]), dtype=np.int32)
+        np.testing.assert_array_equal(expected_groups_1, obs.groups)
+        # Test setting groups using incorrect-sized array.
+        new_groups_2 = np.array(([1], [1], [2]), dtype=np.int32)
         with pytest.raises(Exception) as e_info:
-            obs.set_group_id(new_group_id_2)
+            obs.set_groups(new_groups_2)
 
     def test_save_load_file(self, setup_obs_0, tmpdir):
         """Test saving and loading of RankObservations."""
@@ -667,7 +667,7 @@ class TestObservations:
         np.testing.assert_array_equal(
             setup_obs_0['is_ranked'], loaded_obs.is_ranked)
         np.testing.assert_array_equal(
-            setup_obs_0['group_id'], loaded_obs.group_id)
+            setup_obs_0['groups'], loaded_obs.groups)
         pd.testing.assert_frame_equal(
             setup_obs_0['configurations'],
             loaded_obs.config_list)
@@ -734,9 +734,9 @@ class TestStack:
             obs_all.is_ranked[n_trial:], obs_expert.is_ranked)
 
         np.testing.assert_array_equal(
-            obs_all.group_id[0:n_trial], obs_novice.group_id)
+            obs_all.groups[0:n_trial], obs_novice.groups)
         np.testing.assert_array_equal(
-            obs_all.group_id[n_trial:], obs_expert.group_id)
+            obs_all.groups[n_trial:], obs_expert.groups)
 
     def test_stack_different_config(self):
         """Test stack static method with different configurations."""

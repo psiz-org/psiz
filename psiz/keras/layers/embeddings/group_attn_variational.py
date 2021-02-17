@@ -44,7 +44,7 @@ class GroupAttentionVariational(Variational):
     def call(self, inputs):
         """Call.
 
-        Grab `group_id` only.
+        Grab `groups` only.
 
         Arguments:
             inputs: A Tensor denoting a trial's group membership.

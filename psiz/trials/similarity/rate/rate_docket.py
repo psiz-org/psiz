@@ -145,27 +145,27 @@ class RateDocket(RateTrials):
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.close()
 
-    def as_dataset(self, group=None):
+    def as_dataset(self, groups=None):
         """Return TensorFlow dataset.
 
         Arguments:
-            group (optional): ND array indicating group membership
+            groups (optional): ND array indicating group membership
                 information for each trial.
 
         Returns:
             x: A TensorFlow dataset.
 
         """
-        if group is None:
-            group = np.zeros([self.n_trial, 1], dtype=np.int32)
+        if groups is None:
+            groups = np.zeros([self.n_trial, 1], dtype=np.int32)
         else:
-            group = self._check_group_id(group)
+            groups = self._check_groups(groups)
 
         # Return tensorflow dataset.
         stimulus_set = self.stimulus_set + 1
         x = {
             'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
-            'group': tf.constant(group, dtype=tf.int32)
+            'groups': tf.constant(groups, dtype=tf.int32)
         }
         return tf.data.Dataset.from_tensor_slices((x))
 

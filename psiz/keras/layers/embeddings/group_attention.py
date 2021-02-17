@@ -118,10 +118,10 @@ class GroupAttention(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call.
 
-        Inflate weights by `group_id`.
+        Inflate weights by `groups`.
 
         Arguments:
-            inputs: A Tensor denoting `group_id`.
+            inputs: A Tensor denoting `groups`.
 
         """
         output = tf.gather(self.embeddings, inputs)

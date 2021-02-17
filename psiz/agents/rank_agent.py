@@ -111,7 +111,7 @@ class RankAgent(Agent):
             stimulus_set,
             n_select=docket.n_select,
             is_ranked=docket.is_ranked,
-            group_id=group_matrix
+            groups=group_matrix
         )
         return obs
 

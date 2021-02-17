@@ -72,10 +72,10 @@ class RankObservations(RankTrials):
             Each row of the 2D array indicates one potential outcome.
             The values in the rows are the indices of the the reference
             stimuli (as specified in the attribute `stimulus_set`.
-        group_id: An integer 2D array indicating the group membership
-            of each trial. It is assumed that group_id is composed of
+        groups: An integer 2D array indicating the group membership
+            of each trial. It is assumed that `groups` is composed of
             integers from [0, M-1] where M is the total number of
-            groups.
+            groups for a particular column.
             shape = (n_trial, n_col)
         agent_id: An integer array indicating the agent ID of a trial.
             It is assumed that all IDs are non-negative and that
@@ -102,19 +102,19 @@ class RankObservations(RankTrials):
             trial is ranked) and remaining unselected references are
             listed in any order.
         Unique configurations and configuration IDs are determined by
-            'group_id' in addition to the usual 'n_reference',
+            'groups' in addition to the usual 'n_reference',
             'n_select', and 'is_ranked' variables.
 
     Methods:
         subset: Return a subset of judged trials given an index.
-        set_group_id: Override the group ID of all trials.
+        set_groups: Override the group ID of all trials.
         set_weight: Override the weight of all trials.
         save: Save the observations data structure to disk.
 
     """
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None,
-                 group_id=None, agent_id=None, session_id=None, weight=None,
+                 groups=None, agent_id=None, session_id=None, weight=None,
                  rt_ms=None):
         """Initialize.
 
@@ -128,9 +128,9 @@ class RankObservations(RankTrials):
                 order. See SimilarityTrials.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
-            group_id (optional): An integer 2D array indicating the
+            groups (optional): An integer 2D array indicating the
                 group membership of each trial. It is assumed that
-                `group_id` is composed of integers from [0, M-1] where
+                `groups` is composed of integers from [0, M-1] where
                 M is the total number of groups.
                 shape = (n_trial, n_col)
             agent_id: An integer array indicating the agent ID of a
@@ -154,11 +154,11 @@ class RankObservations(RankTrials):
         RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
 
         # Handle default settings.
-        if group_id is None:
-            group_id = np.zeros([self.n_trial, 1], dtype=np.int32)
+        if groups is None:
+            groups = np.zeros([self.n_trial, 1], dtype=np.int32)
         else:
-            group_id = self._check_group_id(group_id)
-        self.group_id = group_id
+            groups = self._check_groups(groups)
+        self.groups = groups
 
         if agent_id is None:
             agent_id = np.zeros((self.n_trial), dtype=np.int32)
@@ -186,7 +186,8 @@ class RankObservations(RankTrials):
 
         # Determine unique display configurations.
         self._set_configuration_data(
-            self.n_reference, self.n_select, self.is_ranked, self.group_id)
+            self.n_reference, self.n_select, self.is_ranked, self.groups
+        )
 
     def _check_agent_id(self, agent_id):
         """Check the argument agent_id."""
@@ -254,13 +255,13 @@ class RankObservations(RankTrials):
         """
         return RankObservations(
             self.stimulus_set[index, :], n_select=self.n_select[index],
-            is_ranked=self.is_ranked[index], group_id=self.group_id[index],
+            is_ranked=self.is_ranked[index], groups=self.groups[index],
             agent_id=self.agent_id[index], session_id=self.session_id[index],
             weight=self.weight[index], rt_ms=self.rt_ms[index]
         )
 
     def _set_configuration_data(
-            self, n_reference, n_select, is_ranked, group_id,
+            self, n_reference, n_select, is_ranked, groups,
             session_id=None):
         """Generate a unique ID for each trial configuration.
 
@@ -277,11 +278,7 @@ class RankObservations(RankTrials):
             is_ranked:  Boolean array indicating which trials had
                 selected references that were ordered.
                 shape = (n_trial,)
-            group_id: An integer array indicating the group membership
-                of each trial. It is assumed that group is composed of
-                integers from [0, M-1] where M is the total number of
-                groups. Separate attention weights are inferred for
-                each group.
+            groups:
                 shape = (n_trial,)
             session_id: An integer array indicating the session ID of
                 a trial. It is assumed that observations with the same
@@ -310,8 +307,8 @@ class RankObservations(RankTrials):
             'n_reference': n_reference, 'n_select': n_select,
             'is_ranked': is_ranked, 'session_id': session_id
         }
-        d_group_id = self._split_group_id_columns(group_id)
-        d.update(d_group_id)
+        d_groups = self._split_groups_columns(groups)
+        d.update(d_groups)
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
@@ -341,20 +338,20 @@ class RankObservations(RankTrials):
         self.config_list = df_config
         self.outcome_idx_list = outcome_idx_list
 
-    def set_group_id(self, group_id):
-        """Override the existing group_ids.
+    def set_groups(self, groups):
+        """Override the existing groups.
 
         Arguments:
-            group_id: The new group IDs.
+            groups: The new group IDs.
                 shape=(n_trial, n_col)
 
         """
-        group_id = self._check_group_id(group_id)
-        self.group_id = copy.copy(group_id)
+        groups = self._check_groups(groups)
+        self.groups = copy.copy(groups)
 
         # Re-derive unique display configurations.
         self._set_configuration_data(
-            self.n_reference, self.n_select, self.is_ranked, group_id
+            self.n_reference, self.n_select, self.is_ranked, groups
         )
 
     def set_weight(self, weight):
@@ -383,7 +380,7 @@ class RankObservations(RankTrials):
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)
-        f.create_dataset("group_id", data=self.group_id)
+        f.create_dataset("groups", data=self.groups)
         f.create_dataset("agent_id", data=self.agent_id)
         f.create_dataset("session_id", data=self.session_id)
         f.create_dataset("weight", data=self.weight)
@@ -415,7 +412,7 @@ class RankObservations(RankTrials):
                 'is_select': np.expand_dims(
                     self.is_select(compress=False), axis=2
                 ),
-                'group': self.group_id
+                'groups': self.groups
             }
             # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
             # that occurred.
@@ -427,7 +424,7 @@ class RankObservations(RankTrials):
                 'is_select': np.expand_dims(
                     self.is_select(compress=False), axis=2
                 ),
-                'group': self.group_id
+                'groups': self.groups
             }
             # NOTE: The outputs `y` indicate a sparse encoding of the outcome
             # that occurred.
@@ -454,11 +451,13 @@ class RankObservations(RankTrials):
         stimulus_set = f["stimulus_set"][()]
         n_select = f["n_select"][()]
         is_ranked = f["is_ranked"][()]
-        group_id = f["group_id"][()]
-
-        # Patch for old saving assumptions.
-        if group_id.ndim == 1:
-            group_id = np.expand_dims(group_id, axis=1)
+        try:
+            groups = f["groups"][()]
+        except KeyError:
+            groups = f["group_id"][()]
+            # Patch for old saving assumptions.
+            if groups.ndim == 1:
+                groups = np.expand_dims(groups, axis=1)
 
         # For backwards compatability.
         if "weight" in f:
@@ -481,7 +480,7 @@ class RankObservations(RankTrials):
 
         trials = RankObservations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            group_id=group_id, agent_id=agent_id, session_id=session_id,
+            groups=groups, agent_id=agent_id, session_id=session_id,
             weight=weight, rt_ms=rt_ms
         )
         return trials
@@ -512,7 +511,7 @@ class RankObservations(RankTrials):
         )
         n_select = trials_list[0].n_select
         is_ranked = trials_list[0].is_ranked
-        group_id = trials_list[0].group_id
+        groups = trials_list[0].groups
         agent_id = trials_list[0].agent_id
         session_id = trials_list[0].session_id
         weight = trials_list[0].weight
@@ -525,7 +524,7 @@ class RankObservations(RankTrials):
             ))
             n_select = np.hstack((n_select, i_trials.n_select))
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
-            group_id = np.vstack((group_id, i_trials.group_id))
+            groups = np.vstack((groups, i_trials.groups))
             agent_id = np.hstack((agent_id, i_trials.agent_id))
             session_id = np.hstack((session_id, i_trials.session_id))
             weight = np.hstack((weight, i_trials.weight))
@@ -533,7 +532,7 @@ class RankObservations(RankTrials):
 
         trials_stacked = RankObservations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            group_id=group_id, agent_id=agent_id, session_id=session_id,
+            groups=groups, agent_id=agent_id, session_id=session_id,
             weight=weight, rt_ms=rt_ms
         )
         return trials_stacked

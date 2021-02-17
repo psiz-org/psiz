@@ -67,14 +67,14 @@ class Rate(PsychologicalEmbedding):
                 stimulus_set: dtype=tf.int32, consisting of the
                     integers on the interval [0, n_stimuli[
                     shape=(batch_size, 2)
-                group: dtype=tf.int32, Integers indicating the
+                groups: dtype=tf.int32, Integers indicating the
                     group membership of a trial.
                     shape=(batch_size, k)
 
         """
         # Grab inputs.
         stimulus_set = inputs['stimulus_set']
-        group = inputs['group']
+        groups = inputs['groups']
 
         # Repeat `stimulus_set` `n_sample` times in a newly inserted
         # axis (axis=1).
@@ -86,7 +86,7 @@ class Rate(PsychologicalEmbedding):
         # Enbed stimuli indices in n-dimensional space.
         # TensorShape([batch_size, n_sample, 2, n_dim])
         if self._use_group['stimuli']:
-            z = self.stimuli([stimulus_set, group])
+            z = self.stimuli([stimulus_set, groups])
         else:
             z = self.stimuli(stimulus_set)
 
@@ -97,13 +97,13 @@ class Rate(PsychologicalEmbedding):
         # Pass through similarity kernel.
         # TensorShape([batch_size, n_sample,])
         if self._use_group['kernel']:
-            sim_01 = self.kernel([z_0, z_1, group])
+            sim_01 = self.kernel([z_0, z_1, groups])
         else:
             sim_01 = self.kernel([z_0, z_1])
 
         # Predict rating of stimulus pair.
         if self._use_group['behavior']:
-            rating = self.behavior([sim_01, group])
+            rating = self.behavior([sim_01, groups])
         else:
             rating = self.behavior([sim_01])
 

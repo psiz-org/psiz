@@ -169,26 +169,25 @@ class AttentionKernel(GroupLevel):
         """
         z_0 = inputs[0]
         z_1 = inputs[1]
-        group = inputs[-1]
+        groups = inputs[-1][:, self.group_level]
 
-        group_idx = group[:, self.group_level]
-        # NOTE: The remainder of the method assumes that `group_idx` is a
+        # NOTE: The remainder of the method assumes that `groups` is a
         # rank-1 tensor.
 
-        # Adjust rank of group_idx by adding singleton axis to match rank of
+        # Adjust rank of groups by adding singleton axis to match rank of
         # z[1:-1], i.e., omitting batch axis and n_dim axis.
         reshape_shape = tf.ones([tf.rank(z_1) - 2], dtype=tf.int32)
-        reshape_shape = tf.concat((tf.shape(group_idx), reshape_shape), axis=0)
-        group_idx = tf.reshape(group_idx, reshape_shape)
+        reshape_shape = tf.concat((tf.shape(groups), reshape_shape), axis=0)
+        groups = tf.reshape(groups, reshape_shape)
 
-        # Tile group_idx to be compatible with `z_1`, again omitting batch
+        # Tile groups to be compatible with `z_1`, again omitting batch
         # axis and n_dim axis. TODO
         # repeats = tf.shape(z_1)[1:-1]
         # repeats = tf.concat([tf.constant([1]), repeats], axis=0)
-        # group_idx = tf.tile(group_idx, repeats)
+        # groups = tf.tile(groups, repeats)
 
         # Embed group indices as attention weights.
-        attention = self.attention(group_idx)
+        attention = self.attention(groups)
 
         # Compute distance between query and references.
         dist_qr = self.distance([z_0, z_1, attention])

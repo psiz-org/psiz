@@ -104,7 +104,7 @@ def pairwise_index_dataset(
     }
 
     if group_idx is not None:
-        group_matrix = generate_group_matrix(n_pair, group_idx=group_idx)
+        group_matrix = generate_group_matrix(n_pair, groups=group_idx)
         group_matrix = tf.constant(group_matrix, dtype=np.int32)
 
         ds = tf.data.Dataset.from_tensor_slices(

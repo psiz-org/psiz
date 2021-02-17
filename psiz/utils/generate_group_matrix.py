@@ -23,7 +23,7 @@ Functions:
 import numpy as np
 
 
-def generate_group_matrix(n_row, group_idx=[]):
+def generate_group_matrix(n_row, groups=[]):
     """Generate group ID data structure.
 
     The first column is reserved and is composed of all zeros.
@@ -31,19 +31,19 @@ def generate_group_matrix(n_row, group_idx=[]):
 
     Arguments:
         n_row: The number of rows.
-        group_idx (optional): Array-like integers indicating
-            hierarchical group index information. For example, `[4,3]`
-            indicates that the first hierarchical level has `group_id`
-            4 and the second hierarchical level has `group_id` 3.
+        groups (optional): Array-like integers indicating
+            hierarchical group index information. For example, `[4, 3]`
+            indicates that the first optional column has the value
+            4 and the second optional column has the value 3.
 
     Returns:
         group_matrix: The completed group matrix where each column
-            corresponds to a group level and each row a datum.
-            shape=(n_row,1+len(group_id))
+            corresponds to a different distinction and each row
+            corresponds to something like number of trials.
+            shape=(n_row, 1+len(groups))
 
     """
-    group_matrix = np.hstack(([0], group_idx))
+    group_matrix = np.hstack(([0], groups))
     group_matrix = np.expand_dims(group_matrix, axis=0)
     group_matrix = np.repeat(group_matrix, n_row, axis=0)
     return group_matrix
-

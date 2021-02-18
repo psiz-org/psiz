@@ -387,7 +387,7 @@ class RankObservations(RankTrials):
         f.create_dataset("rt_ms", data=self.rt_ms)
         f.close()
 
-    def as_dataset(self, all_outcomes=True):
+    def as_dataset(self):
         """Format necessary data as Tensorflow.data.Dataset object.
 
         Returns:
@@ -405,30 +405,18 @@ class RankObservations(RankTrials):
         # NOTE: The dimensions of inputs are expanded to have an additional
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
-        if all_outcomes:
-            stimulus_set = self.all_outcomes()
-            x = {
-                'stimulus_set': stimulus_set + 1,
-                'is_select': np.expand_dims(
-                    self.is_select(compress=False), axis=2
-                ),
-                'groups': self.groups
-            }
-            # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
-            # that occurred.
-            y = np.zeros([self.n_trial, stimulus_set.shape[2]])
-            y[:, 0] = 1
-        else:
-            x = {
-                'stimulus_set': np.expand_dims(self.stimulus_set + 1, axis=2),
-                'is_select': np.expand_dims(
-                    self.is_select(compress=False), axis=2
-                ),
-                'groups': self.groups
-            }
-            # NOTE: The outputs `y` indicate a sparse encoding of the outcome
-            # that occurred.
-            y = np.zeros([self.n_trial])
+        stimulus_set = self.all_outcomes()
+        x = {
+            'stimulus_set': stimulus_set + 1,
+            'is_select': np.expand_dims(
+                self.is_select(compress=False), axis=2
+            ),
+            'groups': self.groups
+        }
+        # NOTE: The outputs `y` indicate a one-hot encoding of the outcome
+        # that occurred.
+        y = np.zeros([self.n_trial, stimulus_set.shape[2]])
+        y[:, 0] = 1
 
         y = tf.constant(y, dtype=K.floatx())
 

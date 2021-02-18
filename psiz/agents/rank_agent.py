@@ -83,7 +83,7 @@ class RankAgent(Agent):
             group_matrix = np.repeat(group_matrix, docket.n_trial, axis=0)
 
         # Create TF dataset.
-        ds_docket = docket.as_dataset(group_matrix, all_outcomes=True).batch(
+        ds_docket = docket.as_dataset(group_matrix).batch(
             batch_size, drop_remainder=False
         )
 

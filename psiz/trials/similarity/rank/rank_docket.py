@@ -197,15 +197,12 @@ class RankDocket(RankTrials):
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
-    def as_dataset(self, groups, all_outcomes=True):
+    def as_dataset(self, groups):
         """Return TensorFlow dataset.
 
         Arguments:
             groups: ND array indicating group membership information for
                 each trial.
-            all_outcomes (optional): Boolean indicating whether all
-                possible outcomes (along third dimension) should be
-                included in returned dataset.
 
         Returns:
             x: A TensorFlow dataset.
@@ -217,28 +214,17 @@ class RankDocket(RankTrials):
             groups = self._check_groups(groups)
 
         # Return tensorflow dataset.
-        if all_outcomes:
-            stimulus_set = self.all_outcomes()
-            x = {
-                'stimulus_set': tf.constant(
-                    stimulus_set + 1, dtype=tf.int32
-                ),
-                'is_select': tf.constant(
-                    np.expand_dims(self.is_select(compress=False), axis=2),
-                    dtype=tf.bool
-                ),
-                'groups': tf.constant(groups, dtype=tf.int32)
-            }
-        else:
-            stimulus_set = np.expand_dims(self.stimulus_set + 1, axis=2)
-            x = {
-                'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
-                'is_select': tf.constant(
-                    np.expand_dims(self.is_select(compress=False), axis=2),
-                    dtype=tf.bool
-                ),
-                'groups': tf.constant(groups, dtype=tf.int32)
-            }
+        stimulus_set = self.all_outcomes()
+        x = {
+            'stimulus_set': tf.constant(
+                stimulus_set + 1, dtype=tf.int32
+            ),
+            'is_select': tf.constant(
+                np.expand_dims(self.is_select(compress=False), axis=2),
+                dtype=tf.bool
+            ),
+            'groups': tf.constant(groups, dtype=tf.int32)
+        }
         return tf.data.Dataset.from_tensor_slices((x))
 
     @classmethod

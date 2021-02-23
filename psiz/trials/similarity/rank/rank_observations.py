@@ -32,7 +32,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from psiz.trials.similarity.rank.rank_trials import RankTrials
-from psiz.utils import pad_2d_array, generate_group_matrix
+from psiz.utils import pad_2d_array
 
 
 class RankObservations(RankTrials):

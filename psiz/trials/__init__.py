@@ -23,3 +23,12 @@ from psiz.trials.similarity.rank.rank_observations import RankObservations
 from psiz.trials.similarity.rate.rate_trials import RateTrials
 from psiz.trials.similarity.rate.rate_docket import RateDocket
 from psiz.trials.similarity.rate.rate_observations import RateObservations
+from psiz.trials.trial_component import TrialComponent
+from psiz.trials.trial_dataset import TrialDataset
+from psiz.trials.contents.content import Content
+from psiz.trials.contents.rank_similarity import RankSimilarity
+from psiz.trials.contents.rate_similarity import RateSimilarity
+from psiz.trials.outcomes.outcome import Outcome
+from psiz.trials.outcomes.continuous import Continuous
+from psiz.trials.outcomes.sparse_categorical import SparseCategorical
+from psiz.trials.unravel_timestep import unravel_timestep

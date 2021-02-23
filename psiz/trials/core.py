@@ -27,6 +27,7 @@ from psiz.trials.similarity.rank.rank_docket import RankDocket
 from psiz.trials.similarity.rank.rank_observations import RankObservations
 from psiz.trials.similarity.rate.rate_docket import RateDocket
 from psiz.trials.similarity.rate.rate_observations import RateObservations
+from psiz.trials.trial_dataset import TrialDataset
 
 
 def load_trials(filepath, verbose=0):
@@ -47,22 +48,27 @@ def load_trials(filepath, verbose=0):
 
     """
     f = h5py.File(filepath, "r")
-    # Retrieve trial class name.
-    class_name = f["trial_type"][()]
+    # Retrieve trial class name. Fall back to "trial_type" field for legacy
+    # implementations.
+    try:
+        class_name = f["class_name"][()]
+    except KeyError:
+        class_name = f["trial_type"][()]
     f.close()
 
-    # Handle legacy.
+    # Handle legacy class names.
     if class_name == "Docket":
         class_name = "RankDocket"
     elif class_name == "Observations":
         class_name = "RankObservations"
-    
+
     # Route to appropriate class.
     custom_objects = {
         'RankDocket': RankDocket,
         'RankObservations': RankObservations,
         'RateDocket': RateDocket,
         'RateObservations': RateObservations,
+        'TrialDataset': TrialDataset,
     }
     if class_name in custom_objects:
         trial_class = custom_objects[class_name]
@@ -70,23 +76,18 @@ def load_trials(filepath, verbose=0):
         raise NotImplementedError
 
     trials = trial_class.load(filepath)
-
-    if verbose > 0:
-        print("Trial Summary")
-        print('  class_name: {0}'.format(class_name))
-        print('  n_trial: {0}'.format(loaded_trials.n_trial))
     return trials
 
 
 def stack(trials_list):
-    """Return an instance of a SimilarityTrials object of all trials.
+    """Return an instance of a trials object of all trials.
 
     Arguments:
-        trials_list: A tuple of SimilarityTrials objects to be stacked.
+        trials_list: A tuple of trial objects to be stacked.
             All objects should be of the same class.
 
     Returns:
-        A new SimilarityTrials object.
+        A new trials object.
 
     """
     trials_stacked = trials_list[0].stack(trials_list)

@@ -103,8 +103,10 @@ class StratifiedGroupKFold(_BaseKFold):
     """
 
     def __init__(self, n_splits=5, shuffle=False, random_state=None):
+        """Initialize."""
         super().__init__(
-            n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+            n_splits=n_splits, shuffle=shuffle, random_state=random_state
+        )
 
     def _iter_test_indices(self, X, y, groups):
         labels_num = np.max(y) + 1

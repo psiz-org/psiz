@@ -128,6 +128,16 @@ class TrialDataset(object):
             )
         return ds
 
+    def is_actual(self):
+        """Return 2D Boolean array indicating trials with actual content.
+
+        Returns:
+            is_actual:
+                shape=(n_sequence, max_timestep)
+
+        """
+        return self.content.is_actual()
+
     @classmethod
     def load(cls, filepath):
         """Load trials.

@@ -62,8 +62,10 @@ class TestCatalog:
         assert str(e_info.value) == (
             'The argument `stimulus_id` must be a 1D array of integers.')
 
+        # NOTE: We no longer care about contiguous IDs. We leave it up to the
+        # user to make sure the IDs make sense.
+
         # Zero stimulus_id not present.
-        # NOTE: We no longer care about this being true.
         # stimulus_id = np.array([1, 2, 3, 4, 5])
         # stimulus_filepath = [
         #     'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg', 'r/f.jpg']
@@ -74,13 +76,13 @@ class TestCatalog:
         #     'integers [0, n_stimuli[.')
 
         # Two stimulus_id's not present.
-        stimulus_id = np.array([0, 1, 2, 5])
-        stimulus_filepath = ['r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/f.jpg']
-        with pytest.raises(Exception) as e_info:
-            catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
-        assert str(e_info.value) == (
-            'The argument `stimulus_id` must contain a contiguous set of '
-            'integers [0, n_stimuli[.')
+        # stimulus_id = np.array([0, 1, 2, 5])
+        # stimulus_filepath = ['r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/f.jpg']
+        # with pytest.raises(Exception) as e_info:
+        #     catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
+        # assert str(e_info.value) == (
+        #     'The argument `stimulus_id` must contain a contiguous set of '
+        #     'integers [0, n_stimuli[.')
 
         # Bad shape.
         stimulus_id = np.array([0, 1, 2, 3, 4, 5])

@@ -116,13 +116,14 @@ class Catalog(object):
 
         n_stimuli = len(stimulus_id)
 
-        is_contiguous = False
-        if np.array_equal(np.unique(stimulus_id), np.arange(0, n_stimuli)):
-            is_contiguous = True
-        if not is_contiguous:
-            raise ValueError((
-                'The argument `stimulus_id` must contain a contiguous set of '
-                'integers [0, n_stimuli[.'))
+        # TODO
+        # is_contiguous = False
+        # if np.array_equal(np.unique(stimulus_id), np.arange(0, n_stimuli)):
+        #     is_contiguous = True
+        # if not is_contiguous:
+        #     raise ValueError((
+        #         'The argument `stimulus_id` must contain a contiguous set of '
+        #         'integers [0, n_stimuli[.'))
         return stimulus_id
 
     def _check_filepath(self, stimulus_filepath):

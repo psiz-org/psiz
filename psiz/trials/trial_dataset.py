@@ -43,11 +43,9 @@ class TrialDataset(object):
 
         Arguments:
             content: A subclass of a psiz.trials.Content object.
-            groups (optional): 2D np.ndarray of integers. Note that the
-                second dimension allows for a given sequence to belong
-                to multiple groups, but the membership applies to the
-                entire sequence.
-                shape=(n_sequence, n_col)
+            groups (optional): A np.ndarray of integers. Must be rank-2
+                or rank-3.
+                shape=(n_sequence, [max_timestep], n_col)
             outcome (optional): A subclass of a psiz.trials.Outcome
                 object.
             weight (optional): 2D np.ndarray of floats.

@@ -84,22 +84,24 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             tau_initializer = tf.random_uniform_initializer(1., 2.)
         self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         tau_trainable = self.trainable and self.fit_tau
-        self.tau = self.add_weight(
-            shape=[], initializer=self.tau_initializer,
-            trainable=tau_trainable, name="tau", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
-        )
+        with tf.name_scope(self.name):
+            self.tau = self.add_weight(
+                shape=[], initializer=self.tau_initializer,
+                trainable=tau_trainable, name="tau", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+            )
 
         self.fit_gamma = fit_gamma
         if gamma_initializer is None:
             gamma_initializer = tf.random_uniform_initializer(0., .001)
         self.gamma_initializer = tf.keras.initializers.get(gamma_initializer)
         gamma_trainable = self.trainable and self.fit_gamma
-        self.gamma = self.add_weight(
-            shape=[], initializer=self.gamma_initializer,
-            trainable=gamma_trainable, name="gamma", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
-        )
+        with tf.name_scope(self.name):
+            self.gamma = self.add_weight(
+                shape=[], initializer=self.gamma_initializer,
+                trainable=gamma_trainable, name="gamma", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+            )
 
         self.fit_beta = fit_beta
         if beta_initializer is None:
@@ -109,11 +111,12 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
                 beta_initializer = tf.keras.initializers.Constant(value=10.)
         self.beta_initializer = tf.keras.initializers.get(beta_initializer)
         beta_trainable = self.trainable and self.fit_beta
-        self.beta = self.add_weight(
-            shape=[], initializer=self.beta_initializer,
-            trainable=beta_trainable, name="beta", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
-        )
+        with tf.name_scope(self.name):
+            self.beta = self.add_weight(
+                shape=[], initializer=self.beta_initializer,
+                trainable=beta_trainable, name="beta", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+            )
 
     def call(self, inputs):
         """Call.

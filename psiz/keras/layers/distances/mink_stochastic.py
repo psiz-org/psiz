@@ -127,24 +127,25 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         self.w = self._build_w(input_shape, dtype)
 
     def _build_rho(self, input_shape, dtype):
-        self.rho_loc = self.add_weight(
-            name='rho_loc',
-            shape=[], dtype=dtype,
-            initializer=self.rho_loc_initializer,
-            regularizer=self.rho_loc_regularizer,
-            trainable=self.rho_loc_trainable,
-            constraint=self.rho_loc_constraint
-        )
+        with tf.name_scope(self.name):
+            self.rho_loc = self.add_weight(
+                name='rho_loc',
+                shape=[], dtype=dtype,
+                initializer=self.rho_loc_initializer,
+                regularizer=self.rho_loc_regularizer,
+                trainable=self.rho_loc_trainable,
+                constraint=self.rho_loc_constraint
+            )
 
-        # Handle scale variables.
-        self.rho_untransformed_scale = self.add_weight(
-            name='rho_untransformed_scale',
-            shape=[], dtype=dtype,
-            initializer=self.rho_scale_initializer,
-            regularizer=self.rho_scale_regularizer,
-            trainable=self.rho_scale_trainable,
-            constraint=self.rho_scale_constraint
-        )
+            # Handle scale variables.
+            self.rho_untransformed_scale = self.add_weight(
+                name='rho_untransformed_scale',
+                shape=[], dtype=dtype,
+                initializer=self.rho_scale_initializer,
+                regularizer=self.rho_scale_regularizer,
+                trainable=self.rho_scale_trainable,
+                constraint=self.rho_scale_constraint
+            )
         rho_scale = tfp.util.DeferredTensor(
             self.rho_untransformed_scale,
             lambda x: (K.epsilon() + tf.nn.softplus(x))
@@ -159,24 +160,25 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         )
 
     def _build_w(self, input_shape, dtype):
-        self.w_loc = self.add_weight(
-            name='w_loc',
-            shape=[input_shape[0][-1]], dtype=dtype,
-            initializer=self.w_loc_initializer,
-            regularizer=self.w_loc_regularizer,
-            trainable=self.w_loc_trainable,
-            constraint=self.w_loc_constraint
-        )
+        with tf.name_scope(self.name):
+            self.w_loc = self.add_weight(
+                name='w_loc',
+                shape=[input_shape[0][-1]], dtype=dtype,
+                initializer=self.w_loc_initializer,
+                regularizer=self.w_loc_regularizer,
+                trainable=self.w_loc_trainable,
+                constraint=self.w_loc_constraint
+            )
 
-        # Handle scale variables.
-        self.w_untransformed_scale = self.add_weight(
-            name='w_untransformed_scale',
-            shape=[input_shape[0][-1]], dtype=dtype,
-            initializer=self.w_scale_initializer,
-            regularizer=self.w_scale_regularizer,
-            trainable=self.w_scale_trainable,
-            constraint=self.w_scale_constraint
-        )
+            # Handle scale variables.
+            self.w_untransformed_scale = self.add_weight(
+                name='w_untransformed_scale',
+                shape=[input_shape[0][-1]], dtype=dtype,
+                initializer=self.w_scale_initializer,
+                regularizer=self.w_scale_regularizer,
+                trainable=self.w_scale_trainable,
+                constraint=self.w_scale_constraint
+            )
         w_scale = tfp.util.DeferredTensor(
             self.w_untransformed_scale,
             lambda x: (K.epsilon() + tf.nn.softplus(x))

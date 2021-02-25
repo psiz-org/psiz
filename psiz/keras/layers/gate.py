@@ -75,7 +75,7 @@ class Gate(tf.keras.layers.Layer):
     def build(self, inputs_shape):
         """Build."""
         # Pop group tensor.
-        input_shape_less_group = inputs_shape[1]
+        input_shape_less_group = inputs_shape[0]
 
         # Build subnets.
         for subnet in self.subnets:

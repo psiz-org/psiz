@@ -147,11 +147,14 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         # the placement decision has to be made right now. Checking for
         # the presence of GPUs to avoid complicating the TPU codepaths
         # which can handle sparse optimizers.
-        if context.executing_eagerly() and context.context().num_gpus():
-            with ops.device('cpu:0'):
+        with tf.name_scope(self.name):
+            if context.executing_eagerly() and context.context().num_gpus():
+                with ops.device('cpu:0'):
+                    self.embeddings = self._build_embeddings_distribution(
+                        dtype
+                    )
+            else:
                 self.embeddings = self._build_embeddings_distribution(dtype)
-        else:
-            self.embeddings = self._build_embeddings_distribution(dtype)
 
     def _build_embeddings_distribution(self, dtype):
         """Build embeddings distribution."""

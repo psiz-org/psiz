@@ -59,22 +59,27 @@ class InverseSimilarity(tf.keras.layers.Layer):
             tau_initializer = tf.random_uniform_initializer(1., 2.)
         self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         tau_trainable = self.trainable and self.fit_tau
-        self.tau = self.add_weight(
-            shape=[], initializer=self.tau_initializer,
-            trainable=tau_trainable, name="tau", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
-        )
+        with tf.name_scope(self.name):
+            self.tau = self.add_weight(
+                shape=[], initializer=self.tau_initializer,
+                trainable=tau_trainable, name="tau", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+            )
 
         self.fit_mu = fit_mu
         if mu_initializer is None:
             mu_initializer = tf.random_uniform_initializer(0.0000000001, .001)
         self.mu_initializer = tf.keras.initializers.get(tau_initializer)
         mu_trainable = self.trainable and self.fit_mu
-        self.mu = self.add_weight(
-            shape=[], initializer=self.tau_initializer, trainable=mu_trainable,
-            name="mu", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16)
-        )
+        with tf.name_scope(self.name):
+            self.mu = self.add_weight(
+                shape=[], initializer=self.tau_initializer,
+                trainable=mu_trainable,
+                name="mu", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(
+                    min_value=2.2204e-16
+                )
+            )
 
     def call(self, inputs):
         """Call.

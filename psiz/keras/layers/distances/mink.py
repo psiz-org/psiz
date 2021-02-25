@@ -70,12 +70,13 @@ class Minkowski(tf.keras.layers.Layer):
         if rho_constraint is None:
             rho_constraint = pk_constraints.GreaterEqualThan(min_value=1.0)
         self.rho_constraint = tf.keras.constraints.get(rho_constraint)
-        self.rho = self.add_weight(
-            shape=[], initializer=self.rho_initializer,
-            regularizer=self.rho_regularizer, trainable=self.rho_trainable,
-            name="rho", dtype=K.floatx(),
-            constraint=self.rho_constraint
-        )
+        with tf.name_scope(self.name):
+            self.rho = self.add_weight(
+                shape=[], initializer=self.rho_initializer,
+                regularizer=self.rho_regularizer, trainable=self.rho_trainable,
+                name="rho", dtype=K.floatx(),
+                constraint=self.rho_constraint
+            )
 
         self.w_trainable = self.trainable and w_trainable
         if w_initializer is None:
@@ -88,11 +89,12 @@ class Minkowski(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
-        self.w = self.add_weight(
-            shape=[input_shape[0][-1]], initializer=self.w_initializer,
-            regularizer=self.w_regularizer, trainable=self.w_trainable,
-            name="w", dtype=K.floatx(), constraint=self.w_constraint
-        )
+        with tf.name_scope(self.name):
+            self.w = self.add_weight(
+                shape=[input_shape[0][-1]], initializer=self.w_initializer,
+                regularizer=self.w_regularizer, trainable=self.w_trainable,
+                name="w", dtype=K.floatx(), constraint=self.w_constraint
+            )
 
     def call(self, inputs):
         """Call.

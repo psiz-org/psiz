@@ -62,33 +62,36 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
             tau_initializer = tf.random_uniform_initializer(1., 2.)
         self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         tau_trainable = self.trainable and self.fit_tau
-        self.tau = self.add_weight(
-            shape=[], initializer=self.tau_initializer,
-            trainable=tau_trainable, name="tau", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
-        )
+        with tf.name_scope(self.name):
+            self.tau = self.add_weight(
+                shape=[], initializer=self.tau_initializer,
+                trainable=tau_trainable, name="tau", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+            )
 
         self.fit_kappa = fit_kappa
         if kappa_initializer is None:
             kappa_initializer = tf.random_uniform_initializer(1., 11.)
         self.kappa_initializer = tf.keras.initializers.get(kappa_initializer)
         kappa_trainable = self.trainable and self.fit_kappa
-        self.kappa = self.add_weight(
-            shape=[], initializer=self.kappa_initializer,
-            trainable=kappa_trainable, name="kappa", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
-        )
+        with tf.name_scope(self.name):
+            self.kappa = self.add_weight(
+                shape=[], initializer=self.kappa_initializer,
+                trainable=kappa_trainable, name="kappa", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+            )
 
         self.fit_alpha = fit_alpha
         if alpha_initializer is None:
             alpha_initializer = tf.random_uniform_initializer(10., 60.)
         self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
         alpha_trainable = self.trainable and self.fit_alpha
-        self.alpha = self.add_weight(
-            shape=[], initializer=self.alpha_initializer,
-            trainable=alpha_trainable, name="alpha", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
-        )
+        with tf.name_scope(self.name):
+            self.alpha = self.add_weight(
+                shape=[], initializer=self.alpha_initializer,
+                trainable=alpha_trainable, name="alpha", dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+            )
 
     def call(self, inputs):
         """Call.

@@ -39,6 +39,7 @@ from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 
 from psiz.utils.expand_dim_repeat import expand_dim_repeat
+from psiz.utils.progress_bar_re import ProgressBarRe
 
 
 def affine_mvn(loc, cov, r=None, t=None):
@@ -350,17 +351,24 @@ def pad_2d_array(arr, n_column, value=-1):
 
 def pairwise_similarity(
         stimuli, kernel, ds_pairs, use_group_stimuli=False,
-        use_group_kernel=False, n_sample=None):
+        use_group_kernel=False, n_sample=None, compute_average=False,
+        verbose=0):
     """Return the similarity between stimulus pairs.
 
     Arguments:
         stimuli: A tf.keras.layers.Layer with stimuli semantics.
         kernel: A tf.keras.layers.Layer with kernel sematnics.
-        ds_pairs: A TF dataset object that yields a 3-tuple composed
-            of stimulus index i, sitmulus index j, and (optionally)
-            group membership indices.
+        ds_pairs: A TF dataset object that yields a 2-tuple or 3-tuple
+            composed of stimulus index i, sitmulus index j, and
+            (optionally) group membership indices.
+        use_group_stimuli: Boolean indicating if `stimuli` layer should
+            receive group input.
+        use_group_kernel: Boolean indicating if `kernel` layer should
+            receive group input.
         n_sample (optional): The size of an additional "sample" axis.
-        TODO
+        compute_average (optional): Boolean indicating if an average
+            across samples should be computed.
+        verbose (optional): Verbosity of output.
 
     Returns:
         s: A tf.Tensor of similarities between stimulus i and stimulus
@@ -369,6 +377,17 @@ def pairwise_similarity(
             shape=(n_pair, [n_sample])
 
     """
+    if verbose > 0:
+        n_batch = 0
+        for _ in ds_pairs:
+            n_batch += 1
+        progbar = ProgressBarRe(n_batch, prefix='Similarity:', length=50)
+        progbar.update(0)
+        progbar_counter = 0
+        # Determine how often progbar should update (we use 50 since that is
+        # the visual length of the progbar).
+        progbar_update = np.maximum(1, int(np.ceil(n_batch / 50)))
+
     s = []
     for x_batch in ds_pairs:
         idx_0 = x_batch[0]
@@ -392,14 +411,23 @@ def pairwise_similarity(
             z_1 = stimuli(idx_1)
 
         if use_group_kernel:
-            s.append(
-                kernel([z_0, z_1, group])
-            )
+            s_batch = kernel([z_0, z_1, group])
         else:
-            s.append(
-                kernel([z_0, z_1])
-            )
+            s_batch = kernel([z_0, z_1])
 
-    # Concatenate along pairs dimension (i.e., the last dimension).
-    s = tf.concat(s, axis=-1)
+        if compute_average:
+            s_batch = tf.reduce_mean(s_batch, axis=1)
+
+        s.append(s_batch)
+
+        if verbose > 0:
+            if (np.mod(progbar_counter, progbar_update) == 0):
+                progbar.update(progbar_counter + 1)
+            progbar_counter += 1
+
+    if verbose > 0:
+        progbar.update(n_batch)
+
+    # Concatenate along pairs dimension (i.e., the first axis).
+    s = tf.concat(s, axis=0)
     return s

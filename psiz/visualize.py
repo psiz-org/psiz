@@ -212,59 +212,6 @@ def visualize_embedding_images(
     ax.set_yticks([])
 
 
-# def visualize_embedding_movie(
-#       Z3, class_id=None, classes=None, fname=None):
-#     """
-#     """
-# TODO
-
-
-def visualize_convergence(data, fname=None):
-    """Visualize convergence analysis.
-
-    Arguments:
-        data: The output of calling psiz.utils.assess_convergence. A
-            dictionary having the fields, `n_trial_array`, `val`, and
-            `measure`.
-        fname (optional): The pdf filename to save the figure,
-            otherwise the figure is displayed. Can be either a path
-            string or a pathlib Path object.
-
-    """
-    n_trial_array = data["n_trial_array"]
-    val = data["val"]
-    val_mean = np.mean(val, axis=0)
-    val_std = np.std(val, axis=0)
-
-    _, ax = plt.subplots()
-    ax.plot(
-        n_trial_array, val_mean,
-        linestyle='-', marker="o"
-    )
-    ax.fill_between(
-        n_trial_array, val_mean - val_std, val_mean + val_std,
-        alpha=.5
-    )
-    ax.set_xlabel('Number of Trials')
-    ax.set_ylabel('Convergence Measure ({0})'.format(data["measure"]))
-    ax.set_ylim([0, 1])
-
-    str_rho = "{0} = {1:.2f}".format(data['measure'], val_mean[-1])
-    ax.text(
-        n_trial_array[-1], val_mean[-1] + .03, str_rho,
-        horizontalalignment='center', verticalalignment='center'
-    )
-
-    if fname is None:
-        plt.show()
-    else:
-        # Note: The dpi must be supplied otherwise the aspect ratio will be
-        # changed when savefig is called.
-        plt.savefig(
-            os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
-        )
-
-
 def infer_legend(unique_class_list, classes):
     """Infer text for legend entries."""
     n_class = len(unique_class_list)

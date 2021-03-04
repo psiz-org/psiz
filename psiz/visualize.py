@@ -30,7 +30,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-import tensorflow_probability as tfp
 
 
 def visualize_embedding_static(

@@ -33,16 +33,6 @@ def test_n_sample_propogation(rate_1g_vi):
     assert rate_1g_vi.n_sample == 100
 
 
-def test_kl_weight_propogation(rate_1g_vi):
-    """Test propogation properties."""
-    assert rate_1g_vi.kl_weight == 0.
-
-    # Set kl_weight at model level.
-    rate_1g_vi.kl_weight = .001
-    # Test property propagated to all relevant layers.
-    assert rate_1g_vi.kl_weight == .001
-
-
 @pytest.mark.parametrize(
     "is_eager", [True, False]
 )

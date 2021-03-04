@@ -144,15 +144,6 @@ class PsychologicalEmbedding(tf.keras.Model):
     def n_sample(self, n_sample):
         self._n_sample = n_sample
 
-    @property
-    def kl_weight(self):
-        return self._kl_weight
-
-    @kl_weight.setter
-    def kl_weight(self, kl_weight):
-        self._kl_weight = kl_weight
-        _submodule_setattr(self.layers, 'kl_weight', kl_weight)
-
     def train_step(self, data):
         """Logic for one training step.
 

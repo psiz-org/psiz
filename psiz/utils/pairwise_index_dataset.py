@@ -49,7 +49,8 @@ def pairwise_index_dataset(
         seed: Integer controlling which pairs are subsampled.
 
     Returns:
-        Tensorflow Dataset.
+        ds: A Tensorflow Dataset.
+        ds_info: A convenience dictionary.
 
     """
     if elements == 'all':

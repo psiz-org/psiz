@@ -15,19 +15,17 @@
 # ============================================================================
 """Utilities initialization file."""
 
+from psiz.utils.affine_mvn import affine_mvn
 from psiz.utils.choice_wo_replace import choice_wo_replace
 from psiz.utils.expand_dim_repeat import expand_dim_repeat
 from psiz.utils.generate_group_matrix import generate_group_matrix
+from psiz.utils.matrix_comparison import matrix_comparison
+from psiz.utils.pad_2d_array import pad_2d_array
 from psiz.utils.pairwise_index_dataset import pairwise_index_dataset
+from psiz.utils.pairwise_matrix import pairwise_matrix
+from psiz.utils.pairwise_similarity import pairwise_similarity
 from psiz.utils.procrustes import procrustes_rotation
 from psiz.utils.progress_bar_re import ProgressBarRe
+from psiz.utils.rotation_matrix import rotation_matrix
+from psiz.utils.standard_split import standard_split
 from psiz.utils.stratified_group_kfold import StratifiedGroupKFold
-from psiz.utils.utils import affine_mvn
-from psiz.utils.utils import assess_convergence
-from psiz.utils.utils import pairwise_matrix
-from psiz.utils.utils import matrix_comparison
-from psiz.utils.utils import compare_models
-from psiz.utils.utils import rotation_matrix
-from psiz.utils.utils import standard_split
-from psiz.utils.utils import pad_2d_array
-from psiz.utils.utils import pairwise_similarity

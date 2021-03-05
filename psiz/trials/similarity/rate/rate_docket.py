@@ -34,7 +34,6 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from psiz.trials.similarity.rate.rate_trials import RateTrials
-from psiz.utils import pad_2d_array
 
 
 class RateDocket(RateTrials):
@@ -191,15 +190,21 @@ class RateDocket(RateTrials):
                 max_n_present = i_trials.max_n_present
 
         # Grab relevant information from first entry in list.
-        stimulus_set = pad_2d_array(
-            trials_list[0].stimulus_set, max_n_present
+        n_pad = max_n_present - trials_list[0].max_n_present
+        pad_width = ((0, 0), (0, n_pad))
+        stimulus_set = np.pad(
+            trials_list[0].stimulus_set,
+            pad_width, mode='constant', constant_values=-1
         )
 
         for i_trials in trials_list[1:]:
-            stimulus_set = np.vstack((
-                stimulus_set,
-                pad_2d_array(i_trials.stimulus_set, max_n_present)
-            ))
+            n_pad = max_n_present - i_trials.max_n_present
+            pad_width = ((0, 0), (0, n_pad))
+            curr_stimulus_set = np.pad(
+                i_trials.stimulus_set,
+                pad_width, mode='constant', constant_values=-1
+            )
+            stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
 
         trials_stacked = RateDocket(stimulus_set)
         return trials_stacked

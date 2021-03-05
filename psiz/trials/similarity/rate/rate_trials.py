@@ -34,7 +34,6 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from psiz.trials.similarity.similarity_trials import SimilarityTrials
-from psiz.utils import pad_2d_array
 
 
 class RateTrials(SimilarityTrials, metaclass=ABCMeta):

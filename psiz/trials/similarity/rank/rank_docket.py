@@ -31,7 +31,6 @@ import pandas as pd
 import tensorflow as tf
 
 from psiz.trials.similarity.rank.rank_trials import RankTrials
-from psiz.utils import pad_2d_array
 
 
 class RankDocket(RankTrials):
@@ -266,17 +265,24 @@ class RankDocket(RankTrials):
                 max_n_reference = i_trials.max_n_reference
 
         # Grab relevant information from first entry in list.
-        stimulus_set = pad_2d_array(
-            trials_list[0].stimulus_set, max_n_reference + 1
+        n_pad = max_n_reference - trials_list[0].max_n_reference
+        pad_width = ((0, 0), (0, n_pad))
+        stimulus_set = np.pad(
+            trials_list[0].stimulus_set,
+            pad_width, mode='constant', constant_values=-1
         )
+
         n_select = trials_list[0].n_select
         is_ranked = trials_list[0].is_ranked
 
         for i_trials in trials_list[1:]:
-            stimulus_set = np.vstack((
-                stimulus_set,
-                pad_2d_array(i_trials.stimulus_set, max_n_reference + 1)
-            ))
+            n_pad = max_n_reference - i_trials.max_n_reference
+            pad_width = ((0, 0), (0, n_pad))
+            curr_stimulus_set = np.pad(
+                i_trials.stimulus_set,
+                pad_width, mode='constant', constant_values=-1
+            )
+            stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
             n_select = np.hstack((n_select, i_trials.n_select))
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
 

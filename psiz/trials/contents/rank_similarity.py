@@ -140,8 +140,8 @@ class RankSimilarity(Content):
 
         # Start by padding first entry in list.
         timestep_pad = max_timestep - component_list[0].max_timestep
-        n_ref_pad = max_n_reference - component_list[0].max_n_reference
-        pad_width = ((0, 0), (0, timestep_pad), (0, n_ref_pad))
+        n_pad = max_n_reference - component_list[0].max_n_reference
+        pad_width = ((0, 0), (0, timestep_pad), (0, n_pad))
         stimulus_set = np.pad(
             component_list[0].stimulus_set,
             pad_width, mode='constant', constant_values=0
@@ -156,8 +156,8 @@ class RankSimilarity(Content):
         for i_component in component_list[1:]:
 
             timestep_pad = max_timestep - i_component.max_timestep
-            n_ref_pad = max_n_reference - i_component.max_n_reference
-            pad_width = ((0, 0), (0, timestep_pad), (0, n_ref_pad))
+            n_pad = max_n_reference - i_component.max_n_reference
+            pad_width = ((0, 0), (0, timestep_pad), (0, n_pad))
             curr_stimulus_set = np.pad(
                 i_component.stimulus_set,
                 pad_width, mode='constant', constant_values=0

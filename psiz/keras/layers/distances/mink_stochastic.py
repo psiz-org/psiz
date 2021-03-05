@@ -25,7 +25,7 @@ from tensorflow.python.framework import ops
 from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
 
-from psiz.distributions.truncated_normal import TruncatedNormal
+from psiz.tfp.distributions.truncated_normal import TruncatedNormal
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.ops.core import wpnorm
 

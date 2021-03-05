@@ -26,7 +26,7 @@ from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
-from psiz.distributions.truncated_normal import TruncatedNormal
+from psiz.tfp.distributions.truncated_normal import TruncatedNormal
 
 
 @tf.keras.utils.register_keras_serializable(

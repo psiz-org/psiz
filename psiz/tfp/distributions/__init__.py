@@ -15,12 +15,13 @@
 # ============================================================================
 """TensorFlow probability distributions specific initialization file.
 
-Modules:
-    inv_softplus_normal
-    gamma
+Classes:
+    InvSoftplusNormal
+    Gamma
+    TruncatedNormal
 
 """
 
-from psiz.distributions.inv_softplus_normal import InvSoftplusNormal
-from psiz.distributions.gamma import Gamma
-from psiz.distributions.truncated_normal import TruncatedNormal
+from psiz.tfp.distributions.inv_softplus_normal import InvSoftplusNormal
+from psiz.tfp.distributions.gamma import Gamma
+from psiz.tfp.distributions.truncated_normal import TruncatedNormal

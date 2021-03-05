@@ -28,7 +28,7 @@ from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import math_ops
 import tensorflow_probability as tfp
 
-import psiz.distributions
+import psiz.tfp.distributions
 import psiz.keras.constraints
 
 
@@ -176,7 +176,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             constraint=self.rate_constraint
         )
 
-        dist = psiz.distributions.Gamma(self.concentration, self.rate)
+        dist = psiz.tfp.distributions.Gamma(self.concentration, self.rate)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -199,7 +199,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
 
         # [inputs_concetration, inputs_rate] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = psiz.distributions.Gamma(
+        dist_batch = psiz.tfp.distributions.Gamma(
             inputs_concentration, inputs_rate
         )
         # Reify output using samples.

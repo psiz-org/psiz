@@ -13,32 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Top-level package initialization file.
+"""TensorFlow Probability (tfp) initialization file.
 
 Modules:
-    agents
-    catalog
-    datasets
     distributions
-    generator
-    keras
-    mplot
-    preprocess
-    trials
-    utils
-    visualize
+
 """
 
-import psiz.agents
-import psiz.catalog
-import psiz.datasets
-import psiz.generators
-import psiz.keras
-import psiz.mplot
-import psiz.preprocess
-import psiz.tfp
-import psiz.trials
-import psiz.utils
-import psiz.visualize
-
-psiz.models = psiz.keras.models  # TEMPORARY For backwards compatability.
+from psiz.tfp import distributions

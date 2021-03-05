@@ -33,3 +33,4 @@ import psiz.keras.losses
 import psiz.keras.metrics
 import psiz.keras.models
 import psiz.keras.regularizers
+from psiz.keras.restarter import Restarter

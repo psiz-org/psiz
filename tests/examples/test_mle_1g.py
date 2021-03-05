@@ -194,7 +194,7 @@ def test_rate_1g_mle_execution(similarity_func):
 
         # Handle restarts.
         model_inferred = build_model(n_stimuli, n_dim, similarity_func)
-        restarter = psiz.restart.Restarter(
+        restarter = psiz.keras.Restarter(
             model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
             n_restart=n_restart
         )

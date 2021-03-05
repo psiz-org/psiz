@@ -116,7 +116,7 @@ def main():
     model_inferred = build_model(n_stimuli, n_dim, n_group)
 
     # Infer embedding with restarts.
-    restarter = psiz.restart.Restarter(
+    restarter = psiz.keras.Restarter(
         model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
         n_restart=n_restart
     )

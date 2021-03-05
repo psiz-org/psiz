@@ -18,6 +18,7 @@
 from psiz.utils.affine_mvn import affine_mvn
 from psiz.utils.choice_wo_replace import choice_wo_replace
 from psiz.utils.expand_dim_repeat import expand_dim_repeat
+from psiz.utils.fit_tracker import FitTracker
 from psiz.utils.generate_group_matrix import generate_group_matrix
 from psiz.utils.matrix_comparison import matrix_comparison
 from psiz.utils.pad_2d_array import pad_2d_array

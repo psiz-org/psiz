@@ -122,7 +122,7 @@ def main():
     callbacks = [cb_board, cb_early]
 
     # Infer embedding with restarts.
-    restarter = psiz.restart.Restarter(
+    restarter = psiz.keras.Restarter(
         model, compile_kwargs=compile_kwargs, monitor='val_loss',
         n_restart=n_restart
     )

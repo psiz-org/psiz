@@ -37,7 +37,6 @@ import psiz.generators
 import psiz.keras
 import psiz.mplot
 import psiz.preprocess
-import psiz.restart
 import psiz.trials
 import psiz.utils
 import psiz.visualize

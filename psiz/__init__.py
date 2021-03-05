@@ -19,7 +19,6 @@ Modules:
     agents
     catalog
     datasets
-    dimensionality
     distributions
     generator
     keras
@@ -33,7 +32,6 @@ Modules:
 import psiz.agents
 import psiz.catalog
 import psiz.datasets
-import psiz.dimensionality
 import psiz.distributions
 import psiz.generators
 import psiz.keras

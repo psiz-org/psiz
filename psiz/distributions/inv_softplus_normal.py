@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""LogNormal distribution classes."""
+"""InvSoftplusNormal distribution classes."""
 
 import numpy as np
 import tensorflow as tf
@@ -127,7 +127,7 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
 def _kl_lognormal_lognormal(a, b, name=None):
 
     """Calculate the batched KL divergence KL(a || b) with a and b LogNormal.
-    
+
     This is the same as the KL divergence between the underlying Normal
     distributions.
 

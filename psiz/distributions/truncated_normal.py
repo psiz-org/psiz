@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Gamma distribution class."""
+"""TruncatedNormal distribution class.
+
+Note: Needed quantile method.
+
+"""
 
 import numpy as np
 import tensorflow as tf
 from tensorflow_probability.python.distributions import truncated_normal
 from tensorflow_probability.python.internal import special_math
+
 
 class TruncatedNormal(truncated_normal.TruncatedNormal):
     """Truncated Normal distribution with quantile."""

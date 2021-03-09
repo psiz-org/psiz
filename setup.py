@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='psiz',
-    version='0.4.2',
+    version='0.5.0',
     description='Toolbox for inferring psychological embeddings.',
     long_description=long_description,
     long_description_content_type="text/markdown",

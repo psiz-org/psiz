@@ -331,7 +331,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         config = {
             'name': self.name,
             'class_name': self.__class__.__name__,
-            'psiz_version': '0.4.2',
+            'psiz_version': '0.5.0',
             'n_sample': self.n_sample,
             'layers': copy.deepcopy(layer_configs),
             'use_group_stimuli': self._use_group['stimuli'],

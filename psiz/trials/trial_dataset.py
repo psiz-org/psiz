@@ -166,7 +166,7 @@ class TrialDataset(object):
         """
         f = h5py.File(filepath, "w")
         f.create_dataset("class_name", data="TrialDataset")
-        f.create_dataset("version", data="0.4.2")
+        f.create_dataset("version", data="0.5.0")
         grp_content = f.create_group("content")
         self.content._save(grp_content)
         f.create_dataset("groups", data=self.groups)

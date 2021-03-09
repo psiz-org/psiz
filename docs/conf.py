@@ -22,7 +22,7 @@ copyright = '2021, Brett D. Roads'
 author = 'Brett D. Roads'
 
 # The full version, including alpha/beta/rc tags
-release = '0.4.2'
+release = '0.5.0'
 
 
 # -- General configuration ---------------------------------------------------

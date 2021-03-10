@@ -19,4 +19,4 @@ NOTES.md
 mark_*.json
 
 # Sphinx documentation
-docs/_build/*
+/docs/_build

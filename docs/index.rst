@@ -10,6 +10,11 @@ Welcome to psiz's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   intro
+   quick_start
+   design_philosophy
+   trials_and_obs
+   your_data
 
 
 Indices and tables

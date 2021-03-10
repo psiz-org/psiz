@@ -17,3 +17,6 @@ NOTES.md
 .pytest_cache/*
 
 mark_*.json
+
+# Sphinx documentation
+docs/_build/*

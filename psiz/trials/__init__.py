@@ -15,20 +15,25 @@
 # ============================================================================
 """Trials initialization."""
 
-from psiz.trials.core import stack
-from psiz.trials.core import load_trials
+from psiz.trials.stack import stack
+from psiz.trials.load_trials import load_trials
+from psiz.trials.similarity.docket_generator import DocketGenerator
+from psiz.trials.similarity.rank.active_rank import ActiveRank
+from psiz.trials.similarity.rank.active_rank import expected_information_gain_rank
+from psiz.trials.similarity.rank.random_rank import RandomRank
 from psiz.trials.similarity.rank.rank_trials import RankTrials
 from psiz.trials.similarity.rank.rank_docket import RankDocket
 from psiz.trials.similarity.rank.rank_observations import RankObservations
+from psiz.trials.similarity.rate.random_rate import RandomRate
 from psiz.trials.similarity.rate.rate_trials import RateTrials
 from psiz.trials.similarity.rate.rate_docket import RateDocket
 from psiz.trials.similarity.rate.rate_observations import RateObservations
-from psiz.trials.trial_component import TrialComponent
-from psiz.trials.trial_dataset import TrialDataset
-from psiz.trials.contents.content import Content
-from psiz.trials.contents.rank_similarity import RankSimilarity
-from psiz.trials.contents.rate_similarity import RateSimilarity
-from psiz.trials.outcomes.outcome import Outcome
-from psiz.trials.outcomes.continuous import Continuous
-from psiz.trials.outcomes.sparse_categorical import SparseCategorical
-from psiz.trials.unravel_timestep import unravel_timestep
+from psiz.trials.experimental.trial_component import TrialComponent
+from psiz.trials.experimental.trial_dataset import TrialDataset
+from psiz.trials.experimental.contents.content import Content
+from psiz.trials.experimental.contents.rank_similarity import RankSimilarity
+from psiz.trials.experimental.contents.rate_similarity import RateSimilarity
+from psiz.trials.experimental.outcomes.outcome import Outcome
+from psiz.trials.experimental.outcomes.continuous import Continuous
+from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategorical
+from psiz.trials.experimental.unravel_timestep import unravel_timestep

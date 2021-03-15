@@ -25,8 +25,8 @@ Classes:
 import numpy as np
 import tensorflow as tf
 
-from psiz.trials.contents.content import Content
-from psiz.trials.unravel_timestep import unravel_timestep
+from psiz.trials.experimental.contents.content import Content
+from psiz.trials.experimental.unravel_timestep import unravel_timestep
 
 
 class RateSimilarity(Content):

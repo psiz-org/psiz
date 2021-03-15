@@ -135,7 +135,7 @@ def test_random_generator():
     n_reference_desired = 4
     n_select_desired = 2
     is_ranked_desired = True
-    gen = psiz.generators.RandomRank(
+    gen = psiz.trials.RandomRank(
         n_stimuli_desired, n_reference=n_reference_desired,
         n_select=n_select_desired
     )
@@ -179,10 +179,10 @@ def test_random_generator():
 #         np.array([1], dtype=np.int32)
 #         )
 #     # Compute expected information gain.
-#     ig_0 = psiz.generators.information_gain(
+#     ig_0 = psiz.trials.information_gain(
 #         rank_1g_mle_rand, samples, docket_0
 #     )
-#     ig_1 = psiz.generators.information_gain(
+#     ig_1 = psiz.trials.information_gain(
 #         rank_1g_mle_rand, samples, docket_1
 #     )
 
@@ -193,7 +193,7 @@ def test_random_generator():
 #         np.array([[0, 1, 2], [3, 1, 2]], dtype=np.int32),
 #         np.array([1, 1], dtype=np.int32)
 #         )
-#     ig_01 = psiz.generators.information_gain(
+#     ig_01 = psiz.trials.information_gain(
 #         rank_1g_mle_rand, samples, docket_01
 #     )
 #     assert ig_01[0] == ig_0
@@ -204,7 +204,7 @@ def test_random_generator():
 #         np.array([[0, 1, 2, 4, 9], [3, 1, 5, 6, 8]], dtype=np.int32),
 #         np.array([2, 2], dtype=np.int32)
 #         )
-    # ig_23 = psiz.generators.information_gain(
+    # ig_23 = psiz.trials.information_gain(
     #     rank_1g_mle_rand, samples, docket_23
     # )
 
@@ -217,7 +217,7 @@ def test_random_generator():
 #         ], dtype=np.int32),
 #         np.array([1, 1, 2, 2], dtype=np.int32)
 #         )
-#     ig_0123 = psiz.generators.information_gain(
+#     ig_0123 = psiz.trials.information_gain(
 #         rank_1g_mle_rand, samples, docket_0123
 #     )
 #     np.testing.assert_almost_equal(ig_0123[0], ig_0)
@@ -235,13 +235,13 @@ def test_random_generator():
 #     cov_sm = np.eye(2)
 #     cov_lg = 10 * np.eye(2)
 
-#     kl_sm_sm = psiz.generators.normal_kl_divergence(
+#     kl_sm_sm = psiz.trials.normal_kl_divergence(
 #         mu_left, cov_sm, mu_right, cov_sm)
-#     kl_sm_lg = psiz.generators.normal_kl_divergence(
+#     kl_sm_lg = psiz.trials.normal_kl_divergence(
 #         mu_left, cov_sm, mu_right, cov_lg)
-#     kl_lg_sm = psiz.generators.normal_kl_divergence(
+#     kl_lg_sm = psiz.trials.normal_kl_divergence(
 #         mu_left, cov_lg, mu_right, cov_sm)
-#     kl_lg_lg = psiz.generators.normal_kl_divergence(
+#     kl_lg_lg = psiz.trials.normal_kl_divergence(
 #         mu_left, cov_lg, mu_right, cov_lg)
 
 #     np.testing.assert_almost_equal(kl_sm_sm, 50.00000, decimal=5)
@@ -265,7 +265,7 @@ def test_random_generator():
 #     is_ranked = True
 
 #     i_query = 0
-#     docket, ig_top = psiz.generators._select_query_references(
+#     docket, ig_top = psiz.trials._select_query_references(
 #         i_query, rank_1g_mle_det, samples, query_idx_list,
 #         n_trial_per_query_list, n_reference, n_select, is_ranked,
 #         max_candidate, max_neighbor
@@ -298,14 +298,14 @@ def test_random_generator():
 #     n_trial_desired = 200
 #     n_reference_desired = 2
 #     n_select_desired = 1
-#     gen = psiz.generators.RandomRank(
+#     gen = psiz.trials.RandomRank(
 #         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
 #     unjudged_trials_0 = gen.generate(
 #         n_trial_desired, n_stimuli_desired)
 #     n_stimuli_desired = 10
 #     n_trial_desired = 50
-#     gen = psiz.generators.RandomRank(
+#     gen = psiz.trials.RandomRank(
 #         n_reference=n_reference_desired,
 #         n_select=n_select_desired)
 #     unjudged_trials_1 = gen.generate(

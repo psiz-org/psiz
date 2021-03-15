@@ -19,10 +19,10 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials.contents.rank_similarity import RankSimilarity
-from psiz.trials.contents.rate_similarity import RateSimilarity
-from psiz.trials.outcomes.continuous import Continuous
-from psiz.trials.outcomes.sparse_categorical import SparseCategorical
+from psiz.trials.experimental.contents.rank_similarity import RankSimilarity
+from psiz.trials.experimental.contents.rate_similarity import RateSimilarity
+from psiz.trials.experimental.outcomes.continuous import Continuous
+from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategorical
 
 
 @pytest.fixture(scope="module")

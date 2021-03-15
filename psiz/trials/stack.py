@@ -13,23 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for trials.
+"""Module of core `trials` functionality.
 
-Classes:
-    Outcome: Abstract class for outcome data.
+Functions:
+    stack: Combine a list of multiple SimilarityTrial objects into one.
 
 """
 
-from abc import ABCMeta
 
-import numpy as np
+def stack(trials_list):
+    """Return an instance of a trials object of all trials.
 
-from psiz.trials.trial_component import TrialComponent
+    Arguments:
+        trials_list: A tuple of trial objects to be stacked.
+            All objects should be of the same class.
 
+    Returns:
+        A new trials object.
 
-class Outcome(TrialComponent, metaclass=ABCMeta):
-    """Abstract base class for outcome data."""
-
-    def __init__(self):
-        """Initialize."""
-        TrialComponent.__init__(self)
+    """
+    trials_stacked = trials_list[0].stack(trials_list)
+    return trials_stacked

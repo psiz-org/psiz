@@ -20,8 +20,8 @@ import pandas as pd
 import tensorflow as tf
 
 from psiz.trials import load_trials
-from psiz.trials.outcomes.sparse_categorical import SparseCategorical
-from psiz.trials.trial_dataset import TrialDataset
+from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategorical
+from psiz.trials.experimental.trial_dataset import TrialDataset
 from psiz.trials import stack
 
 

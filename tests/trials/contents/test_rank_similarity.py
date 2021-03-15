@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials.contents.rank_similarity import RankSimilarity
+from psiz.trials.experimental.contents.rank_similarity import RankSimilarity
 from psiz.trials import stack
 
 

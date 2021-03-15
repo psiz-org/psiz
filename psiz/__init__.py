@@ -20,7 +20,6 @@ Modules:
     catalog
     datasets
     distributions
-    generator
     keras
     mplot
     preprocess
@@ -32,7 +31,6 @@ Modules:
 import psiz.agents
 import psiz.catalog
 import psiz.datasets
-import psiz.generators
 import psiz.keras
 import psiz.mplot
 import psiz.preprocess

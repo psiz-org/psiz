@@ -34,7 +34,7 @@ import pandas as pd
 import tensorflow as tf
 
 from psiz import trials
-from psiz.generators import RandomRank
+from psiz.trials import RandomRank
 from psiz.agents import RankAgent
 import psiz.keras.models
 import psiz.keras.layers

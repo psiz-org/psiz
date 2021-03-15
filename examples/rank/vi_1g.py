@@ -101,7 +101,7 @@ def main():
     ).numpy()
 
     # Generate a random docket of trials.
-    generator = psiz.generators.RandomRank(
+    generator = psiz.trials.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)

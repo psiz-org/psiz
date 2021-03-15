@@ -13,10 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Generators initialization."""
+"""Module for trials.
 
-from psiz.generators.similarity.base import DocketGenerator
-from psiz.generators.similarity.rank.random_rank import RandomRank
-from psiz.generators.similarity.rank.active_rank import ActiveRank
-from psiz.generators.similarity.rank.active_rank import expected_information_gain_rank
-from psiz.generators.similarity.rate.random_rate import RandomRate
+Classes:
+    Outcome: Abstract class for outcome data.
+
+"""
+
+from abc import ABCMeta
+
+import numpy as np
+
+from psiz.trials.experimental.trial_component import TrialComponent
+
+
+class Outcome(TrialComponent, metaclass=ABCMeta):
+    """Abstract base class for outcome data."""
+
+    def __init__(self):
+        """Initialize."""
+        TrialComponent.__init__(self)

@@ -130,7 +130,7 @@ def test_rate_1g_mle_execution(similarity_func):
     model_true = ground_truth(n_stimuli, n_dim, similarity_func)
 
     # Generate a random docket of trials.
-    generator = psiz.generators.RandomRank(
+    generator = psiz.trials.RandomRank(
         n_stimuli, n_reference=8, n_select=2
     )
     docket = generator.generate(n_trial)

@@ -18,7 +18,6 @@
 Functions:
     load_trials: Load a hdf5 file that was saved using the `save` class
         method.
-    stack: Combine a list of multiple SimilarityTrial objects into one.
 
 """
 import h5py
@@ -27,7 +26,7 @@ from psiz.trials.similarity.rank.rank_docket import RankDocket
 from psiz.trials.similarity.rank.rank_observations import RankObservations
 from psiz.trials.similarity.rate.rate_docket import RateDocket
 from psiz.trials.similarity.rate.rate_observations import RateObservations
-from psiz.trials.trial_dataset import TrialDataset
+from psiz.trials.experimental.trial_dataset import TrialDataset
 
 
 def load_trials(filepath, verbose=0):
@@ -77,18 +76,3 @@ def load_trials(filepath, verbose=0):
 
     trials = trial_class.load(filepath)
     return trials
-
-
-def stack(trials_list):
-    """Return an instance of a trials object of all trials.
-
-    Arguments:
-        trials_list: A tuple of trial objects to be stacked.
-            All objects should be of the same class.
-
-    Returns:
-        A new trials object.
-
-    """
-    trials_stacked = trials_list[0].stack(trials_list)
-    return trials_stacked

@@ -93,7 +93,7 @@ def main():
             # Compute expected information gain from prediction samples.
             y_pred = model(data, training=False)
             y_pred = tf.transpose(y_pred, perm=[1, 0, 2])
-            batch_expected_ig = psiz.generators.expected_information_gain_rank(
+            batch_expected_ig = psiz.trials.expected_information_gain_rank(
                 y_pred
             )
             if expected_ig is None:

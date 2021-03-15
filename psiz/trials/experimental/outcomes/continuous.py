@@ -16,7 +16,7 @@
 """Module for trials.
 
 Classes:
-    SparseCategorical: A categorical outcome.
+    Continuous: A continuous outcome.
 
 """
 
@@ -24,32 +24,32 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from psiz.trials.outcomes.outcome import Outcome
-from psiz.trials.unravel_timestep import unravel_timestep
+from psiz.trials.experimental.outcomes.outcome import Outcome
+from psiz.trials.experimental.unravel_timestep import unravel_timestep
 
 
-class SparseCategorical(Outcome):
-    """A categorical outcome."""
+class Continuous(Outcome):
+    """A continuous outcome."""
 
-    def __init__(self, index, depth=None):
+    def __init__(self, value):
         """Initialize.
 
         Arguments:
-            index: A 2D np.ndarray of integers indicating the
-                outcomes (as positional indices).
-            depth: Integer indicating the maximum number of
-                outcomes. This value determines the length of the
-                one-hot encoding.
+            value: Ab np.ndarray of floats indicating the outcome
+                values. Must be rank-2 or rank-3. If rank-2,
+                it is assumed that n_timestep=1 and a singleton
+                dimension is added. If rank-3, the first two axis are
+                interpretted as `n_sequence` and `n_timestep`.
 
         Raises:
             ValueError if improper arguments are provided.
 
         """
         Outcome.__init__(self)
-        self.index = self._check_index(index)
-        self.n_sequence = self.index.shape[0]
-        self.max_timestep = self.index.shape[1]
-        self.depth = depth
+        self.value = self._check_value(value)
+        self.n_sequence = self.value.shape[0]
+        self.max_timestep = self.value.shape[1]
+        self.n_unit = self.value.shape[2]
 
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
@@ -61,39 +61,47 @@ class SparseCategorical(Outcome):
         Returns:
             A new object.
 
+        Raises:
+            ValueError if `n_unit` does not agree.
+
         """
+        # Before doing anything, check that `n_unit` agree.
+        n_unit = component_list[0].n_unit
+        for i_component in component_list[1:]:
+            if component_list[0].n_unit != n_unit:
+                raise ValueError(
+                    'The `n_unit` for the different components must be'
+                    'identical to stack `Continous` output.'
+                )
+
         # Determine maximum number of timesteps.
         max_timestep = 0
-        max_depth = 0
         for i_component in component_list:
             if i_component.max_timestep > max_timestep:
                 max_timestep = i_component.max_timestep
-            if i_component.depth > max_depth:
-                max_depth = i_component.depth
 
         # Start by padding first entry in list.
         timestep_pad = max_timestep - component_list[0].max_timestep
-        pad_width = ((0, 0), (0, timestep_pad))
-        index = np.pad(
-            component_list[0].index,
+        pad_width = ((0, 0), (0, timestep_pad), (0, 0))
+        value = np.pad(
+            component_list[0].value,
             pad_width, mode='constant', constant_values=0
         )
 
         # Loop over remaining list.
         for i_component in component_list[1:]:
-
             timestep_pad = max_timestep - i_component.max_timestep
-            pad_width = ((0, 0), (0, timestep_pad))
-            curr_index = np.pad(
-                i_component.index,
+            pad_width = ((0, 0), (0, timestep_pad), (0, 0))
+            curr_value = np.pad(
+                i_component.value,
                 pad_width, mode='constant', constant_values=0
             )
 
-            index = np.concatenate(
-                (index, curr_index), axis=0
+            value = np.concatenate(
+                (value, curr_value), axis=0
             )
 
-        return SparseCategorical(index, depth=max_depth)
+        return Continuous(value)
 
     def subset(self, idx):
         """Return subset of data as a new object.
@@ -105,50 +113,33 @@ class SparseCategorical(Outcome):
             A new object.
 
         """
-        index_sub = self.index[idx]
-        return SparseCategorical(index_sub, depth=self.depth)
+        value_sub = self.value[idx]
+        return Continuous(value_sub)
 
-    def _check_index(self, index):
-        """Check validity of `index`."""
-        # Check that provided values are integers.
-        if not issubclass(index.dtype.type, np.integer):
-            raise ValueError(
-                "The argument `index` must be an np.ndarray of "
-                "integers."
-            )
-
-        # Check that all values are greater than or equal to placeholder.
-        if np.sum(np.less(index, 0)) > 0:
-            raise ValueError(
-                "The argument `index` must contain non-negative "
-                "integers."
-            )
-
-        if index.ndim == 1:
+    def _check_value(self, value):
+        """Check validity of `value`."""
+        if value.ndim == 2:
             # Assume trials are independent and add singleton dimension for
             # `timestep`.
-            index = np.expand_dims(index, axis=1)
+            value = np.expand_dims(value, axis=1)
 
         # Check shape.
-        if not (index.ndim == 2):
+        if not value.ndim == 3:
             raise ValueError(
-                "The argument `index` must be a rank-2 ndarray with a "
-                "shape corresponding to (n_sequence, n_timestep)."
+                "The argument `value` must be a rank-2 or rank-3 "
+                "ndarray with a shape corresponding to (n_sequence, "
+                "[n_timestep,] n_unit)."
             )
 
-        return index
+        return value
 
     def _for_dataset(self, format='tf', timestep=True):
         """Return appropriately formatted data."""
         if format == 'tf':
-            # Convert from sparse to one-hot-encoding (along new trailing
-            # axis).
-            index = self.index
+            value = self.value
             if timestep is False:
-                index = unravel_timestep(index)
-            y = tf.one_hot(
-                index, self.depth, dtype=K.floatx()
-            )
+                value = unravel_timestep(value)
+            y = tf.constant(value, dtype=K.floatx())
         else:
             raise ValueError(
                 "Unrecognized format '{0}'.".format(format)
@@ -162,14 +153,12 @@ class SparseCategorical(Outcome):
         grp.create_dataset("my_data_name", data=my_data)
 
         """
-        grp.create_dataset("class_name", data="SparseCategorical")
-        grp.create_dataset("index", data=self.index)
-        grp.create_dataset("depth", data=self.depth)
+        grp.create_dataset("class_name", data="Continuous")
+        grp.create_dataset("value", data=self.value)
         return None
 
     @classmethod
     def _load(cls, grp):
         """Retrieve relevant datasets from group."""
-        index = grp["index"][()]
-        depth = grp["depth"][()]
-        return cls(index, depth=depth)
+        value = grp["value"][()]
+        return cls(value)

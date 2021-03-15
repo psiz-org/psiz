@@ -30,8 +30,9 @@ import time
 import numpy as np
 import tensorflow as tf
 
-from psiz.generators.similarity.base import DocketGenerator
-from psiz.trials import stack, RankDocket
+from psiz.trials.similarity.docket_generator import DocketGenerator
+from psiz.trials.similarity.rank.rank_docket import RankDocket
+from psiz.trials.stack import stack
 from psiz.utils import ProgressBarRe, choice_wo_replace
 
 

@@ -28,8 +28,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from psiz.trials.contents.content import Content
-from psiz.trials.unravel_timestep import unravel_timestep
+from psiz.trials.experimental.contents.content import Content
+from psiz.trials.experimental.unravel_timestep import unravel_timestep
 
 
 class RankSimilarity(Content):

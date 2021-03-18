@@ -18,10 +18,6 @@
 Classes:
     Catalog: A catalog to keep track of stimuli.
 
-Functions:
-    load_catalog: Load a catalog.
-    load: Alias for load_catalog.
-
 """
 
 import copy
@@ -122,8 +118,8 @@ class Catalog(object):
         #     is_contiguous = True
         # if not is_contiguous:
         #     raise ValueError((
-        #         'The argument `stimulus_id` must contain a contiguous set of '
-        #         'integers [0, n_stimuli[.'))
+        #         'The argument `stimulus_id` must contain a contiguous set of'
+        #         ' integers [0, n_stimuli[.'))
         return stimulus_id
 
     def _check_filepath(self, stimulus_filepath):
@@ -234,46 +230,3 @@ class Catalog(object):
         if squeeze:
             catalog.stimuli.at[:, "id"] = np.arange(0, catalog.n_stimuli)
         return catalog
-
-
-def load_catalog(filepath, verbose=0):
-    """Load data saved via the save method.
-
-    The loaded data is instantiated as a Catalog object.
-
-    Arguments:
-        filepath: The location of the hdf5 file to load.
-        verbose (optional): Controls the verbosity of printed summary.
-
-    Returns:
-        Loaded catalog.
-
-    """
-    f = h5py.File(filepath, "r")
-    stimulus_id = f["stimulus_id"][()]
-    stimulus_filepath = f["stimulus_filepath"][()].astype('U')
-    class_id = f["class_id"][()]
-
-    try:
-        class_map_class_id = f["class_map_class_id"][()]
-        class_map_label = f["class_map_label"][()]
-        class_label_dict = {}
-        for idx in np.arange(len(class_map_class_id)):
-            class_label_dict[class_map_class_id[idx]] = (
-                class_map_label[idx].decode('ascii')
-            )
-    except KeyError:
-        class_label_dict = None
-
-    catalog = Catalog(
-        stimulus_id, stimulus_filepath, class_id, class_label_dict)
-    f.close()
-
-    if verbose > 0:
-        print("Catalog Summary")
-        print('  n_stimuli: {0}'.format(catalog.n_stimuli))
-        print('')
-    return catalog
-
-
-load = load_catalog

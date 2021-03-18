@@ -19,12 +19,11 @@ Modules:
     agents
     catalog
     datasets
-    distributions
     keras
     mplot
+    tfp
     trials
     utils
-    visualize
 """
 
 import psiz.agents
@@ -35,6 +34,5 @@ import psiz.mplot
 import psiz.tfp
 import psiz.trials
 import psiz.utils
-import psiz.visualize
 
 psiz.models = psiz.keras.models  # TEMPORARY For backwards compatability.

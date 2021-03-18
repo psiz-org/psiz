@@ -2,8 +2,10 @@
 Design Philosophy
 #################
 
-PsiZ is built around the TensorFlow ecosystem and strives to follow TensorFlow
-idioms as closely as possible. Package-defined models are built by sub-classing
+PsiZ is built using the TensorFlow ecosystem and strives to follow TensorFlow
+idioms as closely as possible.
+
+Package-defined models are built by sub-classing
 :py:class:`tf.keras.Model`. Components of a model are built using the
 :py:class:`tf.keras.layers.Layer` API. A free parameter is implemented as a
 :py:class:`tf.Variable`.

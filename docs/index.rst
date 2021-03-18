@@ -14,6 +14,8 @@ Welcome to psiz's documentation!
    quick_start
    design_philosophy
    trials_and_obs
+   datasets
+   pretrained
    your_data
 
 

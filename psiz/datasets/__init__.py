@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module catalog."""
+"""Module datasets."""
 
-from psiz.catalog.catalog import Catalog
-from psiz.catalog.load_catalog import load_catalog
+from psiz.datasets.load_dataset import load

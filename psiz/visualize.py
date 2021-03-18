@@ -16,11 +16,11 @@
 """Module of visualization tools.
 
 Functions:
-    heatmap_embeddings: Create a heatmap of embeddings.
-    embedding_output_dimension: Visualize embedding values for a
-        requested output dimension.
-    embedding_input_dimension: Visualize embedding values for a
-        requested input dimension.
+    visualize_embedding_static
+    visualize_embedding_images
+    infer_legend
+    dot_2d
+    image_2d
 
 """
 

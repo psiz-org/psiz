@@ -2,10 +2,9 @@
 Trials and Observations
 #######################
 
-Inference is performed by fitting a model to a set of observations. In this
-package, a single observation is comprised of trial where multiple stimuli
-that have been judged by an agent (human or machine) based on their similarity.
-There are currently two different types of trials: *rank* and *rate*.
+Inference is performed by fitting a model to a set of observed behavioral
+outcomes. Two types of behavioral outcomes are currently supported:
+*rank* similarity judgments and *rate* similarity judgments.
 
 
 Rank
@@ -44,15 +43,16 @@ two stimuli. An agent provides a numerical rating regarding the similarity
 between the stimuli.
 
 .. note::
-    This trial type is still under development.
+    This trial type is relatively new with many features still being developed
+    and tested.
 
 
 Other trial types
 =================
 
-While rankings and ratings capture a large amount of work, their are many
-other trial types. For example, a *sort* trial which requires participants
-to sort a set of stimuli into an artbitrary number of different piles. Other
-trials are constantly under consideration but constitute a sizable time
-investment. Discussions and pull requests are strongly encouraged for new
+While rankings and ratings include a large body of research, other types of
+observations are possible. For example, a *sort* trial which requires
+participants to sort a set of stimuli into an artbitrary number of different
+piles. Other trials are constantly under consideration but constitute a sizable
+time investment. Discussions and pull requests are strongly encouraged for new
 trial types.

@@ -3,9 +3,10 @@ Using your own data
 ###################
 
 To use your own data, you should place your data in an appropriate subclass of
-:py:class:`psiz.trials.Observations`. Once the `Observations` object has been
-created, you can save it to disk by calling its `save` method. It can be
-loaded later using the function `psiz.trials.load(filepath)`.
+:py:class:`psiz.trials.Observations`. Once the :py:class:`Observations` object
+has been created, you can save it to disk by calling its :py:meth:`save`
+method. It can be loaded later using the function
+:py:func:`psiz.trials.load_trials`.
 
 Consider the following example that creates some fake rank observations:
 

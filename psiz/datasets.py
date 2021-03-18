@@ -124,7 +124,7 @@ def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
             cache_subdir=cache_subdir, extract=True,
             cache_dir=cache_dir
         )
-        catalog = psiz.catalog.load(path)
+        catalog = psiz.catalog.load_catalog(path)
     else:
         raise ValueError(
             'The requested dataset `{0}` may not exist since the '

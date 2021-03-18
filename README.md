@@ -29,10 +29,11 @@ The package can also be obtained by:
 ## Contribution Guidelines
 If you would like to contribute please see the contribution guidelines.
 
-This project uses a Code of Conduct [CODE](CODE.md) adapted from the [Contributor Covenant][homepage], version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
+This project uses a [Code of Conduct](CODE.md) adapted from the [Contributor Covenant](https://www.contributor-covenant.org/)
+version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
 
 ## Resources
-* Psiz Documentation
+* [Psiz Documentation](docs/)
 * [PsiZ Examples](examples/)
 
 ## Licence

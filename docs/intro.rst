@@ -17,14 +17,15 @@ is often used in machine learning to denote a latent feature space.
 Purpose
 =======
 
-PsiZ provides the computational tools to infer a continuous, multivariate
-stimulus representation using similarity relations. It integrates cognitive
+PsiZ provides computational tools for inferring continuous, multivariate
+stimulus representation from similarity relations. It integrates cognitive
 theory with contemporary computational methods.
 
 PsiZ aims to provide useful top-level and mid-level objects for use in
 cognitive models. Package-defined models (top-level) are implemented by
 subclassing :py:class:`tf.keras.Model`. Model components (mid-level) are
 implemented by subclassing :py:class:`tf.keras.layers.Layer`.
+
 
 Examples
 ========

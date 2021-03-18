@@ -22,7 +22,6 @@ Modules:
     distributions
     keras
     mplot
-    preprocess
     trials
     utils
     visualize
@@ -33,7 +32,6 @@ import psiz.catalog
 import psiz.datasets
 import psiz.keras
 import psiz.mplot
-import psiz.preprocess
 import psiz.tfp
 import psiz.trials
 import psiz.utils

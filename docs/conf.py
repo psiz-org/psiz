@@ -19,7 +19,7 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'psiz'
-copyright = '2021, Brett D. Roads'
+copyright = '2021, The PsiZ Authors'
 author = 'Brett D. Roads'
 
 # The full version, including alpha/beta/rc tags

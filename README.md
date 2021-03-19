@@ -33,7 +33,7 @@ This project uses a [Code of Conduct](CODE.md) adapted from the [Contributor Cov
 version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
 
 ## Resources
-* [Psiz Documentation](docs/)
+* [Psiz Documentation](https://psiz.readthedocs.io/en/latest/)
 * [PsiZ Examples](examples/)
 
 ## Licence

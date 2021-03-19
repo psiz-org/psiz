@@ -152,7 +152,7 @@ ImageNet-HSJ
 Validation Set
 ^^^^^^^^^^^^^^
 
-- OSF location: https://osf.io/7f96y/
+- OSF link: https://osf.io/7f96y/
 - :file:`catalog.hdf5` link: https://osf.io/bf3e2/
 
 ImageNet validation set models are stored at :file:`val/models/psiz0.5.0_tf2.4.x​`.

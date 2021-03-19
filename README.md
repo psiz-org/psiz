@@ -27,7 +27,7 @@ The package can also be obtained by:
 **Note:** PsiZ also requires TensorFlow. In older versions of TensorFlow, CPU only versions were targeted separately. For Tensorflow >=2.0, both CPU-only and GPU versions are obtained via `tensorflow`. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
 
 ## Contribution Guidelines
-If you would like to contribute please see the contribution guidelines.
+If you would like to contribute please see the [contributing guidelines](CONTRIBUTING.md).
 
 This project uses a [Code of Conduct](CODE.md) adapted from the [Contributor Covenant](https://www.contributor-covenant.org/)
 version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.

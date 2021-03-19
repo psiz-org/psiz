@@ -1,4 +1,6 @@
-# PsiZ: A Psychological Embedding Package
+![PsiZ logo](docs/full_logo_300.png)
+
+# A Psychological Embedding Package
 
 WARNING: This package is pre-release and the API is not stable.
 

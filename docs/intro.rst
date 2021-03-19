@@ -37,6 +37,6 @@ implemented by subclassing :py:class:`tf.keras.layers.Layer`.
 Examples
 ========
 
-Check out the `examples <https://github.com/roads/psiz/tree/master/examples>`_
+Check out the `examples <https://github.com/roads/psiz/tree/main/examples>`_
 to explore other ways to take advantage of the various features that PsiZ
 offers.

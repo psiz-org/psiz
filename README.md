@@ -17,7 +17,7 @@ There is not yet a stable version. All APIs are subject to change and all releas
 To install the latest development version, clone from GitHub and install the local repo using pip.
 1. Use `git` to clone the latest version to your local machine: `git clone https://github.com/roads/psiz.git`
 2. Use `pip` to install the cloned repo (using editable mode): `pip install -e /local/path/to/psiz`.
-By using editable mode, you can easily update your local copy by use `git pull origin master` inside your local copy of the repo. You do not have to re-install with `pip`.
+By using editable mode, you can easily update your local copy by use `git pull origin main` inside your local copy of the repo. You do not have to re-install with `pip`.
 
 The package can also be obtained by:
 * Manually downloading the latest version at https://github.com/roads/psiz.git

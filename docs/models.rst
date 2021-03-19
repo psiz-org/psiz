@@ -1,21 +1,10 @@
-#################
-Design Philosophy
-#################
+######
+Models
+######
 
-PsiZ is built using the TensorFlow ecosystem and strives to follow TensorFlow
-idioms as closely as possible.
+Model Components
+================
 
-Package-defined models are built by sub-classing
-:py:class:`tf.keras.Model`. Components of a model are built using the
-:py:class:`tf.keras.layers.Layer` API. A free parameter is implemented as a
-:py:class:`tf.Variable`.
-
-If you would like to contribute, please see
-`CONTRIBUTING <https://github.com/roads/psiz/blob/master/CONTRIBUTING.md>`_ on
-the GitHub repo for additional guidance.
-
-PsiZ Models
-===========
 In PsiZ, a model can be thought as having two major components. The first
 component is a psychological embedding which describes how the agent of
 interest perceives similarity between a set of stimuli. This component
@@ -25,7 +14,8 @@ between the embedding coordinates. The second component describes how
 similarities are converted into an observed behavior, such as rankings or
 ratings.
 
-Deviations from TensorFlow
+
+Departures from TensorFlow
 ==========================
 
 Embeddings are susceptible to local optima. While the usual tricks help, such

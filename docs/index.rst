@@ -12,10 +12,9 @@ Welcome to psiz's documentation!
 
    intro
    quick_start
-   design_philosophy
    trials_and_obs
-   datasets
-   pretrained
+   models
+   hosted
    your_data
 
 

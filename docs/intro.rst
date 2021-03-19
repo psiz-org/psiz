@@ -21,6 +21,13 @@ PsiZ provides computational tools for inferring continuous, multivariate
 stimulus representation from similarity relations. It integrates cognitive
 theory with contemporary computational methods.
 
+
+Design Philosophy
+=================
+
+PsiZ is built using the TensorFlow ecosystem and strives to follow TensorFlow
+and Keras idioms as closely as possible.
+
 PsiZ aims to provide useful top-level and mid-level objects for use in
 cognitive models. Package-defined models (top-level) are implemented by
 subclassing :py:class:`tf.keras.Model`. Model components (mid-level) are

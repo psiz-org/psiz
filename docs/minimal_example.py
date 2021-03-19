@@ -1,4 +1,5 @@
 import psiz
+import tensorflow as tf
 
 # Load observations (and corresponding catalog) for a predefined dataset.
 (obs, catalog) = psiz.datasets.load('birds-16')

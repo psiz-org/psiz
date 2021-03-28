@@ -164,7 +164,7 @@ def build_model(n_stimuli, n_dim, **trainable_parameters_kwargs):
 
     kernel = psiz.keras.layers.Kernel(
         distance=psiz.keras.layers.WeightedMinkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
+            rho_initializer=tf.keras.initializers.Constant(1/10.),
             trainable=trainable_parameters_kwargs['rho_trainable'],
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(

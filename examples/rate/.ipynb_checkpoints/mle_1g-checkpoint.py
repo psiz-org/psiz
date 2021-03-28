@@ -50,14 +50,6 @@ import psiz
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-#Questions:
-#How is the ground truth model made without data?
-#What do the proxy lines means?
-#What is the definition of a docket?
-#How indetailed would we have to know everything in order to be good at/understand this?
-#Do the features come fromt the Proxy object, compile_kwargs variabele, or something else?
-######
-#When you call the model you are infering the embedding? So all the similarity functions, kernanals, and behavior functionalities happen in this function
 
 def main():
     """Run script."""
@@ -93,7 +85,6 @@ def main():
     model_true = ground_truth_grid()
     # model_true = ground_truth_randn(n_stimuli, n_dim)
 
-    #Proxy is an object that contains variables and functions to handle different parts of the model.
     proxy_true = psiz.models.Proxy(model_true)
     simmat_true = psiz.utils.pairwise_matrix(
         proxy_true.similarity, proxy_true.z[0]
@@ -108,13 +99,15 @@ def main():
     )
 
     # Assemble an exhaustive docket of all possible pairwise combinations.
-    docket = exhaustive_docket(n_stimuli) #docket is used to organize that data to put the data in a similarity function
+    docket = exhaustive_docket(n_stimuli)
     ds_docket = docket.as_dataset().batch(
         batch_size=batch_size, drop_remainder=False
     )
 
     # Simulate noise-free similarity judgments.
-    output = model_true.predict(ds_docket) #similarity judgement model; predicts how similar the data values are
+    output = model_true.predict(ds_docket)
+    output = np.random.binomial(1, output)
+    print(output.shape)
     print(
         'Observed Ratings\n'
         '    min: {0:.2f}'
@@ -125,15 +118,12 @@ def main():
             np.max(output)
         )
     )
-    obs = psiz.trials.RateObservations(docket.stimulus_set, output) #Uses stimulus set to create observations for the model.
+    obs = psiz.trials.RateObservations(docket.stimulus_set, output)
 
-    #This section creates the set of observations that will be used the train a model
-    #The data is shuffled in some way to obtain this train split
     ds_obs_train = obs.as_dataset().shuffle(
         buffer_size=obs.n_trial, reshuffle_each_iteration=True
     ).batch(batch_size, drop_remainder=False)
 
-    #I think this is setting some sort of parameters or settings for the model that will be created
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
         'optimizer': tf.keras.optimizers.Adam(lr=lr),
@@ -145,7 +135,6 @@ def main():
     # Infer independent models with increasing amounts of data.
     for i_restart in range(n_restart):
         # Use Tensorboard callback.
-        #this tensor board helps to visualize the models along with its metrics
         fp_board_frame = fp_board / Path('restart_{0}'.format(i_restart))
         cb_board = psiz.keras.callbacks.TensorBoardRe(
             log_dir=fp_board_frame, histogram_freq=0,
@@ -170,8 +159,6 @@ def main():
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        #This section of code shows the accuracy of the model by comparing its metrics with the ground truth model metrics
-        #I would say this is the recording of the validation loss and validation accuracy
         proxy_inferred = psiz.models.Proxy(model)
         simmat_infer = psiz.utils.pairwise_matrix(
             proxy_inferred.similarity, proxy_inferred.z[0]
@@ -203,7 +190,9 @@ def main():
         plt.savefig(
             os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
         )
-
+        
+    print(model)
+    return model
 
 def exhaustive_docket(n_stimuli):
     """Assemble an exhausitive docket.
@@ -221,7 +210,8 @@ def exhaustive_docket(n_stimuli):
     stimulus_set_diff = np.asarray(
         list(itertools.combinations(np.arange(n_stimuli), 2))
     )
-    stimulus_set = np.vstack((stimulus_set_self, stimulus_set_diff))
+    stimulus_set_temp = np.vstack((stimulus_set_self, stimulus_set_diff))
+    stimulus_set = np.vstack([stimulus_set_temp for i in range(100)])
     return psiz.trials.RateDocket(stimulus_set)
 
 
@@ -259,6 +249,7 @@ def ground_truth_randn(n_stimuli, n_dim):
     return psiz.models.Rate(
         stimuli=stimuli, kernel=kernel, behavior=behavior
     )
+
 
 def ground_truth_grid():
     """Create embedding points arranged on a grid."""

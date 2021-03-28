@@ -106,6 +106,8 @@ def main():
 
     # Simulate noise-free similarity judgments.
     output = model_true.predict(ds_docket)
+    output = np.random.binomial(1, output)
+    print(output.shape)
     print(
         'Observed Ratings\n'
         '    min: {0:.2f}'
@@ -188,7 +190,9 @@ def main():
         plt.savefig(
             os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
         )
-
+        
+    print(model)
+    return model
 
 def exhaustive_docket(n_stimuli):
     """Assemble an exhausitive docket.
@@ -206,7 +210,8 @@ def exhaustive_docket(n_stimuli):
     stimulus_set_diff = np.asarray(
         list(itertools.combinations(np.arange(n_stimuli), 2))
     )
-    stimulus_set = np.vstack((stimulus_set_self, stimulus_set_diff))
+    stimulus_set_temp = np.vstack((stimulus_set_self, stimulus_set_diff))
+    stimulus_set = np.vstack([stimulus_set_temp for i in range(100)])
     return psiz.trials.RateDocket(stimulus_set)
 
 

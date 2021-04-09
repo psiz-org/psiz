@@ -41,6 +41,7 @@ import numpy as np
 from scipy.stats import pearsonr
 import tensorflow as tf
 import tensorflow_probability as tfp
+from tqdm.keras import TqdmCallback
 
 import psiz
 
@@ -157,7 +158,8 @@ def main():
         # Infer embedding.
         model_inferred.compile(**compile_kwargs)
         history = model_inferred.fit(
-            ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0
+            ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0,
+            callbacks=[TqdmCallback(verbose=0)]
         )
 
         # train_mse = history.history['mse'][0]

@@ -20,3 +20,6 @@ mark_*.json
 
 # Sphinx documentation
 /docs/_build
+
+# Coverage
+coverage.xml

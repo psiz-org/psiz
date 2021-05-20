@@ -9,17 +9,31 @@ NOTES.md
 /build/
 
 # Python egg metadata, regenerated from source files by setuptools.
-*.egg-info
+*.egg-info/
 *.egg
 
-.vscode/*
-.cache/*
-.pytest_cache/*
+/.cache/
+/.pytest_cache/
 
 mark_*.json
 
 # Sphinx documentation
 /docs/_build
 
-# Coverage
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
 coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Visual Studio Code
+/.vscode/

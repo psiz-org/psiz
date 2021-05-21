@@ -37,7 +37,7 @@ setup(
     package_dir={'': 'src'},
     python_requires='>=3.7, <3.10',
     install_requires=[
-        'tensorflow>=2.4, <2.6', 'tensorflow-probability==0.11.0', 'pandas',
+        'tensorflow>=2.4.2, <2.6', 'tensorflow-probability==0.11.0', 'pandas',
         'scikit-learn', 'matplotlib', 'pillow', 'imageio'
     ],
     project_urls={

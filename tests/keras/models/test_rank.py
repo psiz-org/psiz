@@ -385,7 +385,7 @@ def test_call_2groups(
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -407,7 +407,7 @@ def test_fit_mle_1g(rank_1g_mle_v2, ds_rank_obs_2g, is_eager):
     model = rank_1g_mle_v2
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -427,7 +427,7 @@ def test_fit_mle_3g(rank_3g_mle_v2, ds_rank_obs_2g, is_eager):
     model = rank_3g_mle_v2
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -447,7 +447,7 @@ def test_fit_vi_1g(rank_1g_vi_v2, ds_rank_obs_2g, is_eager):
     model = rank_1g_vi_v2
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -467,7 +467,7 @@ def test_fit_vi_emb_w_1g(rank_1g_emb_w_vi_v2, ds_rank_obs_2g, is_eager):
     model = rank_1g_emb_w_vi_v2
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -487,7 +487,7 @@ def test_fit_vi_3g(rank_3g_vi_v2, ds_rank_obs_3g, is_eager):
     model = rank_3g_vi_v2
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -514,7 +514,7 @@ def test_fit_vi_3g_empty_kernel_branch(
     model = rank_3g_vi_v2
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -541,7 +541,7 @@ def test_fit_vi_3g_v3_empty_kernel_branch(
     model = rank_3g_vi_v3
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -560,7 +560,7 @@ def test_save_load_rank_wtrace(
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
@@ -603,7 +603,7 @@ def test_save_load_rank_wotrace(
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]

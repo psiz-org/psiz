@@ -135,7 +135,7 @@ def main():
 
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(lr=lr),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=lr),
         'weighted_metrics': [
             tf.keras.metrics.MeanSquaredError(name='mse')
         ]

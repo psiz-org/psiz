@@ -73,7 +73,7 @@ def main():
         model = build_model(case=i_case)
         model.compile(
             loss=tf.keras.losses.CategoricalCrossentropy(),
-            optimizer=tf.keras.optimizers.Adam(lr=.001),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
         )
 
         # Create exhaustive list of candidate trials.

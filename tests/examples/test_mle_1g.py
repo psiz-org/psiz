@@ -163,7 +163,7 @@ def test_rate_1g_mle_execution(similarity_func):
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]

@@ -21,8 +21,8 @@ model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
 
 # Compile the model.
 model.compile(
-    'loss': tf.keras.losses.CategoricalCrossentropy(),
-    'optimizer': tf.keras.optimizers.Adam(lr=.001),
+    loss=tf.keras.losses.CategoricalCrossentropy(),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
 )
 
 # Fit the psychological embedding using all observations.

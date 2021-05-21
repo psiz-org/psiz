@@ -47,7 +47,7 @@ def test_call_2groups(
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.MeanSquaredError(name='mse')
         ]
@@ -67,7 +67,7 @@ def test_save_load_rate_wtrace(
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.MeanSquaredError(name='mse')
         ]
@@ -106,7 +106,7 @@ def test_save_load_rate_wotrace(
     # Compile
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(lr=.001),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
             tf.keras.metrics.MeanSquaredError(name='mse')
         ]

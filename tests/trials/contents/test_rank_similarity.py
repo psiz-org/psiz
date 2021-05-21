@@ -628,11 +628,16 @@ def test_persistence(rank_sim_4, tmpdir):
     # Load group.
     f = h5py.File(fn, "r")
     grp = f[group_name]
-    class_name = grp["class_name"][()]
+    # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
+    try:
+        class_name = grp["class_name"].asstr()[()]
+    except AttributeError:
+        class_name = grp["class_name"][()]
     reconstructed = RankSimilarity._load(grp)
     f.close()
 
     # Check for equivalency.
+    assert class_name == "RankSimilarity"
     assert original.n_sequence == reconstructed.n_sequence
     assert original.max_timestep == reconstructed.max_timestep
     np.testing.assert_array_equal(

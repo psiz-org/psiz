@@ -50,9 +50,16 @@ def load_trials(filepath, verbose=0):
     # Retrieve trial class name. Fall back to "trial_type" field for legacy
     # implementations.
     try:
-        class_name = f["class_name"][()]
+        # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
+        try:
+            class_name = f["class_name"].asstr()[()]
+        except AttributeError:
+            class_name = f["class_name"][()]
     except KeyError:
-        class_name = f["trial_type"][()]
+        try:
+            class_name = f["trial_type"].asstr()[()]
+        except AttributeError:
+            class_name = f["trial_type"][()]
     f.close()
 
     # Handle legacy class names.
@@ -72,6 +79,11 @@ def load_trials(filepath, verbose=0):
     if class_name in custom_objects:
         trial_class = custom_objects[class_name]
     else:
+        print(
+            'NotImplementedError: class_name={0} is not implemented.'.format(
+                class_name
+            )
+        )
         raise NotImplementedError
 
     trials = trial_class.load(filepath)

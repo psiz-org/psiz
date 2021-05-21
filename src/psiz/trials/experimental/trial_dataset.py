@@ -311,7 +311,11 @@ class TrialDataset(object):
 
     @staticmethod
     def _load_h5_group(grp):
-        class_name = grp["class_name"][()]
+        # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
+        try:
+            class_name = grp["class_name"].asstr()[()]
+        except AttributeError:
+            class_name = grp["class_name"][()]
         custom_objects = {
             'RankSimilarity': RankSimilarity,
             'RateSimilarity': RateSimilarity,

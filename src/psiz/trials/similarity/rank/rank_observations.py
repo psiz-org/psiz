@@ -375,7 +375,7 @@ class RankObservations(RankTrials):
 
         """
         f = h5py.File(filepath, "w")
-        f.create_dataset("trial_type", data="RankObservations")
+        f.create_dataset("class_name", data="RankObservations")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)

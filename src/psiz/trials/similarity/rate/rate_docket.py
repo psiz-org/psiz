@@ -140,7 +140,7 @@ class RateDocket(RateTrials):
 
         """
         f = h5py.File(filepath, "w")
-        f.create_dataset("trial_type", data="RateDocket")
+        f.create_dataset("class_name", data="RateDocket")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.close()
 

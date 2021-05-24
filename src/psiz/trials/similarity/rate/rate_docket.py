@@ -53,8 +53,8 @@ class RateDocket(RateTrials):
             referencing the row of config_list.
             shape = (n_trial,)
         config_list: A DataFrame object describing the unique trial
-            configurations. The columns are 'n_present',
-            'n_select', 'is_ranked'. and 'n_outcome'.
+            configurations. The columns are 'n_present' and
+            'n_outcome'.
 
     Notes:
         stimulus_set: The order of the stimuli is not important.
@@ -72,8 +72,6 @@ class RateDocket(RateTrials):
 
         Arguments:
             stimulus_set: The order of the indices is not important.
-            n_select (optional): See SimilarityTrials.
-            is_ranked (optional): See SimilarityTrials.
 
         """
         RateTrials.__init__(self, stimulus_set)
@@ -125,9 +123,9 @@ class RateDocket(RateTrials):
         for i_config in range(n_config):
             # Find trials matching configuration.
             a = (n_present == df_config['n_present'].iloc[i_config])
-            f = np.array((a))
-            display_type_locs = np.all(f, axis=0)
-            config_idx[display_type_locs] = i_config
+            # f = np.array((a, b, c))
+            # display_type_locs = np.all(f, axis=0)
+            config_idx[a] = i_config
 
         self.config_idx = config_idx
         self.config_list = df_config

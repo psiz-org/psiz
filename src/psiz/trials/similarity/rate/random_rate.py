@@ -31,17 +31,20 @@ from psiz.utils import choice_wo_replace
 class RandomRate(DocketGenerator):
     """A trial generator that blindly samples trials."""
 
-    def __init__(self, n_stimuli, n_reference=2, n_select=1):
+    def __init__(self, n_stimuli, n_present=2):
         """Initialize.
 
         Arguments:
             n_stimuli: A scalar indicating the total number of unique
                 stimuli.
+            n_present: A scalar indicating the number of unique stimuli
+                per trial.
 
         """
         DocketGenerator.__init__(self)
 
         self.n_stimuli = n_stimuli
+        self.n_present = n_present
 
     def generate(self, n_trial):
         """Return generated trials based on provided arguments.
@@ -57,6 +60,6 @@ class RandomRate(DocketGenerator):
         idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
         prob = np.ones([self.n_stimuli]) / self.n_stimuli
         stimulus_set = choice_wo_replace(
-            idx_eligable, (n_trial, 2), prob
+            idx_eligable, (n_trial, self.n_present), prob
         )
         return RateDocket(stimulus_set)

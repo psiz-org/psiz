@@ -226,7 +226,7 @@ class RateObservations(RateTrials):
 
         """
         return RateObservations(
-            self.stimulus_set[index, :], self.rating[index, :],
+            self.stimulus_set[index, :], self.rating[index],
             groups=self.groups[index], agent_id=self.agent_id[index],
             session_id=self.session_id[index], weight=self.weight[index],
             rt_ms=self.rt_ms[index]
@@ -294,7 +294,7 @@ class RateObservations(RateTrials):
         self.groups = copy.copy(groups)
 
         # Re-derive unique display configurations.
-        self._set_configuration_data(self.m_present, groups)
+        self._set_configuration_data(self.n_present, groups)
 
     def set_weight(self, weight):
         """Override the existing weights.
@@ -403,7 +403,7 @@ class RateObservations(RateTrials):
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
             rating = np.hstack((rating, i_trials.rating))
-            groups = np.hstack((groups, i_trials.groups))
+            groups = np.vstack((groups, i_trials.groups))
             agent_id = np.hstack((agent_id, i_trials.agent_id))
             session_id = np.hstack((session_id, i_trials.session_id))
             weight = np.hstack((weight, i_trials.weight))
@@ -454,7 +454,7 @@ class RateObservations(RateTrials):
         f.close()
 
         trials = RateObservations(
-            stimulus_set, groups=groups, agent_id=agent_id,
+            stimulus_set, rating=rating, groups=groups, agent_id=agent_id,
             session_id=session_id, weight=weight, rt_ms=rt_ms
         )
         return trials

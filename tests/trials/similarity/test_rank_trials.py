@@ -46,12 +46,16 @@ from psiz.trials.similarity.rank.rank_trials import RankTrials
 
 @pytest.fixture(scope="module")
 def setup_docket_0():
+    """Simplest n_select.
     """
-    """
-    stimulus_set = np.array(((0, 1, 2, -1, -1, -1, -1, -1, -1),
-                            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-                            (3, 4, 5, 6, 13, 14, 15, 16, 17)), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        ), dtype=np.int32
+    )
     n_trial = 4
     n_select = np.array((1, 1, 1, 1), dtype=np.int32)
     n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
@@ -74,12 +78,12 @@ def setup_docket_0():
         'is_ranked': is_ranked, 'docket': docket,
         'configurations': configurations,
         'configuration_id': configuration_id
-        }
+    }
 
 
 @pytest.fixture(scope="module")
 def setup_docket_1():
-    """
+    """Varying n_select.
     """
     stimulus_set = np.array(
         (
@@ -111,12 +115,12 @@ def setup_docket_1():
         'is_ranked': is_ranked, 'docket': docket,
         'configurations': configurations,
         'configuration_id': configuration_id
-        }
+    }
 
 
 @pytest.fixture(scope="module")
 def setup_obs_0():
-    """
+    """Default group information.
     """
     stimulus_set = np.array(
         (
@@ -155,7 +159,7 @@ def setup_obs_0():
 
 @pytest.fixture(scope="module")
 def setup_obs_1():
-    """
+    """Varying group information.
     """
     stimulus_set = np.array(
         (
@@ -243,7 +247,7 @@ def ground_truth(n_stimuli):
     return model
 
 
-class TestSimilarityTrials:
+class TestRankSimilarityTrials:
     """Test functionality of base class SimilarityTrials."""
 
     def test_invalid_n_select(self):
@@ -287,7 +291,7 @@ class TestSimilarityTrials:
             docket = trials.RankDocket(stimulus_set, is_ranked=is_ranked)
 
 
-class TestDocket:
+class TestRankDocket:
     """Test class RankDocket."""
 
     def test_invalid_stimulus_set(self):
@@ -471,7 +475,7 @@ class TestDocket:
         # TODO test _possible_rank_outcomes
 
 
-class TestObservations:
+class TestRankObservations:
     """Test class RankObservations."""
 
     def test_invalid_stimulus_set(self):

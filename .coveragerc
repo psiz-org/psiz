@@ -14,7 +14,7 @@ omit =
     tests/*
     src/psiz/keras/layers/group_level.py
     src/psiz/keras/layers/stimuli.py
-    src/psiz/keras/layers/kernel.py
+    src/psiz/keras/layers/kerneles/kernel.py
     src/psiz/keras/layers/distances/minkowski.py
     src/psiz/keras/layers/embeddings/group_attention.py
     src/psiz/keras/layers/embeddings/group_attn_variational.py

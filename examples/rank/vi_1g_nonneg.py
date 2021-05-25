@@ -245,7 +245,7 @@ def plot_frame(
     f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
     psiz.mplot.embedding_output_dimension(
-        fig0, f0_ax4, model_inferred.stimuli, i_dim
+        fig0, f0_ax4, model_inferred.stimuli.posterior, i_dim
     )
 
     gs.tight_layout(fig0)

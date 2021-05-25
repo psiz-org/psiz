@@ -28,7 +28,7 @@ import tensorflow_probability as tfp
 def heatmap_embeddings(fig, ax, embedding, cmap=None):
     """Visualize embeddings as a heatmap.
 
-    Intended to handle rank 2 and rank 3 embeddings.
+    Intended to handle rank 2 embeddings.
 
     Arguments:
         fig: A Matplotlib Figure object.
@@ -47,21 +47,22 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
         # Handle point estimate.
         z_mode = embedding.embeddings.numpy()
 
-    rank = z_mode.ndim
     if embedding.mask_zero:
         z_mode = z_mode[1:]
 
-    n_dim = z_mode.shape[-1]
+    n_output_dim = z_mode.shape[-1]
+    z_mode_min = np.min(z_mode)
     z_mode_max = np.max(z_mode)
+    # MAYBE use `matshow` instead of imshow to fix interpolation issue?
     im = ax.imshow(
-        z_mode, cmap=cmap, interpolation='none', vmin=0., vmax=z_mode_max
+        z_mode, cmap=cmap, interpolation='none',
+        vmin=z_mode_min, vmax=z_mode_max
     )
-    # TODO use matshow to fix interpolation issue.
 
-    # Note: imshow displays different rows as different values of y and
+    # NOTE: `imshow` displays different rows as different values of y and
     # different columns as different values of x.
-    ax.set_xticks([0, n_dim-1])
-    ax.set_xticklabels([0, n_dim-1])
-    ax.set_xlabel('Dimension')
-    ax.set_ylabel('Stimulus')
+    ax.set_xlabel('Output')
+    ax.set_xticks([0, n_output_dim-1])
+    ax.set_xticklabels([0, n_output_dim-1])
+    ax.set_ylabel('Input')
     fig.colorbar(im, ax=ax)

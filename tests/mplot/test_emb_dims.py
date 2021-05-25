@@ -15,6 +15,7 @@
 # ============================================================================
 
 import pytest
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -23,7 +24,7 @@ import tensorflow_probability as tfp
 import psiz.mplot
 
 
-def locs_0(mask_zero):
+def emb_0(mask_zero, is_dist):
     """Location parameters for embedding."""
     n_stimuli = 5
     n_dim = 3
@@ -45,19 +46,30 @@ def locs_0(mask_zero):
             [.15, -.14, .05],
             [.2, .2, .2],
         ])
-    return locs, n_stimuli, n_dim
+
+    if is_dist:
+        emb = psiz.keras.layers.EmbeddingNormalDiag(
+            n_stimuli, n_dim, mask_zero=mask_zero,
+            loc_initializer=tf.keras.initializers.Constant(locs),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(.2).numpy()
+            )
+        )
+    else:
+        emb = tf.keras.layers.Embedding(
+            n_stimuli, n_dim, mask_zero=mask_zero,
+            embeddings_initializer=tf.keras.initializers.Constant(locs)
+        )
+    emb.build([None])
+
+    return emb
 
 
 @pytest.mark.parametrize("mask_zero", [False, True])
 def test_deterministic_emb_input(mask_zero):
     """Basic test of deterministic embedding."""
-    locs, n_stimuli, n_dim = locs_0(mask_zero)
-
-    emb = tf.keras.layers.Embedding(
-        n_stimuli, n_dim, mask_zero=mask_zero,
-        embeddings_initializer=tf.keras.initializers.Constant(locs)
-    )
-    emb.build([None])
+    is_dist = False
+    emb = emb_0(mask_zero, is_dist)
 
     num_figures_before = plt.gcf().number
 
@@ -90,16 +102,8 @@ def test_deterministic_emb_input(mask_zero):
 @pytest.mark.parametrize("mask_zero", [False, True])
 def test_stochastic_emb_input(mask_zero):
     """Basic test of deterministic embedding."""
-    locs, n_stimuli, n_dim = locs_0(mask_zero)
-
-    emb = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=mask_zero,
-        loc_initializer=tf.keras.initializers.Constant(locs),
-        scale_initializer=tf.keras.initializers.Constant(
-            tfp.math.softplus_inverse(.2).numpy()
-        )
-    )
-    emb.build([None])
+    is_dist = True
+    emb = emb_0(mask_zero, is_dist)
 
     num_figures_before = plt.gcf().number
 
@@ -143,13 +147,8 @@ def test_stochastic_emb_input(mask_zero):
 @pytest.mark.parametrize("mask_zero", [False, True])
 def test_deterministic_emb_output(mask_zero):
     """Basic test of deterministic embedding."""
-    locs, n_stimuli, n_dim = locs_0(mask_zero)
-
-    emb = tf.keras.layers.Embedding(
-        n_stimuli, n_dim, mask_zero=mask_zero,
-        embeddings_initializer=tf.keras.initializers.Constant(locs)
-    )
-    emb.build([None])
+    is_dist = False
+    emb = emb_0(mask_zero, is_dist)
 
     num_figures_before = plt.gcf().number
 
@@ -182,16 +181,8 @@ def test_deterministic_emb_output(mask_zero):
 @pytest.mark.parametrize("mask_zero", [False, True])
 def test_stochastic_emb_output(mask_zero):
     """Basic test of deterministic embedding."""
-    locs, n_stimuli, n_dim = locs_0(mask_zero)
-
-    emb = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=mask_zero,
-        loc_initializer=tf.keras.initializers.Constant(locs),
-        scale_initializer=tf.keras.initializers.Constant(
-            tfp.math.softplus_inverse(.2).numpy()
-        )
-    )
-    emb.build([None])
+    is_dist = True
+    emb = emb_0(mask_zero, is_dist)
 
     num_figures_before = plt.gcf().number
 
@@ -229,4 +220,38 @@ def test_stochastic_emb_output(mask_zero):
     np.testing.assert_array_almost_equal(ax.lines[-1]._x, np.array([4., 4.]))
     np.testing.assert_array_almost_equal(
         ax.lines[-1]._y, np.array([0.06510197, 0.33489805])
+    )
+
+
+@pytest.mark.parametrize("mask_zero", [False, True])
+@pytest.mark.parametrize("is_dist", [False, True])
+@pytest.mark.parametrize("cmap", [False, True])
+def test_emb_heatmap(is_dist, mask_zero, cmap):
+    """Test plotter `heatmap_embedding`."""
+    emb = emb_0(mask_zero, is_dist)
+
+    num_figures_before = plt.gcf().number
+
+    fig = plt.figure(figsize=(6.5, 4), dpi=200)
+    gs = fig.add_gridspec(1, 1)
+    ax = fig.add_subplot(gs[0, 0])
+
+    if cmap:
+        cmap = matplotlib.cm.get_cmap('Blues')
+        psiz.mplot.heatmap_embeddings(fig, ax, emb, cmap=cmap)
+    else:
+        psiz.mplot.heatmap_embeddings(fig, ax, emb)
+
+    num_figures_after = plt.gcf().number
+    assert num_figures_before < num_figures_after
+
+    desired_array = np.array([
+        [-.14, .11, .11],
+        [-.14, -.12, .13],
+        [.16, .14, .12],
+        [.15, -.14, .05],
+        [.2, .2, .2],
+    ])
+    np.testing.assert_array_almost_equal(
+        desired_array, ax.images[0].get_array().data,
     )

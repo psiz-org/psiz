@@ -1,8 +1,7 @@
 ![PsiZ logo](docs/full_logo_300.png)
+[![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
 
 # A Psychological Embedding Package
-
-[![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
 
 **WARNING:** This package is pre-release and the API is not stable.
 

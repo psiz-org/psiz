@@ -91,6 +91,13 @@ def test_call_1d_input(emb_input_1d, sample_shape, embedding_class, mask_zero):
     assert config['input_length'] == desired_input_length
     assert config['sample_shape'] == sample_shape
 
+    # Reconstruct embedding and test.
+    recon_emb = embedding_class.from_config(config)
+    recon_output = recon_emb(input)
+    np.testing.assert_array_equal(
+        desired_output_shape, np.shape(recon_output.numpy())
+    )
+
 
 @pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])

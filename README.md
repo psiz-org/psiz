@@ -2,8 +2,6 @@
 
 [![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
 
-# A Psychological Embedding Package
-
 **WARNING:** This package is pre-release and the API is not stable.
 
 ## What's in a name?
@@ -12,7 +10,7 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 
 ## Purpose
 
-PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation from human behavior. It integrates cognitive theory with contemporary computational methods.
+PsiZ provides the computational tools to infer psychological representations from human behavior (i.e., a psychological embedding). It integrates cognitive theory with contemporary computational methods.
 
 ## Installation
 

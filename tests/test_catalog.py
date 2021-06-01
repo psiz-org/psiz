@@ -34,15 +34,27 @@ class TestCatalog:
 
     def test_initialization(self):
         """Test initialization of class."""
-        # Normal.
+        # Normal (no class_id provided).
         stimulus_id = np.array([0, 1, 2, 3, 4, 5])
         stimulus_filepath = [
             'r/a.jpg', 'r/b.jpg', 'r/c.jpg', 'r/d.jpg', 'r/e.jpg', 'r/f.jpg']
         catalog = psiz.catalog.Catalog(stimulus_id, stimulus_filepath)
-        np.testing.assert_array_equal(catalog.stimuli.id.values, stimulus_id)
-        np.testing.assert_array_equal(
-            catalog.stimuli.filepath.values, stimulus_filepath)
         assert catalog.n_stimuli == 6
+        # Stimulus ID.
+        np.testing.assert_array_equal(catalog.stimuli.id.values, stimulus_id)
+        np.testing.assert_array_equal(catalog.id(), stimulus_id)
+        # File paths.
+        np.testing.assert_array_equal(
+            catalog.stimuli.filepath.values, stimulus_filepath
+        )
+        desired_filepath = [
+            Path('r/a.jpg'), Path('r/b.jpg'), Path('r/c.jpg'),
+            Path('r/d.jpg'), Path('r/e.jpg'), Path('r/f.jpg')
+        ]
+        assert desired_filepath == catalog.filepath()
+        # Class IDs.
+        desired_class_id = np.zeros((6))
+        np.testing.assert_array_equal(desired_class_id, catalog.class_id())
 
         # Bad input shape.
         stimulus_id = np.array([[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5]])

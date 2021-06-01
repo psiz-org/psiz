@@ -30,8 +30,12 @@ from tensorflow.python.ops import embedding_ops
 from tensorflow.python.ops import math_ops
 import tensorflow_probability as tfp
 
+from psiz.keras.layers.embeddings.stochastic_embedding import (
+    StochasticEmbedding
+)
 
-class _EmbeddingLocScale(tf.keras.layers.Layer):
+
+class _EmbeddingLocScale(StochasticEmbedding):
     """A private base class for a location-scale embedding.
 
     Each embedding point is characterized by a location-scale
@@ -68,28 +72,12 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
             attribute that specifically controls the variable `x`).
 
         """
-        if 'input_shape' not in kwargs:
-            if input_length:
-                kwargs['input_shape'] = (input_length,)
-            else:
-                kwargs['input_shape'] = (None,)
-        dtype = kwargs.pop('dtype', K.floatx())
-        # We set autocast to False, as we do not want to cast floating-
-        # point inputs to self.dtype. In call(), we cast to int32, and
-        # casting to self.dtype before casting to int32 might cause the
-        # int32 values to be different due to a loss of precision.
-        kwargs['autocast'] = False
-        super(_EmbeddingLocScale, self).__init__(dtype=dtype, **kwargs)
+        super(_EmbeddingLocScale, self).__init__(
+            input_dim, output_dim, mask_zero=mask_zero,
+            input_length=input_length, sample_shape=sample_shape, **kwargs
+        )
 
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.mask_zero = mask_zero
-        self.supports_masking = mask_zero
-        self.input_length = input_length
-        self._supports_ragged_inputs = True
-        self.sample_shape = sample_shape
-
-        # Handle initializer.
+        # Handle initializers.
         if loc_initializer is None:
             loc_initializer = tf.keras.initializers.RandomUniform()
         self.loc_initializer = tf.keras.initializers.get(loc_initializer)
@@ -103,7 +91,7 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
             scale_initializer
         )
 
-        # Handle regularizer.
+        # Handle regularizers.
         self.loc_regularizer = tf.keras.regularizers.get(
             loc_regularizer
         )
@@ -181,10 +169,6 @@ class _EmbeddingLocScale(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super(_EmbeddingLocScale, self).get_config()
         config.update({
-            'input_dim': int(self.input_dim),
-            'output_dim': int(self.output_dim),
-            'mask_zero': self.mask_zero,
-            'input_length': int(self.input_length),
             'loc_initializer':
                 tf.keras.initializers.serialize(self.loc_initializer),
             'scale_initializer':

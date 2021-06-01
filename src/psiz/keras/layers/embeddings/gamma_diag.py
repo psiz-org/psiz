@@ -30,12 +30,15 @@ import tensorflow_probability as tfp
 
 import psiz.tfp.distributions
 import psiz.keras.constraints
+from psiz.keras.layers.embeddings.stochastic_embedding import (
+    StochasticEmbedding
+)
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='EmbeddingGammaDiag'
 )
-class EmbeddingGammaDiag(tf.keras.layers.Layer):
+class EmbeddingGammaDiag(StochasticEmbedding):
     """Gamma distribution embedding.
 
     Each embedding point is characterized by a Gamma distribution.
@@ -75,28 +78,12 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
                 issues with small parameter values.
 
         """
-        if 'input_shape' not in kwargs:
-            if input_length:
-                kwargs['input_shape'] = (input_length,)
-            else:
-                kwargs['input_shape'] = (None,)
-        dtype = kwargs.pop('dtype', K.floatx())
-        # We set autocast to False, as we do not want to cast floating-
-        # point inputs to self.dtype. In call(), we cast to int32, and
-        # casting to self.dtype before casting to int32 might cause the
-        # int32 values to be different due to a loss of precision.
-        kwargs['autocast'] = False
-        super(EmbeddingGammaDiag, self).__init__(dtype=dtype, **kwargs)
+        super(EmbeddingGammaDiag, self).__init__(
+            input_dim, output_dim, mask_zero=mask_zero,
+            input_length=input_length, sample_shape=sample_shape, **kwargs
+        )
 
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.mask_zero = mask_zero
-        self.supports_masking = mask_zero
-        self.input_length = input_length
-        self._supports_ragged_inputs = True
-        self.sample_shape = sample_shape
-
-        # Handle initializer.
+        # Handle initializers.
         if concentration_initializer is None:
             concentration_initializer = tf.keras.initializers.RandomUniform(
                 1., 3.
@@ -110,7 +97,7 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
             rate_initializer
         )
 
-        # Handle regularizer.
+        # Handle regularizers.
         self.concentration_regularizer = tf.keras.regularizers.get(
             concentration_regularizer
         )
@@ -209,10 +196,6 @@ class EmbeddingGammaDiag(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super(EmbeddingGammaDiag, self).get_config()
         config.update({
-            'input_dim': int(self.input_dim),
-            'output_dim': int(self.output_dim),
-            'mask_zero': self.mask_zero,
-            'input_length': int(self.input_length),
             'concentration_initializer':
                 tf.keras.initializers.serialize(
                     self.concentration_initializer

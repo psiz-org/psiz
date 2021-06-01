@@ -37,6 +37,7 @@ def emb_input_2d():
     return batch
 
 
+@pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
     'embedding_class', [
@@ -48,7 +49,7 @@ def emb_input_2d():
         psiz.keras.layers.EmbeddingTruncatedNormalDiag
     ]
 )
-def test_call_1d_input(emb_input_1d, sample_shape, embedding_class):
+def test_call_1d_input(emb_input_1d, sample_shape, embedding_class, mask_zero):
     """Test call() return shape.
 
     Returned shape must include appropriate `sample_shape`."
@@ -63,13 +64,14 @@ def test_call_1d_input(emb_input_1d, sample_shape, embedding_class):
         # Test default `sample_shape`.
         sample_shape = ()
         embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=True
+            n_stimuli, n_dim, mask_zero=mask_zero
         )
     else:
         embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=True, sample_shape=sample_shape
+            n_stimuli, n_dim, mask_zero=mask_zero, sample_shape=sample_shape
         )
 
+    desired_input_length = 1
     desired_output_shape = np.hstack(
         [sample_shape, input_shape, n_dim]
     ).astype(int)
@@ -79,7 +81,18 @@ def test_call_1d_input(emb_input_1d, sample_shape, embedding_class):
         desired_output_shape, np.shape(output.numpy())
     )
 
+    assert embedding.mask_zero == mask_zero
 
+    # Verify `get_config` dictionary.
+    config = embedding.get_config()
+    assert config['input_dim'] == n_stimuli
+    assert config['output_dim'] == n_dim
+    assert config['mask_zero'] == mask_zero
+    assert config['input_length'] == desired_input_length
+    assert config['sample_shape'] == sample_shape
+
+
+@pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
     'embedding_class', [
@@ -91,7 +104,7 @@ def test_call_1d_input(emb_input_1d, sample_shape, embedding_class):
         psiz.keras.layers.EmbeddingTruncatedNormalDiag
     ]
 )
-def test_call_2d_input(emb_input_2d, sample_shape, embedding_class):
+def test_call_2d_input(emb_input_2d, sample_shape, embedding_class, mask_zero):
     """Test call() return shape.
 
     Returned shape must include appropriate `sample_shape`."
@@ -106,11 +119,11 @@ def test_call_2d_input(emb_input_2d, sample_shape, embedding_class):
         # Test default `sample_shape`.
         sample_shape = ()
         embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=True
+            n_stimuli, n_dim, mask_zero=mask_zero
         )
     else:
         embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=True, sample_shape=sample_shape
+            n_stimuli, n_dim, mask_zero=mask_zero, sample_shape=sample_shape
         )
 
     desired_output_shape = np.hstack(
@@ -121,3 +134,5 @@ def test_call_2d_input(emb_input_2d, sample_shape, embedding_class):
     np.testing.assert_array_equal(
         desired_output_shape, np.shape(output.numpy())
     )
+
+    assert embedding.mask_zero == mask_zero

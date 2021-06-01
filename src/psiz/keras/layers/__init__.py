@@ -43,5 +43,6 @@ from psiz.keras.layers.embeddings.logit_normal_diag import EmbeddingLogitNormalD
 from psiz.keras.layers.embeddings.nd import EmbeddingND
 from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
 from psiz.keras.layers.embeddings.shared import EmbeddingShared
+from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag
 from psiz.keras.layers.embeddings.variational import EmbeddingVariational

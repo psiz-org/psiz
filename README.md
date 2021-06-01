@@ -2,7 +2,9 @@
 
 # A Psychological Embedding Package
 
-WARNING: This package is pre-release and the API is not stable.
+[![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
+
+**WARNING:** This package is pre-release and the API is not stable.
 
 ## What's in a name?
 
@@ -10,7 +12,7 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 
 ## Purpose
 
-PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation using similarity relations. It integrates cognitive theory with contemporary computational methods.
+PsiZ provides the computational tools to infer a continuous, multivariate stimulus representation from human behavior. It integrates cognitive theory with contemporary computational methods.
 
 ## Installation
 
@@ -26,17 +28,17 @@ The package can also be obtained by:
 * Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.3.0`
 * Using PyPi to install older alpha releases: ``pip install psiz``. The versions available through PyPI lag behind the GitHub versions.
 
-**Note:** PsiZ also requires TensorFlow. In older versions of TensorFlow, CPU only versions were targeted separately. For Tensorflow >=2.0, both CPU-only and GPU versions are obtained via `tensorflow`. The current `setup.py` file fulfills this dependency by downloading the `tensorflow` package using `pip`.
+**Note:** PsiZ depends on TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TF.
+
+## Resources
+* [Psiz Documentation](https://psiz.readthedocs.io/en/latest/)
+* [PsiZ Examples](examples/)
 
 ## Contribution Guidelines
 If you would like to contribute please see the [contributing guidelines](CONTRIBUTING.md).
 
 This project uses a [Code of Conduct](CODE.md) adapted from the [Contributor Covenant](https://www.contributor-covenant.org/)
 version 2.0, available at <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
-
-## Resources
-* [Psiz Documentation](https://psiz.readthedocs.io/en/latest/)
-* [PsiZ Examples](examples/)
 
 ## Licence
 This project is licensed under the Apache Licence 2.0 - see LICENSE file for details.

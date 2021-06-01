@@ -24,6 +24,7 @@ from psiz.trials import RankObservations
 
 
 @pytest.mark.slow
+@pytest.mark.osf
 def test_birds_12(tmpdir):
     dataset_name = 'birds-12'
     obs, catalog = psiz.datasets.load(
@@ -54,6 +55,7 @@ def test_birds_12(tmpdir):
 
 
 @pytest.mark.slow
+@pytest.mark.osf
 def test_birds_16(tmpdir):
     dataset_name = 'birds-16'
     obs, catalog = psiz.datasets.load(
@@ -87,6 +89,7 @@ def test_birds_16(tmpdir):
 
 
 @pytest.mark.slow
+@pytest.mark.osf
 def test_skin_lesions(tmpdir):
     dataset_name = 'skin_lesions'
     obs, catalog = psiz.datasets.load(
@@ -117,6 +120,7 @@ def test_skin_lesions(tmpdir):
 
 
 @pytest.mark.slow
+@pytest.mark.osf
 def test_rocks(tmpdir):
     dataset_name = 'rocks_Nosofsky_etal_2016'
     obs, catalog = psiz.datasets.load(
@@ -147,6 +151,7 @@ def test_rocks(tmpdir):
 
 
 @pytest.mark.slow
+@pytest.mark.osf
 def test_ilscrc_val_v1(tmpdir):
     dataset_name = 'ilsvrc_val_v0_1'
     obs, catalog = psiz.datasets.load(
@@ -177,6 +182,7 @@ def test_ilscrc_val_v1(tmpdir):
 
 
 @pytest.mark.slow
+@pytest.mark.osf
 def test_ilscrc_val_v2(tmpdir):
     dataset_name = 'ilsvrc_val_v0_2'
     obs, catalog = psiz.datasets.load(

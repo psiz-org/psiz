@@ -78,6 +78,10 @@ def pairwise_index_dataset(
 
     n_pair = len(idx_0)
     if subsample is not None:
+        # Make sure subsample is valid subsample value.
+        subsample = np.minimum(1., subsample)
+        subsample = np.maximum(0., subsample)
+
         np.random.seed(seed)
         idx_rand = np.random.permutation(n_pair)
         n_pair = int(np.ceil(n_pair * subsample))

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for testing embeddings."""
+"""Module for testing stochastic embeddings."""
 
 import pytest
 

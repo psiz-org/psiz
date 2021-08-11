@@ -18,7 +18,7 @@ Please send in fixes and feature additions through Pull Requests.
 
 ## Testing
 
-* PsiZ uses `pytest` for testing, `pytest-cov` for coverage analytics, and `tox` for testing multiple python versions. These packages should be installed separtely by the tester.
+* PsiZ uses `pytest` for testing, `pytest-cov` for coverage analytics, and `tox` for testing multiple python versions. These packages should be installed separately by the tester.
 * A coverage report can be generated using `pytest --cov`
 * An xml coverage report for uploading to codecov can be generated using `py.test --cov-report=xml --cov=psiz tests/`
 * Tests that take more than a few seconds are marked as `slow` and can be skipped by running `pytest -m "not slow"`.
@@ -37,7 +37,6 @@ PsiZ closely adheres to TensorFlow and Keras idioms. Model components are implem
 
 ### Observations
 * requires as_datatset() method
-
 
 ## Module: models
 * take an appropriate Dataset as an argument

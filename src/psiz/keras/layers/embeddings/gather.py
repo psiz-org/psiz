@@ -127,7 +127,7 @@ class EmbeddingGather(tf.keras.layers.Layer):
     def embeddings(self):
         """Getter method for `embeddings`."""
         if self._is_distribution:
-            z_mapped = self._embedding.gather(self.input_map)
+            z_mapped = self._embedding[self.input_map]
         else:
             z = self._embedding.embeddings
             z_mapped = tf.gather(z, self.input_map)

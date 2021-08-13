@@ -20,7 +20,7 @@ import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from psiz.keras.layers import EmbeddingNormalDiag
+from psiz.keras.layers import EmbeddingLaplaceDiag, EmbeddingNormalDiag
 from psiz.keras.layers import EmbeddingGather
 
 
@@ -351,7 +351,7 @@ def test_stochastic_1():
     assert output_dim_desired == embedding_gather.output_dim
 
 
-def test_stochastic_2():
+def test_stochastic_2a():
     """Test stochastic, hierarchically shared."""
     n_stimuli = 6
     n_dim = 2
@@ -359,6 +359,74 @@ def test_stochastic_2():
 
     # Create core embedding composed of one 1D point.
     embedding_core = EmbeddingNormalDiag(
+        3, 2,
+        loc_initializer=tf.keras.initializers.Constant(
+            np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
+        ),
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(
+                np.array([[0.01, 0.02], [0.03, 0.04], [0.05, 0.06]])
+            ).numpy()
+        ),
+        loc_trainable=False,
+    )
+    # Map one point to four points.
+    input_map = [0, 0, 1, 2, 1, 2]
+    embedding_gather = EmbeddingGather(
+        embedding=embedding_core, input_map=input_map
+    )
+
+    # Test call with 1D input.
+    x = tf.constant(
+        np.array([0, 1, 2, 3, 4, 5]), dtype=tf.int32
+    )
+    z = embedding_gather(x).numpy()
+    assert z.shape[0] == 6
+    assert z.shape[1] == n_dim
+
+    # Test embedding properties.
+    embeddings_loc_desired = tf.constant(
+        [[.1, .2], [.1, .2], [.3, .4], [.5, .6], [.3, .4], [.5, .6]],
+        dtype=tf.float32
+    )
+    embeddings_scale_desired = tf.constant(
+        [
+            [0.0100001, 0.0200001],
+            [0.0100001, 0.0200001],
+            [0.0300001, 0.0400001],
+            [0.05000011, 0.0600001],
+            [0.0300001, 0.0400001],
+            [0.05000011, 0.0600001],
+        ],
+        dtype=tf.float32
+    )
+    embeddings = embedding_gather.embeddings
+    tf.debugging.assert_equal(
+        embeddings_loc_desired, embeddings.distribution.loc
+    )
+    np.testing.assert_array_almost_equal(
+        embeddings_scale_desired.numpy(),
+        embeddings.distribution.scale.numpy()
+    )
+
+    mask_zero_desired = False
+    assert mask_zero_desired == embedding_gather.mask_zero
+
+    input_dim_desired = 6
+    assert input_dim_desired == embedding_gather.input_dim
+
+    output_dim_desired = 2
+    assert output_dim_desired == embedding_gather.output_dim
+
+
+def test_stochastic_2b():
+    """Test stochastic, hierarchically shared."""
+    n_stimuli = 6
+    n_dim = 2
+    prior_scale = .12
+
+    # Create core embedding composed of one 1D point.
+    embedding_core = EmbeddingLaplaceDiag(
         3, 2,
         loc_initializer=tf.keras.initializers.Constant(
             np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])

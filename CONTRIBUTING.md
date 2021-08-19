@@ -4,7 +4,7 @@ When contributing to this repository, please first discuss the change you wish t
 
 Please note we have a code of conduct, please follow it in all your interactions with the project.
 
-PsiZ's scope is restricted to computational modeling of *similarity* data. This includes ratings, rankings, and sorts of stimuli. Not all of this functionality is implemented. Contributions that support this functionality are welcome.
+PsiZ's scope is restricted to computational modeling of human behavioral data. This includes similarity ratings, similarity rankings, and pile sorts of stimuli. Not all of this functionality is implemented. Contributions that support this functionality are welcome.
 
 ## Issues
 

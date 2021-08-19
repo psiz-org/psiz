@@ -41,14 +41,14 @@ class EmbeddingGather(tf.keras.layers.Layer):
 
         """
         super(EmbeddingGather, self).__init__(**kwargs)
-        self._embedding = embedding
+        self.embedding = embedding
 
         # Make sure provided `input_map` works with provided embedding.
         if np.min(input_map) < 0:
             raise ValueError(
                 'Indices in `input_map` must be non-negative.'
             )
-        if np.max(input_map) > (self._embedding.input_dim - 1):
+        if np.max(input_map) > (self.embedding.input_dim - 1):
             raise ValueError(
                 'Indices in `input_map` must not be greater than the '
                 '`input_dim` of the provided embedding.'
@@ -61,19 +61,19 @@ class EmbeddingGather(tf.keras.layers.Layer):
     @property
     def mask_zero(self):
         """Get `mask_zero`."""
-        return self._embedding.mask_zero
+        return self.embedding.mask_zero
 
     @property
     def output_dim(self):
         """Get `output_dim`."""
-        return self._embedding.output_dim
+        return self.embedding.output_dim
 
     def build(self, input_shape):
         """Build."""
         super().build(input_shape)
-        self._embedding.build(input_shape)
+        self.embedding.build(input_shape)
         self._is_distribution = isinstance(
-            self._embedding.embeddings, tfp.distributions.Distribution
+            self.embedding.embeddings, tfp.distributions.Distribution
         )
 
     def call(self, inputs):
@@ -89,7 +89,7 @@ class EmbeddingGather(tf.keras.layers.Layer):
         # Unflatten
         inputs = tf.reshape(inputs, inputs_shape)
 
-        outputs = self._embedding(inputs)
+        outputs = self.embedding(inputs)
         return outputs
 
     def get_config(self):
@@ -97,7 +97,7 @@ class EmbeddingGather(tf.keras.layers.Layer):
         config = super(EmbeddingGather, self).get_config()
         config.update({
             'embedding': tf.keras.utils.serialize_keras_object(
-                self._embedding
+                self.embedding
             ),
             'input_map': self.input_map.numpy().tolist()
         })
@@ -127,9 +127,9 @@ class EmbeddingGather(tf.keras.layers.Layer):
     def embeddings(self):
         """Getter method for `embeddings`."""
         if self._is_distribution:
-            z_mapped = self._embedding[self.input_map]
+            z_mapped = self.embedding[self.input_map]
         else:
-            z = self._embedding.embeddings
+            z = self.embedding.embeddings
             z_mapped = tf.gather(z, self.input_map)
 
         return z_mapped

@@ -21,15 +21,15 @@ PsiZ provides the computational tools to infer psychological representations fro
 There are two different ways to install: PyPI or git. Installing via git has the advantage of including examples and tests in the cloned repository.
 
 ### Using PyPI
-```console
+```
 $ pip install psiz
 ```
 
 ### Using git
-```console
+```
 # Clone the PsiZ repository from GitHub to your local machine.
 $ git clone https://github.com/roads/psiz.git
-# Uses `pip` to install the cloned repository.
+# Use `pip` to install the cloned repository.
 $ pip install /local/path/to/psiz
 ```
 

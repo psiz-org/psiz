@@ -3,7 +3,10 @@
 [![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
 [![codecov](https://codecov.io/gh/roads/psiz/branch/main/graph/badge.svg?token=UIK748KI5I)](https://codecov.io/gh/roads/psiz)
 
-**WARNING:** This package is pre-release and the API is not stable.
+---
+**WARNING:** This package is pre-release and the API is not stable. All APIs are subject to change and all releases are alpha.
+
+---
 
 ## What's in a name?
 
@@ -15,30 +18,24 @@ PsiZ provides the computational tools to infer psychological representations fro
 
 ## Installation
 
----
-**WARNING:** There is not yet a stable version. All APIs are subject to change and all releases are alpha.
+There are two different ways to install: PyPI or git. Installing via git has the advantage of including examples and tests in the cloned repository.
 
----
-
-### Install using PyPI
-```
-pip install psiz
+### Using PyPI
+```console
+$ pip install psiz
 ```
 
-### Install using git
-This method includes examples and tests in the repository.
-1. Use `git` to clone the repository from GitHub to your local machine. 
-```
-git clone https://github.com/roads/psiz.git
-```
-2. Then use `pip` to install the cloned repo.
-```
-pip install /local/path/to/psiz
+### Using git
+```console
+# Clone the PsiZ repository from GitHub to your local machine.
+$ git clone https://github.com/roads/psiz.git
+# Uses `pip` to install the cloned repository.
+$ pip install /local/path/to/psiz
 ```
 
 ### Notes
-* PsiZ depends on TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TF.
-* Versions 0.5.0 and older must be installed using git clone and editable mode (`pip install -e /local/path/to/psiz`).
+* PsiZ depends on TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow.
+* PsiZ versions 0.5.0 and older must be installed using git clone and editable mode (`pip install -e /local/path/to/psiz`).
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`
     * using git: `git clone https://github.com/roads/psiz.git --branch v0.5.1`

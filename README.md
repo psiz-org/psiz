@@ -40,7 +40,7 @@ pip install /local/path/to/psiz
 * Versions 0.5.0 and older must be installed using git clone and editable mode (`pip install -e /local/path/to/psiz`).
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`
-    * usings git: `git clone https://github.com/roads/psiz.git --branch v0.5.1`
+    * using git: `git clone https://github.com/roads/psiz.git --branch v0.5.1`
 
 ## Resources
 * [Psiz Documentation](https://psiz.readthedocs.io/en/latest/)

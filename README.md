@@ -33,7 +33,7 @@ $ git clone https://github.com/roads/psiz.git
 $ pip install /local/path/to/psiz
 ```
 
-### Notes
+**Notes:**
 * PsiZ depends on TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow.
 * PsiZ versions 0.5.0 and older must be installed using git clone and editable mode (`pip install -e /local/path/to/psiz`).
 * You can install specific releases:

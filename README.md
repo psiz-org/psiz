@@ -14,23 +14,61 @@ PsiZ provides the computational tools to infer psychological representations fro
 
 ## Installation
 
-There is not yet a stable version. All APIs are subject to change and all releases are alpha.
+---
+**WARNING:** There is not yet a stable version. All APIs are subject to change and all releases are alpha.
 
-To install the latest development version, clone from GitHub and install the local repo using pip.
-1. Use `git` to clone the latest version to your local machine: `git clone https://github.com/roads/psiz.git`
-2. Use `pip` to install the cloned repo (using editable mode): `pip install -e /local/path/to/psiz`.
-By using editable mode, you can easily update your local copy by use `git pull origin main` inside your local copy of the repo. You do not have to re-install with `pip`.
+---
 
-The package can also be obtained by:
-* Manually downloading the latest version at https://github.com/roads/psiz.git
-* Use git to clone a specific release, for example: `git clone https://github.com/roads/psiz.git --branch v0.3.0`
-* Using PyPi to install older alpha releases: ``pip install psiz``. The versions available through PyPI lag behind the GitHub versions.
+### Install using PyPI
+```
+pip install psiz
+```
 
-**Note:** PsiZ depends on TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TF.
+### Install using git
+This method includes examples and tests in the repository.
+1. Use `git` to clone the repository from GitHub to your local machine. 
+```
+git clone https://github.com/roads/psiz.git
+```
+2. Then use `pip` to install the cloned repo.
+```
+pip install /local/path/to/psiz
+```
+
+### Notes
+* PsiZ depends on TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TF.
+* Versions 0.5.0 and older must be installed using git clone and editable mode (`pip install -e /local/path/to/psiz`).
+* You can install specific releases:
+    * using PyPI: `pip install 'psiz==0.5.1'`
+    * usings git: `git clone https://github.com/roads/psiz.git --branch v0.5.1`
 
 ## Resources
 * [Psiz Documentation](https://psiz.readthedocs.io/en/latest/)
 * [PsiZ Examples](examples/)
+
+## Attribution
+If you use PsiZ in your work please cite one of the following:
+```
+@InProceedings{Roads_Love_2021:CVPR,
+    title     = {Enriching ImageNet with Human Similarity Judgments and Psychological Embeddings},
+    author    = {Brett D. Roads and Bradley C. Love},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+    year      = {2021},
+    month     = {6},
+    pages     = {3547--3557}
+}
+```
+```
+@Article{Roads_Mozer_2019:BRM,
+    title   = {Obtaining psychological embeddings through joint kernel and metric learning},
+    author  = {Brett D. Roads and Michael C. Mozer},
+    journal = {Behavior Research Methods},
+    year    = {2019},
+    volume  = {51},
+    pages   = {2180–-2193},
+    doi     = {10.3758/s13428-019-01285-3}
+}
+```
 
 ## Contribution Guidelines
 If you would like to contribute please see the [contributing guidelines](CONTRIBUTING.md).

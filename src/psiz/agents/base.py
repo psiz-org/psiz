@@ -23,7 +23,7 @@ Classes:
 from abc import ABCMeta, abstractmethod
 
 
-class Agent(object):
+class Agent():  # pylint: disable=too-few-public-methods
     """Abstract base class for simulating agent behavior.
 
     Methods:
@@ -48,4 +48,3 @@ class Agent(object):
             An Observations object.
 
         """
-        pass

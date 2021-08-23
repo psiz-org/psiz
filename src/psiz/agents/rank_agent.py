@@ -29,7 +29,7 @@ from psiz.agents.base import Agent
 from psiz.trials import RankObservations
 
 
-class RankAgent(Agent):
+class RankAgent(Agent):  # pylint: disable=too-few-public-methods
     """Agent that simulates Rank similarity judgments.
 
     Attributes:
@@ -43,7 +43,7 @@ class RankAgent(Agent):
 
     """
 
-    def __init__(self, model, groups=[]):
+    def __init__(self, model, groups=None):
         """Initialize.
 
         Arguments:
@@ -55,7 +55,10 @@ class RankAgent(Agent):
                 second optional column has the value 3.
 
         """
+        Agent.__init__(self)
         self.model = model
+        if groups is None:
+            groups = []
         self.groups = groups
 
     def simulate(self, docket, batch_size=None):
@@ -91,18 +94,21 @@ class RankAgent(Agent):
         # stochastically sample an outcome.
         stimulus_set = None
         for data in ds_docket:
+            # TODO is data_adapter.expand_1d necessary?
             data = data_adapter.expand_1d(data)
-            x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
+            # TODO replace current unpack with
+            # tf.keras.utils.unpack_x_y_sample_weight
+            dict_x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
 
             batch_stimulus_set = _rank_sample(
-                x['stimulus_set'],
-                tf.reduce_mean(self.model(x, training=False), axis=1)
+                dict_x['stimulus_set'],
+                tf.reduce_mean(self.model(dict_x, training=False), axis=1)
             )
             if stimulus_set is None:
                 stimulus_set = [batch_stimulus_set]
             else:
                 stimulus_set.append(batch_stimulus_set)
-        stimulus_set = tf.concat(stimulus_set, axis=0).numpy() - 1
+        stimulus_set = tf.concat(stimulus_set, 0).numpy() - 1
 
         obs = RankObservations(
             stimulus_set,

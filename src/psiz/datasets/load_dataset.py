@@ -27,22 +27,18 @@ Notes:
 """
 
 import collections
-import copy
 import os
 from pathlib import Path
 import shutil
 import sys
 import tarfile
 import time
-from urllib import request
 import zipfile
 
 import numpy as np
-import pandas as pd
 import six
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
-from six.moves.urllib.request import urlopen
 from six.moves.urllib.request import urlretrieve
 
 import psiz.catalog
@@ -259,7 +255,8 @@ def _get_file(
     if download:
         print('Downloading data from', origin)
 
-        class ProgressTracker(object):
+        class ProgressTracker():
+            """Download progress bar."""
             # Maintain progbar for the lifetime of download.
             # This design was chosen for Python 2.7 compatibility.
             progbar = None
@@ -296,7 +293,7 @@ def _get_file(
     return fpath
 
 
-class Progbar(object):
+class Progbar():
     """Displays a progress bar."""
 
     def __init__(
@@ -379,22 +376,22 @@ class Progbar(object):
             if self.target is not None:
                 numdigits = int(np.floor(np.log10(self.target))) + 1
                 barstr = '%%%dd/%d [' % (numdigits, self.target)
-                bar = barstr % current
+                displayed_bar = barstr % current
                 prog = float(current) / self.target
                 prog_width = int(self.width * prog)
                 if prog_width > 0:
-                    bar += ('=' * (prog_width - 1))
+                    displayed_bar += ('=' * (prog_width - 1))
                     if current < self.target:
-                        bar += '>'
+                        displayed_bar += '>'
                     else:
-                        bar += '='
-                bar += ('.' * (self.width - prog_width))
-                bar += ']'
+                        displayed_bar += '='
+                displayed_bar += ('.' * (self.width - prog_width))
+                displayed_bar += ']'
             else:
-                bar = '%7d/Unknown' % current
+                displayed_bar = '%7d/Unknown' % current
 
-            self._total_width = len(bar)
-            sys.stdout.write(bar)
+            self._total_width = len(displayed_bar)
+            sys.stdout.write(displayed_bar)
 
             if current:
                 time_per_unit = (now - self._start) / current

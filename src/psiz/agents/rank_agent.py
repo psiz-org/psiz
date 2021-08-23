@@ -22,7 +22,6 @@ Classes:
 """
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.engine import data_adapter
 import tensorflow_probability as tfp
 
 from psiz.agents.base import Agent
@@ -94,11 +93,7 @@ class RankAgent(Agent):  # pylint: disable=too-few-public-methods
         # stochastically sample an outcome.
         stimulus_set = None
         for data in ds_docket:
-            # TODO is data_adapter.expand_1d necessary?
-            data = data_adapter.expand_1d(data)
-            # TODO replace current unpack with
-            # tf.keras.utils.unpack_x_y_sample_weight
-            dict_x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
+            dict_x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
 
             batch_stimulus_set = _rank_sample(
                 dict_x['stimulus_set'],

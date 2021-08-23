@@ -35,7 +35,6 @@ import h5py
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.python.keras.engine import data_adapter
 from tensorflow.python.eager import backprop
 import tensorflow_probability as tfp
 
@@ -220,9 +219,7 @@ class PsychologicalEmbedding(tf.keras.Model):
             divided by the same incorrect `effective_batch_size`.
 
         """
-
-        data = data_adapter.expand_1d(data)
-        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
 
         # NOTE: During computation of gradients, IndexedSlices are
         # created which generates a TensorFlow warning. I cannot
@@ -283,8 +280,7 @@ class PsychologicalEmbedding(tf.keras.Model):
             returned.
 
         """
-        data = data_adapter.expand_1d(data)
-        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
         # NOTE The first dimension of the Tensor returned from calling the
         # model is assumed to be `sample_size`. If this is a singleton
         # dimension, taking the mean is equivalent to a squeeze
@@ -311,8 +307,7 @@ class PsychologicalEmbedding(tf.keras.Model):
             calling the `Model` on data.
 
         """
-        data = data_adapter.expand_1d(data)
-        x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
+        x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         y_pred = tf.reduce_mean(self(x, training=False), axis=1)
         return y_pred
 

@@ -18,7 +18,6 @@
 import numpy as np
 import pytest
 import tensorflow as tf
-from tensorflow.python.keras.engine import data_adapter
 import tensorflow_probability as tfp
 
 import psiz
@@ -393,8 +392,7 @@ def test_call_2groups(
     model.compile(**compile_kwargs)
 
     for data in ds_rank_docket_2g:
-        data = data_adapter.expand_1d(data)
-        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
         output = model(x, training=False)
 
 

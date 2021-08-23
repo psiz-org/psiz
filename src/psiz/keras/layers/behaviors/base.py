@@ -35,7 +35,7 @@ class Behavior(tf.keras.layers.Layer):
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(Behavior, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def get_config(self):
         """Return layer configuration."""

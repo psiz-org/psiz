@@ -31,14 +31,6 @@ class EarlyStoppingRe(callbacks.EarlyStopping):
 
     """
 
-    # def on_train_begin(self, logs=None):
-    #     """Overload."""
-    #     super().on_train_begin(logs=logs)
-
-    #     # Add initial set of weights to best weights.
-    #     if self.restore_best_weights:
-    #         self.best_weights = self.model.get_weights()
-
     def reset(self, restart=None):
         """Reset best weights.
 

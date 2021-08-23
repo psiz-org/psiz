@@ -21,7 +21,6 @@ Classes:
 
 """
 
-import numpy as np
 import tensorflow as tf
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 
@@ -98,13 +97,14 @@ class GateMulti(tf.keras.layers.Layer):
         # Split inputs.
         inputs_less_group = inputs[0:-1]
         idx_group = inputs[-1][:, self.group_col]
-        idx_group = tf.one_hot(idx_group, self.n_subnet)
+        idx_group = tf.one_hot(
+            idx_group, self.n_subnet, on_value=1.0, off_value=0.0
+        )
 
         # Run inputs through group-specific dispatcher.
         dispatcher = SparseDispatcher(self.n_subnet, idx_group)
         subnet_inputs = dispatcher.dispatch_multi(inputs_less_group)
         subnet_outputs = []
-        max_size = 0
         for i in range(self.n_subnet):
             out = self.subnets[i](subnet_inputs[i])
             out, lost_shape = self._pre_combine(out)
@@ -190,6 +190,6 @@ class GateMulti(tf.keras.layers.Layer):
         batch_size = tf.expand_dims(tf.shape(x)[0], axis=0)
         # Unflatten non-batch dimensions.
         desired_shape = tf.concat(
-            (batch_size, lost_shape), axis=0
+            (batch_size, lost_shape), 0
         )
         return tf.reshape(x, desired_shape)

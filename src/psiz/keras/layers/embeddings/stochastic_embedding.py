@@ -62,7 +62,7 @@ class StochasticEmbedding(tf.keras.layers.Layer):
         # casting to self.dtype before casting to int32 might cause the
         # int32 values to be different due to a loss of precision.
         kwargs['autocast'] = False
-        super(StochasticEmbedding, self).__init__(dtype=dtype, **kwargs)
+        super().__init__(dtype=dtype, **kwargs)
 
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -74,7 +74,7 @@ class StochasticEmbedding(tf.keras.layers.Layer):
 
     def get_config(self):
         """Return layer configuration."""
-        config = super(StochasticEmbedding, self).get_config()
+        config = super().get_config()
         config.update({
             'input_dim': int(self.input_dim),
             'output_dim': int(self.output_dim),

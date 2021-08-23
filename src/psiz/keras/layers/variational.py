@@ -69,7 +69,7 @@ class Variational(tf.keras.layers.Layer):
             kwargs: Additional key-word arguments.
 
         """
-        super(Variational, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.posterior = posterior
         self.prior = prior
         self.kl_weight = kl_weight
@@ -112,7 +112,7 @@ class Variational(tf.keras.layers.Layer):
 
     def get_config(self):
         """Return configuration."""
-        config = super(Variational, self).get_config()
+        config = super().get_config()
         config.update({
             'posterior': tf.keras.utils.serialize_keras_object(self.posterior),
             'prior': tf.keras.utils.serialize_keras_object(self.prior),

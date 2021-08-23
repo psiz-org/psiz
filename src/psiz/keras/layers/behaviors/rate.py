@@ -70,7 +70,7 @@ class RateBehavior(Behavior):
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(RateBehavior, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.lower_trainable = lower_trainable
         if lower_initializer is None:

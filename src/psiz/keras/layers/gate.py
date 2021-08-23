@@ -20,7 +20,6 @@ Classes:
 
 """
 
-import numpy as np
 import tensorflow as tf
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 
@@ -188,6 +187,6 @@ class Gate(tf.keras.layers.Layer):
         batch_size = tf.expand_dims(tf.shape(x)[0], axis=0)
         # Unflatten non-batch dimensions.
         desired_shape = tf.concat(
-            (batch_size, lost_shape), axis=0
+            (batch_size, lost_shape), 0
         )
         return tf.reshape(x, desired_shape)

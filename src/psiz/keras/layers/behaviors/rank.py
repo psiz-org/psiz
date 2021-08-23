@@ -43,7 +43,7 @@ class RankBehavior(Behavior):
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(RankBehavior, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def call(self, inputs):
         """Return probability of a ranked selection sequence.

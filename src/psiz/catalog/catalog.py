@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 
 
-class Catalog(object):
+class Catalog():
     """Class to keep track of stimuli information.
 
     Attributes:
@@ -85,7 +85,7 @@ class Catalog(object):
         # Optional information.
         self.common_path = ''
         self.class_label = class_label
-        # Optional class information. TODO MAYBE
+        # Optional class information. MAYBE
         # self.leaf_class_id
         # self.class_id_label
         # self.class_class
@@ -110,16 +110,6 @@ class Catalog(object):
                 "The argument `stimulus_id` must be a 1D array of "
                 "integers."))
 
-        n_stimuli = len(stimulus_id)
-
-        # TODO
-        # is_contiguous = False
-        # if np.array_equal(np.unique(stimulus_id), np.arange(0, n_stimuli)):
-        #     is_contiguous = True
-        # if not is_contiguous:
-        #     raise ValueError((
-        #         'The argument `stimulus_id` must contain a contiguous set of'
-        #         ' integers [0, n_stimuli[.'))
         return stimulus_id
 
     def _check_filepath(self, stimulus_filepath):
@@ -175,15 +165,15 @@ class Catalog(object):
         """
         max_filepath_length = len(max(self.stimuli.filepath.values, key=len))
 
-        f = h5py.File(filepath, "w")
-        f.create_dataset("stimulus_id", data=self.stimuli.id.values)
-        f.create_dataset(
+        h5_file = h5py.File(filepath, "w")
+        h5_file.create_dataset("stimulus_id", data=self.stimuli.id.values)
+        h5_file.create_dataset(
             "stimulus_filepath",
             data=self.stimuli.filepath.values.astype(
                 dtype="S{0}".format(max_filepath_length)
             )
         )
-        f.create_dataset("class_id", data=self.stimuli.class_id.values)
+        h5_file.create_dataset("class_id", data=self.stimuli.class_id.values)
 
         if self.class_label is not None:
             max_label_length = len(max(self.class_label.values(), key=len))
@@ -199,16 +189,16 @@ class Catalog(object):
                 class_map_label[idx] = value
                 idx = idx + 1
 
-            f.create_dataset(
+            h5_file.create_dataset(
                 "class_map_class_id",
                 data=class_map_class_id
             )
-            f.create_dataset(
+            h5_file.create_dataset(
                 "class_map_label",
                 data=class_map_label
             )
 
-        f.close()
+        h5_file.close()
 
     def subset(self, idx, squeeze=False):
         """Return a subset of the catalog.

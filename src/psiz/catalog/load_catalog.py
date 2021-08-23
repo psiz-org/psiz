@@ -39,14 +39,14 @@ def load_catalog(filepath, verbose=0):
         Loaded catalog.
 
     """
-    f = h5py.File(filepath, "r")
-    stimulus_id = f["stimulus_id"][()]
-    stimulus_filepath = f["stimulus_filepath"][()].astype('U')
-    class_id = f["class_id"][()]
+    h5_file = h5py.File(filepath, "r")
+    stimulus_id = h5_file["stimulus_id"][()]
+    stimulus_filepath = h5_file["stimulus_filepath"][()].astype('U')
+    class_id = h5_file["class_id"][()]
 
     try:
-        class_map_class_id = f["class_map_class_id"][()]
-        class_map_label = f["class_map_label"][()]
+        class_map_class_id = h5_file["class_map_class_id"][()]
+        class_map_label = h5_file["class_map_label"][()]
         class_label_dict = {}
         for idx in np.arange(len(class_map_class_id)):
             class_label_dict[class_map_class_id[idx]] = (
@@ -57,7 +57,7 @@ def load_catalog(filepath, verbose=0):
 
     catalog = Catalog(
         stimulus_id, stimulus_filepath, class_id, class_label_dict)
-    f.close()
+    h5_file.close()
 
     if verbose > 0:
         print("Catalog Summary")

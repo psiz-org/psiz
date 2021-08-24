@@ -38,15 +38,8 @@ TODO:
 """
 
 from abc import ABCMeta, abstractmethod
-from itertools import permutations
-import copy
-import warnings
 
-import h5py
 import numpy as np
-import pandas as pd
-import tensorflow as tf
-from tensorflow.keras import backend as K
 
 
 class SimilarityTrials(metaclass=ABCMeta):

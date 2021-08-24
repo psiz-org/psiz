@@ -26,20 +26,12 @@ Functions:
 """
 
 import copy
-import json
-import os
-from pathlib import Path
 import warnings
 
-import h5py
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
 from tensorflow.python.eager import backprop
-import tensorflow_probability as tfp
 
 import psiz.keras.layers
-import psiz.trials
 
 
 class PsychologicalEmbedding(tf.keras.Model):

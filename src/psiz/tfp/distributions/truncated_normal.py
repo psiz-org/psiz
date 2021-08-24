@@ -19,7 +19,6 @@ Note: Needed quantile method.
 
 """
 
-import numpy as np
 import tensorflow as tf
 from tensorflow_probability.python.distributions import truncated_normal
 from tensorflow_probability.python.internal import special_math

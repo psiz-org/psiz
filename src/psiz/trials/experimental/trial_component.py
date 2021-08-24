@@ -22,9 +22,6 @@ Classes:
 
 from abc import ABCMeta, abstractmethod
 
-import numpy as np
-import pandas as pd
-
 
 class TrialComponent(metaclass=ABCMeta):
     """Abstract class for trial content data."""

@@ -56,7 +56,7 @@ def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
     # Handle masking.
     if embedding.mask_zero:
         z_mode = z_mode[1:]
-    n_input_dim = z_mode.shape[0]
+    # n_input_dim = z_mode.shape[0]
     n_output_dim = z_mode.shape[1]
 
     z_mode = z_mode[idx, :]
@@ -79,7 +79,7 @@ def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
         p = .99
         v = (1 - p) / 2
         mdi99_lower = dist.quantile(v).numpy()[idx, :]
-        mdi99_upper = dist.quantile(1-v).numpy()[idx, :]
+        mdi99_upper = dist.quantile(1 - v).numpy()[idx, :]
         # Override ymin and ymax based on 99quant.
         y_min = np.min(mdi99_lower)
         y_max = np.max(mdi99_upper)
@@ -88,7 +88,7 @@ def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
         p = .5
         v = (1 - p) / 2
         mdi50_lower = dist.quantile(v).numpy()[idx, :]
-        mdi50_upper = dist.quantile(1-v).numpy()[idx, :]
+        mdi50_upper = dist.quantile(1 - v).numpy()[idx, :]
 
         for i_dim in range(n_output_dim):
             xg = np.array([i_dim, i_dim])
@@ -103,7 +103,7 @@ def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
             ax.plot(xg, yg, c=c, linewidth=3)
 
     ax.set_xlabel('Output Dimension')
-    ax.set_xlim([-.5, n_output_dim-.5])
+    ax.set_xlim([-.5, n_output_dim - .5])
 
     ax.set_ylabel(r'$z$')
     ax.set_ylim([1.05 * y_min, 1.05 * y_max])

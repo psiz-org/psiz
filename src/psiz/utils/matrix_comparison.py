@@ -22,7 +22,6 @@ Functions:
 
 import numpy as np
 from scipy.stats import pearsonr
-from sklearn.metrics import r2_score
 
 
 def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
@@ -73,7 +72,7 @@ def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
     elif score == 'r2':
         rho, _ = pearsonr(mat_a[idx], mat_b[idx])
         score = rho**2
-        # score = r2_score(mat_a[idx], mat_b[idx])
+        # ALT: score = sklearn.metrics.r2_score(mat_a[idx], mat_b[idx])
     elif score == 'mse':
         score = np.mean((mat_a[idx] - mat_b[idx])**2)
     else:

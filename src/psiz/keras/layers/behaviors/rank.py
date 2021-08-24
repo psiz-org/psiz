@@ -21,7 +21,6 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
 
 from psiz.keras.layers.behaviors.base import Behavior
 

@@ -132,7 +132,7 @@ class RateBehavior(Behavior):
         sim_qr = inputs[0]
         prob = self.lower + tf.math.divide(
             self.upper - self.lower,
-            1 + tf.math.exp(-self.rate*(sim_qr - self.midpoint))
+            1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint))
         )
         return prob
 

@@ -21,7 +21,6 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.framework import ops
 from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
 
@@ -225,7 +224,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         w = tf.cond(
             batch_size == 0,
             lambda: tf.zeros(x_shape),
-            lambda:  self.w.sample(x_shape[0:-1])
+            lambda: self.w.sample(x_shape[0:-1])
         )
 
         # Weighted Minkowski distance.

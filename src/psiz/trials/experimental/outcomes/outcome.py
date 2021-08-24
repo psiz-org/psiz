@@ -22,8 +22,6 @@ Classes:
 
 from abc import ABCMeta
 
-import numpy as np
-
 from psiz.trials.experimental.trial_component import TrialComponent
 
 

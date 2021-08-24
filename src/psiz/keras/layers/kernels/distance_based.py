@@ -20,7 +20,6 @@ Classes:
 
 """
 
-import numpy as np
 import tensorflow as tf
 
 from psiz.keras.layers.distances.mink import Minkowski

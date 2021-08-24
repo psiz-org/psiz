@@ -26,7 +26,6 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 import psiz.keras.initializers as pk_initializers

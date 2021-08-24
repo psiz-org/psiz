@@ -23,8 +23,7 @@ Classes:
 
 """
 
-from abc import ABCMeta, abstractmethod
-import copy
+from abc import ABCMeta
 from itertools import permutations
 
 import numpy as np
@@ -65,7 +64,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
 
         # Format stimulus set.
         self.max_n_reference = np.amax(self.n_reference)
-        self.stimulus_set = self.stimulus_set[:, 0:self.max_n_reference+1]
+        self.stimulus_set = self.stimulus_set[:, 0:self.max_n_reference + 1]
 
         if n_select is None:
             n_select = np.ones((self.n_trial), dtype=np.int32)
@@ -209,8 +208,6 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             trial_locs = self.config_idx == i_config
             n_trial_config = np.sum(trial_locs)
 
-            config = self.config_list.iloc[i_config]
-            n_reference = config['n_reference']
             outcome_idx = outcome_idx_list[i_config]
             n_outcome = outcome_idx.shape[0]
             # Add query index, increment references to accommodate query.

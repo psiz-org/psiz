@@ -25,7 +25,6 @@ Classes:
 from itertools import permutations
 
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 
 from psiz.trials.experimental.contents.content import Content
@@ -80,7 +79,7 @@ class RankSimilarity(Content):
         n_reference = np.sum(is_present, axis=2, dtype=np.int32) - 1
         self.n_reference = self._check_n_reference(n_reference)
         self.max_n_reference = np.amax(self.n_reference)
-        stimulus_set = stimulus_set[:, :, 0:self.max_n_reference+1]
+        stimulus_set = stimulus_set[:, :, 0:self.max_n_reference + 1]
 
         self.stimulus_set = stimulus_set
         self.n_sequence = stimulus_set.shape[0]

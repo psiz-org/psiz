@@ -21,12 +21,7 @@ Classes:
 
 """
 
-import copy
-import warnings
-
-import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
 
 from psiz.keras.models.psych_embedding import PsychologicalEmbedding
 import psiz.keras.layers

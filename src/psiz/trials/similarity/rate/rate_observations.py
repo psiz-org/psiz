@@ -23,9 +23,7 @@ Classes:
 
 """
 
-from abc import ABCMeta, abstractmethod
 import copy
-import warnings
 
 import h5py
 import numpy as np
@@ -266,7 +264,7 @@ class RateObservations(RateTrials):
         # Determine unique display configurations.
         d = {
             'n_present': n_present, 'session_id': session_id
-            }
+        }
         d_groups = self._split_groups_columns(groups)
         d.update(d_groups)
         df_config = pd.DataFrame(d)

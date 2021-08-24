@@ -23,7 +23,6 @@ Classes:
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
-import tensorflow_probability as tfp
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')

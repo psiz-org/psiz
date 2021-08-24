@@ -56,15 +56,15 @@ def wpnorm(x, w, p):
         # gradients.
         # shape=(batch_size, [n, m, ...] n_dim)
         dydx = dy * (
-            (w * x * tf.math.divide_no_nan(abs_x_p, abs_x**2)) /
-            (y**(p_exp-1) + tf.keras.backend.epsilon())
+            (w * x * tf.math.divide_no_nan(abs_x_p, abs_x**2))
+            / (y**(p_exp - 1) + tf.keras.backend.epsilon())
         )
 
         # Gradients of weights `w` with fudge factor to avoid problematic
         # gradients.
         # shape=(batch_size, [n, m, ...] n_dim)
         dydw = dy * (
-            abs_x_p / (p_exp * y**(p_exp-1) + tf.keras.backend.epsilon())
+            abs_x_p / (p_exp * y**(p_exp - 1) + tf.keras.backend.epsilon())
         )
 
         # Gradients of `p` with fudge factor and to avoid problematic

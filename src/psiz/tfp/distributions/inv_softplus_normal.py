@@ -15,7 +15,6 @@
 # ============================================================================
 """InvSoftplusNormal distribution classes."""
 
-import numpy as np
 import tensorflow as tf
 from tensorflow_probability.python.bijectors import Softplus
 from tensorflow_probability.python.distributions import kullback_leibler
@@ -78,7 +77,7 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
 
     @property
     def scale(self):
-        """Distribution parameter for the pre-transformed standard deviation."""
+        """Distribution parameter for pre-transformed standard deviation."""
         return self.distribution.scale
 
     @property
@@ -91,7 +90,9 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
 
     # TODO work out math
     # def _mean(self):
-    #     return tf.exp(self.distribution.mean() + 0.5 * self.distribution.variance())
+    #     return tf.exp(
+    #         self.distribution.mean() + 0.5 * self.distribution.variance()
+    #     )
 
     # TODO work out math
     # def _variance(self):
@@ -103,12 +104,16 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
 
     # TODO work out math
     # def _mode(self):
-    #     return tf.exp(self.distribution.mean() - self.distribution.variance())
+    #     return tf.exp(
+    #         self.distribution.mean() - self.distribution.variance()
+    #     )
 
     # TODO work out math
     # def _entropy(self):
-    #     return (self.distribution.mean() + 0.5 +
-    #             tf.math.log(self.distribution.stddev()) + 0.5 * np.log(2 * np.pi))
+    #     return (
+    #         self.distribution.mean() + 0.5 +
+    #         tf.math.log(self.distribution.stddev()) + 0.5 * np.log(2 * np.pi)
+    #     )
 
     def _sample_control_dependencies(self, x):
         assertions = []

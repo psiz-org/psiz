@@ -21,7 +21,6 @@ Classes:
 
 """
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
@@ -100,7 +99,7 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
         """
         return tf.pow(
             1 + (tf.pow(inputs, self.tau) / self.alpha),
-            tf.negative(self.alpha + 1)/2
+            tf.negative(self.alpha + 1) / 2
         )
 
     def get_config(self):

@@ -23,8 +23,6 @@ Classes:
 
 """
 
-import copy
-
 import h5py
 import numpy as np
 import pandas as pd
@@ -153,7 +151,7 @@ class RankDocket(RankTrials):
         d = {
             'n_reference': n_reference, 'n_select': n_select,
             'is_ranked': is_ranked, 'n_outcome': n_outcome_placeholder
-            }
+        }
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)

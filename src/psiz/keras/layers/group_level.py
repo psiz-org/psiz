@@ -21,8 +21,6 @@ Classes:
 
 """
 
-import copy
-
 import tensorflow as tf
 
 

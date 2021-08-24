@@ -62,7 +62,7 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
     # NOTE: `imshow` displays different rows as different values of y and
     # different columns as different values of x.
     ax.set_xlabel('Output')
-    ax.set_xticks([0, n_output_dim-1])
-    ax.set_xticklabels([0, n_output_dim-1])
+    ax.set_xticks([0, n_output_dim - 1])
+    ax.set_xticklabels([0, n_output_dim - 1])
     ax.set_ylabel('Input')
     fig.colorbar(im, ax=ax)

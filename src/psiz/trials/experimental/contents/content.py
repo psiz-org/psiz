@@ -99,7 +99,6 @@ class Content(TrialComponent, metaclass=ABCMeta):
             df_config = df_config.drop_duplicates()
             df_config = df_config.sort_values(by=attr_list[0], axis=0)
             df_config = df_config.reset_index(drop=True)
-            n_config = len(df_config)
 
             # Loop over distinct configurations in order to determine
             # configuration index for all trials.

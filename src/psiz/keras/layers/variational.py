@@ -106,8 +106,8 @@ class Variational(tf.keras.layers.Layer):
         """Sample-based KL approximation."""
         posterior_samples = posterior_dist.sample(self.kl_n_sample)
         return tf.reduce_mean(
-            posterior_dist.log_prob(posterior_samples) -
-            prior_dist.log_prob(posterior_samples)
+            posterior_dist.log_prob(posterior_samples)
+            - prior_dist.log_prob(posterior_samples)
         )
 
     def get_config(self):

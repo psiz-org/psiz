@@ -21,9 +21,6 @@ Classes:
 
 """
 
-import copy
-import warnings
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
@@ -198,5 +195,5 @@ def _ranked_sequence_probability(sim_qr, n_select):
         # of the previous selection in the sequence.
         if i_selected > 0:
             # denom = denom + sim_qr[:, i_selected-1, :]
-            denom += sim_qr[:, i_selected-1, :]
+            denom += sim_qr[:, i_selected - 1, :]
     return seq_prob

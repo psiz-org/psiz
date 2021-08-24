@@ -55,7 +55,7 @@ def hdi_bvn(loc, cov, ax=None, p=.99, **kwargs):
     # Convert proability to standard deviations (z-score) using percent point
     # function of normal distribution.
     outside_prob = 1 - p
-    r = st.norm.ppf(1 - outside_prob/2)
+    r = st.norm.ppf(1 - outside_prob / 2)
 
     # Intercept `kwargs` and isolate distribute specific arguments.
     k_pop_list = []

@@ -23,15 +23,10 @@ Classes:
 
 """
 
-from abc import ABCMeta, abstractmethod
-import copy
-import warnings
-
 import h5py
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras import backend as K
 
 from psiz.trials.similarity.rate.rate_trials import RateTrials
 

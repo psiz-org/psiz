@@ -37,7 +37,7 @@ Classes:
 
 """
 import tensorflow as tf
-from tensorflow.python.framework import function
+# from tensorflow.python.framework import function
 
 
 # TODO do we need this, if so why does it break during eager?

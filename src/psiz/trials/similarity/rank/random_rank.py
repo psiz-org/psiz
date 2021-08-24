@@ -21,8 +21,6 @@ Classes:
 
 """
 
-import time
-
 import numpy as np
 
 from psiz.trials.similarity.docket_generator import DocketGenerator

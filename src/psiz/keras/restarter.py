@@ -180,7 +180,7 @@ class Restarter(object):
             fit_start_time_s = time.time()
             history = model_re.fit(
                 x=x, validation_data=validation_data, callbacks=callbacks,
-                verbose=np.maximum(0, verbose-1), **kwargs
+                verbose=np.maximum(0, verbose - 1), **kwargs
             )
             total_duration = time.time() - fit_start_time_s
             logs = {}

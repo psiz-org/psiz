@@ -101,7 +101,6 @@ class Gate(tf.keras.layers.Layer):
         dispatcher = SparseDispatcher(self.n_subnet, idx_group)
         subnet_inputs = dispatcher.dispatch_single(inputs_less_group)
         subnet_outputs = []
-        max_size = 0
         for i in range(self.n_subnet):
             out = self.subnets[i](subnet_inputs[i])
             out, lost_shape = self._pre_combine(out)

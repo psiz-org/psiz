@@ -71,7 +71,7 @@ class Sort(PsychologicalEmbedding):
                 is_select: dtype=tf.bool, the shape implies the
                     maximum number of selected stimuli in the data
                     shape=(batch_size, TODO)
-                group: dtype=tf.int32, Integers indicating the
+                groups: dtype=tf.int32, Integers indicating the
                     group membership of a trial.
                     shape=(batch_size, k)
 
@@ -82,7 +82,7 @@ class Sort(PsychologicalEmbedding):
         groups = inputs['groups']
 
         # Inflate coordinates.
-        z = self.stimuli([stimulus_set, group])
+        z = self.stimuli([stimulus_set, groups])
         # TensorShape([sample_size, batch_size, TODO, n_dim])
         raise NotImplementedError
         return None

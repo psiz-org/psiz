@@ -29,4 +29,4 @@ jobs:
           flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Analyse code with pylint
         run: |
-          pylint `ls -R|grep .py$|xargs`
+          pylint `ls -R src | grep .py$ | xargs`

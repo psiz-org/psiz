@@ -137,7 +137,7 @@ class ActiveRank(DocketGenerator):
         """
         # Normalize priorities.
         if q_priority is None:
-            q_priority = np.ones([n_stimuli]) / self.n_stimuli
+            q_priority = np.ones([self.n_stimuli]) / self.n_stimuli
 
         # Check that `q_priority` is non-negative.
         if np.sum(np.less(q_priority, 0)) > 0:
@@ -152,7 +152,7 @@ class ActiveRank(DocketGenerator):
             # NOTE: We divide by `n_stimuli - 1` because we will set the
             # diagonal element in each row to zero.
             r_priority = np.ones(
-                [n_stimuli, n_stimuli], dtype=np.float32
+                [self.n_stimuli, self.n_stimuli], dtype=np.float32
             ) / (self.n_stimuli - 1)
         else:
             r_priority = r_priority.astype(np.float32)

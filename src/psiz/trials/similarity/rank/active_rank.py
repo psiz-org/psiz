@@ -287,7 +287,7 @@ def _select_query_references(
     docket = RankDocket(stimulus_set, n_select=n_select)
 
     group_matrix = np.expand_dims(groups, axis=0)
-    group_matrix = np.repeat(group_matrix, n_row, axis=0)
+    group_matrix = np.repeat(group_matrix, n_candidate, axis=0)
 
     ds_docket = docket.as_dataset(group_matrix).batch(
         batch_size, drop_remainder=False

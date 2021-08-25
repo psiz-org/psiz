@@ -146,8 +146,10 @@ class SparseCategorical(Outcome):
             index = self.index
             if timestep is False:
                 index = unravel_timestep(index)
+            # pylint: disable=unexpected-keyword-arg
             y = tf.one_hot(
-                index, self.depth, dtype=K.floatx()
+                index, self.depth, on_value=1.0, off_value=0.0,
+                dtype=K.floatx()
             )
         else:
             raise ValueError(

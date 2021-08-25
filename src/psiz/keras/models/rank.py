@@ -115,15 +115,14 @@ class Rank(PsychologicalEmbedding):
         # because they have effectively been "consumed" by the similarity
         # operation.
         is_present = tf.cast(
-            tf.math.not_equal(stimulus_set[:, :, 1:], 0),
-            dtype=K.floatx()
+            tf.math.not_equal(stimulus_set[:, :, 1:], 0), K.floatx()
         )
         sim_qr = sim_qr * is_present
 
         # Prepare for efficient probability computation by adding
         # singleton dimension for `n_sample`.
         is_select = tf.expand_dims(
-            tf.cast(is_select, dtype=K.floatx()), axis=1
+            tf.cast(is_select, K.floatx()), axis=1
         )
         # Determine if outcome is legitamate by checking if at least one
         # reference is present. This is important because not all trials have

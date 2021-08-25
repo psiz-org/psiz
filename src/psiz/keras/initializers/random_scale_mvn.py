@@ -53,13 +53,10 @@ class RandomScaleMVN(initializers.Initializer):
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
+        # pylint: disable=unexpected-keyword-arg
         p = tf.random.uniform(
-            [1],
-            minval=self.minval,
-            maxval=self.maxval,
-            dtype=dtype,
-            seed=self.seed,
-            name=None
+            [1], minval=self.minval, maxval=self.maxval, dtype=dtype,
+            seed=self.seed, name=None
         )
         scale = tf.pow(
             tf.constant(10., dtype=dtype), p

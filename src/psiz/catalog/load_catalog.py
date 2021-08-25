@@ -41,7 +41,8 @@ def load_catalog(filepath, verbose=0):
     """
     h5_file = h5py.File(filepath, "r")
     stimulus_id = h5_file["stimulus_id"][()]
-    stimulus_filepath = h5_file["stimulus_filepath"][()].astype('U')
+    # pylint: disable=no-member
+    stimulus_filepath = h5_file["stimulus_filepath"].asstr()[:]
     class_id = h5_file["class_id"][()]
 
     try:

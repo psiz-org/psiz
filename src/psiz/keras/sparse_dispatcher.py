@@ -62,7 +62,7 @@ import tensorflow as tf
 #     return x
 
 
-class SparseDispatcher(object):
+class SparseDispatcher():
     """Helper for implementing a mixture of experts.
 
     TODO: update doc strings for arbitrary length inputs
@@ -145,7 +145,8 @@ class SparseDispatcher(object):
         # Grab nonzero gate values (in the same order as `where`).
         self._nonzero_gates = tf.gather(
             tf.reshape(self._gates, [-1]),
-            self._batch_index * num_experts + self._expert_index
+            self._batch_index * num_experts + self._expert_index,
+            axis=0
         )
 
     # TODO maybe dispatch_multi vs dispatch single
@@ -164,10 +165,8 @@ class SparseDispatcher(object):
                 `[expert_batch_size_i, <extra_input_dims>]`.
 
         """
-        inputs = tf.gather(inputs, self._batch_index)
-        return tf.split(
-            inputs, self._part_sizes_tensor, 0, num=self._num_experts
-        )
+        inputs = tf.gather(inputs, self._batch_index, axis=0)
+        return tf.split(inputs, self._part_sizes_tensor, 0)
 
     # @add_name_scope()
     def dispatch_multi(self, inputs):
@@ -188,10 +187,8 @@ class SparseDispatcher(object):
         expert_list = [[] for _ in range(self._num_experts)]
         # Loop over inputs, creating expert-specific list of `inputs`.
         for inp in inputs:
-            inp = tf.gather(inp, self._batch_index)
-            inp = tf.split(
-                inp, self._part_sizes_tensor, 0, num=self._num_experts
-            )
+            inp = tf.gather(inp, self._batch_index, axis=0)
+            inp = tf.split(inp, self._part_sizes_tensor, 0)
             for i_expert in range(self._num_experts):
                 expert_list[i_expert].append(inp[i_expert])
 
@@ -244,10 +241,7 @@ class SparseDispatcher(object):
                 `tf.float32` and shapes `[expert_batch_size_i]`
 
         """
-        return tf.split(
-            self._nonzero_gates, self._part_sizes_tensor, 0,
-            num=self._num_experts
-        )
+        return tf.split(self._nonzero_gates, self._part_sizes_tensor, 0)
 
     def expert_to_batch_indices(self):
         """Batch indices corresponding to the examples in the
@@ -258,10 +252,7 @@ class SparseDispatcher(object):
                 `tf.int64` and shapes `[expert_batch_size_i]`
 
         """
-        return tf.split(
-            self._batch_index, self._part_sizes_tensor, 0,
-            num=self._num_experts
-        )
+        return tf.split(self._batch_index, self._part_sizes_tensor, 0)
 
     @property
     def part_sizes(self):

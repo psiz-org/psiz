@@ -311,7 +311,7 @@ def _select_query_references(
         batch_expected_ig = tf.stack(batch_expected_ig, axis=0)
         batch_expected_ig = tf.reduce_mean(batch_expected_ig, axis=0)
         expected_ig.append(batch_expected_ig)
-    expected_ig = tf.concat(expected_ig, axis=0).numpy()
+    expected_ig = tf.concat(expected_ig, 0).numpy()
 
     # Grab the top trials as requested.
     top_indices = np.argsort(-expected_ig)

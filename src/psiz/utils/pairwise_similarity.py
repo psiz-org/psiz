@@ -109,5 +109,5 @@ def pairwise_similarity(
         progbar.update(n_batch)
 
     # Concatenate along pairs dimension (i.e., the first axis).
-    s = tf.concat(s, axis=0)
+    s = tf.concat(s, 0)
     return s

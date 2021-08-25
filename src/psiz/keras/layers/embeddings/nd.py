@@ -172,6 +172,6 @@ class EmbeddingND(tf.keras.layers.Layer):
 
 
 def _tf_ravel_multi_index(multi_index, input_dims):
-    strides = tf.math.cumprod(input_dims, exclusive=True, reverse=True)
+    strides = tf.math.cumprod(input_dims, axis=0, exclusive=True, reverse=True)
     adj = multi_index * tf.expand_dims(strides, 1)
     return tf.reduce_sum(adj, axis=0)

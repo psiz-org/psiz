@@ -100,7 +100,7 @@ def main():
                 expected_ig = [batch_expected_ig]
             else:
                 expected_ig.append(batch_expected_ig)
-        expected_ig = tf.concat(expected_ig, axis=0).numpy()
+        expected_ig = tf.concat(expected_ig, 0).numpy()
 
         # Select data to represent case in visualization.
         case_data = package_case_data(model, stimulus_set, expected_ig)

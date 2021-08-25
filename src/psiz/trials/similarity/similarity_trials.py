@@ -95,6 +95,7 @@ class SimilarityTrials(metaclass=ABCMeta):
         # Attributes determined by concrete class.
         self.config_idx = None
         self.config_list = None
+        self.groups = None
         self.outcome_idx_list = None
 
     def _check_stimulus_set(self, stimulus_set):

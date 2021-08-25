@@ -50,19 +50,16 @@ class SoftplusUniform(initializers.Initializer):
 
     def __call__(self, shape, dtype=K.floatx()):
         """Call."""
+        # pylint: disable=unexpected-keyword-arg
         w = tf.random.uniform(
-            shape,
-            minval=self.minval,
-            maxval=self.maxval,
-            dtype=dtype,
-            seed=self.seed,
-            name=None
+            shape, minval=self.minval, maxval=self.maxval, dtype=dtype,
+            seed=self.seed, name=None
         )
 
         def generalized_softplus_inverse(x, c, name=None):
             return c * tfp.math.softplus_inverse(x / c)
 
-        # TOOD critical handle zeros
+        # TODO critical handle zeros
         return generalized_softplus_inverse(w, self.hinge_softness)
 
     def get_config(self):

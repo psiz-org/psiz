@@ -124,7 +124,7 @@ class GroupAttention(tf.keras.layers.Layer):
             inputs: A Tensor denoting `groups`.
 
         """
-        output = tf.gather(self.embeddings, inputs)
+        output = tf.gather(self.embeddings, inputs, axis=0)
         # Add singleton dimension for sample_size.
         output = tf.expand_dims(output, axis=0)
         return output

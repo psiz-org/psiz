@@ -166,7 +166,7 @@ class Stimuli(GroupLevel):
         batch_size = tf.shape(group_idx)
         diff_rank = tf.rank(idx) - tf.rank(group_idx)
         shape_new = tf.ones(diff_rank, dtype=batch_size.dtype)
-        shape_new = tf.concat((batch_size, shape_new), axis=0)
+        shape_new = tf.concat((batch_size, shape_new), 0)
         group_idx = tf.reshape(group_idx, shape_new)
 
         # Perform mapping.

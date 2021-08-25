@@ -22,10 +22,9 @@ Classes:
 
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.keras.metrics import Mean
 
 
-class NegLogLikelihood(Mean):
+class NegLogLikelihood(tf.keras.metrics.Mean):
     """Negative Log-likelihood."""
 
     def __init__(self, name='nll', dtype=None):

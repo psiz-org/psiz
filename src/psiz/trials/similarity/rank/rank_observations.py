@@ -443,6 +443,7 @@ class RankObservations(RankTrials):
         except KeyError:
             groups = f["group_id"][()]
             # Patch for old saving assumptions.
+            # pylint: disable=no-member
             if groups.ndim == 1:
                 groups = np.expand_dims(groups, axis=1)
 

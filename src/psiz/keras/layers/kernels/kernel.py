@@ -176,13 +176,13 @@ class AttentionKernel(GroupLevel):
         # Adjust rank of groups by adding singleton axis to match rank of
         # z[1:-1], i.e., omitting batch axis and n_dim axis.
         reshape_shape = tf.ones([tf.rank(z_1) - 2], dtype=tf.int32)
-        reshape_shape = tf.concat((tf.shape(groups), reshape_shape), axis=0)
+        reshape_shape = tf.concat((tf.shape(groups), reshape_shape), 0)
         groups = tf.reshape(groups, reshape_shape)
 
         # Tile groups to be compatible with `z_1`, again omitting batch
         # axis and n_dim axis. TODO
         # repeats = tf.shape(z_1)[1:-1]
-        # repeats = tf.concat([tf.constant([1]), repeats], axis=0)
+        # repeats = tf.concat([tf.constant([1]), repeats], 0)
         # groups = tf.tile(groups, repeats)
 
         # Embed group indices as attention weights.

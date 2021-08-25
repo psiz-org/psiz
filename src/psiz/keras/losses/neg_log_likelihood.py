@@ -21,11 +21,10 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras.losses import Loss
 from tensorflow.keras import backend as K
 
 
-class NegLogLikelihood(Loss):
+class NegLogLikelihood(tf.keras.losses.Loss):
     """Negative log-likelihood loss."""
 
     def call(self, y_true, y_pred):

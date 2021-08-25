@@ -24,11 +24,13 @@ from tensorflow_probability.python.distributions import truncated_normal
 from tensorflow_probability.python.internal import special_math
 
 
+# pylint: disable=abstract-method
 class TruncatedNormal(truncated_normal.TruncatedNormal):
     """Truncated Normal distribution with quantile."""
 
     def _quantile(self, p):
         """See https://www.ntrand.com/truncated-normal-distribution/"""
+        # pylint: disable=arguments-renamed,arguments-differ
         a = (self.low - self.loc) / self.scale
         b = (self.high - self.loc) / self.scale
         delta = special_math.ndtr(b) - special_math.ndtr(a)

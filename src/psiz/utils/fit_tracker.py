@@ -112,7 +112,7 @@ class FitTracker(object):
         else:
             idx_sort = np.argsort(-self.record[self.monitor])
 
-        for k, v in self.record.items():
+        for k, _ in self.record.items():
             if k == 'weights':
                 self.record['weights'] = [
                     self.record['weights'][i] for i in idx_sort

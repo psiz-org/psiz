@@ -35,6 +35,8 @@ class Behavior(tf.keras.layers.Layer):
             kwargs (optional): Additional keyword arguments.
 
         """
+        # TODO remove unused arguments
+        # pylint: disable=unused-argument
         super().__init__(**kwargs)
 
     def get_config(self):

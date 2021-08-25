@@ -65,4 +65,5 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
     ax.set_xticks([0, n_output_dim - 1])
     ax.set_xticklabels([0, n_output_dim - 1])
     ax.set_ylabel('Input')
+    # TODO use fig = plt.gcf() instead of using passed in `fig` argument.
     fig.colorbar(im, ax=ax)

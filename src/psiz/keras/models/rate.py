@@ -21,7 +21,6 @@ Classes:
 
 """
 
-import numpy as np
 import tensorflow as tf
 
 from psiz.keras.models.psych_embedding import PsychologicalEmbedding

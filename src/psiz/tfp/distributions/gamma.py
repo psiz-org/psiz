@@ -42,3 +42,16 @@ class Gamma(gamma.Gamma):
                 mode,
                 dtype_util.as_numpy_dtype(self.dtype)(np.nan)
             )
+
+    def _covariance(self, **kwargs):
+        raise NotImplementedError
+
+    def _survival_function(self, value, **kwargs):
+        raise NotImplementedError
+
+    def _log_survival_function(self, value, **kwargs):
+        raise NotImplementedError
+
+    def _quantile(self, value, **kwargs):
+        raise NotImplementedError
+

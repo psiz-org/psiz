@@ -103,7 +103,7 @@ class RankSimilarity(Content):
         _, df_config = self.unique_configurations()
 
         max_n_outcome = 0
-        for index, row in df_config.iterrows():
+        for _, row in df_config.iterrows():
             outcome_idx = self._possible_outcomes(
                 row['n_reference'], row['n_select']
             )

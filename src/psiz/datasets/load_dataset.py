@@ -274,9 +274,11 @@ def _get_file(
             try:
                 urlretrieve(origin, fpath, dl_progress)
             except HTTPError as e:
-                raise Exception(error_msg.format(origin, e.code, e.msg))
+                raise Exception(error_msg.format(origin, e.code, e.msg)) from e
             except URLError as e:
-                raise Exception(error_msg.format(origin, e.errno, e.reason))
+                raise Exception(
+                    error_msg.format(origin, e.errno, e.reason)
+                ) from e
         except (Exception, KeyboardInterrupt):
             if os.path.exists(fpath):
                 os.remove(fpath)

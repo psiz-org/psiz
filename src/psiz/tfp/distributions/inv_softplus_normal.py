@@ -85,42 +85,52 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
         """Bijector parameter governing the hinge softness."""
         return self.bijector.hinge_softness
 
-    def _median(self):
+    # def _param_shapes(self):
+    #     raise NotImplementedError
+
+    def _median(self, **kwargs):
         return self.bijector(self.Distribution.mean())
 
-    # TODO work out math
-    # def _mean(self):
-    #     return tf.exp(
-    #         self.distribution.mean() + 0.5 * self.distribution.variance()
-    #     )
+    def _mean(self, **kwargs):
+        raise NotImplementedError
+        # TODO work out math
+        # return tf.exp(
+        #     self.distribution.mean() + 0.5 * self.distribution.variance()
+        # )
 
-    # TODO work out math
-    # def _variance(self):
-    #     variance = self.distribution.variance()
-    #     return (
-    #         tf.math.expm1(variance) *
-    #         tf.exp(2. * self.distribution.mean() + variance)
-    #     )
+    def _variance(self, **kwargs):
+        raise NotImplementedError
+        # TODO work out math
+        # variance = self.distribution.variance()
+        # return (
+        #     tf.math.expm1(variance) *
+        #     tf.exp(2. * self.distribution.mean() + variance)
+        # )
 
-    # TODO work out math
-    # def _mode(self):
-    #     return tf.exp(
-    #         self.distribution.mean() - self.distribution.variance()
-    #     )
+    def _covariance(self, **kwargs):
+        raise NotImplementedError
 
-    # TODO work out math
-    # def _entropy(self):
-    #     return (
-    #         self.distribution.mean() + 0.5 +
-    #         tf.math.log(self.distribution.stddev()) + 0.5 * np.log(2 * np.pi)
-    #     )
+    def _mode(self, **kwargs):
+        raise NotImplementedError
+        # TODO work out math
+        # return tf.exp(
+        #     self.distribution.mean() - self.distribution.variance()
+        # )
 
-    def _sample_control_dependencies(self, x):
+    def _entropy(self, **kwargs):
+        raise NotImplementedError
+        # TODO work out math
+        # return (
+        #     self.distribution.mean() + 0.5 +
+        #     tf.math.log(self.distribution.stddev()) + 0.5 * np.log(2 * np.pi)
+        # )
+
+    def _sample_control_dependencies(self, value):
         assertions = []
         if not self.validate_args:
             return assertions
         assertions.append(assert_util.assert_non_negative(
-            x, message='Sample must be non-negative.')
+            value, message='Sample must be non-negative.')
         )
         return assertions
 

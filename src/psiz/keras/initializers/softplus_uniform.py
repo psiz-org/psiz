@@ -21,7 +21,6 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
 import tensorflow_probability as tfp
 
@@ -48,7 +47,7 @@ class SoftplusUniform(initializers.Initializer):
         self.hinge_softness = hinge_softness
         self.seed = seed
 
-    def __call__(self, shape, dtype=K.floatx()):
+    def __call__(self, shape, dtype=None, **kwargs):
         """Call."""
         # pylint: disable=unexpected-keyword-arg
         w = tf.random.uniform(
@@ -56,7 +55,7 @@ class SoftplusUniform(initializers.Initializer):
             seed=self.seed, name=None
         )
 
-        def generalized_softplus_inverse(x, c, name=None):
+        def generalized_softplus_inverse(x, c):
             return c * tfp.math.softplus_inverse(x / c)
 
         # TODO critical handle zeros

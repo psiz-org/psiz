@@ -29,6 +29,7 @@ class NegLogLikelihood(tf.keras.losses.Loss):
 
     def call(self, y_true, y_pred):
         """Call."""
+        # pylint: disable=unused-argument
         return _safe_neg_log_prob(y_pred)
 
 

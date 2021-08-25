@@ -31,8 +31,6 @@ import warnings
 import tensorflow as tf
 from tensorflow.python.eager import backprop
 
-import psiz.keras.layers
-
 
 class PsychologicalEmbedding(tf.keras.Model):
     """A pscyhological embedding model.
@@ -239,7 +237,7 @@ class PsychologicalEmbedding(tf.keras.Model):
             # There are also issues when using Eager Execution. A
             # work-around is to convert the problematic gradients, which
             # are returned as tf.IndexedSlices, into dense tensors.
-            for idx, grad in enumerate(gradients):
+            for idx in range(len(gradients)):
                 if gradients[idx].__class__.__name__ == 'IndexedSlices':
                     gradients[idx] = tf.convert_to_tensor(
                         gradients[idx]

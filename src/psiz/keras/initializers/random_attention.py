@@ -22,7 +22,6 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
 import tensorflow_probability as tfp
 
@@ -47,7 +46,7 @@ class RandomAttention(initializers.Initializer):
         self.scale = scale
         self.seed = seed
 
-    def __call__(self, shape, dtype=K.floatx()):
+    def __call__(self, shape, dtype=None, **kwargs):
         """Call."""
         dist = tfp.distributions.Dirichlet(
             tf.cast(self.concentration, dtype)

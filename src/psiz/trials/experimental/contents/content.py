@@ -61,7 +61,6 @@ class Content(TrialComponent, metaclass=ABCMeta):
                 shape=(n_sequence, max_timestep)
 
         """
-        pass
 
     def unique_configurations(self):
         """Generate a unique ID for each content configuration.

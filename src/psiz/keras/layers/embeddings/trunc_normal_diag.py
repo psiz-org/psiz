@@ -48,6 +48,8 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
         if loc_constraint is None:
             loc_constraint = tf.keras.constraints.NonNeg()
         kwargs.update({'loc_constraint': loc_constraint})
+        self.loc = None
+        self.untransformed_scale = None
         super(EmbeddingTruncatedNormalDiag, self).__init__(
             input_dim, output_dim, **kwargs
         )

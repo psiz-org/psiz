@@ -40,4 +40,5 @@ class EarlyStoppingRe(callbacks.EarlyStopping):
                 that may change in later versions.
 
         """
+        # pylint: disable=unused-argument
         self.best_weights = None

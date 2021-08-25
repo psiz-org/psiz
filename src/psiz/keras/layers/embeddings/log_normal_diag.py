@@ -46,6 +46,8 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
                 mean=tfp.math.softplus_inverse(2.), stddev=.01
             )
 
+        self.loc = None
+        self.untransformed_scale = None
         super(EmbeddingLogNormalDiag, self).__init__(
             input_dim, output_dim, scale_initializer=scale_initializer,
             **kwargs

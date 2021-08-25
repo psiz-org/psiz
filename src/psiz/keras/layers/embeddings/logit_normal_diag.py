@@ -45,6 +45,8 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         if scale_initializer is None:
             scale_initializer = tf.keras.initializers.RandomNormal(0.3, .01)
 
+        self.untransformed_loc = None
+        self.untransformed_scale = None
         super(EmbeddingLogitNormalDiag, self).__init__(
             input_dim, output_dim, scale_initializer=scale_initializer,
             **kwargs

@@ -39,7 +39,7 @@ class NegLogLikelihood(tf.keras.metrics.Mean):
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         """Update state."""
-        # y_true = tf.cast(y_pred, self._dtype)
+        # pylint: disable=unused-argument
         y_pred = tf.cast(y_pred, self._dtype)
         values = _safe_neg_log_prob(y_pred)
         super().update_state(values, sample_weight=sample_weight)

@@ -51,8 +51,8 @@ class Restarter(object):
     """
 
     def __init__(
-            self, model, compile_kwargs={}, monitor='loss', n_restart=10,
-            n_record=None, do_init=False, custom_objects={},
+            self, model, compile_kwargs=None, monitor='loss', n_restart=10,
+            n_record=None, do_init=False, custom_objects=None,
             weight_dir='/tmp/psiz/restarts'):
         """Initialize.
 
@@ -84,6 +84,7 @@ class Restarter(object):
             n_record = np.minimum(n_record, n_restart)
 
         self.model = model
+        compile_kwargs = compile_kwargs or {}
         self.optimizer = compile_kwargs.pop(
             'optimizer', tf.keras.optimizers.RMSprop()
         )
@@ -92,11 +93,11 @@ class Restarter(object):
         self.n_restart = n_restart
         self.n_record = n_record
         self.do_init = do_init
-        self.custom_objects = custom_objects
+        self.custom_objects = custom_objects or {}
         self.weight_dir = weight_dir
 
     def fit(
-            self, x=None, validation_data=None, callbacks=[], verbose=0,
+            self, x=None, validation_data=None, callbacks=None, verbose=0,
             **kwargs):
         """Fit the embedding model to the observations using restarts.
 
@@ -111,6 +112,7 @@ class Restarter(object):
                 record of the best restarts.
 
         """
+        callbacks = callbacks or []
         start_time_s = time.time()
         tracker = FitTracker(self.n_record, self.monitor)
 
@@ -252,17 +254,17 @@ class Restarter(object):
         return tracker
 
 
-def _new_model(model, custom_objects={}):
+def _new_model(model, custom_objects=None):
     """Create new model."""
-    with tf.keras.utils.custom_object_scope(custom_objects):
+    with tf.keras.utils.custom_object_scope(custom_objects or {}):
         new_model = model.from_config(model.get_config())
     return new_model
 
 
-def _new_optimizer(optimizer, custom_objects={}):
+def _new_optimizer(optimizer, custom_objects=None):
     """Create new optimizer."""
     config = tf.keras.optimizers.serialize(optimizer)
-    with tf.keras.utils.custom_object_scope(custom_objects):
+    with tf.keras.utils.custom_object_scope(custom_objects or {}):
         new_optimizer = tf.keras.optimizers.deserialize(config)
     return new_optimizer
 

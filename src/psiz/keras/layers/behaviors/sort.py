@@ -47,6 +47,7 @@ class SortBehavior(Behavior):
             kwargs (optional): Additional keyword arguments.
 
         """
+        # pylint: disable=unused-argument
         super(SortBehavior, self).__init__(**kwargs)
         raise NotImplementedError
 
@@ -66,7 +67,6 @@ class SortBehavior(Behavior):
 
         """
         raise NotImplementedError
-        return None
 
     def get_config(self):
         """Return layer configuration."""

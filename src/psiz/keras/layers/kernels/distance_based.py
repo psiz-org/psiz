@@ -78,6 +78,7 @@ class DistanceBased(tf.keras.layers.Layer):
         self.distance.build(input_shape)
         distance_output_shape = self.distance.compute_output_shape(input_shape)
         # Clear any losses that were created during `compute_output_shape`.
+        # pylint: disable=protected-access
         self.distance._clear_losses()
         self.similarity.build(distance_output_shape)
         super().build(input_shape)

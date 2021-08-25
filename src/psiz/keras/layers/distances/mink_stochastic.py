@@ -119,6 +119,13 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         self.w_loc_trainable = self.trainable and w_loc_trainable
         self.w_scale_trainable = self.trainable and w_scale_trainable
 
+        self.rho = None
+        self.rho_loc = None
+        self.rho_untransformed_scale = None
+        self.w = None
+        self.w_loc = None
+        self.w_untransformed_scale = None
+
     def build(self, input_shape):
         """Build."""
         dtype = tf.as_dtype(self.dtype or K.floatx())
@@ -126,6 +133,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         self.w = self._build_w(input_shape, dtype)
 
     def _build_rho(self, input_shape, dtype):
+        # pylint: disable=unused-argument
         with tf.name_scope(self.name):
             self.rho_loc = self.add_weight(
                 name='rho_loc',

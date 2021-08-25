@@ -39,6 +39,8 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
     """
     def __init__(self, input_dim, output_dim, **kwargs):
         """Initialize."""
+        self.loc = None
+        self.untransformed_scale = None
         super(EmbeddingNormalDiag, self).__init__(
             input_dim, output_dim, **kwargs
         )

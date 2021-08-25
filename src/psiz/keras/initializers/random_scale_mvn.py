@@ -21,7 +21,6 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
 from tensorflow.keras import initializers
 
 
@@ -51,8 +50,9 @@ class RandomScaleMVN(initializers.Initializer):
         self.maxval = maxval
         self.seed = seed
 
-    def __call__(self, shape, dtype=K.floatx()):
+    def __call__(self, shape, dtype=None, **kwargs):
         """Call."""
+
         # pylint: disable=unexpected-keyword-arg
         p = tf.random.uniform(
             [1], minval=self.minval, maxval=self.maxval, dtype=dtype,

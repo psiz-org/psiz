@@ -44,7 +44,6 @@ class TrialComponent(metaclass=ABCMeta):
             A new object.
 
         """
-        pass
 
     @abstractmethod
     def subset(self, idx):
@@ -57,12 +56,10 @@ class TrialComponent(metaclass=ABCMeta):
             A new object.
 
         """
-        pass
 
     @abstractmethod
     def _for_dataset(self, format='tf', timestep=True):
         """Return appropriately formatted data."""
-        pass
 
     @abstractmethod
     def _save(self, grp):
@@ -72,9 +69,7 @@ class TrialComponent(metaclass=ABCMeta):
         grp.create_dataset("my_data_name", data=my_data)
 
         """
-        pass
 
     @abstractmethod
     def _load(self, grp):
         """Retrieve relevant datasets from group."""
-        pass

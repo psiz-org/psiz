@@ -87,6 +87,8 @@ class Minkowski(tf.keras.layers.Layer):
             w_constraint = tf.keras.constraints.NonNeg()
         self.w_constraint = tf.keras.constraints.get(w_constraint)
 
+        self.w = None
+
     def build(self, input_shape):
         """Build."""
         with tf.name_scope(self.name):

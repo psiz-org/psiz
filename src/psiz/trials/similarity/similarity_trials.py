@@ -150,7 +150,7 @@ class SimilarityTrials(metaclass=ABCMeta):
         return groups
 
     @abstractmethod
-    def _set_configuration_data(self, *args):
+    def _set_configuration_data(self, *args, **kwargs):
         """Generate a unique ID for each trial configuration.
 
         Helper function that generates a unique ID for each of the
@@ -166,7 +166,6 @@ class SimilarityTrials(metaclass=ABCMeta):
                 trial configuration.
 
         """
-        pass
 
     @abstractmethod
     def subset(self, index):
@@ -179,7 +178,6 @@ class SimilarityTrials(metaclass=ABCMeta):
             A new SimilarityTrials object.
 
         """
-        pass
 
     @abstractmethod
     def save(self, filepath):
@@ -189,7 +187,6 @@ class SimilarityTrials(metaclass=ABCMeta):
             filepath: String specifying the path to save the data.
 
         """
-        pass
 
     def is_present(self):
         """Return a 2D Boolean array indicating a present stimulus."""

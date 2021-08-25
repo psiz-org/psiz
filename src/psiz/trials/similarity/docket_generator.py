@@ -38,7 +38,7 @@ class DocketGenerator(object):
         """Initialize."""
 
     @abstractmethod
-    def generate(self, args):
+    def generate(self, *args, **kwargs):
         """Return generated trials based on provided arguments.
 
         Arguments:
@@ -48,4 +48,3 @@ class DocketGenerator(object):
             A Docket object.
 
         """
-        pass

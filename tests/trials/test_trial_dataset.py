@@ -15,6 +15,8 @@
 # ============================================================================
 """Test trials module."""
 
+import h5py
+from importlib.metadata import version
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -414,6 +416,12 @@ def test_persistence_0(rank_sim_4, tmpdir):
     np.testing.assert_array_equal(trials.groups, reconstructed.groups)
     assert trials.outcome == reconstructed.outcome
     np.testing.assert_array_equal(trials.weight, reconstructed.weight)
+
+    ver = version("psiz")
+    ver = '.'.join(ver.split('.')[:3])
+    f = h5py.File(fn, "r")
+    reconstructed_version = f["version"].asstr()[()]
+    assert ver == reconstructed_version
 
 
 def test_persistence_1(rank_sim_4, tmpdir):

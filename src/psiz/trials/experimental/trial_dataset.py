@@ -21,6 +21,7 @@ Classes:
 """
 
 import h5py
+from importlib.metadata import version
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
@@ -161,9 +162,12 @@ class TrialDataset(object):
             filepath: String specifying the path tosave the data.
 
         """
+        ver = version("psiz")
+        ver = '.'.join(ver.split('.')[:3])
+
         f = h5py.File(filepath, "w")
         f.create_dataset("class_name", data="TrialDataset")
-        f.create_dataset("version", data="0.5.0")
+        f.create_dataset("version", data=ver)
         grp_content = f.create_group("content")
         self.content._save(grp_content)
         f.create_dataset("groups", data=self.groups)

@@ -54,4 +54,3 @@ class Gamma(gamma.Gamma):
 
     def _quantile(self, value, **kwargs):
         raise NotImplementedError
-

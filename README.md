@@ -24,6 +24,10 @@ There are two different ways to install: PyPI or git. Installing via git has the
 ```
 $ pip install psiz
 ```
+You can optionally install `pytest` necessary for running package tests:
+```
+$ pip install psiz[test]
+```
 
 ### Using git
 ```

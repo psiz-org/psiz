@@ -18,6 +18,9 @@ NOTES.md
 
 mark_*.json
 
+# Automatic version detection
+/src/psiz/version.py
+
 # Sphinx documentation
 /docs/_build
 

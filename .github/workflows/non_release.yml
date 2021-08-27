@@ -36,7 +36,6 @@ jobs:
       matrix:
         python-version: [3.8, 3.9]
     steps:
-    steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
         with:

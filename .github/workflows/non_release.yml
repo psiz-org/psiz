@@ -65,7 +65,7 @@ jobs:
 
   publish_dist:
       name: Publish Python distribution
-      needs: build_dist, lint_dist
+      needs: [build_dist, lint_dist]
       runs-on: ubuntu-latest
       steps:
       - uses: actions/checkout@v2

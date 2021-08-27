@@ -1,0 +1,47 @@
+name: Build, lint, test, and publish distribution to TestPyPI.
+
+on: [push]
+
+jobs:
+  build_dist:
+    name: Build Python distribution(s)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools
+          pip install build
+      - name: Build package
+        run: python -m build
+      - uses: actions/upload-artifact@v2
+        with:
+          name: dist-py3
+          path: dist/
+          if-no-files-found: error
+          retention-days: 3
+
+  lint_dist:
+    name: Lint and test Python distribution
+    needs: build_dist
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9]
+    steps:
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist-py3
+          path: dist/
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: dist/

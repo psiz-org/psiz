@@ -73,6 +73,9 @@ jobs:
         with:
           name: dist-py3
           path: dist/
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: dist/
+      - name: Publish distribution to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/

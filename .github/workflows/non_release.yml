@@ -98,7 +98,7 @@ jobs:
         name: dist-py3
         path: dist/
     - name: Publish distribution to Test PyPI
-    if: ${{ github.ref != 'refs/heads/main' }}
+      if: ${{ github.ref != 'refs/heads/main' }}
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
@@ -106,7 +106,7 @@ jobs:
         repository_url: https://test.pypi.org/legacy/
     - name: Publish distribution to PyPI
       if: ${{ github.ref == 'refs/heads/main' }}
-      uses: pypa/gh-action-pypi-publish@master
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}

@@ -107,10 +107,11 @@ def build_model(n_stimuli, n_dim, similarity_func):
     return model
 
 
+# TODO ("StudentsT"), ("Exponential"), ("HeavyTailed"), ("Inverse")
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "similarity_func",
-    [("StudentsT"), ("Exponential"), ("HeavyTailed"), ("Inverse")]
+    [("Exponential")]
 )
 def test_rate_1g_mle_execution(similarity_func):
     # Settings.

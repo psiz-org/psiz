@@ -23,21 +23,22 @@ import tensorflow as tf
 
 import psiz
 
+# TODO
 # model_inferred_best = {}
-        # val_loss_best = np.inf
-        # for i_restart in range(n_restart):
-        #     model_inferred = build_model(n_stimuli, n_dim)
-        #     model_inferred.compile(**compile_kwargs)
+# val_loss_best = np.inf
+# for i_restart in range(n_restart):
+#     model_inferred = build_model(n_stimuli, n_dim)
+#     model_inferred.compile(**compile_kwargs)
 
-        #     model_inferred.fit(
-        #         ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
-        #         callbacks=callbacks, verbose=0
-        #     )
+#     model_inferred.fit(
+#         ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
+#         callbacks=callbacks, verbose=0
+#     )
 
-        #     # d_train = model_inferred.evaluate(ds_obs_train, return_dict=True)
-        #     d_val = model_inferred.evaluate(ds_obs_val, return_dict=True)
-        #     # d_test = model_inferred.evaluate(ds_obs_test, return_dict=True)
+#     # d_train = model_inferred.evaluate(ds_obs_train, return_dict=True)
+#     d_val = model_inferred.evaluate(ds_obs_val, return_dict=True)
+#     # d_test = model_inferred.evaluate(ds_obs_test, return_dict=True)
 
-        #     if d_val['loss'] < val_loss_best:
-        #         val_loss_best = d_val['loss']
-        #         model_inferred_best = model_inferred
+#     if d_val['loss'] < val_loss_best:
+#         val_loss_best = d_val['loss']
+#         model_inferred_best = model_inferred

@@ -44,7 +44,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: "3.8"
+        python-version: '3.8'
     - name: Install dependencies
       run: pip install twine
     - uses: actions/download-artifact@v2
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: ['3.8', '3.9']
     steps:
     - uses: actions/checkout@v2
     - uses: actions/download-artifact@v2
@@ -73,7 +73,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools
-        pip install flake8 pylint pytest
+        pip install flake8 pylint pytest pytest-cov
         # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         pip install .
     - name: Analyse code with flake8
@@ -85,14 +85,20 @@ jobs:
     - name: Analyse code with pylint
       run: |
         pylint --disable=R,C,W --ignored-modules=tensorflow src
-    - name: Run fast pytest
-      if: ${{ github.ref != 'refs/heads/main' }}
+    - name: Run pytest with code coverage
+      if: ${{ matrix.python_version == '3.9'}}
       run: |
-        pytest -m "not slow"
-    - name: Run complete pytest
-      if: ${{ github.ref == 'refs/heads/main' }}
+        pytest --cov-report=xml --cov=psiz tests/ 
+    - name: Run pytest without code coverage
+      if: ${{ matrix.python_version != '3.9'}}
       run: |
-        pytest          
+        pytest
+    - name: Upload coverage to Codecov
+      if: ${{ matrix.python_version == '3.9'}}
+      uses: codecov/codecov-action@v2
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        move_coverage_to_trash: true
 
   publish_dist:
     name: Publish Python distribution

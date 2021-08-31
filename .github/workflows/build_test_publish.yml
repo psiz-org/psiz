@@ -86,15 +86,15 @@ jobs:
       run: |
         pylint --disable=R,C,W --ignored-modules=tensorflow src
     - name: Run pytest with code coverage
-      if: ${{ matrix.python_version == '3.9'}}
+      if: ${{ matrix.python-version == '3.9'}}
       run: |
         pytest --cov-report=xml --cov=psiz tests/ 
     - name: Run pytest without code coverage
-      if: ${{ matrix.python_version != '3.9'}}
+      if: ${{ matrix.python-version != '3.9'}}
       run: |
         pytest
     - name: Upload coverage to Codecov
-      if: ${{ matrix.python_version == '3.9'}}
+      if: ${{ matrix.python-version == '3.9'}}
       uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}

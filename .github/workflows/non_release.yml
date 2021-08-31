@@ -86,13 +86,13 @@ jobs:
       run: |
         pylint --disable=R,C,W --ignored-modules=tensorflow src
     - name: Run fast pytest
-        if: ${{ github.ref != 'refs/heads/main' }}
-        run: |
-          pytest -m "not slow"
+      if: ${{ github.ref != 'refs/heads/main' }}
+      run: |
+        pytest -m "not slow"
     - name: Run complete pytest
-        if: ${{ github.ref == 'refs/heads/main' }}
-        run: |
-          pytest          
+      if: ${{ github.ref == 'refs/heads/main' }}
+      run: |
+        pytest          
 
   publish_dist:
     name: Publish Python distribution

@@ -49,7 +49,7 @@ jobs:
       run: pip install twine
     - uses: actions/download-artifact@v2
       with:
-        name: dist-y3
+        name: dist-py3
         path: dist/
     - run: twine check dist/*
 

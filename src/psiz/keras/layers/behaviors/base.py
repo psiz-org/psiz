@@ -26,12 +26,10 @@ import tensorflow as tf
 class Behavior(tf.keras.layers.Layer):
     """An abstract behavior layer."""
 
-    def __init__(self, n_group=None, group_level=None, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize.
 
         Arguments:
-            n_group: DEPRECATED not used
-            group_level: DEPRECATED not used
             kwargs (optional): Additional keyword arguments.
 
         """

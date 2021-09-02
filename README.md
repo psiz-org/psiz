@@ -26,7 +26,7 @@ $ pip install psiz
 ```
 You can optionally install `pytest` necessary for running package tests:
 ```
-$ pip install psiz[test]
+$ pip install "psiz[test]"
 ```
 
 ### Using git

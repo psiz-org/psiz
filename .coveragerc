@@ -12,9 +12,4 @@ exclude_lines =
 ignore_errors = True
 omit =
     tests/*
-    src/psiz/keras/layers/group_level.py
-    src/psiz/keras/layers/stimuli.py
-    src/psiz/keras/layers/kernels/kernel.py
-    src/psiz/keras/layers/distances/minkowski.py
-    src/psiz/keras/layers/embeddings/group_attention.py
-    src/psiz/keras/layers/embeddings/group_attn_variational.py
+    src/psiz/version.py

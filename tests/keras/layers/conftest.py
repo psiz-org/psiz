@@ -22,7 +22,7 @@ import tensorflow as tf
 
 @pytest.fixture
 def paired_inputs_v0():
-    """A minibatch of non-gate inupts."""
+    """A minibatch of non-gate inputs."""
     # Create a simple batch (batch_size=5).
 
     inputs_0 = tf.constant(
@@ -45,6 +45,38 @@ def paired_inputs_v0():
                 [7.0, 7.1, 7.2],
                 [8.0, 8.1, 8.2],
                 [9.0, 9.1, 9.2]
+            ], dtype=np.float32
+        )
+    )
+
+    return [inputs_0, inputs_1]
+
+
+@pytest.fixture
+def paired_inputs_v1():
+    """A minibatch of embedding coordinate inputs."""
+    # Create a simple batch (batch_size=5).
+
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [0.0, 0.1, 0.2],
+                [1.0, 1.1, 1.2],
+                [2.0, 2.1, 2.2],
+                [3.0, 3.1, 3.2],
+                [4.0, 4.1, 4.2]
+            ], dtype=np.float32
+        )
+    )
+
+    inputs_1 = tf.constant(
+        np.array(
+            [
+                [1.0, 1.1, 1.2],
+                [2.1, 2.2, 2.3],
+                [3.2, 3.3, 3.4],
+                [4.4, 4.3, 4.2],
+                [4.0, 4.1, 4.2]
             ], dtype=np.float32
         )
     )

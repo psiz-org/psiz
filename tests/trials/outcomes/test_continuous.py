@@ -281,5 +281,5 @@ def test_stack_1(continuous_2, continuous_3):
 
     """
     with pytest.raises(Exception) as e_info:
-        stacked = stack((continuous_2, continuous_3))
+        stack((continuous_2, continuous_3))
     assert e_info.type == ValueError

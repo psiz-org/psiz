@@ -37,3 +37,12 @@ from psiz.trials.experimental.outcomes.outcome import Outcome
 from psiz.trials.experimental.outcomes.continuous import Continuous
 from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategorical
 from psiz.trials.experimental.unravel_timestep import unravel_timestep
+
+__all__ = [
+    'stack', 'load_trials', 'DocketGenerator', 'ActiveRank',
+    'expected_information_gain_rank', 'RandomRank', 'RankTrials', 'RankDocket',
+    'RankObservations', 'RandomRate', 'RateTrials', 'RateDocket',
+    'RateObservations', 'TrialComponent', 'TrialDataset', 'Content',
+    'RankSimilarity', 'RateSimilarity', 'Outcome', 'Continuous',
+    'SparseCategorical', 'unravel_timestep'
+]

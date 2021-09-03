@@ -71,13 +71,4 @@ class Sort(PsychologicalEmbedding):
                     shape=(batch_size, k)
 
         """
-        # pylint: disable=unused-variable
-        # Grab inputs.
-        stimulus_set = inputs['stimulus_set']
-        is_select = inputs['is_select'][:, 1:, :]
-        groups = inputs['groups']
-
-        # Inflate coordinates.
-        z = self.stimuli([stimulus_set, groups])
-        # TensorShape([sample_size, batch_size, TODO, n_dim])
         raise NotImplementedError

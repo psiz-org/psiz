@@ -16,3 +16,5 @@
 """Keras losses initialization file."""
 
 from psiz.keras.losses.neg_log_likelihood import NegLogLikelihood
+
+__all__ = ['NegLogLikelihood']

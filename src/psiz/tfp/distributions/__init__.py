@@ -25,3 +25,5 @@ Classes:
 from psiz.tfp.distributions.inv_softplus_normal import InvSoftplusNormal
 from psiz.tfp.distributions.gamma import Gamma
 from psiz.tfp.distributions.truncated_normal import TruncatedNormal
+
+__all__ = ['InvSoftplusNormal', 'Gamma', 'TruncatedNormal']

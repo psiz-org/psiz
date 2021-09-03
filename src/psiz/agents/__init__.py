@@ -17,3 +17,5 @@
 
 from psiz.agents.base import Agent
 from psiz.agents.rank_agent import RankAgent
+
+__all__ = ['Agent', 'RankAgent']

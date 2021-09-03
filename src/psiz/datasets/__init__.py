@@ -16,3 +16,5 @@
 """Module datasets."""
 
 from psiz.datasets.load_dataset import load
+
+__all__ = ['load']

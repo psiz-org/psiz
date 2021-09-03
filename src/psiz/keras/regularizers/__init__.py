@@ -18,3 +18,7 @@
 from psiz.keras.regularizers.attention_entropy import AttentionEntropy
 from psiz.keras.regularizers.squeeze import Squeeze
 from psiz.keras.regularizers.stimulus_normed_l1 import StimulusNormedL1
+
+__all__ = [
+    'AttentionEntropy', 'Squeeze', 'StimulusNormedL1'
+]

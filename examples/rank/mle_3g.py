@@ -95,9 +95,9 @@ def main():
     ds_obs_val = obs_val.as_dataset().batch(
         batch_size, drop_remainder=False
     )
-    ds_obs_test = obs_test.as_dataset().batch(
-        batch_size, drop_remainder=False
-    )
+    # ds_obs_test = obs_test.as_dataset().batch(
+    #     batch_size, drop_remainder=False
+    # )
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
@@ -120,7 +120,7 @@ def main():
         model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
         n_restart=n_restart
     )
-    restart_record = restarter.fit(
+    restarter.fit(
         x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
         callbacks=callbacks, verbose=0
     )

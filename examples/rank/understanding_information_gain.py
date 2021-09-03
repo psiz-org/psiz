@@ -24,7 +24,6 @@ import itertools
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
-import shutil
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -107,7 +106,7 @@ def main():
         case_list.append(case_data)
 
     # Visualize.
-    fig = draw_figure(case_list, n_col)
+    draw_figure(case_list, n_col)
     fname = fp_example / Path('visual.pdf')
     plt.savefig(
         os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
@@ -124,7 +123,6 @@ def draw_figure(case_list, n_col):
 
     plt.suptitle('Candidate Trials', x=.58)
     gs.tight_layout(fig)
-    return fig
 
 
 def draw_scenario(fig, gs, row, case_data):

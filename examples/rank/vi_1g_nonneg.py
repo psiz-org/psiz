@@ -25,18 +25,15 @@ default, a `psiz_examples` directory is created in your home directory.
 
 """
 
-import copy
 import os
 from pathlib import Path
 import shutil
 
 import imageio
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 import psiz
 
@@ -58,7 +55,7 @@ def main():
     n_group = 1
     n_dim_nonneg = 20
     n_trial = 2000
-    epochs = 100  # 1000 TODO
+    epochs = 1000
     batch_size = 100
     n_frame = 1  # Set to 7 to observe convergence behavior.
 
@@ -131,7 +128,6 @@ def main():
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
-    train_time = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
         include_idx = np.arange(0, n_obs[i_frame])
         obs_round_train = obs_train.subset(include_idx)
@@ -224,9 +220,6 @@ def plot_frame(
         fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
         model_inferred):
     """Plot frame."""
-    # Settings.
-    s = 10
-
     gs = fig0.add_gridspec(2, 6)
 
     f0_ax0 = fig0.add_subplot(gs[0, 0:2])

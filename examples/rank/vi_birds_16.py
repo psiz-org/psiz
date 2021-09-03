@@ -24,12 +24,10 @@ is determined by `Path.home()`.
 
 """
 
-import copy
 import os
 from pathlib import Path
 import shutil
 
-import imageio
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -133,7 +131,6 @@ def main():
     model = restarter.model
 
     train_loss = restart_record.record['loss'][0]
-    train_time = restart_record.record['ms_per_epoch'][0]
     val_loss = restart_record.record['val_loss'][0]
 
     # Evaluate test set by taking multiple samples.

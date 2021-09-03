@@ -65,7 +65,6 @@ def main():
     fp_example = Path.home() / Path('psiz_examples', 'rank', 'vi_3ge')
     fp_board = fp_example / Path('logs', 'fit')
     n_stimuli = 30
-    n_dim = 2
     n_dim_inferred = 2
     n_group = 3
     n_trial = 2000
@@ -471,12 +470,6 @@ def plot_frame(
         fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
         model_inferred, i_frame, color_array):
     """Plot posteriors."""
-    # Settings.
-    group_labels = ['Novice', 'Intermediate', 'Expert']
-
-    n_group = model_inferred.stimuli.n_subnet
-    n_dim = model_inferred.n_dim
-
     gs = fig0.add_gridspec(2, 2)
 
     f0_ax0 = fig0.add_subplot(gs[0, 0])
@@ -539,7 +532,6 @@ def plot_embeddings_true(fig, ax, model_true, color_array):
 
     # Apply and plot Procrustes affine transformation of posterior.
     loc_list = []
-    cov_list = []
     z_max = 0
     for i_group in range(n_group):
         loc = model_true.stimuli.subnets[i_group].embeddings

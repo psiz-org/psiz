@@ -488,7 +488,6 @@ def plot_normal(ax, dist, name=None, c=None):
 
     # Determine mode from samples.
     x_mode = dist.mode().numpy()
-    x_std = dist.stddev().numpy()
 
     x = np.linspace(x_min, x_max, 1000)
     y = dist.prob(x).numpy()

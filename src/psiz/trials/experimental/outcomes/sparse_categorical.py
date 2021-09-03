@@ -138,9 +138,9 @@ class SparseCategorical(Outcome):
 
         return index
 
-    def _for_dataset(self, format='tf', timestep=True):
+    def _for_dataset(self, output_format='tf', timestep=True):
         """Return appropriately formatted data."""
-        if format == 'tf':
+        if output_format == 'tf':
             # Convert from sparse to one-hot-encoding (along new trailing
             # axis).
             index = self.index
@@ -153,7 +153,7 @@ class SparseCategorical(Outcome):
             )
         else:
             raise ValueError(
-                "Unrecognized format '{0}'.".format(format)
+                "Unrecognized `output_format` '{0}'.".format(output_format)
             )
         return y
 

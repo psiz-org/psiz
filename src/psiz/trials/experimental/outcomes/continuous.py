@@ -133,16 +133,16 @@ class Continuous(Outcome):
 
         return value
 
-    def _for_dataset(self, format='tf', timestep=True):
+    def _for_dataset(self, output_format='tf', timestep=True):
         """Return appropriately formatted data."""
-        if format == 'tf':
+        if output_format == 'tf':
             value = self.value
             if timestep is False:
                 value = unravel_timestep(value)
             y = tf.constant(value, dtype=K.floatx())
         else:
             raise ValueError(
-                "Unrecognized format '{0}'.".format(format)
+                "Unrecognized `output_format` '{0}'.".format(output_format)
             )
         return y
 

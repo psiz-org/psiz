@@ -58,7 +58,7 @@ class TrialComponent(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _for_dataset(self, format='tf', timestep=True):
+    def _for_dataset(self, output_format='tf', timestep=True):
         """Return appropriately formatted data."""
 
     @abstractmethod

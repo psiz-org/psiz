@@ -443,9 +443,9 @@ class RankSimilarity(Content):
 
         return is_select
 
-    def _for_dataset(self, format='tf', timestep=True):
+    def _for_dataset(self, output_format='tf', timestep=True):
         """Prepare trial content data for dataset."""
-        if format == 'tf':
+        if output_format == 'tf':
             # Create appropriate `stimulus_set` for all possible outcomes.
             stimulus_set = self._stimulus_set_with_outcomes()
             # Expand `is_select` to add axis for outcomes.
@@ -461,7 +461,7 @@ class RankSimilarity(Content):
             }
         else:
             raise ValueError(
-                "Unrecognized format '{0}'.".format(format)
+                "Unrecognized `output_format` '{0}'.".format(output_format)
             )
         return x
 

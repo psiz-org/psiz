@@ -184,9 +184,9 @@ class RateSimilarity(Content):
                 "valid timestep per sequence."))
         return n_timestep
 
-    def _for_dataset(self, format='tf', timestep=True):
+    def _for_dataset(self, output_format='tf', timestep=True):
         """Prepare trial content data for dataset."""
-        if format == 'tf':
+        if output_format == 'tf':
             stimulus_set = self.stimulus_set
             if timestep is False:
                 stimulus_set = unravel_timestep(stimulus_set)
@@ -195,7 +195,7 @@ class RateSimilarity(Content):
             }
         else:
             raise ValueError(
-                "Unrecognized format '{0}'.".format(format)
+                "Unrecognized `output_format` '{0}'.".format(output_format)
             )
         return x
 

@@ -77,7 +77,7 @@ class TrialDataset(object):
             weight = self._check_weight(weight)
         self.weight = weight
 
-    def as_dataset(self, input_only=False, timestep=True, format='tf'):
+    def as_dataset(self, input_only=False, timestep=True, output_format='tf'):
         """Format trial data as model-consumable object.
 
         Arguments:
@@ -85,16 +85,18 @@ class TrialDataset(object):
                 returned.
             timestep: Boolean indicating if data should be returned
                 with a timestep axis. If `False`, data is reshaped.
-            format: The format of the dataset. By default the dataset
-            is formatted as a tf.data.Dataset object.
+            output_format: The output format of the dataset. By default
+                the dataset is formatted as a tf.data.Dataset object.
 
         Returns:
             ds: A dataset that can be consumed by a model.
 
         """
-        if format == 'tf':
+        if output_format == 'tf':
             # Assemble model input.
-            x = self.content._for_dataset(format=format, timestep=timestep)
+            x = self.content._for_dataset(
+                output_format=output_format, timestep=timestep
+            )
             groups = self.groups
             if timestep is False:
                 groups = unravel_timestep(groups)
@@ -106,7 +108,7 @@ class TrialDataset(object):
                 # Assemble model output
                 if self.outcome is not None:
                     y = self.outcome._for_dataset(
-                        format=format, timestep=timestep
+                        output_format=output_format, timestep=timestep
                     )
                 else:
                     raise ValueError("No outcome has been specified.")
@@ -122,7 +124,7 @@ class TrialDataset(object):
                 ds = tf.data.Dataset.from_tensor_slices((x))
         else:
             raise ValueError(
-                "Unrecognized format '{0}'.".format(format)
+                "Unrecognized output_format '{0}'.".format(output_format)
             )
         return ds
 

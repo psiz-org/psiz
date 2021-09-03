@@ -21,11 +21,12 @@ Functions:
 
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow_probability as tfp
 
 
-def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
+def embedding_input_dimension(embedding, idx, ax=None, c='b'):
     """Visualize embedding values for a requested input dimension.
 
     Plots point estimates of embedding values for the requested
@@ -39,13 +40,15 @@ def embedding_input_dimension(fig, ax, embedding, idx, c='b'):
     Intended to handle rank 2 embeddings.
 
     Arguments:
-        fig: A Matplotlib Figure object.
-        ax: A Matplotlib Axes object.
         embedding: An embedding layer.
         idx: Index of requested input dimension to visualize.
+        ax (optional): A 'matplotlib' `AxesSubplot` object.
         c (optional): Color of interval marks.
 
     """
+    if ax is None:
+        ax = plt.gca()
+
     if isinstance(embedding.embeddings, tfp.distributions.Distribution):
         z_mode = embedding.embeddings.mode().numpy()
         is_distribution = True

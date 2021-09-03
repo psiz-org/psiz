@@ -58,7 +58,7 @@ def main():
     n_group = 1
     n_dim_nonneg = 20
     n_trial = 2000
-    epochs = 1000
+    epochs = 100  # 1000 TODO
     batch_size = 100
     n_frame = 1  # Set to 7 to observe convergence behavior.
 
@@ -237,15 +237,13 @@ def plot_frame(
 
     # Visualize embedding point estimates.
     f0_ax3 = fig0.add_subplot(gs[1, 0:2])
-    psiz.mplot.heatmap_embeddings(
-        fig0, f0_ax3, model_inferred.stimuli
-    )
+    psiz.mplot.heatmap_embeddings(model_inferred.stimuli, ax=f0_ax3)
 
     # Visualize embedding distributions for the first dimension.
     f0_ax4 = fig0.add_subplot(gs[1, 2:6])
     i_dim = 0
     psiz.mplot.embedding_output_dimension(
-        fig0, f0_ax4, model_inferred.stimuli.posterior, i_dim
+        model_inferred.stimuli.posterior, i_dim, ax=f0_ax4
     )
 
     gs.tight_layout(fig0)

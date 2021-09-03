@@ -21,22 +21,25 @@ Functions:
 """
 
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow_probability as tfp
 
 
-def heatmap_embeddings(fig, ax, embedding, cmap=None):
+def heatmap_embeddings(embedding, ax=None, cmap=None):
     """Visualize embeddings as a heatmap.
 
     Intended to handle rank 2 embeddings.
 
     Arguments:
-        fig: A Matplotlib Figure object.
-        ax: A Matplotlib Axes object.
         embedding: An embedding layer.
+        ax (optional): A 'matplotlib' `AxesSubplot` object.
         cmap (optional): A Matplotlib compatible colormap.
 
     """
+    if ax is None:
+        ax = plt.gca()
+
     if cmap is None:
         cmap = matplotlib.cm.get_cmap('Greys')
 
@@ -65,5 +68,6 @@ def heatmap_embeddings(fig, ax, embedding, cmap=None):
     ax.set_xticks([0, n_output_dim - 1])
     ax.set_xticklabels([0, n_output_dim - 1])
     ax.set_ylabel('Input')
-    # TODO use fig = plt.gcf() instead of using passed in `fig` argument.
+    # Grab current figure handle to use colorbar.
+    fig = plt.gcf()
     fig.colorbar(im, ax=ax)

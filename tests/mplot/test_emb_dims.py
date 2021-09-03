@@ -77,7 +77,7 @@ def test_deterministic_emb_input(mask_zero):
     gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
-    psiz.mplot.embedding_input_dimension(fig, ax, emb, idx, c='b')
+    psiz.mplot.embedding_input_dimension(emb, idx, ax=ax, c='b')
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -111,7 +111,7 @@ def test_stochastic_emb_input(mask_zero):
     gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
-    psiz.mplot.embedding_input_dimension(fig, ax, emb, idx, c='b')
+    psiz.mplot.embedding_input_dimension(emb, idx, ax=ax, c='b')
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -156,7 +156,7 @@ def test_deterministic_emb_output(mask_zero):
     gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
-    psiz.mplot.embedding_output_dimension(fig, ax, emb, idx, c='b')
+    psiz.mplot.embedding_output_dimension(emb, idx, ax=ax, c='b')
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -190,7 +190,7 @@ def test_stochastic_emb_output(mask_zero):
     gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
-    psiz.mplot.embedding_output_dimension(fig, ax, emb, idx, c='b')
+    psiz.mplot.embedding_output_dimension(emb, idx, ax=ax, c='b')
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -238,9 +238,9 @@ def test_emb_heatmap(is_dist, mask_zero, cmap):
 
     if cmap:
         cmap = matplotlib.cm.get_cmap('Blues')
-        psiz.mplot.heatmap_embeddings(fig, ax, emb, cmap=cmap)
+        psiz.mplot.heatmap_embeddings(emb, ax=ax, cmap=cmap)
     else:
-        psiz.mplot.heatmap_embeddings(fig, ax, emb)
+        psiz.mplot.heatmap_embeddings(emb, ax=ax)
 
     num_figures_after = plt.gcf().number
     assert num_figures_before < num_figures_after

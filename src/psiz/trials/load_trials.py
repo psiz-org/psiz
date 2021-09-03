@@ -29,7 +29,7 @@ from psiz.trials.similarity.rate.rate_observations import RateObservations
 from psiz.trials.experimental.trial_dataset import TrialDataset
 
 
-def load_trials(filepath, verbose=0):
+def load_trials(filepath):
     """Load data saved via the save method.
 
     The loaded data is instantiated as a concrete class of
@@ -37,7 +37,6 @@ def load_trials(filepath, verbose=0):
 
     Arguments:
         filepath: The location of the hdf5 file to load.
-        verbose (optional): Controls the verbosity of printed summary.
 
     Returns:
         Loaded trials.

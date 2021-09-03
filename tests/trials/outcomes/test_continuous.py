@@ -110,7 +110,7 @@ def test_for_dataset_0(continuous_0):
         )
     )
 
-    tf.debugging.assert_equal(desired_y, continuous_0._for_dataset())
+    tf.debugging.assert_equal(desired_y, continuous_0.export())
 
 
 def test_for_dataset_1(continuous_1):
@@ -120,7 +120,7 @@ def test_for_dataset_1(continuous_1):
         )
     )
 
-    tf.debugging.assert_equal(desired_y, continuous_1._for_dataset())
+    tf.debugging.assert_equal(desired_y, continuous_1.export())
 
 
 def test_for_dataset_2a(continuous_2):
@@ -135,7 +135,7 @@ def test_for_dataset_2a(continuous_2):
         )
     )
 
-    tf.debugging.assert_equal(desired_y, continuous_2._for_dataset())
+    tf.debugging.assert_equal(desired_y, continuous_2.export())
 
 
 def test_for_dataset_2b(continuous_2):
@@ -153,7 +153,7 @@ def test_for_dataset_2b(continuous_2):
         )
     )
 
-    y = continuous_2._for_dataset(timestep=False)
+    y = continuous_2.export(timestep=False)
     tf.debugging.assert_equal(desired_y, y)
 
 
@@ -169,7 +169,7 @@ def test_for_dataset_3a(continuous_3):
         )
     )
 
-    tf.debugging.assert_equal(desired_y, continuous_3._for_dataset())
+    tf.debugging.assert_equal(desired_y, continuous_3.export())
 
 
 def test_for_dataset_3b(continuous_3):
@@ -189,7 +189,7 @@ def test_for_dataset_3b(continuous_3):
         )
     )
 
-    y = continuous_3._for_dataset(timestep=False)
+    y = continuous_3.export(timestep=False)
     tf.debugging.assert_equal(desired_y, y)
 
 

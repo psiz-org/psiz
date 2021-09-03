@@ -77,8 +77,8 @@ class TrialDataset(object):
             weight = self._check_weight(weight)
         self.weight = weight
 
-    def as_dataset(self, input_only=False, timestep=True, export_format='tf'):
-        """Format trial data as model-consumable object.
+    def export(self, input_only=False, timestep=True, export_format='tf'):
+        """Export trial data as model-consumable object.
 
         Arguments:
             input_only: Boolean indicating if only the input should be

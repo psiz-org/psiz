@@ -18,7 +18,6 @@
 import h5py
 from importlib.metadata import version
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 
 from psiz.trials import load_trials
@@ -71,7 +70,7 @@ def test_init_2(rank_sim_1):
     TrialDataset(content, outcome=outcome, groups=groups)
 
 
-def test_as_dataset_0(rank_sim_4):
+def test_export_0(rank_sim_4):
     """Test as_dataset.
 
     Return inputs, outputs, and weights.
@@ -88,7 +87,7 @@ def test_as_dataset_0(rank_sim_4):
         content, outcome=outcome, groups=groups, weight=weight
     )
 
-    ds = trials.as_dataset().batch(4, drop_remainder=False)
+    ds = trials.export().batch(4, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0][0]
     y = ds_list[0][1]
@@ -194,8 +193,8 @@ def test_as_dataset_0(rank_sim_4):
     tf.debugging.assert_equal(desired_w, w)
 
 
-def test_as_dataset_1(rank_sim_4):
-    """Test as_dataset.
+def test_export_1(rank_sim_4):
+    """Test export.
 
     Inputs only.
 
@@ -211,7 +210,7 @@ def test_as_dataset_1(rank_sim_4):
         content, outcome=outcome, groups=groups, weight=weight
     )
 
-    ds = trials.as_dataset(input_only=True).batch(4, drop_remainder=False)
+    ds = trials.export(input_only=True).batch(4, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0]
 
@@ -286,8 +285,8 @@ def test_as_dataset_1(rank_sim_4):
     tf.debugging.assert_equal(desired_x_is_select, x['is_select'])
 
 
-def test_as_dataset_2(rank_sim_4):
-    """Test as_dataset.
+def test_export_2(rank_sim_4):
+    """Test export.
 
     Return dataset using `timestep=False`.
 
@@ -303,7 +302,7 @@ def test_as_dataset_2(rank_sim_4):
         content, outcome=outcome, groups=groups, weight=weight
     )
 
-    ds = trials.as_dataset(timestep=False).batch(6, drop_remainder=False)
+    ds = trials.export(timestep=False).batch(6, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0][0]
     y = ds_list[0][1]

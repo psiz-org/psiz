@@ -191,8 +191,8 @@ def test_is_actual(rate_sim_2):
 
 
 def test_for_dataset_0(rate_sim_3):
-    """Test _for_dataset."""
-    x = rate_sim_3._for_dataset()
+    """Test export."""
+    x = rate_sim_3.export()
     desired_stimulus_set = np.array(
         [
             [
@@ -217,12 +217,12 @@ def test_for_dataset_0(rate_sim_3):
 
 
 def test_for_dataset_1(rate_sim_3):
-    """Test _for_dataset.
+    """Test export.
 
     Use timestep=False.
 
     """
-    x = rate_sim_3._for_dataset(timestep=False)
+    x = rate_sim_3.export(timestep=False)
     desired_stimulus_set = np.array(
         [
             [3, 1],

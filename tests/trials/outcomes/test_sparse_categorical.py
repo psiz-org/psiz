@@ -87,7 +87,7 @@ def test_for_dataset_0(sparse_cat_0):
         )
     )
 
-    tf.debugging.assert_equal(desired_y, sparse_cat_0._for_dataset())
+    tf.debugging.assert_equal(desired_y, sparse_cat_0.export())
 
 
 def test_for_dataset_1(sparse_cat_1):
@@ -102,11 +102,11 @@ def test_for_dataset_1(sparse_cat_1):
         )
     )
 
-    tf.debugging.assert_equal(desired_y, sparse_cat_1._for_dataset())
+    tf.debugging.assert_equal(desired_y, sparse_cat_1.export())
 
 
 def test_for_dataset_2(sparse_cat_1):
-    """Test _for_dataset.
+    """Test export.
 
     Use timestep=False
 
@@ -121,12 +121,12 @@ def test_for_dataset_2(sparse_cat_1):
             ], dtype=np.float32
         )
     )
-    y = sparse_cat_1._for_dataset(timestep=False)
+    y = sparse_cat_1.export(timestep=False)
     tf.debugging.assert_equal(desired_y, y)
 
 
 def test_for_dataset_3(sparse_cat_2):
-    """Test _for_dataset.
+    """Test export.
 
     Use timestep=False
 
@@ -149,7 +149,7 @@ def test_for_dataset_3(sparse_cat_2):
             ], dtype=np.float32
         )
     )
-    y = sparse_cat_2._for_dataset(timestep=False)
+    y = sparse_cat_2.export(timestep=False)
     tf.debugging.assert_equal(desired_y, y)
 
 
@@ -165,7 +165,7 @@ def test_for_dataset(sparse_cat_2):
         )
     )
 
-    tf.debugging.assert_equal(desired_y, sparse_cat_2._for_dataset())
+    tf.debugging.assert_equal(desired_y, sparse_cat_2.export())
 
 
 def test_persistence(sparse_cat_2, tmpdir):

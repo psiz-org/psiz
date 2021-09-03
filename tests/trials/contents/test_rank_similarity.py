@@ -469,8 +469,8 @@ def test_is_select_compress_1(rank_sim_4):
 
 
 def test_for_dataset_0(rank_sim_4):
-    """Test _for_dataset."""
-    x = rank_sim_4._for_dataset()
+    """Test export."""
+    x = rank_sim_4.export()
     desired_stimulus_set = tf.constant(
         np.array([
             [
@@ -543,12 +543,12 @@ def test_for_dataset_0(rank_sim_4):
 
 
 def test_for_dataset_1(rank_sim_4):
-    """Test _for_dataset.
+    """Test export.
 
     Use timestep=False.
 
     """
-    x = rank_sim_4._for_dataset(timestep=False)
+    x = rank_sim_4.export(timestep=False)
     desired_stimulus_set = tf.constant(
         np.array([
             [

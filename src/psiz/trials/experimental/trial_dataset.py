@@ -77,7 +77,7 @@ class TrialDataset(object):
             weight = self._check_weight(weight)
         self.weight = weight
 
-    def as_dataset(self, input_only=False, timestep=True, output_format='tf'):
+    def as_dataset(self, input_only=False, timestep=True, export_format='tf'):
         """Format trial data as model-consumable object.
 
         Arguments:
@@ -85,17 +85,17 @@ class TrialDataset(object):
                 returned.
             timestep: Boolean indicating if data should be returned
                 with a timestep axis. If `False`, data is reshaped.
-            output_format: The output format of the dataset. By default
+            export_format: The output format of the dataset. By default
                 the dataset is formatted as a tf.data.Dataset object.
 
         Returns:
             ds: A dataset that can be consumed by a model.
 
         """
-        if output_format == 'tf':
+        if export_format == 'tf':
             # Assemble model input.
-            x = self.content._for_dataset(
-                output_format=output_format, timestep=timestep
+            x = self.content.export(
+                export_format=export_format, timestep=timestep
             )
             groups = self.groups
             if timestep is False:
@@ -107,8 +107,8 @@ class TrialDataset(object):
             if not input_only:
                 # Assemble model output
                 if self.outcome is not None:
-                    y = self.outcome._for_dataset(
-                        output_format=output_format, timestep=timestep
+                    y = self.outcome.export(
+                        export_format=export_format, timestep=timestep
                     )
                 else:
                     raise ValueError("No outcome has been specified.")
@@ -124,7 +124,7 @@ class TrialDataset(object):
                 ds = tf.data.Dataset.from_tensor_slices((x))
         else:
             raise ValueError(
-                "Unrecognized output_format '{0}'.".format(output_format)
+                "Unrecognized export_format '{0}'.".format(export_format)
             )
         return ds
 

@@ -60,6 +60,9 @@ def test_init_with_shape(emb_input_1d):
     )
 
 
+@pytest.mark.parametrize(
+    "is_eager", [True, False]
+)
 @pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
@@ -72,12 +75,14 @@ def test_init_with_shape(emb_input_1d):
         psiz.keras.layers.EmbeddingTruncatedNormalDiag
     ]
 )
-def test_call_1d_input(emb_input_1d, sample_shape, embedding_class, mask_zero):
+def test_call_1d_input(
+        emb_input_1d, sample_shape, embedding_class, mask_zero, is_eager):
     """Test call() return shape.
 
     Returned shape must include appropriate `sample_shape`."
 
     """
+    tf.config.run_functions_eagerly(is_eager)
     input = emb_input_1d
     input_shape = [3]
     n_stimuli = 10

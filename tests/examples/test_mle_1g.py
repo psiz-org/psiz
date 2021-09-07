@@ -196,7 +196,7 @@ def test_rate_1g_mle_execution(similarity_func, tmpdir):
         ).batch(batch_size, drop_remainder=False)
 
         # Use Tensorboard callback.
-        callbacks = [early_stop]
+        callbacks = [early_stop, cb_board]
 
         # Handle restarts.
         model_inferred = build_model(n_stimuli, n_dim, similarity_func)

@@ -22,10 +22,7 @@ from tensorflow.keras.layers import Embedding
 import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingNormalDiag
-from psiz.keras.layers.distances.mink import Minkowski
-from psiz.keras.layers import ExponentialSimilarity
 from psiz.keras.layers import Gate
-from psiz.keras.layers.kernels.distance_based import DistanceBased
 
 
 @pytest.fixture
@@ -63,7 +60,7 @@ def emb_subnets_determ():
 
 
 @pytest.fixture
-def emb_subnets_dist_rank0():
+def emb_subnets_stoch_rank0():
     """A list of subnets"""
     # Settings.
     prior_scale = .0000000001
@@ -120,7 +117,7 @@ def emb_subnets_dist_rank0():
 
 
 @pytest.fixture
-def emb_subnets_dist_rank1():
+def emb_subnets_stoch_rank1():
     """A list of subnets"""
     # Settings.
     prior_scale = .0000000001
@@ -309,10 +306,10 @@ def test_emb_call_determ_3d_input(emb_subnets_determ, emb_inputs_v1, group_v0):
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs)
 
 
-def test_emb_call_dist_2d_input_rank0(
-        emb_subnets_dist_rank0, emb_inputs_v0, group_v0):
+def test_emb_call_stoch_2d_input_rank0(
+        emb_subnets_stoch_rank0, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = Gate(subnets=emb_subnets_dist_rank0, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_stoch_rank0, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -328,10 +325,10 @@ def test_emb_call_dist_2d_input_rank0(
     )
 
 
-def test_emb_call_dist_2d_input_rank1(
-        emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
+def test_emb_call_stoch_2d_input_rank1(
+        emb_subnets_stoch_rank1, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = Gate(subnets=emb_subnets_dist_rank1, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_stoch_rank1, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -348,9 +345,9 @@ def test_emb_call_dist_2d_input_rank1(
 
 
 def test_emb_call_empty_branch(
-        emb_subnets_dist_rank0, emb_inputs_v0, group_3g_empty_v0):
+        emb_subnets_stoch_rank0, emb_inputs_v0, group_3g_empty_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = Gate(subnets=emb_subnets_dist_rank0, group_col=1)
+    group_layer = Gate(subnets=emb_subnets_stoch_rank0, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_3g_empty_v0])
 
@@ -366,9 +363,9 @@ def test_emb_call_empty_branch(
     )
 
 
-def test_emb_serialization(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
+def test_emb_serialization(emb_subnets_stoch_rank1, emb_inputs_v0, group_v0):
     # Build group-specific layer.
-    group_layer = Gate(subnets=emb_subnets_dist_rank1, group_col=0)
+    group_layer = Gate(subnets=emb_subnets_stoch_rank1, group_col=0)
 
     # Get configuration.
     config = group_layer.get_config()
@@ -388,3 +385,23 @@ def test_emb_serialization(emb_subnets_dist_rank1, emb_inputs_v0, group_v0):
     np.testing.assert_array_almost_equal(
         outputs.numpy(), outputs_recon.numpy(), decimal=1
     )
+
+
+def test_compute_deterministic_embedding_output_shape(
+        emb_subnets_determ, emb_inputs_v0, group_v0):
+    """Test `compute_output_shape`."""
+    group_layer = Gate(subnets=emb_subnets_determ, group_col=1)
+    output_shape = group_layer.compute_output_shape(
+        [emb_inputs_v0.shape, group_v0.shape]
+    )
+    assert output_shape == tf.TensorShape([5, 3, 3])
+
+
+def test_compute_stochastic_embedding_output_shape(
+        emb_subnets_stoch_rank0, emb_inputs_v0, group_v0):
+    """Test `compute_output_shape`."""
+    group_layer = Gate(subnets=emb_subnets_stoch_rank0, group_col=1)
+    output_shape = group_layer.compute_output_shape(
+        [emb_inputs_v0.shape, group_v0.shape]
+    )
+    assert output_shape == tf.TensorShape([5, 3, 3])

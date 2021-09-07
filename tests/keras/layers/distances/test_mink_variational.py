@@ -16,8 +16,8 @@
 """Test MinkowskiVariational layer."""
 
 import numpy as np
-import pytest
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
 from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
@@ -102,3 +102,28 @@ def test_serialization():
     tf.debugging.assert_equal(
         mink_layer.prior.w.mode(), recon_layer.prior.w.mode()
     )
+
+
+def test_properties():
+    """Test properties."""
+    kl_weight = .1
+
+    mink_posterior = MinkowskiStochastic()
+    mink_prior = MinkowskiStochastic()
+
+    mink_layer = MinkowskiVariational(
+        posterior=mink_posterior,
+        prior=mink_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+    mink_layer.build([[None, 3], [None, 3]])
+
+    # Test weight property.
+    w = mink_layer.w
+    assert isinstance(w, tfp.distributions.Distribution)
+    assert w.event_shape == tf.TensorShape([3])
+
+    # Test rho property.
+    rho = mink_layer.rho
+    assert isinstance(rho, tfp.distributions.Distribution)
+    assert rho.event_shape == tf.TensorShape([])

@@ -24,7 +24,6 @@ Todo:
 """
 
 import numpy as np
-import numpy.ma as ma
 import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -87,10 +86,27 @@ def docket_0():
     return docket
 
 
-def test_simulate(rank_1g_mle_rand, docket_0):
-    """Test simulation of agent."""
+def test_simulate_0(rank_1g_mle_rand, docket_0):
+    """Test simulation of agent.
+
+    Uses default for `batch_size`.
+
+    """
     agent = psiz.agents.RankAgent(rank_1g_mle_rand)
     obs = agent.simulate(docket_0)
+    np.testing.assert_array_equal(
+        obs.stimulus_set[:, 0], docket_0.stimulus_set[:, 0]
+    )
+
+
+def test_simulate_1(rank_1g_mle_rand, docket_0):
+    """Test simulation of agent.
+
+    Uses user-provided `batch_size`.
+
+    """
+    agent = psiz.agents.RankAgent(rank_1g_mle_rand)
+    obs = agent.simulate(docket_0, batch_size=2)
     np.testing.assert_array_equal(
         obs.stimulus_set[:, 0], docket_0.stimulus_set[:, 0]
     )

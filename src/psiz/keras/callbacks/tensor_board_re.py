@@ -47,11 +47,6 @@ class TensorBoardRe(callbacks.TensorBoard):
                 saved separately to allow joint viewing on TensorBoard.
 
         """
-        # if retart == 0:
-        #     self.write_graph = True
-        # else:
-        #     self.write_graph = False
-
         if restart is not None:
             # Distinguish between restart by setting log_dir for TensorBoard.
             self.log_dir = os.path.join(self.log_dir_init, str(restart))

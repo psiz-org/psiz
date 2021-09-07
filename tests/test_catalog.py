@@ -156,10 +156,56 @@ class TestCatalog:
         assert catalog.n_stimuli == loaded_catalog.n_stimuli
         np.testing.assert_array_equal(
             catalog.stimuli.id.values,
-            loaded_catalog.stimuli.id.values)
+            loaded_catalog.stimuli.id.values
+        )
         np.testing.assert_array_equal(
             catalog.stimuli.filepath.values,
-            loaded_catalog.stimuli.filepath.values)
+            loaded_catalog.stimuli.filepath.values
+        )
+
+    def test_persistence_w_class_label(self, tmpdir, capsys):
+        """Test object persistence.
+
+        Create catalog with class information and load saved catalog
+        with verbose output.
+
+        """
+        # Create Catalog object.
+        stimulus_id = np.array([0, 1, 2, 3, 4, 5])
+        stimulus_filepath = np.array(
+            ['r/a', 'r/b12', 'r/c', 'r/d', 'r/e', 'r/f'], dtype='O')
+        class_id = np.array([0, 0, 1, 1, 0, 1])
+        class_label = {'0': 'strawberry', '1': 'blueberry'}
+        catalog = psiz.catalog.Catalog(
+            stimulus_id, stimulus_filepath, class_id=class_id,
+            class_label=class_label
+        )
+        # Save Catalog.
+        fn = tmpdir.join('catalog_test.hdf5')
+        catalog.save(fn)
+        # Load the saved catalog.
+        loaded_catalog = psiz.catalog.load_catalog(fn, verbose=1)
+
+        # Assert printed summary is correct.
+        captured = capsys.readouterr()
+        assert captured.out == "Catalog Summary\n  n_stimuli: 6\n\n"
+
+        # Check that the loaded Catalog object is correct.
+        assert catalog.n_stimuli == loaded_catalog.n_stimuli
+        np.testing.assert_array_equal(
+            catalog.stimuli.id.values,
+            loaded_catalog.stimuli.id.values
+        )
+        np.testing.assert_array_equal(
+            catalog.stimuli.filepath.values,
+            loaded_catalog.stimuli.filepath.values
+        )
+        np.testing.assert_array_equal(
+            class_id,
+            loaded_catalog.stimuli.class_id.values
+        )
+        assert loaded_catalog.class_label[0] == 'strawberry'
+        assert loaded_catalog.class_label[1] == 'blueberry'
 
     def test_subset(self):
         """Test subset method of Catalog object."""

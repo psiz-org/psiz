@@ -113,7 +113,7 @@ def build_model(n_stimuli, n_dim, similarity_func):
     "similarity_func",
     [("Exponential")]
 )
-def test_rate_1g_mle_execution(similarity_func):
+def test_rate_1g_mle_execution(similarity_func, tmpdir):
     # Settings.
     n_stimuli = 30
     n_dim = 3
@@ -160,6 +160,11 @@ def test_rate_1g_mle_execution(similarity_func):
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
         'val_cce', patience=30, mode='min', restore_best_weights=True
+    )
+    cb_board = psiz.keras.callbacks.TensorBoardRe(
+        log_dir=tmpdir, histogram_freq=0,
+        write_graph=False, write_images=False, update_freq='epoch',
+        profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
 
     compile_kwargs = {

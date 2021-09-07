@@ -239,3 +239,13 @@ class TestCatalog:
         np.testing.assert_array_equal(
             catalog_b.id(), stimulus_id[idx]
         )
+
+        # Use optional `squeeze` argument.
+        idx = np.array([1, 0, 1, 1, 0, 1], dtype=bool)
+        catalog_b = catalog.subset(idx, squeeze=True)
+
+        assert catalog_b.n_stimuli == 4
+        assert catalog_b.filepath() == stimulus_filepath_sub
+        np.testing.assert_array_equal(
+            np.array([0, 1, 2, 3]), catalog_b.id()
+        )

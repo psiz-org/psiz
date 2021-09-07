@@ -419,7 +419,7 @@ def test_persistence_0(rank_sim_4, tmpdir):
     ver = version("psiz")
     ver = '.'.join(ver.split('.')[:3])
     f = h5py.File(fn, "r")
-    reconstructed_version = f["version"].asstr()[()]
+    reconstructed_version = f["psiz_version"].asstr()[()]
     assert ver == reconstructed_version
 
 

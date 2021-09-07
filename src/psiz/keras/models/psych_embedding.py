@@ -26,6 +26,7 @@ Functions:
 """
 
 import copy
+from importlib.metadata import version
 import warnings
 
 import tensorflow as tf
@@ -303,6 +304,9 @@ class PsychologicalEmbedding(tf.keras.Model):
 
     def get_config(self):
         """Return model configuration."""
+        ver = version("psiz")
+        ver = '.'.join(ver.split('.')[:3])
+
         layer_configs = {
             'stimuli': tf.keras.utils.serialize_keras_object(
                 self.stimuli
@@ -316,7 +320,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         config = {
             'name': self.name,
             'class_name': self.__class__.__name__,
-            'psiz_version': '0.5.0',
+            'psiz_version': ver,
             'n_sample': self.n_sample,
             'layers': copy.deepcopy(layer_configs),
             'use_group_stimuli': self._use_group['stimuli'],

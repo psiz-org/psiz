@@ -14,6 +14,7 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+from importlib.metadata import version
 import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
@@ -23,7 +24,8 @@ copyright = '2021, The PsiZ Authors'
 author = 'Brett D. Roads'
 
 # The full version, including alpha/beta/rc tags
-release = '0.5.0'
+release = version("psiz")
+ver = '.'.join(release.split('.')[:3])
 
 
 # -- General configuration ---------------------------------------------------

@@ -160,3 +160,46 @@ def test_serialization():
         orig_layer.prior.embeddings.mode(),
         recon_layer.prior.embeddings.mode()
     )
+
+
+def test_properties():
+    kl_weight = .1
+    n_stimuli = 10
+    n_dim = 3
+    prior_scale = .2
+
+    embedding_posterior = EmbeddingNormalDiag(
+        n_stimuli, n_dim, mask_zero=False,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(prior_scale).numpy()
+        )
+    )
+    embedding_prior = EmbeddingShared(
+        n_stimuli, n_dim, mask_zero=False,
+        embedding=EmbeddingNormalDiag(
+            1, 1,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ),
+            loc_trainable=False,
+        )
+    )
+
+    orig_layer = EmbeddingVariational(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+    orig_layer.build([None, 3])
+
+    input_dim = orig_layer.input_dim
+    assert input_dim == n_stimuli
+
+    output_dim = orig_layer.output_dim
+    assert output_dim == n_dim
+
+    mask_zero = orig_layer.mask_zero
+    assert not mask_zero
+
+    embeddings = orig_layer.embeddings
+    assert isinstance(embeddings, tfp.distributions.Distribution)

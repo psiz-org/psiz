@@ -20,8 +20,6 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-import psiz
-
 
 def test_n_sample_propogation(rate_1g_vi):
     """Test propogation properties."""

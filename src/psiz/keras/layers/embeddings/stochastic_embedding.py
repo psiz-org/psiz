@@ -46,10 +46,7 @@ class StochasticEmbedding(tf.keras.layers.Layer):
 
         """
         if 'input_shape' not in kwargs:
-            if input_length:
-                kwargs['input_shape'] = (input_length,)
-            else:
-                kwargs['input_shape'] = (None,)
+            kwargs['input_shape'] = (input_length,)
         dtype = kwargs.pop('dtype', K.floatx())
         # We set autocast to False, as we do not want to cast floating-
         # point inputs to self.dtype. In call(), we cast to int32, and

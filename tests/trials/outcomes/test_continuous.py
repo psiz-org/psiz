@@ -194,7 +194,7 @@ def test_for_dataset_3b(continuous_3):
 
 
 def test_persistence(continuous_2, tmpdir):
-    """Test _save and _load."""
+    """Test save and load."""
     group_name = "value"
 
     original = continuous_2
@@ -203,7 +203,7 @@ def test_persistence(continuous_2, tmpdir):
     # Save group.
     f = h5py.File(fn, "w")
     grp_stimulus = f.create_group(group_name)
-    original._save(grp_stimulus)
+    original.save(grp_stimulus)
     f.close()
 
     # Load group.
@@ -214,7 +214,7 @@ def test_persistence(continuous_2, tmpdir):
         class_name = grp["class_name"].asstr()[()]
     except AttributeError:
         class_name = grp["class_name"][()]
-    reconstructed = Continuous._load(grp)
+    reconstructed = Continuous.load(grp)
     f.close()
 
     # Check for equivalency.

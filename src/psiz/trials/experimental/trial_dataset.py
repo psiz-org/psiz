@@ -81,12 +81,14 @@ class TrialDataset(object):
         """Export trial data as model-consumable object.
 
         Arguments:
-            input_only: Boolean indicating if only the input should be
-                returned.
-            timestep: Boolean indicating if data should be returned
-                with a timestep axis. If `False`, data is reshaped.
-            export_format: The output format of the dataset. By default
-                the dataset is formatted as a tf.data.Dataset object.
+            input_only (optional): Boolean indicating if only the input
+                should be returned.
+            timestep (optional): Boolean indicating if data should be
+                returned with a timestep axis. If `False`, data is
+                reshaped.
+            export_format (optional): The output format of the dataset.
+                By default the dataset is formatted as a
+                    tf.data.Dataset object.
 
         Returns:
             ds: A dataset that can be consumed by a model.
@@ -161,7 +163,7 @@ class TrialDataset(object):
         """Save the TrialDataset object as an HDF5 file.
 
         Arguments:
-            filepath: String specifying the path tosave the data.
+            filepath: String specifying the path to save the data.
 
         """
         ver = version("psiz")
@@ -171,11 +173,11 @@ class TrialDataset(object):
         f.create_dataset("class_name", data="TrialDataset")
         f.create_dataset("version", data=ver)
         grp_content = f.create_group("content")
-        self.content._save(grp_content)
+        self.content.save(grp_content)
         f.create_dataset("groups", data=self.groups)
         grp_outcome = f.create_group("outcome")
         if self.outcome is not None:
-            self.outcome._save(grp_outcome)
+            self.outcome.save(grp_outcome)
         else:
             grp_outcome.create_dataset("class_name", data="None")
         f.create_dataset("weight", data=self.weight)
@@ -333,7 +335,7 @@ class TrialDataset(object):
             else:
                 raise NotImplementedError
 
-            return group_class._load(grp)
+            return group_class.load(grp)
 
     def _stack_groups(self, trials_list, max_timestep):
         """Stack `groups` data."""

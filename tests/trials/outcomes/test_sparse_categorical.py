@@ -169,7 +169,7 @@ def test_for_dataset(sparse_cat_2):
 
 
 def test_persistence(sparse_cat_2, tmpdir):
-    """Test _save and _load."""
+    """Test save and load."""
     group_name = "outcome"
 
     original = sparse_cat_2
@@ -178,7 +178,7 @@ def test_persistence(sparse_cat_2, tmpdir):
     # Save group.
     f = h5py.File(fn, "w")
     grp_stimulus = f.create_group(group_name)
-    original._save(grp_stimulus)
+    original.save(grp_stimulus)
     f.close()
 
     # Load group.
@@ -189,7 +189,7 @@ def test_persistence(sparse_cat_2, tmpdir):
         class_name = grp["class_name"].asstr()[()]
     except AttributeError:
         class_name = grp["class_name"][()]
-    reconstructed = SparseCategorical._load(grp)
+    reconstructed = SparseCategorical.load(grp)
     f.close()
 
     # Check for equivalency.

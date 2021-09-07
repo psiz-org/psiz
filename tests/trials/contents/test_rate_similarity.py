@@ -239,7 +239,7 @@ def test_for_dataset_1(rate_sim_3):
 
 
 def test_persistence(rate_sim_3, tmpdir):
-    """Test _save and _load."""
+    """Test save and load."""
     group_name = "content"
 
     original = rate_sim_3
@@ -248,7 +248,7 @@ def test_persistence(rate_sim_3, tmpdir):
     # Save group.
     f = h5py.File(fn, "w")
     grp_stimulus = f.create_group(group_name)
-    original._save(grp_stimulus)
+    original.save(grp_stimulus)
     f.close()
 
     # Load group.
@@ -259,7 +259,7 @@ def test_persistence(rate_sim_3, tmpdir):
         class_name = grp["class_name"].asstr()[()]
     except AttributeError:
         class_name = grp["class_name"][()]
-    reconstructed = RateSimilarity._load(grp)
+    reconstructed = RateSimilarity.load(grp)
     f.close()
 
     # Check for equivalency.

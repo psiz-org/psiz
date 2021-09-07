@@ -185,7 +185,17 @@ class RateSimilarity(Content):
         return n_timestep
 
     def export(self, export_format='tf', timestep=True):
-        """Prepare trial content data for dataset."""
+        """Prepare trial content data for dataset.
+
+        Arguments:
+            export_format (optional): The output format of the dataset.
+                By default the dataset is formatted as a
+                    tf.data.Dataset object.
+            timestep (optional): Boolean indicating if data should be
+                returned with a timestep axis. If `False`, data is
+                reshaped.
+
+        """
         if export_format == 'tf':
             stimulus_set = self.stimulus_set
             if timestep is False:
@@ -199,14 +209,24 @@ class RateSimilarity(Content):
             )
         return x
 
-    def _save(self, grp):
-        """Add relevant data to H5 group."""
+    def save(self, grp):
+        """Add relevant data to H5 group.
+
+        Arguments:
+            grp: H5 group for saving data.
+
+        """
         grp.create_dataset("class_name", data="RateSimilarity")
         grp.create_dataset("stimulus_set", data=self.stimulus_set)
         return None
 
     @classmethod
-    def _load(cls, grp):
-        """Retrieve relevant datasets from group."""
+    def load(cls, grp):
+        """Retrieve relevant datasets from group.
+
+        Arguments:
+            grp: H5 group from which to load data.
+
+        """
         stimulus_set = grp["stimulus_set"][()]
         return cls(stimulus_set)

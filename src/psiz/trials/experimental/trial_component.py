@@ -59,11 +59,24 @@ class TrialComponent(metaclass=ABCMeta):
 
     @abstractmethod
     def export(self, export_format='tf', timestep=True):
-        """Return appropriately formatted data."""
+        """Return appropriately formatted data.
+
+        Arguments:
+            export_format (optional): The output format of the dataset.
+                By default the dataset is formatted as a
+                    tf.data.Dataset object.
+            timestep (optional): Boolean indicating if data should be
+                returned with a timestep axis. If `False`, data is
+                reshaped.
+
+        """
 
     @abstractmethod
-    def _save(self, grp):
+    def save(self, grp):
         """Add relevant datasets to group.
+
+        Arguments:
+            grp: H5 group for saving data.
 
         Example:
         grp.create_dataset("my_data_name", data=my_data)
@@ -71,5 +84,10 @@ class TrialComponent(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _load(self, grp):
-        """Retrieve relevant datasets from group."""
+    def load(self, grp):
+        """Retrieve relevant datasets from group.
+    
+        Arguments:
+            grp: H5 group from which to load data.
+
+        """

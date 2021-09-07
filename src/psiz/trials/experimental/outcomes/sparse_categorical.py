@@ -139,7 +139,17 @@ class SparseCategorical(Outcome):
         return index
 
     def export(self, export_format='tf', timestep=True):
-        """Return appropriately formatted data."""
+        """Return appropriately formatted data.
+        
+        Arguments:
+            export_format (optional): The output format of the dataset.
+                By default the dataset is formatted as a
+                    tf.data.Dataset object.
+            timestep (optional): Boolean indicating if data should be
+                returned with a timestep axis. If `False`, data is
+                reshaped.
+
+        """
         if export_format == 'tf':
             # Convert from sparse to one-hot-encoding (along new trailing
             # axis).
@@ -157,11 +167,11 @@ class SparseCategorical(Outcome):
             )
         return y
 
-    def _save(self, grp):
-        """Add relevant datasets to H5 group.
+    def save(self, grp):
+        """Add relevant data to H5 group.
 
-        Example:
-        grp.create_dataset("my_data_name", data=my_data)
+        Arguments:
+            grp: H5 group for saving data.
 
         """
         grp.create_dataset("class_name", data="SparseCategorical")
@@ -170,8 +180,13 @@ class SparseCategorical(Outcome):
         return None
 
     @classmethod
-    def _load(cls, grp):
-        """Retrieve relevant datasets from group."""
+    def load(cls, grp):
+        """Retrieve relevant datasets from group.
+
+        Arguments:
+            grp: H5 group from which to load data.
+
+        """
         index = grp["index"][()]
         depth = grp["depth"][()]
         return cls(index, depth=depth)

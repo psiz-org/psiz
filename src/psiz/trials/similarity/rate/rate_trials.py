@@ -49,7 +49,7 @@ class RateTrials(SimilarityTrials, metaclass=ABCMeta):
         """
         SimilarityTrials.__init__(self, stimulus_set)
 
-        n_present = self._infer_n_present(stimulus_set)
+        n_present = self._infer_n_present()
         self.n_present = self._check_n_present(n_present)
 
         # Format stimulus set.

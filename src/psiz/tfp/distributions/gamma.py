@@ -52,5 +52,5 @@ class Gamma(gamma.Gamma):
     def _log_survival_function(self, value, **kwargs):
         raise NotImplementedError
 
-    def _quantile(self, value, **kwargs):
+    def _quantile(self, p, **kwargs):
         raise NotImplementedError

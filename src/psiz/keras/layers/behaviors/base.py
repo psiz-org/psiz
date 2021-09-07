@@ -26,17 +26,6 @@ import tensorflow as tf
 class Behavior(tf.keras.layers.Layer):
     """An abstract behavior layer."""
 
-    def __init__(self, **kwargs):
-        """Initialize.
-
-        Arguments:
-            kwargs (optional): Additional keyword arguments.
-
-        """
-        # TODO remove unused arguments
-        # pylint: disable=unused-argument
-        super().__init__(**kwargs)
-
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()

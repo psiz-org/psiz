@@ -63,7 +63,7 @@ def procrustes_rotation(z0, z1, scale=True):
 
     # Compute SVD of covariance matrix.
     # NOTE: h = u @ np.diag(s) @ vh = (u * s) @ vh
-    u, s, vh = np.linalg.svd(m, hermitian=False)
+    u, _, vh = np.linalg.svd(m, hermitian=False)
 
     # Aseemble rotation matrix (does not include scaling).
     r = u @ vh

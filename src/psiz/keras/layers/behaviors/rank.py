@@ -35,15 +35,6 @@ class RankBehavior(Behavior):
 
     """
 
-    def __init__(self, **kwargs):
-        """Initialize.
-
-        Arguments:
-            kwargs (optional): Additional keyword arguments.
-
-        """
-        super().__init__(**kwargs)
-
     def call(self, inputs):
         """Return probability of a ranked selection sequence.
 

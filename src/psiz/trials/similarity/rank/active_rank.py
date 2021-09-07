@@ -84,7 +84,7 @@ class ActiveRank(DocketGenerator):
 
     def generate(
             self, n_trial, model_list, q_priority=None, r_priority=None,
-            groups=[0], verbose=0):
+            groups=None, verbose=0):
         """Return a docket of trials based on provided arguments.
 
         Trials are selected in order to maximize expected information
@@ -133,6 +133,10 @@ class ActiveRank(DocketGenerator):
                 shape = (n_trial,)
 
         """
+        # Set default groups.
+        if groups is None:
+            groups = [0]
+
         # Normalize priorities.
         if q_priority is None:
             q_priority = np.ones([self.n_stimuli]) / self.n_stimuli

@@ -59,7 +59,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         """
         SimilarityTrials.__init__(self, stimulus_set)
 
-        n_reference = self._infer_n_reference(stimulus_set)
+        n_reference = self._infer_n_reference()
         self.n_reference = self._check_n_reference(n_reference)
 
         # Format stimulus set.
@@ -78,15 +78,12 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             is_ranked = self._check_is_ranked(is_ranked)
         self.is_ranked = is_ranked
 
-    def _infer_n_reference(self, stimulus_set):
+    def _infer_n_reference(self):
         """Return the number of references in each trial.
 
         Infers the number of available references for each trial. The
         function assumes that values less than zero, are placeholder
         values and should be treated as non-existent.
-
-        Arguments:
-            stimulus_set: shape = [n_trial, 1]
 
         Returns:
             n_reference: An integer array indicating the number of
@@ -94,7 +91,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
                 shape = [n_trial, 1]
 
         """
-        n_reference = self._infer_n_present(stimulus_set) - 1
+        n_reference = self._infer_n_present() - 1
         return n_reference.astype(dtype=np.int32)
 
     def _check_n_reference(self, n_reference):

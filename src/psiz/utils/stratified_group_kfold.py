@@ -109,6 +109,7 @@ class StratifiedGroupKFold(_BaseKFold):
         )
 
     def _iter_test_indices(self, X, y, groups):
+        # pylint: disable=signature-differs
         labels_num = np.max(y) + 1
         y_counts_per_group = defaultdict(lambda: np.zeros(labels_num))
         y_distr = Counter()

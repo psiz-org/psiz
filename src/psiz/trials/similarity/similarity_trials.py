@@ -193,14 +193,10 @@ class SimilarityTrials(metaclass=ABCMeta):
         is_present = np.not_equal(self.stimulus_set, -1)
         return is_present
 
-    def _infer_n_present(self, stimulus_set):
+    def _infer_n_present(self):
         """Return the number of stimuli present in each trial.
 
         Assumes that -1 is a placeholder value.
-
-        Arguments:
-            stimulus_set: A 2D array of stimulus IDs.
-                shape = [n_trial, None]
 
         Returns:
             n_present: An integer array indicating the number of

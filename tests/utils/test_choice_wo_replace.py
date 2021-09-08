@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2021 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,73 +17,7 @@
 
 import numpy as np
 
-import psiz.utils
-
-
-def test_generate_group_matrix():
-    """Test generate_group_matrix."""
-    n_row = 3
-
-    # Test default.
-    group_matrix = psiz.utils.generate_group_matrix(
-        n_row
-    )
-    desired_group_matrix = np.array([
-        [0],
-        [0],
-        [0]
-    ])
-    np.testing.assert_array_equal(
-        group_matrix, desired_group_matrix
-    )
-
-    # Test one-level hierarchy.
-    groups = [0, 0]
-    group_matrix = psiz.utils.generate_group_matrix(
-        n_row, groups=groups
-    )
-    desired_group_matrix = np.array([
-        [0, 0],
-        [0, 0],
-        [0, 0]
-    ])
-    np.testing.assert_array_equal(
-        group_matrix, desired_group_matrix
-    )
-
-    # Test three-level hierarchy.
-    groups = [0, 6, 7, 3]
-    group_matrix = psiz.utils.generate_group_matrix(
-        n_row, groups=groups
-    )
-    desired_group_matrix = np.array([
-        [0, 6, 7, 3],
-        [0, 6, 7, 3],
-        [0, 6, 7, 3]
-    ])
-    np.testing.assert_array_equal(
-        group_matrix, desired_group_matrix
-    )
-
-
-def test_matrix_comparison():
-    """Test matrix correlation."""
-    a = np.array((
-        (1.0, .50, .90, .13),
-        (.50, 1.0, .10, .80),
-        (.90, .10, 1.0, .12),
-        (.13, .80, .12, 1.0)
-    ))
-
-    b = np.array((
-        (1.0, .45, .90, .11),
-        (.45, 1.0, .20, .82),
-        (.90, .20, 1.0, .02),
-        (.11, .82, .02, 1.0)
-    ))
-
-    r2_score_1 = psiz.utils.matrix_comparison(a, b, score='r2')
-    np.testing.assert_almost_equal(r2_score_1, 0.96723696)
+from psiz.utils import choice_wo_replace
 
 
 def test_choice_wo_replace():
@@ -102,7 +36,7 @@ def test_choice_wo_replace():
 
     # Draw samples.
     np.random.seed(560897)
-    drawn_idx = psiz.utils.choice_wo_replace(
+    drawn_idx = choice_wo_replace(
         candidate_idx, (n_trial, n_reference), candidate_prob
     )
     bin_counts, bin_edges = np.histogram(drawn_idx.flatten(), bins=n_option)

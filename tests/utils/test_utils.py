@@ -17,8 +17,7 @@
 
 import numpy as np
 
-from psiz import utils
-import psiz.keras.models
+import psiz.utils
 
 
 def test_generate_group_matrix():
@@ -67,47 +66,6 @@ def test_generate_group_matrix():
     )
 
 
-def test_pairwise_matrix(rank_2g_mle_determ):
-    """Test similarity matrix."""
-    n_stimuli = 3
-    desired_simmat0 = np.array((
-        (1., 0.35035481, 0.00776613),
-        (0.35035481, 1., 0.0216217),
-        (0.00776613, 0.0216217, 1.)
-    ))
-    desired_simmat1 = np.array((
-        (1., 0.29685964, 0.00548485),
-        (0.29685964, 1., 0.01814493),
-        (0.00548485, 0.01814493, 1.)
-    ))
-
-    ds_pairs_0, ds_info_0 = psiz.utils.pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, groups=[0]
-    )
-
-    ds_pairs_1, ds_info_1 = psiz.utils.pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, groups=[1]
-    )
-
-    computed_simmat0 = psiz.utils.pairwise_similarity(
-        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_0,
-        use_group_kernel=True
-    ).numpy()
-
-    computed_simmat1 = psiz.utils.pairwise_similarity(
-        rank_2g_mle_determ.stimuli, rank_2g_mle_determ.kernel, ds_pairs_1,
-        use_group_kernel=True
-    ).numpy()
-
-    # Use fact that n_sample=1 and elements='all' to take advantage of
-    # np.reshape.
-    computed_simmat0 = np.reshape(computed_simmat0, [n_stimuli, n_stimuli])
-    computed_simmat1 = np.reshape(computed_simmat1, [n_stimuli, n_stimuli])
-
-    np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
-    np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
-
-
 def test_matrix_comparison():
     """Test matrix correlation."""
     a = np.array((
@@ -124,7 +82,7 @@ def test_matrix_comparison():
         (.11, .82, .02, 1.0)
     ))
 
-    r2_score_1 = utils.matrix_comparison(a, b, score='r2')
+    r2_score_1 = psiz.utils.matrix_comparison(a, b, score='r2')
     np.testing.assert_almost_equal(r2_score_1, 0.96723696)
 
 

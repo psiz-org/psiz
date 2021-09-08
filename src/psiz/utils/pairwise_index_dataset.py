@@ -42,7 +42,7 @@ def pairwise_index_dataset(
             membership information. For example, `[4,3]`
             indicates that the first optional column has a value of 4
             and the second optional column has a value of 3.
-        mask_zero (optional): Whether the zero index should be masked
+        mask_zero (optional): Whether the zero index should be skipped
             and all indices incremented by one.
         subsample: A float ]0,1] indicating the proportion of all pairs
             that should be retained. By default all pairs are retained.
@@ -74,13 +74,15 @@ def pairwise_index_dataset(
         )
         idx_0 = idx[0]
         idx_1 = idx[1]
+    else:
+        raise NotImplementedError
     del idx
 
     n_pair = len(idx_0)
     if subsample is not None:
         # Make sure subsample is valid subsample value.
-        subsample = np.minimum(1., subsample)
-        subsample = np.maximum(0., subsample)
+        if subsample <= 0 or subsample > 1.:
+            raise ValueError('Argument `subsample` must be in ]0,1]')
 
         np.random.seed(seed)
         idx_rand = np.random.permutation(n_pair)

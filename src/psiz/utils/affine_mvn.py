@@ -33,20 +33,25 @@ def affine_mvn(loc, cov, r=None, t=None):
 
     Arguments:
         loc: Location parameters.
-            shape=(1, n_dim)
+            shape=(n_dim,) or (1, n_dim)
         cov: Covariance.
             shape=(n_dim, n_dim)
         r: Rotation matrix.
             shape=(n_dim, n_dim)
         t: Transformation vector.
-            shape=(1, n_dim)
+            shape=(n_dim,) or (1, n_dim)
 
     Returns:
         loc_affine: Rotated location parameters.
         cov_affine: Rotated covariance.
 
-    NOTE:
-        This implementation hits the means with a rotation matrix on
+    Notes:
+        1) np.matmul will prepend (postpend) singleton dimensions if
+        the first (second) argument is a 1D array. This function
+        therefore allows for 1D or 2D `loc` input. The translation
+        vector `t` can be 1D or 2D since the additional operation will
+        broadcast it appropriately.
+        2) This implementation hits the means with a rotation matrix on
         the RHS, allowing the rows to correspond to an instance and
         columns to correspond to dimensionality. The more conventional
         pattern has rows corresponding to dimensionality, in which case
@@ -58,11 +63,12 @@ def affine_mvn(loc, cov, r=None, t=None):
         ```
 
     """
-    n_dim = loc.shape[0]
-
     if t is None:
-        t = 0
+        # Default to no translation.
+        t = 0.
     if r is None:
+        # Default to identity matrix (no rotation).
+        n_dim = loc.shape[-1]
         r = np.eye(n_dim)
 
     loc_affine = np.matmul(loc, r) + t

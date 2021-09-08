@@ -47,6 +47,6 @@ class TensorBoardRe(callbacks.TensorBoard):
                 saved separately to allow joint viewing on TensorBoard.
 
         """
-        if restart is not None:
+        if restart is not None:  # pragma: no branch
             # Distinguish between restart by setting log_dir for TensorBoard.
             self.log_dir = os.path.join(self.log_dir_init, str(restart))

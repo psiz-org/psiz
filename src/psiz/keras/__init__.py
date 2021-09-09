@@ -29,8 +29,6 @@ import psiz.keras.callbacks
 import psiz.keras.constraints
 import psiz.keras.initializers
 import psiz.keras.layers
-import psiz.keras.losses
-import psiz.keras.metrics
 import psiz.keras.models
 import psiz.keras.regularizers
 from psiz.keras.restarter import Restarter

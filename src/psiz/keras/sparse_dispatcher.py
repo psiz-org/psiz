@@ -149,7 +149,6 @@ class SparseDispatcher():
             axis=0
         )
 
-    # TODO maybe dispatch_multi vs dispatch single
     # @add_name_scope()
     def dispatch_single(self, inputs):
         """Create one input Tensor for each expert.

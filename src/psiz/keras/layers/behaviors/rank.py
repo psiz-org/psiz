@@ -38,8 +38,6 @@ class RankBehavior(Behavior):
     def call(self, inputs):
         """Return probability of a ranked selection sequence.
 
-        See: _ranked_sequence_probability for NumPy implementation.
-
         Arguments:
             inputs[0]: i.e., sim_qr: A tensor containing the
                 precomputed similarities between the query stimuli and

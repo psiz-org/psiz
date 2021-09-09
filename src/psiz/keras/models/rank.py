@@ -21,7 +21,6 @@ Classes:
 
 """
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
@@ -137,62 +136,3 @@ class Rank(PsychologicalEmbedding):
             probs = self.behavior([sim_qr, is_select, is_outcome])
 
         return probs
-
-
-def _ranked_sequence_probability(sim_qr, n_select):
-    """Return probability of a ranked selection sequence.
-
-    Arguments:
-        sim_qr: A 3D tensor containing pairwise similarity values.
-            Each row (dimension 0) contains the similarity between
-            a trial's query stimulus and reference stimuli. The
-            tensor is arranged such that the first column
-            corresponds to the first selection in a sequence, and
-            the last column corresponds to the last selection
-            (dimension 1). The third dimension indicates
-            different samples.
-            shape = (n_trial, n_reference, n_sample)
-        n_select: Scalar indicating the number of selections made
-            by an agent.
-
-    Returns:
-        A 2D tensor of probabilities.
-        shape = (n_trial, n_sample)
-
-    Notes:
-        For example, given query Q and references A, B, and C, the
-        probability of selecting reference A then B (in that order)
-        would be:
-
-        P(A)P(B|A) = s_QA/(s_QA + s_QB + s_QC) * s_QB/(s_QB + s_QC)
-
-        where s_QA denotes the similarity between the query and
-        reference A.
-
-        The probability is computed by starting with the last
-        selection for efficiency and numerical stability. In the
-        provided example, this corresponds to first computing the
-        probability of selecting B second, given that A was
-        selected first.
-
-    """
-    n_trial = sim_qr.shape[0]
-    n_sample = sim_qr.shape[2]
-
-    # Initialize.
-    seq_prob = np.ones((n_trial, n_sample), dtype=np.float64)
-    selected_idx = n_select - 1
-    denom = np.sum(sim_qr[:, selected_idx:, :], axis=1)
-
-    for i_selected in range(selected_idx, -1, -1):
-        # Compute selection probability.
-        prob = np.divide(sim_qr[:, i_selected], denom)
-        # Update sequence probability.
-        # seq_prob = np.multiply(seq_prob, prob)
-        seq_prob *= prob
-        # Update denominator in preparation for computing the probability
-        # of the previous selection in the sequence.
-        if i_selected > 0:
-            # denom = denom + sim_qr[:, i_selected-1, :]
-            denom += sim_qr[:, i_selected - 1, :]
-    return seq_prob

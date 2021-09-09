@@ -351,16 +351,8 @@ class PsychologicalEmbedding(tf.keras.Model):
             layer = tf.keras.layers.deserialize(layer_config)
             # Convert old saved models.
             if layer_name == 'embedding':
-                layer_name = 'stimuli'
+                layer_name = 'stimuli'  # pragma: no cover
             built_layers[layer_name] = layer
 
         model_config.update(built_layers)
         return cls(**model_config)
-
-
-def _submodule_setattr(layers, attribute, val):
-    """Iterate over layers and submodules to set attribute."""
-    for layer in layers:
-        for sub in layer.submodules:
-            if hasattr(sub, attribute):
-                setattr(sub, attribute, val)

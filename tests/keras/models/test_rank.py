@@ -78,8 +78,6 @@ def ds_rank_obs_3g():
 
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
-    is_ranked = np.array((True, True, True, True))
     groups = np.array(([0], [0], [1], [2]), dtype=np.int32)
 
     obs = psiz.trials.RankObservations(
@@ -98,6 +96,33 @@ def rank_1g_mle_v2():
 
     stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            # rho_trainable=False,
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+        )
+    )
+    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
+    return model
+
+
+@pytest.fixture
+def rank_1g_mle_nomask_v2():
+    """Rank, one group, MLE."""
+    n_stimuli = 20
+    n_dim = 3
+
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli, n_dim, mask_zero=False
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
@@ -371,6 +396,66 @@ def test_n_sample_propogation(rank_1g_vi):
     assert rank_1g_vi.n_sample == 100
 
 
+def test_properties_0(rank_1g_mle_v2):
+    """Test properties."""
+    model = rank_1g_mle_v2
+
+    n_stimuli = model.n_stimuli
+    n_dim = model.n_dim
+
+    n_stimui_desired = 20
+    n_dim_desired = 3
+    assert n_stimuli == n_stimui_desired
+    assert n_dim == n_dim_desired
+
+
+def test_properties_1(rank_1g_mle_nomask_v2):
+    """Test properties."""
+    model = rank_1g_mle_nomask_v2
+
+    n_stimuli = model.n_stimuli
+    n_dim = model.n_dim
+
+    n_stimui_desired = 20
+    n_dim_desired = 3
+    assert n_stimuli == n_stimui_desired
+    assert n_dim == n_dim_desired
+
+
+def test_properties_2(rank_2stim_2kern_determ):
+    """Test properties.
+
+    Trigger cases involving Gate and GateMulti.
+
+    """
+    model = rank_2stim_2kern_determ
+
+    n_stimuli = model.n_stimuli
+    n_dim = model.n_dim
+
+    n_stimui_desired = 3
+    n_dim_desired = 2
+    assert n_stimuli == n_stimui_desired
+    assert n_dim == n_dim_desired
+
+
+def test_properties_3(rank_2stim_2kern_nomask_determ):
+    """Test properties.
+
+    Trigger cases involving Gate and GateMulti.
+
+    """
+    model = rank_2stim_2kern_nomask_determ
+
+    n_stimuli = model.n_stimuli
+    n_dim = model.n_dim
+
+    n_stimui_desired = 3
+    n_dim_desired = 2
+    assert n_stimuli == n_stimui_desired
+    assert n_dim == n_dim_desired
+
+
 @pytest.mark.parametrize(
     "is_eager", [True, False]
 )
@@ -379,7 +464,6 @@ def test_call_2groups(
     """Test call with group-specific kernels."""
     tf.config.run_functions_eagerly(is_eager)
     model = rank_2g_mle
-    n_trial = 4
 
     # Compile
     compile_kwargs = {
@@ -393,7 +477,7 @@ def test_call_2groups(
 
     for data in ds_rank_docket_2g:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        output = model(x, training=False)
+        _ = model(x, training=False)
 
 
 @pytest.mark.parametrize(
@@ -415,6 +499,9 @@ def test_fit_mle_1g(rank_1g_mle_v2, ds_rank_obs_2g, is_eager):
     # Fit one epoch.
     model.fit(ds_rank_obs_2g, epochs=2)
 
+    # Evaluate.
+    model.evaluate(ds_rank_obs_2g)
+
 
 @pytest.mark.parametrize(
     "is_eager", [True, False]
@@ -434,6 +521,9 @@ def test_fit_mle_3g(rank_3g_mle_v2, ds_rank_obs_2g, is_eager):
 
     # Fit one epoch.
     model.fit(ds_rank_obs_2g, epochs=2)
+
+    # Evaluate.
+    model.evaluate(ds_rank_obs_2g)
 
 
 @pytest.mark.parametrize(
@@ -455,6 +545,9 @@ def test_fit_vi_1g(rank_1g_vi_v2, ds_rank_obs_2g, is_eager):
     # Fit one epoch.
     model.fit(ds_rank_obs_2g, epochs=2)
 
+    # Evaluate.
+    model.evaluate(ds_rank_obs_2g)
+
 
 @pytest.mark.parametrize(
     "is_eager", [True, False]
@@ -475,6 +568,9 @@ def test_fit_vi_emb_w_1g(rank_1g_emb_w_vi_v2, ds_rank_obs_2g, is_eager):
     # Fit one epoch.
     model.fit(ds_rank_obs_2g, epochs=2)
 
+    # Evaluate.
+    model.evaluate(ds_rank_obs_2g)
+
 
 @pytest.mark.parametrize(
     "is_eager", [True, False]
@@ -494,6 +590,9 @@ def test_fit_vi_3g(rank_3g_vi_v2, ds_rank_obs_3g, is_eager):
 
     # Fit one epoch.
     model.fit(ds_rank_obs_3g, epochs=2)
+
+    # Evaluate.
+    model.evaluate(ds_rank_obs_3g)
 
 
 @pytest.mark.parametrize(
@@ -522,6 +621,9 @@ def test_fit_vi_3g_empty_kernel_branch(
     # Fit one epoch.
     model.fit(ds_rank_obs_2g, epochs=2)
 
+    # Evaluate.
+    model.evaluate(ds_rank_obs_2g)
+
 
 @pytest.mark.parametrize(
     "is_eager", [True, False]
@@ -548,6 +650,39 @@ def test_fit_vi_3g_v3_empty_kernel_branch(
 
     # Fit one epoch.
     model.fit(ds_rank_obs_2g, epochs=2)
+
+    # Evaluate.
+    model.evaluate(ds_rank_obs_2g)
+
+
+@pytest.mark.parametrize(
+    "is_eager", [True, False]
+)
+def test_fit_mle_2stimuli_2kernel(
+        rank_2stim_2kern_2behav, ds_rank_obs_2g, is_eager):
+    """Test fit case where third "expert" has batch_size=0.
+
+    This will generate an obscure error if not handled correctly.
+    See:
+    https://github.com/matterport/Mask_RCNN/issues/521#issuecomment-646096887
+
+    """
+    tf.config.run_functions_eagerly(is_eager)
+    model = rank_2stim_2kern_2behav
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
+
+    # Fit one epoch.
+    model.fit(ds_rank_obs_2g, epochs=2)
+
+    # Evaluate.
+    model.evaluate(ds_rank_obs_2g)
 
 
 def test_save_load_rank_wtrace(

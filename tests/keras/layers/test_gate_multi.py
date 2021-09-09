@@ -18,11 +18,8 @@
 import numpy as np
 import pytest
 import tensorflow as tf
-from tensorflow.keras.layers import Embedding
-import tensorflow_probability as tfp
 
 from psiz.keras.layers import DistanceBased
-from psiz.keras.layers import EmbeddingNormalDiag
 from psiz.keras.layers import ExponentialSimilarity
 from psiz.keras.layers import GateMulti
 from psiz.keras.layers import Minkowski
@@ -153,7 +150,12 @@ def test_kernel_call(kernel_subnets, paired_inputs_v0, group_v0):
 
 
 def test_call_kernel_empty_branch(paired_inputs_v0, group_3g_empty_v0):
-    """Test call with empty branch."""
+    """Test call with empty branch.
+
+    This test does not have an explicit assert, but tests that such a
+    call does not raise a runtime error.
+
+    """
     n_dim = 3
     kl_weight = .1
 
@@ -172,7 +174,7 @@ def test_call_kernel_empty_branch(paired_inputs_v0, group_3g_empty_v0):
         subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
-    outputs = kernel_group(
+    _ = kernel_group(
         [paired_inputs_v0[0], paired_inputs_v0[1], group_3g_empty_v0]
     )
 
@@ -189,3 +191,20 @@ def test_kernel_output_shape(kernel_subnets, paired_inputs_v0, group_v0):
     output_shape = group_layer.compute_output_shape(input_shape)
     desired_output_shape = tf.TensorShape([5])
     tf.debugging.assert_equal(output_shape, desired_output_shape)
+
+
+def test_serialization(kernel_subnets, paired_inputs_v0, group_v0):
+    """Test serialization."""
+    group_layer_0 = GateMulti(subnets=kernel_subnets, group_col=0)
+    outputs_0 = group_layer_0(
+        [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
+    )
+    config = group_layer_0.get_config()
+    assert config['group_col'] == 0
+
+    group_layer_1 = GateMulti.from_config(config)
+    outputs_1 = group_layer_1(
+        [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
+    )
+
+    tf.debugging.assert_equal(outputs_0, outputs_1)

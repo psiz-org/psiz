@@ -21,8 +21,8 @@ import numpy as np
 import psiz.mplot
 
 
-@pytest.mark.parametrize("ax", [False, True])
-def test_hdi_bvn(ax):
+@pytest.mark.parametrize("ax_present", [False, True])
+def test_hdi_bvn(ax_present):
     """Basic test of `hdi_bvn` plotter.
 
     NOTE: Does not test if HDI is computed correctly.
@@ -51,7 +51,7 @@ def test_hdi_bvn(ax):
     fig = plt.figure(figsize=(6.5, 4), dpi=200)
     gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
-    if ax:
+    if ax_present:
         psiz.mplot.hdi_bvn(
             loc, cov, ax, p=.95, edgecolor=edgecolor, lw=lw,
             alpha=alpha, fill=fill

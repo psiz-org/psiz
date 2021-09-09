@@ -14,14 +14,14 @@
 # limitations under the License.
 # ============================================================================
 
-import pytest
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-import psiz.mplot
+from psiz.keras.layers import EmbeddingNormalDiag
+from psiz.mplot import embedding_input_dimension
 
 
 def emb_0(mask_zero, is_dist):
@@ -48,7 +48,7 @@ def emb_0(mask_zero, is_dist):
         ])
 
     if is_dist:
-        emb = psiz.keras.layers.EmbeddingNormalDiag(
+        emb = EmbeddingNormalDiag(
             n_stimuli, n_dim, mask_zero=mask_zero,
             loc_initializer=tf.keras.initializers.Constant(locs),
             scale_initializer=tf.keras.initializers.Constant(
@@ -66,7 +66,8 @@ def emb_0(mask_zero, is_dist):
 
 
 @pytest.mark.parametrize("mask_zero", [False, True])
-def test_deterministic_emb_input(mask_zero):
+@pytest.mark.parametrize("ax_present", [False, True])
+def test_deterministic_emb_input(mask_zero, ax_present):
     """Basic test of deterministic embedding."""
     is_dist = False
     emb = emb_0(mask_zero, is_dist)
@@ -77,7 +78,10 @@ def test_deterministic_emb_input(mask_zero):
     gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
-    psiz.mplot.embedding_input_dimension(emb, idx, ax=ax, c='b')
+    if ax_present:
+        embedding_input_dimension(emb, idx, ax=ax, c='b')
+    else:
+        embedding_input_dimension(emb, idx, c='b')
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -100,7 +104,8 @@ def test_deterministic_emb_input(mask_zero):
 
 
 @pytest.mark.parametrize("mask_zero", [False, True])
-def test_stochastic_emb_input(mask_zero):
+@pytest.mark.parametrize("ax_present", [False, True])
+def test_stochastic_emb_input(mask_zero, ax_present):
     """Basic test of deterministic embedding."""
     is_dist = True
     emb = emb_0(mask_zero, is_dist)
@@ -111,7 +116,10 @@ def test_stochastic_emb_input(mask_zero):
     gs = fig.add_gridspec(1, 1)
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
-    psiz.mplot.embedding_input_dimension(emb, idx, ax=ax, c='b')
+    if ax_present:
+        embedding_input_dimension(emb, idx, ax=ax, c='b')
+    else:
+        embedding_input_dimension(emb, idx, c='b')
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -141,117 +149,4 @@ def test_stochastic_emb_input(mask_zero):
     np.testing.assert_array_almost_equal(ax.lines[-1]._x, np.array([2., 2.]))
     np.testing.assert_array_almost_equal(
         ax.lines[-1]._y, np.array([-0.00489804,  0.26489803])
-    )
-
-
-@pytest.mark.parametrize("mask_zero", [False, True])
-def test_deterministic_emb_output(mask_zero):
-    """Basic test of deterministic embedding."""
-    is_dist = False
-    emb = emb_0(mask_zero, is_dist)
-
-    num_figures_before = plt.gcf().number
-
-    fig = plt.figure(figsize=(6.5, 4), dpi=200)
-    gs = fig.add_gridspec(1, 1)
-    ax = fig.add_subplot(gs[0, 0])
-    idx = 1
-    psiz.mplot.embedding_output_dimension(emb, idx, ax=ax, c='b')
-    gs.tight_layout(fig)
-
-    num_figures_after = plt.gcf().number
-    assert num_figures_before < num_figures_after
-
-    # Check scatter of point estimates.
-    cs = ax.collections[0]
-    arr = cs.get_offsets()
-
-    desired_arr = np.array([
-        [0.,  0.11],
-        [1., -0.12],
-        [2.,  0.14],
-        [3., -0.14],
-        [4.,  0.2]
-    ])
-    np.testing.assert_array_almost_equal(
-        arr.data, desired_arr
-    )
-
-
-@pytest.mark.parametrize("mask_zero", [False, True])
-def test_stochastic_emb_output(mask_zero):
-    """Basic test of deterministic embedding."""
-    is_dist = True
-    emb = emb_0(mask_zero, is_dist)
-
-    num_figures_before = plt.gcf().number
-
-    fig = plt.figure(figsize=(6.5, 4), dpi=200)
-    gs = fig.add_gridspec(1, 1)
-    ax = fig.add_subplot(gs[0, 0])
-    idx = 1
-    psiz.mplot.embedding_output_dimension(emb, idx, ax=ax, c='b')
-    gs.tight_layout(fig)
-
-    num_figures_after = plt.gcf().number
-    assert num_figures_before < num_figures_after
-
-    # Check scatter of mode.
-    cs = ax.collections[0]
-    arr = cs.get_offsets()
-
-    desired_arr = np.array([
-        [0.,  0.11],
-        [1., -0.12],
-        [2.,  0.14],
-        [3., -0.14],
-        [4.,  0.2]
-    ])
-    np.testing.assert_array_almost_equal(
-        arr.data, desired_arr
-    )
-
-    # Spot check middle density intervals.
-    np.testing.assert_array_almost_equal(ax.lines[0]._x, np.array([0., 0.]))
-    np.testing.assert_array_almost_equal(
-        ax.lines[0]._y, np.array([-0.40516615,  0.62516624])
-    )
-
-    np.testing.assert_array_almost_equal(ax.lines[-1]._x, np.array([4., 4.]))
-    np.testing.assert_array_almost_equal(
-        ax.lines[-1]._y, np.array([0.06510197, 0.33489805])
-    )
-
-
-@pytest.mark.parametrize("mask_zero", [False, True])
-@pytest.mark.parametrize("is_dist", [False, True])
-@pytest.mark.parametrize("cmap", [False, True])
-def test_emb_heatmap(is_dist, mask_zero, cmap):
-    """Test plotter `heatmap_embedding`."""
-    emb = emb_0(mask_zero, is_dist)
-
-    num_figures_before = plt.gcf().number
-
-    fig = plt.figure(figsize=(6.5, 4), dpi=200)
-    gs = fig.add_gridspec(1, 1)
-    ax = fig.add_subplot(gs[0, 0])
-
-    if cmap:
-        cmap = matplotlib.cm.get_cmap('Blues')
-        psiz.mplot.heatmap_embeddings(emb, ax=ax, cmap=cmap)
-    else:
-        psiz.mplot.heatmap_embeddings(emb, ax=ax)
-
-    num_figures_after = plt.gcf().number
-    assert num_figures_before < num_figures_after
-
-    desired_array = np.array([
-        [-.14, .11, .11],
-        [-.14, -.12, .13],
-        [.16, .14, .12],
-        [.15, -.14, .05],
-        [.2, .2, .2],
-    ])
-    np.testing.assert_array_almost_equal(
-        desired_array, ax.images[0].get_array().data,
     )

@@ -28,10 +28,10 @@ def hdi_bvn(loc, cov, ax=None, p=.99, **kwargs):
     Arguments:
         loc: Array denoting the means of bivariate normal
             distributions.
-            shape=(n_distr, 2)
+            shape=(n_distribution, 2)
         cov: Array denoting the covariance matrices of
             bivariate normal distributions.
-            shape=(n_distr, 2, 2)
+            shape=(n_distribution, 2, 2)
         ax (optional): A 'matplotlib' `AxesSubplot` object.
         p (optional): The amount of probability that the HDI should
             indicate. This must be a float ]0, 1[.
@@ -41,16 +41,16 @@ def hdi_bvn(loc, cov, ax=None, p=.99, **kwargs):
             to see if the length matches the number of distributions.
             If so, it will be assumed that these are values that should
             be applied on a per-distribution bases. For example,
-            if edgecolor has shape=(n_distr, 3), it will be assumed
-            that the `edgecolor[i_distr]` should be applied to the ith
-            distribution.
+            if edgecolor has shape=(n_distribution, 3), it will be
+            assumed that the `edgecolor[i_distr]` should be applied to
+            the ith distribution.
 
     """
     if ax is None:
         ax = plt.gca()
 
     # Determine number of distributions.
-    n_distr = loc.shape[0]
+    n_distribution = loc.shape[0]
 
     # Convert proability to standard deviations (z-score) using percent point
     # function of normal distribution.
@@ -61,17 +61,16 @@ def hdi_bvn(loc, cov, ax=None, p=.99, **kwargs):
     k_pop_list = []
     distr_kwargs = {}
     for k, v in kwargs.items():
-        if hasattr(v, "__len__"):
-            if len(v) == n_distr:
-                # This will grab the first dim of numpy arrays.
-                # Assume argument for `bvn_ellipse`.
-                k_pop_list.append(k)
-                distr_kwargs.update({k: v})
+        if hasattr(v, "__len__") and len(v) == n_distribution:
+            # This will grab the first dim of numpy arrays.
+            # Assume argument for `bvn_ellipse`.
+            k_pop_list.append(k)
+            distr_kwargs.update({k: v})
     for k in k_pop_list:
         kwargs.pop(k)
 
     # Draw BVN HDI ellipses for each distribution.
-    for i_distr in range(n_distr):
+    for i_distr in range(n_distribution):
         # Assemble key-word arguments for single distribution.
         curr_distr_kwargs = {}
         for k, v in distr_kwargs.items():

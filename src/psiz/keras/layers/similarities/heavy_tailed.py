@@ -53,6 +53,9 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
                 trainable.
             fit_alpha (optional): Boolean indicating if variable is
                 trainable.
+            tau_initializer (optional): Initializer for tau.
+            kappa_initializer (optional): Initializer for kappa.
+            alpha_initializer (optional): Initializer for alpha.
 
         """
         super(HeavyTailedSimilarity, self).__init__(**kwargs)
@@ -83,7 +86,7 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
 
         self.fit_alpha = fit_alpha
         if alpha_initializer is None:
-            alpha_initializer = tf.random_uniform_initializer(10., 60.)
+            alpha_initializer = tf.random_uniform_initializer(1., 10.)
         self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
         alpha_trainable = self.trainable and self.fit_alpha
         with tf.name_scope(self.name):

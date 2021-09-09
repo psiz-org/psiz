@@ -46,10 +46,10 @@ class InverseSimilarity(tf.keras.layers.Layer):
         Arguments:
             fit_tau (optional): Boolean indicating if variable is
                 trainable.
-            fit_gamma (optional): Boolean indicating if variable is
+            fit_mu (optional): Boolean indicating if variable is
                 trainable.
-            fit_beta (optional): Boolean indicating if variable is
-                trainable.
+            tau_initializer (optional): Initializer for tau.
+            mu_initializer (optional): Initializer for mu.
 
         """
         super(InverseSimilarity, self).__init__(**kwargs)

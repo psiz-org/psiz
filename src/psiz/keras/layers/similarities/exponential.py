@@ -75,6 +75,9 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
                 trainable.
             fit_beta (optional): Boolean indicating if variable is
                 trainable.
+            tau_initializer (optional): Initializer for tau.
+            gamma_initializer (optional): Initializer for gamma.
+            beta_initializer (optional): Initializer for beta.
 
         """
         super(ExponentialSimilarity, self).__init__(**kwargs)

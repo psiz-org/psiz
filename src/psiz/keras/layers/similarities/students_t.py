@@ -59,6 +59,8 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
                 trainable.
             fit_alpha (optional): Boolean indicating if variable is
                 trainable.
+            tau_initializer (optional): Initializer for tau.
+            alpha_initializer (optional): Initializer for alpha.
 
         """
         super(StudentsTSimilarity, self).__init__(**kwargs)

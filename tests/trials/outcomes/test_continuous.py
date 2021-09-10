@@ -102,7 +102,26 @@ def test_init_3(continuous_3):
     )
 
 
-def test_for_dataset_0(continuous_0):
+def test_init_wrong():
+    """Test initialization."""
+    outcome = np.array(
+        [
+            [
+                [[0.0, 0.1], [0.0, 0.2], [0.0, 0.3]],
+                [[2.0, 0.4], [0.0, 0.5], [0.0, 0.6]],
+            ],
+            [
+                [[-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9]],
+                [[1.0, 1.1], [1.0, 1.2], [1.0, 1.3]],
+            ]
+        ], dtype=np.float32
+    )
+    with pytest.raises(Exception) as e_info:
+        Continuous(outcome)
+    assert e_info.type == ValueError
+
+
+def test_export_0(continuous_0):
     desired_y = tf.constant(
         np.array(
             [[[0.0]], [[2.0]], [[-.1]], [[1.3]]],
@@ -113,7 +132,7 @@ def test_for_dataset_0(continuous_0):
     tf.debugging.assert_equal(desired_y, continuous_0.export())
 
 
-def test_for_dataset_1(continuous_1):
+def test_export_1(continuous_1):
     desired_y = tf.constant(
         np.array(
             [[[0.0]], [[2.0]], [[-0.1]], [[1.3]]], dtype=np.float32
@@ -123,7 +142,7 @@ def test_for_dataset_1(continuous_1):
     tf.debugging.assert_equal(desired_y, continuous_1.export())
 
 
-def test_for_dataset_2a(continuous_2):
+def test_export_2a(continuous_2):
     desired_y = tf.constant(
         np.array(
             [
@@ -138,7 +157,7 @@ def test_for_dataset_2a(continuous_2):
     tf.debugging.assert_equal(desired_y, continuous_2.export())
 
 
-def test_for_dataset_2b(continuous_2):
+def test_export_2b(continuous_2):
     """Test for_dataset
 
     Use timestep=False
@@ -157,7 +176,7 @@ def test_for_dataset_2b(continuous_2):
     tf.debugging.assert_equal(desired_y, y)
 
 
-def test_for_dataset_3a(continuous_3):
+def test_export_3a(continuous_3):
     desired_y = tf.constant(
         np.array(
             [
@@ -172,7 +191,7 @@ def test_for_dataset_3a(continuous_3):
     tf.debugging.assert_equal(desired_y, continuous_3.export())
 
 
-def test_for_dataset_3b(continuous_3):
+def test_export_3b(continuous_3):
     """Test for_dataset
 
     Use timestep=False
@@ -191,6 +210,20 @@ def test_for_dataset_3b(continuous_3):
 
     y = continuous_3.export(timestep=False)
     tf.debugging.assert_equal(desired_y, y)
+
+
+def test_export_wrong(continuous_3):
+    """Test export.
+
+    Using incorrect `export_format`.
+
+    """
+    with pytest.raises(Exception) as e_info:
+        continuous_3.export(export_format='garbage')
+    assert e_info.type == ValueError
+    assert (
+        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
+    )
 
 
 def test_persistence(continuous_2, tmpdir):

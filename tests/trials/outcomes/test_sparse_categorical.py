@@ -75,7 +75,64 @@ def test_init_2(sparse_cat_2):
     assert desired_depth == sparse_cat_2.depth
 
 
-def test_for_dataset_0(sparse_cat_0):
+def test_init_wrong_0():
+    """Test initialization.
+
+    Indices are not integers.
+
+    """
+    outcome_idx = np.array(
+        [
+            [0., 2., 1.],
+            [1., 2., 2.],
+        ], dtype=np.float32
+    )
+    with pytest.raises(Exception) as e_info:
+        SparseCategorical(outcome_idx, depth=3)
+    assert e_info.type == ValueError
+
+
+def test_init_wrong_1():
+    """Test initialization.
+
+    Indices are not greater than placeholder.
+
+    """
+    outcome_idx = np.array(
+        [
+            [0, 2, 1],
+            [-1, 2, 2],
+        ], dtype=np.int32
+    )
+    with pytest.raises(Exception) as e_info:
+        SparseCategorical(outcome_idx, depth=3)
+    assert e_info.type == ValueError
+
+
+def test_init_wrong_2():
+    """Test initialization.
+
+    Indices are not rank-2 ndarray.
+
+    """
+    outcome_idx = np.array(
+        [
+            [
+                [0, 2, 1],
+                [1, 2, 2],
+            ],
+            [
+                [2, 0, 1],
+                [1, 0, 2],
+            ],
+        ], dtype=np.int32
+    )
+    with pytest.raises(Exception) as e_info:
+        SparseCategorical(outcome_idx, depth=3)
+    assert e_info.type == ValueError
+
+
+def test_export_0(sparse_cat_0):
     desired_y = tf.constant(
         np.array(
             [
@@ -90,7 +147,7 @@ def test_for_dataset_0(sparse_cat_0):
     tf.debugging.assert_equal(desired_y, sparse_cat_0.export())
 
 
-def test_for_dataset_1(sparse_cat_1):
+def test_export_1(sparse_cat_1):
     desired_y = tf.constant(
         np.array(
             [
@@ -105,7 +162,7 @@ def test_for_dataset_1(sparse_cat_1):
     tf.debugging.assert_equal(desired_y, sparse_cat_1.export())
 
 
-def test_for_dataset_2(sparse_cat_1):
+def test_export_2(sparse_cat_1):
     """Test export.
 
     Use timestep=False
@@ -125,7 +182,7 @@ def test_for_dataset_2(sparse_cat_1):
     tf.debugging.assert_equal(desired_y, y)
 
 
-def test_for_dataset_3(sparse_cat_2):
+def test_export_3(sparse_cat_2):
     """Test export.
 
     Use timestep=False
@@ -151,6 +208,20 @@ def test_for_dataset_3(sparse_cat_2):
     )
     y = sparse_cat_2.export(timestep=False)
     tf.debugging.assert_equal(desired_y, y)
+
+
+def test_export_wrong(sparse_cat_2):
+    """Test export.
+
+    Using incorrect `export_format`.
+
+    """
+    with pytest.raises(Exception) as e_info:
+        sparse_cat_2.export(export_format='garbage')
+    assert e_info.type == ValueError
+    assert (
+        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
+    )
 
 
 def test_for_dataset(sparse_cat_2):
@@ -227,9 +298,9 @@ def test_subset_0(rank_sim_4):
     assert desired_depth == sub.depth
 
 
-def test_stack_0(sparse_cat_1, sparse_cat_2):
+def test_stack_0(sparse_cat_1, sparse_cat_2, sparse_cat_3):
     """Test stack."""
-    desired_n_sequence = 8
+    desired_n_sequence = 10
     desired_max_timestep = 3
     desired_index = np.array(
         [
@@ -241,11 +312,13 @@ def test_stack_0(sparse_cat_1, sparse_cat_2):
             [2, 0, 0],
             [0, 1, 0],
             [1, 1, 1],
+            [0, 2, 1],
+            [1, 2, 2],
         ], dtype=np.int32
     )
     desired_depth = 5
 
-    stacked = stack((sparse_cat_1, sparse_cat_2))
+    stacked = stack((sparse_cat_1, sparse_cat_2, sparse_cat_3))
 
     assert desired_n_sequence == stacked.n_sequence
     assert desired_max_timestep == stacked.max_timestep

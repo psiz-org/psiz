@@ -126,7 +126,7 @@ class TrialDataset(object):
                 ds = tf.data.Dataset.from_tensor_slices((x))
         else:
             raise ValueError(
-                "Unrecognized export_format '{0}'.".format(export_format)
+                "Unrecognized `export_format` '{0}'.".format(export_format)
             )
         return ds
 
@@ -218,7 +218,7 @@ class TrialDataset(object):
         """Return subset of trials as a new RankObservations object.
 
         Arguments:
-            index: The indices corresponding to the subset.
+            idx: The indices corresponding to the subset.
 
         Returns:
             A new RankObservations object.
@@ -316,11 +316,9 @@ class TrialDataset(object):
 
     @staticmethod
     def _load_h5_group(grp):
-        # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
-        try:
-            class_name = grp["class_name"].asstr()[()]
-        except AttributeError:
-            class_name = grp["class_name"][()]
+        # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
+        # call. The `setup.cfg` file notes this minimum version requirement.
+        class_name = grp["class_name"].asstr()[()]
         custom_objects = {
             'RankSimilarity': RankSimilarity,
             'RateSimilarity': RateSimilarity,
@@ -342,7 +340,11 @@ class TrialDataset(object):
         # Before doing anything, check that `groups` shape is compatible.
         n_group = trials_list[0].groups.shape[2]
         for i_trials in trials_list[1:]:
-            if trials_list[0].groups.shape[2] != n_group:
+            if i_trials.groups.shape[2] != n_group:
+                # NOTE: The axis=2 for `groups` must agree because this axis
+                # indicates group membership of a particular sequence. It is
+                # not safe to simply pad with zeros, since zero may have
+                # special user-defined semantics.
                 raise ValueError(
                     'The shape of `groups` for the different TrialDatasets '
                     'must be identical on axis=2.'

@@ -140,7 +140,7 @@ class SparseCategorical(Outcome):
 
     def export(self, export_format='tf', timestep=True):
         """Return appropriately formatted data.
-        
+
         Arguments:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a

@@ -17,7 +17,6 @@
 
 import numpy as np
 import pytest
-import tensorflow as tf
 
 from psiz.trials.experimental.contents.rank_similarity import RankSimilarity
 from psiz.trials.experimental.contents.rate_similarity import RateSimilarity
@@ -199,6 +198,36 @@ def rank_sim_5():
 
 
 @pytest.fixture(scope="module")
+def rank_sim_6():
+    """Content RankedSimilarity with true rank arguments.
+
+    A set of trials with relatively simple outcomes.
+
+    """
+    stimulus_set = np.array(
+        [
+            [
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9],
+                [7, 8, 9],
+            ],
+            [
+                [10, 11, 12],
+                [13, 14, 15],
+                [16, 17, 18],
+                [16, 17, 18],
+            ],
+        ], dtype=np.int32
+    )
+    n_select = np.array(
+        [[1, 1, 1, 1], [1, 1, 1, 1]], dtype=np.int32
+    )
+
+    return RankSimilarity(stimulus_set, n_select=n_select)
+
+
+@pytest.fixture(scope="module")
 def rate_sim_0():
     """Content RateSimilarity with minimal rank arguments."""
     stimulus_set = np.array(
@@ -341,7 +370,7 @@ def continuous_0():
 
 @pytest.fixture(scope="module")
 def continuous_1():
-    """Outcome Continuous with rull rank arguments (singleton)."""
+    """Outcome Continuous with full rank arguments (singleton)."""
     outcome = np.array(
         [[[0.0]], [[2.0]], [[-0.1]], [[1.3]]], dtype=np.float32
     )
@@ -350,7 +379,7 @@ def continuous_1():
 
 @pytest.fixture(scope="module")
 def continuous_2():
-    """Outcome Continuous with rull rank arguments."""
+    """Outcome Continuous with full rank arguments."""
     outcome = np.array(
         [
             [[0.0], [0.0], [0.0]],
@@ -364,7 +393,7 @@ def continuous_2():
 
 @pytest.fixture(scope="module")
 def continuous_3():
-    """Outcome Continuous with rull rank arguments."""
+    """Outcome Continuous with full rank arguments."""
     outcome = np.array(
         [
             [[0.0, 0.1], [0.0, 0.2], [0.0, 0.3]],
@@ -378,7 +407,7 @@ def continuous_3():
 
 @pytest.fixture(scope="module")
 def continuous_4():
-    """Outcome Continuous with rull rank arguments."""
+    """Outcome Continuous with full rank arguments."""
     outcome = np.array(
         [
             [[2.0, 2.1], [2.0, 2.2], [2.0, 2.3]],
@@ -399,7 +428,7 @@ def sparse_cat_0():
 
 @pytest.fixture(scope="module")
 def sparse_cat_1():
-    """Outcome SparseCategorical with rull rank arguments (singleton)."""
+    """Outcome SparseCategorical with full rank arguments (singleton)."""
     outcome_idx = np.array(
         [[0], [2], [0], [1]], dtype=np.int32
     )
@@ -408,13 +437,25 @@ def sparse_cat_1():
 
 @pytest.fixture(scope="module")
 def sparse_cat_2():
-    """Outcome SparseCategorical with rull rank arguments."""
+    """Outcome SparseCategorical with full rank arguments."""
     outcome_idx = np.array(
         [
             [0, 0, 0],
             [2, 0, 0],
             [0, 1, 0],
             [1, 1, 1],
+        ], dtype=np.int32
+    )
+    return SparseCategorical(outcome_idx, depth=3)
+
+
+@pytest.fixture(scope="module")
+def sparse_cat_3():
+    """Outcome SparseCategorical with full rank arguments."""
+    outcome_idx = np.array(
+        [
+            [0, 2, 1],
+            [1, 2, 2],
         ], dtype=np.int32
     )
     return SparseCategorical(outcome_idx, depth=3)

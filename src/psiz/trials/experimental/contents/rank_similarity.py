@@ -85,9 +85,8 @@ class RankSimilarity(Content):
         self.n_sequence = stimulus_set.shape[0]
 
         if n_select is None:
-            n_select = np.ones(
-                (self.n_sequence, self.max_timestep), dtype=np.int32
-            )
+            # Assume `n_select` is 1 for all actual trials.
+            n_select = self.is_actual().astype(np.int32)
         else:
             n_select = self._check_n_select(n_select)
         self.n_select = n_select
@@ -202,7 +201,7 @@ class RankSimilarity(Content):
             )
             outcome_idx_hash[index] = outcome_idx
             n_outcome = outcome_idx.shape[0]
-            if n_outcome > max_n_outcome:
+            if n_outcome > max_n_outcome:  # pragma: no branch
                 max_n_outcome = n_outcome
 
         # Combine `n_sequence` and `max_timestep` axis for `stimulus_set` and

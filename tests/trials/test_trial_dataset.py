@@ -18,6 +18,7 @@
 import h5py
 from importlib.metadata import version
 import numpy as np
+import pytest
 import tensorflow as tf
 
 from psiz.trials import load_trials
@@ -67,7 +68,174 @@ def test_init_2(rank_sim_1):
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     groups = np.ones([content.n_sequence, content.max_timestep, 1], dtype=int)
     weight = .9 * np.ones([content.n_sequence, content.max_timestep])
-    TrialDataset(content, outcome=outcome, groups=groups)
+    TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+
+
+def test_init_3(rank_sim_1):
+    """Test initialization.
+
+    Include outcome, group, and weight argument.
+    Pass in 2D group instead of 3D to force internal handling.
+
+    """
+    content = rank_sim_1
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    groups = np.ones([content.n_sequence, content.max_timestep], dtype=int)
+    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+
+
+def test_invalid_init_0(rank_sim_1):
+    """Test invalid initialization."""
+    content = rank_sim_1
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    groups = np.ones([content.n_sequence, content.max_timestep, 1], dtype=int)
+    weight = .9 * np.ones([content.n_sequence, content.max_timestep, 2])
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+
+    weight = .9 * np.ones([content.n_sequence + 1, content.max_timestep])
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'weight' must have "
+        "shape=(n_squence, max_timestep) as determined by `content`."
+    )
+
+    weight = .9 * np.ones([content.n_sequence, content.max_timestep + 1])
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'weight' must have "
+        "shape=(n_squence, max_timestep) as determined by `content`."
+    )
+
+
+def test_invalid_init_1(rank_sim_1):
+    """Test invalid initialization.
+
+    Bad group shapes:
+    * invalid rank 4 groups.
+    * mismatch in n_sequence
+    * mismatch in max_timestep
+
+    """
+    content = rank_sim_1
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    groups = np.ones(
+        [content.n_sequence, content.max_timestep, 1, 1], dtype=int
+    )
+    weight = .9 * np.ones([content.n_sequence, content.max_timestep, 2])
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'groups' must be a rank 3 ND array."
+    )
+
+    groups = np.ones(
+        [content.n_sequence + 1, content.max_timestep, 1], dtype=int
+    )
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'groups' must have "
+        "shape=(n_squence, max_timestep) as determined by `content`."
+    )
+
+    groups = np.ones(
+        [content.n_sequence, content.max_timestep + 1, 1], dtype=int
+    )
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'groups' must have "
+        "shape=(n_squence, max_timestep) as determined by `content`."
+    )
+
+    groups = np.array(
+        [
+            [[0]], [[-2]], [[1]], [[-1]]
+        ]
+    )
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The parameter 'groups' contains integers less than 0. "
+        "Found 2 bad trial(s)."
+    )
+
+
+def test_invalid_init_2(rank_sim_1):
+    """Test invalid initialization.
+
+    Invalid outcome.
+    * Number of sequences disagrees.
+
+    """
+    content = rank_sim_1
+    outcome_idx = np.zeros(
+        [content.n_sequence + 1, content.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    groups = np.ones([content.n_sequence, content.max_timestep], dtype=int)
+    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The user-provided 'outcome' object must agree with the "
+        "`n_sequence` attribute of the user-provided"
+        "`content` object."
+    )
+
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep + 1], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    with pytest.raises(Exception) as e_info:
+        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The user-provided 'outcome' object must agree with the "
+        "`max_timestep` attribute of the user-provided "
+        "`content` object."
+    )
+
+
+def test_is_actual(rank_sim_2):
+    """Test is_actual."""
+    outcome_idx = np.zeros(
+        [rank_sim_2.n_sequence, rank_sim_2.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=rank_sim_2.max_outcome)
+    trials_4 = TrialDataset(rank_sim_2, outcome=outcome)
+
+    is_actual = trials_4.is_actual()
+    is_actual_desired = np.array(
+        [
+            [1, 1],
+            [1, 0],
+            [1, 1],
+            [1, 1],
+        ], dtype=bool
+    )
+    np.testing.assert_array_equal(is_actual, is_actual_desired)
 
 
 def test_export_0(rank_sim_4):
@@ -392,6 +560,44 @@ def test_export_2(rank_sim_4):
     tf.debugging.assert_equal(desired_w, w)
 
 
+def test_invalid_export_0(rank_sim_4):
+    """Test invalid export."""
+    content = rank_sim_4
+    trials = TrialDataset(content)
+
+    with pytest.raises(Exception) as e_info:
+        trials.export()
+    assert e_info.type == ValueError
+    assert (
+        str(e_info.value) == "No outcome has been specified."
+    )
+
+
+def test_invalid_export_1(rank_sim_4):
+    """Test export.
+
+    Using incorrect `export_format`.
+
+    """
+    content = rank_sim_4
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    groups = np.ones([content.n_sequence, content.max_timestep, 1], dtype=int)
+    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    trials = TrialDataset(
+        content, outcome=outcome, groups=groups, weight=weight
+    )
+
+    with pytest.raises(Exception) as e_info:
+        trials.export(export_format='garbage')
+    assert e_info.type == ValueError
+    assert (
+        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
+    )
+
+
 def test_persistence_0(rank_sim_4, tmpdir):
     """Test persistence.
 
@@ -455,7 +661,11 @@ def test_persistence_1(rank_sim_4, tmpdir):
 
 
 def test_subset_0(rank_sim_4):
-    """Test subset with non-singleton timestep."""
+    """Test subset
+
+    With non-singleton timestep and outcome.
+
+    """
     content = rank_sim_4
     outcome_idx = np.zeros(
         [content.n_sequence, content.max_timestep], dtype=np.int32
@@ -514,6 +724,58 @@ def test_subset_0(rank_sim_4):
     assert desired_depth == trials_sub.outcome.depth
 
 
+def test_subset_1(rank_sim_4):
+    """Test subset.
+
+    With non-singleton timestepand no outcome.
+
+    """
+    content = rank_sim_4
+    groups = np.ones([content.n_sequence, content.max_timestep, 1], dtype=int)
+    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    trials = TrialDataset(
+        content, groups=groups, weight=weight
+    )
+
+    trials_sub = trials.subset(np.array([1, 2]))
+
+    desired_n_sequence = 2
+    desired_max_timestep = 2
+    desired_stimulus_set = np.array([
+        [
+            [7, 8, 9, 0],
+            [0, 0, 0, 0],
+        ],
+        [
+            [10, 11, 12, 13],
+            [14, 15, 16, 0],
+        ]
+    ], dtype=np.int32)
+    desired_n_reference = np.array([[2, 0], [3, 2]], dtype=np.int32)
+    desired_n_select = np.array([[1, 0], [1, 1]], dtype=np.int32)
+    desired_n_timestep = np.array([1, 2], dtype=np.int32)
+    desired_max_outcome = 3
+
+    assert trials_sub.n_sequence == desired_n_sequence
+    assert trials_sub.max_timestep == desired_max_timestep
+    np.testing.assert_array_equal(
+        desired_stimulus_set, trials_sub.content.stimulus_set
+    )
+    np.testing.assert_array_equal(
+        desired_n_reference, trials_sub.content.n_reference
+    )
+    np.testing.assert_array_equal(
+        desired_n_select, trials_sub.content.n_select
+    )
+    np.testing.assert_array_equal(
+        desired_n_timestep, trials_sub.content.n_timestep
+    )
+    assert desired_max_outcome == trials_sub.content.max_outcome
+
+    assert desired_n_sequence == trials_sub.content.n_sequence
+    assert desired_max_timestep == trials_sub.content.max_timestep
+
+
 def test_stack_0(rank_sim_4, rank_sim_5):
     """Test stack."""
     # Creat two trial datasets.
@@ -541,9 +803,9 @@ def test_stack_0(rank_sim_4, rank_sim_5):
         rank_sim_5, outcome=outcome, groups=groups, weight=weight
     )
 
-    stacked = stack((trials_4, trials_5))
+    stacked = stack((trials_4, trials_5, trials_4))
 
-    desired_n_sequence = 5
+    desired_n_sequence = 8
     desired_max_timestep = 3
     desired_stimulus_set = np.array(
         [
@@ -571,12 +833,28 @@ def test_stack_0(rank_sim_4, rank_sim_5):
                 [10, 11, 12, 0],
                 [13, 14, 15, 0],
                 [16, 17, 18, 0]
-            ]
+            ],
+            [
+                [1, 2, 3, 0],
+                [4, 5, 6, 0],
+                [0, 0, 0, 0]
+            ],
+            [
+                [7, 8, 9, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0]
+            ],
+            [
+                [10, 11, 12, 13],
+                [14, 15, 16, 0],
+                [0, 0, 0, 0]
+            ],
         ], dtype=np.int32
     )
     desired_n_select = np.array(
         [
-            [1, 1, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 1, 1]
+            [1, 1, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 1, 1], [1, 1, 0],
+            [1, 0, 0], [1, 1, 0]
         ], dtype=np.int32
     )
     desired_max_n_referece = 3
@@ -586,7 +864,10 @@ def test_stack_0(rank_sim_4, rank_sim_5):
             [0.4, 0.4, 0.0],
             [0.4, 0.4, 0.0],
             [0.5, 0.5, 0.5],
-            [0.5, 0.5, 0.5]
+            [0.5, 0.5, 0.5],
+            [0.4, 0.4, 0.0],
+            [0.4, 0.4, 0.0],
+            [0.4, 0.4, 0.0],
         ]
     )
     desired_groups = np.array(
@@ -605,7 +886,16 @@ def test_stack_0(rank_sim_4, rank_sim_5):
             ],
             [
                 [5], [5], [5]
-            ]
+            ],
+            [
+                [4], [4], [0]
+            ],
+            [
+                [4], [4], [0]
+            ],
+            [
+                [4], [4], [0]
+            ],
         ], dtype=np.int32
     )
 
@@ -623,4 +913,44 @@ def test_stack_0(rank_sim_4, rank_sim_5):
     )
     np.testing.assert_array_equal(
         desired_groups, stacked.groups
+    )
+
+
+def test_invalid_stack_0(rank_sim_4, rank_sim_5):
+    """Test invalid stack.
+
+    The `groups` axis=2 does not agree.
+
+    """
+    # Creat two trial datasets.
+    outcome_idx = np.zeros(
+        [rank_sim_4.n_sequence, rank_sim_4.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=rank_sim_4.max_outcome)
+    groups = 4 * np.ones(
+        [rank_sim_4.n_sequence, rank_sim_4.max_timestep, 1], dtype=int
+    )
+    weight = .4 * np.ones([rank_sim_4.n_sequence, rank_sim_4.max_timestep])
+    trials_4 = TrialDataset(
+        rank_sim_4, outcome=outcome, groups=groups, weight=weight
+    )
+
+    outcome_idx = np.zeros(
+        [rank_sim_5.n_sequence, rank_sim_5.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=rank_sim_5.max_outcome)
+    groups = 5 * np.ones(
+        [rank_sim_5.n_sequence, rank_sim_5.max_timestep, 2], dtype=int
+    )
+    weight = .5 * np.ones([rank_sim_5.n_sequence, rank_sim_5.max_timestep])
+    trials_5 = TrialDataset(
+        rank_sim_5, outcome=outcome, groups=groups, weight=weight
+    )
+
+    with pytest.raises(Exception) as e_info:
+        stack((trials_4, trials_5))
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        'The shape of `groups` for the different TrialDatasets '
+        'must be identical on axis=2.'
     )

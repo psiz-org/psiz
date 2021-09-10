@@ -68,7 +68,7 @@ class Continuous(Outcome):
         # Before doing anything, check that `n_unit` agree.
         n_unit = component_list[0].n_unit
         for i_component in component_list[1:]:
-            if component_list[0].n_unit != n_unit:
+            if i_component.n_unit != n_unit:
                 raise ValueError(
                     'The `n_unit` for the different components must be'
                     'identical to stack `Continous` output.'

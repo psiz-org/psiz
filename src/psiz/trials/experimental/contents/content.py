@@ -82,7 +82,9 @@ class Content(TrialComponent, metaclass=ABCMeta):
         """
         attr_list = self._config_attrs()
         if len(attr_list) == 0:
-            config_idx = np.zeros([self.n_sequence, self.max_timestep])
+            config_idx = np.zeros(
+                [self.n_sequence, self.max_timestep], dtype=np.int32
+            )
             df_config = None
         else:
             # Assemble dictionary of relevant attributes (as flattened array).
@@ -111,7 +113,16 @@ class Content(TrialComponent, metaclass=ABCMeta):
         return config_idx, df_config
 
     def _config_attrs(self):
-        """Return attributes that govern trial configurations."""
+        """Return attributes that govern trial configurations.
+
+        NOTE: Subclass should overide this method if the content type
+        has different configurations that need to be tracked. See
+        `RankSimilarity` for an example implementation.
+
+        Returns:
+            An empty list.
+
+        """
         return []
 
     def _find_trials_matching_config(self, row):

@@ -44,6 +44,7 @@ def test_init_0(rate_sim_0):
     np.testing.assert_array_equal(
         desired_n_timestep, rate_sim_0.n_timestep
     )
+    assert rate_sim_0.mask_zero
 
 
 def test_init_1(rate_sim_1):
@@ -66,6 +67,7 @@ def test_init_1(rate_sim_1):
     np.testing.assert_array_equal(
         desired_n_timestep, rate_sim_1.n_timestep
     )
+    assert rate_sim_1.mask_zero
 
 
 def test_init_2(rate_sim_2):
@@ -102,6 +104,7 @@ def test_init_2(rate_sim_2):
     np.testing.assert_array_equal(
         desired_n_timestep, rate_sim_2.n_timestep
     )
+    assert rate_sim_2.mask_zero
 
 
 def test_init_3(rate_sim_3):
@@ -138,6 +141,7 @@ def test_init_3(rate_sim_3):
     np.testing.assert_array_equal(
         desired_n_timestep, rate_sim_3.n_timestep
     )
+    assert rate_sim_3.mask_zero
 
 
 def test_invalid_stimulus_set():
@@ -150,7 +154,8 @@ def test_invalid_stimulus_set():
         (3, 4)
     ))
     with pytest.raises(Exception) as e_info:
-        obs = RateSimilarity(stimulus_set)
+        RateSimilarity(stimulus_set)
+    assert e_info.type == ValueError
 
     # Contains negative integers.
     stimulus_set = np.array((
@@ -160,18 +165,71 @@ def test_invalid_stimulus_set():
         (3, 4)
     ))
     with pytest.raises(Exception) as e_info:
-        obs = RateSimilarity(stimulus_set)
+        RateSimilarity(stimulus_set)
+    assert e_info.type == ValueError
 
-    # TODO
-    # # Does not contain enough stimuli for each trial.
-    # stimulus_set = np.array((
-    #     (3, 0),
-    #     (9, 12),
-    #     (3, 4),
-    #     (3, 4)
-    # ))
-    # with pytest.raises(Exception) as e_info:
-    #     obs = RateSimilarity(stimulus_set)
+    # Incorrect shape.
+    stimulus_set = np.array([
+        [
+            [
+                [3, 1],
+                [9, 12]
+            ],
+            [
+                [3, 1],
+                [9, 12]
+            ],
+        ],
+        [
+            [
+                [3, 4],
+                [2, 4]
+            ],
+            [
+                [3, 4],
+                [2, 4]
+            ]
+        ]
+    ])
+    with pytest.raises(Exception) as e_info:
+        RateSimilarity(stimulus_set)
+    assert e_info.type == ValueError
+
+    # Integer is too large.
+    ii32 = np.iinfo(np.int32)
+    too_large = ii32.max + 1
+    stimulus_set = np.array((
+        (3, too_large),
+        (9, 12),
+        (3, 4),
+        (3, 4)
+    ))
+    with pytest.raises(Exception) as e_info:
+        RateSimilarity(stimulus_set)
+    assert e_info.type == ValueError
+
+    # Does not contain enough stimuli for each trial.
+    stimulus_set = np.array([
+        [
+            [3, 1],
+            [9, 12]
+        ],
+        [
+            [0, 0],
+            [0, 0]
+        ],
+        [
+            [3, 4],
+            [2, 4]
+        ],
+        [
+            [3, 4],
+            [2, 4]
+        ]
+    ])
+    with pytest.raises(Exception) as e_info:
+        RateSimilarity(stimulus_set)
+    assert e_info.type == ValueError
 
 
 def test_is_actual(rate_sim_2):
@@ -190,7 +248,24 @@ def test_is_actual(rate_sim_2):
     )
 
 
-def test_for_dataset_0(rate_sim_3):
+def test_unique_configurations(rate_sim_2):
+    """Test unique configurations."""
+    config_idx, df_config = rate_sim_2.unique_configurations()
+    config_idx_desired = np.array(
+        [
+            [0, 0],
+            [0, 0],
+            [0, 0],
+            [0, 0],
+        ], dtype=np.int32
+    )
+    np.testing.assert_array_equal(
+        config_idx, config_idx_desired
+    )
+    assert df_config is None
+
+
+def test_export_0(rate_sim_3):
     """Test export."""
     x = rate_sim_3.export()
     desired_stimulus_set = np.array(
@@ -216,7 +291,7 @@ def test_for_dataset_0(rate_sim_3):
     tf.debugging.assert_equal(desired_stimulus_set, x['stimulus_set'])
 
 
-def test_for_dataset_1(rate_sim_3):
+def test_export_1(rate_sim_3):
     """Test export.
 
     Use timestep=False.
@@ -236,6 +311,20 @@ def test_for_dataset_1(rate_sim_3):
         ], dtype=np.int32
     )
     tf.debugging.assert_equal(desired_stimulus_set, x['stimulus_set'])
+
+
+def test_export_wrong(rate_sim_3):
+    """Test export.
+
+    Using incorrect `export_format`.
+
+    """
+    with pytest.raises(Exception) as e_info:
+        rate_sim_3.export(export_format='garbage')
+    assert e_info.type == ValueError
+    assert (
+        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
+    )
 
 
 def test_persistence(rate_sim_3, tmpdir):
@@ -305,9 +394,9 @@ def test_subset_0(rate_sim_3):
 
 def test_stack_0(rate_sim_3, rate_sim_4):
     """Test stack."""
-    desired_n_sequence = 6
+    desired_n_sequence = 10
     desired_max_timestep = 3
-    desired_stimulus_set = stimulus_set = np.array(
+    desired_stimulus_set = np.array(
         [
             [
                 [3, 1],
@@ -339,9 +428,29 @@ def test_stack_0(rate_sim_3, rate_sim_4):
                 [3, 4],
                 [0, 0]
             ],
+            [
+                [3, 1],
+                [3, 1],
+                [0, 0]
+            ],
+            [
+                [9, 12],
+                [0, 0],
+                [0, 0]
+            ],
+            [
+                [3, 4],
+                [3, 4],
+                [0, 0]
+            ],
+            [
+                [3, 4],
+                [3, 4],
+                [0, 0]
+            ],
         ], dtype=np.int32
     )
-    stacked = stack((rate_sim_3, rate_sim_4))
+    stacked = stack((rate_sim_3, rate_sim_4, rate_sim_3))
 
     assert desired_n_sequence == stacked.n_sequence
     assert desired_max_timestep == stacked.max_timestep

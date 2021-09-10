@@ -188,6 +188,38 @@ def test_init_3(rank_sim_3):
     assert desired_max_outcome == rank_sim_3.max_outcome
 
 
+def test_init_4():
+    """Test initialization without `n_select` argument.
+
+    Note that you cannot simply create an array of ones as a default because
+    some trials may be placeholders.
+
+    """
+    stimulus_set = np.array(
+        [
+            [
+                [1, 2, 3, 0],
+                [4, 5, 6, 0],
+            ],
+            [
+                [7, 8, 9, 0],
+                [0, 0, 0, 0],
+            ],
+            [
+                [10, 11, 12, 13],
+                [14, 15, 16, 0],
+            ]
+        ], dtype=np.int32
+    )
+
+    content = RankSimilarity(stimulus_set)
+
+    n_select_desired = np.array(
+        [[1, 1], [1, 0], [1, 1]], dtype=np.int32
+    )
+    np.testing.assert_array_equal(content.n_select, n_select_desired)
+
+
 def test_invalid_stimulus_set():
     """Test handling of invalid `stimulus_set` argument."""
     # Non-integer input.
@@ -197,7 +229,8 @@ def test_invalid_stimulus_set():
         (3, 4, 5, 6, 7, 0, 0, 0, 0),
         (3, 4, 5, 6, 13, 14, 15, 16, 17)))
     with pytest.raises(Exception) as e_info:
-        obs = RankSimilarity(stimulus_set)
+        RankSimilarity(stimulus_set)
+    assert e_info.type == ValueError
 
     # Contains negative integers.
     stimulus_set = np.array((
@@ -206,16 +239,90 @@ def test_invalid_stimulus_set():
         (3, 4, 5, 6, 7, 0, 0, 0, 0),
         (3, 4, 5, 6, 13, 14, 15, 16, 17)))
     with pytest.raises(Exception) as e_info:
-        obs = RankSimilarity(stimulus_set)
+        RankSimilarity(stimulus_set)
+    assert e_info.type == ValueError
 
     # Does not contain enough references for each trial.
     stimulus_set = np.array((
         (3, 1, 2, 0, 0, 0, 0, 0, 0),
         (9, 12, 7, 0, 0, 0, 0, 0, 0),
         (3, 4, 0, 0, 0, 0, 0, 0, 0),
-        (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+        (3, 4, 5, 6, 13, 14, 15, 16, 17)
+    ))
     with pytest.raises(Exception) as e_info:
-        obs = RankSimilarity(stimulus_set)
+        RankSimilarity(stimulus_set)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `stimulus_set` must contain at least three positive int"
+        "egers per a trial, i.e. one query and at least two reference stimuli."
+    )
+
+    # A sequence does not contain any data.
+    stimulus_set = np.array((
+        (3, 1, 2, 0, 0, 0, 0, 0, 0),
+        (9, 12, 7, 0, 0, 0, 0, 0, 0),
+        (0, 0, 0, 0, 0, 0, 0, 0, 0),
+        (3, 4, 5, 6, 13, 14, 15, 16, 17)
+    ))
+    with pytest.raises(Exception) as e_info:
+        RankSimilarity(stimulus_set)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `stimulus_set` must contain at least one valid "
+        "timestep per sequence."
+    )
+
+    # Is too large a rank.
+    stimulus_set = np.array(
+        [
+            [
+                [
+                    [3, 1, 2, 0],
+                    [9, 12, 7, 0]
+                ],
+                [
+                    [3, 1, 2, 0],
+                    [9, 12, 7, 0]
+                ]
+            ],
+            [
+                [
+                    [13, 14, 15, 2],
+                    [16, 17, 0, 0]
+                ],
+                [
+                    [3, 4, 5, 6],
+                    [3, 4, 5, 6]
+                ]
+            ]
+        ]
+    )
+    with pytest.raises(Exception) as e_info:
+        RankSimilarity(stimulus_set)
+    assert e_info.type == ValueError
+
+    # Integer is too large.
+    ii32 = np.iinfo(np.int32)
+    too_large = ii32.max + 1
+    stimulus_set = np.array(
+        [
+            [
+                [3, 1, 2, 0],
+                [9, too_large, 7, 0],
+                [3, 1, 2, 0],
+                [9, 12, 7, 0]
+            ],
+            [
+                [13, 14, 15, 2],
+                [16, 17, 0, 0],
+                [3, 4, 5, 6],
+                [3, 4, 5, 6]
+            ]
+        ]
+    )
+    with pytest.raises(Exception) as e_info:
+        RankSimilarity(stimulus_set)
+    assert e_info.type == ValueError
 
 
 def test_invalid_n_select():
@@ -229,17 +336,31 @@ def test_invalid_n_select():
     # Mismatch in number of trials
     n_select = np.array((1, 1, 2))
     with pytest.raises(Exception) as e_info:
-        content = RankSimilarity(stimulus_set, n_select=n_select)
+        RankSimilarity(stimulus_set, n_select=n_select)
+    assert e_info.type == ValueError
 
     # Below support.
     n_select = np.array((1, 0, 1, 0))
     with pytest.raises(Exception) as e_info:
-        content = RankSimilarity(stimulus_set, n_select=n_select)
+        RankSimilarity(stimulus_set, n_select=n_select)
+    assert e_info.type == ValueError
 
     # Above support.
     n_select = np.array((2, 1, 1, 2))
     with pytest.raises(Exception) as e_info:
-        content = RankSimilarity(stimulus_set, n_select=n_select)
+        RankSimilarity(stimulus_set, n_select=n_select)
+    assert e_info.type == ValueError
+
+    # Not 1D or 2D.
+    n_select = np.array([
+        [[2], [1]], [[1], [2]]
+    ])
+    with pytest.raises(Exception) as e_info:
+        RankSimilarity(stimulus_set, n_select=n_select)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `n_select` must be a rank 2 np.ndarray."
+    )
 
 
 def test_is_actual(rank_sim_2):
@@ -468,7 +589,7 @@ def test_is_select_compress_1(rank_sim_4):
     np.testing.assert_array_equal(desired_is_select, is_select)
 
 
-def test_for_dataset_0(rank_sim_4):
+def test_export_0(rank_sim_4):
     """Test export."""
     x = rank_sim_4.export()
     desired_stimulus_set = tf.constant(
@@ -542,7 +663,7 @@ def test_for_dataset_0(rank_sim_4):
     tf.debugging.assert_equal(desired_is_select, x['is_select'])
 
 
-def test_for_dataset_1(rank_sim_4):
+def test_export_1(rank_sim_4):
     """Test export.
 
     Use timestep=False.
@@ -610,6 +731,20 @@ def test_for_dataset_1(rank_sim_4):
     )
     tf.debugging.assert_equal(desired_stimulus_set, x['stimulus_set'])
     tf.debugging.assert_equal(desired_is_select, x['is_select'])
+
+
+def test_export_wrong(rank_sim_4):
+    """Test export.
+
+    Using incorrect `export_format`.
+
+    """
+    with pytest.raises(Exception) as e_info:
+        rank_sim_4.export(export_format='garbage')
+    assert e_info.type == ValueError
+    assert (
+        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
+    )
 
 
 def test_persistence(rank_sim_4, tmpdir):
@@ -722,46 +857,83 @@ def test_subset_1(rank_sim_4):
     assert desired_max_outcome == sub.max_outcome
 
 
-def test_stack(rank_sim_4, rank_sim_5):
+def test_stack(rank_sim_4, rank_sim_5, rank_sim_6):
     """Test stack."""
-    desired_n_sequence = 5
-    desired_max_timestep = 3
+    desired_n_sequence = 10
+    desired_max_timestep = 4
     desired_stimulus_set = np.array(
         [
             [
                 [1, 2, 3, 0],
                 [4, 5, 6, 0],
-                [0, 0, 0, 0]
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
             ],
             [
                 [7, 8, 9, 0],
                 [0, 0, 0, 0],
-                [0, 0, 0, 0]
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
             ],
             [
                 [10, 11, 12, 13],
                 [14, 15, 16, 0],
-                [0, 0, 0, 0]
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
             ],
             [
                 [1, 2, 3, 0],
                 [4, 5, 6, 0],
-                [7, 8, 9, 0]
+                [7, 8, 9, 0],
+                [0, 0, 0, 0],
             ],
             [
                 [10, 11, 12, 0],
                 [13, 14, 15, 0],
-                [16, 17, 18, 0]
-            ]
+                [16, 17, 18, 0],
+                [0, 0, 0, 0],
+            ],
+            [
+                [1, 2, 3, 0],
+                [4, 5, 6, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+            ],
+            [
+                [7, 8, 9, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+            ],
+            [
+                [10, 11, 12, 13],
+                [14, 15, 16, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+            ],
+            [
+                [1, 2, 3, 0],
+                [4, 5, 6, 0],
+                [7, 8, 9, 0],
+                [7, 8, 9, 0],
+            ],
+            [
+                [10, 11, 12, 0],
+                [13, 14, 15, 0],
+                [16, 17, 18, 0],
+                [16, 17, 18, 0],
+            ],
         ], dtype=np.int32
     )
     desired_n_select = np.array(
         [
-            [1, 1, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 1, 1]
+            [1, 1, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0], [1, 1, 1, 0],
+            [1, 1, 1, 0], [1, 1, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0],
+            [1, 1, 1, 1], [1, 1, 1, 1]
         ], dtype=np.int32
     )
     desired_max_n_referece = 3
-    stacked = stack((rank_sim_4, rank_sim_5))
+    stacked = stack((rank_sim_4, rank_sim_5, rank_sim_4, rank_sim_6))
 
     assert desired_n_sequence == stacked.n_sequence
     assert desired_max_timestep == stacked.max_timestep

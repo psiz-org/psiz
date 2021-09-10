@@ -52,6 +52,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
         """Getter method for `placeholder`."""
         return self._placeholder
 
+    @property
     @abstractmethod
     def is_actual(self):
         """Return 2D Boolean array indicating trials with actual content.
@@ -62,10 +63,11 @@ class Content(TrialComponent, metaclass=ABCMeta):
 
         """
 
+    @property
     def unique_configurations(self):
         """Generate a unique ID for each content configuration.
 
-        Convenience function that generates a unique ID for each unique
+        Convenience method that generates a unique ID for each unique
         content configuration.
 
         Will call subclass `_config_attrs` in order to determine

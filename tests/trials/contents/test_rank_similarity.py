@@ -373,10 +373,7 @@ def test_is_actual(rank_sim_2):
             [1, 1]
         ], dtype=bool
     )
-    np.testing.assert_array_equal(
-        desired_is_actual,
-        rank_sim_2.is_actual()
-    )
+    np.testing.assert_array_equal(desired_is_actual, rank_sim_2.is_actual)
 
 
 def test_config_attrs():

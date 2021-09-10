@@ -67,6 +67,7 @@ class RateSimilarity(Content):
         self.stimulus_set = stimulus_set
         self.n_sequence = stimulus_set.shape[0]
 
+    @property
     def is_actual(self):
         """Return 2D Boolean array indicating trials with actual content."""
         return np.not_equal(self.stimulus_set[:, :, 0], self.placeholder)

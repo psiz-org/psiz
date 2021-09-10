@@ -226,7 +226,7 @@ def test_is_actual(rank_sim_2):
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_2.max_outcome)
     trials_4 = TrialDataset(rank_sim_2, outcome=outcome)
 
-    is_actual = trials_4.is_actual()
+    is_actual = trials_4.is_actual
     is_actual_desired = np.array(
         [
             [1, 1],

@@ -242,15 +242,12 @@ def test_is_actual(rate_sim_2):
             [1, 1]
         ], dtype=bool
     )
-    np.testing.assert_array_equal(
-        desired_is_actual,
-        rate_sim_2.is_actual()
-    )
+    np.testing.assert_array_equal(desired_is_actual, rate_sim_2.is_actual)
 
 
 def test_unique_configurations(rate_sim_2):
     """Test unique configurations."""
-    config_idx, df_config = rate_sim_2.unique_configurations()
+    config_idx, df_config = rate_sim_2.unique_configurations
     config_idx_desired = np.array(
         [
             [0, 0],

@@ -72,7 +72,7 @@ class TrialDataset(object):
 
         # Handle `weight` initialization.
         if weight is None:
-            weight = self.content.is_actual().astype(np.float)
+            weight = self.content.is_actual.astype(np.float)
         else:
             weight = self._check_weight(weight)
         self.weight = weight
@@ -130,6 +130,7 @@ class TrialDataset(object):
             )
         return ds
 
+    @property
     def is_actual(self):
         """Return 2D Boolean array indicating trials with actual content.
 
@@ -138,7 +139,7 @@ class TrialDataset(object):
                 shape=(n_sequence, max_timestep)
 
         """
-        return self.content.is_actual()
+        return self.content.is_actual
 
     @classmethod
     def load(cls, filepath):

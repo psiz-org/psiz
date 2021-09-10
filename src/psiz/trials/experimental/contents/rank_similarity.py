@@ -86,7 +86,7 @@ class RankSimilarity(Content):
 
         if n_select is None:
             # Assume `n_select` is 1 for all actual trials.
-            n_select = self.is_actual().astype(np.int32)
+            n_select = self.is_actual.astype(np.int32)
         else:
             n_select = self._check_n_select(n_select)
         self.n_select = n_select
@@ -99,7 +99,7 @@ class RankSimilarity(Content):
             The max number of outcomes for any trial in the dataset.
 
         """
-        _, df_config = self.unique_configurations()
+        _, df_config = self.unique_configurations
 
         max_n_outcome = 0
         for _, row in df_config.iterrows():
@@ -111,6 +111,7 @@ class RankSimilarity(Content):
                 max_n_outcome = n_outcome
         return max_n_outcome
 
+    @property
     def is_actual(self):
         """Return 2D Boolean array indicating trials with actual content."""
         return np.not_equal(self.stimulus_set[:, :, 0], self.placeholder)
@@ -190,7 +191,7 @@ class RankSimilarity(Content):
 
     def _stimulus_set_with_outcomes(self):
         """Inflate `stimulus_set` for all possible outcomes."""
-        config_idx, df_config = self.unique_configurations()
+        config_idx, df_config = self.unique_configurations
 
         # Precompute possible outcomes for each content configuration.
         outcome_idx_hash = {}

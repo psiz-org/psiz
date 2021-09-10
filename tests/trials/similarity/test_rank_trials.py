@@ -39,15 +39,12 @@ from psiz.agents import RankAgent
 import psiz.keras.models
 import psiz.keras.layers
 
-from psiz.trials.similarity.rank.rank_docket import RankDocket
-from psiz.trials.similarity.rank.rank_observations import RankObservations
 from psiz.trials.similarity.rank.rank_trials import RankTrials
 
 
 @pytest.fixture(scope="module")
 def setup_docket_0():
-    """Simplest n_select.
-    """
+    """Simplest n_select."""
     stimulus_set = np.array(
         (
             (0, 1, 2, -1, -1, -1, -1, -1, -1),
@@ -83,8 +80,7 @@ def setup_docket_0():
 
 @pytest.fixture(scope="module")
 def setup_docket_1():
-    """Varying n_select.
-    """
+    """Varying n_select."""
     stimulus_set = np.array(
         (
             (0, 1, 2, -1, -1, -1, -1, -1, -1),
@@ -119,6 +115,28 @@ def setup_docket_1():
 
 
 @pytest.fixture(scope="module")
+def setup_docket_3():
+    """Simplest n_select."""
+    stimulus_set = np.array(
+        (
+            (0, 1, 2, -1),
+            (9, 12, 7, -1),
+            (3, 4, 5, 6),
+            (3, 4, 5, 16)
+        ), dtype=np.int32
+    )
+    n_trial = 4
+    n_select = np.array((1, 1, 1, 1), dtype=np.int32)
+    n_reference = np.array((2, 2, 3, 3), dtype=np.int32)
+    docket = trials.RankDocket(stimulus_set)
+    return {
+        'n_trial': n_trial, 'stimulus_set': stimulus_set,
+        'n_reference': n_reference, 'n_select': n_select,
+        'docket': docket
+    }
+
+
+@pytest.fixture(scope="module")
 def setup_obs_0():
     """Default group information.
     """
@@ -140,7 +158,6 @@ def setup_obs_0():
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
             'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'session_id': np.array([0, 0, 0], dtype=np.int32),
             'groups_0': np.array([0, 0, 0], dtype=np.int32),
             'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
@@ -180,7 +197,6 @@ def setup_obs_1():
             'n_reference': np.array([2, 4, 8], dtype=np.int32),
             'n_select': np.array([1, 1, 2], dtype=np.int32),
             'is_ranked': [True, True, True],
-            'session_id': np.array([0, 0, 0], dtype=np.int32),
             'groups_0': np.array([0, 1, 1], dtype=np.int32),
             'n_outcome': np.array([2, 4, 56], dtype=np.int32)
         },
@@ -198,10 +214,37 @@ def setup_obs_1():
         }
 
 
+@pytest.fixture(scope="module")
+def setup_obs_2():
+    """Varying group information.
+    """
+    stimulus_set = np.array(
+        (
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        ), dtype=np.int32
+    )
+    n_trial = 4
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+    session_id = np.array([0, 1, 0, 0], dtype=np.int32)
+
+    obs = trials.RankObservations(
+        stimulus_set, n_select=n_select, groups=groups, session_id=session_id
+    )
+    return {
+        'n_trial': n_trial, 'stimulus_set': stimulus_set,
+        'n_reference': n_reference, 'n_select': n_select,
+        'groups': groups, 'obs': obs,
+    }
+
+
 def ground_truth(n_stimuli):
     """Return a ground truth model."""
     n_dim = 3
-    n_group = 2
 
     stimuli = tf.keras.layers.Embedding(
         n_stimuli+1, n_dim, mask_zero=True
@@ -261,17 +304,20 @@ class TestRankSimilarityTrials:
         # Mismatch in number of trials
         n_select = np.array((1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set, n_select=n_select)
+            trials.RankDocket(stimulus_set, n_select=n_select)
+        assert e_info.type == ValueError
 
         # Below support.
         n_select = np.array((1, 0, 1, 0))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set, n_select=n_select)
+            trials.RankDocket(stimulus_set, n_select=n_select)
+        assert e_info.type == ValueError
 
         # Above support.
         n_select = np.array((2, 1, 1, 2))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set, n_select=n_select)
+            trials.RankDocket(stimulus_set, n_select=n_select)
+        assert e_info.type == ValueError
 
     def test_invalid_is_ranked(self):
         """Test handling of invalid 'is_ranked' argument."""
@@ -284,11 +330,13 @@ class TestRankSimilarityTrials:
         # Mismatch in number of trials
         is_ranked = np.array((True, True, True))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set, is_ranked=is_ranked)
+            trials.RankDocket(stimulus_set, is_ranked=is_ranked)
+        assert e_info.type == ValueError
 
         is_ranked = np.array((True, False, True, False))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set, is_ranked=is_ranked)
+            trials.RankDocket(stimulus_set, is_ranked=is_ranked)
+        assert e_info.type == ValueError
 
 
 class TestRankDocket:
@@ -303,7 +351,8 @@ class TestRankDocket:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set)
+            trials.RankDocket(stimulus_set)
+        assert e_info.type == ValueError
 
         # Contains integers below -1.
         stimulus_set = np.array((
@@ -312,7 +361,8 @@ class TestRankDocket:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set)
+            trials.RankDocket(stimulus_set)
+        assert e_info.type == ValueError
 
         # Does not contain enough references for each trial.
         stimulus_set = np.array((
@@ -321,7 +371,8 @@ class TestRankDocket:
             (3, 4, -1, -1, -1, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = trials.RankDocket(stimulus_set)
+            trials.RankDocket(stimulus_set)
+        assert e_info.type == ValueError
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -474,6 +525,33 @@ class TestRankDocket:
             loaded_docket.config_idx)
         # TODO test _possible_rank_outcomes
 
+    def test_as_dataset(self, setup_docket_3):
+        docket = setup_docket_3['docket']
+        groups = np.array([[0], [0], [0], [0]])
+
+        stimulus_set_0_desired = tf.constant(
+            [
+                [1, 1, 0],
+                [2, 3, 0],
+                [3, 2, 0],
+                [0, 0, 0]
+            ], dtype=tf.int32
+        )
+
+        ds_docket = docket.as_dataset(groups)
+        docket_list = list(ds_docket)
+        stimulus_set_0 = docket_list[0]['stimulus_set']
+        tf.debugging.assert_equal(
+            stimulus_set_0, stimulus_set_0_desired
+        )
+
+        ds_docket = docket.as_dataset()
+        docket_list = list(ds_docket)
+        stimulus_set_0 = docket_list[0]['stimulus_set']
+        tf.debugging.assert_equal(
+            stimulus_set_0, stimulus_set_0_desired
+        )
+
 
 class TestRankObservations:
     """Test class RankObservations."""
@@ -487,7 +565,8 @@ class TestRankObservations:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = trials.RankObservations(stimulus_set)
+            trials.RankObservations(stimulus_set)
+        assert e_info.type == ValueError
 
         # Contains integers below -1.
         stimulus_set = np.array((
@@ -496,7 +575,8 @@ class TestRankObservations:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = trials.RankObservations(stimulus_set)
+            trials.RankObservations(stimulus_set)
+        assert e_info.type == ValueError
 
         # Does not contain enough references for each trial.
         stimulus_set = np.array((
@@ -505,7 +585,8 @@ class TestRankObservations:
             (3, 4, -1, -1, -1, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = trials.RankObservations(stimulus_set)
+            trials.RankObservations(stimulus_set)
+        assert e_info.type == ValueError
 
     def test_invalid_groups(self):
         """Test handling of invalid `groups` argument."""
@@ -518,12 +599,106 @@ class TestRankObservations:
         # Mismatch in number of trials
         groups = np.array(([0], [0], [1]))
         with pytest.raises(Exception) as e_info:
-            obs = trials.RankObservations(stimulus_set, groups=groups)
+            trials.RankObservations(stimulus_set, groups=groups)
+        assert e_info.type == ValueError
 
         # Below support.
         groups = np.array(([0], [-1], [1], [0]))
         with pytest.raises(Exception) as e_info:
-            obs = trials.RankObservations(stimulus_set, groups=groups)
+            trials.RankObservations(stimulus_set, groups=groups)
+        assert e_info.type == ValueError
+
+    def test_invalid_agent_id(self):
+        """Test invalid agent_id."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Mismatch in number of trials.
+        agent_id = np.array([0, 0, 1], dtype=np.int32)
+        with pytest.raises(Exception) as e_info:
+            trials.RankObservations(stimulus_set, agent_id=agent_id)
+        assert e_info.type == ValueError
+        assert str(e_info.value) == (
+            "The argument 'agent_id' must have the same length as the "
+            "number of rows in the argument 'stimulus_set'."
+        )
+
+        # Value is below support.
+        agent_id = np.array([0, 0, -1, 0], dtype=np.int32)
+        with pytest.raises(Exception) as e_info:
+            trials.RankObservations(stimulus_set, agent_id=agent_id)
+        assert e_info.type == ValueError
+        assert str(e_info.value) == (
+            "The parameter 'agent_id' contains integers less than 0. "
+            "Found 1 bad trial(s)."
+        )
+
+    def test_invalid_session_id(self):
+        """Test invalid session_id."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Mismatch in number of trials.
+        session_id = np.array([0, 0, 1], dtype=np.int32)
+        with pytest.raises(Exception) as e_info:
+            trials.RankObservations(stimulus_set, session_id=session_id)
+        assert e_info.type == ValueError
+        assert str(e_info.value) == (
+            "The argument 'session_id' must have the same length as the "
+            "number of rows in the argument 'stimulus_set'."
+        )
+
+        # Value is below support.
+        session_id = np.array([0, 0, -1, 0], dtype=np.int32)
+        with pytest.raises(Exception) as e_info:
+            trials.RankObservations(stimulus_set, session_id=session_id)
+        assert e_info.type == ValueError
+        assert str(e_info.value) == (
+            "The parameter 'session_id' contains integers less than 0. "
+            "Found 1 bad trial(s)."
+        )
+
+    def test_invalid_weight(self):
+        """Test invalid weight."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Mismatch in number of trials.
+        weight = np.array([0.5, 0.5, 1], dtype=np.int32)
+        with pytest.raises(Exception) as e_info:
+            trials.RankObservations(stimulus_set, weight=weight)
+        assert e_info.type == ValueError
+        assert str(e_info.value) == (
+            "The argument 'weight' must have the same length as the "
+            "number of rows in the argument 'stimulus_set'."
+        )
+
+    def test_invalid_rt(self):
+        """Test invalid rt."""
+        stimulus_set = np.array((
+            (0, 1, 2, -1, -1, -1, -1, -1, -1),
+            (9, 12, 7, -1, -1, -1, -1, -1, -1),
+            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+
+        # Mismatch in number of trials.
+        rt_ms = np.array([123, 99, 144], dtype=np.int32)
+        with pytest.raises(Exception) as e_info:
+            trials.RankObservations(stimulus_set, rt_ms=rt_ms)
+        assert e_info.type == ValueError
+        assert str(e_info.value) == (
+            "The argument 'rt_ms' must have the same length as the "
+            "number of rows in the argument 'stimulus_set'."
+        )
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -652,6 +827,44 @@ class TestRankObservations:
         new_groups_2 = np.array(([1], [1], [2]), dtype=np.int32)
         with pytest.raises(Exception) as e_info:
             obs.set_groups(new_groups_2)
+        assert e_info.type == ValueError
+
+    def test_init_2(self, setup_obs_2):
+        """Test initialization."""
+        obs = setup_obs_2['obs']
+        session_id_desired = np.array([0, 1, 0, 0], dtype=np.int32)
+        np.testing.assert_equal(obs.session_id, session_id_desired)
+
+    def test_set_weight(self, setup_obs_2):
+        """Test set_weight."""
+        obs = setup_obs_2['obs']
+
+        obs.set_weight(.9)
+        weight_desired = np.array([.9, .9, .9, .9])
+        np.testing.assert_array_equal(
+            obs.weight, weight_desired
+        )
+
+        weight_desired = np.array([.7, .8, .9, 1.])
+        obs.set_weight(weight_desired)
+        np.testing.assert_array_equal(
+            obs.weight, weight_desired
+        )
+
+    def test_as_dataset(self, setup_obs_2):
+        obs = setup_obs_2['obs']
+
+        ds_obs = obs.as_dataset()
+        obs_list = list(ds_obs)
+        groups_0 = obs_list[0][0]['groups']
+
+        groups_0_desired = tf.constant(
+            [0], dtype=tf.int32
+        )
+        tf.debugging.assert_equal(
+            groups_0, groups_0_desired
+        )
+
 
     def test_save_load_file(self, setup_obs_0, tmpdir):
         """Test saving and loading of RankObservations."""

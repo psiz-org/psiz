@@ -194,7 +194,7 @@ class RankDocket(RankTrials):
         f.create_dataset("is_ranked", data=self.is_ranked)
         f.close()
 
-    def as_dataset(self, groups):
+    def as_dataset(self, groups=None):
         """Return TensorFlow dataset.
 
         Arguments:

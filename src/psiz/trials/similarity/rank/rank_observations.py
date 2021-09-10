@@ -193,16 +193,18 @@ class RankObservations(RankTrials):
         agent_id = agent_id.astype(np.int32)
         # Check shape agreement.
         if not (agent_id.shape[0] == self.n_trial):
-            raise ValueError((
+            raise ValueError(
                 "The argument 'agent_id' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+                "number of rows in the argument 'stimulus_set'."
+            )
         # Check lowerbound support limit.
         bad_locs = agent_id < 0
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
-            raise ValueError((
+            raise ValueError(
                 "The parameter 'agent_id' contains integers less than 0. "
-                "Found {0} bad trial(s).").format(n_bad))
+                "Found {0} bad trial(s).".format(n_bad)
+            )
         return agent_id
 
     def _check_session_id(self, session_id):
@@ -260,8 +262,7 @@ class RankObservations(RankTrials):
         )
 
     def _set_configuration_data(
-            self, n_reference, n_select, is_ranked, groups,
-            session_id=None):
+            self, n_reference, n_select, is_ranked, groups):
         """Generate a unique ID for each trial configuration.
 
         Helper function that generates a unique ID for each of the
@@ -279,11 +280,6 @@ class RankObservations(RankTrials):
                 shape = (n_trial,)
             groups:
                 shape = (n_trial,)
-            session_id: An integer array indicating the session ID of
-                a trial. It is assumed that observations with the same
-                session ID were judged by a single agent. A single
-                agent may have completed multiple sessions.
-                shape = (n_trial,)
 
         Notes:
             Sets three attributes of object.
@@ -297,14 +293,11 @@ class RankObservations(RankTrials):
         """
         n_trial = len(n_reference)
 
-        if session_id is None:
-            session_id = np.zeros((n_trial), dtype=np.int32)
-
         # Determine unique display configurations by create a dictionary on
         # which to determine distinct configurations.
         d = {
             'n_reference': n_reference, 'n_select': n_select,
-            'is_ranked': is_ranked, 'session_id': session_id
+            'is_ranked': is_ranked
         }
         d_groups = self._split_groups_columns(groups)
         d.update(d_groups)

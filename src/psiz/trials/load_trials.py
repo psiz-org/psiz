@@ -49,16 +49,11 @@ def load_trials(filepath):
     # Retrieve trial class name. Fall back to "trial_type" field for legacy
     # implementations.
     try:
-        # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
-        try:
-            class_name = f["class_name"].asstr()[()]
-        except AttributeError:
-            class_name = f["class_name"][()]
+        # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
+        # call. The `setup.cfg` file notes this minimum version requirement.
+        class_name = f["class_name"].asstr()[()]
     except KeyError:
-        try:
-            class_name = f["trial_type"].asstr()[()]
-        except AttributeError:
-            class_name = f["trial_type"][()]
+        class_name = f["trial_type"].asstr()[()]
     f.close()
 
     # Handle legacy class names.

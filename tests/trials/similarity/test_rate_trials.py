@@ -113,7 +113,6 @@ def setup_obs_0():
     configurations = pd.DataFrame(
         {
             'n_present': np.array([2, 3], dtype=np.int32),
-            'session_id': np.array([0, 0], dtype=np.int32),
             'groups_0': np.array([0, 0], dtype=np.int32),
         },
         index=[0, 3])
@@ -150,7 +149,6 @@ def setup_obs_1():
     configurations = pd.DataFrame(
         {
             'n_present': np.array([2, 2, 3], dtype=np.int32),
-            'session_id': np.array([0, 0, 0], dtype=np.int32),
             'groups_0': np.array([0, 1, 1], dtype=np.int32),
         },
         index=[0, 2, 3])

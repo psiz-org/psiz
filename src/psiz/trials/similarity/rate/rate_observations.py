@@ -230,7 +230,7 @@ class RateObservations(RateTrials):
             rt_ms=self.rt_ms[index]
         )
 
-    def _set_configuration_data(self, n_present, groups, session_id=None):
+    def _set_configuration_data(self, n_present, groups):
         """Generate a unique ID for each trial configuration.
 
         Helper function that generates a unique ID for each of the
@@ -242,11 +242,6 @@ class RateObservations(RateTrials):
                 shape = (n_trial,)
             groups:
                 shape = (n_trial, n_col)
-            session_id: An integer array indicating the session ID of
-                a trial. It is assumed that observations with the same
-                session ID were judged by a single agent. A single
-                agent may have completed multiple sessions.
-                shape = (n_trial,)
 
         Notes:
             Sets two attributes of object.
@@ -258,12 +253,9 @@ class RateObservations(RateTrials):
         """
         n_trial = len(n_present)
 
-        if session_id is None:
-            session_id = np.zeros((n_trial), dtype=np.int32)
-
         # Determine unique display configurations.
         d = {
-            'n_present': n_present, 'session_id': session_id
+            'n_present': n_present
         }
         d_groups = self._split_groups_columns(groups)
         d.update(d_groups)

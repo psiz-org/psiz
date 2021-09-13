@@ -95,7 +95,7 @@ def test_deterministic_emb_input(mask_zero, ax_present):
         [
             [0., -0.14],
             [1., -0.12],
-            [2.,  0.13]
+            [2., 0.13]
         ]
     )
     np.testing.assert_array_almost_equal(
@@ -133,7 +133,7 @@ def test_stochastic_emb_input(mask_zero, ax_present):
         [
             [0., -0.14],
             [1., -0.12],
-            [2.,  0.13]
+            [2., 0.13]
         ]
     )
     np.testing.assert_array_almost_equal(
@@ -143,10 +143,10 @@ def test_stochastic_emb_input(mask_zero, ax_present):
     # Spot check middle density intervals.
     np.testing.assert_array_almost_equal(ax.lines[0]._x, np.array([0., 0.]))
     np.testing.assert_array_almost_equal(
-        ax.lines[0]._y, np.array([-0.65516615,  0.37516624])
+        ax.lines[0]._y, np.array([-0.65516615, 0.37516624])
     )
 
     np.testing.assert_array_almost_equal(ax.lines[-1]._x, np.array([2., 2.]))
     np.testing.assert_array_almost_equal(
-        ax.lines[-1]._y, np.array([-0.00489804,  0.26489803])
+        ax.lines[-1]._y, np.array([-0.00489804, 0.26489803])
     )

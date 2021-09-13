@@ -284,7 +284,7 @@ def test_subset_0(rank_sim_4):
 
     content = rank_sim_4
     outcome_idx = np.zeros(
-            [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.max_timestep], dtype=np.int32
     )
     sparse_cat = SparseCategorical(outcome_idx, depth=content.max_outcome)
 

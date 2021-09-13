@@ -28,7 +28,7 @@ def rank_1g_mle_determ():
     n_stimuli = 3
     n_dim = 2
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
                 [
@@ -72,7 +72,7 @@ def rank_1g_mle_random():
     n_stimuli = 10
     n_dim = 2
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -109,7 +109,7 @@ def rank_2g_mle_determ():
     n_stimuli = 3
     n_dim = 2
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
                 [
@@ -173,7 +173,7 @@ def rank_2stim_2kern_determ():
     n_stimuli = 3
     n_dim = 2
     stimuli_0 = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
                 [
@@ -184,7 +184,7 @@ def rank_2stim_2kern_determ():
     )
 
     stimuli_1 = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
                 [
@@ -331,11 +331,11 @@ def rank_2stim_2kern_2behav():
     n_stimuli = 20
     n_dim = 2
     stimuli_0 = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     stimuli_1 = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     stimuli_group = psiz.keras.layers.Gate(

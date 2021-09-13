@@ -79,8 +79,6 @@ def ds_rank_obs_2g():
 
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    n_reference = np.array((2, 2, 4, 8), dtype=np.int32)
-    is_ranked = np.array((True, True, True, True))
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     obs = psiz.trials.RankObservations(
@@ -98,7 +96,7 @@ def rank_1g_vi():
     kl_weight = 0.
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(.01).numpy()
         )
@@ -106,7 +104,7 @@ def rank_1g_vi():
 
     prior_scale = .2
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),
@@ -149,7 +147,7 @@ def rank_1g_mle():
     n_dim = 10
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     kernel = psiz.keras.layers.DistanceBased(
@@ -179,10 +177,9 @@ def rank_2g_mle():
     """A MLE rank model for two groups."""
     n_stimuli = 30
     n_dim = 10
-    n_group = 2
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -297,7 +294,7 @@ def rate_1g_mle():
     n_dim = 10
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     kernel = psiz.keras.layers.DistanceBased(
@@ -327,10 +324,9 @@ def rate_2g_mle():
     """A MLE rate model with group-specific kernel."""
     n_stimuli = 30
     n_dim = 10
-    n_group = 2
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -383,7 +379,7 @@ def rate_1g_vi():
     kl_weight = 0.
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(.01).numpy()
         )
@@ -391,7 +387,7 @@ def rate_1g_vi():
 
     prior_scale = .2
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),

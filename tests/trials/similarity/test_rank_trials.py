@@ -171,7 +171,7 @@ def setup_obs_0():
         'is_ranked': is_ranked, 'groups': groups, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
-        }
+    }
 
 
 @pytest.fixture(scope="module")
@@ -211,7 +211,7 @@ def setup_obs_1():
         'is_ranked': is_ranked, 'groups': groups, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
-        }
+    }
 
 
 @pytest.fixture(scope="module")
@@ -247,7 +247,7 @@ def ground_truth(n_stimuli):
     n_dim = 3
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -864,7 +864,6 @@ class TestRankObservations:
         tf.debugging.assert_equal(
             groups_0, groups_0_desired
         )
-
 
     def test_save_load_file(self, setup_obs_0, tmpdir):
         """Test saving and loading of RankObservations."""

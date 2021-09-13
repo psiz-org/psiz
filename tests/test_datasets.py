@@ -81,10 +81,10 @@ def test_birds_16(tmpdir):
     # Spot check catalog.
     row_10 = catalog.stimuli.iloc[10]
     assert row_10.id == 10
-    assert (
-        row_10.filepath ==
+    desired_filepath = (
         'Bird/Cardinalidae/Blue_Grosbeak/Blue_Grosbeak_0043_37200.jpg'
     )
+    assert (row_10.filepath == desired_filepath)
     assert row_10.class_id == 2
 
 
@@ -134,7 +134,7 @@ def test_rocks(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [175, 345, 337,  63, 160, 168, 202, 316, 324], dtype=np.int32
+            [175, 345, 337, 63, 160, 168, 202, 316, 324], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -165,7 +165,7 @@ def test_ilscrc_val_v1(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [126, 999, 641, 790, 551, 832, 882,  12, 592], dtype=np.int32
+            [126, 999, 641, 790, 551, 832, 882, 12, 592], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -196,7 +196,7 @@ def test_ilscrc_val_v2(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [126, 999, 641, 790, 551, 832, 882,  12, 592], dtype=np.int32
+            [126, 999, 641, 790, 551, 832, 882, 12, 592], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8

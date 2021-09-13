@@ -38,7 +38,6 @@ def test_call_2groups(
     """Test call with group-specific kernels."""
     tf.config.run_functions_eagerly(is_eager)
     model = rate_2g_mle
-    n_trial = 4
     # n_submodule = len(model.submodules)
 
     # Compile
@@ -53,7 +52,7 @@ def test_call_2groups(
 
     for data in ds_rate_docket_2g:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        output = model(x, training=False)
+        model(x, training=False)
 
 
 def test_save_load_rate_wtrace(

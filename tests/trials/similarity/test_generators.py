@@ -35,7 +35,7 @@ def rank_1g_mle_rand():
     n_dim = 2
 
     stimuli = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(.01).numpy()
         )
@@ -84,7 +84,7 @@ def rank_1g_mle_det():
     )
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(z)
     )
 
@@ -155,7 +155,7 @@ def test_random_generator():
         # the indexing into stimulus set.
         assert (
             len(np.unique(
-                docket.stimulus_set[i_trial, 0:n_reference_desired+1])
+                docket.stimulus_set[i_trial, 0:n_reference_desired + 1])
                 ) == n_unique_desired
         )
     assert sum(docket.n_select == n_select_desired) == n_trial_desired

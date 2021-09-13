@@ -35,7 +35,7 @@ def test_expand_dim_repeat_empty():
 
     n_sample = ()
     with pytest.raises(Exception) as e_info:
-        output = expand_dim_repeat(x, n_sample, axis=1)
+        expand_dim_repeat(x, n_sample, axis=1)
     assert str(e_info.value) == (
         'Dimensions 1 and 0 are not compatible'
     )

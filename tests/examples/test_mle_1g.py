@@ -27,7 +27,7 @@ import psiz
 def ground_truth(n_stimuli, n_dim, similarity_func):
     """Return a ground truth embedding."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=4
         )
@@ -86,7 +86,7 @@ def build_model(n_stimuli, n_dim, similarity_func):
 
     """
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     # Set similarity function.
@@ -153,9 +153,9 @@ def test_rate_1g_mle_execution(similarity_func, tmpdir):
     ds_obs_val = obs_val.as_dataset().batch(
         batch_size, drop_remainder=False
     )
-    ds_obs_test = obs_test.as_dataset().batch(
-        batch_size, drop_remainder=False
-    )
+    # ds_obs_test = obs_test.as_dataset().batch(
+    #     batch_size, drop_remainder=False
+    # )
 
     # Use early stopping.
     early_stop = psiz.keras.callbacks.EarlyStoppingRe(
@@ -204,7 +204,7 @@ def test_rate_1g_mle_execution(similarity_func, tmpdir):
             model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
             n_restart=n_restart
         )
-        restart_record = restarter.fit(
+        restarter.fit(
             x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )

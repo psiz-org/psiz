@@ -28,12 +28,12 @@ def test_strat_group_kfold():
 
     y_count = []
     for train_idx, test_idx in skf.split(x, y, group):
-        x_train = x[train_idx]
+        # x_train = x[train_idx]
         y_train = y[train_idx]
         group_train = group[train_idx]
 
-        x_test = x[test_idx]
-        y_test = y[test_idx]
+        # x_test = x[test_idx]
+        # y_test = y[test_idx]
         group_test = group[test_idx]
 
         # Assert that groups are mutually exclusive in train and test.
@@ -56,12 +56,12 @@ def test_strat_group_kfold_shuffle():
 
     y_count = []
     for train_idx, test_idx in skf.split(x, y, group):
-        x_train = x[train_idx]
+        # x_train = x[train_idx]
         y_train = y[train_idx]
         group_train = group[train_idx]
 
-        x_test = x[test_idx]
-        y_test = y[test_idx]
+        # x_test = x[test_idx]
+        # y_test = y[test_idx]
         group_test = group[test_idx]
 
         # Assert that groups are mutually exclusive in train and test.

@@ -43,7 +43,7 @@ def test_simple_rotation_0(z0):
     """Test procrustean solution for simple problem."""
     # Assemble rotation matrix (without scaling or reflection).
     s = np.array([[1, 0], [0, 1]])
-    r = psiz.utils.rotation_matrix(np.pi/4)
+    r = psiz.utils.rotation_matrix(np.pi / 4)
     rs = np.matmul(s, r)
 
     # Center `z0`.
@@ -66,7 +66,7 @@ def test_simple_rotation_1(z0):
     """Test procrustean solution for simple problem."""
     # Assemble rotation matrix (without scaling or reflection).
     s = np.array([[1, 0], [0, 1]])
-    r = psiz.utils.rotation_matrix(-np.pi/2.1)
+    r = psiz.utils.rotation_matrix(-np.pi / 2.1)
     rs = np.matmul(s, r)
 
     # Center `z0`.
@@ -89,7 +89,7 @@ def test_scaled_rotation(z0):
     """Test procrustean solution for simple problem."""
     # Assemble rotation matrix (with scaling).
     s = np.array([[2, 0], [0, 2]])
-    r = psiz.utils.rotation_matrix(np.pi/4)
+    r = psiz.utils.rotation_matrix(np.pi / 4)
     rs = np.matmul(s, r)
 
     # Center `z0`.
@@ -112,7 +112,7 @@ def test_scaled_rotation_no_scale(z0):
     """Test procrustean solution for simple problem."""
     # Assemble rotation matrix (with scaling).
     s = np.array([[2, 0], [0, 2]])
-    r = psiz.utils.rotation_matrix(np.pi/4)
+    r = psiz.utils.rotation_matrix(np.pi / 4)
     rs = np.matmul(s, r)
 
     # Center `z0`.
@@ -136,7 +136,7 @@ def test_x_reflection_rotation(z0):
     """Test procrustean solution for simple problem."""
     # Assemble rotation matrix (with scaling and reflection).
     s = np.array([[-1, 0], [0, 1]])
-    r = psiz.utils.rotation_matrix(np.pi/4)
+    r = psiz.utils.rotation_matrix(np.pi / 4)
     rs = np.matmul(s, r)
 
     # Center `z0`.
@@ -159,7 +159,7 @@ def test_y_reflection_rotation(z0):
     """Test procrustean solution for simple problem."""
     # Assemble rotation matrix (with scaling and reflection).
     s = np.array([[1, 0], [0, -1]])
-    r = psiz.utils.rotation_matrix(np.pi/4)
+    r = psiz.utils.rotation_matrix(np.pi / 4)
     rs = np.matmul(s, r)
 
     # Center `z0`.
@@ -182,7 +182,7 @@ def test_xy_reflection_rotation(z0):
     """Test procrustean solution for simple problem."""
     # Assemble rotation matrix (with scaling and reflection).
     s = np.array([[-1, 0], [0, -1]])
-    r = psiz.utils.rotation_matrix(np.pi/4)
+    r = psiz.utils.rotation_matrix(np.pi / 4)
     rs = np.matmul(s, r)
 
     # Center `z0`.

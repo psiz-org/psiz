@@ -149,7 +149,7 @@ def test_rotation_3():
         [1., 0.],
         [0., 1.2]
     ])
-    r = rotation_matrix(np.pi/2)
+    r = rotation_matrix(np.pi / 2)
     loc1, cov1 = affine_mvn(loc0, cov0, r)
 
     desired_loc = np.array([-.2, -.2])
@@ -173,7 +173,7 @@ def test_rotation_plus_translation():
         [1., 0.],
         [0., 1.2]
     ])
-    r = rotation_matrix(np.pi/2)
+    r = rotation_matrix(np.pi / 2)
     t = np.array([.1, .1])
     loc1, cov1 = affine_mvn(loc0, cov0, r, t)
 
@@ -199,7 +199,7 @@ def test_rotation_3_w_singleton_dims():
         [1., 0.],
         [0., 1.2]
     ])
-    r = rotation_matrix(np.pi/2)
+    r = rotation_matrix(np.pi / 2)
     loc1, cov1 = affine_mvn(loc0, cov0, r)
 
     desired_loc = np.array([[-.2, -.2]])

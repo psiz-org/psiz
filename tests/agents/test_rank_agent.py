@@ -37,7 +37,7 @@ def rank_1g_mle_rand():
     n_dim = 2
 
     stimuli = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         loc_initializer=tf.keras.initializers.Constant(
             1.
         ),
@@ -79,9 +79,11 @@ def docket_0():
         (2, 1, 0, 6, -1),
         (3, 0, 2, 6, -1),
     ))
-    n_select = np.array((
-        2, 2, 2, 2, 1, 1, 1
-        ), dtype=np.int32)
+    n_select = np.array(
+        [
+            2, 2, 2, 2, 1, 1, 1
+        ], dtype=np.int32
+    )
     docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
     return docket
 
@@ -132,16 +134,16 @@ def test_rank_sample(rank_1g_mle_rand):
         (0, 1, 2, 7, 3),
         (3, 4, 5, 9, 1),
     ))
-    stimulus_set = np.tile(stimulus_set, (int(n_trial/2), 1))
-    n_select = 2 * np.ones(n_trial, dtype=np.int32)
-    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
+    stimulus_set = np.tile(stimulus_set, (int(n_trial / 2), 1))
+    # n_select = 2 * np.ones(n_trial, dtype=np.int32)
+    # docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
 
-    agent = psiz.agents.RankAgent(rank_1g_mle_rand)
+    # agent = psiz.agents.RankAgent(rank_1g_mle_rand)
     probs = np.array((
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
         (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
     ))
-    probs = np.tile(probs, (int(n_trial/2), 1))
+    probs = np.tile(probs, (int(n_trial / 2), 1))
     # probs = np.array((
     #     (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),
     #     (.01, .01, .01, .01, .01, .8, .1, .01, .01, .01, .01, .01),

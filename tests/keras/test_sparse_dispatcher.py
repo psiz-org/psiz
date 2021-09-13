@@ -115,7 +115,7 @@ def inputs_multi():
     return inputs
 
 
-def test_single_dispatch(gates_v0,  inputs_single):
+def test_single_dispatch(gates_v0, inputs_single):
     """Test single-input dispatch."""
     # gates: a float32 `Tensor` with shape `[batch_size, num_experts]`
     # inputs: a float32 `Tensor` with shape `[batch_size, input_size]`
@@ -189,7 +189,7 @@ def test_single_dispatch(gates_v0,  inputs_single):
     tf.debugging.assert_near(outputs, desired_outputs)
 
 
-def test_multi_dispatch(gates_v0,  inputs_multi):
+def test_multi_dispatch(gates_v0, inputs_multi):
     """Test multi-input dispatch.
 
     Note that initialization behavior is the same as single-input

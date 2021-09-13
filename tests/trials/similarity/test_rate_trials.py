@@ -27,7 +27,6 @@ import psiz.keras.layers
 from psiz.trials import RandomRate
 from psiz.trials.similarity.rate.rate_docket import RateDocket
 from psiz.trials.similarity.rate.rate_observations import RateObservations
-from psiz.trials.similarity.rate.rate_trials import RateTrials
 
 
 @pytest.fixture(scope="module")
@@ -124,7 +123,7 @@ def setup_obs_0():
         'n_present': n_present, 'groups': groups, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
-        }
+    }
 
 
 @pytest.fixture(scope="module")
@@ -161,16 +160,15 @@ def setup_obs_1():
         'n_present': n_present, 'groups': groups, 'obs': obs,
         'configurations': configurations,
         'configuration_id': configuration_id
-        }
+    }
 
 
 def ground_truth(n_stimuli):
     """Return a ground truth model."""
     n_dim = 3
-    n_group = 2
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -225,7 +223,8 @@ class TestRateDocket:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = RateDocket(stimulus_set)
+            RateDocket(stimulus_set)
+        assert e_info.type == ValueError
 
         # Contains integers below -1.
         stimulus_set = np.array((
@@ -234,7 +233,8 @@ class TestRateDocket:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = RateDocket(stimulus_set)
+            RateDocket(stimulus_set)
+        assert e_info.type == ValueError
 
         # Does not contain enough stimuli for each trial.
         stimulus_set = np.array((
@@ -243,7 +243,8 @@ class TestRateDocket:
             (3, -1, -1, -1, -1, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            docket = RateDocket(stimulus_set)
+            RateDocket(stimulus_set)
+        assert e_info.type == ValueError
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -390,7 +391,8 @@ class TestRateObservations:
         ))
         rating = np.array([.1, .2, .3, .4])
         with pytest.raises(Exception) as e_info:
-            obs = RateObservations(stimulus_set, rating=rating)
+            RateObservations(stimulus_set, rating=rating)
+        assert e_info.type == ValueError
 
         # Contains integers below -1.
         stimulus_set = np.array((
@@ -399,7 +401,8 @@ class TestRateObservations:
             (3, 4, 5, 6, 7, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = RateObservations(stimulus_set, rating=rating)
+            RateObservations(stimulus_set, rating=rating)
+        assert e_info.type == ValueError
 
         # Does not contain enough references for each trial.
         stimulus_set = np.array((
@@ -408,7 +411,8 @@ class TestRateObservations:
             (3, -1, -1, -1, -1, -1, -1, -1, -1),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            obs = RateObservations(stimulus_set)
+            RateObservations(stimulus_set, rating=rating)
+        assert e_info.type == ValueError
 
     def test_invalid_groups(self):
         """Test handling of invalid `groups` argument."""
@@ -423,12 +427,14 @@ class TestRateObservations:
         # Mismatch in number of trials
         groups = np.array(([0], [0], [1]))
         with pytest.raises(Exception) as e_info:
-            obs = RateObservations(stimulus_set, rating=rating, groups=groups)
+            RateObservations(stimulus_set, rating=rating, groups=groups)
+        assert e_info.type == ValueError
 
         # Below support.
         groups = np.array(([0], [-1], [1], [0]))
         with pytest.raises(Exception) as e_info:
-            obs = RateObservations(stimulus_set, rating=rating, groups=groups)
+            RateObservations(stimulus_set, rating=rating, groups=groups)
+        assert e_info.type == ValueError
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
@@ -442,7 +448,6 @@ class TestRateObservations:
         rating = np.array([.1, .2, .3, .4, .5])
 
         # Create original trials.
-        n_select = np.array((1, 1, 1, 1, 2))
         obs = RateObservations(stimulus_set, rating=rating)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(obs.config_idx, desired_config_idx)
@@ -565,6 +570,7 @@ class TestRateObservations:
         new_groups_2 = np.array(([1], [1], [2]), dtype=np.int32)
         with pytest.raises(Exception) as e_info:
             obs.set_groups(new_groups_2)
+        assert e_info.type == ValueError
 
     def test_save_load_file(self, setup_obs_0, tmpdir):
         """Test saving and loading of RankObservations."""
@@ -601,7 +607,6 @@ class TestStack:
     def test_stack_same_config(self):
         """Test stack method with same configuration."""
         n_stimuli = 10
-        model_truth = ground_truth(n_stimuli)
 
         n_trial = 50
         n_present = 2

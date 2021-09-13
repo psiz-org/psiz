@@ -27,7 +27,7 @@ from psiz.trials import RankObservations
 @pytest.mark.osf
 def test_birds_12(tmpdir):
     dataset_name = 'birds-12'
-    obs, catalog = psiz.datasets.load(
+    obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
@@ -58,7 +58,7 @@ def test_birds_12(tmpdir):
 @pytest.mark.osf
 def test_birds_16(tmpdir):
     dataset_name = 'birds-16'
-    obs, catalog = psiz.datasets.load(
+    obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
@@ -92,7 +92,7 @@ def test_birds_16(tmpdir):
 @pytest.mark.osf
 def test_skin_lesions(tmpdir):
     dataset_name = 'skin_lesions'
-    obs, catalog = psiz.datasets.load(
+    obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
@@ -123,7 +123,7 @@ def test_skin_lesions(tmpdir):
 @pytest.mark.osf
 def test_rocks(tmpdir):
     dataset_name = 'rocks_Nosofsky_etal_2016'
-    obs, catalog = psiz.datasets.load(
+    obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
@@ -154,7 +154,7 @@ def test_rocks(tmpdir):
 @pytest.mark.osf
 def test_ilscrc_val_v1(tmpdir):
     dataset_name = 'ilsvrc_val_v0_1'
-    obs, catalog = psiz.datasets.load(
+    obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
@@ -185,7 +185,7 @@ def test_ilscrc_val_v1(tmpdir):
 @pytest.mark.osf
 def test_ilscrc_val_v2(tmpdir):
     dataset_name = 'ilsvrc_val_v0_2'
-    obs, catalog = psiz.datasets.load(
+    obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
 
@@ -216,7 +216,7 @@ def test_nonexistent(tmpdir):
     dataset_name = 'nonexistent_dataset'
 
     with pytest.raises(Exception) as e_info:
-        obs, catalog = psiz.datasets.load(
+        obs, catalog = psiz.datasets.load_dataset(
             dataset_name, cache_subdir='datasets', cache_dir=tmpdir
         )
     assert e_info.type == ValueError

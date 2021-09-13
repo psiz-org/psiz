@@ -20,7 +20,7 @@ import psiz.datasets
 
 def main():
     """Run script."""
-    (obs, catalog) = psiz.datasets.load('birds-16')
+    (obs, catalog) = psiz.datasets.load_dataset('birds-16')
 
 
 if __name__ == "__main__":

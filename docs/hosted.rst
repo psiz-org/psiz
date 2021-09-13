@@ -62,7 +62,7 @@ validation set can be loaded in the following way:
 
     import psiz
 
-    (obs, catalog) = psiz.datasets.load('ilsvrc_val_v0_2')    
+    (obs, catalog) = psiz.datasets.load_dataset('ilsvrc_val_v0_2')    
 
 
 Models

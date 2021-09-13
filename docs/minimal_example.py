@@ -2,7 +2,7 @@ import psiz
 import tensorflow as tf
 
 # Load observations (and corresponding catalog) for a predefined dataset.
-(obs, catalog) = psiz.datasets.load('birds-16')
+(obs, catalog) = psiz.datasets.load_dataset('birds-16')
 n_stimuli = catalog.n_stimuli
 
 # Create a 2-dimensional embedding layer for the stimuli.

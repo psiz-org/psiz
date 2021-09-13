@@ -16,7 +16,7 @@
 """Module for loading internally pre-defined datasets.
 
 Functions:
-    load: Load observations for the requested dataset.
+    load_dataset: Load observations for the requested dataset.
 
 Notes:
     The dataset will only be downloaded from the server if it does not
@@ -45,7 +45,7 @@ import psiz.catalog
 import psiz.trials
 
 
-def load(
+def load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=None,
         verbose=0):
     """Load observations and catalog for the requested hosted dataset.

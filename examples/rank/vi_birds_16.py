@@ -73,7 +73,7 @@ def main():
     plt.rc('figure', titlesize=large_size)
 
     # Import hosted rank dataset of 16 bird species.
-    (obs, catalog) = psiz.datasets.load('birds-16', verbose=1)
+    (obs, catalog) = psiz.datasets.load_dataset('birds-16', verbose=1)
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)

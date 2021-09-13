@@ -15,6 +15,6 @@
 # ============================================================================
 """Module datasets."""
 
-from psiz.datasets.load_dataset import load
+from psiz.datasets.load_dataset import load_dataset
 
-__all__ = ['load']
+__all__ = ['load_dataset']

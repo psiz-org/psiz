@@ -13,19 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Top-level package initialization file.
-
-Modules:
-    agents
-    catalog
-    datasets
-    keras
-    mplot
-    tf
-    tfp
-    trials
-    utils
-"""
+"""Initialization file for top-level package modules."""
 
 import psiz.agents
 import psiz.catalog
@@ -36,5 +24,3 @@ import psiz.tf
 import psiz.tfp
 import psiz.trials
 import psiz.utils
-
-psiz.models = psiz.keras.models  # TEMPORARY For backwards compatability.

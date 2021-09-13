@@ -25,7 +25,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
-from psiz.keras.layers.ops.core import wpnorm
+from psiz.tf.ops.wpnorm import wpnorm
 
 
 @tf.keras.utils.register_keras_serializable(

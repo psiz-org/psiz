@@ -21,6 +21,7 @@ Modules:
     datasets
     keras
     mplot
+    tf
     tfp
     trials
     utils
@@ -31,6 +32,7 @@ import psiz.catalog
 import psiz.datasets
 import psiz.keras
 import psiz.mplot
+import psiz.tf
 import psiz.tfp
 import psiz.trials
 import psiz.utils

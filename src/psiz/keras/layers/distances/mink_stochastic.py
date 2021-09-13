@@ -26,7 +26,7 @@ import tensorflow_probability as tfp
 
 from psiz.tfp.distributions.truncated_normal import TruncatedNormal
 import psiz.keras.constraints as pk_constraints
-from psiz.keras.layers.ops.core import wpnorm
+from psiz.tf.ops.wpnorm import wpnorm
 
 
 @tf.keras.utils.register_keras_serializable(

@@ -30,49 +30,41 @@ def matrix_comparison(mat_a, mat_b, score='r2', elements='upper'):
     Arguments:
         mat_a: A square matrix.
         mat_b: A square matrix the same size as mat_a
-        score (optional): The type of comparison to use.
+        score (optional): The type of comparison to use. Can be 'r2',
+            'pearson', or 'mse'.
         elements (optional): Which elements to use in the computation.
             The options are upper triangular elements (upper), lower
-            triangular elements (lower), or off-diagonal elements
-            (off).
+            triangular elements (lower), off-diagonal elements (off),
+            or all elements (all).
 
     Returns:
         The comparison score.
 
-    Notes:
-        'r2'
-        When computing R^2 values of two similarity matrices, it is
-        assumed, by definition, that the corresponding diagonal
-        elements are the same between the two matrices being compared.
-        Therefore, the diagonal elements are not included in the R^2
-        computation to prevent inflating the R^2 value. On a similar
-        note, including both the upper and lower triangular portion
-        does not artificially inflate R^2 values for symmetric
-        matrices.
-
     """
     n_row = mat_a.shape[0]
-    idx_upper = np.triu_indices(n_row, 1)
-    idx_lower = np.triu_indices(n_row, 1)
     if elements == 'upper':
-        idx = idx_upper
+        idx = np.triu_indices(n_row, 1)
     elif elements == 'lower':
-        idx = idx_lower
+        idx = np.tril_indices(n_row, -1)
     elif elements == 'off':
+        idx_upper = np.triu_indices(n_row, 1)
+        idx_lower = np.tril_indices(n_row, -1)
         idx = (
             np.hstack((idx_upper[0], idx_lower[0])),
             np.hstack((idx_upper[1], idx_lower[1])),
         )
+    elif elements == 'all':
+        idx_mesh = np.meshgrid(np.arange(n_row), np.arange(n_row))
+        idx = (idx_mesh[0].flatten(), idx_mesh[1].flatten())
     else:
         raise ValueError(
             'The argument to `elements` must be "upper", "lower", or "off".')
 
-    if score == 'pearson':
-        score, _ = pearsonr(mat_a[idx], mat_b[idx])
-    elif score == 'r2':
+    if score == 'r2':
         rho, _ = pearsonr(mat_a[idx], mat_b[idx])
         score = rho**2
-        # ALT: score = sklearn.metrics.r2_score(mat_a[idx], mat_b[idx])
+    elif score == 'pearson':
+        score, _ = pearsonr(mat_a[idx], mat_b[idx])
     elif score == 'mse':
         score = np.mean((mat_a[idx] - mat_b[idx])**2)
     else:

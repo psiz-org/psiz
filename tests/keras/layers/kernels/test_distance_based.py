@@ -43,6 +43,7 @@ def kernel_db_static_v1():
     )
     # Create exponential similarity function.
     similarity = ExponentialSimilarity(
+        fit_beta=False,
         beta_initializer=tf.keras.initializers.Constant(1.),
         tau_initializer=tf.keras.initializers.Constant(1.),
         gamma_initializer=tf.keras.initializers.Constant(0.01),

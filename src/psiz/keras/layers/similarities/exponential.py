@@ -63,7 +63,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_tau=True, fit_gamma=True, fit_beta=False,
+            self, fit_tau=True, fit_gamma=True, fit_beta=True,
             tau_initializer=None, gamma_initializer=None,
             beta_initializer=None, **kwargs):
         """Initialize.

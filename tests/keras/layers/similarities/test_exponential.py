@@ -26,13 +26,13 @@ def test_init_default():
 
     assert similarity.fit_tau
     assert similarity.fit_gamma
-    assert not similarity.fit_beta
+    assert similarity.fit_beta
 
 
 def test_init_options_0():
     """Test initialization with optional arguments."""
     similarity = ExponentialSimilarity(
-        fit_tau=False, fit_gamma=False, fit_beta=True,
+        fit_tau=False, fit_gamma=False, fit_beta=False,
         tau_initializer=tf.keras.initializers.Constant(1.),
         gamma_initializer=tf.keras.initializers.Constant(0.01),
         beta_initializer=tf.keras.initializers.Constant(10.),
@@ -40,16 +40,16 @@ def test_init_options_0():
 
     assert not similarity.fit_tau
     assert not similarity.fit_gamma
-    assert similarity.fit_beta
+    assert not similarity.fit_beta
 
 
 def test_init_options_1():
     """Test initialization with optional arguments."""
-    similarity = ExponentialSimilarity(fit_beta=True)
+    similarity = ExponentialSimilarity(fit_beta=False)
 
     assert similarity.fit_tau
     assert similarity.fit_gamma
-    assert similarity.fit_beta
+    assert not similarity.fit_beta
 
 
 def test_call():
@@ -83,4 +83,4 @@ def test_get_config():
 
     assert config['fit_tau']
     assert config['fit_gamma']
-    assert not config['fit_beta']
+    assert config['fit_beta']

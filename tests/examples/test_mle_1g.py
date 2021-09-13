@@ -36,7 +36,7 @@ def ground_truth(n_stimuli, n_dim, similarity_func):
     # Set similarity function.
     if similarity_func == 'Exponential':
         similarity = psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            fit_tau=False, fit_gamma=False, fit_beta=False,
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.001),
         )

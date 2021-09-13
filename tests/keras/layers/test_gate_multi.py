@@ -63,7 +63,7 @@ def kernel_subnets():
             trainable=False
         ),
         similarity=ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            fit_tau=False, fit_gamma=False, fit_beta=False,
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             beta_initializer=tf.keras.initializers.Constant(.1),
@@ -76,7 +76,7 @@ def kernel_subnets():
             trainable=False
         ),
         similarity=ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            fit_tau=False, fit_gamma=False, fit_beta=False,
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             beta_initializer=tf.keras.initializers.Constant(.1),
@@ -90,7 +90,7 @@ def kernel_subnets():
             trainable=False
         ),
         similarity=ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False,
+            fit_tau=False, fit_gamma=False, fit_beta=False,
             tau_initializer=tf.keras.initializers.Constant(1.),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             beta_initializer=tf.keras.initializers.Constant(.1),

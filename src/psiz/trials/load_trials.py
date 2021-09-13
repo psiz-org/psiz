@@ -51,8 +51,10 @@ def load_trials(filepath):
     try:
         # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
         # call. The `setup.cfg` file notes this minimum version requirement.
+        # pylint: disable=no-member
         class_name = f["class_name"].asstr()[()]
     except KeyError:
+        # pylint: disable=no-member
         class_name = f["trial_type"].asstr()[()]
     f.close()
 

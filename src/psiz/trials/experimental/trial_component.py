@@ -86,7 +86,7 @@ class TrialComponent(metaclass=ABCMeta):
     @abstractmethod
     def load(self, grp):
         """Retrieve relevant datasets from group.
-    
+
         Arguments:
             grp: H5 group from which to load data.
 

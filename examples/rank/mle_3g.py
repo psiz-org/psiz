@@ -161,11 +161,12 @@ def main():
     group_labels = ["Novice", "Intermediate", "Expert"]
     print("\n    Attention weights:")
     for i_group in range(attention_weight.shape[0]):
-        print("    {0:>12} | {1}".format(
-            group_labels[i_group],
-            np.array2string(
-                attention_weight[i_group, :],
-                formatter={'float_kind': lambda x: "%.2f" % x})
+        print(
+            "    {0:>12} | {1}".format(
+                group_labels[i_group], np.array2string(
+                    attention_weight[i_group, :],
+                    formatter={'float_kind': lambda x: "%.2f" % x}
+                )
             )
         )
 
@@ -189,7 +190,7 @@ def main():
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17
         )
@@ -269,7 +270,7 @@ def build_model(n_stimuli, n_dim, n_group):
 
     """
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(

@@ -228,11 +228,13 @@ def main():
         group_labels = ["Novice", "Intermediate", "Expert"]
         print("\n    Attention weights:")
         for i_group in range(n_group):
-            print("    {0:>12} | {1}".format(
-                group_labels[i_group],
-                np.array2string(
-                    attention_weight[i_group, :],
-                    formatter={'float_kind': lambda x: "%.2f" % x})
+            print(
+                "    {0:>12} | {1}".format(
+                    group_labels[i_group],
+                    np.array2string(
+                        attention_weight[i_group, :],
+                        formatter={'float_kind': lambda x: "%.2f" % x}
+                    )
                 )
             )
 
@@ -275,7 +277,7 @@ def main():
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=58
         )
@@ -359,13 +361,13 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
     prior_scale = .2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),

@@ -267,7 +267,7 @@ def plot_convergence(ax, n_obs, r2):
     # Settings.
     ms = 2
 
-    ax.plot(n_obs, r2, 'ro-',  ms=ms,)
+    ax.plot(n_obs, r2, 'ro-', ms=ms)
     ax.set_title('Convergence')
 
     ax.set_xlabel('Trials')
@@ -286,7 +286,7 @@ def ground_truth(n_stimuli, n_dim):
     scale_request = .17
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58
         ),
@@ -328,14 +328,14 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
 
     """
     embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
         scale_initializer=psiz.keras.initializers.SoftplusUniform(
             .01, .05
         ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingGammaDiag(
             1, 1,
             concentration_initializer=tf.keras.initializers.Constant(1.),

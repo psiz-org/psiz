@@ -57,7 +57,6 @@ def main():
     # Settings.
     fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
     fp_board = fp_example / Path('logs', 'fit')
-    fp_model = fp_example / Path('inferred_model')
     n_stimuli = 25
     n_dim = 2
     n_restart = 1
@@ -156,7 +155,7 @@ def main():
 
         # Infer embedding.
         model_inferred.compile(**compile_kwargs)
-        history = model_inferred.fit(
+        model_inferred.fit(
             ds_obs_train, epochs=epochs, callbacks=callbacks, verbose=0
         )
 
@@ -225,7 +224,7 @@ def ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     seed = 252
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=seed
         )
@@ -268,7 +267,7 @@ def ground_truth_grid():
     z_grid = np.vstack((np.ones([1, 2]), z_grid))
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             z_grid
         )
@@ -304,7 +303,7 @@ def ground_truth_grid():
 def build_model(n_stimuli, n_dim):
     """Build a model to use for inference."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     kernel = psiz.keras.layers.DistanceBased(

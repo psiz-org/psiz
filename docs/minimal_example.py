@@ -9,7 +9,7 @@ n_stimuli = catalog.n_stimuli
 # NOTE: Since we will use masking, we increment n_stimuli by one.
 n_dim = 2
 stimuli = tf.keras.layers.Embedding(
-    catalog.n_stimuli+1, n_dim, mask_zero=True
+    catalog.n_stimuli + 1, n_dim, mask_zero=True
 )
 
 # Use a default similarity kernel (a fully trainable exponential with

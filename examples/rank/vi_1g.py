@@ -321,7 +321,7 @@ def plot_convergence(ax, n_obs, r2):
     # Settings.
     ms = 2
 
-    ax.plot(n_obs, r2, 'ro-',  ms=ms,)
+    ax.plot(n_obs, r2, 'ro-', ms=ms)
     ax.set_title('Convergence')
 
     ax.set_xlabel('Trials')
@@ -363,7 +363,7 @@ def ground_truth(n_stimuli, n_dim):
     scale_request = .17
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58
         )
@@ -414,13 +414,13 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
 
     # Create variational stimuli layer.
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),

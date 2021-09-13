@@ -177,13 +177,13 @@ def build_model(n_stimuli, n_dim, n_obs_train):
     # little data, the posterior will be driven by an incorrect prior.
     prior_scale = .2  # Mispecified to demonstrate robustness.
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),

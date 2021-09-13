@@ -205,7 +205,7 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17
         )
@@ -244,7 +244,7 @@ def build_model(n_stimuli, n_dim):
     """
     # Create a group-agnostic stimuli layer.
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli+1, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
 
     # Create a group-agnostic kernel.

@@ -167,7 +167,7 @@ def draw_scenario(fig, gs, row, case_data):
     ax.set_yticks([])
 
     for i_subplot in range(n_trial):
-        ax = fig.add_subplot(gs[row,  i_subplot+1])
+        ax = fig.add_subplot(gs[row, i_subplot + 1])
         candidate_subplot(
             fig, ax, loc, stimulus_set[i_subplot], expected_ig[i_subplot],
             standardized_ig[i_subplot], color_arr, fontdict
@@ -245,7 +245,7 @@ def build_model(case=0):
 
     prior_scale = .17
     stimuli = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli+1, n_dim, mask_zero=True,
+        n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
@@ -273,26 +273,26 @@ def build_model(case=0):
     if case == 0:
         # One stimulus with relatively high uncertainty.
         loc = z_grid
-        scale = .01 * np.ones([n_stimuli+1, n_dim], dtype=np.float32)
+        scale = .01 * np.ones([n_stimuli + 1, n_dim], dtype=np.float32)
         scale[5, :] = .05
     elif case == 1:
         # One stimulus with relatively high uncertainty.
         loc = z_grid
-        scale = .01 * np.ones([n_stimuli+1, n_dim], dtype=np.float32)
+        scale = .01 * np.ones([n_stimuli + 1, n_dim], dtype=np.float32)
         scale[10, :] = .05
     elif case == 2:
         loc = z_grid
-        scale = .01 * np.ones([n_stimuli+1, n_dim], dtype=np.float32)
+        scale = .01 * np.ones([n_stimuli + 1, n_dim], dtype=np.float32)
         scale[5, 0] = .05
         scale[5, 1] = .01
     elif case == 3:
         loc = z_grid
-        scale = .01 * np.ones([n_stimuli+1, n_dim], dtype=np.float32)
+        scale = .01 * np.ones([n_stimuli + 1, n_dim], dtype=np.float32)
         scale[6, :] = .03
         scale[8, :] = .03
     elif case == 4:
         loc = z_circle
-        scale = .01 * np.ones([n_stimuli+1, n_dim], dtype=np.float32)
+        scale = .01 * np.ones([n_stimuli + 1, n_dim], dtype=np.float32)
         scale[4, :] = .03
 
     # Assign scenario variables.
@@ -319,7 +319,7 @@ def package_case_data(model, stimulus_set, expected_ig):
     n_best = 3
     n_total = 6
     intermediate_trial_idx = np.linspace(
-        n_best, n_candidate-1, n_total-n_best, dtype=np.int32
+        n_best, n_candidate - 1, n_total - n_best, dtype=np.int32
     )
     trial_idx = np.concatenate(
         (np.arange(n_best), intermediate_trial_idx), axis=0

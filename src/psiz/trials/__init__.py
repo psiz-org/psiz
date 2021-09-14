@@ -15,11 +15,12 @@
 # ============================================================================
 """Trials initialization."""
 
+
+import psiz.trials.information_gain
 from psiz.trials.stack import stack
 from psiz.trials.load_trials import load_trials
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rank.active_rank import ActiveRank
-from psiz.trials.similarity.rank.active_rank import expected_information_gain_rank
 from psiz.trials.similarity.rank.random_rank import RandomRank
 from psiz.trials.similarity.rank.rank_trials import RankTrials
 from psiz.trials.similarity.rank.rank_docket import RankDocket
@@ -39,10 +40,9 @@ from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategoric
 from psiz.trials.experimental.unravel_timestep import unravel_timestep
 
 __all__ = [
-    'stack', 'load_trials', 'DocketGenerator', 'ActiveRank',
-    'expected_information_gain_rank', 'RandomRank', 'RankTrials', 'RankDocket',
-    'RankObservations', 'RandomRate', 'RateTrials', 'RateDocket',
-    'RateObservations', 'TrialComponent', 'TrialDataset', 'Content',
-    'RankSimilarity', 'RateSimilarity', 'Outcome', 'Continuous',
-    'SparseCategorical', 'unravel_timestep'
+    'stack', 'load_trials', 'DocketGenerator', 'ActiveRank', 'RandomRank',
+    'RankTrials', 'RankDocket', 'RankObservations', 'RandomRate',
+    'RateTrials', 'RateDocket', 'RateObservations', 'TrialComponent',
+    'TrialDataset', 'Content', 'RankSimilarity', 'RateSimilarity', 'Outcome',
+    'Continuous', 'SparseCategorical', 'unravel_timestep'
 ]

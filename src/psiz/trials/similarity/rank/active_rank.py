@@ -19,10 +19,6 @@ Classes:
     ActiveRank: Concrete class that produces Rank similarity trials
         that are expected to maxize expected information gain.
 
-Functions:
-    expected_information_gain_rank: A sample-based function for computing
-        expected information gain of Rank trials.
-
 """
 
 import numpy as np
@@ -30,6 +26,7 @@ import tensorflow as tf
 
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rank.rank_docket import RankDocket
+from psiz.trials.information_gain.ig_categorical import ig_categorical
 from psiz.trials.stack import stack
 from psiz.utils import ProgressBarRe, choice_wo_replace
 
@@ -302,15 +299,13 @@ def _select_query_references(
         for model in model_list:
             # Compute expected information gain from prediction samples.
             batch_expected_ig.append(
-                expected_information_gain_rank(
-                    tf.transpose(model(x, training=False), perm=[1, 0, 2])
-                )
+                ig_categorical(model(x, training=False))
             )
         # TODO Should IG be computed on ensemble samples collectively?
         # for model in model_list:
         #     batch_pred.append(model(x, training=False))
         # batch_pred = tf.stack(batch_pred, axis=TODO)
-        # batch_expected_ig = expected_information_gain_rank(batch_pred)
+        # batch_expected_ig = ig_categorical(batch_pred)
 
         batch_expected_ig = tf.stack(batch_expected_ig, axis=0)
         batch_expected_ig = tf.reduce_mean(batch_expected_ig, axis=0)
@@ -325,63 +320,3 @@ def _select_query_references(
     expected_ig = expected_ig[top_indices[0:n_trial_q]]
 
     return docket, expected_ig
-
-
-def expected_information_gain_rank(y_pred):
-    """Return expected information gain of each discrete outcome trial.
-
-    A sample-based approximation of information gain is determined by
-    computing the mutual information between the candidate trial(s)
-    and the existing set of observations (implied by the current model
-    state).
-
-    This sample-based approximation is intended for trials that have
-    multiple discrete outcomes.
-
-    This function is designed to be agnostic to the manner in which
-    `y_pred` samples are drawn. For example, these could be dervied
-    using MCMC or by sampling output predictions from a model fit using
-    variational inference.
-
-    NOTE: This function works with placeholder elements as long as
-    `y_pred` is zero for those elements.
-
-    Arguments:
-        y_pred: A tf.Tensor of model predictions.
-            shape=(n_sample, n_trial, n_outcome)
-
-    Returns:
-        A tf.Tensor object representing the expected information gain
-        of the candidate trial(s).
-        shape=(n_trial,)
-
-    """
-    # First term of mutual information.
-    # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c),
-    # where `c` indicates a candidate trial that we want to compute the
-    # expected information gain for.
-    # Take mean over samples to approximate p(y_i | obs, c).
-    term0 = tf.reduce_mean(y_pred, axis=0)  # shape=(n_trial, n_outcome)
-    term0 = term0 * tf.math.log(
-        tf.math.maximum(term0, tf.keras.backend.epsilon())
-    )
-    # NOTE: At this point we would need to zero out place-holder outcomes,
-    # but placeholder elements will always have a value of zero since
-    # y_pred will be zero for placeholder elements.
-    # Sum over possible outcomes.
-    term0 = -tf.reduce_sum(term0, axis=1)  # shape=(n_trial,)
-
-    # Second term of mutual information.
-    # E[H(Y | Z, D, x)]
-    term1 = y_pred * tf.math.log(
-        tf.math.maximum(y_pred, tf.keras.backend.epsilon())
-    )
-    # Take the sum over the possible outcomes.
-    # NOTE: At this point we would need to zero out place-holder outcomes,
-    # but placeholder elements will always have a value of zero since
-    # y_pred will be zero for placeholder elements.
-    term1 = tf.reduce_sum(term1, axis=2)  # shape=(n_sample, n_trial,)
-    # Take the mean over all samples.
-    term1 = tf.reduce_mean(term1, axis=0)  # shape=(n_trial,)
-
-    return term0 + term1

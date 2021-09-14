@@ -32,6 +32,8 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
+from psiz.trials.information_gain import ig_categorical
+
 
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
@@ -89,12 +91,10 @@ def main():
 
         expected_ig = None
         for data in ds_docket:
-            # Compute expected information gain from prediction samples.
+            # Compute expected information gain from categorical prediction
+            # samples.
             y_pred = model(data, training=False)
-            y_pred = tf.transpose(y_pred, perm=[1, 0, 2])
-            batch_expected_ig = psiz.trials.expected_information_gain_rank(
-                y_pred
-            )
+            batch_expected_ig = ig_categorical(y_pred)
             if expected_ig is None:
                 expected_ig = [batch_expected_ig]
             else:

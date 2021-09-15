@@ -32,7 +32,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
-from psiz.trials.information_gain import ig_categorical
+from psiz.trials.information_gain import ig_model_categorical
 
 
 # Uncomment the following line to force eager execution.
@@ -49,7 +49,7 @@ def main():
     fp_example = Path.home() / Path(
         'psiz_examples', 'rank', 'information_gain'
     )
-    n_reference = 3
+    n_reference = 2
     n_select = 1
     n_col = 7
 
@@ -89,16 +89,11 @@ def main():
             docket.n_trial, drop_remainder=False
         )
 
-        expected_ig = None
-        for data in ds_docket:
-            # Compute expected information gain from categorical prediction
-            # samples.
-            y_pred = model(data, training=False)
-            batch_expected_ig = ig_categorical(y_pred)
-            if expected_ig is None:
-                expected_ig = [batch_expected_ig]
-            else:
-                expected_ig.append(batch_expected_ig)
+        # Compute expected information gain for candidate trials in mini
+        # batches.
+        expected_ig = []
+        for docket_batch in ds_docket:
+            expected_ig.append(ig_model_categorical([model], docket_batch))
         expected_ig = tf.concat(expected_ig, 0).numpy()
 
         # Select data to represent case in visualization.

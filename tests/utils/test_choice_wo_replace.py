@@ -48,3 +48,31 @@ def test_choice_wo_replace():
 
     # Check that sampling distribution matches original probabilites.
     np.testing.assert_array_almost_equal(candidate_prob, drawn_prob, decimal=2)
+
+
+def test_seed():
+    """Test seed."""
+    n_trial = 2
+    n_reference = 3
+    n_option = 20
+
+    candidate_idx = np.arange(n_option)
+    candidate_prob = np.array([
+        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
+        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
+        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
+        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
+    ])
+
+    # Draw samples using seed.
+    seed = 560897
+    drawn_idx = choice_wo_replace(
+        candidate_idx, (n_trial, n_reference), candidate_prob, seed=seed
+    )
+    drawn_idx_desired = np.array(
+        [
+            [4, 7, 2],
+            [3, 2, 4]
+        ], dtype=int
+    )
+    np.testing.assert_array_equal(drawn_idx, drawn_idx_desired)

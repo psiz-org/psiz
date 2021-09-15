@@ -23,7 +23,7 @@ Functions:
 import numpy as np
 
 
-def choice_wo_replace(a, size, p):
+def choice_wo_replace(a, size, p, seed=None):
     """Fast sampling without replacement.
 
     Arguments:
@@ -36,6 +36,7 @@ def choice_wo_replace(a, size, p):
             a particular element. User provided probabilities are
             already assumed to sum to one. Probability p[i] indicates
             the probability of drawing index a[i].
+        seed (optional): A seed value for the random number generator.
 
     Returns:
         result: A 2D array containing the drawn elements.
@@ -52,6 +53,7 @@ def choice_wo_replace(a, size, p):
     replicated_probabilities = np.tile(p, (n_sample, 1))
 
     # Get random shifting numbers & scale them correctly.
+    np.random.seed(seed=seed)
     random_shifts = np.random.random(replicated_probabilities.shape)
     random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
 

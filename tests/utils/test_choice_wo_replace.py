@@ -65,14 +65,14 @@ def test_seed():
     ])
 
     # Draw samples using seed.
-    seed = 560897
+    rng = np.random.default_rng(seed=560897)
     drawn_idx = choice_wo_replace(
-        candidate_idx, (n_trial, n_reference), candidate_prob, seed=seed
+        candidate_idx, (n_trial, n_reference), candidate_prob, rng=rng
     )
     drawn_idx_desired = np.array(
         [
-            [4, 7, 2],
-            [3, 2, 4]
+            [2, 14, 3],
+            [12, 13, 15]
         ], dtype=int
     )
     np.testing.assert_array_equal(drawn_idx, drawn_idx_desired)

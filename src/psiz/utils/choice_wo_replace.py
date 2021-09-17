@@ -23,20 +23,23 @@ Functions:
 import numpy as np
 
 
-def choice_wo_replace(a, size, p, seed=None):
+def choice_wo_replace(a, size, p, rng=None):
     """Fast sampling without replacement.
+
+    For each sample, draw elements without replacement. Across samples
+    there may be repetitions.
 
     Arguments:
         a: An array indicating the eligable elements.
-        size: A tuple indicating the number of independent samples and
+        size: A 2-tuple indicating the number of independent samples and
             the number of draws (without replacement) for each sample.
             The tuple is ordered such that
-            size = (n_sample, sample_size).
+            shape=(n_sample, sample_size).
         p: An array indicating the probabilites associated with drawing
             a particular element. User provided probabilities are
             already assumed to sum to one. Probability p[i] indicates
             the probability of drawing index a[i].
-        seed (optional): A seed value for the random number generator.
+        rng (optional): A numpy random number generator.
 
     Returns:
         result: A 2D array containing the drawn elements.
@@ -53,8 +56,10 @@ def choice_wo_replace(a, size, p, seed=None):
     replicated_probabilities = np.tile(p, (n_sample, 1))
 
     # Get random shifting numbers & scale them correctly.
-    np.random.seed(seed=seed)
-    random_shifts = np.random.random(replicated_probabilities.shape)
+    if rng is not None:
+        random_shifts = rng.random(replicated_probabilities.shape)
+    else:
+        random_shifts = np.random.random(replicated_probabilities.shape)
     random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
 
     # Shift by numbers and find largest (by finding the smallest of the

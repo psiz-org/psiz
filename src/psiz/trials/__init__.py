@@ -19,6 +19,7 @@
 import psiz.trials.information_gain
 from psiz.trials.stack import stack
 from psiz.trials.load_trials import load_trials
+from psiz.trials.sample_qr_sets import sample_qr_sets
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rank.active_rank import ActiveRank
 from psiz.trials.similarity.rank.random_rank import RandomRank
@@ -40,8 +41,8 @@ from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategoric
 from psiz.trials.experimental.unravel_timestep import unravel_timestep
 
 __all__ = [
-    'stack', 'load_trials', 'DocketGenerator', 'ActiveRank', 'RandomRank',
-    'RankTrials', 'RankDocket', 'RankObservations', 'RandomRate',
+    'stack', 'load_trials', 'sample_qr_sets', 'DocketGenerator', 'ActiveRank',
+    'RandomRank', 'RankTrials', 'RankDocket', 'RankObservations', 'RandomRate',
     'RateTrials', 'RateDocket', 'RateObservations', 'TrialComponent',
     'TrialDataset', 'Content', 'RankSimilarity', 'RateSimilarity', 'Outcome',
     'Continuous', 'SparseCategorical', 'unravel_timestep'

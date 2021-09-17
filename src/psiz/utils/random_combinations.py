@@ -59,7 +59,10 @@ def random_combinations(a, k, n_sample, p=None, replace=True, rng=None):
     if p is None:
         p = np.ones([n_element]) / n_element
 
-    if not replace:
+    if replace:
+        # Sample with replacement.
+        samples = choice_wo_replace(a, [n_sample, k], p, rng=rng)
+    else:
         # Sample without replacement.
         n_unique = comb(n_element, k)
         if n_sample > n_unique:
@@ -82,7 +85,5 @@ def random_combinations(a, k, n_sample, p=None, replace=True, rng=None):
                 if samples.shape[0] >= n_sample:
                     is_sufficient = True
                     samples = samples[0:n_sample]
-    else:
-        samples = choice_wo_replace(a, [n_sample, k], p, rng=rng)
 
     return samples

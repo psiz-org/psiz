@@ -19,11 +19,9 @@ import numpy as np
 
 from psiz.utils import random_combinations
 
-# TODO does it matter if probs are unnormalized?
-
 
 def test_w_replace_probs():
-    """Test choice_wo_replace."""
+    """Test with replacement and probabilities."""
     n_option = 20
     arr = np.arange(n_option)
     probs = np.array([

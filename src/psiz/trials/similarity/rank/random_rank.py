@@ -25,7 +25,7 @@ import numpy as np
 
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rank.rank_docket import RankDocket
-from psiz.utils.choice_wo_replace import choice_wo_replace
+from psiz.utils import random_combinations
 
 
 class RandomRank(DocketGenerator):
@@ -69,8 +69,8 @@ class RandomRank(DocketGenerator):
         is_ranked = np.repeat(self.is_ranked, n_trial)
         idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
         prob = np.ones([self.n_stimuli]) / self.n_stimuli
-        stimulus_set = choice_wo_replace(
-            idx_eligable, (n_trial, n_reference + 1), prob
+        stimulus_set = random_combinations(
+            idx_eligable, n_reference + 1, n_trial, p=prob
         )
 
         return RankDocket(

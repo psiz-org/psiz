@@ -162,30 +162,3 @@ def test_replace_seed():
         ]
     )
     np.testing.assert_array_equal(qr_sets, qr_sets_desired)
-
-
-# # Check correct query index.
-    # query_arr_desired = np.full([n_unique_desired], query_idx)
-    # np.testing.assert_array_equal(qr_sets[:, 0], query_arr_desired)
-
-    # # Check number of unique sets.
-    # n_unique_post = np.unique(qr_sets, axis=0).shape[0]
-    # assert n_unique_post == n_unique_desired
-
-
-# def test_validate():
-#     """Test when requested n_samples cannot be satisfied."""
-#     n_stimuli = 5
-#     n_unique = 10
-
-#     n_reference = 2
-#     ref_prob = np.ones([n_stimuli])
-#     n_samples = 15
-#     ref_idx_eligable = np.array([0, 1, 2, 3, 4])
-#     samples = choice_wo_replace(
-#         ref_idx_eligable, (n_samples, n_reference), ref_prob
-#     )
-#     n_samples_obtained = samples.shape[0]
-#     assert n_samples_obtained == n_unique
-
-#     # TODO does order matter here?

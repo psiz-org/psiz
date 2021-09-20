@@ -58,6 +58,9 @@ def random_combinations(a, k, n_sample, p=None, replace=True, rng=None):
 
     if p is None:
         p = np.ones([n_element]) / n_element
+    else:
+        # Make sure probabilities sum to one.
+        p = p / np.sum(p)
 
     if replace:
         # Sample with replacement.

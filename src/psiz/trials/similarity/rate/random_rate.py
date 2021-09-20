@@ -25,7 +25,7 @@ import numpy as np
 
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rate.rate_docket import RateDocket
-from psiz.utils import choice_wo_replace
+from psiz.utils import random_combinations
 
 
 class RandomRate(DocketGenerator):
@@ -59,7 +59,7 @@ class RandomRate(DocketGenerator):
         """
         idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
         prob = np.ones([self.n_stimuli]) / self.n_stimuli
-        stimulus_set = choice_wo_replace(
-            idx_eligable, (n_trial, self.n_present), prob
+        stimulus_set = random_combinations(
+            idx_eligable, self.n_present, n_trial, p=prob
         )
         return RateDocket(stimulus_set)

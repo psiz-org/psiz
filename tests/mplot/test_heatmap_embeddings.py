@@ -102,3 +102,4 @@ def test_emb_heatmap(is_dist, mask_zero, cmap, ax_present):
     np.testing.assert_array_almost_equal(
         desired_array, ax.images[0].get_array().data,
     )
+    plt.close(fig)

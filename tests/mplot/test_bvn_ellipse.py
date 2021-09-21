@@ -68,3 +68,4 @@ def test_hdi_bvn(ax_present):
     assert len(ax.artists) == 2
     np.testing.assert_array_equal(ax.artists[0].center, loc[0])
     np.testing.assert_array_equal(ax.artists[1].center, loc[1])
+    plt.close(fig)

@@ -101,6 +101,7 @@ def test_deterministic_emb_input(mask_zero, ax_present):
     np.testing.assert_array_almost_equal(
         arr.data, desired_arr
     )
+    plt.close(fig)
 
 
 @pytest.mark.parametrize("mask_zero", [False, True])
@@ -150,3 +151,4 @@ def test_stochastic_emb_input(mask_zero, ax_present):
     np.testing.assert_array_almost_equal(
         ax.lines[-1]._y, np.array([-0.00489804, 0.26489803])
     )
+    plt.close(fig)

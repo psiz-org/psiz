@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2021 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,22 +16,39 @@
 """Generate rank-type unjudged similarity judgment trials.
 
 Classes:
-    RandomRank: Concrete class for generating random Rank similarity
-        trials.
+    RandomRank: Concrete class for generating Rank similarity trials.
 
 """
 
+import copy
+import multiprocessing
+import sys
+from time import time
+
 import numpy as np
 
+from psiz.trials import sample_qr_sets
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rank.rank_docket import RankDocket
-from psiz.utils import random_combinations
 
 
 class RandomRank(DocketGenerator):
-    """A trial generator that blindly samples trials."""
+    """Trial generator that samples query-reference trials.
 
-    def __init__(self, n_stimuli, n_reference=2, n_select=1):
+    Users can guide the sampling process by providing a matrix of
+    weights. The generative process can be distributed across multiple
+    workers.
+
+    NOTE: When sampling without replacement (i.e., replace=False) you
+    must be mindful of the number of unique trials possible. If
+    requesting more unique trials than possible, you may be surprised
+    when fewer trials are returned.
+
+    """
+
+    def __init__(
+            self, n_stimuli, n_reference=2, n_select=1, w=None, replace=True,
+            n_highest=None, n_worker=1, verbose=0):
         """Initialize.
 
         Arguments:
@@ -41,38 +58,236 @@ class RandomRank(DocketGenerator):
                 references for each trial.
             n_select (optional): A scalar indicating the number of
                 selections an agent must make.
+            w (optional): A non-negative square matrix, specifying the
+                sampling weight of a particular stimulus. The diagonal
+                and off-diagonal elements serve different purposes. The
+                diagonal elements indicate the probability of selecting
+                a stimulus as a query. These elements are only used when
+                calling the `generate` method. Each row of the off-
+                diagonal elements corresponds to a particular query and
+                indicates the probability of sampling a stimulus to
+                serve as a reference for that query. For eample element
+                `w[i, j]` indicates the probability stimulus `j` will
+                be sampled as a reference for query `i`. By default, all
+                stimuli are given equal weight.
+                shape=(n_stimuli, n_stimuli)
+            replace (optional): Boolean indicating if sampled trials
+                should be unique. The default `replace=True` does not
+                guarantee unique trials.
+            n_highest (optional): An integer specifying the number of
+                highest probability references that are eligible for
+                selection. All references are eligible by default. For
+                large problems it can be useful to set this value to
+                something less than the total number of stimuli. For
+                example, if `n_highest=100`, only the 100 references
+                with the highest probability will be considered and all
+                other references will be masked.
+            n_worker (optional): The number of unique workers (CPUs) to
+                divide the work amongst. By default, only one worker is
+                used.
+            verbose (optional): The verbosity of output.
 
         """
         DocketGenerator.__init__(self)
 
         self.n_stimuli = n_stimuli
 
+        if n_reference > n_stimuli:
+            raise ValueError('`n_reference` must be less than `n_stimuli`')
+        if n_select > n_reference:
+            raise ValueError('`n_select` must be less than `n_reference`')
+
         # Sanitize inputs.
-        # TODO re-use sanitize methods from elsewhere
         self.n_reference = np.int32(n_reference)
         self.n_select = np.int32(n_select)
-        self.is_ranked = True
 
-    def generate(self, n_trial):
-        """Return generated trials based on provided arguments.
+        # Make sure `w` is a square matrix.
+        if w is None:
+            w = np.ones([n_stimuli, n_stimuli]) / n_stimuli
+        else:
+            assert w.shape[0] == w.shape[1]
+            assert w.shape[0] == n_stimuli
+        self.w = w
+
+        self.replace = replace
+        self.n_highest = n_highest
+        self.n_worker = int(np.maximum(n_worker, 1))
+
+        self.verbose = verbose
+
+    def generate(self, n_trial, per_query=False):
+        """Generate trials.
+
+        Generative behavior is toggled via `per_query`.
 
         Arguments:
             n_trial: A scalar indicating the number of trials to
                 generate.
+            per_query (optional): Boolean indicating if the provided
+                `n_trial` should be interpreted as the number of trials
+                per query. The default (False) means that queries and
+                references are sampled to create a total of `n_trial`
+                trials. If `True`, `n_trial` trials will be generated
+                for each stimulus with non-zero weight on the diagonal
+                of `w`.
 
         Returns:
             A RankDocket object.
 
         """
-        n_reference = self.n_reference
-        n_select = np.repeat(self.n_select, n_trial)
-        is_ranked = np.repeat(self.is_ranked, n_trial)
-        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
-        prob = np.ones([self.n_stimuli]) / self.n_stimuli
-        stimulus_set = random_combinations(
-            idx_eligable, n_reference + 1, n_trial, p=prob
+        # Determine eligable queries from diagonal of `w`.
+        query_idx_list = np.arange(self.n_stimuli)
+        w_diag = np.diag(self.w)
+        bidx = np.greater(w_diag, 0.)
+        query_idx_list = query_idx_list[bidx]
+        w_diag = w_diag[bidx]
+
+        if len(bidx) == 0:
+            raise ValueError('No queries are eligable. You must change `w`.')
+
+        if per_query:
+            # Generate `n_trial` for each query.
+            n_trial_per_query_list = np.full(
+                [len(query_idx_list)], n_trial
+            )
+        else:
+            # Draw query index counts.
+            w_diag = w_diag / np.sum(w_diag)
+            rng = np.random.default_rng()
+            n_trial_per_query_list = rng.multinomial(n_trial, w_diag)
+
+        return self._multiprocess_generate(
+            query_idx_list, n_trial_per_query_list
         )
 
-        return RankDocket(
-            stimulus_set, n_select=n_select, is_ranked=is_ranked
+    def _multiprocess_generate(self, query_idx_list, n_trial_per_query_list):
+        """Multiprocessing setup and teardown."""
+        # Create a Queue for exception handling.
+        shared_exception = multiprocessing.Queue()
+
+        # Partition the requested queries into sub-groups for consumption by
+        # the worker pool.
+        n_query = len(query_idx_list)
+        worker_boundaries = np.linspace(
+            0, n_query, self.n_worker + 1, dtype=int
         )
+        start_s = time()
+
+        with multiprocessing.Manager() as manager:
+            stimulus_set_shared = manager.list([])
+
+            process_list = []
+            for idx in range(self.n_worker):
+                query_idx_list_sub = query_idx_list[
+                    worker_boundaries[idx]:worker_boundaries[idx + 1]
+                ]
+                n_trial_per_query_list_sub = n_trial_per_query_list[
+                    worker_boundaries[idx]:worker_boundaries[idx + 1]
+                ]
+                process_list.append(
+                    multiprocessing.Process(
+                        target=_worker_generate,
+                        args=(
+                            query_idx_list_sub, stimulus_set_shared, self.w,
+                            self.n_reference, self.n_highest,
+                            n_trial_per_query_list_sub, self.replace,
+                            shared_exception
+                        )
+                    )
+                )
+
+            for p in process_list:
+                p.start()
+
+            for p in process_list:
+                p.join()
+
+            #  Check for raised exceptions.
+            e_list = [shared_exception.get() for _ in process_list]
+            for e in e_list:
+                if e is not None:
+                    raise e
+
+            stimulus_set = np.concatenate(stimulus_set_shared, axis=0)
+        n_trial_total = stimulus_set.shape[0]
+
+        if self.verbose > 0:
+            duration_s = time() - start_s
+            print(
+                'Docket assembly: n_trial {0} | duration {1:.0f} s'.format(
+                    stimulus_set.shape[0], duration_s
+                )
+            )
+
+        n_select = np.full([n_trial_total], self.n_select)
+
+        return RankDocket(stimulus_set, n_select=n_select)
+
+
+def _worker_generate(
+        query_idx_list, stimulus_set, w, n_reference,
+        n_highest, n_trial_per_query_list, replace, shared_exception):
+    """Launch worker sub-process.
+
+    Assemble complete stimulus set for a list of pre-selected query
+    indices (`query_idx_list`).
+
+    Arguments:
+        query_idx_list:
+        stimulus_set:
+        w:
+        n_reference:
+        n_highest:
+        n_trial_per_query_list:
+        replace:
+        shared_exception:
+
+    """
+    try:
+        stimulus_set_batch = []
+        for query_idx, n_trial_per_query in zip(
+            query_idx_list, n_trial_per_query_list
+        ):
+            w_q = w[query_idx]
+            # Set query index to zero to prohibit sampling query as reference.
+            w_q[query_idx] = 0.
+            # Mask references (if any) below the specified limit.
+            if n_highest is not None:
+                ref_priority = _mask_lowest(w_q, n_highest)
+            else:
+                ref_priority = copy.copy(w_q)
+            stimulus_set_q = sample_qr_sets(
+                query_idx, n_reference, n_trial_per_query, ref_priority,
+                replace=replace
+            )
+            stimulus_set_batch.append(stimulus_set_q)
+
+        stimulus_set.extend(stimulus_set_batch)
+
+        shared_exception.put(None)
+
+    except Exception as e:
+        tb = sys.exc_info()[2]
+        shared_exception.put(e.with_traceback(tb))
+
+
+def _mask_lowest(arr, n_unmasked, mask_value=0):
+    """Mask lowest value entries.
+
+    Arguments:
+        arr: A 1D array of values.
+        n_unmasked: The number of entries to leave unmasked.
+        mask_value (optional): The mask value.
+
+    Returns:
+        arr_masked: A 1D array with mask applied.
+
+    """
+    # Sort highest to lowest.
+    nn_idx = np.argsort(-arr)
+    # Select lowest values.
+    nn_idx = nn_idx[n_unmasked:]
+    # Mask lowest values.
+    arr_masked = copy.copy(arr)
+    arr_masked[nn_idx] = mask_value
+    return arr_masked

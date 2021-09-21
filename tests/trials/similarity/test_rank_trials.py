@@ -904,10 +904,10 @@ class TestStack:
         n_trial = 50
         n_reference = 8
         n_select = 2
-        generator = RandomRank(
+        gen = RandomRank(
             n_stimuli, n_reference=n_reference, n_select=n_select
         )
-        docket = generator.generate(n_trial)
+        docket = gen.generate(n_trial)
 
         double_trials = trials.stack((docket, docket))
 
@@ -961,24 +961,24 @@ class TestStack:
 
         n_reference1 = 2
         n_select1 = 1
-        generator = RandomRank(
+        gen = RandomRank(
             n_stimuli, n_reference=n_reference1, n_select=n_select1
         )
-        trials1 = generator.generate(n_trial)
+        trials1 = gen.generate(n_trial)
 
         n_reference2 = 4
         n_select2 = 2
-        generator = RandomRank(
+        gen = RandomRank(
             n_stimuli, n_reference=n_reference2, n_select=n_select2
         )
-        trials2 = generator.generate(n_trial)
+        trials2 = gen.generate(n_trial)
 
         n_reference3 = 6
         n_select3 = 2
-        generator = RandomRank(
+        gen = RandomRank(
             n_stimuli, n_reference=n_reference3, n_select=n_select3
         )
-        trials3 = generator.generate(n_trial)
+        trials3 = gen.generate(n_trial)
 
         trials_all = trials.stack((trials1, trials2, trials3))
 
@@ -999,30 +999,30 @@ class TestStack:
 
         n_reference1 = 2
         n_select1 = 1
-        generator = RandomRank(
+        gen = RandomRank(
             n_stimuli, n_reference=n_reference1, n_select=n_select1
         )
-        trials1 = generator.generate(n_trial)
+        trials1 = gen.generate(n_trial)
 
         n_reference2 = 4
         n_select2 = 2
-        generator = RandomRank(
+        gen = RandomRank(
             n_stimuli, n_reference=n_reference2, n_select=n_select2
         )
-        trials2 = generator.generate(n_trial)
+        trials2 = gen.generate(n_trial)
 
         n_reference3 = 8
         n_select3 = 2
-        generator = RandomRank(
+        gen = RandomRank(
             n_stimuli, n_reference=n_reference3, n_select=n_select3
         )
-        trials3 = generator.generate(n_trial)
+        trials3 = gen.generate(n_trial)
 
         trials_all = trials.stack((trials1, trials2, trials3))
 
         # Check padding values of first set (non-padded and then padded
         # values).
-        assert np.sum(np.equal(trials_all.stimulus_set[1:5, 0:3], -1)) == 0
+        assert np.sum(np.equal(trials_all.stimulus_set[0:5, 0:3], -1)) == 0
         np.testing.assert_array_equal(
             trials_all.stimulus_set[0:5, 3:],
             -1 * np.ones((5, 6), dtype=np.int32)

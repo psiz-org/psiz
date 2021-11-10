@@ -127,9 +127,9 @@ class RandomRank(DocketGenerator):
                 `n_trial` should be interpreted as the number of trials
                 per query. The default (False) means that queries and
                 references are sampled to create a total of `n_trial`
-                trials. If `True`, `n_trial` trials will be generated
-                for each stimulus with non-zero weight on the diagonal
-                of `w`.
+                trials. If `True`, `n_trial` trials will be
+                stochastically sampled for each stimulus in proportion
+                to the weights on the diagonal of `w`.
 
         Returns:
             A RankDocket object.

@@ -118,7 +118,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             self.beta = self.add_weight(
                 shape=[], initializer=self.beta_initializer,
                 trainable=beta_trainable, name="beta", dtype=K.floatx(),
-                constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+                constraint=pk_constraints.GreaterThan(min_value=0.0)
             )
 
     def call(self, inputs):

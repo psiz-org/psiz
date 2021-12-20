@@ -14,7 +14,8 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-# Need to import as get_version since version is a reserved variable name in sphinx.
+# Need to import as get_version since version is a reserved variable name in
+# sphinx.
 from importlib.metadata import version as get_version
 import sphinx_rtd_theme
 

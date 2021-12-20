@@ -8,13 +8,13 @@
 
 ---
 
+## Purpose
+
+PsiZ provides computational tools for modeling how people perceive the world. The primary use case of PsiZ is to infer psychological representations from human behavior (e.g., similarity judgments). The package integrates cognitive theory with modern computational methods.
+
 ## What's in a name?
 
 The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
-
-## Purpose
-
-PsiZ provides the computational tools to infer psychological representations from human behavior (i.e., a psychological embedding). It integrates cognitive theory with contemporary computational methods.
 
 ## Installation
 
@@ -24,7 +24,7 @@ There are two different ways to install: PyPI or git. Installing via git has the
 ```
 $ pip install psiz
 ```
-You can optionally install `pytest` necessary for running package tests:
+You can optionally install the python packages necessary for running package tests (e.g., `pytest`):
 ```
 $ pip install "psiz[test]"
 ```
@@ -39,7 +39,7 @@ $ pip install /local/path/to/psiz
 
 **Notes:**
 * PsiZ depends on TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow.
-* PsiZ versions 0.5.0 and older must be installed using git clone and editable mode (`pip install -e /local/path/to/psiz`).
+* PsiZ versions <=0.5.0 must be installed using git clone and editable mode (e.g., `pip install -e /local/path/to/psiz`).
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`
     * using git: `git clone https://github.com/roads/psiz.git --branch v0.5.1`
@@ -49,7 +49,7 @@ $ pip install /local/path/to/psiz
 * [PsiZ Examples](examples/)
 
 ## Attribution
-If you use PsiZ in your work please cite one of the following:
+If you use PsiZ in your work please cite at least one of the following:
 ```
 @InProceedings{Roads_Love_2021:CVPR,
     title     = {Enriching ImageNet with Human Similarity Judgments and Psychological Embeddings},
@@ -58,6 +58,7 @@ If you use PsiZ in your work please cite one of the following:
     year      = {2021},
     month     = {6},
     pages     = {3547--3557}
+    doi       = {10.1109/CVPR46437.2021.00355},
 }
 ```
 ```

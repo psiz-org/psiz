@@ -14,7 +14,8 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-from importlib.metadata import version
+# Need to import as get_version since version is a reserved variable name in sphinx.
+from importlib.metadata import version as get_version
 import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
@@ -24,9 +25,9 @@ copyright = '2021, The PsiZ Authors'
 author = 'Brett D. Roads'
 
 # The full version, including alpha/beta/rc tags
-release = version("psiz")
-ver = '.'.join(release.split('.')[:3])
-
+release = get_version("psiz")
+ver = '.'.join(release.split('.')[:3])  # TODO why ver? is it necessary?
+version = ver
 
 # -- General configuration ---------------------------------------------------
 
@@ -36,7 +37,9 @@ ver = '.'.join(release.split('.')[:3])
 extensions = [
     'sphinx_rtd_theme',
     'sphinx.ext.napoleon',
-    'sphinx.ext.imgmath',
+    'sphinx.ext.imgmath',  # Render math equations.
+    'sphinx_last_updated_by_git',  # Infer last updated date via git.
+    'nbsphinx',  # Jupyter notebooks.
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -59,5 +62,9 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-
-html_favicon = 'favicon.ico'
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_favicon = 'img/favicon.ico'
+html_logo = 'img/full_logo_300.png'
+html_theme_options = {
+    'logo_only': True,
+}

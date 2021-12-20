@@ -1,6 +1,6 @@
-#######################
-Trials and Observations
-#######################
+#############################
+Data: Trials and Observations
+#############################
 
 Inference is performed by fitting a model to a set of observed behavioral
 outcomes. Two types of behavioral outcomes are currently supported:

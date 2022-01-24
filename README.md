@@ -14,7 +14,7 @@ PsiZ provides computational tools for modeling how people perceive the world. Th
 
 ## What's in a name?
 
-The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to represent the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
+The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to denote the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
 
 ## Installation
 

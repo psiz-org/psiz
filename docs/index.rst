@@ -6,21 +6,38 @@
 PsiZ: Psychological Embeddings
 ==============================
 
+Welcome to PsiZ! If this is your first visit, we suggest reading the Introduction first.
+
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started
 
-   intro
-   quick_start
+   src/first_steps/intro
+   src/first_steps/quick_start
 
 .. toctree::
    :maxdepth: 2
-   :caption: Notebook Tutorials
+   :caption: Beginner Tutorial
    
-   trials_and_obs
-   models
-   hosted
-   your_data
+   src/beginner_tutorial/beginner_tutorial
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+   src/tutorials/vi
+   src/tutorials/active_learning
+   
+.. toctree::
+   :maxdepth: 2
+   :caption: Features
+
+   src/features/overview
+   src/features/data
+   src/features/models
+   src/features/hosted
+   src/features/faq
+   
 
 Indices and tables
 ==================

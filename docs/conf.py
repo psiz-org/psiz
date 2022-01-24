@@ -40,7 +40,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.imgmath',  # Render math equations.
     'sphinx_last_updated_by_git',  # Infer last updated date via git.
-    'nbsphinx',  # Jupyter notebooks.
+    'myst_nb',  # Parsing Jupyter notebooks.
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,3 +69,4 @@ html_logo = 'img/full_logo_300.png'
 html_theme_options = {
     'logo_only': True,
 }
+numfig = True

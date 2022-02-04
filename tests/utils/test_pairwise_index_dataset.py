@@ -21,8 +21,12 @@ import pytest
 from psiz.utils import pairwise_index_dataset
 
 
-def test_defaults():
-    """Test default optional arguments."""
+def test_scalar_defaults():
+    """Test default optional arguments.
+
+    Scalar argument.
+
+    """
     n_stimuli = 5
     ds_pairs, ds_info = pairwise_index_dataset(n_stimuli)
     pairs = list(ds_pairs.as_numpy_iterator())
@@ -42,7 +46,60 @@ def test_defaults():
     assert ds_info['batch_size'] == 10
     assert ds_info['n_batch'] == 1.0
     assert ds_info['elements'] == 'upper'
-    assert not ds_info['mask_zero']
+
+
+def test_array_defaults():
+    """Test default optional arguments.
+
+    Array argument.
+
+    """
+    n_stimuli = 5
+    ds_pairs, ds_info = pairwise_index_dataset(np.arange(n_stimuli))
+    pairs = list(ds_pairs.as_numpy_iterator())
+    pairs_0 = pairs[0][0]
+    pairs_1 = pairs[0][1]
+
+    pairs_0_desired = np.array(
+        [0, 0, 0, 0, 1, 1, 1, 2, 2, 3], dtype=np.int32
+    )
+    pairs_1_desired = np.array(
+        [1, 2, 3, 4, 2, 3, 4, 3, 4, 4], dtype=np.int32
+    )
+    np.testing.assert_array_equal(pairs_0, pairs_0_desired)
+    np.testing.assert_array_equal(pairs_1, pairs_1_desired)
+
+    assert ds_info['n_pair'] == 10
+    assert ds_info['batch_size'] == 10
+    assert ds_info['n_batch'] == 1.0
+    assert ds_info['elements'] == 'upper'
+
+
+def test_list_defaults():
+    """Test default optional arguments.
+
+    List argument.
+
+    """
+    indices = [0, 1, 2, 3, 4]
+    ds_pairs, ds_info = pairwise_index_dataset(indices)
+    pairs = list(ds_pairs.as_numpy_iterator())
+    pairs_0 = pairs[0][0]
+    pairs_1 = pairs[0][1]
+
+    pairs_0_desired = np.array(
+        [0, 0, 0, 0, 1, 1, 1, 2, 2, 3], dtype=np.int32
+    )
+    pairs_1_desired = np.array(
+        [1, 2, 3, 4, 2, 3, 4, 3, 4, 4], dtype=np.int32
+    )
+    np.testing.assert_array_equal(pairs_0, pairs_0_desired)
+    np.testing.assert_array_equal(pairs_1, pairs_1_desired)
+
+    assert ds_info['n_pair'] == 10
+    assert ds_info['batch_size'] == 10
+    assert ds_info['n_batch'] == 1.0
+    assert ds_info['elements'] == 'upper'
 
 
 def test_all():
@@ -72,7 +129,6 @@ def test_all():
     assert ds_info['batch_size'] == 25
     assert ds_info['n_batch'] == 1.0
     assert ds_info['elements'] == 'all'
-    assert not ds_info['mask_zero']
 
 
 def test_lower():
@@ -98,7 +154,6 @@ def test_lower():
     assert ds_info['batch_size'] == 10
     assert ds_info['n_batch'] == 1.0
     assert ds_info['elements'] == 'lower'
-    assert not ds_info['mask_zero']
 
 
 def test_off():
@@ -124,7 +179,6 @@ def test_off():
     assert ds_info['batch_size'] == 20
     assert ds_info['n_batch'] == 1.0
     assert ds_info['elements'] == 'off'
-    assert not ds_info['mask_zero']
 
 
 def test_wrong():
@@ -162,7 +216,6 @@ def test_subsample_0():
     assert ds_info['batch_size'] == 10
     assert ds_info['n_batch'] == 1.0
     assert ds_info['elements'] == 'all'
-    assert not ds_info['mask_zero']
 
 
 def test_subsample_1():
@@ -190,7 +243,6 @@ def test_subsample_1():
     assert ds_info['batch_size'] == 10
     assert ds_info['n_batch'] == 1.0
     assert ds_info['elements'] == 'upper'
-    assert not ds_info['mask_zero']
 
 
 def test_subsample_wrong():
@@ -212,11 +264,11 @@ def test_subsample_wrong():
     assert e_info.type == ValueError
 
 
-def test_mask_and_batch_size():
-    """Test non-default mask and batch_size arguments."""
+def test_batch_size():
+    """Test non-default index and batch_size arguments."""
     n_stimuli = 5
     ds_pairs, ds_info = pairwise_index_dataset(
-        n_stimuli, elements='all', mask_zero=True, batch_size=5
+        np.arange(n_stimuli) + 1, elements='all', batch_size=5
     )
     pairs = list(ds_pairs.as_numpy_iterator())
 
@@ -240,7 +292,6 @@ def test_mask_and_batch_size():
     assert ds_info['batch_size'] == 5
     assert ds_info['n_batch'] == 5.0
     assert ds_info['elements'] == 'all'
-    assert ds_info['mask_zero']
 
 
 def test_groups():
@@ -273,4 +324,3 @@ def test_groups():
     assert ds_info['batch_size'] == 10
     assert ds_info['n_batch'] == 1.0
     assert ds_info['elements'] == 'upper'
-    assert not ds_info['mask_zero']

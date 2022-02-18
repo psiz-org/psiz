@@ -31,20 +31,34 @@ from psiz.utils import random_combinations
 class RandomRate(DocketGenerator):
     """A trial generator that blindly samples trials."""
 
-    def __init__(self, n_stimuli, n_present=2):
+    def __init__(self, eligible_indices, n_present=2, mask_zero=False):
         """Initialize.
 
         Arguments:
-            n_stimuli: A scalar indicating the total number of unique
-                stimuli.
+            eligible_indices: A 1D array-like of integers indicating
+                the eligible indices.
             n_present: A scalar indicating the number of unique stimuli
                 per trial.
+            mask_zero (optional): A Boolean indicating if zero should
+                be interpretted as a mask value in `stimulus_set`. By
+                default, `mask_zero=False`.
 
         """
         DocketGenerator.__init__(self)
 
-        self.n_stimuli = n_stimuli
+        eligible_indices = np.array(eligible_indices, copy=False)
+        if eligible_indices.ndim == 0:
+            raise ValueError('Argument `eligible_indices` must be 1D.')
+        elif eligible_indices.ndim != 1:
+            raise ValueError('Argument `eligible_indices` must be 1D.')
+        self.eligible_indices = eligible_indices
+        self.n_stimuli = len(eligible_indices)
+
+        if n_present > self.n_stimuli:
+            raise ValueError('`n_present` must be less than `n_stimuli`')
+
         self.n_present = n_present
+        self.mask_zero = mask_zero
 
     def generate(self, n_trial):
         """Return generated trials based on provided arguments.
@@ -57,9 +71,9 @@ class RandomRate(DocketGenerator):
             A RateDocket object.
 
         """
-        idx_eligable = np.arange(self.n_stimuli, dtype=np.int32)
+        idx_eligable = self.eligible_indices
         prob = np.ones([self.n_stimuli]) / self.n_stimuli
         stimulus_set = random_combinations(
             idx_eligable, self.n_present, n_trial, p=prob
         )
-        return RateDocket(stimulus_set)
+        return RateDocket(stimulus_set, mask_zero=self.mask_zero)

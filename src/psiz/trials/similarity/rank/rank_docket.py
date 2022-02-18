@@ -85,7 +85,9 @@ class RankDocket(RankTrials):
 
     """
 
-    def __init__(self, stimulus_set, n_select=None, is_ranked=None):
+    def __init__(
+            self, stimulus_set, n_select=None, is_ranked=None,
+            mask_zero=False):
         """Initialize.
 
         Arguments:
@@ -93,9 +95,13 @@ class RankDocket(RankTrials):
                 important. See SimilarityTrials.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
+            mask_zero (optional): See SimilarityTrials.
 
         """
-        RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
+        RankTrials.__init__(
+            self, stimulus_set, n_select=n_select, is_ranked=is_ranked,
+            mask_zero=mask_zero
+        )
 
         # Determine unique display configurations.
         self._set_configuration_data(
@@ -113,8 +119,8 @@ class RankDocket(RankTrials):
 
         """
         return RankDocket(
-            self.stimulus_set[index, :], self.n_select[index],
-            self.is_ranked[index]
+            self.stimulus_set[index, :], n_select=self.n_select[index],
+            is_ranked=self.is_ranked[index], mask_zero=self.mask_zero
         )
 
     def _set_configuration_data(self, n_reference, n_select, is_ranked):
@@ -192,6 +198,7 @@ class RankDocket(RankTrials):
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)
+        f.create_dataset("mask_zero", data=self.mask_zero)
         f.close()
 
     def as_dataset(self, groups=None):
@@ -213,9 +220,7 @@ class RankDocket(RankTrials):
         # Return tensorflow dataset.
         stimulus_set = self.all_outcomes()
         x = {
-            'stimulus_set': tf.constant(
-                stimulus_set + 1, dtype=tf.int32
-            ),
+            'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
             'is_select': tf.constant(
                 np.expand_dims(self.is_select(compress=False), axis=2),
                 dtype=tf.bool
@@ -236,9 +241,15 @@ class RankDocket(RankTrials):
         stimulus_set = f["stimulus_set"][()]
         n_select = f["n_select"][()]
         is_ranked = f["is_ranked"][()]
+        try:
+            mask_zero = f["mask_zero"][()]
+        except KeyError:
+            mask_zero = False
+
         f.close()
         trials = RankDocket(
-            stimulus_set, n_select=n_select, is_ranked=is_ranked
+            stimulus_set, n_select=n_select, is_ranked=is_ranked,
+            mask_zero=mask_zero
         )
         return trials
 
@@ -256,35 +267,34 @@ class RankDocket(RankTrials):
             A new RankTrials object.
 
         """
-        # Determine the maximum number of references.
-        max_n_reference = 0
-        for i_trials in trials_list:
-            if i_trials.max_n_reference > max_n_reference:
-                max_n_reference = i_trials.max_n_reference
+        _, max_n_present, mask_zero = cls._stack_precheck(
+            trials_list
+        )
 
         # Grab relevant information from first entry in list.
-        n_pad = max_n_reference - trials_list[0].max_n_reference
+        n_pad = max_n_present - trials_list[0].max_n_present
         pad_width = ((0, 0), (0, n_pad))
         stimulus_set = np.pad(
-            trials_list[0].stimulus_set,
-            pad_width, mode='constant', constant_values=-1
+            trials_list[0].stimulus_set, pad_width, mode='constant',
+            constant_values=cls._mask_value
         )
 
         n_select = trials_list[0].n_select
         is_ranked = trials_list[0].is_ranked
 
         for i_trials in trials_list[1:]:
-            n_pad = max_n_reference - i_trials.max_n_reference
+            n_pad = max_n_present - i_trials.max_n_present
             pad_width = ((0, 0), (0, n_pad))
             curr_stimulus_set = np.pad(
-                i_trials.stimulus_set,
-                pad_width, mode='constant', constant_values=-1
+                i_trials.stimulus_set, pad_width, mode='constant',
+                constant_values=cls._mask_value
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
             n_select = np.hstack((n_select, i_trials.n_select))
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
 
         trials_stacked = RankDocket(
-            stimulus_set, n_select, is_ranked
+            stimulus_set, n_select=n_select, is_ranked=is_ranked,
+            mask_zero=mask_zero
         )
         return trials_stacked

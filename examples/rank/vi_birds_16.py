@@ -25,6 +25,7 @@ is determined by `Path.home()`.
 """
 
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 import shutil
 
@@ -40,8 +41,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():

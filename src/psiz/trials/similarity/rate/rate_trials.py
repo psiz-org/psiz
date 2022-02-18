@@ -33,31 +33,34 @@ from psiz.trials.similarity.similarity_trials import SimilarityTrials
 class RateTrials(SimilarityTrials, metaclass=ABCMeta):
     """Abstract base class for rank-type trials."""
 
-    def __init__(self, stimulus_set):
+    def __init__(self, stimulus_set, mask_zero=False):
         """Initialize.
 
         Arguments:
             stimulus_set: An integer matrix containing indices that
                 indicate the set of stimuli used in each trial. Each
                 row indicates the stimuli used in one trial. It is
-                assumed that stimuli indices are composed of integers
-                from [0, N-1], where N is the number of unique stimuli.
-                The value -1 can be used as a placeholder for
-                non-existent stimuli.
-                shape = (n_trial, max(n_present))
+                assumed that stimuli indices are composed of
+                non-negative integers.
+                shape = (n_trial, max_n_present)
+            mask_zero (optional): See SimilarityTrials.
 
         """
-        SimilarityTrials.__init__(self, stimulus_set)
-
-        n_present = self._infer_n_present()
-        self.n_present = self._check_n_present(n_present)
+        SimilarityTrials.__init__(self, stimulus_set, mask_zero=mask_zero)
+        self.n_present = self._check_n_present(self.n_present)
 
         # Format stimulus set.
-        self.max_n_present = np.amax(self.n_present)
         self.stimulus_set = self.stimulus_set[:, 0:self.max_n_present]
 
     def _check_n_present(self, n_present):
         """Check the argument `n_present`.
+
+        Valid rate similarity trials must have at least two stimuli.
+
+        Returns:
+            n_present: An integer array indicating the number of
+                stimuli present in each trial.
+                shape = [n_trial, 1]
 
         Raises:
             ValueError

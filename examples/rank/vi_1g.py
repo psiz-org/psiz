@@ -45,8 +45,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Modify the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -90,9 +90,7 @@ def main():
     color_array = np.vstack([gray_array, color_array])
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, mask_zero=True
-    )
+    ds_pairs, _ = psiz.utils.pairwise_index_dataset(n_stimuli)
 
     model_true = ground_truth(n_stimuli, n_dim)
 
@@ -101,9 +99,7 @@ def main():
     ).numpy()
 
     # Generate a random docket of trials.
-    generator = psiz.trials.RandomRank(
-        n_stimuli, n_reference=8, n_select=2
-    )
+    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
@@ -363,7 +359,7 @@ def ground_truth(n_stimuli, n_dim):
     scale_request = .17
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58
         )
@@ -414,13 +410,13 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
 
     # Create variational stimuli layer.
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),

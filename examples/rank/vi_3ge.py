@@ -55,8 +55,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -105,9 +105,7 @@ def main():
     )
 
     # Generate a random docket of trials to show each group.
-    generator = psiz.trials.RandomRank(
-        n_stimuli, n_reference=8, n_select=2
-    )
+    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
@@ -281,7 +279,7 @@ def main():
 
 def ground_truth(n_stimuli, n_group):
     """Return a ground truth embedding."""
-    # Mimicing a category learning task.
+    # Mimicking a category learning task.
     n_class = 5
     n_exemplar_per_class = 6
     n_dim = 2
@@ -306,12 +304,8 @@ def ground_truth(n_stimuli, n_group):
             )
         )
     class_mean_full = np.concatenate(class_mean_full, axis=0)
-    # Add placeholder to zero index.
-    class_mean_full = np.concatenate(
-        [np.zeros([1, n_dim]), class_mean_full], axis=0
-    )
 
-    n_exemplar = (n_class * n_exemplar_per_class) + 1
+    n_exemplar = (n_class * n_exemplar_per_class)
     exemplar_locs_centered = np.random.normal(
         loc=0.0, scale=.04, size=[n_exemplar, n_dim]
     )
@@ -358,7 +352,7 @@ def build_ground_truth_stimuli(class_mean_full, exemplar_locs_centered, scale):
     # NOTE: n_stimuli includes placeholder already so do not increment by 1.
     exemplar_locs = class_mean_full + (scale * exemplar_locs_centered)
     stim = tf.keras.layers.Embedding(
-        n_stimuli, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embeddings_initializer=tf.keras.initializers.Constant(exemplar_locs)
     )
     return stim
@@ -424,13 +418,13 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
     posterior_scale = .0001
     prior_scale = .2
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(posterior_scale).numpy()
         )
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),
@@ -453,7 +447,7 @@ def build_vi_group_stimuli(n_stimuli, n_dim, shared_prior, kl_weight, name):
     prior_scale = .0001  # Set to match posterior of shared prior.
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
@@ -637,7 +631,7 @@ def model_similarity(
     n_stimuli = model.n_stimuli
 
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, mask_zero=True, groups=groups
+        n_stimuli, groups=groups
     )
     simmat = psiz.utils.pairwise_similarity(
         model.stimuli, model.kernel, ds_pairs, n_sample=n_sample,

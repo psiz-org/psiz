@@ -20,7 +20,7 @@ import pytest
 from psiz.trials import RandomRank
 
 
-def test_generate():
+def test_generate_with_integer():
     """Test random generator."""
     n_stimuli_desired = 10
     n_trial_desired = 50
@@ -37,10 +37,46 @@ def test_generate():
     assert sum(docket.n_reference == n_reference_desired) == n_trial_desired
     assert docket.stimulus_set.shape[0] == n_trial_desired
     assert docket.stimulus_set.shape[1] == n_reference_desired + 1
+
     min_actual = np.min(docket.stimulus_set)
     max_actual = np.max(docket.stimulus_set)
-    assert min_actual >= -1  # Need -1 for padding.
-    assert max_actual < n_stimuli_desired
+    assert min_actual >= 0
+    assert max_actual < 10
+    n_unique_desired = n_reference_desired + 1
+    for i_trial in range(n_trial_desired):
+        # NOTE: The padding padding values (-1)'s are counted as unique, thus
+        # the indexing into stimulus set.
+        assert (
+            len(np.unique(
+                docket.stimulus_set[i_trial, 0:n_reference_desired + 1])
+                ) == n_unique_desired
+        )
+    assert sum(docket.n_select == n_select_desired) == n_trial_desired
+    assert sum(docket.is_ranked == is_ranked_desired) == n_trial_desired
+    
+
+def test_generate_with_array():
+    """Test random generator."""
+    eligible_indices = np.arange(1, 11)
+    n_trial_desired = 50
+    n_reference_desired = 4
+    n_select_desired = 2
+    is_ranked_desired = True
+    gen = RandomRank(
+        eligible_indices, n_reference=n_reference_desired,
+        n_select=n_select_desired
+    )
+    docket = gen.generate(n_trial_desired)
+
+    assert docket.n_trial == n_trial_desired
+    assert sum(docket.n_reference == n_reference_desired) == n_trial_desired
+    assert docket.stimulus_set.shape[0] == n_trial_desired
+    assert docket.stimulus_set.shape[1] == n_reference_desired + 1
+
+    min_actual = np.min(docket.stimulus_set)
+    max_actual = np.max(docket.stimulus_set)
+    assert min_actual >= 1
+    assert max_actual <= 10
     n_unique_desired = n_reference_desired + 1
     for i_trial in range(n_trial_desired):
         # NOTE: The padding padding values (-1)'s are counted as unique, thus
@@ -62,12 +98,12 @@ def test_per_query_0():
     One worker.
 
     """
-    n_stimuli = 10
+    eligible_indices = np.arange(1, 11)
     n_highest = None
     replace = False
     verbose = 1
     gen = RandomRank(
-        n_stimuli, replace=replace, n_highest=n_highest, verbose=verbose
+        eligible_indices, replace=replace, n_highest=n_highest, verbose=verbose
     )
 
     # Generate.
@@ -80,7 +116,7 @@ def test_per_query_0():
     used_query_idx, query_count = np.unique(
         docket.stimulus_set[:, 0], return_counts=True
     )
-    used_query_idx_desired = np.array([0, 1, 8, 9], dtype=np.int32)
+    used_query_idx_desired = np.array([1, 2, 9, 10], dtype=np.int32)
     query_count_desired = np.array([10, 10, 10, 10], dtype=np.int32)
     np.testing.assert_array_equal(used_query_idx, used_query_idx_desired)
     np.testing.assert_array_equal(query_count, query_count_desired)
@@ -105,6 +141,7 @@ def test_query_with_weight():
     With weight.
 
     """
+    eligible_indices = np.arange(1, 21)
     n_stimuli = 20
     n_reference = 8
     n_select = 2
@@ -118,7 +155,7 @@ def test_query_with_weight():
     n_worker = 2
 
     gen = RandomRank(
-        n_stimuli, n_reference=n_reference, n_select=n_select, w=w,
+        eligible_indices, n_reference=n_reference, n_select=n_select, w=w,
         replace=replace, n_worker=n_worker
     )
 
@@ -130,7 +167,7 @@ def test_query_with_weight():
     used_query_idx, query_count = np.unique(
         docket.stimulus_set[:, 0], return_counts=True
     )
-    used_query_idx_desired = np.array([0, 1, 8, 9], dtype=np.int32)
+    used_query_idx_desired = np.array([1, 2, 9, 10], dtype=np.int32)
     query_count_desired = np.array([10, 10, 10, 10], dtype=np.int32)
     np.testing.assert_array_equal(used_query_idx, used_query_idx_desired)
     np.testing.assert_array_equal(query_count, query_count_desired)
@@ -148,6 +185,7 @@ def test_query_with_highest():
 
     """
     n_stimuli = 10
+    eligible_indices = np.arange(1, n_stimuli + 1)
     n_reference = 2
     n_select = 1
     w = np.array(
@@ -170,7 +208,7 @@ def test_query_with_highest():
     verbose = 1
 
     gen = RandomRank(
-        n_stimuli, n_reference=n_reference, n_select=n_select, w=w,
+        eligible_indices, n_reference=n_reference, n_select=n_select, w=w,
         replace=replace, n_highest=n_highest, n_worker=n_worker,
         verbose=verbose
     )
@@ -181,11 +219,11 @@ def test_query_with_highest():
 
     # Check references within highest.
     refs_sub_desired = {
-        0: {1, 2, 3, 4, 5},
-        4: {5, 6, 7, 8, 9},
-        9: {0, 1, 2, 3, 4},
+        1: {2, 3, 4, 5, 6},
+        5: {6, 7, 8, 9, 10},
+        10: {1, 2, 3, 4, 5},
     }
-    query_idx_list = np.array([0, 4, 9], dtype=np.int)
+    query_idx_list = np.array([1, 5, 10], dtype=np.int)
     for i_query in query_idx_list:
         bidx = np.equal(docket.stimulus_set[:, 0], i_query)
         qr_set_sub = docket.stimulus_set[bidx]
@@ -198,7 +236,7 @@ def test_query_with_highest():
     assert n_unique == n_unique_desired
 
 
-def test_query_other():
+def test_query_other_nomaskzero():
     """Test.
 
     Default initialization.
@@ -207,7 +245,7 @@ def test_query_other():
 
     """
     n_stimuli = 10
-    gen = RandomRank(n_stimuli, verbose=1)
+    gen = RandomRank(n_stimuli, mask_zero=False, verbose=1)
 
     # Generate.
     n_trial_per_query = 10
@@ -218,6 +256,40 @@ def test_query_other():
         docket.stimulus_set[:, 0], return_counts=True
     )
     used_query_idx_desired = np.arange(n_stimuli, dtype=np.int32)
+    query_count_desired = np.full([10], n_trial_per_query, dtype=np.int32)
+    np.testing.assert_array_equal(used_query_idx, used_query_idx_desired)
+    np.testing.assert_array_equal(query_count, query_count_desired)
+
+    # Check trial configuration
+    n_trial_desired = n_stimuli * n_trial_per_query
+    np.testing.assert_array_equal(
+        docket.n_select, np.ones([n_trial_desired], dtype=np.int32)
+    )
+    np.testing.assert_array_equal(
+        docket.n_reference, np.full([n_trial_desired], 2, dtype=np.int32)
+    )
+
+
+def test_query_other_maskzero():
+    """Test.
+
+    Default initialization.
+    Alternative generation with replace=True, verbose=1, default query
+    list.
+
+    """
+    n_stimuli = 10
+    gen = RandomRank(np.arange(n_stimuli) + 1, mask_zero=True, verbose=1)
+
+    # Generate.
+    n_trial_per_query = 10
+    docket = gen.generate(n_trial_per_query, per_query=True)
+
+    # Count query occurence.
+    used_query_idx, query_count = np.unique(
+        docket.stimulus_set[:, 0], return_counts=True
+    )
+    used_query_idx_desired = np.arange(1, n_stimuli + 1, dtype=np.int32)
     query_count_desired = np.full([10], n_trial_per_query, dtype=np.int32)
     np.testing.assert_array_equal(used_query_idx, used_query_idx_desired)
     np.testing.assert_array_equal(query_count, query_count_desired)

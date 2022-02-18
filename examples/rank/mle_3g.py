@@ -52,8 +52,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -63,16 +63,14 @@ def main():
     n_dim = 4
     n_group = 3
     n_restart = 1
-    epochs = 1000
-    n_trial = 2000
+    epochs = 3000
+    n_trial = 6000
     batch_size = 128
 
     model_true = ground_truth(n_stimuli, n_dim, n_group)
 
     # Generate a random docket of trials to show each group.
-    generator = psiz.trials.RandomRank(
-        n_stimuli, n_reference=8, n_select=2
-    )
+    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
@@ -190,7 +188,7 @@ def main():
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17
         )
@@ -270,7 +268,7 @@ def build_model(n_stimuli, n_dim, n_group):
 
     """
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -313,7 +311,7 @@ def build_kernel(similarity, n_dim):
 
 def model_similarity(model, groups=[]):
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        model.n_stimuli, mask_zero=True, groups=groups
+        model.n_stimuli, groups=groups
     )
     simmat = psiz.utils.pairwise_similarity(
         model.stimuli, model.kernel, ds_pairs, use_group_kernel=True

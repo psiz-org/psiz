@@ -35,10 +35,10 @@ def setup_docket_0():
     """
     stimulus_set = np.array(
         (
-            (0, 1),
-            (9, 12),
-            (3, 4),
-            (3, 4)
+            (1, 2),
+            (10, 13),
+            (4, 5),
+            (4, 5)
         ), dtype=np.int32
     )
     n_trial = 4
@@ -51,7 +51,7 @@ def setup_docket_0():
         index=[0])
     configuration_id = np.array((0, 0, 0, 0))
 
-    docket = RateDocket(stimulus_set)
+    docket = RateDocket(stimulus_set, mask_zero=True)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_present': n_present, 'docket': docket,
@@ -66,10 +66,10 @@ def setup_docket_1():
     """
     stimulus_set = np.array(
         (
-            (0, 1, -1),
-            (9, 12, -1),
-            (3, 4, -1),
-            (3, 4, 5)
+            (1, 2, 0),
+            (10, 13, 0),
+            (4, 5, 0),
+            (4, 5, 6)
         ), dtype=np.int32
     )
     n_trial = 4
@@ -82,7 +82,7 @@ def setup_docket_1():
         index=[0, 3])
     configuration_id = np.array((0, 0, 0, 1))
 
-    docket = RateDocket(stimulus_set)
+    docket = RateDocket(stimulus_set, mask_zero=True)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set,
         'n_present': n_present, 'docket': docket,
@@ -97,10 +97,10 @@ def setup_obs_0():
     """
     stimulus_set = np.array(
         (
-            (0, 1, -1),
-            (9, 12, -1),
-            (3, 4, -1),
-            (3, 4, 5)
+            (1, 2, 0),
+            (10, 13, 0),
+            (4, 5, 0),
+            (4, 5, 6)
         ), dtype=np.int32
     )
     rating = np.array(
@@ -117,7 +117,7 @@ def setup_obs_0():
         index=[0, 3])
     configuration_id = np.array((0, 0, 0, 1))
 
-    obs = RateObservations(stimulus_set, rating=rating)
+    obs = RateObservations(stimulus_set, rating=rating, mask_zero=True)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set, 'rating': rating,
         'n_present': n_present, 'groups': groups, 'obs': obs,
@@ -132,10 +132,10 @@ def setup_obs_1():
     """
     stimulus_set = np.array(
         (
-            (0, 1, -1),
-            (9, 12, -1),
-            (3, 4, -1),
-            (3, 4, 5)
+            (1, 2, 0),
+            (10, 13, 0),
+            (4, 5, 0),
+            (4, 5, 6)
         ), dtype=np.int32
     )
     rating = np.array(
@@ -154,7 +154,7 @@ def setup_obs_1():
     configuration_id = np.array((0, 0, 1, 2), dtype=np.int32)
 
     obs = RateObservations(
-        stimulus_set, rating=rating, groups=groups)
+        stimulus_set, rating=rating, mask_zero=True, groups=groups)
     return {
         'n_trial': n_trial, 'stimulus_set': stimulus_set, 'rating': rating,
         'n_present': n_present, 'groups': groups, 'obs': obs,
@@ -163,13 +163,18 @@ def setup_obs_1():
     }
 
 
-def ground_truth(n_stimuli):
+def ground_truth(n_stimuli, mask_zero):
     """Return a ground truth model."""
     n_dim = 3
 
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
-    )
+    if mask_zero:
+        stimuli = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True
+        )
+    else:
+        stimuli = tf.keras.layers.Embedding(
+            n_stimuli, n_dim
+        )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
         trainable=False,
@@ -214,49 +219,81 @@ def ground_truth(n_stimuli):
 class TestRateDocket:
     """Test class RateDocket."""
 
-    def test_invalid_stimulus_set(self):
+    def test_invalid_stimulus_set_nomaskzero(self):
         """Test handling of invalid `stimulus_set` argument."""
         # Non-integer input.
         stimulus_set = np.array((
-            (0., 1, 2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+            (1., 2, 3),
+            (10, 13, 8),
+            (4, 5, 6),
+            (16, 17, 18)))
         with pytest.raises(Exception) as e_info:
             RateDocket(stimulus_set)
         assert e_info.type == ValueError
 
-        # Contains integers below -1.
+        # Contains integers below 0.
         stimulus_set = np.array((
-            (0, 1, -2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
-        with pytest.raises(Exception) as e_info:
+            (1, 2, -1),
+            (10, 13, 8),
+            (4, 5, 6),
+            (16, 17, 18)
+        ))
+        with pytest.warns(Warning):
             RateDocket(stimulus_set)
-        assert e_info.type == ValueError
 
         # Does not contain enough stimuli for each trial.
         stimulus_set = np.array((
-            (0, 1, 2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, -1, -1, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+            (1,),
+            (10,),
+            (4,),
+            (4,)
+        ))
         with pytest.raises(Exception) as e_info:
             RateDocket(stimulus_set)
+        assert e_info.type == ValueError
+
+    def test_invalid_stimulus_set_maskzero(self):
+        """Test handling of invalid `stimulus_set` argument."""
+        # Non-integer input.
+        stimulus_set = np.array((
+            (1., 2, 3, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18)))
+        with pytest.raises(Exception) as e_info:
+            RateDocket(stimulus_set, mask_zero=True)
+        assert e_info.type == ValueError
+
+        # Contains integers below 0.
+        stimulus_set = np.array((
+            (1, 2, -1, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18)))
+        with pytest.warns(Warning):
+            RateDocket(stimulus_set, mask_zero=True)
+
+        # Does not contain enough stimuli for each trial.
+        stimulus_set = np.array((
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 0, 0, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18)))
+        with pytest.raises(Exception) as e_info:
+            RateDocket(stimulus_set, mask_zero=True)
         assert e_info.type == ValueError
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
         stimulus_set = np.array((
-            (0, 1, 2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 2, 6, 7, -1, -1, -1, -1),
-            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 3, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18)))
 
         # Create original trials.
-        docket = RateDocket(stimulus_set)
+        docket = RateDocket(stimulus_set, mask_zero=True)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(docket.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -265,31 +302,32 @@ class TestRateDocket:
         np.testing.assert_array_equal(
             trials_subset.config_idx, desired_config_idx
         )
+        assert trials_subset.mask_zero
 
     def test_stack_config_idx(self):
         """Test if config_idx is updated correctly after stack."""
         # Create first set of original trials.
         stimulus_set = np.array((
-            (0, 1, 2, 3, -1, -1, -1, -1, -1),
-            (9, 12, 7, 1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 2, 6, 7, -1, -1, -1, -1),
-            (3, 4, 5, 6, 13, 14, 15, 16, 17)
+            (1, 2, 3, 4, 0, 0, 0, 0, 0),
+            (10, 13, 8, 2, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 3, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18)
         ))
-        trials_0 = RateDocket(stimulus_set)
+        trials_0 = RateDocket(stimulus_set, mask_zero=True)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
         stimulus_set = np.array((
-            (0, 1, -1, -1, -1, -1, -1, -1, -1),
-            (9, 12, -1, -1, -1, -1, -1, -1, -1),
-            (3, 4, -1, -1, -1, -1, -1, -1, -1),
-            (5, 6, -1, -1, -1, -1, -1, -1, -1),
-            (7, 8, -1, -1, -1, -1, -1, -1, -1),
+            (1, 2, 0, 0, 0, 0, 0, 0, 0),
+            (10, 13, 0, 0, 0, 0, 0, 0, 0),
+            (4, 5, 0, 0, 0, 0, 0, 0, 0),
+            (6, 7, 0, 0, 0, 0, 0, 0, 0),
+            (8, 9, 0, 0, 0, 0, 0, 0, 0),
         ))
-        trials_1 = RateDocket(stimulus_set)
+        trials_1 = RateDocket(stimulus_set, mask_zero=True)
         desired_config_idx = np.array((0, 0, 0, 0, 0))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
@@ -299,6 +337,7 @@ class TestRateDocket:
         np.testing.assert_array_equal(
             trials_stack.config_idx, desired_config_idx
         )
+        assert trials_stack.mask_zero
 
     def test_n_trial_0(self, setup_docket_0):
         assert setup_docket_0['n_trial'] == setup_docket_0['docket'].n_trial
@@ -375,19 +414,20 @@ class TestRateDocket:
         np.testing.assert_array_equal(
             setup_docket_0['configuration_id'], loaded_docket.config_idx
         )
+        assert loaded_docket.mask_zero
 
 
 class TestRateObservations:
     """Test class RankObservations."""
 
-    def test_invalid_stimulus_set(self):
+    def test_invalid_stimulus_set_nomaskzero(self):
         """Test handling of invalid `stimulus_set` argument."""
         # Non-integer input.
         stimulus_set = np.array((
-            (0., 1, 2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 5, 6, 13, 14, 15, 16, 17)
+            (1., 2),
+            (10, 13),
+            (4, 5),
+            (17, 18)
         ))
         rating = np.array([.1, .2, .3, .4])
         with pytest.raises(Exception) as e_info:
@@ -396,30 +436,62 @@ class TestRateObservations:
 
         # Contains integers below -1.
         stimulus_set = np.array((
-            (0, 1, -2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 5, 6, 13, 14, 15, 16, 17)))
+            (0, -1),
+            (9, 12),
+            (4, 5),
+            (17, 18)))
+        with pytest.warns(Warning):
+            RateObservations(stimulus_set, rating=rating)
+
+        # Does not contain enough references for each trial.
+        stimulus_set = np.array((
+            (0,),
+            (9,),
+            (3,),
+            (17,)))
         with pytest.raises(Exception) as e_info:
             RateObservations(stimulus_set, rating=rating)
         assert e_info.type == ValueError
 
+    def test_invalid_stimulus_set_maskzero(self):
+        """Test handling of invalid `stimulus_set` argument."""
+        # Non-integer input.
+        stimulus_set = np.array((
+            (1., 2, 3, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18)
+        ))
+        rating = np.array([.1, .2, .3, .4])
+        with pytest.raises(Exception) as e_info:
+            RateObservations(stimulus_set, rating=rating, mask_zero=True)
+        assert e_info.type == ValueError
+
+        # Contains integers below 0.
+        stimulus_set = np.array((
+            (1, 2, -1, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18)))
+        with pytest.warns(Warning):
+            RateObservations(stimulus_set, rating=rating, mask_zero=True)
+
         # Does not contain enough references for each trial.
         stimulus_set = np.array((
-            (0, 1, 2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, -1, -1, -1, -1, -1, -1, -1, -1),
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (9, 12, 7, 0, 0, 0, 0, 0, 0),
+            (3, 0, 0, 0, 0, 0, 0, 0, 0),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
         with pytest.raises(Exception) as e_info:
-            RateObservations(stimulus_set, rating=rating)
+            RateObservations(stimulus_set, rating=rating, mask_zero=True)
         assert e_info.type == ValueError
 
     def test_invalid_groups(self):
         """Test handling of invalid `groups` argument."""
         stimulus_set = np.array((
-            (0, 1, 2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (9, 12, 7, 0, 0, 0, 0, 0, 0),
+            (3, 4, 5, 6, 7, 0, 0, 0, 0),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)
         ))
         rating = np.array([.1, .2, .3, .4])
@@ -427,28 +499,32 @@ class TestRateObservations:
         # Mismatch in number of trials
         groups = np.array(([0], [0], [1]))
         with pytest.raises(Exception) as e_info:
-            RateObservations(stimulus_set, rating=rating, groups=groups)
+            RateObservations(
+                stimulus_set, rating=rating, mask_zero=True, groups=groups
+            )
         assert e_info.type == ValueError
 
         # Below support.
         groups = np.array(([0], [-1], [1], [0]))
         with pytest.raises(Exception) as e_info:
-            RateObservations(stimulus_set, rating=rating, groups=groups)
+            RateObservations(
+                stimulus_set, rating=rating, mask_zero=True, groups=groups
+            )
         assert e_info.type == ValueError
 
     def test_subset_config_idx(self):
         """Test if config_idx is updated correctly after subset."""
         stimulus_set = np.array((
-            (0, 1, 2, -1, -1, -1, -1, -1, -1),
-            (9, 12, 7, -1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 2, 6, 7, -1, -1, -1, -1),
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (9, 12, 7, 0, 0, 0, 0, 0, 0),
+            (3, 4, 5, 6, 7, 0, 0, 0, 0),
+            (3, 4, 2, 6, 7, 0, 0, 0, 0),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)
         ))
         rating = np.array([.1, .2, .3, .4, .5])
 
         # Create original trials.
-        obs = RateObservations(stimulus_set, rating=rating)
+        obs = RateObservations(stimulus_set, rating=rating, mask_zero=True)
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(obs.config_idx, desired_config_idx)
         # Grab subset and check that config_idx is updated to start at 0.
@@ -457,33 +533,38 @@ class TestRateObservations:
         np.testing.assert_array_equal(
             trials_subset.config_idx, desired_config_idx
         )
+        assert trials_subset.mask_zero
 
     def test_stack_config_idx(self):
         """Test if config_idx is updated correctly after stack."""
         stimulus_set = np.array((
-            (0, 1, 2, 3, -1, -1, -1, -1, -1),
-            (9, 12, 7, 1, -1, -1, -1, -1, -1),
-            (3, 4, 5, 6, 7, -1, -1, -1, -1),
-            (3, 4, 2, 6, 7, -1, -1, -1, -1),
+            (1, 2, 3, 4, 0, 0, 0, 0, 0),
+            (9, 12, 7, 1, 0, 0, 0, 0, 0),
+            (3, 4, 5, 6, 7, 0, 0, 0, 0),
+            (3, 4, 2, 6, 7, 0, 0, 0, 0),
             (3, 4, 5, 6, 13, 14, 15, 16, 17)))
 
         # Create first set of original trials.
         rating = np.array([.1, .2, .3, .4, .5])
-        trials_0 = RateObservations(stimulus_set, rating=rating)
+        trials_0 = RateObservations(
+            stimulus_set, rating=rating, mask_zero=True
+        )
         desired_config_idx = np.array((0, 0, 1, 1, 2))
         np.testing.assert_array_equal(trials_0.config_idx, desired_config_idx)
 
         # Create second set of original trials, with non-overlapping
         # configuration.
         stimulus_set = np.array((
-            (0, 1, -1, -1, -1, -1, -1, -1, -1),
-            (9, 12, -1, -1, -1, -1, -1, -1, -1),
-            (3, 4, -1, -1, -1, -1, -1, -1, -1),
-            (5, 6, -1, -1, -1, -1, -1, -1, -1),
-            (7, 8, -1, -1, -1, -1, -1, -1, -1),
+            (1, 2, 0, 0, 0, 0, 0, 0, 0),
+            (9, 12, 0, 0, 0, 0, 0, 0, 0),
+            (3, 4, 0, 0, 0, 0, 0, 0, 0),
+            (5, 6, 0, 0, 0, 0, 0, 0, 0),
+            (7, 8, 0, 0, 0, 0, 0, 0, 0),
         ))
         rating = np.array([.6, .7, .8, .9, 1.])
-        trials_1 = RateObservations(stimulus_set, rating=rating)
+        trials_1 = RateObservations(
+            stimulus_set, rating=rating, mask_zero=True
+        )
         desired_config_idx = np.array((0, 0, 0, 0, 0))
         np.testing.assert_array_equal(trials_1.config_idx, desired_config_idx)
 
@@ -493,6 +574,7 @@ class TestRateObservations:
         np.testing.assert_array_equal(
             trials_stack.config_idx, desired_config_idx
         )
+        assert trials_stack.mask_zero
 
     def test_n_trial_0(self, setup_obs_0):
         assert setup_obs_0['n_trial'] == setup_obs_0['obs'].n_trial
@@ -610,7 +692,10 @@ class TestStack:
 
         n_trial = 50
         n_present = 2
-        generator = RandomRate(n_stimuli, n_present=n_present)
+        generator = RandomRate(
+            np.arange(1, n_stimuli + 1), n_present=n_present,
+            mask_zero=True
+        )
         docket = generator.generate(n_trial)
 
         double_trials = trials.stack((docket, docket))
@@ -620,14 +705,17 @@ class TestStack:
             double_trials.n_present[0:n_trial], docket.n_present)
         np.testing.assert_array_equal(
             double_trials.n_present[n_trial:], docket.n_present)
+        assert double_trials.mask_zero
 
         rating = np.random.uniform(size=n_trial)
         obs_novice = RateObservations(
-            docket.stimulus_set, rating=rating, groups=np.zeros([n_trial, 1])
+            docket.stimulus_set, rating=rating, mask_zero=True,
+            groups=np.zeros([n_trial, 1])
         )
         rating = np.random.uniform(size=n_trial)
         obs_expert = RateObservations(
-            docket.stimulus_set, rating=rating, groups=np.ones([n_trial, 1])
+            docket.stimulus_set, rating=rating, mask_zero=True,
+            groups=np.ones([n_trial, 1])
         )
         obs_all = trials.stack((obs_novice, obs_expert))
 
@@ -645,22 +733,33 @@ class TestStack:
         np.testing.assert_array_equal(
             obs_all.groups[n_trial:], obs_expert.groups
         )
+        assert obs_all.mask_zero
 
     def test_stack_different_config(self):
         """Test stack static method with different configurations."""
         n_stimuli = 20
         n_trial = 5
+        mask_value = 0
 
         n_present1 = 2
-        generator = RandomRate(n_stimuli, n_present=n_present1)
+        generator = RandomRate(
+            np.arange(1, n_stimuli + 1), n_present=n_present1,
+            mask_zero=True
+        )
         trials1 = generator.generate(n_trial)
 
         n_present2 = 3
-        generator = RandomRate(n_stimuli, n_present=n_present2)
+        generator = RandomRate(
+            np.arange(1, n_stimuli + 1), n_present=n_present2,
+            mask_zero=True
+        )
         trials2 = generator.generate(n_trial)
 
         n_present3 = 4
-        generator = RandomRate(n_stimuli, n_present=n_present3)
+        generator = RandomRate(
+            np.arange(1, n_stimuli + 1), n_present=n_present3,
+            mask_zero=True
+        )
         trials3 = generator.generate(n_trial)
 
         trials_all = trials.stack((trials1, trials2, trials3))
@@ -674,37 +773,46 @@ class TestStack:
         np.testing.assert_array_equal(
             trials_all.n_present, desired_n_present
         )
+        assert trials_all.mask_zero
 
         # Check padding values of first set (non-padded and then padded
         # values).
-        assert np.sum(np.equal(trials_all.stimulus_set[0:5, 0:2], -1)) == 0
+        assert np.sum(
+            np.equal(trials_all.stimulus_set[0:5, 0:2], mask_value)
+        ) == 0
         np.testing.assert_array_equal(
             trials_all.stimulus_set[0:5, 2:],
-            -1 * np.ones((5, 2), dtype=np.int32)
+            mask_value * np.ones((5, 2), dtype=np.int32)
         )
         # Check padding values of second set (non-padded and then padded
         # values).
-        assert np.sum(np.equal(trials_all.stimulus_set[5:10, 0:3], -1)) == 0
+        assert np.sum(
+            np.equal(trials_all.stimulus_set[5:10, 0:3], mask_value)
+        ) == 0
         np.testing.assert_array_equal(
             trials_all.stimulus_set[5:10, 3:],
-            -1 * np.ones((5, 1), dtype=np.int32)
+            mask_value * np.ones((5, 1), dtype=np.int32)
         )
         # Check padding values of third set (non-padded and then padded
         # values).
-        assert np.sum(np.equal(trials_all.stimulus_set[10:15, :], -1)) == 0
+        assert np.sum(
+            np.equal(trials_all.stimulus_set[10:15, :], mask_value)
+        ) == 0
 
         # Check padding when taking subset.
         trials_subset = trials_all.subset(np.arange(10))
         assert trials_subset.stimulus_set.shape[1] == 3
         # Check padding values of first set (non-padded and then padded
         # values).
-        assert np.sum(np.equal(trials_subset.stimulus_set[0:5, 0:2], -1)) == 0
+        assert np.sum(
+            np.equal(trials_subset.stimulus_set[0:5, 0:2], mask_value)
+        ) == 0
         np.testing.assert_array_equal(
             trials_subset.stimulus_set[0:5, 2:],
-            -1 * np.ones((5, 1), dtype=np.int32)
+            mask_value * np.ones((5, 1), dtype=np.int32)
         )
         # Check padding values of second set (non-padded and then padded
         # values).
         assert np.sum(
-            np.equal(trials_subset.stimulus_set[5:10, 0:3], -1)
+            np.equal(trials_subset.stimulus_set[5:10, 0:3], mask_value)
         ) == 0

@@ -113,8 +113,8 @@ class RankObservations(RankTrials):
     """
 
     def __init__(self, stimulus_set, n_select=None, is_ranked=None,
-                 groups=None, agent_id=None, session_id=None, weight=None,
-                 rt_ms=None):
+                 mask_zero=False, groups=None, agent_id=None, session_id=None,
+                 weight=None, rt_ms=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -127,6 +127,7 @@ class RankObservations(RankTrials):
                 order. See SimilarityTrials.
             n_select (optional): See SimilarityTrials.
             is_ranked (optional): See SimilarityTrials.
+            mask_zero (optional): See SimilarityTrials.
             groups (optional): An integer 2D array indicating the
                 group membership of each trial. It is assumed that
                 `groups` is composed of integers from [0, M-1] where
@@ -150,7 +151,10 @@ class RankObservations(RankTrials):
                 shape = (n_trial,1)
 
         """
-        RankTrials.__init__(self, stimulus_set, n_select, is_ranked)
+        RankTrials.__init__(
+            self, stimulus_set, n_select=n_select, is_ranked=is_ranked,
+            mask_zero=mask_zero
+        )
 
         # Handle default settings.
         if groups is None:
@@ -256,9 +260,10 @@ class RankObservations(RankTrials):
         """
         return RankObservations(
             self.stimulus_set[index, :], n_select=self.n_select[index],
-            is_ranked=self.is_ranked[index], groups=self.groups[index],
-            agent_id=self.agent_id[index], session_id=self.session_id[index],
-            weight=self.weight[index], rt_ms=self.rt_ms[index]
+            is_ranked=self.is_ranked[index], mask_zero=self.mask_zero,
+            groups=self.groups[index], agent_id=self.agent_id[index],
+            session_id=self.session_id[index], weight=self.weight[index],
+            rt_ms=self.rt_ms[index]
         )
 
     def _set_configuration_data(
@@ -372,6 +377,7 @@ class RankObservations(RankTrials):
         f.create_dataset("stimulus_set", data=self.stimulus_set)
         f.create_dataset("n_select", data=self.n_select)
         f.create_dataset("is_ranked", data=self.is_ranked)
+        f.create_dataset("mask_zero", data=self.mask_zero)
         f.create_dataset("groups", data=self.groups)
         f.create_dataset("agent_id", data=self.agent_id)
         f.create_dataset("session_id", data=self.session_id)
@@ -399,7 +405,7 @@ class RankObservations(RankTrials):
         # that we are interested for each trial.
         stimulus_set = self.all_outcomes()
         x = {
-            'stimulus_set': stimulus_set + 1,
+            'stimulus_set': stimulus_set,
             'is_select': np.expand_dims(
                 self.is_select(compress=False), axis=2
             ),
@@ -432,6 +438,10 @@ class RankObservations(RankTrials):
         n_select = f["n_select"][()]
         is_ranked = f["is_ranked"][()]
         try:
+            mask_zero = f["mask_zero"][()]
+        except KeyError:
+            mask_zero = False
+        try:
             groups = f["groups"][()]
         except KeyError:
             groups = f["group_id"][()]
@@ -461,8 +471,8 @@ class RankObservations(RankTrials):
 
         trials = RankObservations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            groups=groups, agent_id=agent_id, session_id=session_id,
-            weight=weight, rt_ms=rt_ms
+            mask_zero=mask_zero, groups=groups, agent_id=agent_id,
+            session_id=session_id, weight=weight, rt_ms=rt_ms
         )
         return trials
 
@@ -480,18 +490,16 @@ class RankObservations(RankTrials):
             A new RankTrials object.
 
         """
-        # Determine the maximum number of references.
-        max_n_reference = 0
-        for i_trials in trials_list:
-            if i_trials.max_n_reference > max_n_reference:
-                max_n_reference = i_trials.max_n_reference
+        _, max_n_present, mask_zero = cls._stack_precheck(
+            trials_list
+        )
 
         # Grab relevant information from first entry in list.
-        n_pad = max_n_reference - trials_list[0].max_n_reference
+        n_pad = max_n_present - trials_list[0].max_n_present
         pad_width = ((0, 0), (0, n_pad))
         stimulus_set = np.pad(
             trials_list[0].stimulus_set,
-            pad_width, mode='constant', constant_values=-1
+            pad_width, mode='constant', constant_values=cls._mask_value
         )
         n_select = trials_list[0].n_select
         is_ranked = trials_list[0].is_ranked
@@ -502,11 +510,11 @@ class RankObservations(RankTrials):
         rt_ms = trials_list[0].rt_ms
 
         for i_trials in trials_list[1:]:
-            n_pad = max_n_reference - i_trials.max_n_reference
+            n_pad = max_n_present - i_trials.max_n_present
             pad_width = ((0, 0), (0, n_pad))
             curr_stimulus_set = np.pad(
                 i_trials.stimulus_set,
-                pad_width, mode='constant', constant_values=-1
+                pad_width, mode='constant', constant_values=cls._mask_value
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
             n_select = np.hstack((n_select, i_trials.n_select))
@@ -520,6 +528,6 @@ class RankObservations(RankTrials):
         trials_stacked = RankObservations(
             stimulus_set, n_select=n_select, is_ranked=is_ranked,
             groups=groups, agent_id=agent_id, session_id=session_id,
-            weight=weight, rt_ms=rt_ms
+            weight=weight, rt_ms=rt_ms, mask_zero=mask_zero
         )
         return trials_stacked

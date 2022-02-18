@@ -96,21 +96,21 @@ def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
         catalog: A Catalog object.
 
     """
-    fname = "catalog.hdf5"
+    fname = "catalog_v0.6.0.hdf5"
 
     dataset_exists = True
     if dataset_name == "birds-12":
-        origin = "https://osf.io/xek89/download"
+        origin = "https://osf.io/zs4gh/download"
     elif dataset_name == "birds-16":
-        origin = "https://osf.io/473vh/download"
+        origin = "https://osf.io/rcf6v/download"
     elif dataset_name == "skin_lesions":
-        origin = "https://osf.io/5grsp/download"
+        origin = "https://osf.io/9kbjq/download"
     elif dataset_name == "rocks_Nosofsky_etal_2016":
-        origin = "https://osf.io/vw28u/download"
+        origin = "https://osf.io/2ej4d/download"
     elif dataset_name == "ilsvrc_val_v0_1":
-        origin = "https://osf.io/bf3e2/download"
+        origin = "https://osf.io/5b8g4/download"
     elif dataset_name == "ilsvrc_val_v0_2":
-        origin = "https://osf.io/bf3e2/download"
+        origin = "https://osf.io/5b8g4/download"
     else:
         dataset_exists = False
 
@@ -144,21 +144,21 @@ def _fetch_obs(dataset_name, cache_dir, cache_subdir):
         obs: An RankObservations object.
 
     """
-    fname = 'obs.hdf5'
+    fname = 'obs_v0.6.0.hdf5'
 
     dataset_exists = True
     if dataset_name == "birds-12":
-        origin = "https://osf.io/apd3g/download"
+        origin = "https://osf.io/jscqn/download"
     elif dataset_name == "birds-16":
-        origin = "https://osf.io/nz4gy/download"
+        origin = "https://osf.io/yrx43/download"
     elif dataset_name == "skin_lesions":
-        origin = "https://osf.io/nbps4/download"
+        origin = "https://osf.io/hm2ay/download"
     elif dataset_name == "rocks_Nosofsky_etal_2016":
-        origin = "https://osf.io/jauvh/download"
+        origin = "https://osf.io/xrhju/download"
     elif dataset_name == "ilsvrc_val_v0_1":
-        origin = "https://osf.io/ej6sz/download"
+        origin = "https://osf.io/w8v7n/download"
     elif dataset_name == "ilsvrc_val_v0_2":
-        origin = "https://osf.io/x6dht/download"
+        origin = "https://osf.io/43z9f/download"
     else:
         dataset_exists = False
 

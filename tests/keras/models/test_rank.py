@@ -70,10 +70,10 @@ def build_vi_kernel(similarity, n_dim, kl_weight):
 def ds_rank_obs_3g():
     """Rank observations dataset."""
     stimulus_set = np.array((
-        (0, 1, 2, -1, -1, -1, -1, -1, -1),
-        (9, 12, 7, -1, -1, -1, -1, -1, -1),
-        (3, 4, 5, 6, 7, -1, -1, -1, -1),
-        (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
 
     n_trial = 4

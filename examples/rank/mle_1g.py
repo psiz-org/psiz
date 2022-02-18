@@ -42,8 +42,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -54,9 +54,9 @@ def main():
     n_stimuli = 30
     n_dim = 3
     n_restart = 3
-    epochs = 1000
-    n_trial = 2000
-    batch_size = 100
+    epochs = 3000
+    n_trial = 4000
+    batch_size = 128
     n_frame = 1  # Set to 8 to observe convergence behavior.
 
     # Directory preparation.
@@ -66,9 +66,7 @@ def main():
         shutil.rmtree(fp_board)
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, mask_zero=True
-    )
+    ds_pairs, _ = psiz.utils.pairwise_index_dataset(n_stimuli)
 
     model_true = ground_truth(n_stimuli, n_dim)
 
@@ -77,9 +75,7 @@ def main():
     ).numpy()
 
     # Generate a random docket of trials.
-    generator = psiz.trials.RandomRank(
-        n_stimuli, n_reference=8, n_select=2
-    )
+    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
@@ -205,10 +201,8 @@ def main():
 def ground_truth(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(
-            stddev=.17
-        )
+        n_stimuli, n_dim,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=.17)
     )
 
     kernel = psiz.keras.layers.DistanceBased(
@@ -243,9 +237,7 @@ def build_model(n_stimuli, n_dim):
 
     """
     # Create a group-agnostic stimuli layer.
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
-    )
+    stimuli = tf.keras.layers.Embedding(n_stimuli, n_dim)
 
     # Create a group-agnostic kernel.
     kernel = psiz.keras.layers.DistanceBased(

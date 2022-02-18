@@ -71,20 +71,22 @@ def rank_1g_mle_rand():
 def docket_0():
     """Return a set of unjudged trials."""
     stimulus_set = np.array((
-        (0, 1, 2, 7, 3),
-        (3, 4, 5, 9, 1),
-        (1, 8, 9, 2, -1),
-        (7, 3, 2, 7, -1),
-        (6, 7, 5, 0, -1),
-        (2, 1, 0, 6, -1),
-        (3, 0, 2, 6, -1),
+        (1, 2, 3, 8, 4),
+        (4, 5, 6, 10, 2),
+        (2, 9, 10, 3, 0),
+        (8, 4, 3, 7, 0),
+        (7, 8, 6, 1, 0),
+        (3, 2, 1, 7, 0),
+        (4, 1, 3, 7, 0),
     ))
     n_select = np.array(
         [
             2, 2, 2, 2, 1, 1, 1
         ], dtype=np.int32
     )
-    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
+    docket = psiz.trials.RankDocket(
+        stimulus_set, n_select=n_select, mask_zero=True
+    )
     return docket
 
 

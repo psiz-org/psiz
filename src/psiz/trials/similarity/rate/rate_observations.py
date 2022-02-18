@@ -89,8 +89,8 @@ class RateObservations(RateTrials):
     """
 
     def __init__(
-            self, stimulus_set, rating, groups=None, agent_id=None,
-            session_id=None, weight=None, rt_ms=None):
+            self, stimulus_set, rating, mask_zero=False, groups=None,
+            agent_id=None, session_id=None, weight=None, rt_ms=None):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -122,7 +122,7 @@ class RateObservations(RateTrials):
                 shape = (n_trial,1)
 
         """
-        RateTrials.__init__(self, stimulus_set)
+        RateTrials.__init__(self, stimulus_set, mask_zero=mask_zero)
         self.rating = np.asarray(rating, dtype=np.float32)
 
         # Handle default settings.
@@ -225,9 +225,9 @@ class RateObservations(RateTrials):
         """
         return RateObservations(
             self.stimulus_set[index, :], self.rating[index],
-            groups=self.groups[index], agent_id=self.agent_id[index],
-            session_id=self.session_id[index], weight=self.weight[index],
-            rt_ms=self.rt_ms[index]
+            mask_zero=self.mask_zero, groups=self.groups[index],
+            agent_id=self.agent_id[index], session_id=self.session_id[index],
+            weight=self.weight[index], rt_ms=self.rt_ms[index]
         )
 
     def _set_configuration_data(self, n_present, groups):
@@ -310,6 +310,7 @@ class RateObservations(RateTrials):
         f = h5py.File(filepath, "w")
         f.create_dataset("class_name", data="RateObservations")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
+        f.create_dataset("mask_zero", data=self.mask_zero)
         f.create_dataset("rating", data=self.rating)
         f.create_dataset("groups", data=self.groups)
         f.create_dataset("agent_id", data=self.agent_id)
@@ -337,7 +338,7 @@ class RateObservations(RateTrials):
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
         x = {
-            'stimulus_set': self.stimulus_set + 1,
+            'stimulus_set': self.stimulus_set,
             'groups': self.groups
         }
         y = tf.constant(self.rating, dtype=K.floatx())
@@ -364,18 +365,16 @@ class RateObservations(RateTrials):
             A new RateTrials object.
 
         """
-        # Determine the maximum number of stimuli present.
-        max_n_present = 0
-        for i_trials in trials_list:
-            if i_trials.max_n_present > max_n_present:
-                max_n_present = i_trials.max_n_present
+        _, max_n_present, mask_zero = cls._stack_precheck(
+            trials_list
+        )
 
         # Grab relevant information from first entry in list.
         n_pad = max_n_present - trials_list[0].max_n_present
         pad_width = ((0, 0), (0, n_pad))
         stimulus_set = np.pad(
-            trials_list[0].stimulus_set,
-            pad_width, mode='constant', constant_values=-1
+            trials_list[0].stimulus_set, pad_width, mode='constant',
+            constant_values=cls._mask_value
         )
         rating = trials_list[0].rating
         groups = trials_list[0].groups
@@ -388,8 +387,8 @@ class RateObservations(RateTrials):
             n_pad = max_n_present - i_trials.max_n_present
             pad_width = ((0, 0), (0, n_pad))
             curr_stimulus_set = np.pad(
-                i_trials.stimulus_set,
-                pad_width, mode='constant', constant_values=-1
+                i_trials.stimulus_set, pad_width, mode='constant',
+                constant_values=cls._mask_value
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
             rating = np.hstack((rating, i_trials.rating))
@@ -400,8 +399,9 @@ class RateObservations(RateTrials):
             rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
 
         trials_stacked = RateObservations(
-            stimulus_set, rating, groups=groups, agent_id=agent_id,
-            session_id=session_id, weight=weight, rt_ms=rt_ms
+            stimulus_set, rating, mask_zero=mask_zero, groups=groups,
+            agent_id=agent_id, session_id=session_id, weight=weight,
+            rt_ms=rt_ms
         )
         return trials_stacked
 
@@ -416,6 +416,10 @@ class RateObservations(RateTrials):
         f = h5py.File(filepath, "r")
         stimulus_set = f["stimulus_set"][()]
         rating = f["rating"][()]
+        try:
+            mask_zero = f["mask_zero"][()]
+        except KeyError:
+            mask_zero = False
         try:
             groups = f["groups"][()]
         except KeyError:
@@ -445,7 +449,8 @@ class RateObservations(RateTrials):
         f.close()
 
         trials = RateObservations(
-            stimulus_set, rating=rating, groups=groups, agent_id=agent_id,
-            session_id=session_id, weight=weight, rt_ms=rt_ms
+            stimulus_set, rating=rating, mask_zero=mask_zero, groups=groups,
+            agent_id=agent_id, session_id=session_id, weight=weight,
+            rt_ms=rt_ms
         )
         return trials

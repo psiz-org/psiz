@@ -34,7 +34,9 @@ from psiz.trials.similarity.similarity_trials import SimilarityTrials
 class RankTrials(SimilarityTrials, metaclass=ABCMeta):
     """Abstract base class for rank-type trials."""
 
-    def __init__(self, stimulus_set, n_select=None, is_ranked=None):
+    def __init__(
+            self, stimulus_set, n_select=None, is_ranked=None,
+            mask_zero=False):
         """Initialize.
 
         Arguments:
@@ -43,9 +45,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
                 row indicates the stimuli used in one trial. The first
                 column is the query stimulus. The remaining columns
                 indicate reference stimuli. It is assumed that stimuli
-                indices are composed of integers from [0, N-1], where N
-                is the number of unique stimuli. The value -1 can be
-                used as a placeholder for non-existent references.
+                indices are composed of non-negative integers.
                 shape = (n_trial, max(n_reference) + 1)
             n_select (optional): An integer array indicating the number
                 of references selected in each trial. Values must be
@@ -55,14 +55,14 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             is_ranked (optional): A Boolean array indicating which
                 trials require reference selections to be ranked.
                 shape = (n_trial,)
+            mask_zero (optional): See SimilarityTrials.
 
         """
-        SimilarityTrials.__init__(self, stimulus_set)
-
-        n_reference = self._infer_n_reference()
-        self.n_reference = self._check_n_reference(n_reference)
+        SimilarityTrials.__init__(self, stimulus_set, mask_zero=mask_zero)
+        self.n_present = self._check_n_present(self.n_present)
 
         # Format stimulus set.
+        self.n_reference = self.n_present - 1
         self.max_n_reference = np.amax(self.n_reference)
         self.stimulus_set = self.stimulus_set[:, 0:self.max_n_reference + 1]
 
@@ -78,35 +78,27 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             is_ranked = self._check_is_ranked(is_ranked)
         self.is_ranked = is_ranked
 
-    def _infer_n_reference(self):
-        """Return the number of references in each trial.
+    def _check_n_present(self, n_present):
+        """Check the argument `n_present`.
 
-        Infers the number of available references for each trial. The
-        function assumes that values less than zero, are placeholder
-        values and should be treated as non-existent.
+        Valid rank similarity trials must have at least three stimuli
+        (one query and two references).
 
         Returns:
-            n_reference: An integer array indicating the number of
-                references in each trial.
+            n_present: An integer array indicating the number of
+                stimuli present in each trial.
                 shape = [n_trial, 1]
-
-        """
-        n_reference = self._infer_n_present() - 1
-        return n_reference.astype(dtype=np.int32)
-
-    def _check_n_reference(self, n_reference):
-        """Check the argument `n_reference`.
 
         Raises:
             ValueError
 
         """
-        if np.sum(np.less(n_reference, 2)) > 0:
+        if np.sum(np.less(n_present, 3)) > 0:
             raise ValueError((
                 "The argument `stimulus_set` must contain at least three "
                 "non-negative integers per a row, i.e. one query and at least "
                 "two reference stimuli per trial."))
-        return n_reference
+        return n_present
 
     def _check_n_select(self, n_select):
         """Check the argument `n_select`.
@@ -163,6 +155,11 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         This method has two modes that return 2D arrays of different
         shapes.
 
+        Assumes `stimulus_set` is in sorted order with chosen
+        references first. The output of this method is combined with a
+        `stimulus_set` that has been expanded for all possible
+        outcomes.
+
         Returns:
             is_select: A 2D Boolean array indicating the stimuli that
                 were selected. By default, this will be a 2D array that
@@ -180,6 +177,10 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         """
         is_select = np.zeros(self.stimulus_set.shape, dtype=bool)
         max_n_select = np.max(self.n_select)
+
+        # Iterate over columns, marking trials that have at least that
+        # many references selected. Start at 1 since query is not
+        # selected.
         for n_select in range(1, max_n_select + 1):
             locs = np.less_equal(n_select, self.n_select)
             is_select[locs, n_select] = True
@@ -196,9 +197,11 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         max_n_outcome = np.max(n_outcome_list)
         n_config = self.config_list.shape[0]
 
-        stimulus_set_expand = -1 * np.ones(
+        # Can use mask value regardless of whether `mask_zero=True` since if
+        # not True, all cells will be updated.
+        stimulus_set_expand = np.full(
             [self.n_trial, self.max_n_reference + 1, max_n_outcome],
-            dtype=np.int32
+            self._mask_value, dtype=np.int32
         )
         for i_config in range(n_config):
             # Identify relevant trials.
@@ -207,17 +210,26 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
 
             outcome_idx = outcome_idx_list[i_config]
             n_outcome = outcome_idx.shape[0]
-            # Add query index, increment references to accommodate query.
-            stimulus_set_idx = np.hstack(
+
+            # Assemble relative indices (not absolute stimuli indices) for
+            # possible outcomes. The query stimulus stays in the same spot
+            # regardless of outcome, so we append a column of zeros to the
+            # possible orderings of the references. The indices into the
+            # reference positions are incremented by one to take into account
+            # the query.
+            stimulus_set_rel_idx = np.hstack(
                 [np.zeros([n_outcome, 1], dtype=int), outcome_idx + 1]
             )
+            # Grab absolute stimuli indices associated with current trial
+            # configuration.
             curr_stimulus_set_copy = self.stimulus_set[trial_locs, :]
-            curr_stimulus_set_expand = -1 * np.ones(
+            # Initialize array taking into account max outcome configuration.
+            curr_stimulus_set_expand = np.full(
                 [n_trial_config, self.max_n_reference + 1, max_n_outcome],
-                dtype=int
+                self._mask_value, dtype=int
             )
             for i_outcome in range(n_outcome):
-                curr_stimulus_set_idx = stimulus_set_idx[i_outcome, :]
+                curr_stimulus_set_idx = stimulus_set_rel_idx[i_outcome, :]
                 # Append placeholder indices.
                 curr_idx = np.hstack([
                     curr_stimulus_set_idx,
@@ -226,6 +238,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
                         self.max_n_reference + 1
                     )
                 ])
+                # Convert relative indices to absolute indices.
                 curr_stimulus_set_expand[:, :, i_outcome] = (
                     curr_stimulus_set_copy[:, curr_idx]
                 )

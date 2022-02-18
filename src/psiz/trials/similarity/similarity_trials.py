@@ -21,23 +21,18 @@ Classes:
 Functions:
 
 Notes:
-    A `stimulus_id` of `-1` is a reserved value to be used as a
-        placeholder.
+    A `stimulus_id` of `0` can be used as a masking value if
+    `mask_zero` is set to True.
     Groups are used to identify distinct populations of agents. For
         example, similarity judgments could be collected from two
         groups: novices and experts. During inference, group
         information can be used to infer a separate set of attention
         weights for each group while sharing all other parameters.
 
-TODO:
-    * Add SortDocket class
-    * Add SortObservations class
-    * Add Observations "interface" which requires `as_dataset()` method
-        which returns a tf.data.Dataset object.
-
 """
 
 from abc import ABCMeta, abstractmethod
+import warnings
 
 import numpy as np
 
@@ -69,28 +64,35 @@ class SimilarityTrials(metaclass=ABCMeta):
             Each row of the 2D array indicates one potential outcome.
 
     Methods:
-        subset: Return a subset of similarity trials given an index.
+        subset: Return the requested subset of similarity trials.
         save: Save the object to disk.
         is_present: Indicate if a stimulus is present.
 
     """
+    _mask_value = 0
 
-    def __init__(self, stimulus_set):
+    def __init__(self, stimulus_set, mask_zero=False):
         """Initialize.
 
         Arguments:
             stimulus_set: An integer matrix containing indices that
                 indicate the set of stimuli used in each trial. Each
-                row indicates the stimuli used in one trial. The value
-                '-1' can be used as a masking placeholder to indicate
-                non-existent stimuli if each trial has a different
-                number of stimuli.
-                shape = (n_trial, max_n_stimuli_per_trial)
+                row indicates the stimuli used in one trial. It is
+                assumed that stimuli indices are composed of
+                non-negative integers.
+                shape = (n_trial, max_n_present)
+            mask_zero (optional): A Boolean indicating if zero values
+                in `stimulus_set` should be interpretted as a mask
+                value.
 
         """
+        self.mask_zero = mask_zero
+
         stimulus_set = self._check_stimulus_set(stimulus_set)
         self.stimulus_set = stimulus_set
         self.n_trial = stimulus_set.shape[0]
+        self.n_present = self._infer_n_present()
+        self.max_n_present = np.amax(self.n_present)
 
         # Attributes determined by concrete class.
         self.config_idx = None
@@ -112,17 +114,25 @@ class SimilarityTrials(metaclass=ABCMeta):
                 "integers."
             ))
 
-        # Check that all values are greater than or equal to -1.
-        # NOTE: The value '-1' is used as a masking placeholder.
-        if np.sum(np.less(stimulus_set, -1)) > 0:
-            raise ValueError((
+        # Check that all values are greater than or equal to 0.
+        if np.sum(np.less(stimulus_set, 0)) > 0:
+            # NOTE: To prevent annoying run-time errors for users loading old
+            # datasets, this Error has been reduced to a warning.
+            # raise ValueError((
+            #     "The argument `stimulus_set` must only contain integers "
+            #     "greater than or equal to 0."
+            # ))
+            warnings.warn(
                 "The argument `stimulus_set` must only contain integers "
-                "greater than or equal to -1."
-            ))
+                "greater than or equal to 0. This might be caused by using "
+                "an older dataset that uses '-1' values as placeholders. To "
+                "fix, convert `stimulus_set` to use '0' as a placeholder",
+                Warning
+            )
 
-        # NOTE: ii32.max -1 since we will perform a +1 operation.
+        # Check that all values are less than maximum for int32.
         ii32 = np.iinfo(np.int32)
-        if np.sum(np.greater(stimulus_set, ii32.max - 1)) > 0:
+        if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
             raise ValueError((
                 "The argument `stimulus_set` must only contain integers "
                 "in the int32 range."
@@ -169,7 +179,7 @@ class SimilarityTrials(metaclass=ABCMeta):
 
     @abstractmethod
     def subset(self, index):
-        """Return subset of trials as new SimilarityTrials object.
+        """Return subset of trials as a new SimilarityTrials object.
 
         Arguments:
             index: The indices corresponding to the subset.
@@ -190,13 +200,14 @@ class SimilarityTrials(metaclass=ABCMeta):
 
     def is_present(self):
         """Return a 2D Boolean array indicating a present stimulus."""
-        is_present = np.not_equal(self.stimulus_set, -1)
+        if self.mask_zero:
+            is_present = np.not_equal(self.stimulus_set, self._mask_value)
+        else:
+            is_present = np.ones_like(self.stimulus_set, dtype=bool)
         return is_present
 
     def _infer_n_present(self):
         """Return the number of stimuli present in each trial.
-
-        Assumes that -1 is a placeholder value.
 
         Returns:
             n_present: An integer array indicating the number of
@@ -237,3 +248,43 @@ class SimilarityTrials(metaclass=ABCMeta):
             # Determine intersection.
             bidx = np.logical_and(bidx, bidx_key)
         return bidx
+
+    @classmethod
+    def _stack_precheck(cls, trials_list):
+        """Check if stackable."""
+        # Determine if trials can be stacked.
+        is_stackable = False
+        max_present_list = []
+        mask_zero_list = []
+        for i_trials in trials_list:
+            max_present_list.append(i_trials.max_n_present)
+            mask_zero_list.append(i_trials.mask_zero)
+
+        mask_zero_unique = np.unique(mask_zero_list)
+        max_present_unique = np.unique(max_present_list)
+        if len(mask_zero_unique) == 1:
+            if len(max_present_unique) == 1:
+                is_stackable = True
+            else:
+                # Objects differ in number of stimuli per trial.
+                if mask_zero_unique[0]:
+                    is_stackable = True
+                else:
+                    is_stackable = False
+                    raise ValueError(
+                        'Objects with different number of stimuli in each ',
+                        'trial are only stackable if all objects have '
+                        '`mask_zero=True`.'
+                    )
+        else:
+            # Not all trial sets have the same `mask_zero` setting.
+            is_stackable = False
+            raise ValueError(
+                'All objects must have the same `mask_zero` setting in order'
+                'to be stacked.'
+            )
+
+        max_n_present = np.max(max_present_unique)
+        mask_zero = mask_zero_unique[0]
+
+        return is_stackable, max_n_present, mask_zero

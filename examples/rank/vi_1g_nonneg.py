@@ -26,6 +26,7 @@ default, a `psiz_examples` directory is created in your home directory.
 """
 
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 import shutil
 
@@ -41,8 +42,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -56,7 +57,7 @@ def main():
     n_dim_nonneg = 20
     n_trial = 2000
     epochs = 1000
-    batch_size = 100
+    batch_size = 128
     n_frame = 1  # Set to 7 to observe convergence behavior.
 
     # Directory preparation.
@@ -78,9 +79,7 @@ def main():
     plt.rc('figure', titlesize=large_size)
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, mask_zero=True
-    )
+    ds_pairs, _ = psiz.utils.pairwise_index_dataset(n_stimuli)
 
     model_true = ground_truth(n_stimuli, n_dim)
 
@@ -89,9 +88,7 @@ def main():
     ).numpy()
 
     # Generate a random docket of trials.
-    generator = psiz.trials.RandomRank(
-        n_stimuli, n_reference=8, n_select=2
-    )
+    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
@@ -286,7 +283,7 @@ def ground_truth(n_stimuli, n_dim):
     scale_request = .17
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58
         ),
@@ -328,14 +325,14 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
 
     """
     embedding_posterior = psiz.keras.layers.EmbeddingTruncatedNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         loc_initializer=tf.keras.initializers.RandomUniform(0., .05),
         scale_initializer=psiz.keras.initializers.SoftplusUniform(
             .01, .05
         ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embedding=psiz.keras.layers.EmbeddingGammaDiag(
             1, 1,
             concentration_initializer=tf.keras.initializers.Constant(1.),

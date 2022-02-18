@@ -47,13 +47,15 @@ class RandomRank(DocketGenerator):
     """
 
     def __init__(
-            self, n_stimuli, n_reference=2, n_select=1, w=None, replace=True,
-            n_highest=None, n_worker=1, verbose=0):
+            self, indices, n_reference=2, n_select=1, w=None,
+            replace=True, n_highest=None, n_worker=1, mask_zero=False,
+            verbose=0):
         """Initialize.
 
         Arguments:
-            n_stimuli: A scalar indicating the total number of unique
-                stimuli.
+            indices: A scalar inter or 1D array-like of integers
+                indicating the eligible indices. If scalar, index array
+                is instantiated as `np.arange(indices)`.
             n_reference (optional): A scalar indicating the number of
                 references for each trial.
             n_select (optional): A scalar indicating the number of
@@ -70,7 +72,7 @@ class RandomRank(DocketGenerator):
                 `w[i, j]` indicates the probability stimulus `j` will
                 be sampled as a reference for query `i`. By default, all
                 stimuli are given equal weight.
-                shape=(n_stimuli, n_stimuli)
+                shape=(n_idx, n_idx)
             replace (optional): Boolean indicating if sampled trials
                 should be unique. The default `replace=True` does not
                 guarantee unique trials.
@@ -85,34 +87,49 @@ class RandomRank(DocketGenerator):
             n_worker (optional): The number of unique workers (CPUs) to
                 divide the work amongst. By default, only one worker is
                 used.
+            mask_zero (optional): A Boolean indicating if zero should
+                be interpretted as a mask value in `stimulus_set`. By
+                default, `mask_zero=False`.
             verbose (optional): The verbosity of output.
 
         """
         DocketGenerator.__init__(self)
 
-        self.n_stimuli = n_stimuli
+        # Check if argument is sclar or array-like.
+        indices = np.array(indices, copy=False)
+        if indices.ndim == 0:
+            indices = np.arange(indices)
+        elif indices.ndim != 1:
+            raise ValueError('Argument `indices` must be 1D.')
+        self.indices = indices
+        self.n_idx = len(indices)
 
-        if n_reference > n_stimuli:
-            raise ValueError('`n_reference` must be less than `n_stimuli`')
+        if n_reference > self.n_idx:
+            raise ValueError(
+                'Argument `n_reference` must be less than `n_idx`'
+            )
         if n_select > n_reference:
-            raise ValueError('`n_select` must be less than `n_reference`')
+            raise ValueError(
+                'Argument `n_select` must be less than `n_reference`'
+            )
 
         # Sanitize inputs.
         self.n_reference = np.int32(n_reference)
         self.n_select = np.int32(n_select)
 
-        # Make sure `w` is a square matrix.
+        # Check weight matrix `w`.
         if w is None:
-            w = np.ones([n_stimuli, n_stimuli]) / n_stimuli
+            w = np.ones([self.n_idx, self.n_idx]) / self.n_idx
         else:
+            # Make sure `w` is a square matrix.
             assert w.shape[0] == w.shape[1]
-            assert w.shape[0] == n_stimuli
+            assert w.shape[0] == self.n_idx
         self.w = w
 
         self.replace = replace
         self.n_highest = n_highest
         self.n_worker = int(np.maximum(n_worker, 1))
-
+        self.mask_zero = mask_zero
         self.verbose = verbose
 
     def generate(self, n_trial, per_query=False):
@@ -135,15 +152,19 @@ class RandomRank(DocketGenerator):
             A RankDocket object.
 
         """
+        # Create a contiguous array of indices.
+        query_idx_list = np.arange(self.n_idx)
         # Determine eligable queries from diagonal of `w`.
-        query_idx_list = np.arange(self.n_stimuli)
         w_diag = np.diag(self.w)
         bidx = np.greater(w_diag, 0.)
         query_idx_list = query_idx_list[bidx]
         w_diag = w_diag[bidx]
 
         if len(bidx) == 0:
-            raise ValueError('No queries are eligable. You must change `w`.')
+            raise ValueError(
+                'No queries are eligable. You must have some non-zero values'
+                'on the diagonal of `w`.'
+            )
 
         if per_query:
             # Generate `n_trial` for each query.
@@ -156,8 +177,17 @@ class RandomRank(DocketGenerator):
             rng = np.random.default_rng()
             n_trial_per_query_list = rng.multinomial(n_trial, w_diag)
 
-        return self._multiprocess_generate(
+        stimulus_set = self._multiprocess_generate(
             query_idx_list, n_trial_per_query_list
+        )
+        n_trial_total = stimulus_set.shape[0]
+        n_select = np.full([n_trial_total], self.n_select)
+
+        # Convert from contiguous indices to user-provided indices.
+        stimulus_set = self.indices[stimulus_set]
+
+        return RankDocket(
+            stimulus_set, n_select=n_select, mask_zero=self.mask_zero
         )
 
     def _multiprocess_generate(self, query_idx_list, n_trial_per_query_list):
@@ -209,7 +239,6 @@ class RandomRank(DocketGenerator):
                     raise e
 
             stimulus_set = np.concatenate(stimulus_set_shared, axis=0)
-        n_trial_total = stimulus_set.shape[0]
 
         if self.verbose > 0:
             duration_s = time() - start_s
@@ -219,9 +248,7 @@ class RandomRank(DocketGenerator):
                 )
             )
 
-        n_select = np.full([n_trial_total], self.n_select)
-
-        return RankDocket(stimulus_set, n_select=n_select)
+        return stimulus_set
 
 
 def _worker_generate(

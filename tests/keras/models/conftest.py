@@ -27,15 +27,17 @@ import psiz
 def ds_rank_docket():
     """Rank docket dataset."""
     stimulus_set = np.array((
-        (0, 1, 2, -1, -1, -1, -1, -1, -1),
-        (9, 12, 7, -1, -1, -1, -1, -1, -1),
-        (3, 4, 5, 6, 7, -1, -1, -1, -1),
-        (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
 
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
+    docket = psiz.trials.RankDocket(
+        stimulus_set, n_select=n_select, mask_zero=True
+    )
 
     ds_docket = docket.as_dataset(
         np.zeros([n_trial, 1])
@@ -48,15 +50,17 @@ def ds_rank_docket():
 def ds_rank_docket_2g():
     """Rank docket dataset."""
     stimulus_set = np.array((
-        (0, 1, 2, -1, -1, -1, -1, -1, -1),
-        (9, 12, 7, -1, -1, -1, -1, -1, -1),
-        (3, 4, 5, 6, 7, -1, -1, -1, -1),
-        (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
 
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
+    docket = psiz.trials.RankDocket(
+        stimulus_set, n_select=n_select, mask_zero=True
+    )
 
     ds_docket = docket.as_dataset(
         np.array([
@@ -71,10 +75,10 @@ def ds_rank_docket_2g():
 def ds_rank_obs_2g():
     """Rank observations dataset."""
     stimulus_set = np.array((
-        (0, 1, 2, -1, -1, -1, -1, -1, -1),
-        (9, 12, 7, -1, -1, -1, -1, -1, -1),
-        (3, 4, 5, 6, 7, -1, -1, -1, -1),
-        (3, 4, 5, 6, 13, 14, 15, 16, 17)
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
 
     n_trial = 4
@@ -82,7 +86,7 @@ def ds_rank_obs_2g():
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     obs = psiz.trials.RankObservations(
-        stimulus_set, n_select=n_select, groups=groups
+        stimulus_set, n_select=n_select, groups=groups, mask_zero=True
     )
     ds_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
 
@@ -228,10 +232,10 @@ def rank_2g_mle():
 def ds_rate_docket():
     """Rate docket dataset."""
     stimulus_set = np.array((
-        (0, 1),
-        (9, 12),
-        (3, 4),
-        (3, 17)
+        (1, 2),
+        (10, 13),
+        (4, 5),
+        (4, 18)
     ), dtype=np.int32)
 
     n_trial = 4
@@ -248,10 +252,10 @@ def ds_rate_docket():
 def ds_rate_docket_2g():
     """Rate docket dataset."""
     stimulus_set = np.array((
-        (0, 1),
-        (9, 12),
-        (3, 4),
-        (3, 17)
+        (1, 2),
+        (10, 13),
+        (4, 5),
+        (4, 18)
     ), dtype=np.int32)
 
     n_trial = 4
@@ -271,10 +275,10 @@ def ds_rate_obs_2g():
     """Rate observations dataset."""
     n_trial = 4
     stimulus_set = np.array((
-        (0, 1),
-        (9, 12),
-        (3, 4),
-        (3, 17)
+        (1, 2),
+        (10, 13),
+        (4, 5),
+        (4, 18)
     ), dtype=np.int32)
     rating = np.array([0.1, .4, .8, .9])
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)

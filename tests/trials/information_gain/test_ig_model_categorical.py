@@ -125,18 +125,20 @@ def ds_rank_docket():
     """Rank docket dataset."""
     stimulus_set = np.array(
         [
-            [3, 2, 4],
-            [3, 1, 4],
-            [3, 2, 5],
-            [3, 1, 5],
-            [3, 4, 5],
-            [6, 0, 2]
+            [4, 3, 5],
+            [4, 2, 5],
+            [4, 3, 6],
+            [4, 2, 6],
+            [4, 5, 6],
+            [7, 1, 3]
         ], dtype=np.int32
     )
 
     n_trial = 6
     n_select = np.ones([n_trial], dtype=np.int32)
-    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select)
+    docket = psiz.trials.RankDocket(
+        stimulus_set, n_select=n_select, mask_zero=True
+    )
     groups = np.zeros([n_trial, 1])
     ds_docket = docket.as_dataset(groups).batch(n_trial, drop_remainder=False)
     return ds_docket

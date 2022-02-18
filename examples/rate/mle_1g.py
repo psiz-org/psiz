@@ -48,8 +48,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -83,9 +83,7 @@ def main():
         shutil.rmtree(fp_board)
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, mask_zero=True
-    )
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(n_stimuli)
 
     # Create a ground truth model.
     # You can choose a grid arrangement of Gaussian arrangement by
@@ -224,7 +222,7 @@ def ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     seed = 252
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=seed
         )
@@ -267,7 +265,7 @@ def ground_truth_grid():
     z_grid = np.vstack((np.ones([1, 2]), z_grid))
 
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embeddings_initializer=tf.keras.initializers.Constant(
             z_grid
         )
@@ -303,7 +301,7 @@ def ground_truth_grid():
 def build_model(n_stimuli, n_dim):
     """Build a model to use for inference."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
+        n_stimuli, n_dim,
     )
 
     kernel = psiz.keras.layers.DistanceBased(

@@ -62,14 +62,14 @@ class RateDocket(RateTrials):
 
     """
 
-    def __init__(self, stimulus_set):
+    def __init__(self, stimulus_set, mask_zero=False):
         """Initialize.
 
         Arguments:
             stimulus_set: The order of the indices is not important.
 
         """
-        RateTrials.__init__(self, stimulus_set)
+        RateTrials.__init__(self, stimulus_set, mask_zero=mask_zero)
 
         # Determine unique display configurations.
         self._set_configuration_data(self.n_present)
@@ -84,7 +84,9 @@ class RateDocket(RateTrials):
             A new RateDocket object.
 
         """
-        return RateDocket(self.stimulus_set[index, :])
+        return RateDocket(
+            self.stimulus_set[index, :], mask_zero=self.mask_zero
+        )
 
     def _set_configuration_data(self, n_present):
         """Generate a unique ID for each trial configuration.
@@ -135,6 +137,7 @@ class RateDocket(RateTrials):
         f = h5py.File(filepath, "w")
         f.create_dataset("class_name", data="RateDocket")
         f.create_dataset("stimulus_set", data=self.stimulus_set)
+        f.create_dataset("mask_zero", data=self.mask_zero)
         f.close()
 
     def as_dataset(self, groups=None):
@@ -154,7 +157,7 @@ class RateDocket(RateTrials):
             groups = self._check_groups(groups)
 
         # Return tensorflow dataset.
-        stimulus_set = self.stimulus_set + 1
+        stimulus_set = self.stimulus_set
         x = {
             'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
             'groups': tf.constant(groups, dtype=tf.int32)
@@ -176,30 +179,28 @@ class RateDocket(RateTrials):
             A new RateTrials object.
 
         """
-        # Determine the maximum number of stimuli present.
-        max_n_present = 0
-        for i_trials in trials_list:
-            if i_trials.max_n_present > max_n_present:
-                max_n_present = i_trials.max_n_present
+        _, max_n_present, mask_zero = cls._stack_precheck(
+            trials_list
+        )
 
         # Grab relevant information from first entry in list.
         n_pad = max_n_present - trials_list[0].max_n_present
         pad_width = ((0, 0), (0, n_pad))
         stimulus_set = np.pad(
-            trials_list[0].stimulus_set,
-            pad_width, mode='constant', constant_values=-1
+            trials_list[0].stimulus_set, pad_width, mode='constant',
+            constant_values=cls._mask_value
         )
 
         for i_trials in trials_list[1:]:
             n_pad = max_n_present - i_trials.max_n_present
             pad_width = ((0, 0), (0, n_pad))
             curr_stimulus_set = np.pad(
-                i_trials.stimulus_set,
-                pad_width, mode='constant', constant_values=-1
+                i_trials.stimulus_set, pad_width, mode='constant',
+                constant_values=cls._mask_value
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
 
-        trials_stacked = RateDocket(stimulus_set)
+        trials_stacked = RateDocket(stimulus_set, mask_zero=mask_zero)
         return trials_stacked
 
     @classmethod
@@ -212,6 +213,10 @@ class RateDocket(RateTrials):
         """
         f = h5py.File(filepath, "r")
         stimulus_set = f["stimulus_set"][()]
+        try:
+            mask_zero = f["mask_zero"][()]
+        except KeyError:
+            mask_zero = False
         f.close()
-        trials = RateDocket(stimulus_set)
+        trials = RateDocket(stimulus_set, mask_zero=mask_zero)
         return trials

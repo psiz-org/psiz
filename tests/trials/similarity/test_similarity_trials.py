@@ -15,7 +15,6 @@
 # ============================================================================
 """Test `trials` module."""
 
-import pytest
 import numpy as np
 
 from psiz.trials.similarity.similarity_trials import SimilarityTrials

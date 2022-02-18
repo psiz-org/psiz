@@ -28,18 +28,18 @@ default, a `psiz_examples` directory is created in your home directory.
 Example output:
 
     Attention weights:
-          Novice | [0.89 0.81 0.13 0.11]
-    Intermediate | [0.54 0.44 0.53 0.58]
-          Expert | [0.06 0.08 0.80 0.92]
+          Novice | [1.82 1.75 0.24 0.19]
+    Intermediate | [1.00 1.00 1.13 0.87]
+          Expert | [0.23 0.20 2.04 1.53]
 
     Model Comparison (R^2)
     ================================
       True  |        Inferred
             | Novice  Interm  Expert
     --------+-----------------------
-     Novice |   0.97    0.59    0.12
-     Interm |   0.64    0.98    0.60
-     Expert |   0.14    0.58    0.96
+     Novice |   0.92    0.53    0.11
+     Interm |   0.61    0.92    0.57
+     Expert |   0.12    0.56    0.95
 
 """
 
@@ -62,8 +62,8 @@ import psiz
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def main():
@@ -107,9 +107,7 @@ def main():
     )
 
     # Generate a random docket of trials to show each group.
-    generator = psiz.trials.RandomRank(
-        n_stimuli, n_reference=8, n_select=2
-    )
+    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
     docket = generator.generate(n_trial)
 
     # Create virtual agents for each group.
@@ -277,7 +275,7 @@ def main():
 def ground_truth(n_stimuli, n_dim, n_group):
     """Return a ground truth embedding."""
     stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17, seed=58
         )
@@ -361,13 +359,13 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
     prior_scale = .2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli, n_dim,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),
@@ -554,7 +552,7 @@ def model_similarity(model, groups=[], n_sample=None):
 
     """
     ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        model.n_stimuli, mask_zero=True, groups=groups
+        model.n_stimuli, groups=groups
     )
     simmat = psiz.utils.pairwise_similarity(
         model.stimuli, model.kernel, ds_pairs, n_sample=n_sample,

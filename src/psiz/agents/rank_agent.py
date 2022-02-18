@@ -103,12 +103,13 @@ class RankAgent(Agent):  # pylint: disable=too-few-public-methods
                 stimulus_set = [batch_stimulus_set]
             else:
                 stimulus_set.append(batch_stimulus_set)
-        stimulus_set = tf.concat(stimulus_set, 0).numpy() - 1
+        stimulus_set = tf.concat(stimulus_set, 0).numpy()
 
         obs = RankObservations(
             stimulus_set,
             n_select=docket.n_select,
             is_ranked=docket.is_ranked,
+            mask_zero=docket.mask_zero,
             groups=group_matrix
         )
         return obs

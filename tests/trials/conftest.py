@@ -42,7 +42,7 @@ def rank_sim_0():
 
 @pytest.fixture(scope="module")
 def rank_sim_1():
-    """Content RankedSimilarity with true rank arguments.
+    """Content RankSimilarity with true rank arguments.
 
     Notes:
     The input arguments are full rank, but singleton on the

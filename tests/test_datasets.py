@@ -38,7 +38,7 @@ def test_birds_12(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [111, 145, 137, 119, 123, 126, 139, 140, 154], dtype=np.int32
+            [112, 146, 138, 120, 124, 127, 140, 141, 155], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -49,7 +49,7 @@ def test_birds_12(tmpdir):
     assert catalog.n_stimuli == 156
     # Spot check catalog.
     row_10 = catalog.stimuli.iloc[10]
-    assert row_10.id == 10
+    assert row_10.id == 11
     assert row_10.filepath == 'Bird/Icteridae/Bobolink/Bobolink_0040_9681.jpg'
     assert row_10.class_id == 2
 
@@ -69,7 +69,7 @@ def test_birds_16(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [163, 197, 189, 171, 175, 178, 191, 192, 206], dtype=np.int32
+            [164, 198, 190, 172, 176, 179, 192, 193, 207], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -80,7 +80,7 @@ def test_birds_16(tmpdir):
     assert catalog.n_stimuli == 208
     # Spot check catalog.
     row_10 = catalog.stimuli.iloc[10]
-    assert row_10.id == 10
+    assert row_10.id == 11
     desired_filepath = (
         'Bird/Cardinalidae/Blue_Grosbeak/Blue_Grosbeak_0043_37200.jpg'
     )
@@ -103,7 +103,7 @@ def test_skin_lesions(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [40, 42, 52, 37, 47, 48, 49, 51, 54], dtype=np.int32
+            [41, 43, 53, 38, 48, 49, 50, 52, 55], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -114,7 +114,7 @@ def test_skin_lesions(tmpdir):
     assert catalog.n_stimuli == 237
     # Spot check catalog.
     row_10 = catalog.stimuli.iloc[10]
-    assert row_10.id == 10
+    assert row_10.id == 11
     assert row_10.filepath == 'lesion/benign/blue_nevus/blue_nevus_21.jpg'
     assert row_10.class_id == 2
 
@@ -134,7 +134,7 @@ def test_rocks(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [175, 345, 337, 63, 160, 168, 202, 316, 324], dtype=np.int32
+            [176, 346, 338, 64, 161, 169, 203, 317, 325], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -145,7 +145,7 @@ def test_rocks(tmpdir):
     assert catalog.n_stimuli == 360
     # Spot check catalog.
     row_10 = catalog.stimuli.iloc[10]
-    assert row_10.id == 10
+    assert row_10.id == 11
     assert row_10.filepath == 'Rock/Igneous/Andesite/I_Andesite_11.png'
     assert row_10.class_id == 2
 
@@ -165,7 +165,7 @@ def test_ilscrc_val_v1(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [126, 999, 641, 790, 551, 832, 882, 12, 592], dtype=np.int32
+            [127, 1000, 642, 791, 552, 833, 883, 13, 593], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -176,7 +176,7 @@ def test_ilscrc_val_v1(tmpdir):
     assert catalog.n_stimuli == 50000
     # Spot check catalog.
     row_10 = catalog.stimuli.iloc[10]
-    assert row_10.id == 10
+    assert row_10.id == 11
     assert row_10.filepath == 'n01530575/ILSVRC2012_val_00010999.JPEG'
     assert row_10.class_id == 10
 
@@ -196,7 +196,7 @@ def test_ilscrc_val_v2(tmpdir):
     np.testing.assert_array_equal(
         obs.stimulus_set[10],
         np.array(
-            [126, 999, 641, 790, 551, 832, 882, 12, 592], dtype=np.int32
+            [127, 1000, 642, 791, 552, 833, 883, 13, 593], dtype=np.int32
         )
     )
     assert obs.n_reference[10] == 8
@@ -207,7 +207,7 @@ def test_ilscrc_val_v2(tmpdir):
     assert catalog.n_stimuli == 50000
     # Spot check catalog.
     row_10 = catalog.stimuli.iloc[10]
-    assert row_10.id == 10
+    assert row_10.id == 11
     assert row_10.filepath == 'n01530575/ILSVRC2012_val_00010999.JPEG'
     assert row_10.class_id == 10
 

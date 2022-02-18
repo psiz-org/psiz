@@ -24,14 +24,22 @@ import tensorflow as tf
 import psiz
 
 
-def ground_truth(n_stimuli, n_dim, similarity_func):
+def ground_truth(n_stimuli, n_dim, similarity_func, mask_zero):
     """Return a ground truth embedding."""
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(
-            stddev=.17, seed=4
+    if mask_zero:
+        stimuli = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(
+                stddev=.17, seed=4
+            )
         )
-    )
+    else:
+        stimuli = tf.keras.layers.Embedding(
+            n_stimuli, n_dim,
+            embeddings_initializer=tf.keras.initializers.RandomNormal(
+                stddev=.17, seed=4
+            )
+        )
 
     # Set similarity function.
     if similarity_func == 'Exponential':
@@ -73,7 +81,7 @@ def ground_truth(n_stimuli, n_dim, similarity_func):
     return model
 
 
-def build_model(n_stimuli, n_dim, similarity_func):
+def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     """Build model.
 
     Arguments:
@@ -85,9 +93,14 @@ def build_model(n_stimuli, n_dim, similarity_func):
         model: A TensorFlow Keras model.
 
     """
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
-    )
+    if mask_zero:
+        stimuli = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True
+        )
+    else:
+        stimuli = tf.keras.layers.Embedding(
+            n_stimuli, n_dim
+        )
 
     # Set similarity function.
     if similarity_func == 'Exponential':
@@ -107,13 +120,14 @@ def build_model(n_stimuli, n_dim, similarity_func):
     return model
 
 
-# TODO ("StudentsT"), ("Exponential"), ("HeavyTailed"), ("Inverse")
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "similarity_func",
-    [("Exponential")]
+    "similarity_func", ["Exponential"]
 )
-def test_rate_1g_mle_execution(similarity_func, tmpdir):
+@pytest.mark.parametrize(
+    "mask_zero", [True, False]
+)
+def test_rate_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     # Settings.
     n_stimuli = 30
     n_dim = 3
@@ -124,16 +138,19 @@ def test_rate_1g_mle_execution(similarity_func, tmpdir):
     n_frame = 2
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, mask_zero=True
-    )
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(n_stimuli)
 
-    model_true = ground_truth(n_stimuli, n_dim, similarity_func)
+    model_true = ground_truth(n_stimuli, n_dim, similarity_func, mask_zero)
 
     # Generate a random docket of trials.
-    generator = psiz.trials.RandomRank(
-        n_stimuli, n_reference=8, n_select=2
-    )
+    if mask_zero:
+        generator = psiz.trials.RandomRank(
+            np.arange(n_stimuli + 1), n_reference=8, n_select=2, mask_zero=True
+        )
+    else:
+        generator = psiz.trials.RandomRank(
+            n_stimuli, n_reference=8, n_select=2
+        )
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
@@ -199,7 +216,9 @@ def test_rate_1g_mle_execution(similarity_func, tmpdir):
         callbacks = [early_stop, cb_board]
 
         # Handle restarts.
-        model_inferred = build_model(n_stimuli, n_dim, similarity_func)
+        model_inferred = build_model(
+            n_stimuli, n_dim, similarity_func, mask_zero
+        )
         restarter = psiz.keras.Restarter(
             model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
             n_restart=n_restart
@@ -229,5 +248,5 @@ def test_rate_1g_mle_execution(similarity_func, tmpdir):
     # greater than 0.9. This indicates that inference has found a model that
     # closely matches the ground truth (which is never directly observed).
     # assert r2[-1] > .9
-    # I think the coordiante space needs to be scaled so that it is
+    # I think the coordianate space needs to be scaled so that it is
     # "learnable" by the selected similarity function.

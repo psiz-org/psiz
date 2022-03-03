@@ -29,7 +29,7 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    src/tutorials/active_learning
    
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Features
 
    src/features/overview
@@ -37,7 +37,12 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    src/features/models
    src/features/hosted
    src/features/faq
-   
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Design Choices
+
+   src/design/mask_zero
 
 Indices and tables
 ==================

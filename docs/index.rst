@@ -34,7 +34,6 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
 
    src/features/overview
    src/features/data
-   src/features/models
    src/features/hosted
    src/features/faq
 
@@ -43,6 +42,7 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    :caption: Design Choices
 
    src/design/mask_zero
+   src/design/model_restarts
 
 Indices and tables
 ==================

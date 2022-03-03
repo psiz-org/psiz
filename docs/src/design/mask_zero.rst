@@ -13,6 +13,7 @@ Complications and Goals
 =======================
 
 PsiZ includes non-TensorFlow classes for organizing stimulus and trial data (i.e., Psiz data classes). The choice of using 0 as a mask has implications for these classes and PsiZ in general.
+
 1. When converting from a PsiZ data class to a TensorFlow dataset, the interpretation of the indices should be the same.
 2. The meaning of the zero index should be explicitly clear for users to minimize misinterpretation.
 3. When stacking trial objects, the zero index must have the same meaning for both objects.

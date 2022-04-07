@@ -150,7 +150,7 @@ def _fetch_obs(dataset_name, cache_dir, cache_subdir):
     if dataset_name == "birds-12":
         origin = "https://osf.io/jscqn/download"
     elif dataset_name == "birds-16":
-        origin = "https://osf.io/yrx43/download"
+        origin = "https://osf.io/6fntw/download"
     elif dataset_name == "skin_lesions":
         origin = "https://osf.io/hm2ay/download"
     elif dataset_name == "rocks_Nosofsky_etal_2016":

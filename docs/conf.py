@@ -41,6 +41,7 @@ extensions = [
     'sphinx.ext.imgmath',  # Render math equations.
     'sphinx_last_updated_by_git',  # Infer last updated date via git.
     'myst_nb',  # Parsing Jupyter notebooks.
+    'sphinxcontrib.bibtex',  # bibtex bibliography
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -70,3 +71,13 @@ html_theme_options = {
     'logo_only': True,
 }
 numfig = True
+
+# bibtex settings.
+bibtex_bibfiles = ['src/refs.bib']
+bibtex_reference_style = 'author_year'
+
+# Notebook execution settings.
+jupyter_execute_notebooks = "off"  # Do not execute cells.
+# jupyter_execute_notebooks = "cache"  # Cache outputs.
+# execution_timeout = -1  # No timeout option for myst-nb.
+# nbsphinx_timeout = -1  # No timeout option for nb-sphinx.

@@ -65,7 +65,7 @@ class RankSimilarity(Content):
         stimulus_set = self._check_stimulus_set(stimulus_set)
 
         # Trim excess placeholder padding off of timestep (axis=1).
-        is_present = np.not_equal(stimulus_set, self.placeholder)
+        is_present = np.not_equal(stimulus_set, self.mask_value)
         # Logical or across last `set` dimension.
         is_present = np.any(is_present, axis=2)
         n_timestep = np.sum(is_present, axis=1, dtype=np.int32)
@@ -75,7 +75,7 @@ class RankSimilarity(Content):
         stimulus_set = stimulus_set[:, 0:max_timestep, :]
 
         # Trim any excess placeholder padding off of n_reference (axis=2).
-        is_present = np.not_equal(stimulus_set, self.placeholder)
+        is_present = np.not_equal(stimulus_set, self.mask_value)
         n_reference = np.sum(is_present, axis=2, dtype=np.int32) - 1
         self.n_reference = self._check_n_reference(n_reference)
         self.max_n_reference = np.amax(self.n_reference)
@@ -114,7 +114,7 @@ class RankSimilarity(Content):
     @property
     def is_actual(self):
         """Return 2D Boolean array indicating trials with actual content."""
-        return np.not_equal(self.stimulus_set[:, :, 0], self.placeholder)
+        return np.not_equal(self.stimulus_set[:, :, 0], self.mask_value)
 
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
@@ -216,7 +216,7 @@ class RankSimilarity(Content):
         # Pre-allocate `stimulus_set` that has additional axis for outcomes.
         stimulus_set_flat_expand = np.full(
             [n_trial, self.max_n_reference + 1, max_n_outcome],
-            self.placeholder, dtype=np.int32
+            self.mask_value, dtype=np.int32
         )
 
         for index, row in df_config.iterrows():
@@ -241,7 +241,7 @@ class RankSimilarity(Content):
                 curr_stimulus_set_copy = stimulus_set_flat[trial_locs, :]
                 curr_stimulus_set_expand = np.full(
                     [n_trial_config, self.max_n_reference + 1, max_n_outcome],
-                    self.placeholder, dtype=np.int32
+                    self.mask_value, dtype=np.int32
                 )
                 for i_outcome in range(n_outcome):
                     curr_stimulus_set_idx = stimulus_set_idx[i_outcome, :]
@@ -376,7 +376,7 @@ class RankSimilarity(Content):
             )
 
         # Check that all values are greater than or equal to placeholder.
-        if np.sum(np.less(stimulus_set, self.placeholder)) > 0:
+        if np.sum(np.less(stimulus_set, self.mask_value)) > 0:
             raise ValueError(
                 "The argument `stimulus_set` must contain integers "
                 "greater than or equal to 0."

@@ -40,7 +40,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
 
         # Immutable attributes.
         self._mask_zero = True
-        self._placeholder = 0
+        self._mask_value = 0
 
     @property
     def mask_zero(self):
@@ -48,9 +48,9 @@ class Content(TrialComponent, metaclass=ABCMeta):
         return self._mask_zero
 
     @property
-    def placeholder(self):
-        """Getter method for `placeholder`."""
-        return self._placeholder
+    def mask_value(self):
+        """Getter method for `mask_value`."""
+        return self._mask_value
 
     @property
     @abstractmethod

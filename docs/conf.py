@@ -37,7 +37,7 @@ version = ver
 # ones.
 extensions = [
     'sphinx_rtd_theme',
-    'sphinx.ext.napoleon',
+    'sphinx.ext.napoleon',  # autdoc parsing of Google style docstrings
     'sphinx.ext.imgmath',  # Render math equations.
     'sphinx_last_updated_by_git',  # Infer last updated date via git.
     'myst_nb',  # Parsing Jupyter notebooks.

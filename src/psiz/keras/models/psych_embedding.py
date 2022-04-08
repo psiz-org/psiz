@@ -19,10 +19,6 @@ Classes:
     PsychologicalEmbedding: Abstract base class for a psychological
         embedding model.
 
-Functions:
-    load_model: Load a hdf5 file, that was saved with the `save`
-        class method, as a PsychologicalEmbedding object.
-
 """
 
 import copy
@@ -37,7 +33,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     """A pscyhological embedding model.
 
     This model can be subclassed to infer a psychological embedding
-    from different types similarity judgment data.
+    from different types behavioral data.
 
     Attributes:
         embedding: An embedding layer.

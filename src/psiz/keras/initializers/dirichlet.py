@@ -16,7 +16,7 @@
 """Module of custom TensorFlow initializers.
 
 Classes:
-    RandomAttention:
+    Dirichlet:
 
 """
 
@@ -28,8 +28,8 @@ import tensorflow_probability as tfp
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
-class RandomAttention(initializers.Initializer):
-    """Initializer that generates tensors for attention weights."""
+class Dirichlet(initializers.Initializer):
+    """Initializer based on a Dirichlet distribution."""
 
     def __init__(self, concentration, scale=1.0, seed=None):
         """Initialize.
@@ -39,7 +39,7 @@ class RandomAttention(initializers.Initializer):
                 concentration parameters (i.e., alpha values) governing
                 a Dirichlet distribution.
             scale (optional): Scalar indicating how the Dirichlet
-                sample should be scaled.
+                sample(s) should be scaled.
             seed (optional): A seed for deterministic behavior.
 
         """

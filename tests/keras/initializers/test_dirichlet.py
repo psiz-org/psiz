@@ -18,14 +18,14 @@
 import numpy as np
 import tensorflow as tf
 
-from psiz.keras.initializers import RandomAttention
+from psiz.keras.initializers import Dirichlet
 
 
 def test_all():
     """Test all methods."""
     # Initialize.
     concentration = [1.1, 1.1, 1.1]
-    initializer = RandomAttention(concentration, seed=123)
+    initializer = Dirichlet(concentration, seed=123)
     np.testing.assert_array_equal(
         initializer.concentration, concentration
     )

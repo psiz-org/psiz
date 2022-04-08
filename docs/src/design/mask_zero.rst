@@ -7,12 +7,12 @@ The `mask_zero` Convention
 Motivation
 ==========
 
-In some instances, it is necessary to mask data. For example, two sequences may not be the same length or efficient computation requires well-shaped arrays. In the case of embeddings, where indices are mapped vectors, one must designate an index value to serve as a mask. TensorFlow's :py:class:`keras.layers.Embedding` designates 0 as an optional mask which is toggled using the optional `mask_zero` Boolean argument.
+In some instances, it is necessary to mask data. For example, two sequences may not be the same length or efficient computation requires well-shaped arrays. In the case of embeddings, where indices are mapped vectors, one must designate an index value to serve as a mask. TensorFlow's :py:class:`keras.layers.Embedding` designates `0` as an optional mask which is toggled using the optional `mask_zero` Boolean argument.
 
 Complications and Goals
 =======================
 
-PsiZ includes non-TensorFlow classes for organizing stimulus and trial data (i.e., Psiz data classes). The choice of using 0 as a mask has implications for these classes and PsiZ in general.
+PsiZ includes non-TensorFlow classes for organizing stimulus and trial data (i.e., Psiz data classes). The choice of using `0` as a mask has implications for these classes and PsiZ in general.
 
 1. When converting from a PsiZ data class to a TensorFlow dataset, the interpretation of the indices should be the same.
 2. The meaning of the zero index should be explicitly clear for users to minimize misinterpretation.
@@ -37,4 +37,5 @@ Rejected Solutions
 ==================
 
 #. Require all users to treat index 0 as a mask. While this is a tempting strategy since it is the simplest to implement and maintain, it is counter-intuitive to new users.
+#. Masking is on by default but can be turned off. Less explicit than other solutions and opposite convention of TensorFlow.
 #. Use -1 (or nan) as a mask value so that interpretation of stimulus indices is the same regardless of masking. Since TensorFlow :py:class:`keras.layers.Embedding` layers use a mask value of 0, this requires a different interpretation of indices in PsiZ data objects and TensorFlow. This inconsistency fosters confusion. As for nan, it is not defined for integers and creates a saving complications for hdf5 files.

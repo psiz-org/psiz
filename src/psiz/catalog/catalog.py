@@ -218,5 +218,5 @@ class Catalog():
         catalog.stimuli = catalog.stimuli.iloc[idx]
         catalog.n_stimuli = len(catalog.stimuli)
         if squeeze:
-            catalog.stimuli.at[:, "id"] = np.arange(0, catalog.n_stimuli)
+            catalog.stimuli.id = np.arange(0, catalog.n_stimuli)
         return catalog

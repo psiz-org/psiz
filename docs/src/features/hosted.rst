@@ -187,7 +187,7 @@ Models for two rounds are currently hosted on OSF.
     future.
 
 .. note::
-    Please see this `ArXiv paper <https://arxiv.org/abs/2011.11015>`_ for
+    Please see this `CVPR 2021 paper <https://ieeexplore.ieee.org/document/9578028>`_ for
     additional details regarding the ImageNet validation models.
 
 The mapping of embedding indices to files is determined by the ImageNet

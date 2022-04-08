@@ -16,6 +16,13 @@ What's in a name?
 
 The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter :math:`\Psi` (psi) is often used to denote the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
 
+Installation
+============
+
+.. code:: bash
+
+    pip install psiz
+
 
 Design Philosophy
 =================
@@ -30,7 +37,7 @@ If deciding what to read next, you have a few of options.
 
 Quick Start
 -----------
-If you would like to get a sense of how the major pieces fit together, check out the minimum working example in the Quick Start.
+If you would like to get a sense of how the major pieces fit together, check out the minimal working example in the Quick Start.
 
 Beginner Tutorial
 ------------------

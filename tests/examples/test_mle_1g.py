@@ -125,9 +125,9 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     "similarity_func", ["Exponential"]
 )
 @pytest.mark.parametrize(
-    "mask_zero", [True, False]
+    "mask_zero", [True]
 )
-def test_rate_1g_mle_execution(similarity_func, mask_zero, tmpdir):
+def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     # Settings.
     n_stimuli = 30
     n_dim = 3

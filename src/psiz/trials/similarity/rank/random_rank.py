@@ -177,9 +177,13 @@ class RandomRank(DocketGenerator):
             rng = np.random.default_rng()
             n_trial_per_query_list = rng.multinomial(n_trial, w_diag)
 
-        stimulus_set = self._multiprocess_generate(
+        stimulus_set = self._uniprocess_generate(
             query_idx_list, n_trial_per_query_list
         )
+        # TODO fix segfault issue with multiprocessing
+        # stimulus_set = self._multiprocess_generate(
+        #     query_idx_list, n_trial_per_query_list
+        # )
         n_trial_total = stimulus_set.shape[0]
         n_select = np.full([n_trial_total], self.n_select)
 
@@ -189,6 +193,40 @@ class RandomRank(DocketGenerator):
         return RankDocket(
             stimulus_set, n_select=n_select, mask_zero=self.mask_zero
         )
+
+    def _uniprocess_generate(self, query_idx_list, n_trial_per_query_list):
+        """Uniprocessing strategy."""
+        start_s = time()
+
+        stimulus_set = []
+        for query_idx, n_trial_per_query in zip(
+            query_idx_list, n_trial_per_query_list
+        ):
+            w_q = self.w[query_idx]
+            # Set query index to zero to prohibit sampling query as reference.
+            w_q[query_idx] = 0.
+            # Mask references (if any) below the specified limit.
+            if self.n_highest is not None:
+                ref_priority = _mask_lowest(w_q, self.n_highest)
+            else:
+                ref_priority = copy.copy(w_q)
+            stimulus_set_q = sample_qr_sets(
+                query_idx, self.n_reference, n_trial_per_query, ref_priority,
+                replace=self.replace
+            )
+            stimulus_set.append(stimulus_set_q)
+
+        stimulus_set = np.concatenate(stimulus_set, axis=0)
+
+        if self.verbose > 0:
+            duration_s = time() - start_s
+            print(
+                'Docket assembly: n_trial {0} | duration {1:.0f} s'.format(
+                    stimulus_set.shape[0], duration_s
+                )
+            )
+
+        return stimulus_set
 
     def _multiprocess_generate(self, query_idx_list, n_trial_per_query_list):
         """Multiprocessing setup and teardown."""

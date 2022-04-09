@@ -25,7 +25,7 @@ def test_all():
     """Test all methods."""
     # Initialize.
     concentration = [1.1, 1.1, 1.1]
-    initializer = Dirichlet(concentration, seed=123)
+    initializer = Dirichlet(concentration, seed=[123, 252])
     np.testing.assert_array_equal(
         initializer.concentration, concentration
     )
@@ -35,7 +35,8 @@ def test_all():
     config = initializer.get_config()
     assert config['concentration'] == [1.1, 1.1, 1.1]
     assert config['scale'] == 1.0
-    assert config['seed'] == 123
+    assert config['seed'][0] == 123
+    assert config['seed'][1] == 252
 
     # Check call.
     tf_shape = tf.TensorShape([2, 4])
@@ -44,16 +45,16 @@ def test_all():
     desired_sample = tf.constant(
         [
             [
-                [0.4180948, 0.34049425, 0.24141102],
-                [0.7538074, 0.20453003, 0.041662533],
-                [0.29102674, 0.64605397, 0.06291929],
-                [0.19294274, 0.38227272, 0.42478448]
+                [0.2211622, 0.45494598, 0.32389188],
+                [0.74135166, 0.11674761, 0.14190075],
+                [0.31588084, 0.523675, 0.16044414],
+                [0.90197235, 0.021803739, 0.07622407]
             ],
             [
-                [0.02725979, 0.7716456, 0.20109455],
-                [0.63922215, 0.24183095, 0.11894692],
-                [0.3857724, 0.33163887, 0.28258872],
-                [0.004561754, 0.43929902, 0.5561392]
+                [0.1747177, 0.6633501, 0.16193213],
+                [0.45146146, 0.51521087, 0.033327676],
+                [0.048038144, 0.14123419, 0.81072766],
+                [0.06657295, 0.33051702, 0.60291004]
             ]
         ], dtype=tf.float32
     )

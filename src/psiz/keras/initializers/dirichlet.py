@@ -40,7 +40,8 @@ class Dirichlet(initializers.Initializer):
                 a Dirichlet distribution.
             scale (optional): Scalar indicating how the Dirichlet
                 sample(s) should be scaled.
-            seed (optional): A seed for deterministic behavior.
+            seed (optional): A tuple of two int32 used for seeding
+                deterministic behavior.
 
         """
         self.concentration = np.asarray(concentration)

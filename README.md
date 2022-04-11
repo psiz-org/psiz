@@ -1,6 +1,7 @@
 ![PsiZ logo](docs/img/full_logo_300.png)
 
 [![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
+[![Documentation Status](https://readthedocs.org/projects/psiz/badge/?version=latest)](https://psiz.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/roads/psiz/branch/main/graph/badge.svg?token=UIK748KI5I)](https://codecov.io/gh/roads/psiz)
 
 ---

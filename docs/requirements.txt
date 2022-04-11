@@ -1,3 +1,4 @@
 # docs/requirements.txt
 sphinx==4.3.1
 sphinx-rtd-theme==1.0.0
+psiz

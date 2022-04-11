@@ -26,9 +26,11 @@ copyright = '2021, The PsiZ Authors'
 author = 'Brett D. Roads'
 
 # The full version, including alpha/beta/rc tags
-release = get_version("psiz")
-ver = '.'.join(release.split('.')[:3])  # TODO why ver? is it necessary?
-version = ver
+release = '0.6.1'
+version = '0.6'
+# release = get_version("psiz")
+# ver = '.'.join(release.split('.')[:3])  # TODO why ver? is it necessary?
+# version = ver
 
 # -- General configuration ---------------------------------------------------
 

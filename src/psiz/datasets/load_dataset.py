@@ -50,7 +50,7 @@ def load_dataset(
         verbose=0):
     """Load observations and catalog for the requested hosted dataset.
 
-    Arguments:
+    Args:
         dataset_name: The name of the hosted dataset.
         cache_subdir (optional): The subdirectory where downloaded
             datasets are cached.
@@ -86,7 +86,7 @@ def load_dataset(
 def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
     """Fetch catalog for the requested dataset.
 
-    Arguments:
+    Args:
         dataset_name: The name of the dataset to load.
         cache_dir: The cache directory for PsiZ.
         cache_subdir: The subdirectory where downloaded datasets are
@@ -134,7 +134,7 @@ def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
 def _fetch_obs(dataset_name, cache_dir, cache_subdir):
     """Fetch observations for the requested dataset.
 
-    Arguments:
+    Args:
         dataset_name: The name of the dataset to load.
         cache_dir: The cache directory for PsiZ.
         cache_subdir: The subdirectory where downloaded datasets are
@@ -181,7 +181,7 @@ def _fetch_obs(dataset_name, cache_dir, cache_subdir):
 def _extract_archive(file_path, path='.', archive_format='auto'):
     """Extract an archive if it matches tar, tar.gz, tar.bz, or zip formats.
 
-    Arguments:
+    Args:
         file_path: path to the archive file
         path: path to extract the archive file
         archive_format: Archive format to try for extracting the file.
@@ -303,7 +303,7 @@ class Progbar():
             stateful_metrics=None):
         """Initialize.
 
-        Arguments:
+        Args:
             target: Total number of steps expected, None if unknown.
             width: Progress bar width on screen.
             verbose: Degree of verbosity.

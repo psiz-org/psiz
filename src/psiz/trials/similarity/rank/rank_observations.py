@@ -119,7 +119,7 @@ class RankObservations(RankTrials):
 
         Extends initialization of SimilarityTrials.
 
-        Arguments:
+        Args:
             stimulus_set: The order of reference indices is important.
                 An agent's selected references are listed first (in
                 order of selection if the trial is ranked) and
@@ -251,7 +251,7 @@ class RankObservations(RankTrials):
     def subset(self, index):
         """Return subset of trials as a new RankObservations object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -273,7 +273,7 @@ class RankObservations(RankTrials):
         Helper function that generates a unique ID for each of the
         unique trial configurations in the provided data set.
 
-        Arguments:
+        Args:
             n_reference: An integer array indicating the number of
                 references in each trial.
                 shape = (n_trial,)
@@ -338,7 +338,7 @@ class RankObservations(RankTrials):
     def set_groups(self, groups):
         """Override the existing groups.
 
-        Arguments:
+        Args:
             groups: The new group IDs.
                 shape=(n_trial, n_col)
 
@@ -354,7 +354,7 @@ class RankObservations(RankTrials):
     def set_weight(self, weight):
         """Override the existing weights.
 
-        Arguments:
+        Args:
             weight: The new weight. Can be an float or an array
                 of floats with shape=(self.n_trial,).
 
@@ -368,7 +368,7 @@ class RankObservations(RankTrials):
     def save(self, filepath):
         """Save the RankObservations object as an HDF5 file.
 
-        Arguments:
+        Args:
             filepath: String specifying the path to save the data.
 
         """
@@ -429,7 +429,7 @@ class RankObservations(RankTrials):
     def load(cls, filepath):
         """Load trials.
 
-        Arguments:
+        Args:
             filepath: The location of the hdf5 file to load.
 
         """
@@ -483,7 +483,7 @@ class RankObservations(RankTrials):
         The stimulus_set of each SimilarityTrials object is padded first to
         match the maximum number of references of all the objects.
 
-        Arguments:
+        Args:
             trials_list: A tuple of RankTrials objects to be stacked.
 
         Returns:

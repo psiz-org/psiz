@@ -201,7 +201,7 @@ def main():
 def exhaustive_docket(n_stimuli):
     """Assemble an exhausitive docket.
 
-    Arguments:
+    Args:
         n_stimuli: The number of stimuli.
 
     Returns:

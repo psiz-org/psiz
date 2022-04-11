@@ -54,7 +54,7 @@ class RateBehavior(Behavior):
             midpoint_trainable=True, rate_trainable=True, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             lower_initializer (optional): TensorFlow initializer.
             upper_initializer (optional): TensorFlow initializer.
             midpoint_initializer (optional): TensorFlow initializer.
@@ -117,7 +117,7 @@ class RateBehavior(Behavior):
     def call(self, inputs):
         """Return predicted rating of a trial.
 
-        Arguments:
+        Args:
             inputs:
                 sim_qr: A tensor containing the precomputed
                     similarities between the query stimuli and

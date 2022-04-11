@@ -42,7 +42,7 @@ class Rank(PsychologicalEmbedding):
     def __init__(self, behavior=None, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             See PschologicalEmbedding.
 
         Raises:
@@ -58,7 +58,7 @@ class Rank(PsychologicalEmbedding):
     def call(self, inputs):
         """Call.
 
-        Arguments:
+        Args:
             inputs: A dictionary of inputs:
                 stimulus_set: dtype=tf.int32, consisting of the
                     integers on the interval [0, n_stimuli[

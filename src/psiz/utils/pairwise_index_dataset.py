@@ -31,7 +31,7 @@ def pairwise_index_dataset(
         subsample=None, seed=252):
     """Assemble pairwise combinations.
 
-    Arguments:
+    Args:
         indices: An scalar integer or an array-like of integers
             indicating indices. If a scalar, indices are
             `np.arange(n)`.

@@ -39,7 +39,7 @@ class TrialDataset(object):
     def __init__(self, content, groups=None, outcome=None, weight=None):
         """Initialize.
 
-        Arguments:
+        Args:
             content: A subclass of a psiz.trials.Content object.
             groups (optional): A np.ndarray of integers. Must be rank-2
                 or rank-3.
@@ -80,7 +80,7 @@ class TrialDataset(object):
     def export(self, input_only=False, timestep=True, export_format='tf'):
         """Export trial data as model-consumable object.
 
-        Arguments:
+        Args:
             input_only (optional): Boolean indicating if only the input
                 should be returned.
             timestep (optional): Boolean indicating if data should be
@@ -145,7 +145,7 @@ class TrialDataset(object):
     def load(cls, filepath):
         """Load trials.
 
-        Arguments:
+        Args:
             filepath: The location of the hdf5 file to load.
 
         """
@@ -163,7 +163,7 @@ class TrialDataset(object):
     def save(self, filepath):
         """Save the TrialDataset object as an HDF5 file.
 
-        Arguments:
+        Args:
             filepath: String specifying the path to save the data.
 
         """
@@ -187,7 +187,7 @@ class TrialDataset(object):
     def stack(self, trials_list):
         """Return new object with sequence-stacked data.
 
-        Arguments:
+        Args:
             trials_list: A tuple of TrialDataset objects to be
                 stacked. All objects must be the same class.
 
@@ -218,7 +218,7 @@ class TrialDataset(object):
     def subset(self, idx):
         """Return subset of trials as a new RankObservations object.
 
-        Arguments:
+        Args:
             idx: The indices corresponding to the subset.
 
         Returns:

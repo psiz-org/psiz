@@ -65,7 +65,7 @@ class RateDocket(RateTrials):
     def __init__(self, stimulus_set, mask_zero=False):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_set: The order of the indices is not important.
 
         """
@@ -77,7 +77,7 @@ class RateDocket(RateTrials):
     def subset(self, index):
         """Return subset of trials as a new RateDocket object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -94,7 +94,7 @@ class RateDocket(RateTrials):
         Helper function that generates a unique ID for each of the
         unique trial configurations in the provided data set.
 
-        Arguments:
+        Args:
             n_present: An integer array indicating the number of
                 stimuli present in each trial.
                 shape = (n_trial,)
@@ -130,7 +130,7 @@ class RateDocket(RateTrials):
     def save(self, filepath):
         """Save the RateDocket object as an HDF5 file.
 
-        Arguments:
+        Args:
             filepath: String specifying the path to save the data.
 
         """
@@ -143,7 +143,7 @@ class RateDocket(RateTrials):
     def as_dataset(self, groups=None):
         """Return TensorFlow dataset.
 
-        Arguments:
+        Args:
             groups (optional): ND array indicating group membership
                 information for each trial.
 
@@ -172,7 +172,7 @@ class RateDocket(RateTrials):
         first to match the maximum number of stimuli across all the
         objects.
 
-        Arguments:
+        Args:
             trials_list: A tuple of RateTrials objects to be stacked.
 
         Returns:
@@ -207,7 +207,7 @@ class RateDocket(RateTrials):
     def load(cls, filepath):
         """Load trials.
 
-        Arguments:
+        Args:
             filepath: The location of the hdf5 file to load.
 
         """

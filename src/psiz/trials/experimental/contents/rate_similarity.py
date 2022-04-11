@@ -36,7 +36,7 @@ class RateSimilarity(Content):
             self, stimulus_set):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_set:  A np.ndarray of non-negative integers
                 indicating specific stimuli. The value "0" can be used
                 as a placeholder. Must be rank-2 or rank-3. If rank-2,
@@ -75,7 +75,7 @@ class RateSimilarity(Content):
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
 
-        Arguments:
+        Args:
             component_list: A tuple of TrialComponent objects to be
                 stacked. All objects must be the same class.
 
@@ -116,7 +116,7 @@ class RateSimilarity(Content):
     def subset(self, idx):
         """Return subset of data as a new object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -172,7 +172,7 @@ class RateSimilarity(Content):
     def _check_n_timestep(self, n_timestep):
         """Check validity of `n_timestep`.
 
-        Arguments:
+        Args:
             n_stimstep: A 1D np.ndarray.
 
         Raises:
@@ -188,7 +188,7 @@ class RateSimilarity(Content):
     def export(self, export_format='tf', timestep=True):
         """Prepare trial content data for dataset.
 
-        Arguments:
+        Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
@@ -213,7 +213,7 @@ class RateSimilarity(Content):
     def save(self, grp):
         """Add relevant data to H5 group.
 
-        Arguments:
+        Args:
             grp: H5 group for saving data.
 
         """
@@ -225,7 +225,7 @@ class RateSimilarity(Content):
     def load(cls, grp):
         """Retrieve relevant datasets from group.
 
-        Arguments:
+        Args:
             grp: H5 group from which to load data.
 
         """

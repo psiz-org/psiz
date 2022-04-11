@@ -74,7 +74,7 @@ class SimilarityTrials(metaclass=ABCMeta):
     def __init__(self, stimulus_set, mask_zero=False):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_set: An integer matrix containing indices that
                 indicate the set of stimuli used in each trial. Each
                 row indicates the stimuli used in one trial. It is
@@ -181,7 +181,7 @@ class SimilarityTrials(metaclass=ABCMeta):
     def subset(self, index):
         """Return subset of trials as a new SimilarityTrials object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -193,7 +193,7 @@ class SimilarityTrials(metaclass=ABCMeta):
     def save(self, filepath):
         """Save the SimilarityTrials object as an HDF5 file.
 
-        Arguments:
+        Args:
             filepath: String specifying the path to save the data.
 
         """
@@ -231,7 +231,7 @@ class SimilarityTrials(metaclass=ABCMeta):
     def _find_trials_matching_config(self, row):
         """Find trials matching configuration.
 
-        Arguments:
+        Args:
             row: A pandas.Series object representing a trial
                 configuration.
 

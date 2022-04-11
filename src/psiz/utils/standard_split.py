@@ -26,7 +26,7 @@ from sklearn.model_selection import StratifiedKFold
 def standard_split(obs, shuffle=False, seed=None):
     """Creata a standard 80-10-10 split of the observations.
 
-    Arguments:
+    Args:
         obs: A set of observations.
         shuffle (optional): Boolean indicating if the data should be
             shuffled before splitting.

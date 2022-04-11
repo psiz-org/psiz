@@ -52,7 +52,7 @@ class Catalog():
             class_label=None):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_id: A 1D integer array.
                 shape=(n_stimuli,)
             stimulus_filepath: A 1D list of strings.
@@ -159,7 +159,7 @@ class Catalog():
     def save(self, filepath):
         """Save the Catalog object as an HDF5 file.
 
-        Arguments:
+        Args:
             filepath: String specifying the path to save the data.
 
         """
@@ -203,7 +203,7 @@ class Catalog():
     def subset(self, idx, squeeze=False):
         """Return a subset of the catalog.
 
-        Arguments:
+        Args:
             idx: An integer of boolean array indicating which stimuli
                 to retain.
             squeeze (optional): A boolean indicating if IDs should be

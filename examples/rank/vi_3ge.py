@@ -361,7 +361,7 @@ def build_ground_truth_stimuli(class_mean_full, exemplar_locs_centered, scale):
 def build_model(n_stimuli, n_dim, n_group, kl_weight):
     """Build model.
 
-    Arguments:
+    Args:
         n_stimuli: Integer indicating the number of stimuli in the
             embedding.
         n_dim: Integer indicating the dimensionality of the embedding.
@@ -623,7 +623,7 @@ def model_similarity(
     equivalent to squeeze. In the probabilistic case, mean takes an
     average across samples.
 
-    Arguments:
+    Args:
         model:
         groups:
 

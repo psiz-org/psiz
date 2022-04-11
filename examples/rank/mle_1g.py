@@ -227,7 +227,7 @@ def ground_truth(n_stimuli, n_dim):
 def build_model(n_stimuli, n_dim):
     """Build model.
 
-    Arguments:
+    Args:
         n_stimuli: Integer indicating the number of stimuli in the
             embedding.
         n_dim: Integer indicating the dimensionality of the embedding.

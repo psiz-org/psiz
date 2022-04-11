@@ -90,7 +90,7 @@ class RankDocket(RankTrials):
             mask_zero=False):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_set: The order of the reference indices is not
                 important. See SimilarityTrials.
             n_select (optional): See SimilarityTrials.
@@ -111,7 +111,7 @@ class RankDocket(RankTrials):
     def subset(self, index):
         """Return subset of trials as a new RankDocket object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -129,7 +129,7 @@ class RankDocket(RankTrials):
         Helper function that generates a unique ID for each of the
         unique trial configurations in the provided data set.
 
-        Arguments:
+        Args:
             n_reference: An integer array indicating the number of
                 references in each trial.
                 shape = (n_trial,)
@@ -189,7 +189,7 @@ class RankDocket(RankTrials):
     def save(self, filepath):
         """Save the RankDocket object as an HDF5 file.
 
-        Arguments:
+        Args:
             filepath: String specifying the path to save the data.
 
         """
@@ -204,7 +204,7 @@ class RankDocket(RankTrials):
     def as_dataset(self, groups=None):
         """Return TensorFlow dataset.
 
-        Arguments:
+        Args:
             groups: ND array indicating group membership information for
                 each trial.
 
@@ -233,7 +233,7 @@ class RankDocket(RankTrials):
     def load(cls, filepath):
         """Load trials.
 
-        Arguments:
+        Args:
             filepath: The location of the hdf5 file to load.
 
         """
@@ -260,7 +260,7 @@ class RankDocket(RankTrials):
         The stimulus_set of each SimilarityTrials object is padded first to
         match the maximum number of references of all the objects.
 
-        Arguments:
+        Args:
             trials_list: A tuple of RankTrials objects to be stacked.
 
         Returns:

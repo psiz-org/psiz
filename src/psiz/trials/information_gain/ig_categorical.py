@@ -43,7 +43,7 @@ def ig_categorical(y_pred):
     NOTE: This function works with placeholder elements as long as
     `y_pred` is zero for those elements.
 
-    Arguments:
+    Args:
         y_pred: A tf.Tensor of model predictions.
             shape=(n_trial, n_sample, n_outcome)
 

@@ -25,7 +25,7 @@ def hdi_bvn(loc, cov, ax=None, p=.99, **kwargs):
 
     Ellipses are drawn to indicate the higest density interval.
 
-    Arguments:
+    Args:
         loc: Array denoting the means of bivariate normal
             distributions.
             shape=(n_distribution, 2)

@@ -35,7 +35,7 @@ def load_trials(filepath):
     The loaded data is instantiated as a concrete class of
     psiz.trials.SimilarityTrials.
 
-    Arguments:
+    Args:
         filepath: The location of the hdf5 file to load.
 
     Returns:

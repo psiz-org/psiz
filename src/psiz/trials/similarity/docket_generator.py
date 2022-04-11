@@ -41,7 +41,7 @@ class DocketGenerator(object):
     def generate(self, *args, **kwargs):
         """Return generated trials based on provided arguments.
 
-        Arguments:
+        Args:
             n_stimuli
 
         Returns:

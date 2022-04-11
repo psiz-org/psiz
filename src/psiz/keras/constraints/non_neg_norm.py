@@ -37,7 +37,7 @@ class NonNegNorm(constraints.Constraint):
     def __init__(self, scale=1.0, p=2.0, axis=0):
         """Initialize.
 
-        Arguments:
+        Args:
             scale (optional): The scale (i.e., magnitude) of the norm.
             p (optional): Type of p-norm (must be  >=1).
             axis (optional): integer, axis along which to calculate

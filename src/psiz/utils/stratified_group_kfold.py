@@ -44,7 +44,7 @@ class StratifiedGroupKFold(_BaseKFold):
     StratifiedGroupKFold attempts to create folds which preserve the
     percentage of samples for each class.
 
-    Arguments:
+    Args:
         n_splits : int, default=5
             Number of folds. Must be at least 2.
 

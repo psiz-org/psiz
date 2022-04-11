@@ -39,7 +39,7 @@ def embedding_input_dimension(embedding, idx, ax=None, c='b'):
 
     Intended to handle rank 2 embeddings.
 
-    Arguments:
+    Args:
         embedding: An embedding layer.
         idx: Index of requested input dimension to visualize.
         ax (optional): A 'matplotlib' `AxesSubplot` object.

@@ -30,7 +30,7 @@ class Squeeze(tf.keras.regularizers.Regularizer):
     def __init__(self, rate=0.):
         """Initialize.
 
-        Arguments:
+        Args:
             rate: Rate at which regularization is applied.
 
         """

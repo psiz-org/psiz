@@ -34,7 +34,7 @@ def procrustes_rotation(z0, z1, scale=True):
 
     `z0_rot = z0 @ r`
 
-    Arguments:
+    Args:
         z0: The first set of points.
             shape = (n_point, n_dim)
         z1: The second set of points. The data matrices `z0` and `z1`

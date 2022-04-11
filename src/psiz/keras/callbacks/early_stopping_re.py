@@ -26,7 +26,7 @@ from tensorflow.keras import callbacks
 class EarlyStoppingRe(callbacks.EarlyStopping):
     """Custom early stopping.
 
-    Arguments:
+    Args:
         See tf.keras.callbacks.EarlyStopping.
 
     """
@@ -34,7 +34,7 @@ class EarlyStoppingRe(callbacks.EarlyStopping):
     def reset(self, restart=None):
         """Reset best weights.
 
-        Arguments:
+        Args:
             restart (optional): An integer indicating the restart
                 number. This argument is not currently used, but
                 that may change in later versions.

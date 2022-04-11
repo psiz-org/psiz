@@ -29,7 +29,7 @@ def wpnorm(x, w, p):
 
     ||x||_{w,p} = [sum_i w_i abs(x_i)^p]^(1/p)
 
-    Arguments:
+    Args:
         x: A tf.Tensor indicating the vectors. The vector can have
             arbitrary shape, subject to the following constraint:
             shape=(batch_size, [n, m, ...] n_dim)

@@ -33,7 +33,7 @@ class SoftplusUniform(initializers.Initializer):
             self, minval=-0.05, maxval=0.05, hinge_softness=1., seed=None):
         """Initialize.
 
-        Arguments:
+        Args:
             minval: Minimum value of a uniform random sampler for each
                 dimension.
             maxval: Maximum value of a uniform random sampler for each

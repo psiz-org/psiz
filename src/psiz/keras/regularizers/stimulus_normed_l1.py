@@ -30,7 +30,7 @@ class StimulusNormedL1(tf.keras.regularizers.Regularizer):
     def __init__(self, l1=0.):
         """Initialize.
 
-        Arguments:
+        Args:
             l1: Rate of L1 regularization.
 
         """

@@ -68,7 +68,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             beta_initializer=None, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             fit_tau (optional): Boolean indicating if variable is
                 trainable.
             fit_gamma (optional): Boolean indicating if variable is
@@ -124,7 +124,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call.
 
-        Arguments:
+        Args:
             inputs: A tensor of distances.
 
         Returns:

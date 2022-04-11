@@ -35,7 +35,7 @@ def sample_qr_sets(
     references can be stochastically sampled based on user-provide
     probabilities.
 
-    Arguments:
+    Args:
         query_idx: An integer indicating the query index.
         n_reference: An integer indicating the number of references in
             each trial.

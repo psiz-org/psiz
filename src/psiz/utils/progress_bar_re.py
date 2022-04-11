@@ -33,7 +33,7 @@ class ProgressBarRe(object):
             fill='█'):
         """Initialize.
 
-        Arguments:
+        Args:
             iteration: Integer indicating current iteration.
             total: Integer indicating total iterations.
             prefix (optional): String that is used as prefix.

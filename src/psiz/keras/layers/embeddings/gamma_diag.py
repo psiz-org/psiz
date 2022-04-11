@@ -53,7 +53,7 @@ class EmbeddingGammaDiag(StochasticEmbedding):
             sample_shape=(), **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             input_dim:
             output_dim:
             mask_zero (optional):

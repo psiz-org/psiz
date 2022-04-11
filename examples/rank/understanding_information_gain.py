@@ -199,7 +199,7 @@ def candidate_subplot(
 def build_model(case=0):
     """Return a ground truth embedding.
 
-    Arguments:
+    Args:
         case: Integer indicating the model case.
 
     Case 0:
@@ -377,7 +377,7 @@ def plot_bivariate_normal(ax, loc, cov, c=None, r=2.576, **kwargs):
     If covariances are supplied, ellipses are drawn to indicate regions
     of highest probability mass.
 
-    Arguments:
+    Args:
         ax: A 'matplotlib' axes object.
         loc: Array denoting the means of bivariate normal
             distributions.

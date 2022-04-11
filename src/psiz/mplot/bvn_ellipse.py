@@ -31,7 +31,7 @@ def bvn_ellipse(loc, cov, r=1.96, **kwargs):
     This code was inspired by a solution posted on Stack Overflow:
     https://stackoverflow.com/a/25022642/1860294
 
-    Arguments:
+    Args:
         loc: A 1D array denoting the mean.
         cov: A 2D array denoting the covariance matrix.
         r (optional): The radius (specified in standard deviations) at

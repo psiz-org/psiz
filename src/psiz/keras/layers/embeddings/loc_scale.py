@@ -50,7 +50,7 @@ class _EmbeddingLocScale(StochasticEmbedding):
             **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             input_dim:
             output_dim:
             mask_zero (optional):

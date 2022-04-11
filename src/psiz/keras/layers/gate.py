@@ -57,7 +57,7 @@ class Gate(tf.keras.layers.Layer):
             **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             subnets: A non-empty list of sub-networks. It is assumed
                 that all subnetworks have the same `input_shape` and
                 `output_shape`.
@@ -85,7 +85,7 @@ class Gate(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call.
 
-        Arguments:
+        Args:
             inputs: a n-tuple containing a data Tensor and a trialing
                 group Tensor.
                 data Tensors: shape=(batch, m, [n, ...])
@@ -143,7 +143,7 @@ class Gate(tf.keras.layers.Layer):
     def compute_output_shape(self, input_shape):
         """Computes the output shape of the layer.
 
-        Arguments:
+        Args:
             input_shape: Shape tuple (tuple of integers) or list of
                 shape tuples (one per output tensor of the layer).
                 Shape tuples can include None for free dimensions,
@@ -166,7 +166,7 @@ class Gate(tf.keras.layers.Layer):
         All non-batch dimensions must be flattened together to create a
         final 2D Tensor.
 
-        Arguments:
+        Args:
             x: Data Tensor.
 
         Returns:

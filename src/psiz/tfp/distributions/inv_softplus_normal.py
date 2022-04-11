@@ -37,7 +37,7 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
         constructed as the softplus transformation of a Normal
         distribution.
 
-        Arguments:
+        Args:
             loc: Floating-point `Tensor`; the means of the underlying
                 Normal distribution(s).
             scale: Floating-point `Tensor`; the stddevs of the
@@ -146,7 +146,7 @@ def _kl_lognormal_lognormal(a, b, name=None):
     This is the same as the KL divergence between the underlying Normal
     distributions.
 
-    Arguments:
+    Args:
         a: instance of a LogNormal distribution object.
         b: instance of a LogNormal distribution object.
         name: Name to use for created operations.

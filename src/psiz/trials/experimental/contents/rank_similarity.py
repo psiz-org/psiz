@@ -37,7 +37,7 @@ class RankSimilarity(Content):
     def __init__(self, stimulus_set, n_select=None):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_set: An np.ndarray of non-negative integers
                 indicating specific stimuli. The value "0" can be used
                 as a placeholder. Must be rank-2 or rank-3. If rank-2,
@@ -119,7 +119,7 @@ class RankSimilarity(Content):
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
 
-        Arguments:
+        Args:
             component_list: A tuple of TrialComponent objects to be
                 stacked. All objects must be the same class.
 
@@ -178,7 +178,7 @@ class RankSimilarity(Content):
     def subset(self, idx):
         """Return subset of data as a new object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -348,7 +348,7 @@ class RankSimilarity(Content):
     def _check_n_timestep(self, n_timestep):
         """Check validity of `n_timestep`.
 
-        Arguments:
+        Args:
             n_stimstep: A 1D np.ndarray.
 
         Raises:
@@ -415,7 +415,7 @@ class RankSimilarity(Content):
         This method has two modes that return 2D arrays of different
         shapes.
 
-        Arguments:
+        Args:
             compress (optional): A Boolean indicating if the returned
                 2D array should be compressed such that the first
                 column corresponding to the query is removed, and any
@@ -446,7 +446,7 @@ class RankSimilarity(Content):
     def export(self, export_format='tf', timestep=True):
         """Prepare trial content data for dataset.
 
-        Arguments:
+        Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
@@ -478,7 +478,7 @@ class RankSimilarity(Content):
     def save(self, grp):
         """Add relevant data to H5 group.
 
-        Arguments:
+        Args:
             grp: H5 group for saving data.
 
         """
@@ -491,7 +491,7 @@ class RankSimilarity(Content):
     def load(cls, grp):
         """Retrieve relevant datasets from group.
 
-        Arguments:
+        Args:
             grp: H5 group from which to load data.
 
         """
@@ -503,7 +503,7 @@ class RankSimilarity(Content):
     def _possible_outcomes(n_reference, n_select):
         """Return the possible outcomes of a ranked trial.
 
-        Arguments:
+        Args:
             n_reference: Integer
             n_select: Integer
 

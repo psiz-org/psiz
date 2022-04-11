@@ -36,7 +36,7 @@ class FitTracker(object):
     def __init__(self, n_record, monitor):
         """Initialize.
 
-        Arguments:
+        Args:
             n_record: Integer indicating the number of top restarts to
                 record.
             monitor: String indicating the value to use in order to
@@ -58,7 +58,7 @@ class FitTracker(object):
     def update_state(self, logs, fp_weights, is_init=False):
         """Update record with incoming data.
 
-        Arguments:
+        Args:
             logs: A dictionary of non-weight properties to track.
             fp_weights: A filepath to weights.
             is_init: Boolean indicating if the update is an initial
@@ -123,7 +123,7 @@ class FitTracker(object):
     def result(self, fnc):
         """Return function of all summary fields.
 
-        Arguments:
+        Args:
             fnc: Function that takes a list of items and returns a
                 scalar.
 

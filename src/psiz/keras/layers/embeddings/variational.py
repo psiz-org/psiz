@@ -34,7 +34,7 @@ class EmbeddingVariational(Variational):
     def __init__(self, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             kwargs: Additional key-word arguments.
 
         """

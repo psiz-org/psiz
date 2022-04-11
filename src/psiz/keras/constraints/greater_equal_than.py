@@ -32,7 +32,7 @@ class GreaterEqualThan(constraints.Constraint):
     def __init__(self, min_value=0.):
         """Initialize.
 
-        Arguments:
+        Args:
             min_value: The minimum allowed weight value.
 
         """

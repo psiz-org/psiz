@@ -24,7 +24,7 @@ Functions:
 def stack(trials_list):
     """Return an instance of a trials object of all trials.
 
-    Arguments:
+    Args:
         trials_list: A tuple of trial objects to be stacked.
             All objects should be of the same class.
 

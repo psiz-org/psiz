@@ -35,7 +35,7 @@ class EmbeddingShared(tf.keras.layers.Layer):
             **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             input_dim:
             output_dim:
             embedding: An embedding layer.

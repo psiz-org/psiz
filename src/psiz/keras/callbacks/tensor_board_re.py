@@ -31,7 +31,7 @@ class TensorBoardRe(callbacks.TensorBoard):
     def __init__(self, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             kwargs: See tf.keras.callbacks.Tensorboard.
 
         """
@@ -41,7 +41,7 @@ class TensorBoardRe(callbacks.TensorBoard):
     def reset(self, restart=None):
         """Reset callback.
 
-        Arguments:
+        Args:
             restart (optional): An integer indicating the restart
                 number. If provided, results for each restart will be
                 saved separately to allow joint viewing on TensorBoard.

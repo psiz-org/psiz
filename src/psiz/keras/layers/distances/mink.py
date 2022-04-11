@@ -49,7 +49,7 @@ class Minkowski(tf.keras.layers.Layer):
             **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             rho_trainable (optional):
             rho_initializer (optional):
             rho_regularizer (optional):
@@ -101,7 +101,7 @@ class Minkowski(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call.
 
-        Arguments:
+        Args:
             inputs: A list of two tf.Tensor's denoting a the set of
                 vectors to compute pairwise distances. Each tensor is
                 assumed to have the same shape and be at least rank-2.

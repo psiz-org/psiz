@@ -53,7 +53,7 @@ class PsychologicalEmbedding(tf.keras.Model):
             use_group_behavior=False, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             stimuli: An embedding layer representing the stimuli. Must
                 agree with n_stimuli, n_dim, n_group.
             kernel (optional): A kernel layer.
@@ -133,7 +133,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     def train_step(self, data):
         """Logic for one training step.
 
-        Arguments:
+        Args:
             data: A nested structure of `Tensor`s.
 
         Returns:
@@ -257,7 +257,7 @@ class PsychologicalEmbedding(tf.keras.Model):
                           ~= 1/n * sum_{i=1}^n p(heldout | model_i)
         where model_i is a draw from the posterior p(model|train).
 
-        Arguments:
+        Args:
             data: A nested structure of `Tensor`s.
 
         Returns:
@@ -286,7 +286,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         accommodate variational inference, the predictions are averaged
         over multiple samples from the model.
 
-        Arguments:
+        Args:
             data: A nested structure of `Tensor`s.
 
         Returns:
@@ -329,7 +329,7 @@ class PsychologicalEmbedding(tf.keras.Model):
     def from_config(cls, config):
         """Create model from configuration.
 
-        Arguments:
+        Args:
             config: A hierarchical configuration dictionary.
 
         Returns:

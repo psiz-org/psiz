@@ -34,7 +34,7 @@ class MinkowskiVariational(Variational):
     def __init__(self, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             kwargs: Additional key-word arguments.
 
         """
@@ -43,7 +43,7 @@ class MinkowskiVariational(Variational):
     def call(self, inputs):
         """Call.
 
-        Arguments:
+        Args:
             inputs: A list of two tf.Tensor's denoting a the set of
                 vectors to compute pairwise distance. Each tensor is
                 assumed to have the same shape and be at least rank-2.

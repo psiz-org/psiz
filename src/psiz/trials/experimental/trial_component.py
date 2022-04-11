@@ -36,7 +36,7 @@ class TrialComponent(metaclass=ABCMeta):
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
 
-        Arguments:
+        Args:
             component_list: A tuple of TrialComponent objects to be
                 stacked. All objects must be the same class.
 
@@ -49,7 +49,7 @@ class TrialComponent(metaclass=ABCMeta):
     def subset(self, idx):
         """Return subset of data as a new object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -61,7 +61,7 @@ class TrialComponent(metaclass=ABCMeta):
     def export(self, export_format='tf', timestep=True):
         """Return appropriately formatted data.
 
-        Arguments:
+        Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
@@ -75,7 +75,7 @@ class TrialComponent(metaclass=ABCMeta):
     def save(self, grp):
         """Add relevant datasets to group.
 
-        Arguments:
+        Args:
             grp: H5 group for saving data.
 
         Example:
@@ -87,7 +87,7 @@ class TrialComponent(metaclass=ABCMeta):
     def load(self, grp):
         """Retrieve relevant datasets from group.
 
-        Arguments:
+        Args:
             grp: H5 group from which to load data.
 
         """

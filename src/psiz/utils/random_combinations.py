@@ -25,7 +25,7 @@ from psiz.utils import choice_wo_replace
 def random_combinations(a, k, n_sample, p=None, replace=True, rng=None):
     """Sample from the possible k-combinations of `a`.
 
-    Arguments:
+    Args:
         a: The elements used to create combinations.
             shape=(n_element,)
         k: Integer indicating the number of elements in each

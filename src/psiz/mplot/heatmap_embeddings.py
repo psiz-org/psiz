@@ -31,7 +31,7 @@ def heatmap_embeddings(embedding, ax=None, cmap=None):
 
     Intended to handle rank 2 embeddings.
 
-    Arguments:
+    Args:
         embedding: An embedding layer.
         ax (optional): A 'matplotlib' `AxesSubplot` object.
         cmap (optional): A Matplotlib compatible colormap.

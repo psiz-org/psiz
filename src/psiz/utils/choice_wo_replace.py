@@ -29,7 +29,7 @@ def choice_wo_replace(a, size, p, rng=None):
     For each sample, draw elements without replacement. Across samples
     there may be repetitions.
 
-    Arguments:
+    Args:
         a: An array indicating the eligable elements.
         size: A 2-tuple indicating the number of independent samples and
             the number of draws (without replacement) for each sample.

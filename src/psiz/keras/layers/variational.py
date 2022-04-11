@@ -53,7 +53,7 @@ class Variational(tf.keras.layers.Layer):
             kl_n_sample=100, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             posterior: A layer embodying the posterior.
             prior: A layer embodying the prior.
             kl_weight (optional): A scalar applied to the KL

@@ -46,7 +46,7 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
             alpha_initializer=None, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             fit_tau (optional): Boolean indicating if variable is
                 trainable.
             fit_kappa (optional): Boolean indicating if variable is
@@ -99,7 +99,7 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call.
 
-        Arguments:
+        Args:
             inputs: A tensor of distances.
 
         Returns:

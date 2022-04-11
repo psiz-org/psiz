@@ -40,7 +40,7 @@ class Agent():  # pylint: disable=too-few-public-methods
     def simulate(self, docket, batch_size=None):
         """Return simulated trials.
 
-        Arguments:
+        Args:
             docket: A trial docket.
             batch_size (optional): The batch size.
 

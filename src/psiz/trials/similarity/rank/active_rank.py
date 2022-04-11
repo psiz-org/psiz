@@ -39,7 +39,7 @@ class ActiveRank(DocketGenerator):
             n_candidate=1000, batch_size=128):
         """Initialize.
 
-        Arguments:
+        Args:
             n_stimuli: A scalar indicating the total number of unique
                 stimuli.
             n_reference (optional): An integer indicating the number of
@@ -93,7 +93,7 @@ class ActiveRank(DocketGenerator):
         reference stimuli for the queries are chosen based on
         `r_priority`.
 
-        Arguments:
+        Args:
             n_trial: A scalar indicating the number of trials to
                 generate.
             model_list: A list of PsychologicalEmbedding objects.
@@ -187,7 +187,7 @@ class ActiveRank(DocketGenerator):
     def _select_query(self, n_trial, q_priority, n_unique_query):
         """Select which stimuli should serve as queries and how often.
 
-        Arguments:
+        Args:
             n_trial: Integer indicating the total number of trials.
             q_priority: An array indicating stimulus priorities.
             n_unique_query: Scalar indicating the number of unique queries.

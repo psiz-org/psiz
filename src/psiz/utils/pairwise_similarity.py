@@ -35,7 +35,7 @@ def pairwise_similarity(
         verbose=0):
     """Return the similarity between stimulus pairs.
 
-    Arguments:
+    Args:
         stimuli: A tf.keras.layers.Layer with stimuli semantics.
         kernel: A tf.keras.layers.Layer with kernel sematnics.
         ds_pairs: A TF dataset object that yields a 2-tuple or 3-tuple

@@ -34,7 +34,7 @@ class Continuous(Outcome):
     def __init__(self, value):
         """Initialize.
 
-        Arguments:
+        Args:
             value: Ab np.ndarray of floats indicating the outcome
                 values. Must be rank-2 or rank-3. If rank-2,
                 it is assumed that n_timestep=1 and a singleton
@@ -54,7 +54,7 @@ class Continuous(Outcome):
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
 
-        Arguments:
+        Args:
             component_list: A tuple of TrialComponent objects to be
                 stacked. All objects must be the same class.
 
@@ -106,7 +106,7 @@ class Continuous(Outcome):
     def subset(self, idx):
         """Return subset of data as a new object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -136,7 +136,7 @@ class Continuous(Outcome):
     def export(self, export_format='tf', timestep=True):
         """Return appropriately formatted data.
 
-        Arguments:
+        Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
@@ -159,7 +159,7 @@ class Continuous(Outcome):
     def save(self, grp):
         """Add relevant data to H5 group.
 
-        Arguments:
+        Args:
             grp: H5 group for saving data.
 
         """
@@ -171,7 +171,7 @@ class Continuous(Outcome):
     def load(cls, grp):
         """Retrieve relevant datasets from group.
 
-        Arguments:
+        Args:
             grp: H5 group from which to load data.
 
         """

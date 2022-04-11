@@ -29,7 +29,7 @@ from psiz.trials.information_gain import ig_categorical
 def ig_model_categorical(model_list, inputs):
     """Ensemble information gain.
 
-    Arguments:
+    Args:
         model_list: A list of models. All models are treated as part of
             an ensemble.
         inputs: A batch of inputs. The exact length and shape

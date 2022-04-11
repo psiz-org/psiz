@@ -32,7 +32,7 @@ class LessThan(constraints.Constraint):
     def __init__(self, max_value=0.):
         """Initialize.
 
-        Arguments:
+        Args:
             max_value: The maximum allowed weight value.
 
         """

@@ -26,7 +26,7 @@ import numpy as np
 def generate_group_matrix(n_row, groups=None):
     """Generate group ID data structure.
 
-    Arguments:
+    Args:
         n_row: The number of rows.
         groups (optional): Array-like integers indicating group
             membership information. For example, `[4, 3]` indicates

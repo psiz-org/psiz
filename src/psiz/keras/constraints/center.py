@@ -36,7 +36,7 @@ class Center(constraints.Constraint):
     def __init__(self, axis=0):
         """Initialize.
 
-        Arguments:
+        Args:
             axis (optional): integer, axis along which to reduce
                 weights in order to compute mean.
 

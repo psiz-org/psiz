@@ -54,7 +54,7 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
             tau_initializer=None, alpha_initializer=None, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             fit_tau (optional): Boolean indicating if variable is
                 trainable.
             fit_alpha (optional): Boolean indicating if variable is
@@ -92,7 +92,7 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call.
 
-        Arguments:
+        Args:
             inputs: A tensor of distances.
 
         Returns:

@@ -39,7 +39,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             mask_zero=False):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_set: An integer matrix containing indices that
                 indicate the set of stimuli used in each trial. Each
                 row indicates the stimuli used in one trial. The first
@@ -249,7 +249,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
     def _possible_rank_outcomes(trial_configuration):
         """Return the possible outcomes of a ranked trial.
 
-        Arguments:
+        Args:
             trial_configuration: A trial configuration Pandas Series.
 
         Returns:

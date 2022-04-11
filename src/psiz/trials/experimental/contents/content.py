@@ -130,7 +130,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
     def _find_trials_matching_config(self, row):
         """Find trials matching configuration.
 
-        Arguments:
+        Args:
             row: A pandas.Series object representing a trial
                 configuration.
 

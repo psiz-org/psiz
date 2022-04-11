@@ -34,7 +34,7 @@ class SparseCategorical(Outcome):
     def __init__(self, index, depth=None):
         """Initialize.
 
-        Arguments:
+        Args:
             index: A 2D np.ndarray of integers indicating the
                 outcomes (as positional indices).
             depth: Integer indicating the maximum number of
@@ -54,7 +54,7 @@ class SparseCategorical(Outcome):
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
 
-        Arguments:
+        Args:
             component_list: A tuple of TrialComponent objects to be
                 stacked. All objects must be the same class.
 
@@ -98,7 +98,7 @@ class SparseCategorical(Outcome):
     def subset(self, idx):
         """Return subset of data as a new object.
 
-        Arguments:
+        Args:
             index: The indices corresponding to the subset.
 
         Returns:
@@ -141,7 +141,7 @@ class SparseCategorical(Outcome):
     def export(self, export_format='tf', timestep=True):
         """Return appropriately formatted data.
 
-        Arguments:
+        Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
@@ -170,7 +170,7 @@ class SparseCategorical(Outcome):
     def save(self, grp):
         """Add relevant data to H5 group.
 
-        Arguments:
+        Args:
             grp: H5 group for saving data.
 
         """
@@ -183,7 +183,7 @@ class SparseCategorical(Outcome):
     def load(cls, grp):
         """Retrieve relevant datasets from group.
 
-        Arguments:
+        Args:
             grp: H5 group from which to load data.
 
         """

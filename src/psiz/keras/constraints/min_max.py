@@ -32,7 +32,7 @@ class MinMax(constraints.Constraint):
     def __init__(self, min_value, max_value):
         """Initialize.
 
-        Arguments:
+        Args:
             min_value: The minimum allowed weight value.
             max_value: The maximum allowed weight value.
 

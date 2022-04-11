@@ -26,7 +26,7 @@ import numpy as np
 def rotation_matrix(theta):
     """Return 2D rotation matrix.
 
-    Arguments:
+    Args:
         theta: Scalar value indicating radians of rotation.
 
     """

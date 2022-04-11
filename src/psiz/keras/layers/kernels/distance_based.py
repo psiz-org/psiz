@@ -49,7 +49,7 @@ class DistanceBased(tf.keras.layers.Layer):
 
         Compute k(z_0, z_1), where `k` is the pairwise kernel function.
 
-        Arguments:
+        Args:
             inputs: A list of two tf.Tensor's, plus an optional third
                 Tensor. The first two tensors representing coordinates
                 the pairwise coordinates for which to compute

@@ -34,7 +34,7 @@ class Dirichlet(initializers.Initializer):
     def __init__(self, concentration, scale=1.0, seed=None):
         """Initialize.
 
-        Arguments:
+        Args:
             concentration: An array-like set of values indicating the
                 concentration parameters (i.e., alpha values) governing
                 a Dirichlet distribution.

@@ -344,7 +344,7 @@ def ground_truth(n_stimuli, n_dim, n_group):
 def build_model(n_stimuli, n_dim, n_group, kl_weight):
     """Build model.
 
-    Arguments:
+    Args:
         n_stimuli: Integer indicating the number of stimuli in the
             embedding.
         n_dim: Integer indicating the dimensionality of the embedding.
@@ -473,7 +473,7 @@ def plot_frame(
 def plot_normal(ax, dist, name=None, c=None):
     """Plot univariate distribution.
 
-    Arguments:
+    Args:
         ax:
         dist:
         name:
@@ -545,7 +545,7 @@ def model_similarity(model, groups=[], n_sample=None):
     equivalent to squeeze. In the probabilistic case, mean takes an
     average across samples.
 
-    Arguments:
+    Args:
         model:
         groups:
         n_sample:

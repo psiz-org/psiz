@@ -36,7 +36,7 @@ class RateTrials(SimilarityTrials, metaclass=ABCMeta):
     def __init__(self, stimulus_set, mask_zero=False):
         """Initialize.
 
-        Arguments:
+        Args:
             stimulus_set: An integer matrix containing indices that
                 indicate the set of stimuli used in each trial. Each
                 row indicates the stimuli used in one trial. It is

@@ -31,7 +31,7 @@ def affine_mvn(loc, cov, r=None, t=None):
         loc_affine = loc @ r + t
         cov_affine = r^T @ cov @ r
 
-    Arguments:
+    Args:
         loc: Location parameters.
             shape=(n_dim,) or (1, n_dim)
         cov: Covariance.

@@ -31,7 +31,7 @@ def load_catalog(filepath, verbose=0):
 
     The loaded data is instantiated as a Catalog object.
 
-    Arguments:
+    Args:
         filepath: The location of the hdf5 file to load.
         verbose (optional): Controls the verbosity of printed summary.
 

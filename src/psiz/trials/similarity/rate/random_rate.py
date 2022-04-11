@@ -34,7 +34,7 @@ class RandomRate(DocketGenerator):
     def __init__(self, eligible_indices, n_present=2, mask_zero=False):
         """Initialize.
 
-        Arguments:
+        Args:
             eligible_indices: A 1D array-like of integers indicating
                 the eligible indices.
             n_present: A scalar indicating the number of unique stimuli
@@ -63,7 +63,7 @@ class RandomRate(DocketGenerator):
     def generate(self, n_trial):
         """Return generated trials based on provided arguments.
 
-        Arguments:
+        Args:
             n_trial: A scalar indicating the number of trials to
                 generate.
 

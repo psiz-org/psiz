@@ -42,7 +42,7 @@ class SortBehavior(Behavior):
             midpoint_trainable=True, rate_trainable=True, **kwargs):
         """Initialize.
 
-        Arguments:
+        Args:
             TODO
             kwargs (optional): Additional keyword arguments.
 
@@ -54,7 +54,7 @@ class SortBehavior(Behavior):
     def call(self, inputs):
         """Return probability of outcome.
 
-        Arguments:
+        Args:
             inputs:
                 sim_qr: A tensor containing the precomputed
                     similarities between the query stimuli and

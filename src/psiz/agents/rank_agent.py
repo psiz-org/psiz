@@ -45,7 +45,7 @@ class RankAgent(Agent):  # pylint: disable=too-few-public-methods
     def __init__(self, model, groups=None):
         """Initialize.
 
-        Arguments:
+        Args:
             model: A concrete instance of a PsychologicalEmedding
                 object.
             groups (optional): Array-like integers indicating group
@@ -63,7 +63,7 @@ class RankAgent(Agent):  # pylint: disable=too-few-public-methods
     def simulate(self, docket, batch_size=None):
         """Stochastically simulate similarity judgments.
 
-        Arguments:
+        Args:
             docket: A RankDocket object representing the
                 to-be-judged trials. The order of the stimuli in the
                 stimulus set is ignored for the simulations.
@@ -118,7 +118,7 @@ class RankAgent(Agent):  # pylint: disable=too-few-public-methods
 def _rank_sample(stimulus_set, probs):
     """Stochasatically select outcome.
 
-    Arguments:
+    Args:
         stimulus_set:
             shape=(batch_size, n_reference + 1, n_outcome)
         probs:

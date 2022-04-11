@@ -52,7 +52,7 @@ class RandomRank(DocketGenerator):
             verbose=0):
         """Initialize.
 
-        Arguments:
+        Args:
             indices: A scalar inter or 1D array-like of integers
                 indicating the eligible indices. If scalar, index array
                 is instantiated as `np.arange(indices)`.
@@ -137,7 +137,7 @@ class RandomRank(DocketGenerator):
 
         Generative behavior is toggled via `per_query`.
 
-        Arguments:
+        Args:
             n_trial: A scalar indicating the number of trials to
                 generate.
             per_query (optional): Boolean indicating if the provided
@@ -297,7 +297,7 @@ def _worker_generate(
     Assemble complete stimulus set for a list of pre-selected query
     indices (`query_idx_list`).
 
-    Arguments:
+    Args:
         query_idx_list:
         stimulus_set:
         w:
@@ -339,7 +339,7 @@ def _worker_generate(
 def _mask_lowest(arr, n_unmasked, mask_value=0):
     """Mask lowest value entries.
 
-    Arguments:
+    Args:
         arr: A 1D array of values.
         n_unmasked: The number of entries to leave unmasked.
         mask_value (optional): The mask value.

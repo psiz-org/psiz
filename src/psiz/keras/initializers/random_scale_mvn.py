@@ -32,7 +32,7 @@ class RandomScaleMVN(initializers.Initializer):
             self, mean=0.0, stddev=1.0, minval=-4.0, maxval=-1.0, seed=None):
         """Initialize.
 
-        Arguments:
+        Args:
             mean: A python scalar or a scalar tensor. Mean of the
                 random values to generate.
             stddev: A scalar indicating the initial standard deviation.

@@ -56,7 +56,7 @@ class Restarter(object):
             weight_dir='/tmp/psiz/restarts'):
         """Initialize.
 
-        Arguments:
+        Args:
             model: A compiled TensorFlow model.
             compile_kwargs (optional): Key-word arguments for compile
                 method.
@@ -101,7 +101,7 @@ class Restarter(object):
             **kwargs):
         """Fit the embedding model to the observations using restarts.
 
-        Arguments:
+        Args:
             x: A a tf.data.Dataset object.
             callbacks: A list of callbacks.
             verbose: Verbosity of output.

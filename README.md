@@ -1,4 +1,4 @@
-![PsiZ logo](docs/full_logo_300.png)
+![PsiZ logo](docs/img/full_logo_300.png)
 
 [![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
 [![codecov](https://codecov.io/gh/roads/psiz/branch/main/graph/badge.svg?token=UIK748KI5I)](https://codecov.io/gh/roads/psiz)

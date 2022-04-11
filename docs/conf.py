@@ -16,7 +16,7 @@
 
 # Need to import as get_version since version is a reserved variable name in
 # sphinx.
-from importlib.metadata import version as get_version
+# from importlib.metadata import version as get_version
 import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
@@ -26,7 +26,7 @@ copyright = '2021, The PsiZ Authors'
 author = 'Brett D. Roads'
 
 # The full version, including alpha/beta/rc tags
-release = '0.6.1'
+release = '0.6.2'
 version = '0.6'
 # release = get_version("psiz")
 # ver = '.'.join(release.split('.')[:3])  # TODO why ver? is it necessary?

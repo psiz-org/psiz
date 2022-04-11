@@ -1,5 +1,5 @@
 # docs/requirements.txt
-sphinx==4.3.1
+sphinx==4.5.0
 sphinx-rtd-theme==1.0.0
 sphinx-last-updated-by-git
 myst-nb

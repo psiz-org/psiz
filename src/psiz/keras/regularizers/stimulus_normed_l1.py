@@ -37,7 +37,13 @@ class StimulusNormedL1(tf.keras.regularizers.Regularizer):
         self.l1 = l1
 
     def __call__(self, z):
-        """Call."""
+        """Call.
+
+        Args:
+            z: A Tensor representing percepts.
+                shape=[n_stimuli, n_dim].
+
+        """
         return self.l1 * (tf.reduce_sum(tf.abs(z)) / z.shape[0])
 
     def get_config(self):

@@ -17,6 +17,7 @@
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 from psiz.keras.initializers import Dirichlet
 
@@ -42,6 +43,8 @@ def test_all():
     tf_shape = tf.TensorShape([2, 4])
     _ = initializer(tf_shape)
 
+    _ = initializer(tf_shape, dtype=K.floatx())
+    
     # TODO
     # desired_sample = tf.constant(
     #     [

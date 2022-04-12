@@ -25,7 +25,14 @@ import tensorflow as tf
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
 class Squeeze(tf.keras.regularizers.Regularizer):
-    """Squeeze representation into a low number of dimensions."""
+    """Squeeze representation into a low number of dimensions.
+
+    Regularizer determines the "max usage" for each dimension by taking
+    the maximum across stimuli. The regularizer places pressure on the
+    representation to only use dimensions if necessary, "squeezing" out
+    dimensions that are not essential for any of the stimuli.
+
+    """
 
     def __init__(self, rate=0.):
         """Initialize.
@@ -37,10 +44,17 @@ class Squeeze(tf.keras.regularizers.Regularizer):
         self.rate = rate
 
     def __call__(self, z):
-        """Call."""
-        # Sum across stimuli, but within a dimension.
-        dimension_usage = tf.reduce_max(tf.math.abs(z), axis=0)
-        return self.rate * tf.reduce_sum(dimension_usage)
+        """Call.
+
+        Args:
+            z: A Tensor representing percepts.
+                shape=[n_stimuli, n_dim].
+
+        """
+        # Max across stimuli (axis=0), identifying the "maximum usage" of each
+        # dimension (axis=1).
+        max_usage_per_dim = tf.reduce_max(tf.math.abs(z), axis=0)
+        return self.rate * tf.reduce_sum(max_usage_per_dim)
 
     def get_config(self):
         """Return config."""

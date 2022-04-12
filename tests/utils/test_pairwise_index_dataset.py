@@ -187,10 +187,14 @@ def test_wrong():
 
     # Raise error because elements argument is not implemented.
     with pytest.raises(Exception) as e_info:
-        ds_pairs, ds_info = pairwise_index_dataset(
-            n_stimuli, elements='garbage'
-        )
+        _, _ = pairwise_index_dataset(n_stimuli, elements='garbage')
     assert e_info.type == NotImplementedError
+
+    # Raise error because indices argument must be scalar or 1D.
+    with pytest.raises(Exception) as e_info:
+        indices = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+        _, _ = pairwise_index_dataset(indices)
+    assert e_info.type == ValueError
 
 
 def test_subsample_0():

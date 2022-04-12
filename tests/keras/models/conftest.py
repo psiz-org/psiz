@@ -292,6 +292,34 @@ def ds_rate_obs_2g():
 
 
 @pytest.fixture(scope="module")
+def rate_default_1g_mle():
+    """A MLE rate model."""
+    n_stimuli = 30
+    n_dim = 10
+
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli + 1, n_dim, mask_zero=True
+    )
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(3.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
+    model = psiz.keras.models.Rate(stimuli=stimuli, kernel=kernel)
+    return model
+
+
+@pytest.fixture(scope="module")
 def rate_1g_mle():
     """A MLE rate model."""
     n_stimuli = 30

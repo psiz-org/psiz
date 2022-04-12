@@ -53,15 +53,15 @@ def load_trials(filepath):
         # call. The `setup.cfg` file notes this minimum version requirement.
         # pylint: disable=no-member
         class_name = f["class_name"].asstr()[()]
-    except KeyError:
+    except KeyError:  # pragma: no cover
         # pylint: disable=no-member
         class_name = f["trial_type"].asstr()[()]
     f.close()
 
     # Handle legacy class names.
-    if class_name == "Docket":
+    if class_name == "Docket":  # pragma: no cover
         class_name = "RankDocket"
-    elif class_name == "Observations":
+    elif class_name == "Observations":  # pragma: no cover
         class_name = "RankObservations"
 
     # Route to appropriate class.
@@ -74,7 +74,7 @@ def load_trials(filepath):
     }
     if class_name in custom_objects:
         trial_class = custom_objects[class_name]
-    else:
+    else:  # pragma: no cover
         print(
             'NotImplementedError: class_name={0} is not implemented.'.format(
                 class_name

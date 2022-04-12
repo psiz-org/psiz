@@ -21,12 +21,13 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import initializers
+from tensorflow.keras.initializers import Initializer
+from tensorflow.keras import backend as K
 import tensorflow_probability as tfp
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
-class SoftplusUniform(initializers.Initializer):
+class SoftplusUniform(Initializer):
     """Initializer using an inverse-softplus-uniform distribution."""
 
     def __init__(
@@ -34,12 +35,11 @@ class SoftplusUniform(initializers.Initializer):
         """Initialize.
 
         Args:
-            minval: Minimum value of a uniform random sampler for each
-                dimension.
-            maxval: Maximum value of a uniform random sampler for each
-                dimension.
-            seed (optional): A Python integer. Used to create random
-                seeds. See `tf.set_random_seed` for behavior.
+            minval: Minimum value of a uniform random sampler.
+            maxval: Maximum value of a uniform random sampler.
+            hinge_softness (optional): A float controlling the shape of
+                the softplus function.
+            seed (optional): An integer seed.
 
         """
         self.minval = minval
@@ -50,6 +50,9 @@ class SoftplusUniform(initializers.Initializer):
     def __call__(self, shape, dtype=None, **kwargs):
         """Call."""
         # pylint: disable=unexpected-keyword-arg
+        if dtype is None:
+            dtype = K.floatx()
+
         w = tf.random.uniform(
             shape, minval=self.minval, maxval=self.maxval, dtype=dtype,
             seed=self.seed, name=None
@@ -66,6 +69,7 @@ class SoftplusUniform(initializers.Initializer):
         config = {
             "minval": self.minval,
             "maxval": self.maxval,
+            "hinge_softness": self.hinge_softness,
             "seed": self.seed
         }
         return config

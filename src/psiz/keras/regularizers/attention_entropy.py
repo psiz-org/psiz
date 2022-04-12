@@ -43,9 +43,7 @@ class AttentionEntropy(tf.keras.regularizers.Regularizer):
         # that weights sum to n_dim.
         w = w / n_dim + tf.keras.backend.epsilon()
         t = tf.negative(tf.math.reduce_sum(w * tf.math.log(w), axis=1))
-        return self.rate * (tf.reduce_mean(
-            t
-        ))
+        return self.rate * tf.reduce_mean(t)
 
     def get_config(self):
         """Return config."""

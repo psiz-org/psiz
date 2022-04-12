@@ -30,6 +30,31 @@ def test_n_sample_propogation(rate_1g_vi):
     assert rate_1g_vi.n_sample == 100
 
 
+def test_call_1groups(
+        rate_default_1g_mle, ds_rate_docket, ds_rate_obs_2g):
+    """Test call.
+
+    Use default rate behavior module.
+
+    """
+    model = rate_default_1g_mle
+    # Compile
+    compile_kwargs = {
+        'loss': tf.keras.losses.MeanSquaredError(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.MeanSquaredError(name='mse')
+        ]
+    }
+    model.compile(**compile_kwargs)
+
+    # Fit one epoch.
+    model.fit(ds_rate_obs_2g, epochs=1)
+
+    # Predict using original model.
+    _ = model.predict(ds_rate_docket)
+
+
 @pytest.mark.parametrize(
     "is_eager", [True, False]
 )

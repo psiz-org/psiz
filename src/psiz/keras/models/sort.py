@@ -24,7 +24,7 @@ Classes:
 import tensorflow as tf
 
 from psiz.keras.models.psych_embedding import PsychologicalEmbedding
-import psiz.keras.layers
+# import psiz.keras.layers
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -48,12 +48,13 @@ class Sort(PsychologicalEmbedding):
             ValueError: If arguments are invalid.
 
         """
-        # Initialize behavioral component.
-        if behavior is None:
-            behavior = psiz.keras.layers.SortBehavior()
-        kwargs.update({'behavior': behavior})
+        # # Initialize behavioral component.
+        # if behavior is None:
+        #     behavior = psiz.keras.layers.SortBehavior()
+        # kwargs.update({'behavior': behavior})
 
-        super().__init__(**kwargs)
+        # super().__init__(**kwargs)
+        raise NotImplementedError
 
     def call(self, inputs):
         """Call.

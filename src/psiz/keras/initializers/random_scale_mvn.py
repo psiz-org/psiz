@@ -26,7 +26,11 @@ from tensorflow.keras import initializers
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
 class RandomScaleMVN(initializers.Initializer):
-    """Initializer that generates tensors with a normal distribution."""
+    """Initializer that generates tensors with a normal distribution.
+
+    The scale parameter is uniformly drawn in log space as specified by
+    `minval` and `maxval`.
+    """
 
     def __init__(
             self, mean=0.0, stddev=1.0, minval=-4.0, maxval=-1.0, seed=None):

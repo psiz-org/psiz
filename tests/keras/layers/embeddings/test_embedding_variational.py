@@ -43,7 +43,7 @@ def emb_inputs_v1():
     return inputs
 
 
-def test_call(emb_inputs_v1):
+def test_call_approx(emb_inputs_v1):
     """Test call."""
     kl_weight = .1
     n_stimuli = 10

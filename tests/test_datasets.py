@@ -27,6 +27,7 @@ from psiz.trials import RankObservations
 @pytest.mark.osf
 def test_birds_12(tmpdir):
     dataset_name = 'birds-12'
+    _, _ = psiz.datasets.load_dataset(dataset_name, verbose=0)
     obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
     )
@@ -216,7 +217,7 @@ def test_nonexistent(tmpdir):
     dataset_name = 'nonexistent_dataset'
 
     with pytest.raises(Exception) as e_info:
-        obs, catalog = psiz.datasets.load_dataset(
+        _, _ = psiz.datasets.load_dataset(
             dataset_name, cache_subdir='datasets', cache_dir=tmpdir
         )
     assert e_info.type == ValueError

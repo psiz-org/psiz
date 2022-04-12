@@ -53,7 +53,7 @@ def test_generate_with_integer():
         )
     assert sum(docket.n_select == n_select_desired) == n_trial_desired
     assert sum(docket.is_ranked == is_ranked_desired) == n_trial_desired
-    
+
 
 def test_generate_with_array():
     """Test random generator."""
@@ -223,7 +223,7 @@ def test_query_with_highest():
         5: {6, 7, 8, 9, 10},
         10: {1, 2, 3, 4, 5},
     }
-    query_idx_list = np.array([1, 5, 10], dtype=np.int)
+    query_idx_list = np.array([1, 5, 10], dtype=int)
     for i_query in query_idx_list:
         bidx = np.equal(docket.stimulus_set[:, 0], i_query)
         qr_set_sub = docket.stimulus_set[bidx]

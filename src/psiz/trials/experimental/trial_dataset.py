@@ -72,7 +72,7 @@ class TrialDataset(object):
 
         # Handle `weight` initialization.
         if weight is None:
-            weight = self.content.is_actual.astype(np.float)
+            weight = self.content.is_actual.astype(float)
         else:
             weight = self._check_weight(weight)
         self.weight = weight
@@ -241,7 +241,7 @@ class TrialDataset(object):
     def _check_weight(self, weight):
         """Check the validity of `weight`."""
         # Cast `weight` to float if necessary.
-        weight = weight.astype(np.float)
+        weight = weight.astype(float)
 
         # Check rank of `weight`.
         if not (weight.ndim == 2):

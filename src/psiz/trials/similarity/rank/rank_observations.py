@@ -230,7 +230,7 @@ class RankObservations(RankTrials):
 
     def _check_weight(self, weight):
         """Check the argument weight."""
-        weight = weight.astype(np.float)
+        weight = weight.astype(float)
         # Check shape agreement.
         if not (weight.shape[0] == self.n_trial):
             raise ValueError((
@@ -240,7 +240,7 @@ class RankObservations(RankTrials):
 
     def _check_rt(self, rt_ms):
         """Check the argument rt_ms."""
-        rt_ms = rt_ms.astype(np.float)
+        rt_ms = rt_ms.astype(float)
         # Check shape agreement.
         if not (rt_ms.shape[0] == self.n_trial):
             raise ValueError((

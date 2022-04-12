@@ -179,7 +179,7 @@ class Catalog():
             max_label_length = len(max(self.class_label.values(), key=len))
 
             n_class = len(self.class_label)
-            class_map_class_id = np.empty(n_class, dtype=np.int)
+            class_map_class_id = np.empty(n_class, dtype=int)
             class_map_label = np.empty(n_class, dtype="S{0}".format(
                 max_label_length
             ))

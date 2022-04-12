@@ -29,7 +29,7 @@ Please send in fixes and feature additions through Pull Requests.
 * Developers should create feature branches that branch from a particular "major-minor branch" `rX.Y`. The major-minor branches serve as a development branches. Note that a new branch is NOT created for each patch version.
 * In preparation for a release, a coverage report must be created and uploaded to codecov.io.
 * All releases are tagged using the format `vX.Y.Z`, thus a given release branch can have multiple tags that differ by patch number.
-* Only tagged releases on a major-minor branch are merged with `main`.
+* Only tagged releases on a major-minor branch are merged with `main`. Thus, the `main` branch always represents the latest stable version.
 
 # Additional Guidance
 

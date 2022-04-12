@@ -24,7 +24,6 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 import tensorflow_probability as tfp
 
-from psiz.tfp.distributions.truncated_normal import TruncatedNormal
 import psiz.keras.constraints as pk_constraints
 from psiz.tf.ops.wpnorm import wpnorm
 
@@ -158,7 +157,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
             lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
-        rho_dist = TruncatedNormal(
+        rho_dist = tfp.distributions.TruncatedNormal(
             self.rho_loc, rho_scale, self.rho_low, self.rho_high
         )
         batch_ndims = tf.size(rho_dist.batch_shape_tensor())
@@ -191,7 +190,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
             lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
-        w_dist = TruncatedNormal(
+        w_dist = tfp.distributions.TruncatedNormal(
             self.w_loc, w_scale, self.w_low, self.w_high
         )
         batch_ndims = tf.size(w_dist.batch_shape_tensor())

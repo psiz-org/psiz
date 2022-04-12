@@ -22,13 +22,13 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.initializers import Initializer
+from tensorflow.keras import initializers
 from tensorflow.keras import backend as K
 import tensorflow_probability as tfp
 
 
 @tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
-class Dirichlet(Initializer):
+class Dirichlet(initializers.Initializer):
     """Initializer based on a Dirichlet distribution."""
 
     def __init__(self, concentration, scale=1.0, seed=None):

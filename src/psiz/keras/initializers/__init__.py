@@ -15,10 +15,9 @@
 # ============================================================================
 """Keras initializers initialization file."""
 
-from psiz.keras.initializers.random_scale_mvn import RandomScaleMVN
 from psiz.keras.initializers.dirichlet import Dirichlet
 from psiz.keras.initializers.softplus_uniform import SoftplusUniform
 
 __all__ = [
-    'RandomScaleMVN', 'Dirichlet', 'SoftplusUniform'
+    'Dirichlet', 'SoftplusUniform'
 ]

@@ -35,7 +35,7 @@ Install using PyPI
 
 Install using git
 -----------------
-You can also install PsiZ via `git`. You first clone the PsiZ repository from GitHub to your local machine adn then install via `pip`.
+You can also install PsiZ via `git`. You first clone the PsiZ repository from GitHub to your local machine and then install via `pip`.
 
 .. code:: bash
 

@@ -40,7 +40,7 @@ Please send in fixes and feature additions through Pull Requests.
     * Currently, all releases are alpha which means 
 
 ---
-**WARNING:** This package is pre-release and the API is not stable. Minor version changes may contain breaking changes until 1.0 release.
+**WARNING:** This package is pre-release and the API is not stable. Minor version changes may contain breaking changes until `v1.0.0` is released.
 
 ---
 

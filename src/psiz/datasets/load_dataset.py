@@ -16,7 +16,8 @@
 """Module for loading internally pre-defined datasets.
 
 Functions:
-    load_dataset: Load observations for the requested dataset.
+    load_dataset: Download observations and catalog for the
+        requested dataset.
 
 Notes:
     The dataset will only be downloaded from the server if it does not
@@ -48,32 +49,27 @@ import psiz.trials
 def load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=None,
         verbose=0):
-    """Load observations and catalog for the requested hosted dataset.
+    """Download observations and catalog for the requested hosted dataset.
 
     Args:
         dataset_name: The name of the hosted dataset.
+        cache_dir (optional): The cache directory for PsiZ.
         cache_subdir (optional): The subdirectory where downloaded
             datasets are cached.
-        cache_dir (optional): The cache directory for PsiZ.
         verbose (optional): Controls the verbosity of printed dataset summary.
 
     Returns:
-        obs: An RankObservations object.
         catalog: A catalog object containing information regarding the
             stimuli used to collect observations.
+        obs: An Observations object.
 
     """
-    # Load from download cache.
-    if cache_dir is None:
-        cache_dir = Path.home() / Path('.psiz')
-    else:
-        cache_dir = Path(cache_dir)
-    dataset_path = cache_dir / Path(cache_subdir, dataset_name)
-    if not dataset_path.exists():
-        dataset_path.mkdir(parents=True)
-
-    obs = _fetch_obs(dataset_name, cache_dir, cache_subdir)
-    catalog = _fetch_catalog(dataset_name, cache_dir, cache_subdir)
+    obs = _fetch_obs(
+        dataset_name, cache_subdir=cache_subdir, cache_dir=cache_dir
+    )
+    catalog = _fetch_catalog(
+        dataset_name, cache_subdir=cache_subdir, cache_dir=cache_dir
+    )
 
     if verbose > 0:
         print("Dataset Summary")
@@ -83,20 +79,30 @@ def load_dataset(
     return (obs, catalog)
 
 
-def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
-    """Fetch catalog for the requested dataset.
+def _fetch_catalog(
+        dataset_name, cache_subdir='datasets', cache_dir=None):
+    """Download catalog for the requested dataset.
 
     Args:
-        dataset_name: The name of the dataset to load.
-        cache_dir: The cache directory for PsiZ.
-        cache_subdir: The subdirectory where downloaded datasets are
-            cached.
+        dataset_name: The name of the hosted dataset.
+        cache_dir (optional): The cache directory for PsiZ.
+        cache_subdir (optional): The subdirectory where downloaded
+            datasets are cached.
 
     Returns:
         catalog: A Catalog object.
 
     """
     fname = "catalog_v0.6.0.hdf5"
+
+    # Load from download cache.
+    if cache_dir is None:
+        cache_dir = Path.home() / Path('.psiz')
+    else:
+        cache_dir = Path(cache_dir)
+    dataset_path = cache_dir / Path(cache_subdir, dataset_name)
+    if not dataset_path.exists():
+        dataset_path.mkdir(parents=True)
 
     dataset_exists = True
     if dataset_name == "birds-12":
@@ -131,20 +137,30 @@ def _fetch_catalog(dataset_name, cache_dir, cache_subdir):
     return catalog
 
 
-def _fetch_obs(dataset_name, cache_dir, cache_subdir):
-    """Fetch observations for the requested dataset.
+def _fetch_obs(
+        dataset_name, cache_subdir='datasets', cache_dir=None):
+    """Download observations for the requested dataset.
 
     Args:
-        dataset_name: The name of the dataset to load.
-        cache_dir: The cache directory for PsiZ.
-        cache_subdir: The subdirectory where downloaded datasets are
-            cached.
+        dataset_name: The name of the hosted dataset.
+        cache_dir (optional): The cache directory for PsiZ.
+        cache_subdir (optional): The subdirectory where downloaded
+            datasets are cached.
 
     Returns:
-        obs: An RankObservations object.
+        obs: An Observations object.
 
     """
     fname = 'obs_v0.6.0.hdf5'
+
+    # Load from download cache.
+    if cache_dir is None:
+        cache_dir = Path.home() / Path('.psiz')
+    else:
+        cache_dir = Path(cache_dir)
+    dataset_path = cache_dir / Path(cache_subdir, dataset_name)
+    if not dataset_path.exists():
+        dataset_path.mkdir(parents=True)
 
     dataset_exists = True
     if dataset_name == "birds-12":

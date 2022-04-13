@@ -25,7 +25,7 @@ from psiz.trials import RankObservations
 
 @pytest.mark.slow
 @pytest.mark.osf
-def test_birds_12(tmpdir):
+def test_dataset_birds_12(tmpdir):
     dataset_name = 'birds-12'
     _, _ = psiz.datasets.load_dataset(dataset_name, verbose=0)
     obs, catalog = psiz.datasets.load_dataset(
@@ -57,7 +57,7 @@ def test_birds_12(tmpdir):
 
 @pytest.mark.slow
 @pytest.mark.osf
-def test_birds_16(tmpdir):
+def test_dataset_birds_16(tmpdir):
     dataset_name = 'birds-16'
     obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
@@ -91,7 +91,7 @@ def test_birds_16(tmpdir):
 
 @pytest.mark.slow
 @pytest.mark.osf
-def test_skin_lesions(tmpdir):
+def test_dataset_skin_lesions(tmpdir):
     dataset_name = 'skin_lesions'
     obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
@@ -122,7 +122,7 @@ def test_skin_lesions(tmpdir):
 
 @pytest.mark.slow
 @pytest.mark.osf
-def test_rocks(tmpdir):
+def test_dataset_rocks(tmpdir):
     dataset_name = 'rocks_Nosofsky_etal_2016'
     obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
@@ -153,7 +153,7 @@ def test_rocks(tmpdir):
 
 @pytest.mark.slow
 @pytest.mark.osf
-def test_ilscrc_val_v1(tmpdir):
+def test_dataset_ilscrc_val_v1(tmpdir):
     dataset_name = 'ilsvrc_val_v0_1'
     obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
@@ -184,7 +184,7 @@ def test_ilscrc_val_v1(tmpdir):
 
 @pytest.mark.slow
 @pytest.mark.osf
-def test_ilscrc_val_v2(tmpdir):
+def test_dataset_ilscrc_val_v2(tmpdir):
     dataset_name = 'ilsvrc_val_v0_2'
     obs, catalog = psiz.datasets.load_dataset(
         dataset_name, cache_subdir='datasets', cache_dir=tmpdir, verbose=1
@@ -213,7 +213,7 @@ def test_ilscrc_val_v2(tmpdir):
     assert row_10.class_id == 10
 
 
-def test_nonexistent(tmpdir):
+def test_dataset_nonexistent(tmpdir):
     dataset_name = 'nonexistent_dataset'
 
     with pytest.raises(Exception) as e_info:

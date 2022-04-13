@@ -17,11 +17,9 @@
 
 Classes:
     InvSoftplusNormal
-    Gamma
 
 """
 
 from psiz.tfp.distributions.inv_softplus_normal import InvSoftplusNormal
-from psiz.tfp.distributions.gamma import Gamma
 
-__all__ = ['InvSoftplusNormal', 'Gamma']
+__all__ = ['InvSoftplusNormal']

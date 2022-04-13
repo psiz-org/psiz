@@ -104,6 +104,7 @@ def test_call_1d_input(
         [sample_shape, input_shape, n_dim]
     ).astype(int)
 
+    # Test call
     output = embedding(input)
     np.testing.assert_array_equal(
         desired_output_shape, np.shape(output.numpy())
@@ -124,6 +125,40 @@ def test_call_1d_input(
     recon_output = recon_emb(input)
     np.testing.assert_array_equal(
         desired_output_shape, np.shape(recon_output.numpy())
+    )
+
+
+@pytest.mark.parametrize(
+    'embedding_class', [
+        psiz.keras.layers.EmbeddingGammaDiag,
+        psiz.keras.layers.EmbeddingLaplaceDiag,
+        psiz.keras.layers.EmbeddingLogNormalDiag,
+        pytest.param(
+            psiz.keras.layers.EmbeddingLogitNormalDiag,
+            marks=pytest.mark.xfail(reason="Mode not implemented.")
+        ),
+        psiz.keras.layers.EmbeddingNormalDiag,
+        psiz.keras.layers.EmbeddingTruncatedNormalDiag
+    ]
+)
+def test_mode(
+        emb_input_1d, embedding_class):
+    """Test mode() call and return shape."""
+    input = emb_input_1d
+    n_stimuli = 10
+    n_dim = 2
+
+    embedding = embedding_class(
+        n_stimuli, n_dim, mask_zero=False
+    )
+
+    # Make call to ensure weight are built.
+    _ = embedding(input)
+
+    # Test `mode` method to make sure implemented, then check shape.
+    emb_mode = embedding.embeddings.mode()
+    tf.debugging.assert_equal(
+        emb_mode.shape, tf.TensorShape([n_stimuli, n_dim])
     )
 
 

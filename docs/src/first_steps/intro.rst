@@ -19,9 +19,28 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 Installation
 ============
 
+PsiZ is hosted on PyPI and is easily installed using `pip`. Alternatively, you can insall using `git`.
+
+System Requirements
+-------------------
+* Python 3.9, 3.10
+* cuDNN & CUDA: Please see the `TF compatibility matrix <https://www.tensorflow.org/install/source#gpu>`_ for compatible versions. If using a conda virtual environment, you may want to install CUDA librarires using `conda install -c anaconda cudatoolkit=11.2` (replace 11.2 with the version appropriate for your TensorFlow version).
+
+Install using PyPI
+------------------
+
 .. code:: bash
 
     pip install psiz
+
+Install using git
+-----------------
+You can also install PsiZ via `git`. You first clone the PsiZ repository from GitHub to your local machine adn then install via `pip`.
+
+.. code:: bash
+
+    git clone https://github.com/roads/psiz.git
+    pip install /local/path/to/psiz
 
 
 Design Philosophy

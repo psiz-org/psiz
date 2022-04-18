@@ -26,6 +26,7 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    :caption: Tutorials
 
    src/tutorials/vi
+   src/tutorials/tuning
    src/tutorials/active_learning
    
 .. toctree::

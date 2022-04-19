@@ -15,7 +15,4 @@
 # ============================================================================
 """Keras callbacks initialization file."""
 
-from psiz.keras.callbacks.early_stopping_re import EarlyStoppingRe
-from psiz.keras.callbacks.tensor_board_re import TensorBoardRe
-
-__all__ = ['EarlyStoppingRe', 'TensorBoardRe']
+__all__ = []

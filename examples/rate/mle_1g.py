@@ -142,7 +142,7 @@ def main():
     for i_restart in range(n_restart):
         # Use Tensorboard callback.
         fp_board_frame = fp_board / Path('restart_{0}'.format(i_restart))
-        cb_board = psiz.keras.callbacks.TensorBoardRe(
+        cb_board = tf.keras.callbacks.TensorBoard(
             log_dir=fp_board_frame, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None

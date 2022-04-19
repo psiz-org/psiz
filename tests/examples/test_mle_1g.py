@@ -174,10 +174,10 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     # )
 
     # Use early stopping.
-    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
+    early_stop = tf.keras.callbacks.EarlyStopping(
         'val_cce', patience=30, mode='min', restore_best_weights=True
     )
-    cb_board = psiz.keras.callbacks.TensorBoardRe(
+    cb_board = tf.keras.callbacks.TensorBoard(
         log_dir=tmpdir, histogram_freq=0,
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None

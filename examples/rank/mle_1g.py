@@ -93,7 +93,7 @@ def main():
     )
 
     # Use early stopping.
-    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
+    early_stop = tf.keras.callbacks.EarlyStopping(
         'val_cce', patience=30, mode='min', restore_best_weights=True
     )
 
@@ -129,7 +129,7 @@ def main():
 
         # Use Tensorboard callback.
         fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
-        cb_board = psiz.keras.callbacks.TensorBoardRe(
+        cb_board = tf.keras.callbacks.TensorBoard(
             log_dir=fp_board_frame, histogram_freq=0,
             write_graph=False, write_images=False, update_freq='epoch',
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None

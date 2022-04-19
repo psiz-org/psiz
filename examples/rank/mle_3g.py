@@ -97,7 +97,7 @@ def main():
     # )
 
     # Use early stopping.
-    early_stop = psiz.keras.callbacks.EarlyStoppingRe(
+    early_stop = tf.keras.callbacks.EarlyStopping(
         'val_cce', patience=15, mode='min', restore_best_weights=True
     )
     callbacks = [early_stop]

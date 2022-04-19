@@ -14,6 +14,10 @@
 
 PsiZ provides computational tools for modeling how people perceive the world. The primary use case of PsiZ is to infer psychological representations from human behavior (e.g., similarity judgments). The package integrates cognitive theory with modern computational methods.
 
+## Resources
+* Official Psiz Documentation [psiz.readthedocs.io/en/latest](https://psiz.readthedocs.io/en/latest/)
+* [PsiZ Examples](examples/)
+
 ## What's in a name?
 
 The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as shorthand for the term *psychological embedding*. The greek letter Psi is often used to denote the field of psychology and the matrix variable **Z** is often used in machine learning to denote a latent feature space.
@@ -45,10 +49,6 @@ $ pip install /local/path/to/psiz
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`
     * using git: `git clone https://github.com/roads/psiz.git --branch v0.5.1`
-
-## Resources
-* [Psiz Documentation](https://psiz.readthedocs.io/en/latest/)
-* [PsiZ Examples](examples/)
 
 ## Attribution
 If you use PsiZ in your work please cite at least one of the following:

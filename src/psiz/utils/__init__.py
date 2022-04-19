@@ -18,7 +18,6 @@
 from psiz.utils.affine_mvn import affine_mvn
 from psiz.utils.choice_wo_replace import choice_wo_replace
 from psiz.utils.expand_dim_repeat import expand_dim_repeat
-from psiz.utils.fit_tracker import FitTracker
 from psiz.utils.generate_group_matrix import generate_group_matrix
 from psiz.utils.pairwise_index_dataset import pairwise_index_dataset
 from psiz.utils.pairwise_similarity import pairwise_similarity
@@ -30,7 +29,7 @@ from psiz.utils.standard_split import standard_split
 from psiz.utils.stratified_group_kfold import StratifiedGroupKFold
 
 __all__ = [
-    'affine_mvn', 'choice_wo_replace', 'expand_dim_repeat', 'FitTracker',
+    'affine_mvn', 'choice_wo_replace', 'expand_dim_repeat',
     'generate_group_matrix', 'pairwise_index_dataset',
     'pairwise_similarity', 'procrustes_rotation',
     'ProgressBarRe', 'rotation_matrix', 'random_combinations',

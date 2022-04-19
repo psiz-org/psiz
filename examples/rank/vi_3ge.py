@@ -19,7 +19,7 @@ The stimulus embedding is constructed in a hierarchical manner in order
 to leverage the intuition that distinct-groups should have similar
 embeddings.
 
-Results are saved in the directory specified by `fp_example`. By
+Results are saved in the directory specified by `fp_project`. By
 default, a `psiz_examples` directory is created in your home directory.
 
 Example output:
@@ -62,8 +62,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'rank', 'vi_3ge')
-    fp_board = fp_example / Path('logs', 'fit')
+    fp_project = Path.home() / Path('psiz_examples', 'rank', 'vi_3ge')
+    fp_board = fp_project / Path('logs', 'fit')
     n_stimuli = 30
     n_dim_inferred = 2
     n_group = 3
@@ -73,7 +73,7 @@ def main():
     n_frame = 1
 
     # Directory preparation.
-    fp_example.mkdir(parents=True, exist_ok=True)
+    fp_project.mkdir(parents=True, exist_ok=True)
     # Remove existing TensorBoard logs.
     if fp_board.exists():
         shutil.rmtree(fp_board)
@@ -263,7 +263,7 @@ def main():
             fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
             model_inferred, i_frame, color_array
         )
-        fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
+        fname = fp_project / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
             os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
         )
@@ -272,9 +272,9 @@ def main():
     if n_frame > 1:
         frames = []
         for i_frame in range(n_frame):
-            fname = fp_example / Path('frame_{0}.tiff'.format(i_frame))
+            fname = fp_project / Path('frame_{0}.tiff'.format(i_frame))
             frames.append(imageio.imread(fname))
-        imageio.mimwrite(fp_example / Path('evolution.gif'), frames, fps=1)
+        imageio.mimwrite(fp_project / Path('evolution.gif'), frames, fps=1)
 
 
 def ground_truth(n_stimuli, n_group):

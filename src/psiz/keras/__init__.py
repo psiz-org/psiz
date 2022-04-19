@@ -31,6 +31,5 @@ import psiz.keras.initializers
 import psiz.keras.layers
 import psiz.keras.models
 import psiz.keras.regularizers
-from psiz.keras.restarter import Restarter
 
-__all__ = ['Restarter']
+__all__ = []

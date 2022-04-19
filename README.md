@@ -15,7 +15,7 @@
 PsiZ provides computational tools for modeling how people perceive the world. The primary use case of PsiZ is to infer psychological representations from human behavior (e.g., similarity judgments). The package integrates cognitive theory with modern computational methods.
 
 ## Resources
-* Official Psiz Documentation [psiz.readthedocs.io/en/latest](https://psiz.readthedocs.io/en/latest/)
+* Official Psiz Documentation: [psiz.readthedocs.io/en/latest](https://psiz.readthedocs.io/en/latest/)
 * [PsiZ Examples](examples/)
 
 ## What's in a name?

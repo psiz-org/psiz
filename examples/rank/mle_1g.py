@@ -20,7 +20,7 @@ An embedding is inferred with an increasing amount of data,
 demonstrating how the inferred model improves and asymptotes as more
 data is added.
 
-Results are saved in the directory specified by `fp_example`. By
+Results are saved in the directory specified by `fp_project`. By
 default, a `psiz_examples` directory is created in your home directory.
 
 """
@@ -49,18 +49,17 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'rank', 'mle_1g')
-    fp_board = fp_example / Path('logs', 'fit')
+    fp_project = Path.home() / Path('psiz_examples', 'rank', 'mle_1g')
+    fp_board = fp_project / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 3
-    n_restart = 3
     epochs = 3000
     n_trial = 4000
     batch_size = 128
     n_frame = 1  # Set to 8 to observe convergence behavior.
 
     # Directory preparation.
-    fp_example.mkdir(parents=True, exist_ok=True)
+    fp_project.mkdir(parents=True, exist_ok=True)
     # Remove existing TensorBoard logs.
     if fp_board.exists():
         shutil.rmtree(fp_board)
@@ -138,20 +137,16 @@ def main():
         callbacks = [early_stop, cb_board]
 
         model = build_model(n_stimuli, n_dim)
+        model.compile(**compile_kwargs)
 
-        # Infer embedding with restarts.
-        restarter = psiz.keras.Restarter(
-            model, compile_kwargs=compile_kwargs, monitor='val_loss',
-            n_restart=n_restart
-        )
-        restart_record = restarter.fit(
+        # Infer embedding.
+        history = model.fit(
             x=ds_obs_round_train, validation_data=ds_obs_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
-        model = restarter.model
 
-        train_cce[i_frame] = restart_record.record['cce'][0]
-        val_cce[i_frame] = restart_record.record['val_cce'][0]
+        train_cce[i_frame] = history.history['cce'][-1]
+        val_cce[i_frame] = history.history['val_cce'][-1]
         test_metrics = model.evaluate(
             ds_obs_test, verbose=0, return_dict=True
         )
@@ -192,7 +187,7 @@ def main():
     axes[1].set_ylim(-0.05, 1.05)
 
     plt.tight_layout()
-    fname = fp_example / Path('evolution.tiff')
+    fname = fp_project / Path('evolution.tiff')
     plt.savefig(
         os.fspath(fname), format='tiff', bbox_inches="tight", dpi=300
     )

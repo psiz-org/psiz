@@ -131,7 +131,6 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     # Settings.
     n_stimuli = 30
     n_dim = 3
-    n_restart = 3
     epochs = 1000
     n_trial = 2000
     batch_size = 128
@@ -219,15 +218,13 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         model_inferred = build_model(
             n_stimuli, n_dim, similarity_func, mask_zero
         )
-        restarter = psiz.keras.Restarter(
-            model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
-            n_restart=n_restart
-        )
-        restarter.fit(
+        model_inferred.compile(**compile_kwargs)
+
+        # MAYBE keras-tuner 3 restarts, monitor='val_loss'
+        model_inferred.fit(
             x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
-        model_inferred = restarter.model
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.

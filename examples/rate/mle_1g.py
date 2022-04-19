@@ -20,7 +20,7 @@ An embedding is inferred with an increasing amount of data,
 demonstrating how the inferred model improves and asymptotes as more
 data is added.
 
-Results are saved in the directory specified by `fp_example`. By
+Results are saved in the directory specified by `fp_project`. By
 default, a `psiz_examples` directory is created in your home directory.
 
 NOTE: The midpoint value has a large impact on the ability to infer a
@@ -55,8 +55,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
-    fp_board = fp_example / Path('logs', 'fit')
+    fp_project = Path.home() / Path('psiz_examples', 'rate', 'mle_1g')
+    fp_board = fp_project / Path('logs', 'fit')
     n_stimuli = 25
     n_dim = 2
     n_restart = 1
@@ -77,7 +77,7 @@ def main():
     plt.rc('figure', titlesize=large_size)
 
     # Directory preparation.
-    fp_example.mkdir(parents=True, exist_ok=True)
+    fp_project.mkdir(parents=True, exist_ok=True)
     # Remove existing TensorBoard logs.
     if fp_board.exists():
         shutil.rmtree(fp_board)
@@ -192,7 +192,7 @@ def main():
         # Create and save visual frame.
         fig = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_restart(fig, model_true, model_inferred, r2)
-        fname = fp_example / Path('restart_{0}.pdf'.format(i_restart))
+        fname = fp_project / Path('restart_{0}.pdf'.format(i_restart))
         plt.savefig(
             os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
         )

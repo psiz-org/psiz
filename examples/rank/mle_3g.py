@@ -62,7 +62,6 @@ def main():
     n_stimuli = 30
     n_dim = 4
     n_group = 3
-    n_restart = 1
     epochs = 3000
     n_trial = 6000
     batch_size = 128
@@ -112,17 +111,13 @@ def main():
     }
 
     model_inferred = build_model(n_stimuli, n_dim, n_group)
+    model_inferred.compile(**compile_kwargs)
 
-    # Infer embedding with restarts.
-    restarter = psiz.keras.Restarter(
-        model_inferred, compile_kwargs=compile_kwargs, monitor='val_loss',
-        n_restart=n_restart
-    )
-    restarter.fit(
+    # Infer embedding.
+    model_inferred.fit(
         x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
         callbacks=callbacks, verbose=0
     )
-    model_inferred = restarter.model
 
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.

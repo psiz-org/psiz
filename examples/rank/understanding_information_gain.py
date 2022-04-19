@@ -15,7 +15,7 @@
 # ============================================================================
 """Example that explores expected information gain.
 
-Results are saved in the directory specified by `fp_example`. By
+Results are saved in the directory specified by `fp_project`. By
 default, a `psiz_examples` directory is created in your home directory.
 
 """
@@ -46,7 +46,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 def main():
     """Run script."""
     # Settings.
-    fp_example = Path.home() / Path(
+    fp_project = Path.home() / Path(
         'psiz_examples', 'rank', 'information_gain'
     )
     n_reference = 2
@@ -54,7 +54,7 @@ def main():
     n_col = 7
 
     # Directory preparation.
-    fp_example.mkdir(parents=True, exist_ok=True)
+    fp_project.mkdir(parents=True, exist_ok=True)
 
     # Plot settings.
     small_size = 6
@@ -102,7 +102,7 @@ def main():
 
     # Visualize.
     draw_figure(case_list, n_col)
-    fname = fp_example / Path('visual.pdf')
+    fname = fp_project / Path('visual.pdf')
     plt.savefig(
         os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
     )

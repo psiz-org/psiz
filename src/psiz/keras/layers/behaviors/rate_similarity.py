@@ -16,7 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    RateBehavior: A rate behavior layer.
+    RateSimilarity: A rate similarity layer.
 
 """
 
@@ -24,13 +24,13 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
-from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.layers.behaviors.behavior2 import Behavior2
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RateBehavior'
+    package='psiz.keras.layers', name='RateSimilarity'
 )
-class RateBehavior(Behavior):
+class RateSimilarity(Behavior2):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized
@@ -114,6 +114,44 @@ class RateBehavior(Behavior):
             trainable=self.rate_trainable, name="rate", dtype=K.floatx(),
         )
 
+    def on_kernel_begin(self, z):
+        """Call at the start of kernel operation.
+
+        Args:
+            z: TODO
+                shape=TensorShape(
+                    [batch_size, n_sample, n_ref + 1, n_outcome, n_dim]
+                )
+
+        Returns:
+            z_0: TODO
+                shape=TensorShape(
+                    [batch_size, n_sample, 1, n_outcome, n_dim]  TODO
+                )
+            z_1: TODO
+                shape=TensorShape(
+                    [batch_size, n_sample, n_ref, n_outcome, n_dim]  TODO
+                )
+
+        """
+        # Divide up stimuli sets for kernel call.
+        z_0 = z[:, :, 0]
+        z_1 = z[:, :, 1]
+        return z_0, z_1
+
+    def format_inputs(self, inputs):
+        """TODO. move to abstract class so this is default
+
+        Args:
+            inputs: A dictionary of inputs.
+
+        Returns:
+            inputs_list: A list of inputs.
+
+        """
+        inputs_list = []
+        return inputs_list
+
     def call(self, inputs):
         """Return predicted rating of a trial.
 
@@ -130,10 +168,14 @@ class RateBehavior(Behavior):
 
         """
         sim_qr = inputs[0]
+
         prob = self.lower + tf.math.divide(
             self.upper - self.lower,
             1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint))
         )
+
+        # Add singleton trailing dimension since MSE assumes rank-2 Tensors.
+        prob = tf.expand_dims(prob, axis=-1)
         return prob
 
     def get_config(self):

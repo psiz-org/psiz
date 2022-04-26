@@ -13,12 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Model initialization file."""
+"""Module of TensorFlow behavior layers.
 
-from psiz.keras.models.psych_embedding import PsychologicalEmbedding
-from psiz.keras.models.rank import Rank
-from psiz.keras.models.rate import Rate
-from psiz.keras.models.sort import Sort
-from psiz.keras.models.experimental.backbone import Backbone
+Classes:
+    Behavior2: An abstract behavior layer.
 
-__all__ = ['PsychologicalEmbedding', 'Rank', 'Rate', 'Sort', 'Backbone']
+"""
+
+import tensorflow as tf
+
+
+class Behavior2(tf.keras.layers.Layer):
+    """An abstract behavior layer."""
+
+    def init(self, **kwargs):
+        super(Behavior2, self).__init__(**kwargs)
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        return config
+
+    def call(self, inputs):
+        raise NotImplementedError

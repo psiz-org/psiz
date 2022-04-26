@@ -30,13 +30,17 @@ def test_n_sample_propogation(rate_1g_vi):
     assert rate_1g_vi.n_sample == 100
 
 
+@pytest.mark.parametrize(
+    "is_eager", [True, False]
+)
 def test_call_1groups(
-        rate_default_1g_mle, ds_rate_docket, ds_rate_obs_2g):
+        rate_default_1g_mle, ds_rate_docket, ds_rate_obs_2g, is_eager):
     """Test call.
 
     Use default rate behavior module.
 
     """
+    tf.config.run_functions_eagerly(is_eager)
     model = rate_default_1g_mle
     # Compile
     compile_kwargs = {

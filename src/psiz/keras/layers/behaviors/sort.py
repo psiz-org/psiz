@@ -22,7 +22,7 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.behaviors.base import Behavior
+from psiz.keras.layers.behaviors.behavior import Behavior
 
 
 @tf.keras.utils.register_keras_serializable(

@@ -16,29 +16,78 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    RankBehavior: A rank behavior layer.
+    RankSimilarity: A rank behavior layer.
 
 """
 
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
-from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.layers.behaviors.behavior2 import Behavior2
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RankBehavior'
+    package='psiz.keras.layers', name='RankSimilarity'
 )
-class RankBehavior(Behavior):
-    """A rank behavior layer.
+class RankSimilarity(Behavior2):
+    """A rank similarity behavior layer.
 
     Embodies a `_tf_ranked_sequence_probability` call.
 
     """
 
+    def on_kernel_begin(self, z):
+        """Call at the start of kernel operation.
+
+        Args:
+            z: TODO
+                shape=TensorShape(
+                    [batch_size, n_sample, n_ref + 1, n_outcome, n_dim]
+                )
+
+        Returns:
+            z_q: TODO
+                shape=TensorShape(
+                    [batch_size, n_sample, 1, n_outcome, n_dim]
+                )
+            z_r: TODO
+                shape=TensorShape(
+                    [batch_size, n_sample, n_ref, n_outcome, n_dim]
+                )
+
+        """
+        # Define some useful variables before manipulating inputs.
+        max_n_reference = tf.shape(z)[-3] - 1
+
+        # Split query and reference embeddings:
+        # z_q: TensorShape([batch_size, sample_size, 1, n_outcome, n_dim]
+        # z_r: TensorShape([batch_size, sample_size, n_ref, n_outcome, n_dim]
+        z_q, z_r = tf.split(z, [1, max_n_reference], -3)
+        # The tf.split op does not infer split dimension shape. We know that
+        # z_q will always have shape=1, but we don't know `max_n_reference`
+        # ahead of time.
+        z_q.set_shape([None, None, 1, None, None])
+
+        return z_q, z_r
+
+    def format_inputs(self, inputs):
+        """TODO.
+
+        Args:
+            inputs: A dictionary of inputs. TODO   
+
+        Returns:
+            inputs_list: A list of inputs.
+
+        """
+        inputs_list = [inputs['stimulus_set'], inputs['is_select']]
+        return inputs_list
+
     def call(self, inputs):
         """Return probability of a ranked selection sequence.
 
         Args:
+            TODO
             inputs[0]: i.e., sim_qr: A tensor containing the
                 precomputed similarities between the query stimuli and
                 corresponding reference stimuli.
@@ -50,14 +99,38 @@ class RankBehavior(Behavior):
                 an outcome is real or a padded placeholder.
                 shape = (batch_size, 1, n_outcome)
 
+        Returns:
+            outcome_prob: Probability of different behavioral outcomes.
+
         NOTE: This computation takes advantage of log-probability
             space, exploiting the fact that log(prob=1)=1 to make
             vectorization cleaner.
 
         """
         sim_qr = inputs[0]
-        is_select = inputs[1]
-        is_outcome = inputs[2]
+        stimulus_set = inputs[1]
+        is_select = inputs[2][:, 1:, :]
+        # is_outcome = inputs[2]
+
+        # Zero out similarities involving placeholder IDs by creating
+        # a mask based on reference indices. We drop the query indices
+        # because they have effectively been "consumed" by the similarity
+        # operation.
+        is_present = tf.cast(
+            tf.math.not_equal(stimulus_set[:, :, 1:], 0), K.floatx()
+        )
+        sim_qr = sim_qr * is_present
+
+        # Prepare for efficient probability computation by adding
+        # singleton dimension for `n_sample`.
+        is_select = tf.expand_dims(
+            tf.cast(is_select, K.floatx()), axis=1
+        )
+        # Determine if outcome is legitamate by checking if at least one
+        # reference is present. This is important because not all trials have
+        # the same number of possible outcomes and we need to infer the
+        # "zero-padding" of the outcome axis.
+        is_outcome = is_present[:, :, 0, :]
 
         # Compute denominator based on formulation of Luce's choice rule by
         # summing over the different references present in a trial. Note that

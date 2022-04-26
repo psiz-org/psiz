@@ -103,7 +103,7 @@ class PsychologicalEmbedding(tf.keras.Model):
                 if self.stimuli.mask_zero:
                     n_stimuli -= 1
             except AttributeError:
-                # Assume Gate or GateMulti layer.
+                # Assume SubnetGate layer.
                 n_stimuli = self.stimuli.subnets[0].input_dim
                 if self.stimuli.subnets[0].mask_zero:
                     n_stimuli -= 1
@@ -117,7 +117,7 @@ class PsychologicalEmbedding(tf.keras.Model):
             # Assume embedding layer.
             output_dim = self.stimuli.output_dim
         except AttributeError:
-            # Assume Gate or GateMulti layer.
+            # Assume SubhetGate layer.
             output_dim = self.stimuli.subnets[0].output_dim
 
         return output_dim

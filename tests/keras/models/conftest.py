@@ -215,7 +215,7 @@ def rank_2g_mle():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.GateMulti(
+    kernel_group = psiz.keras.layers.SubnetGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
@@ -390,7 +390,7 @@ def rate_2g_mle():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.GateMulti(
+    kernel_group = psiz.keras.layers.SubnetGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 

@@ -28,8 +28,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.eager import backprop
 
-from psiz.keras.layers.gate_multi import GateMulti
-from psiz.keras.layers.gate import Gate
+from psiz.keras.layers.subnet_gate import SubnetGate
 from psiz.utils import expand_dim_repeat
 
 class Backbone(tf.keras.Model):
@@ -90,10 +89,9 @@ class Backbone(tf.keras.Model):
         # PROBLEM: groups needs to be handled outside stimuli,kernel,behavior layer since those layers are blind to group info
 
         # TODO set layer switches based on inspection
-        # TODO Gate and MultiGate should belong to the same super class so users can subclass and get the correct program flow
         # Handle layer switches.
         def is_gated(layer):
-            return isinstance(layer, GateMulti) or isinstance(layer, Gate)
+            return isinstance(layer, SubnetGate)
 
         self._use_group = {
             'stimuli': is_gated(stimuli),
@@ -111,7 +109,7 @@ class Backbone(tf.keras.Model):
             # Assume embedding layer.
             output_dim = self.stimuli.output_dim
         except AttributeError:
-            # Assume Gate or GateMulti layer.
+            # Assume SubnetGate layer.
             output_dim = self.stimuli.subnets[0].output_dim
 
         return output_dim

@@ -32,6 +32,7 @@ from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNor
 from psiz.keras.layers.embeddings.variational import EmbeddingVariational
 from psiz.keras.layers.gate_multi import GateMulti
 from psiz.keras.layers.gate import Gate
+from psiz.keras.layers.subnet_gate import SubnetGate
 from psiz.keras.layers.kernels.distance_based import DistanceBased
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
 from psiz.keras.layers.similarities.heavy_tailed import HeavyTailedSimilarity
@@ -45,7 +46,7 @@ __all__ = [
     'EmbeddingLaplaceDiag', 'EmbeddingLogNormalDiag',
     'EmbeddingLogitNormalDiag', 'EmbeddingNormalDiag', 'EmbeddingShared',
     'StochasticEmbedding', 'EmbeddingTruncatedNormalDiag',
-    'EmbeddingVariational', 'GateMulti', 'Gate', 'DistanceBased',
-    'ExponentialSimilarity', 'HeavyTailedSimilarity', 'InverseSimilarity',
-    'StudentsTSimilarity', 'Variational'
+    'EmbeddingVariational', 'GateMulti', 'Gate', 'SubnetGate',
+    'DistanceBased', 'ExponentialSimilarity', 'HeavyTailedSimilarity',
+    'InverseSimilarity', 'StudentsTSimilarity', 'Variational'
 ]

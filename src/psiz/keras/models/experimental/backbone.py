@@ -28,7 +28,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.eager import backprop
 
-from psiz.keras.layers.subnet_gate import SubnetGate
+from psiz.keras.layers.experimental.subnet_gate import SubnetGate
 from psiz.utils import expand_dim_repeat
 
 class Backbone(tf.keras.Model):

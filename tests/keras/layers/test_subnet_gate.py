@@ -55,6 +55,20 @@ def build_vi_kernel(similarity, n_dim, kl_weight):
     return kernel
 
 
+# Copied from test_sparse_dispatcher:AddPairs.
+class AddPairs(tf.keras.layers.Layer):
+    """A simple layer that increments input by a value."""
+
+    def __init__(self, v, **kwargs):
+        """Initialize."""
+        super(AddPairs, self).__init__(**kwargs)
+        self.v = tf.constant(v)
+
+    def call(self, inputs):
+        """Call."""
+        return inputs[0] + inputs[1] + self.v
+
+
 @pytest.fixture
 def emb_inputs_v0():
     """A minibatch of non-gate inupts."""
@@ -255,6 +269,7 @@ def kernel_subnets():
             beta_initializer=tf.keras.initializers.Constant(.1),
         )
     )
+
     pw_1 = DistanceBased(
         distance=Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -285,6 +300,22 @@ def kernel_subnets():
 
     subnets = [pw_0, pw_1, pw_2]
     return subnets
+
+
+@pytest.fixture
+def nested_subnet_gate_v0():
+    """A list of subnets"""
+    subnet_0 = AddPairs(0.00)
+    subnet_1 = AddPairs(0.01)
+    subnet_2 = AddPairs(0.02)
+    subnet_3 = AddPairs(0.03)
+
+    group_inner = SubnetGate(subnets=[subnet_2, subnet_3], group_col=2)
+    group_outer = SubnetGate(
+        subnets=[subnet_0, subnet_1, group_inner], group_col=1,
+        pass_groups=[False, False, True]
+    )
+    return group_outer
 
 
 def test_inp1_subnet_method(emb_subnets_determ):
@@ -597,3 +628,47 @@ def test_inpmulti_serialization(kernel_subnets, paired_inputs_v0, group_v0):
     )
 
     tf.debugging.assert_equal(outputs_0, outputs_1)
+
+
+def test_wpass_call(nested_subnet_gate_v0, paired_inputs_v0, group_v0):
+    group_layer = nested_subnet_gate_v0
+    # group = tf.constant(
+    #     np.array(
+    #         [
+    #             [0, 0, 0],
+    #             [0, 1, 0],
+    #             [0, 2, 0],
+    #             [0, 1, 1],
+    #             [0, 2, 1]
+    #         ], dtype=np.int32
+    #     )
+    # )
+    # Desired values.
+    inputs_0 = np.array(
+        [
+            [0.0, 0.1, 0.2],
+            [1.0, 1.1, 1.2],
+            [2.0, 2.1, 2.2],
+            [3.0, 3.1, 3.2],
+            [4.0, 4.1, 4.2]
+        ], dtype=np.float32
+    )
+    inputs_1 = np.array(
+        [
+            [5.0, 5.1, 5.2],
+            [6.0, 6.1, 6.2],
+            [7.0, 7.1, 7.2],
+            [8.0, 8.1, 8.2],
+            [9.0, 9.1, 9.2]
+        ], dtype=np.float32
+    )
+    gate_increment = np.expand_dims(
+        np.array([0., 0.01, 0.02, 0.01, 0.03]), axis=1
+    )
+    desired_outputs = inputs_0 + inputs_1 + gate_increment
+
+    outputs = group_layer(
+        [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
+    )
+
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())

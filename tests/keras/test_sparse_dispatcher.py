@@ -34,12 +34,12 @@ class Increment(tf.keras.layers.Layer):
         return inputs + self.v
 
 
-class IncrementPairs(tf.keras.layers.Layer):
+class AddPairs(tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
         """Initialize."""
-        super(IncrementPairs, self).__init__(**kwargs)
+        super(AddPairs, self).__init__(**kwargs)
         self.v = tf.constant(v)
 
     def call(self, inputs):
@@ -201,9 +201,9 @@ def test_multi_dispatch(gates_v0, inputs_multi):
     # experts: a list of length `num_experts` containing sub-networks.
 
     n_expert = 3
-    expert_0 = IncrementPairs(0.00)
-    expert_1 = IncrementPairs(0.01)
-    expert_2 = IncrementPairs(0.02)
+    expert_0 = AddPairs(0.00)
+    expert_1 = AddPairs(0.01)
+    expert_2 = AddPairs(0.02)
 
     experts = [expert_0, expert_1, expert_2]
 

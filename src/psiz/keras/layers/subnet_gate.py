@@ -100,6 +100,7 @@ class SubnetGate(tf.keras.layers.Layer):
         Args:
             inputs: a n-tuple containing a data Tensor and a trailing
                 group Tensor.
+                list format: [Tensor, Tensor, [Tensor, ...]]
                 data Tensor(s): shape=(batch, m, [n, ...])
                 group Tensor: shape=(batch, g)
 

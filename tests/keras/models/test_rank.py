@@ -163,7 +163,7 @@ def rank_3g_mle_v2():
     kernel_0 = build_mle_kernel(shared_similarity, n_dim)
     kernel_1 = build_mle_kernel(shared_similarity, n_dim)
     kernel_2 = build_mle_kernel(shared_similarity, n_dim)
-    kernel_group = psiz.keras.layers.SubnetGate(
+    kernel_group = psiz.keras.layers.BraidedGate(
         subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
@@ -325,7 +325,7 @@ def rank_3g_vi_v2():
     kernel_0 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
-    kernel_group = psiz.keras.layers.SubnetGate(
+    kernel_group = psiz.keras.layers.BraidedGate(
         subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
@@ -377,7 +377,7 @@ def rank_3g_vi_v3():
     kernel_0 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
-    kernel_group = psiz.keras.layers.SubnetGate(
+    kernel_group = psiz.keras.layers.BraidedGate(
         subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
@@ -425,7 +425,7 @@ def test_properties_1(rank_1g_mle_nomask_v2):
 def test_properties_2(rank_2stim_2kern_determ):
     """Test properties.
 
-    Trigger cases involving SubnetGate.
+    Trigger cases involving BraidedGate.
 
     """
     model = rank_2stim_2kern_determ
@@ -442,7 +442,7 @@ def test_properties_2(rank_2stim_2kern_determ):
 def test_properties_3(rank_2stim_2kern_nomask_determ):
     """Test properties.
 
-    Trigger cases involving SubnetGate.
+    Trigger cases involving BraidedGate.
 
     """
     model = rank_2stim_2kern_nomask_determ

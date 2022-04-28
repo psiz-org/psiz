@@ -103,7 +103,7 @@ class PsychologicalEmbedding(tf.keras.Model):
                 if self.stimuli.mask_zero:
                     n_stimuli -= 1
             except AttributeError:
-                # Assume SubnetGate layer.
+                # Assume BraidedGate layer.
                 n_stimuli = self.stimuli.subnets[0].input_dim
                 if self.stimuli.subnets[0].mask_zero:
                     n_stimuli -= 1

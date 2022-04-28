@@ -155,7 +155,7 @@ def rank_2g_mle_determ():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.SubnetGate(
+    kernel_group = psiz.keras.layers.BraidedGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
@@ -194,7 +194,7 @@ def rank_2stim_2kern_determ():
         )
     )
 
-    stimuli_group = psiz.keras.layers.SubnetGate(
+    stimuli_group = psiz.keras.layers.BraidedGate(
         subnets=[stimuli_0, stimuli_1], group_col=0
     )
 
@@ -234,7 +234,7 @@ def rank_2stim_2kern_determ():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.SubnetGate(
+    kernel_group = psiz.keras.layers.BraidedGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
@@ -273,7 +273,7 @@ def rank_2stim_2kern_nomask_determ():
         )
     )
 
-    stimuli_group = psiz.keras.layers.SubnetGate(
+    stimuli_group = psiz.keras.layers.BraidedGate(
         subnets=[stimuli_0, stimuli_1], group_col=0
     )
 
@@ -313,7 +313,7 @@ def rank_2stim_2kern_nomask_determ():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.SubnetGate(
+    kernel_group = psiz.keras.layers.BraidedGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
@@ -338,7 +338,7 @@ def rank_2stim_2kern_2behav():
         n_stimuli + 1, n_dim, mask_zero=True
     )
 
-    stimuli_group = psiz.keras.layers.SubnetGate(
+    stimuli_group = psiz.keras.layers.BraidedGate(
         subnets=[stimuli_0, stimuli_1], group_col=0
     )
 
@@ -378,13 +378,13 @@ def rank_2stim_2kern_2behav():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.SubnetGate(
+    kernel_group = psiz.keras.layers.BraidedGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
     behavior_0 = psiz.keras.layers.RankBehavior()
     behavior_1 = psiz.keras.layers.RankBehavior()
-    behavior_group = psiz.keras.layers.SubnetGate(
+    behavior_group = psiz.keras.layers.BraidedGate(
         subnets=[behavior_0, behavior_1], group_col=0
     )
 

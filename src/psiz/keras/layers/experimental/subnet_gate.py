@@ -25,12 +25,13 @@ import tensorflow as tf
 
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 from psiz.keras.layers.experimental.drop import Drop
+from psiz.keras.layers.experimental.groups import Groups
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras', name='SubnetGate'
 )
-class SubnetGate(tf.keras.layers.Layer):
+class SubnetGate(Groups, tf.keras.layers.Layer):
     """A layer that routes inputs to group-specific subnetworks.
 
     The subnetworks can take a list of inputs, but each subnetwork must

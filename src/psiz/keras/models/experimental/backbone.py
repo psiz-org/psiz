@@ -31,6 +31,7 @@ from tensorflow.python.eager import backprop
 from psiz.keras.layers.experimental.subnet_gate import SubnetGate
 from psiz.utils import expand_dim_repeat
 
+
 class Backbone(tf.keras.Model):
     """A backbone-based psychological embedding model.
 
@@ -63,12 +64,6 @@ class Backbone(tf.keras.Model):
                 number of samples to use on the forward pass. This
                 argument is only advantageous if using stochastic
                 layers (e.g., variational models).
-            use_group_stimuli (optional): Boolean indicating if group
-                information should be piped to `stimuli` layer.
-            use_group_kernel (optional): Boolean indicating if group
-                information should be piped to `kernel` layer.
-            use_group_behavior (optional): Boolean indicating if group
-                information should be piped to `behavior` layer.
             kwargs:  Additional key-word arguments.
 
         Raises:
@@ -88,15 +83,17 @@ class Backbone(tf.keras.Model):
         # self.behavior.use_group = use_group_behavior
         # PROBLEM: groups needs to be handled outside stimuli,kernel,behavior layer since those layers are blind to group info
 
-        # TODO set layer switches based on inspection
-        # Handle layer switches.
-        def is_gated(layer):
-            return isinstance(layer, SubnetGate)
+        # Handle module switches.
+        def supports_groups(layer):
+            if hasattr(layer, 'supports_groups'):
+                return layer.supports_groups
+            else:
+                return False
 
-        self._use_group = {
-            'stimuli': is_gated(stimuli),
-            'kernel': is_gated(kernel),
-            'behavior': is_gated(behavior)
+        self._pass_groups = {
+            'stimuli': supports_groups(stimuli),
+            'kernel': supports_groups(kernel),
+            'behavior': supports_groups(behavior)
         }
 
         self._kl_weight = 0.
@@ -133,10 +130,6 @@ class Backbone(tf.keras.Model):
                 groups: dtype=tf.int32, Integers indicating the
                     group membership of a trial.
                     shape=(batch_size, k)
-                TODO move this rank-specific feature somewhere else
-                is_select: dtype=tf.bool, the shape implies the
-                    maximum number of selected stimuli in the data
-                    shape=(batch_size, n_max_select, n_outcome)
 
         """
         # Grab universal inputs.
@@ -153,7 +146,7 @@ class Backbone(tf.keras.Model):
         inputs['stimulus_set'] = stimulus_set
 
         # Enbed stimuli indices in n-dimensional space:
-        if self._use_group['stimuli']:
+        if self._pass_groups['stimuli']:
             z = self.stimuli([stimulus_set, groups])
         else:
             z = self.stimuli(stimulus_set)
@@ -164,15 +157,15 @@ class Backbone(tf.keras.Model):
         # * maybe ugly isn' a problem, so long as it works well
 
         # Prep retrieved embeddings for kernel op based on behavior.
-        # TODO this assumes all subnets the same behavior (should be true)
-        # TODO this assumes nesting is only one deep (bad assumption?)
-        if self._use_group['behavior']:
+        # NOTE: This assumes all subnets the same behavior, which should be
+        # true.
+        if self._pass_groups['behavior']:
             z_q, z_r = self.behavior.subnets[0].on_kernel_begin(z)
         else:
             z_q, z_r = self.behavior.on_kernel_begin(z)
 
         # Pass through similarity kernel.
-        if self._use_group['kernel']:
+        if self._pass_groups['kernel']:
             sim_qr = self.kernel([z_q, z_r, groups])
         else:
             sim_qr = self.kernel([z_q, z_r])
@@ -181,14 +174,14 @@ class Backbone(tf.keras.Model):
         # Given behavior, prepare retrieved embeddings for kernel op.
         # TODO this assumes all subnets the same behavior (should be true)
         # TODO this assumes nesting is only one deep (bad assumption?)
-        if self._use_group['behavior']:
+        if self._pass_groups['behavior']:
             inputs_list = self.behavior.subnets[0].format_inputs(inputs)
         else:
             inputs_list = self.behavior.format_inputs(inputs)
 
         # Predict behavioral outcomes.
         # TODO problem: my dispatcher can't route inputs of type dictionary
-        if self._use_group['behavior']:
+        if self._pass_groups['behavior']:
             y_pred = self.behavior([sim_qr, *inputs_list, groups])
         else:
             y_pred = self.behavior([sim_qr, *inputs_list])

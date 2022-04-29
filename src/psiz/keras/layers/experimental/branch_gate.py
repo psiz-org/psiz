@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    BraidedGate: A layer that routes inputs to group-specific
-        subnetworks.
+    BranchGate: A layer that routes inputs to group-specific
+        subnetworks that do not rejoin.
 
 """
 
@@ -28,24 +28,20 @@ from psiz.keras.layers.experimental.gate import Gate
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='BraidedGate'
+    package='psiz.keras', name='BranchGate'
 )
-class BraidedGate(Gate):
+class BranchGate(Gate):
     """A layer that routes inputs to group-specific subnetworks.
 
-    In a `BraidedGate` the subnetworks are re-combined at the end (in
-    contrast to a `BranchGate`).
-
-    The subnetworks can take a list of inputs, but each subnetwork must
-    output a single tensor. The final output shape must be the same for
-    all subnetworks.
+    In a `BranchGate` the subnetworks are not combined at the end (in
+    contrast to a `BraidedGate`).
 
     For more information see: `psiz.keras.layers.Gate`
 
     """
     def __init__(
             self, subnets=None, group_col=0, pass_groups=None,
-            strip_inputs=None, **kwargs):
+            strip_inputs=None, output_names=None, **kwargs):
         """Initialize.
 
         Args:
@@ -53,15 +49,24 @@ class BraidedGate(Gate):
             group_col (optional): see `Gate`.
             pass_groups (optional): see `Gate`.
             strip_inputs (optional): see `Gate`.
+            output_names (optional): A list of names to apply to the
+                outputs of each subnet. Useful if using different
+                losses and sample weights for each branch. If provided,
+                the list length must agree with the number of subnets.
 
         Raises:
             ValueError if subnetwork's non-batch output shape is not
             fully defined.
 
         """
-        super(BraidedGate, self).__init__(
+        super(BranchGate, self).__init__(
             subnets=subnets, group_col=group_col, pass_groups=pass_groups,
             strip_inputs=strip_inputs, **kwargs)
+        if output_names is None:
+            output_names = []
+            for i_subnet in range(self.n_subnet):
+                output_names.append(self.name + '_{0}'.format(i_subnet))
+        self.output_names = output_names
 
     def call(self, inputs):
         """Call.
@@ -81,48 +86,14 @@ class BraidedGate(Gate):
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
         dispatcher = SparseDispatcher(self.n_subnet, idx_group)
-        subnet_inputs = dispatcher.dispatch_multi(inputs)
-        subnet_outputs = []
+        subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
+        # subnet_outputs = []  # TODO
+        subnet_outputs = {}
+
+        # dispatcher.expert_to_batch_indices()[i]
         for i in range(self.n_subnet):
             out = self._processed_subnets[i](subnet_inputs[i])
-            out, lost_shape = self._pre_combine(out)
-            subnet_outputs.append(out)
+            # subnet_outputs.append(out)  # TODO
+            subnet_outputs[self.output_names[i]] = out
 
-        outputs = dispatcher.combine(subnet_outputs, multiply_by_gates=True)
-
-        # Handle reshaping of output.
-        outputs = self._post_combine(outputs, lost_shape)
-
-        return outputs
-
-    def _pre_combine(self, x):
-        """Prepare Tensor for combine operation.
-
-        All non-batch dimensions must be flattened together to create a
-        final 2D Tensor.
-
-        Args:
-            x: Data Tensor.
-
-        Returns:
-            x: Transformed data Tensor.
-            lost_shape: A tensor recording the shape lost during
-                reshape.
-
-        """
-        # Flatten non-batch dimensions.
-        x_shape = tf.shape(x)
-        lost_shape = x_shape[1:]
-        x = tf.reshape(
-            x, [x_shape[0], tf.reduce_prod(lost_shape)]
-        )
-        return x, lost_shape
-
-    def _post_combine(self, x, lost_shape):
-        """Handle post-combine operations."""
-        batch_size = tf.expand_dims(tf.shape(x)[0], axis=0)
-        # Unflatten non-batch dimensions.
-        desired_shape = tf.concat(
-            (batch_size, lost_shape), 0
-        )
-        return tf.reshape(x, desired_shape)
+        return subnet_outputs

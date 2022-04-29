@@ -1,0 +1,460 @@
+# -*- coding: utf-8 -*-
+# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+"""Test BranchGate."""
+
+import numpy as np
+import pytest
+import tensorflow as tf
+
+from psiz.keras.layers.experimental.branch_gate import BranchGate
+
+
+# Copied from test_sparse_dispatcher:Increment.
+class Increment(tf.keras.layers.Layer):
+    """A simple layer that increments input by a value."""
+
+    def __init__(self, v, **kwargs):
+        """Initialize."""
+        super(Increment, self).__init__(**kwargs)
+        self.v = tf.constant(v)
+
+    def call(self, inputs):
+        """Call."""
+        return inputs + self.v
+
+
+# Copied from test_sparse_dispatcher:AddPairs.
+class AddPairs(tf.keras.layers.Layer):
+    """A simple layer that increments input by a value."""
+
+    def __init__(self, v, **kwargs):
+        """Initialize."""
+        super(AddPairs, self).__init__(**kwargs)
+        self.v = tf.constant(v)
+
+    def call(self, inputs):
+        """Call."""
+        return inputs[0] + inputs[1] + self.v
+
+
+class Select(tf.keras.layers.Layer):
+    """A simple layer that increments input by a value."""
+
+    def __init__(self, index, **kwargs):
+        """Initialize."""
+        super(Select, self).__init__(**kwargs)
+        self.index = index
+
+    def call(self, inputs):
+        """Call.
+
+        Assumes inputs are at least rank-2.
+        """
+        return inputs[:, self.index]
+
+
+@pytest.fixture
+def inputs_5x1_v0():
+    """A minibatch of non-gate inupts."""
+    # Create a simple batch (batch_size=5).
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [0.0],
+                [1.0],
+                [2.0],
+                [3.0],
+                [4.0]
+            ], dtype=np.float32
+        )
+    )
+    return inputs_0
+
+
+# TODO copied from test_subnet_gate.py:pw_inputs_v1
+@pytest.fixture
+def inputs_5x3_v0():
+    """A minibatch of non-gate inupts."""
+    # Create a simple batch (batch_size=5).
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [0.0, 0.1, 0.2],
+                [1.0, 1.1, 1.2],
+                [2.0, 2.1, 2.2],
+                [3.0, 3.1, 3.2],
+                [4.0, 4.1, 4.2]
+            ], dtype=np.float32
+        )
+    )
+    return inputs_0
+
+
+# TODO copied from conftest.py:pw_inputs_v1
+@pytest.fixture
+def inputs_5x3_v1():
+    inputs_1 = tf.constant(
+        np.array(
+            [
+                [5.0, 5.1, 5.2],
+                [6.0, 6.1, 6.2],
+                [7.0, 7.1, 7.2],
+                [8.0, 8.1, 8.2],
+                [9.0, 9.1, 9.2]
+            ], dtype=np.float32
+        )
+    )
+    return inputs_1
+
+
+@pytest.fixture
+def inputs_5x3x2_v0():
+    """A minibatch of non-gate inupts."""
+    # Create a simple batch (batch_size=5).
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [[0.0, 0.1], [0.2, 0.3], [0.4, 0.5]],
+                [[1.0, 1.1], [1.2, 1.3], [1.4, 1.5]],
+                [[2.0, 2.1], [2.2, 2.3], [2.4, 2.5]],
+                [[3.0, 3.1], [3.2, 3.3], [3.4, 3.5]],
+                [[4.0, 4.1], [4.2, 4.3], [4.4, 4.5]]
+            ], dtype=np.float32
+        )
+    )
+    return inputs_0
+
+
+def test_2g_call_5x1(inputs_5x1_v0, group_v0):
+    """Test call.
+
+    Use `group_col=2` which results in [0, 0, 0, 1, 1].
+
+    """
+    inputs_v0 = inputs_5x1_v0
+
+    holder = tf.constant([0.]) - tf.constant(0.1)
+    incremented = inputs_v0 - tf.constant(0.1)
+    desired_output_br0 = tf.stack(
+        [incremented[0], incremented[1], incremented[2], holder, holder],
+        axis=0
+    )
+    holder = tf.constant([0.]) + tf.constant(0.1)
+    incremented = inputs_v0 + tf.constant(0.1)
+    desired_output_br1 = tf.stack(
+        [holder, holder, holder, incremented[3], incremented[4]],
+        axis=0
+    )
+
+    inputs = [inputs_v0, group_v0]
+
+    # Test default behavior when `output_names` is not provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], group_col=2,
+        name='branch5x1'
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['branch5x1_0'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['branch5x1_1'], desired_output_br1)
+
+    # Test behavior when `output_names` is provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], group_col=2,
+        name='branch5x1', output_names=['br_a', 'br_b']
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['br_a'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)
+
+
+def test_2g_call_5x3(inputs_5x3_v0, inputs_5x3_v1, group_v0):
+    """Test call.
+
+    Use `group_co=2` which results in [0, 0, 0, 1, 1].
+
+    """
+    inputs_v0 = inputs_5x3_v0
+    inputs_v1 = inputs_5x3_v1
+
+    holder = tf.constant([0., 0., 0.]) - tf.constant(0.1)
+    added = inputs_v0 + inputs_v1 - tf.constant(0.1)
+    desired_output_br0 = tf.stack(
+        [added[0], added[1], added[2], holder, holder],
+        axis=0
+    )
+    holder = tf.constant([0., 0., 0.]) + tf.constant(0.1)
+    added = inputs_v0 + inputs_v1 + tf.constant(0.1)
+    desired_output_br1 = tf.stack(
+        [holder, holder, holder, added[3], added[4]],
+        axis=0
+    )
+
+    inputs = [inputs_v0, inputs_v1, group_v0]
+
+    # Test default behavior when `output_names` is not provided.
+    branch = BranchGate(
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2, name='branch5x3'
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['branch5x3_0'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['branch5x3_1'], desired_output_br1)
+
+    # Test behavior when `output_names` is provided.
+    branch = BranchGate(
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2, name='branch5x3',
+        output_names=['br_a', 'br_b']
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['br_a'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)
+
+
+def test_3g_call_5x3x2(inputs_5x3x2_v0, group_v0):
+    """Test call.
+
+    Use `group_col=1` which results in [0, 1, 2, 1, 2].
+
+    Each subnetwork simply selects a subset of the input based on the
+    second input dimension.
+
+    """
+    inputs_v0 = inputs_5x3x2_v0
+
+    # NOTE: The Select layers are provided indices in the order [1, 0, 2]
+    # just to mix things up. Thus inputs_v0[x, y] where y refeflects that
+    # order; x is just the batch index.
+    holder = tf.zeros([2], tf.float32)
+    desired_output_br0 = tf.stack(
+        [inputs_v0[0, 1], holder, holder, holder, holder],
+        axis=0
+    )
+    desired_output_br1 = tf.stack(
+        [holder, inputs_v0[1, 0], holder, inputs_v0[3, 0], holder],
+        axis=0
+    )
+    desired_output_br2 = tf.stack(
+        [holder, holder, inputs_v0[2, 2], holder, inputs_v0[4, 2]],
+        axis=0
+    )
+
+    inputs = [inputs_v0, group_v0]
+
+    # Test default behavior when `output_names` is not provided.
+    branch = BranchGate(
+        subnets=[Select(1), Select(0), Select(2)], group_col=1,
+        name='branch5x3x2'
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['branch5x3x2_0'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['branch5x3x2_1'], desired_output_br1)
+    tf.debugging.assert_equal(outputs['branch5x3x2_2'], desired_output_br2)
+
+    # Test behavior when `output_names` is provided.
+    branch = BranchGate(
+        subnets=[Select(1), Select(0), Select(2)], group_col=1,
+        name='branch5x3x2', output_names=['br_a', 'br_b', 'br_c']
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['br_a'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)
+    tf.debugging.assert_equal(outputs['br_c'], desired_output_br2)
+
+
+@pytest.mark.parametrize(
+    "is_eager", [True, False]
+)
+def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
+    """Test call.
+
+    Use `group_col` which results in [0, 0, 0, 1, 1].
+
+    Expect outputs to have zeros as placeholders in batches that were routed
+    to a different branch.
+
+    """
+    tf.config.run_functions_eagerly(is_eager)
+    inputs_v0 = inputs_5x3_v0
+    inputs_v1 = inputs_5x3_v1
+
+    # Define model.
+    input_0 = tf.keras.Input(shape=(3,), name="data_0")
+    input_1 = tf.keras.Input(shape=(3,), name="data_1")
+    input_2 = tf.keras.Input(
+        type_spec=tf.TensorSpec((None, 3), dtype=tf.dtypes.int32),
+        name="groups"
+    )
+
+    # NOTE: You have to know TF's default naming scheme to suppy these
+    # names ahead of time, i.e, `['<layer.name>', '<layer_name>_0',
+    # '<layer_name>_1', ...]`. The best we can do here is anticipate and
+    # set the layer name.
+
+    name_branch_0 = "branch"
+    name_branch_1 = "branch_1"
+    outputs = BranchGate(
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2,
+        output_names=[name_branch_0, name_branch_1], name="branch"
+    )([input_0, input_1, input_2])
+    model = tf.keras.Model(
+        inputs=[input_0, input_1, input_2],
+        outputs=[outputs[name_branch_0], outputs[name_branch_1]]
+    )
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(),
+        loss=[
+            tf.keras.losses.MeanAbsoluteError(name='mae_0'),
+            tf.keras.losses.MeanAbsoluteError(name='mae_1'),
+        ],
+        loss_weights=[1.0, 1.0],
+    )
+
+    # Test dataset.
+    n_data = 5
+    x = {
+        'data_0': inputs_v0,
+        'data_1': inputs_v1,
+        'groups': group_v0
+    }
+
+    # NOTE: When sample weights are appropriately set for each branch, the
+    # loss (branch and total loss) should be unaffected by the `holder` value
+    # in the target tensor.
+    holder = tf.constant([0., 0., 0.])
+
+    # holder = tf.constant([0., 0., 0.]) - tf.constant(0.1)
+    added = inputs_v0 + inputs_v1 - tf.constant(0.1)
+    targets_0 = tf.stack(
+        [added[0], added[1], added[2], holder, holder],
+        axis=0
+    )
+    # holder = tf.constant([0., 0., 0.]) + tf.constant(0.1)
+    added = inputs_v0 + inputs_v1 + tf.constant(0.1)
+    targets_1 = tf.stack(
+        [holder, holder, holder, added[3], added[4]],
+        axis=0
+    )
+
+    y = {name_branch_0: targets_0, name_branch_1: targets_1}
+
+    w_0 = tf.constant([1., 1., 1., 0., 0.])
+    w_1 = tf.constant([0., 0., 0., 1., 1.])
+    w = {name_branch_0: w_0, name_branch_1: w_1}
+
+    # Wrap it all together as a Dataset and fit for two epochs.
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
+        n_data, drop_remainder=False
+    )
+    history = model.fit(ds, epochs=2, verbose=1)
+
+    # NOTE: There are no trainable parameters, so the loss is predictable and
+    # does not change across epochs.
+    zeros_2epochs = [0.0, 0.0]
+    assert history.history['loss'] == zeros_2epochs
+    assert history.history[name_branch_0 + '_loss'] == zeros_2epochs
+    assert history.history[name_branch_1 + '_loss'] == zeros_2epochs
+
+
+@pytest.mark.parametrize(
+    "is_eager", [True, False]
+)
+def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
+    """Test call.
+
+    Use `group_col` which results in [0, 0, 0, 1, 1].
+
+    Expect outputs to have zeros as placeholders in batches that were routed
+    to a different branch.
+
+    """
+    tf.config.run_functions_eagerly(is_eager)
+
+    inputs_v0 = inputs_5x3_v0
+    inputs_v1 = inputs_5x3_v1
+
+    name_branch_0 = "branch_0"
+    name_branch_1 = "branch_1"
+
+    # Define model.
+    class MyModel(tf.keras.Model):
+        """Custom Model"""
+        def __init__(self):
+            super(MyModel, self).__init__()
+            self.branch = BranchGate(
+                subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2,
+                output_names=[name_branch_0, name_branch_1], name="branch"
+            )
+
+        def call(self, inputs):
+            outputs = self.branch(
+                [inputs['data_0'], inputs['data_1'], inputs['groups']]
+            )
+            return outputs
+
+    model = MyModel()
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(),
+        loss={
+            name_branch_0: tf.keras.losses.MeanAbsoluteError(name='mae_0'),
+            name_branch_1: tf.keras.losses.MeanAbsoluteError(name='mae_1'),
+        },
+        loss_weights={name_branch_0: 1.0, name_branch_1: 1.0},
+    )
+
+    # Create test dataset.
+    n_data = 5
+    x = {
+        'data_0': inputs_v0,
+        'data_1': inputs_v1,
+        'groups': group_v0
+    }
+
+    # NOTE: When sample weights are appropriately set for each branch, the
+    # loss (branch and total loss) should be unaffected by the `holder` value
+    # in the target tensor.
+    holder = tf.constant([0., 0., 0.])
+
+    # holder = tf.constant([0., 0., 0.]) - tf.constant(0.1)
+    added = inputs_v0 + inputs_v1 - tf.constant(0.1)
+    targets_0 = tf.stack(
+        [added[0], added[1], added[2], holder, holder],
+        axis=0
+    )
+    # holder = tf.constant([0., 0., 0.]) + tf.constant(0.1)
+    added = inputs_v0 + inputs_v1 + tf.constant(0.1)
+    targets_1 = tf.stack(
+        [holder, holder, holder, added[3], added[4]],
+        axis=0
+    )
+
+    y = {name_branch_0: targets_0, name_branch_1: targets_1}
+
+    w_0 = tf.constant([1., 1., 1., 0., 0.])
+    w_1 = tf.constant([0., 0., 0., 1., 1.])
+    w = {name_branch_0: w_0, name_branch_1: w_1}
+
+    # Wrap it all together as a Dataset and fit for two epochs.
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
+        n_data, drop_remainder=False
+    )
+    history = model.fit(ds, epochs=2, verbose=1)
+
+    # NOTE: There are no trainable parameters, so the loss is predictable and
+    # does not change across epochs.
+    zeros_2epochs = [0.0, 0.0]
+    assert history.history['loss'] == zeros_2epochs
+    assert history.history[name_branch_0 + '_loss'] == zeros_2epochs
+    assert history.history[name_branch_1 + '_loss'] == zeros_2epochs

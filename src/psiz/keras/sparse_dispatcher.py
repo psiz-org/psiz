@@ -65,19 +65,23 @@ import tensorflow as tf
 class SparseDispatcher():
     """Helper for implementing a mixture of experts.
 
-    TODO: update doc strings for arbitrary length inputs
+    The purpose of this class is to create input minibatches for a list
+    of experts. Optionally, the expert outputs can be re-combined to
+    form a unified output tensor.
 
-    The purpose of this class is to create input minibatches for the
-    experts and to combine the results of the experts to form a unified
-    output tensor.
-
-    There are two functions:
-        dispatch: take an input Tensor and create input Tensors for
-            each expert.
-        combine: take output Tensors from each expert and form a
+    Methods:
+        dispatch_single: Take a single input Tensor and create a single
+            input Tensor for each expert.
+        dispatch_multi: Take a list of input Tensors and create a list
+            of input Tensors for each expert (resulting `batch_size`
+            will vary for each expert).
+        dispatch_multi_pad: Same as `dispatch_multi`, except pad
+            "dropped" batch elements with zeros.
+        combine: Take output Tensors from each expert and reform a
             combined output Tensor. Outputs from different experts for
             the same batch element are summed together, weighted by the
-            provided "gates".
+            provided "gates". Note that this operation does not make
+            much sense if used with `dispatch_multi_pad`.
 
     The class is initialized with a "gates" Tensor, which specifies
     which batch elements go to which experts, and the weights to use
@@ -169,17 +173,22 @@ class SparseDispatcher():
 
     # @add_name_scope()
     def dispatch_multi(self, inputs):
-        """Create one input Tensor for each expert.
+        """Create inputs for each expert.
 
         The `Tensor` for a expert `i` contains the slices of `inp`
         corresponding to the batch elements `b` where `gates[b, i] > 0`.
 
+        NOTE: Batches are not padded. Elements that are not used by the
+        expert are completely ommitted, meaning the `batch_size` is not
+        preserved.
+
         Args:
-            inputs: a `Tensor` of shape "[batch_size, <extra_input_dims>]`
+            inputs: a list of `Tensor`s
+                shape=(batch_size, [n, m, ...])
 
         Returns:
-            a list of `num_experts` `Tensor`s with shapes
-                `[expert_batch_size_i, <extra_input_dims>]`.
+            A list of `num_experts` `Tensor`s
+                shape=(expert_batch_size_i, [n, m, ...])
 
         """
         # Initialize empty list for each expert.
@@ -190,6 +199,52 @@ class SparseDispatcher():
             inp = tf.split(inp, self._part_sizes_tensor, 0)
             for i_expert in range(self._num_experts):
                 expert_list[i_expert].append(inp[i_expert])
+
+        return expert_list
+
+    def dispatch_multi_pad(self, inputs):
+        """Create inputs for each expert.
+
+        The `Tensor` for a expert `i` contains the slices of `inp`
+        corresponding to the batch elements `b` where `gates[b, i] > 0`.
+
+        NOTE: Batch elements that are not used by the expert are
+        present as zero-padded batches. This means that `batch_size` is
+        preserved and relative position of items in the batch is also
+        preserved. It is left to the caller to handle the zero-padded
+        batch elements appropriately (e.g., by providing
+        expert-specific `sample_weights` to the optimizer).
+
+        Args:
+            inputs: a list of `Tensor`s
+                shape=(batch_size, [n, m, ...])
+
+        Returns:
+            A list of `num_experts` `Tensor`s
+                shape=(batch_size, [n, m, ...])
+
+        """
+        # Initialize empty list for each expert.
+        expert_list = [[] for _ in range(self._num_experts)]
+
+        # Create indices that track original batch location of inputs
+        # for later `scatter_nd` update.
+        indices = tf.split(self._batch_index, self._part_sizes_tensor, 0)
+        for i_expert in range(self._num_experts):
+            indices[i_expert] = tf.expand_dims(indices[i_expert], axis=1)
+
+        # Loop over inputs, creating expert-specific list of `inputs`.
+        for inp in inputs:
+            inp_shape = tf.shape(inp)
+            inp = tf.gather(inp, self._batch_index, axis=0)
+            inp = tf.split(inp, self._part_sizes_tensor, 0)
+            for i_expert in range(self._num_experts):
+                inp_expert = tf.scatter_nd(
+                    indices=indices[i_expert],
+                    updates=inp[i_expert],
+                    shape=inp_shape
+                )
+                expert_list[i_expert].append(inp_expert)
 
         return expert_list
 
@@ -205,7 +260,7 @@ class SparseDispatcher():
         Args:
             expert_out: a list of `num_experts` `Tensor`s, each with
                 shape `[expert_batch_size_i, <extra_output_dims>]`.
-        multiply_by_gates: a boolean
+            multiply_by_gates: a boolean
 
         Returns:
             a `Tensor` with shape `[batch_size, <extra_output_dims>]`.

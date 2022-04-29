@@ -630,7 +630,7 @@ def test_inpmulti_serialization(kernel_subnets, paired_inputs_v0, group_v0):
     tf.debugging.assert_equal(outputs_0, outputs_1)
 
 
-def test_wpass_call(nested_subnet_gate_v0, paired_inputs_v0, group_v0):
+def test_nested_call(nested_subnet_gate_v0, paired_inputs_v0, group_v0):
     group_layer = nested_subnet_gate_v0
     # group = tf.constant(
     #     np.array(

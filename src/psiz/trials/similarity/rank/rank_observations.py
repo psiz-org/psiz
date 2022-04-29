@@ -398,8 +398,6 @@ class RankObservations(RankTrials):
         # singleton dimensions on the call signautre for inputs that only
         # have one dimension. Add the singleton dimensions here solves the
         # problem.
-        # NOTE: We use stimulus_set + 1, since TensorFlow requires "0", not
-        # "-1" to indicate a masked value.
         # NOTE: The dimensions of inputs are expanded to have an additional
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.

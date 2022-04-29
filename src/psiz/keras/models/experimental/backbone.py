@@ -28,7 +28,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.eager import backprop
 
-from psiz.keras.layers.experimental.braided_gate import BraidedGate
+from psiz.keras.layers.experimental.braid_gate import BraidGate
 from psiz.utils import expand_dim_repeat
 
 
@@ -106,7 +106,7 @@ class Backbone(tf.keras.Model):
             # Assume embedding layer.
             output_dim = self.stimuli.output_dim
         except AttributeError:
-            # Assume BraidedGate layer.
+            # Assume BraidGate layer.
             output_dim = self.stimuli.subnets[0].output_dim
 
         return output_dim

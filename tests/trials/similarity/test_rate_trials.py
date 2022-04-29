@@ -206,7 +206,7 @@ def ground_truth(n_stimuli, mask_zero):
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.BraidedGate(
+    kernel_group = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 

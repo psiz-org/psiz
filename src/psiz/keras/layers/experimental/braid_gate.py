@@ -16,7 +16,7 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    BraidedGate: A layer that routes inputs to group-specific
+    BraidGate: A layer that routes inputs to group-specific
         subnetworks.
 
 """
@@ -28,12 +28,12 @@ from psiz.keras.layers.experimental.gate import Gate
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='BraidedGate'
+    package='psiz.keras', name='BraidGate'
 )
-class BraidedGate(Gate):
+class BraidGate(Gate):
     """A layer that routes inputs to group-specific subnetworks.
 
-    In a `BraidedGate` the subnetworks are re-combined at the end (in
+    In a `BraidGate` the subnetworks are re-combined at the end (in
     contrast to a `BranchGate`).
 
     The subnetworks can take a list of inputs, but each subnetwork must
@@ -59,7 +59,7 @@ class BraidedGate(Gate):
             fully defined.
 
         """
-        super(BraidedGate, self).__init__(
+        super(BraidGate, self).__init__(
             subnets=subnets, group_col=group_col, pass_groups=pass_groups,
             strip_inputs=strip_inputs, **kwargs)
 

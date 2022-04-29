@@ -34,7 +34,7 @@ class BranchGate(Gate):
     """A layer that routes inputs to group-specific subnetworks.
 
     In a `BranchGate` the subnetworks are not combined at the end (in
-    contrast to a `BraidedGate`).
+    contrast to a `BraidGate`).
 
     For more information see: `psiz.keras.layers.Gate`
 

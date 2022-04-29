@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test BraidedGate."""
+"""Test BraidGate."""
 
 import numpy as np
 import pytest
@@ -23,7 +23,7 @@ import tensorflow_probability as tfp
 from psiz.keras.layers import DistanceBased
 from psiz.keras.layers import EmbeddingNormalDiag
 from psiz.keras.layers import ExponentialSimilarity
-from psiz.keras.layers import BraidedGate
+from psiz.keras.layers import BraidGate
 from psiz.keras.layers import Minkowski
 from psiz.keras.layers import MinkowskiStochastic
 from psiz.keras.layers import MinkowskiVariational
@@ -310,8 +310,8 @@ def nested_subnet_gate_v0():
     subnet_2 = AddPairs(0.02)
     subnet_3 = AddPairs(0.03)
 
-    group_inner = BraidedGate(subnets=[subnet_2, subnet_3], group_col=2)
-    group_outer = BraidedGate(
+    group_inner = BraidGate(subnets=[subnet_2, subnet_3], group_col=2)
+    group_outer = BraidGate(
         subnets=[subnet_0, subnet_1, group_inner], group_col=1,
         pass_groups=[False, False, True]
     )
@@ -319,7 +319,7 @@ def nested_subnet_gate_v0():
 
 
 def test_inp1_subnet_method(emb_subnets_determ):
-    group_layer = BraidedGate(subnets=emb_subnets_determ, group_col=0)
+    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=0)
     group_layer.build([[None, None], [None, None]])
 
     subnet_0 = group_layer.subnets[0]
@@ -340,7 +340,7 @@ def test_inp1_subnet_method(emb_subnets_determ):
 def test_inp1_emb_call_determ_2d_input(
         emb_subnets_determ, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidedGate(subnets=emb_subnets_determ, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -357,7 +357,7 @@ def test_inp1_emb_call_determ_2d_input(
 def test_inp1_emb_call_determ_3d_input(
         emb_subnets_determ, emb_inputs_v1, group_v0):
     """Test call with data inputs larger than 2D."""
-    group_layer = BraidedGate(subnets=emb_subnets_determ, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=1)
 
     outputs = group_layer([emb_inputs_v1, group_v0])
 
@@ -420,7 +420,7 @@ def test_inp1_emb_call_determ_3d_input(
 def test_inp1_emb_call_stoch_2d_input_rank0(
         emb_subnets_stoch_rank0, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidedGate(subnets=emb_subnets_stoch_rank0, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -439,7 +439,7 @@ def test_inp1_emb_call_stoch_2d_input_rank0(
 def test_inp1_emb_call_stoch_2d_input_rank1(
         emb_subnets_stoch_rank1, emb_inputs_v0, group_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidedGate(subnets=emb_subnets_stoch_rank1, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank1, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_v0])
 
@@ -458,7 +458,7 @@ def test_inp1_emb_call_stoch_2d_input_rank1(
 def test_inp1_emb_call_empty_branch(
         emb_subnets_stoch_rank0, emb_inputs_v0, group_3g_empty_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidedGate(subnets=emb_subnets_stoch_rank0, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, group_col=1)
 
     outputs = group_layer([emb_inputs_v0, group_3g_empty_v0])
 
@@ -477,13 +477,13 @@ def test_inp1_emb_call_empty_branch(
 def test_inp1_emb_serialization(
         emb_subnets_stoch_rank1, emb_inputs_v0, group_v0):
     # Build group-specific layer.
-    group_layer = BraidedGate(subnets=emb_subnets_stoch_rank1, group_col=0)
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank1, group_col=0)
 
     # Get configuration.
     config = group_layer.get_config()
 
     # Reconstruct layer from configuration.
-    group_layer_recon = BraidedGate.from_config(config)
+    group_layer_recon = BraidGate.from_config(config)
 
     # Assert reconstructed attributes are the same as original.
     assert group_layer.n_subnet == group_layer_recon.n_subnet
@@ -502,7 +502,7 @@ def test_inp1_emb_serialization(
 def test_inp1_compute_deterministic_embedding_output_shape(
         emb_subnets_determ, emb_inputs_v0, group_v0):
     """Test `compute_output_shape`."""
-    group_layer = BraidedGate(subnets=emb_subnets_determ, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=1)
     output_shape = group_layer.compute_output_shape(
         [emb_inputs_v0.shape, group_v0.shape]
     )
@@ -512,7 +512,7 @@ def test_inp1_compute_deterministic_embedding_output_shape(
 def test_inp1_compute_stochastic_embedding_output_shape(
         emb_subnets_stoch_rank0, emb_inputs_v0, group_v0):
     """Test `compute_output_shape`."""
-    group_layer = BraidedGate(subnets=emb_subnets_stoch_rank0, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, group_col=1)
     output_shape = group_layer.compute_output_shape(
         [emb_inputs_v0.shape, group_v0.shape]
     )
@@ -520,7 +520,7 @@ def test_inp1_compute_stochastic_embedding_output_shape(
 
 
 def test_inpmulti_subnet_method(kernel_subnets):
-    group_layer = BraidedGate(subnets=kernel_subnets, group_col=0)
+    group_layer = BraidGate(subnets=kernel_subnets, group_col=0)
     group_layer.build([[None, 3], [None, 3], [None, 3]])
 
     subnet_0 = group_layer.subnets[0]
@@ -550,7 +550,7 @@ def test_inpmulti_subnet_method(kernel_subnets):
 
 
 def test_inpmulti_kernel_call(kernel_subnets, paired_inputs_v0, group_v0):
-    group_layer = BraidedGate(subnets=kernel_subnets, group_col=0)
+    group_layer = BraidGate(subnets=kernel_subnets, group_col=0)
     outputs = group_layer(
         [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
     )
@@ -589,7 +589,7 @@ def test_inpmulti_call_kernel_empty_branch(
     kernel_0 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
-    kernel_group = BraidedGate(
+    kernel_group = BraidGate(
         subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
@@ -601,7 +601,7 @@ def test_inpmulti_call_kernel_empty_branch(
 def test_inpmulti_kernel_output_shape(
         kernel_subnets, paired_inputs_v0, group_v0):
     """Test output_shape method."""
-    group_layer = BraidedGate(subnets=kernel_subnets, group_col=0)
+    group_layer = BraidGate(subnets=kernel_subnets, group_col=0)
 
     input_shape = [
         tf.TensorShape(tf.shape(paired_inputs_v0[0])),
@@ -615,14 +615,14 @@ def test_inpmulti_kernel_output_shape(
 
 def test_inpmulti_serialization(kernel_subnets, paired_inputs_v0, group_v0):
     """Test serialization."""
-    group_layer_0 = BraidedGate(subnets=kernel_subnets, group_col=0)
+    group_layer_0 = BraidGate(subnets=kernel_subnets, group_col=0)
     outputs_0 = group_layer_0(
         [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
     )
     config = group_layer_0.get_config()
     assert config['group_col'] == 0
 
-    group_layer_1 = BraidedGate.from_config(config)
+    group_layer_1 = BraidGate.from_config(config)
     outputs_1 = group_layer_1(
         [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
     )

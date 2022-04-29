@@ -248,7 +248,7 @@ def bb_rank_1g_2g_mle():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.BraidedGate(
+    kernel_group = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
@@ -282,7 +282,7 @@ def bb_rank_1g_3g_mle():
     kernel_0 = build_mle_kernel(shared_similarity, n_dim)
     kernel_1 = build_mle_kernel(shared_similarity, n_dim)
     kernel_2 = build_mle_kernel(shared_similarity, n_dim)
-    kernel_group = psiz.keras.layers.BraidedGate(
+    kernel_group = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1, kernel_2], group_col=0
     )
 
@@ -322,7 +322,7 @@ def bb_rank_2g_2g_mle():
         )
     )
 
-    stimuli_group = psiz.keras.layers.BraidedGate(
+    stimuli_group = psiz.keras.layers.BraidGate(
         subnets=[stimuli_0, stimuli_1], group_col=0
     )
 
@@ -362,7 +362,7 @@ def bb_rank_2g_2g_mle():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.BraidedGate(
+    kernel_group = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
@@ -388,7 +388,7 @@ def bb_rank_2g_2g_2g_mle():
         n_stimuli + 1, n_dim, mask_zero=True
     )
 
-    stimuli_group = psiz.keras.layers.BraidedGate(
+    stimuli_group = psiz.keras.layers.BraidGate(
         subnets=[stimuli_0, stimuli_1], group_col=0
     )
 
@@ -428,13 +428,13 @@ def bb_rank_2g_2g_2g_mle():
         similarity=shared_similarity
     )
 
-    kernel_group = psiz.keras.layers.BraidedGate(
+    kernel_group = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1], group_col=0
     )
 
     behavior_0 = psiz.keras.layers.RankSimilarity()
     behavior_1 = psiz.keras.layers.RankSimilarity()
-    behavior_group = psiz.keras.layers.BraidedGate(
+    behavior_group = psiz.keras.layers.BraidGate(
         subnets=[behavior_0, behavior_1], group_col=0
     )
 

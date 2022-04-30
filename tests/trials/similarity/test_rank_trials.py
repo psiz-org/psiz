@@ -286,7 +286,7 @@ def ground_truth(n_stimuli, mask_zero):
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], group_col=0
+        subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
     model = psiz.keras.models.Rank(

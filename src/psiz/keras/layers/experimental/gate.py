@@ -52,7 +52,7 @@ class Gate(Groups, tf.keras.layers.Layer):
 
     """
     def __init__(
-            self, subnets=None, group_col=0, pass_groups=None,
+            self, subnets=None, groups_subset=0, pass_groups=None,
             strip_inputs=None, **kwargs):
         """Initialize.
 
@@ -60,8 +60,16 @@ class Gate(Groups, tf.keras.layers.Layer):
             subnets: A non-empty list of sub-networks. It is assumed
                 that all subnetworks have the same `input_shape` and
                 `output_shape`.
-            group_col (optional): Integer indicating the group column
-                on which to gate inputs to the subnetworks.
+            groups_subset (optional): Integer or list of integers
+                indicating the group column(s) on which to gate inputs
+                to the subnetworks.
+                * If an integer, the group column values are assumed to
+                be indices and the number of unique indices should
+                match the number of subnetworks.
+                * If a list of integers, group column values are assumed
+                to be mixing coefficients, where the ith coefficient
+                maps to the ith subnet of the caller-supplied list of
+                subnets.
             pass_groups (optional): Boolean 1D array-like indicating if
                 `groups` (last Tensor in `inputs`) should be passed
                 to the subnets. By default, this information is not
@@ -101,8 +109,19 @@ class Gate(Groups, tf.keras.layers.Layer):
                 )
             )
         self._processed_subnets = processed_subnets
-        self.group_col = group_col
         self.strip_inputs = strip_inputs
+
+        # Handle `groups_subset`.
+        self.groups_subset = groups_subset
+        # Determine if groups_subset is composed of indices based on number
+        # of group columns used.
+        self._groups_are_indices = False
+        if isinstance(groups_subset, list):
+            if len(self.groups_subset) == 1:
+                self._groups_are_indices = True
+                self.groups_subset = groups_subset[0]
+        else:
+            self._groups_are_indices = True
 
     def _process_subnet(self, subnet, pass_groups, strip_inputs):
         """Process subnet.
@@ -135,6 +154,25 @@ class Gate(Groups, tf.keras.layers.Layer):
         else:
             return subnet
 
+    def _process_groups(self, groups):
+        """Process `groups` inputs.
+
+        Args:
+            groups: A float Tensor.
+
+        Returns:
+            gates: A float Tensor.
+
+        """
+        if self._groups_are_indices:
+            idx_group = groups[:, self.groups_subset]
+            gates = tf.one_hot(
+                idx_group, self.n_subnet, on_value=1.0, off_value=0.0
+            )
+        else:
+            gates = tf.gather(groups, self.groups_subset, axis=1)
+        return gates
+
     @property
     def subnets(self):
         subnets = []
@@ -161,7 +199,7 @@ class Gate(Groups, tf.keras.layers.Layer):
             )
         config.update({
             'subnets': subnets_serial,
-            'group_col': int(self.group_col),
+            'groups_subset': self.groups_subset,
             'pass_groups': list(self.pass_groups),
             'strip_inputs': list(self.strip_inputs),
         })

@@ -40,13 +40,13 @@ class BranchGate(Gate):
 
     """
     def __init__(
-            self, subnets=None, group_col=0, pass_groups=None,
+            self, subnets=None, groups_subset=0, pass_groups=None,
             strip_inputs=None, output_names=None, **kwargs):
         """Initialize.
 
         Args:
             subnets: see `Gate`.
-            group_col (optional): see `Gate`.
+            groups_subset (optional): see `Gate`.
             pass_groups (optional): see `Gate`.
             strip_inputs (optional): see `Gate`.
             output_names (optional): A list of names to apply to the
@@ -60,8 +60,8 @@ class BranchGate(Gate):
 
         """
         super(BranchGate, self).__init__(
-            subnets=subnets, group_col=group_col, pass_groups=pass_groups,
-            strip_inputs=strip_inputs, **kwargs)
+            subnets=subnets, groups_subset=groups_subset,
+            pass_groups=pass_groups, strip_inputs=strip_inputs, **kwargs)
         if output_names is None:
             output_names = []
             for i_subnet in range(self.n_subnet):
@@ -78,22 +78,18 @@ class BranchGate(Gate):
                 data Tensor(s): shape=(batch, m, [n, ...])
                 groups Tensor: shape=(batch, g)
 
+        Returns:
+            outputs: A dictionary of Tensors.
         """
-        idx_group = inputs[-1][:, self.group_col]
-        idx_group = tf.one_hot(
-            idx_group, self.n_subnet, on_value=1.0, off_value=0.0
-        )
+        gates = self._process_groups(inputs[-1])
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
-        dispatcher = SparseDispatcher(self.n_subnet, idx_group)
+        dispatcher = SparseDispatcher(self.n_subnet, gates)
         subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
-        # subnet_outputs = []  # TODO
         subnet_outputs = {}
 
-        # dispatcher.expert_to_batch_indices()[i]
         for i in range(self.n_subnet):
             out = self._processed_subnets[i](subnet_inputs[i])
-            # subnet_outputs.append(out)  # TODO
             subnet_outputs[self.output_names[i]] = out
 
         return subnet_outputs

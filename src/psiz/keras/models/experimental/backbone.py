@@ -28,7 +28,6 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.eager import backprop
 
-from psiz.keras.layers.experimental.braid_gate import BraidGate
 from psiz.utils import expand_dim_repeat
 
 
@@ -41,7 +40,7 @@ class Backbone(tf.keras.Model):
     Attributes:
         embedding: An embedding layer.
         kernel: A kernel layer.
-        behavior: A behavior layer.
+        behavior: A list of behavior layers.
         n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.
         n_sample: The number of samples to draw on probalistic layers.
@@ -58,8 +57,8 @@ class Backbone(tf.keras.Model):
         Args:
             stimuli: An embedding layer representing the stimuli. Must
                 agree with n_stimuli, n_dim, n_group.
-            kernel (optional): A kernel layer.
-            behavior (optional): A behavior layer.
+            kernel: A kernel layer.
+            behavior: A behavior layer.
             n_sample (optional): An integer indicating the
                 number of samples to use on the forward pass. This
                 argument is only advantageous if using stochastic
@@ -77,7 +76,6 @@ class Backbone(tf.keras.Model):
         self.kernel = kernel
         self.behavior = behavior
 
-        # TODO could change Backbone signature such that use specifies on the module whether to `use_group_xxx`, easy for kernel and behavior, maybe tricky for stimuli
         # TODO this won't work for list.
         # self.behavior.kernel = kernel  # TODO is this ok, should I use setter for better protection?
         # self.behavior.use_group = use_group_behavior
@@ -137,7 +135,7 @@ class Backbone(tf.keras.Model):
         groups = inputs['groups']
 
         # Repeat `stimulus_set` `n_sample` times in a newly inserted
-        # axis (axis=1).
+        # "sample" axis (axis=1).
         stimulus_set = expand_dim_repeat(
             stimulus_set, self.n_sample, axis=1
         )

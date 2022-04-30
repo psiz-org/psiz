@@ -138,10 +138,10 @@ def inputs_5x3x2_v0():
     return inputs_0
 
 
-def test_2g_call_5x1(inputs_5x1_v0, group_v0):
+def test_2g_call_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0):
     """Test call.
 
-    Use `group_col=2` which results in [0, 0, 0, 1, 1].
+    Use `groups_subset=2` which results in [0, 0, 0, 1, 1].
 
     """
     inputs_v0 = inputs_5x1_v0
@@ -159,11 +159,11 @@ def test_2g_call_5x1(inputs_5x1_v0, group_v0):
         axis=0
     )
 
-    inputs = [inputs_v0, group_v0]
+    inputs = [inputs_v0, groups_v0]
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], group_col=2,
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=2,
         name='branch5x1'
     )
     outputs = branch(inputs)
@@ -172,7 +172,7 @@ def test_2g_call_5x1(inputs_5x1_v0, group_v0):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], group_col=2,
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=2,
         name='branch5x1', output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
@@ -180,7 +180,91 @@ def test_2g_call_5x1(inputs_5x1_v0, group_v0):
     tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)
 
 
-def test_2g_call_5x3(inputs_5x3_v0, inputs_5x3_v1, group_v0):
+def test_2g_call_5x1_disjoint(inputs_5x1_v0, groups_v1):
+    """Test call.
+
+    Use `groups_subset=[1,2]` which results in [0, 0, 0, 1, 1].
+
+    """
+    inputs_v0 = inputs_5x1_v0
+
+    holder = tf.constant([0.]) - tf.constant(0.1)
+    incremented = inputs_v0 - tf.constant(0.1)
+    desired_output_br0 = tf.stack(
+        [incremented[0], incremented[1], incremented[2], holder, holder],
+        axis=0
+    )
+    holder = tf.constant([0.]) + tf.constant(0.1)
+    incremented = inputs_v0 + tf.constant(0.1)
+    desired_output_br1 = tf.stack(
+        [holder, holder, holder, incremented[3], incremented[4]],
+        axis=0
+    )
+
+    inputs = [inputs_v0, groups_v1]
+
+    # Test default behavior when `output_names` is not provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=[1, 2],
+        name='branch5x1'
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['branch5x1_0'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['branch5x1_1'], desired_output_br1)
+
+    # Test behavior when `output_names` is provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=2,
+        name='branch5x1', output_names=['br_a', 'br_b']
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['br_a'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)
+
+
+def test_2g_call_5x1_intersecting(inputs_5x1_v0, groups_v2):
+    """Test call.
+
+    Use `groups_subset=2` which results in [0, 0, 0, 1, 1].
+
+    """
+    inputs_v0 = inputs_5x1_v0
+
+    holder = tf.constant([0.]) - tf.constant(0.1)
+    incremented = inputs_v0 - tf.constant(0.1)
+    desired_output_br0 = tf.stack(
+        [incremented[0], incremented[1], incremented[2], holder, holder],
+        axis=0
+    )
+    holder = tf.constant([0.]) + tf.constant(0.1)
+    incremented = inputs_v0 + tf.constant(0.1)
+    desired_output_br1 = tf.stack(
+        [holder, holder, incremented[2], incremented[3], incremented[4]],
+        axis=0
+    )
+
+    inputs = [inputs_v0, groups_v2]
+
+    # Test default behavior when `output_names` is not provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=[1, 2],
+        name='branch5x1'
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['branch5x1_0'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['branch5x1_1'], desired_output_br1)
+
+    # Test behavior when `output_names` is provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=[1, 2],
+        name='branch5x1', output_names=['br_a', 'br_b']
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['br_a'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)
+
+
+def test_2g_call_5x3(inputs_5x3_v0, inputs_5x3_v1, groups_v0):
     """Test call.
 
     Use `group_co=2` which results in [0, 0, 0, 1, 1].
@@ -202,11 +286,12 @@ def test_2g_call_5x3(inputs_5x3_v0, inputs_5x3_v1, group_v0):
         axis=0
     )
 
-    inputs = [inputs_v0, inputs_v1, group_v0]
+    inputs = [inputs_v0, inputs_v1, groups_v0]
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2, name='branch5x3'
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], groups_subset=2,
+        name='branch5x3'
     )
     outputs = branch(inputs)
     tf.debugging.assert_equal(outputs['branch5x3_0'], desired_output_br0)
@@ -214,18 +299,18 @@ def test_2g_call_5x3(inputs_5x3_v0, inputs_5x3_v1, group_v0):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2, name='branch5x3',
-        output_names=['br_a', 'br_b']
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], groups_subset=2,
+        name='branch5x3', output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
     tf.debugging.assert_equal(outputs['br_a'], desired_output_br0)
     tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)
 
 
-def test_3g_call_5x3x2(inputs_5x3x2_v0, group_v0):
+def test_3g_call_5x3x2(inputs_5x3x2_v0, groups_v0):
     """Test call.
 
-    Use `group_col=1` which results in [0, 1, 2, 1, 2].
+    Use `groups_subset=1` which results in [0, 1, 2, 1, 2].
 
     Each subnetwork simply selects a subset of the input based on the
     second input dimension.
@@ -250,11 +335,11 @@ def test_3g_call_5x3x2(inputs_5x3x2_v0, group_v0):
         axis=0
     )
 
-    inputs = [inputs_v0, group_v0]
+    inputs = [inputs_v0, groups_v0]
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[Select(1), Select(0), Select(2)], group_col=1,
+        subnets=[Select(1), Select(0), Select(2)], groups_subset=1,
         name='branch5x3x2'
     )
     outputs = branch(inputs)
@@ -264,7 +349,7 @@ def test_3g_call_5x3x2(inputs_5x3x2_v0, group_v0):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[Select(1), Select(0), Select(2)], group_col=1,
+        subnets=[Select(1), Select(0), Select(2)], groups_subset=1,
         name='branch5x3x2', output_names=['br_a', 'br_b', 'br_c']
     )
     outputs = branch(inputs)
@@ -276,10 +361,10 @@ def test_3g_call_5x3x2(inputs_5x3x2_v0, group_v0):
 @pytest.mark.parametrize(
     "is_eager", [True, False]
 )
-def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
+def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, groups_v0, is_eager):
     """Test call.
 
-    Use `group_col` which results in [0, 0, 0, 1, 1].
+    Use `groups_subset` which results in [0, 0, 0, 1, 1].
 
     Expect outputs to have zeros as placeholders in batches that were routed
     to a different branch.
@@ -305,7 +390,7 @@ def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
     name_branch_0 = "branch"
     name_branch_1 = "branch_1"
     outputs = BranchGate(
-        subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2,
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], groups_subset=2,
         output_names=[name_branch_0, name_branch_1], name="branch"
     )([input_0, input_1, input_2])
     model = tf.keras.Model(
@@ -327,7 +412,7 @@ def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
     x = {
         'data_0': inputs_v0,
         'data_1': inputs_v1,
-        'groups': group_v0
+        'groups': groups_v0
     }
 
     # NOTE: When sample weights are appropriately set for each branch, the
@@ -371,10 +456,10 @@ def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
 @pytest.mark.parametrize(
     "is_eager", [True, False]
 )
-def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
+def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, groups_v0, is_eager):
     """Test call.
 
-    Use `group_col` which results in [0, 0, 0, 1, 1].
+    Use `groups_subset` which results in [0, 0, 0, 1, 1].
 
     Expect outputs to have zeros as placeholders in batches that were routed
     to a different branch.
@@ -394,7 +479,7 @@ def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
         def __init__(self):
             super(MyModel, self).__init__()
             self.branch = BranchGate(
-                subnets=[AddPairs(-0.1), AddPairs(0.1)], group_col=2,
+                subnets=[AddPairs(-0.1), AddPairs(0.1)], groups_subset=2,
                 output_names=[name_branch_0, name_branch_1], name="branch"
             )
 
@@ -419,7 +504,7 @@ def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, group_v0, is_eager):
     x = {
         'data_0': inputs_v0,
         'data_1': inputs_v1,
-        'groups': group_v0
+        'groups': groups_v0
     }
 
     # NOTE: When sample weights are appropriately set for each branch, the

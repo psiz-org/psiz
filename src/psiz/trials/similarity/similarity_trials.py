@@ -241,8 +241,8 @@ class SimilarityTrials(metaclass=ABCMeta):
             if 'groups' in index:
                 # Must handle groups separately.
                 parts = index.split('_')
-                group_col = int(parts[-1])
-                bidx_key = np.equal(self.groups[:, group_col], value)
+                groups_subset = int(parts[-1])
+                bidx_key = np.equal(self.groups[:, groups_subset], value)
             else:
                 bidx_key = np.equal(getattr(self, index), value)
             # Determine intersection.

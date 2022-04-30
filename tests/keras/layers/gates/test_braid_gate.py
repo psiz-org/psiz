@@ -55,6 +55,20 @@ def build_vi_kernel(similarity, n_dim, kl_weight):
     return kernel
 
 
+# Copied from test_sparse_dispatcher:Increment.
+class Increment(tf.keras.layers.Layer):
+    """A simple layer that increments input by a value."""
+
+    def __init__(self, v, **kwargs):
+        """Initialize."""
+        super(Increment, self).__init__(**kwargs)
+        self.v = tf.constant(v)
+
+    def call(self, inputs):
+        """Call."""
+        return inputs + self.v
+
+
 # Copied from test_sparse_dispatcher:AddPairs.
 class AddPairs(tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
@@ -310,16 +324,16 @@ def nested_subnet_gate_v0():
     subnet_2 = AddPairs(0.02)
     subnet_3 = AddPairs(0.03)
 
-    group_inner = BraidGate(subnets=[subnet_2, subnet_3], group_col=2)
+    group_inner = BraidGate(subnets=[subnet_2, subnet_3], groups_subset=2)
     group_outer = BraidGate(
-        subnets=[subnet_0, subnet_1, group_inner], group_col=1,
+        subnets=[subnet_0, subnet_1, group_inner], groups_subset=1,
         pass_groups=[False, False, True]
     )
     return group_outer
 
 
 def test_inp1_subnet_method(emb_subnets_determ):
-    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=0)
+    group_layer = BraidGate(subnets=emb_subnets_determ, groups_subset=0)
     group_layer.build([[None, None], [None, None]])
 
     subnet_0 = group_layer.subnets[0]
@@ -338,11 +352,12 @@ def test_inp1_subnet_method(emb_subnets_determ):
 
 
 def test_inp1_emb_call_determ_2d_input(
-        emb_subnets_determ, emb_inputs_v0, group_v0):
+        emb_subnets_determ, emb_inputs_v0, groups_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=1)
+    groups = groups_v0
+    group_layer = BraidGate(subnets=emb_subnets_determ, groups_subset=1)
 
-    outputs = group_layer([emb_inputs_v0, group_v0])
+    outputs = group_layer([emb_inputs_v0, groups])
 
     desired_outputs = np.array([
         [[0.0, 0.1, 0.2], [1.0, 1.1, 1.2], [2.0, 2.1, 2.2]],
@@ -355,11 +370,13 @@ def test_inp1_emb_call_determ_2d_input(
 
 
 def test_inp1_emb_call_determ_3d_input(
-        emb_subnets_determ, emb_inputs_v1, group_v0):
+        emb_subnets_determ, emb_inputs_v1, groups_v0):
     """Test call with data inputs larger than 2D."""
-    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=1)
+    groups = groups_v0
 
-    outputs = group_layer([emb_inputs_v1, group_v0])
+    group_layer = BraidGate(subnets=emb_subnets_determ, groups_subset=1)
+
+    outputs = group_layer([emb_inputs_v1, groups])
 
     desired_outputs = np.array([
         [
@@ -418,11 +435,13 @@ def test_inp1_emb_call_determ_3d_input(
 
 
 def test_inp1_emb_call_stoch_2d_input_rank0(
-        emb_subnets_stoch_rank0, emb_inputs_v0, group_v0):
+        emb_subnets_stoch_rank0, emb_inputs_v0, groups_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, group_col=1)
+    groups = groups_v0
 
-    outputs = group_layer([emb_inputs_v0, group_v0])
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, groups_subset=1)
+
+    outputs = group_layer([emb_inputs_v0, groups])
 
     desired_outputs = np.array([
         [[0.0, 0.1, 0.2], [1.0, 1.1, 1.2], [2.0, 2.1, 2.2]],
@@ -437,11 +456,13 @@ def test_inp1_emb_call_stoch_2d_input_rank0(
 
 
 def test_inp1_emb_call_stoch_2d_input_rank1(
-        emb_subnets_stoch_rank1, emb_inputs_v0, group_v0):
+        emb_subnets_stoch_rank1, emb_inputs_v0, groups_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidGate(subnets=emb_subnets_stoch_rank1, group_col=1)
+    groups = groups_v0
 
-    outputs = group_layer([emb_inputs_v0, group_v0])
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank1, groups_subset=1)
+
+    outputs = group_layer([emb_inputs_v0, groups])
 
     desired_outputs = np.array([
         [[0.0, 0.1, 0.2], [1.0, 1.1, 1.2], [2.0, 2.1, 2.2]],
@@ -458,7 +479,7 @@ def test_inp1_emb_call_stoch_2d_input_rank1(
 def test_inp1_emb_call_empty_branch(
         emb_subnets_stoch_rank0, emb_inputs_v0, group_3g_empty_v0):
     """Test call that does not require an internal reshape."""
-    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, group_col=1)
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, groups_subset=1)
 
     outputs = group_layer([emb_inputs_v0, group_3g_empty_v0])
 
@@ -475,9 +496,11 @@ def test_inp1_emb_call_empty_branch(
 
 
 def test_inp1_emb_serialization(
-        emb_subnets_stoch_rank1, emb_inputs_v0, group_v0):
+        emb_subnets_stoch_rank1, emb_inputs_v0, groups_v0):
+    groups = groups_v0
+
     # Build group-specific layer.
-    group_layer = BraidGate(subnets=emb_subnets_stoch_rank1, group_col=0)
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank1, groups_subset=0)
 
     # Get configuration.
     config = group_layer.get_config()
@@ -487,11 +510,11 @@ def test_inp1_emb_serialization(
 
     # Assert reconstructed attributes are the same as original.
     assert group_layer.n_subnet == group_layer_recon.n_subnet
-    assert group_layer.group_col == group_layer_recon.group_col
+    assert group_layer.groups_subset == group_layer_recon.groups_subset
 
-    outputs = group_layer([emb_inputs_v0, group_v0])
+    outputs = group_layer([emb_inputs_v0, groups])
 
-    outputs_recon = group_layer_recon([emb_inputs_v0, group_v0])
+    outputs_recon = group_layer_recon([emb_inputs_v0, groups])
 
     # Assert calls are roughly equal (given constant initializer).
     np.testing.assert_array_almost_equal(
@@ -500,27 +523,31 @@ def test_inp1_emb_serialization(
 
 
 def test_inp1_compute_deterministic_embedding_output_shape(
-        emb_subnets_determ, emb_inputs_v0, group_v0):
+        emb_subnets_determ, emb_inputs_v0, groups_v0):
     """Test `compute_output_shape`."""
-    group_layer = BraidGate(subnets=emb_subnets_determ, group_col=1)
+    groups = groups_v0
+
+    group_layer = BraidGate(subnets=emb_subnets_determ, groups_subset=1)
     output_shape = group_layer.compute_output_shape(
-        [emb_inputs_v0.shape, group_v0.shape]
+        [emb_inputs_v0.shape, groups.shape]
     )
     assert output_shape == tf.TensorShape([5, 3, 3])
 
 
 def test_inp1_compute_stochastic_embedding_output_shape(
-        emb_subnets_stoch_rank0, emb_inputs_v0, group_v0):
+        emb_subnets_stoch_rank0, emb_inputs_v0, groups_v0):
     """Test `compute_output_shape`."""
-    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, group_col=1)
+    groups = groups_v0
+
+    group_layer = BraidGate(subnets=emb_subnets_stoch_rank0, groups_subset=1)
     output_shape = group_layer.compute_output_shape(
-        [emb_inputs_v0.shape, group_v0.shape]
+        [emb_inputs_v0.shape, groups.shape]
     )
     assert output_shape == tf.TensorShape([5, 3, 3])
 
 
 def test_inpmulti_subnet_method(kernel_subnets):
-    group_layer = BraidGate(subnets=kernel_subnets, group_col=0)
+    group_layer = BraidGate(subnets=kernel_subnets, groups_subset=0)
     group_layer.build([[None, 3], [None, 3], [None, 3]])
 
     subnet_0 = group_layer.subnets[0]
@@ -549,10 +576,12 @@ def test_inpmulti_subnet_method(kernel_subnets):
     )
 
 
-def test_inpmulti_kernel_call(kernel_subnets, paired_inputs_v0, group_v0):
-    group_layer = BraidGate(subnets=kernel_subnets, group_col=0)
+def test_inpmulti_kernel_call(kernel_subnets, paired_inputs_v0, groups_v0):
+    groups = groups_v0
+
+    group_layer = BraidGate(subnets=kernel_subnets, groups_subset=0)
     outputs = group_layer(
-        [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
+        [paired_inputs_v0[0], paired_inputs_v0[1], groups]
     )
 
     # x = np.exp(-.1 * np.sqrt(3*(5**2)))
@@ -590,7 +619,7 @@ def test_inpmulti_call_kernel_empty_branch(
     kernel_1 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_2 = build_vi_kernel(shared_similarity, n_dim, kl_weight)
     kernel_group = BraidGate(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
+        subnets=[kernel_0, kernel_1, kernel_2], groups_subset=0
     )
 
     _ = kernel_group(
@@ -599,50 +628,47 @@ def test_inpmulti_call_kernel_empty_branch(
 
 
 def test_inpmulti_kernel_output_shape(
-        kernel_subnets, paired_inputs_v0, group_v0):
+        kernel_subnets, paired_inputs_v0, groups_v0):
     """Test output_shape method."""
-    group_layer = BraidGate(subnets=kernel_subnets, group_col=0)
+    groups = groups_v0
+
+    group_layer = BraidGate(subnets=kernel_subnets, groups_subset=0)
 
     input_shape = [
         tf.TensorShape(tf.shape(paired_inputs_v0[0])),
         tf.TensorShape(tf.shape(paired_inputs_v0[1])),
-        tf.TensorShape(tf.shape(group_v0))
+        tf.TensorShape(tf.shape(groups))
     ]
     output_shape = group_layer.compute_output_shape(input_shape)
     desired_output_shape = tf.TensorShape([5])
     tf.debugging.assert_equal(output_shape, desired_output_shape)
 
 
-def test_inpmulti_serialization(kernel_subnets, paired_inputs_v0, group_v0):
+def test_inpmulti_serialization(kernel_subnets, paired_inputs_v0, groups_v0):
     """Test serialization."""
-    group_layer_0 = BraidGate(subnets=kernel_subnets, group_col=0)
+    groups = groups_v0
+
+    group_layer_0 = BraidGate(subnets=kernel_subnets, groups_subset=0)
     outputs_0 = group_layer_0(
-        [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
+        [paired_inputs_v0[0], paired_inputs_v0[1], groups]
     )
     config = group_layer_0.get_config()
-    assert config['group_col'] == 0
+    assert config['groups_subset'] == 0
 
     group_layer_1 = BraidGate.from_config(config)
     outputs_1 = group_layer_1(
-        [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
+        [paired_inputs_v0[0], paired_inputs_v0[1], groups]
     )
 
     tf.debugging.assert_equal(outputs_0, outputs_1)
 
 
-def test_nested_call(nested_subnet_gate_v0, paired_inputs_v0, group_v0):
+def test_nested_call(nested_subnet_gate_v0, paired_inputs_v0, groups_v0):
+    """Test two-level nested BraidGate."""
+    groups = groups_v0
+
     group_layer = nested_subnet_gate_v0
-    # group = tf.constant(
-    #     np.array(
-    #         [
-    #             [0, 0, 0],
-    #             [0, 1, 0],
-    #             [0, 2, 0],
-    #             [0, 1, 1],
-    #             [0, 2, 1]
-    #         ], dtype=np.int32
-    #     )
-    # )
+
     # Desired values.
     inputs_0 = np.array(
         [
@@ -668,7 +694,149 @@ def test_nested_call(nested_subnet_gate_v0, paired_inputs_v0, group_v0):
     desired_outputs = inputs_0 + inputs_1 + gate_increment
 
     outputs = group_layer(
-        [paired_inputs_v0[0], paired_inputs_v0[1], group_v0]
+        [paired_inputs_v0[0], paired_inputs_v0[1], groups]
     )
 
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+
+
+# TODO abstract out inputs_0
+def test_mixture_call(groups_v3):
+    """Test BraidedGate when mixing branches."""
+    # inputs = paired_inputs_v0
+    groups = groups_v3
+
+    group_layer = BraidGate(
+        subnets=[Increment(1.), Increment(3.)], groups_subset=[1, 2]
+    )
+
+    inputs_0 = np.array(
+        [
+            [0.0, 0.1, 0.2],
+            [1.0, 1.1, 1.2],
+            [2.0, 2.1, 2.2],
+            [3.0, 3.1, 3.2],
+            [4.0, 4.1, 4.2]
+        ], dtype=np.float32
+    )
+
+    desired_increment = np.array(
+        [
+            [1.0, 1.0, 1.0],
+            [1.4, 1.4, 1.4],
+            [2.0, 2.0, 2.0],
+            [2.6, 2.6, 2.6],
+            [3.0, 3.0, 3.0]
+        ], dtype=np.float32
+    )
+    desired_outputs = inputs_0 + desired_increment
+
+    outputs = group_layer([inputs_0, groups])
+
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+
+
+# TODO abstract out inputs_0
+def test_mixture_call_w_emb(groups_v3):
+    """Test BraidedGate when mixing branches."""
+    # inputs = paired_inputs_v0
+    groups = groups_v3
+
+    # Define BraidGate layer
+    emb_loc_0 = np.array(
+        [
+            [0.1, 0.2],
+            [1.1, 1.2],
+            [2.1, 2.2],
+            [3.1, 3.2],
+            [4.1, 4.2],
+            [5.1, 5.2],
+            [6.1, 6.2],
+            [7.1, 7.2],
+            [8.1, 8.2],
+            [9.1, 9.2],
+            [10.1, 10.2],
+            [11.1, 11.2],
+            [12.1, 12.2],
+            [13.1, 13.2],
+            [14.1, 14.2],
+        ], dtype=np.float32
+    )
+    emb_loc_1 = np.array(
+        [
+            [20.1, -0.2],
+            [21.1, -1.2],
+            [22.1, -2.2],
+            [23.1, -3.2],
+            [24.1, -4.2],
+            [25.1, -5.2],
+            [26.1, -6.2],
+            [27.1, -7.2],
+            [28.1, -8.2],
+            [29.1, -9.2],
+            [30.1, -10.2],
+            [31.1, -11.2],
+            [32.1, -12.2],
+            [33.1, -13.2],
+            [34.1, -14.2],
+        ], dtype=np.float32
+    )
+    emb_0 = tf.keras.layers.Embedding(
+        15, 2, mask_zero=False,
+        embeddings_initializer=tf.keras.initializers.Constant(emb_loc_0)
+    )
+    emb_1 = tf.keras.layers.Embedding(
+        15, 2, mask_zero=False,
+        embeddings_initializer=tf.keras.initializers.Constant(emb_loc_1)
+    )
+    group_layer = BraidGate(
+        subnets=[emb_0, emb_1], groups_subset=[1, 2]
+    )
+
+    inputs_0 = np.array(
+        [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [9, 10, 11],
+            [12, 13, 14]
+        ], dtype=np.float32
+    )
+    outputs = group_layer([inputs_0, groups])
+
+    # The desired "linear mixture" of embedding outputs.
+    desired_outputs = np.array(
+        [
+            # 1.0, 0.0 mix
+            [
+                [0.1, 0.2],
+                [1.1, 1.2],
+                [2.1, 2.2],
+            ],
+            # 0.8, 0.2 mix
+            [
+                [7.1, 1.92],
+                [8.1, 2.52],
+                [9.1, 3.12],
+            ],
+            # 0.5, 0.5 mix
+            [
+                [16.1, 0.0],
+                [17.1, 0.0],
+                [18.1, 0.0]
+            ],
+            # 0.2, 0.8 mix
+            [
+                [25.1, -5.52],
+                [26.1, -6.12],
+                [27.1, -6.72]
+            ],
+            # 0.0, 1.0 mix
+            [
+                [32.1, -12.2],
+                [33.1, -13.2],
+                [34.1, -14.2],
+            ],
+        ], dtype=np.float32
+    )
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())

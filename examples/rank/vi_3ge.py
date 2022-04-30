@@ -322,7 +322,7 @@ def ground_truth(n_stimuli, n_group):
         class_mean_full, exemplar_locs_centered, exemplar_scale[2]
     )
     stim_group = psiz.keras.layers.BraidGate(
-        subnets=[stim_0, stim_1, stim_2], group_col=0
+        subnets=[stim_0, stim_1, stim_2], groups_subset=0
     )
 
     # Define group-specific kernels.
@@ -388,7 +388,7 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
         n_stimuli, n_dim, shared_prior, kl_weight, 'vi_stim_group_2'
     )
     stim_group = psiz.keras.layers.BraidGate(
-        subnets=[stim_0, stim_1, stim_2], group_col=0,
+        subnets=[stim_0, stim_1, stim_2], groups_subset=0,
     )
 
     # Define a simple (non-trainable) kernel.

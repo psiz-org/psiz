@@ -216,7 +216,7 @@ def rank_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], group_col=0
+        subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
     behavior = psiz.keras.layers.RankBehavior()
@@ -391,7 +391,7 @@ def rate_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], group_col=0
+        subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
     behavior = psiz.keras.layers.RateBehavior()

@@ -249,7 +249,7 @@ def bb_rank_1g_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], group_col=0
+        subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
     rank = psiz.keras.layers.RankSimilarity()
@@ -283,7 +283,7 @@ def bb_rank_1g_3g_mle():
     kernel_1 = build_mle_kernel(shared_similarity, n_dim)
     kernel_2 = build_mle_kernel(shared_similarity, n_dim)
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1, kernel_2], group_col=0
+        subnets=[kernel_0, kernel_1, kernel_2], groups_subset=0
     )
 
     rank = psiz.keras.layers.RankSimilarity()
@@ -323,7 +323,7 @@ def bb_rank_2g_2g_mle():
     )
 
     stimuli_group = psiz.keras.layers.BraidGate(
-        subnets=[stimuli_0, stimuli_1], group_col=0
+        subnets=[stimuli_0, stimuli_1], groups_subset=0
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -363,7 +363,7 @@ def bb_rank_2g_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], group_col=0
+        subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
     behavior = psiz.keras.layers.RankSimilarity()
@@ -389,7 +389,7 @@ def bb_rank_2g_2g_2g_mle():
     )
 
     stimuli_group = psiz.keras.layers.BraidGate(
-        subnets=[stimuli_0, stimuli_1], group_col=0
+        subnets=[stimuli_0, stimuli_1], groups_subset=0
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -429,13 +429,13 @@ def bb_rank_2g_2g_2g_mle():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], group_col=0
+        subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
     behavior_0 = psiz.keras.layers.RankSimilarity()
     behavior_1 = psiz.keras.layers.RankSimilarity()
     behavior_group = psiz.keras.layers.BraidGate(
-        subnets=[behavior_0, behavior_1], group_col=0
+        subnets=[behavior_0, behavior_1], groups_subset=0
     )
 
     model = psiz.keras.models.Backbone(

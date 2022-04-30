@@ -98,7 +98,7 @@ class Drop(tf.keras.layers.Layer):
         config = super().get_config()
         config.update({
             'subnet': tf.keras.utils.serialize_keras_object(self.subnet),
-            'drop_index': int(self.group_col),
+            'drop_index': int(self.groups_subset),
         })
         return config
 

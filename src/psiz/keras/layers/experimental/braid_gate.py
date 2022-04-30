@@ -60,8 +60,8 @@ class BraidGate(Gate):
 
         """
         super(BraidGate, self).__init__(
-            subnets=subnets, groups_subset=groups_subset, pass_groups=pass_groups,
-            strip_inputs=strip_inputs, **kwargs)
+            subnets=subnets, groups_subset=groups_subset,
+            pass_groups=pass_groups, strip_inputs=strip_inputs, **kwargs)
 
     def call(self, inputs):
         """Call.
@@ -74,7 +74,7 @@ class BraidGate(Gate):
                 groups Tensor: shape=(batch, g)
 
         """
-        gates = self._process_groups(inputs[-1])
+        gates = self._process_groups(inputs[self.inputs_group_idx])
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
         dispatcher = SparseDispatcher(self.n_subnet, gates)

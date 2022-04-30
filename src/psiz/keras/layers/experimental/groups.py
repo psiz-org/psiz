@@ -33,3 +33,4 @@ class Groups():
         """
         super().__init__(*args, **kwargs)
         self.supports_groups = True
+        self.inputs_group_idx = -1

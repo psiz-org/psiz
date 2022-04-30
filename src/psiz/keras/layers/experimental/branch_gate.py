@@ -81,7 +81,7 @@ class BranchGate(Gate):
         Returns:
             outputs: A dictionary of Tensors.
         """
-        gates = self._process_groups(inputs[-1])
+        gates = self._process_groups(inputs[self.inputs_group_idx])
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
         dispatcher = SparseDispatcher(self.n_subnet, gates)

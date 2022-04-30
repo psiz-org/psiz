@@ -144,7 +144,8 @@ class Gate(Groups, tf.keras.layers.Layer):
             return subnet
         else:
             return Drop(
-                subnet=subnet, drop_index=-1, strip_inputs=strip_inputs
+                subnet=subnet, drop_index=self.inputs_group_idx,
+                strip_inputs=strip_inputs
             )
 
     def _unprocess_subnet(self, subnet):

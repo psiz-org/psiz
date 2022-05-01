@@ -40,7 +40,7 @@ class Backbone(tf.keras.Model):
     Attributes:
         embedding: An embedding layer.
         kernel: A kernel layer.
-        behavior: A list of behavior layers.
+        behavior: A behavior layer.
         n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.
         n_sample: The number of samples to draw on probalistic layers.
@@ -274,8 +274,12 @@ class Backbone(tf.keras.Model):
                 'ignore', category=UserWarning, module=r'.*indexed_slices'
             )
             with backprop.GradientTape() as tape:
-                # Average over samples.
-                y_pred = tf.reduce_mean(self(x, training=True), axis=1)
+                # Forward-pass prediction.
+                y_pred = self(x, training=True)
+
+                # Average over samples (handling possible multi-output case).
+                y_pred = self._handle_predict_sample_dimension(y_pred)
+
                 loss = self.compiled_loss(
                     y, y_pred, sample_weight, regularization_losses=self.losses
                 )
@@ -405,3 +409,22 @@ class Backbone(tf.keras.Model):
 
         model_config.update(built_layers)
         return cls(**model_config)
+
+    def _handle_predict_sample_dimension(self, y_pred):
+        """Handle sample dimension.
+
+        Args:
+            y_pred: Tensor predictions of unkown structure that have an
+                extra `n_sample` dimension.
+
+        Returns:
+            y_pred: Tensor predictions with sample dimension correctly
+                handled for different structures.
+
+        """
+        if isinstance(y_pred, dict):
+            for key in y_pred:
+                y_pred[key] = tf.reduce_mean(y_pred[key], axis=1)
+        else:
+            y_pred = tf.reduce_mean(y_pred, axis=1)
+        return y_pred

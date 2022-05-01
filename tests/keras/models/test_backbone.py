@@ -28,10 +28,10 @@ def call_fit_evaluate_predict(model, ds2_docket, ds2_obs):
     # Test call.
     for data in ds2_docket:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        _ = model(x, training=False)
+        outputs = model(x, training=False)
 
     # Test fit.
-    model.fit(ds2_obs, epochs=2)
+    history = model.fit(ds2_obs, epochs=2)
 
     # Test evaluate.
     model.evaluate(ds2_obs)
@@ -169,13 +169,99 @@ def ds2_rate_obs_2g():
 
 
 @pytest.fixture(scope="module")
-def ds2_rank_rate_docket():
+def ds2_rank_rate_docket_2g():
     return None
 
 
 @pytest.fixture(scope="module")
-def ds2_rank_rate_obs():
-    return None
+def ds2_rank_rate_obs_2g():
+    n_trial = 8
+    # TODO
+    # stimulus_set = np.array(
+    #     [
+    #         # Rank trials.
+    #         [1, 2, 3, 0, 0, 0, 0, 0, 0],
+    #         [10, 13, 8, 0, 0, 0, 0, 0, 0],
+    #         [4, 5, 6, 7, 8, 0, 0, 0, 0],
+    #         [4, 5, 6, 7, 14, 15, 16, 17, 18],
+    #         # Rate trials.
+    #         [1, 2, 0, 0, 0, 0, 0, 0, 0],
+    #         [10, 13, 0, 0, 0, 0, 0, 0, 0],
+    #         [4, 5, 0, 0, 0, 0, 0, 0, 0],
+    #         [4, 18, 0, 0, 0, 0, 0, 0, 0],
+    #     ], dtype=np.int32
+    # )
+
+    # # Additional info for rank trials.
+    # n_select = np.array((1, 1, 1, 2, 0, 0, 0, 0), dtype=np.int32)
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+    obs_rank = psiz.trials.RankObservations(
+        stimulus_set, n_select=n_select, groups=groups, mask_zero=True
+    )
+
+    # Rank data for dataset.
+    stimulus_set_rank = obs_rank.all_outcomes()
+    is_select_rank = np.expand_dims(obs_rank.is_select(compress=False), axis=2)
+    y_rank = np.zeros([obs_rank.n_trial, stimulus_set_rank.shape[2]])
+    y_rank[:, 0] = 1
+    y_rank = np.concatenate([y_rank, np.zeros_like(y_rank)], axis=0)
+
+    # Add on rate data.
+    stimulus_set_rate = np.array(
+        [
+            [1, 2, 0, 0, 0, 0, 0, 0, 0],
+            [10, 13, 0, 0, 0, 0, 0, 0, 0],
+            [4, 5, 0, 0, 0, 0, 0, 0, 0],
+            [4, 18, 0, 0, 0, 0, 0, 0, 0],
+        ]
+    )
+    stimulus_set_rate = np.expand_dims(stimulus_set_rate, axis=2)
+    stimulus_set_rate = np.repeat(stimulus_set_rate, 56, axis=2)
+    stimulus_set = np.concatenate(
+        [stimulus_set_rank, stimulus_set_rate], axis=0
+    )
+    # placeholder
+    is_select_rank = np.concatenate(
+        (is_select_rank, np.zeros_like(is_select_rank)), axis=0
+    )
+
+    groups = np.array(
+        [
+            [0, 0], [0, 0], [0, 0], [0, 0], [0, 1], [0, 1], [0, 1], [0, 1]
+        ], dtype=np.int32
+    )
+
+    x = {
+        'stimulus_set': stimulus_set,
+        'is_select': is_select_rank,
+        'groups': groups,
+    }
+
+    y_rate = np.array([0.0, 0.0, 0.0, 0.0, 0.1, .4, .8, .9])  # ratings
+    y = {
+        'rank_branch': tf.constant(y_rank, dtype=tf.float32),
+        'rate_branch': tf.constant(y_rate, dtype=tf.float32)
+    }
+
+    # Define sample weights for each branch.
+    w_rank = tf.constant([1., 1., 1., 1., 0., 0., 0., 0.])
+    w_rate = tf.constant([0., 0., 0., 0., 1., 1., 1., 1.])
+    w = {
+        'rank_branch': w_rank,
+        'rate_branch': w_rate
+    }
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
+        n_trial, drop_remainder=False
+    )
+
+    return ds
 
 
 @pytest.fixture(scope="module")
@@ -208,10 +294,10 @@ def bb_rank_1g_1g_mle():
     return model
 
 
+# TODO same as tests/keras/models/conftest:rank_2g_mle
 @pytest.fixture(scope="module")
 def bb_rank_1g_2g_mle():
     """A MLE rank model for two groups."""
-    # TODO same as tests/keras/models/conftest:rank_2g_mle
     n_stimuli = 30
     n_dim = 10
 
@@ -531,7 +617,38 @@ def bb_rate_1g_mle():
 
 @pytest.fixture(scope="module")
 def bb_rank_rate_1g_mle():
-    return None
+    n_stimuli = 20
+    n_dim = 3
+
+    stimuli = tf.keras.layers.Embedding(
+        n_stimuli + 1, n_dim, mask_zero=True
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            trainable=False,
+        )
+    )
+
+    # Define a multi-behavior module
+    rank = psiz.keras.layers.RankSimilarity()
+    rate = psiz.keras.layers.RateSimilarity()
+    behav_branch = psiz.keras.layers.BranchGate(
+        subnets=[rank, rate], groups_subset=1, name="behav_branch",
+        output_names=['rank_branch', 'rate_branch']
+    )
+
+    model = psiz.keras.models.Backbone(
+        stimuli=stimuli, kernel=kernel, behavior=behav_branch
+    )
+    return model
 
 
 class TestRankSimilarity:
@@ -651,6 +768,29 @@ class TestMultiBehavior:
     """Test with multiple types of behavior."""
 
     def test_rank_rate(
-        self, bb_rank_rate_1g_mle, ds2_rank_rate_docket, ds2_rank_rate_obs
+        self, bb_rank_rate_1g_mle, ds2_rank_rate_docket_2g,
+        ds2_rank_rate_obs_2g
     ):
         """Test rank and rate."""
+        is_eager = True  # TODO
+        tf.config.run_functions_eagerly(is_eager)
+
+        model = bb_rank_rate_1g_mle
+        # Compile
+        compile_kwargs = {
+            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+            'loss': {
+                'rank_branch': tf.keras.losses.CategoricalCrossentropy(
+                    name='rank_loss'
+                ),
+                'rate_branch': tf.keras.losses.MeanSquaredError(
+                    name='rate_loss'
+                ),
+            },
+            'loss_weights': {'rank_branch': 1.0, 'rate_branch': 1.0},
+        }
+        model.compile(**compile_kwargs)
+        # TODO one docket and one obs.
+        call_fit_evaluate_predict(
+            model, ds2_rank_rate_obs_2g, ds2_rank_rate_obs_2g
+        )

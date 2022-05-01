@@ -35,6 +35,7 @@ from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNor
 from psiz.keras.layers.embeddings.variational import EmbeddingVariational
 from psiz.keras.layers.experimental.gate import Gate
 from psiz.keras.layers.experimental.braid_gate import BraidGate
+from psiz.keras.layers.experimental.branch_gate import BranchGate
 from psiz.keras.layers.experimental.drop import Drop
 from psiz.keras.layers.experimental.groups import Groups
 from psiz.keras.layers.kernels.distance_based import DistanceBased
@@ -51,7 +52,8 @@ __all__ = [
     'EmbeddingLaplaceDiag', 'EmbeddingLogNormalDiag',
     'EmbeddingLogitNormalDiag', 'EmbeddingNormalDiag', 'EmbeddingShared',
     'StochasticEmbedding', 'EmbeddingTruncatedNormalDiag',
-    'EmbeddingVariational', 'Gate', 'Drop', 'BraidGate', 'Groups',
+    'EmbeddingVariational',
+    'Gate', 'Drop', 'BraidGate', 'BranchGate', 'Groups',
     'DistanceBased', 'ExponentialSimilarity', 'HeavyTailedSimilarity',
     'InverseSimilarity', 'StudentsTSimilarity', 'Variational'
 ]

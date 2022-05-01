@@ -25,14 +25,39 @@ import tensorflow as tf
 
 class Behavior2(tf.keras.layers.Layer):
     """An abstract behavior layer."""
+    def __init__(self, kernel=None, **kwargs):
+        """Initialize.
 
-    def init(self, **kwargs):
+        Args:
+            kernel: A kernel layer.
+            kwargs: Key-word arguments.
+
+        """
         super(Behavior2, self).__init__(**kwargs)
+        self.kernel = kernel
+
+        # Handle module switches.
+        def supports_groups(layer):
+            if hasattr(layer, 'supports_groups'):
+                return layer.supports_groups
+            else:
+                return False
+        self._pass_groups = {}
+        self._pass_groups['kernel'] = supports_groups(kernel)
+
+    def call(self, inputs):
+        raise NotImplementedError
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update({
+            'kernel': tf.keras.utils.serialize_keras_object(self.kernel)
+        })
         return config
 
-    def call(self, inputs):
-        raise NotImplementedError
+    @classmethod
+    def from_config(cls, config):
+        kernel_serial = config['kernel']
+        config['kernel'] = tf.keras.layers.deserialize(kernel_serial)
+        return super().from_config(config)

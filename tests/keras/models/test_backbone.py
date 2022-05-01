@@ -273,6 +273,7 @@ def bb_rank_1g_1g_mle():
     stimuli = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
+
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -286,10 +287,10 @@ def bb_rank_1g_1g_mle():
             trainable=False,
         )
     )
-    rank = psiz.keras.layers.RankSimilarity()
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
 
     model = psiz.keras.models.Backbone(
-        stimuli=stimuli, kernel=kernel, behavior=rank
+        stimuli=stimuli, behavior=rank
     )
     return model
 
@@ -338,11 +339,9 @@ def bb_rank_1g_2g_mle():
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity()
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
 
-    model = psiz.keras.models.Backbone(
-        stimuli=stimuli, kernel=kernel_group, behavior=rank
-    )
+    model = psiz.keras.models.Backbone(stimuli=stimuli, behavior=rank)
     return model
 
 
@@ -372,11 +371,9 @@ def bb_rank_1g_3g_mle():
         subnets=[kernel_0, kernel_1, kernel_2], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity()
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
 
-    model = psiz.keras.models.Backbone(
-        stimuli=stimuli, kernel=kernel_group, behavior=rank
-    )
+    model = psiz.keras.models.Backbone(stimuli=stimuli, behavior=rank)
     return model
 
 
@@ -452,11 +449,9 @@ def bb_rank_2g_2g_mle():
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    behavior = psiz.keras.layers.RankSimilarity()
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
 
-    model = psiz.keras.models.Backbone(
-        stimuli=stimuli_group, kernel=kernel_group, behavior=behavior
-    )
+    model = psiz.keras.models.Backbone(stimuli=stimuli_group, behavior=rank)
     return model
 
 
@@ -518,14 +513,15 @@ def bb_rank_2g_2g_2g_mle():
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    behavior_0 = psiz.keras.layers.RankSimilarity()
-    behavior_1 = psiz.keras.layers.RankSimilarity()
+    behavior_0 = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
+    behavior_1 = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
     behavior_group = psiz.keras.layers.BraidGate(
-        subnets=[behavior_0, behavior_1], groups_subset=0
+        subnets=[behavior_0, behavior_1], groups_subset=0,
+        pass_groups=[True, True]  # TODO this is annoying to remember
     )
 
     model = psiz.keras.models.Backbone(
-        stimuli=stimuli_group, kernel=kernel_group, behavior=behavior_group
+        stimuli=stimuli_group, behavior=behavior_group
     )
     return model
 
@@ -575,10 +571,10 @@ def bb_rank_1g_vi():
         )
     )
 
-    rank = psiz.keras.layers.RankSimilarity()
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
 
     model = psiz.keras.models.Backbone(
-        stimuli=stimuli, kernel=kernel, behavior=rank
+        stimuli=stimuli, behavior=rank
     )
     return model
 
@@ -607,11 +603,9 @@ def bb_rate_1g_mle():
         )
     )
 
-    behavior = psiz.keras.layers.RateSimilarity()
+    rate = psiz.keras.layers.RateSimilarity(kernel=kernel)
 
-    model = psiz.keras.models.Backbone(
-        stimuli=stimuli, kernel=kernel, behavior=behavior
-    )
+    model = psiz.keras.models.Backbone(stimuli=stimuli, behavior=rate)
     return model
 
 
@@ -623,6 +617,8 @@ def bb_rank_rate_1g_mle():
     stimuli = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
+
+    # Define a kernel that will be shared across behaviors.
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -638,15 +634,15 @@ def bb_rank_rate_1g_mle():
     )
 
     # Define a multi-behavior module
-    rank = psiz.keras.layers.RankSimilarity()
-    rate = psiz.keras.layers.RateSimilarity()
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rate = psiz.keras.layers.RateSimilarity(kernel=kernel)
     behav_branch = psiz.keras.layers.BranchGate(
         subnets=[rank, rate], groups_subset=1, name="behav_branch",
         output_names=['rank_branch', 'rate_branch']
     )
 
     model = psiz.keras.models.Backbone(
-        stimuli=stimuli, kernel=kernel, behavior=behav_branch
+        stimuli=stimuli, behavior=behav_branch
     )
     return model
 

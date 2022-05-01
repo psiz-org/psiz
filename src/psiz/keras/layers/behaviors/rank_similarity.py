@@ -21,36 +21,41 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.python.keras import backend as K
 
 from psiz.keras.layers.behaviors.behavior2 import Behavior2
+from psiz.keras.layers.experimental.groups import Groups
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RankSimilarity'
 )
-class RankSimilarity(Behavior2):
-    """A rank similarity behavior layer.
+class RankSimilarity(Groups, Behavior2):
+    """A rank similarity behavior layer."""
+    def __init__(self, kernel=None, **kwargs):
+        """Initialize.
 
-    Embodies a `_tf_ranked_sequence_probability` call.
+        Args:
+            kernel: A kernel layer.
 
-    """
+        """
+        super(RankSimilarity, self).__init__(kernel=kernel, **kwargs)
 
     def on_kernel_begin(self, z):
         """Call at the start of kernel operation.
 
         Args:
-            z: TODO
+            z: A tensor of embeddings.
                 shape=TensorShape(
                     [batch_size, n_sample, n_ref + 1, n_outcome, n_dim]
                 )
 
         Returns:
-            z_q: TODO
+            z_q: A tensor of embeddings for the query.
                 shape=TensorShape(
                     [batch_size, n_sample, 1, n_outcome, n_dim]
                 )
-            z_r: TODO
+            z_r: A tensor of embeddings for the references.
                 shape=TensorShape(
                     [batch_size, n_sample, n_ref, n_outcome, n_dim]
                 )
@@ -70,34 +75,21 @@ class RankSimilarity(Behavior2):
 
         return z_q, z_r
 
-    def format_inputs(self, inputs):
-        """TODO.
-
-        Args:
-            inputs: A dictionary of inputs. TODO   
-
-        Returns:
-            inputs_list: A list of inputs.
-
-        """
-        inputs_list = [inputs['stimulus_set'], inputs['is_select']]
-        return inputs_list
-
     def call(self, inputs):
         """Return probability of a ranked selection sequence.
 
         Args:
-            TODO
-            inputs[0]: i.e., sim_qr: A tensor containing the
-                precomputed similarities between the query stimuli and
-                corresponding reference stimuli.
-                shape=(batch_size, n_sample, n_max_reference, n_outcome)
-            inputs[1]: i.e., is_select: A float tensor indicating if a
+            inputs[0]: i.e., stimulus_set: A tensor containing indices
+                that define the stimuli used in each trial.
+                shape=(batch_size, n_sample, n_max_reference + 1, n_outcome)
+            inputs[1]: i.e., z: A tensor containing the embeddings for
+                the stimulus set.
+                shape=(batch_size, n_sample, n_max_reference, n_outcome, n_dim)
+            inputs[2]: i.e., is_select: A float tensor indicating if a
                 reference was selected, which indicates a true event.
-                shape = (batch_size, 1, n_max_reference, n_outcome)
-            inputs[2]: i.e., is_outcome: A float tensor indicating if
-                an outcome is real or a padded placeholder.
-                shape = (batch_size, 1, n_outcome)
+                shape = (batch_size, n_max_reference + 1, 1)
+            inputs[-1]: i.e., groups (optional): A tensor containing
+                group membership information.
 
         Returns:
             outcome_prob: Probability of different behavioral outcomes.
@@ -107,10 +99,18 @@ class RankSimilarity(Behavior2):
             vectorization cleaner.
 
         """
-        sim_qr = inputs[0]
-        stimulus_set = inputs[1]
-        is_select = inputs[2][:, 1:, :]
-        # is_outcome = inputs[2]
+        stimulus_set = inputs[0]
+        z = inputs[1]
+        is_select = inputs[2][:, 1:, :]  # Drop "query" position.
+
+        # Prep retrieved embeddings for kernel op based on behavior.
+        z_q, z_r = self.on_kernel_begin(z)
+
+        if self._pass_groups['kernel']:
+            groups = inputs[-1]
+            sim_qr = self.kernel([z_q, z_r, groups])
+        else:
+            sim_qr = self.kernel([z_q, z_r])
 
         # Zero out similarities involving placeholder IDs by creating
         # a mask based on reference indices. We drop the query indices
@@ -126,7 +126,7 @@ class RankSimilarity(Behavior2):
         is_select = tf.expand_dims(
             tf.cast(is_select, K.floatx()), axis=1
         )
-        # Determine if outcome is legitamate by checking if at least one
+        # Determine if outcome is legitimate by checking if at least one
         # reference is present. This is important because not all trials have
         # the same number of possible outcomes and we need to infer the
         # "zero-padding" of the outcome axis.

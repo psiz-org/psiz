@@ -25,12 +25,13 @@ from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.behaviors.behavior2 import Behavior2
+from psiz.keras.layers.experimental.groups import Groups
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RateSimilarity'
 )
-class RateSimilarity(Behavior2):
+class RateSimilarity(Groups, Behavior2):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized
@@ -48,13 +49,14 @@ class RateSimilarity(Behavior2):
     """
 
     def __init__(
-            self, lower_initializer=None, upper_initializer=None,
+            self, kernel=None, lower_initializer=None, upper_initializer=None,
             midpoint_initializer=None, rate_initializer=None,
             lower_trainable=False, upper_trainable=False,
             midpoint_trainable=True, rate_trainable=True, **kwargs):
         """Initialize.
 
         Args:
+            kernel: A kernel layer.
             lower_initializer (optional): TensorFlow initializer.
             upper_initializer (optional): TensorFlow initializer.
             midpoint_initializer (optional): TensorFlow initializer.
@@ -70,7 +72,7 @@ class RateSimilarity(Behavior2):
             kwargs (optional): Additional keyword arguments.
 
         """
-        super().__init__(**kwargs)
+        super(RateSimilarity, self).__init__(kernel=kernel, **kwargs)
 
         self.lower_trainable = lower_trainable
         if lower_initializer is None:
@@ -118,19 +120,19 @@ class RateSimilarity(Behavior2):
         """Call at the start of kernel operation.
 
         Args:
-            z: TODO
+            z: A tensor of embeddings.
                 shape=TensorShape(
-                    [batch_size, n_sample, n_ref + 1, n_outcome, n_dim]
+                    [batch_size, n_sample, 2, n_dim]
                 )
 
         Returns:
-            z_0: TODO
+            z_0: A tensor of embeddings for one part of the pair.
                 shape=TensorShape(
-                    [batch_size, n_sample, 1, n_outcome, n_dim]  TODO
+                    [batch_size, n_sample, 1, n_dim]
                 )
-            z_1: TODO
+            z_1: A tensor of embeddings for the other part of the pair.
                 shape=TensorShape(
-                    [batch_size, n_sample, n_ref, n_outcome, n_dim]  TODO
+                    [batch_size, n_sample, 1, n_dim]
                 )
 
         """
@@ -139,35 +141,35 @@ class RateSimilarity(Behavior2):
         z_1 = z[:, :, 1]
         return z_0, z_1
 
-    def format_inputs(self, inputs):
-        """TODO. move to abstract class so this is default
-
-        Args:
-            inputs: A dictionary of inputs.
-
-        Returns:
-            inputs_list: A list of inputs.
-
-        """
-        inputs_list = []
-        return inputs_list
-
     def call(self, inputs):
         """Return predicted rating of a trial.
 
         Args:
-            inputs:
-                sim_qr: A tensor containing the precomputed
-                    similarities between the query stimuli and
-                    corresponding reference stimuli (only 1 reference).
-                    shape = (batch_size, 1, 1)
+            inputs[0]: i.e., stimulus_set: A tensor containing indices
+                that define the stimuli used in each trial.
+                shape=(batch_size, n_sample, n_stimuli_per_trial)
+            inputs[1]: i.e., z: A tensor containing the embeddings for
+                the stimulus set.
+                shape=(batch_size, n_sample, n_stimuli_per_trial, n_dim)
+            inputs[-1]: i.e., groups (optional): A tensor containing
+                group membership information.
 
         Returns:
             probs: The probabilites as determined by a parameterized
                 logistic function.
 
         """
-        sim_qr = inputs[0]
+        # stimulus_set = inputs[0]
+        z = inputs[1]
+
+        # Prep retrieved embeddings for kernel op based on behavior.
+        z_q, z_r = self.on_kernel_begin(z)
+
+        if self._pass_groups['kernel']:
+            groups = inputs[-1]
+            sim_qr = self.kernel([z_q, z_r, groups])
+        else:
+            sim_qr = self.kernel([z_q, z_r])
 
         prob = self.lower + tf.math.divide(
             self.upper - self.lower,

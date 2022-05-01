@@ -25,7 +25,6 @@ from importlib.metadata import version
 import warnings
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
 from tensorflow.python.eager import backprop
 
 from psiz.utils import expand_dim_repeat
@@ -49,15 +48,12 @@ class Backbone(tf.keras.Model):
 
     """
 
-    def __init__(
-            self, stimuli=None, kernel=None, behavior=None, n_sample=1,
-            **kwargs):
+    def __init__(self, stimuli=None, behavior=None, n_sample=1, **kwargs):
         """Initialize.
 
         Args:
             stimuli: An embedding layer representing the stimuli. Must
                 agree with n_stimuli, n_dim, n_group.
-            kernel: A kernel layer.
             behavior: A behavior layer.
             n_sample (optional): An integer indicating the
                 number of samples to use on the forward pass. This
@@ -73,13 +69,7 @@ class Backbone(tf.keras.Model):
 
         # Assign layers.
         self.stimuli = stimuli
-        self.kernel = kernel
         self.behavior = behavior
-
-        # TODO this won't work for list.
-        # self.behavior.kernel = kernel  # TODO is this ok, should I use setter for better protection?
-        # self.behavior.use_group = use_group_behavior
-        # PROBLEM: groups needs to be handled outside stimuli,kernel,behavior layer since those layers are blind to group info
 
         # Handle module switches.
         def supports_groups(layer):
@@ -90,7 +80,6 @@ class Backbone(tf.keras.Model):
 
         self._pass_groups = {
             'stimuli': supports_groups(stimuli),
-            'kernel': supports_groups(kernel),
             'behavior': supports_groups(behavior)
         }
 
@@ -130,60 +119,35 @@ class Backbone(tf.keras.Model):
                     shape=(batch_size, k)
 
         """
-        # Grab universal inputs.
-        stimulus_set = inputs['stimulus_set']
-        groups = inputs['groups']
+        # Pop universal inputs.
+        stimulus_set = inputs.pop('stimulus_set')
+        groups = inputs.pop('groups', None)
 
         # Repeat `stimulus_set` `n_sample` times in a newly inserted
         # "sample" axis (axis=1).
         stimulus_set = expand_dim_repeat(
             stimulus_set, self.n_sample, axis=1
         )
-        # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome])  TODO
-        # Update `stimulus_set` key.
-        inputs['stimulus_set'] = stimulus_set
+        # TensorShape=(batch_size, n_sample, [n, m, ...])
 
-        # Enbed stimuli indices in n-dimensional space:
+        # Embed stimuli indices in n-dimensional space:
         if self._pass_groups['stimuli']:
             z = self.stimuli([stimulus_set, groups])
         else:
             z = self.stimuli(stimulus_set)
-        # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome, n_dim])  TODO
+        # TensorShape=(batch_size, n_sample, [n, m, ...] n_dim])
 
-        # TODO from here on is very ugly.
-        # * does it make sense to roll things into behavior?
-        # * maybe ugly isn' a problem, so long as it works well
+        # Convert remaining `inputs` dictionary to list, preserving order of
+        # dictionary.
+        # TODO is this ok, maybe create hook for users to control order?
+        inputs_list = []
+        for key, value in inputs.items():
+            inputs_list.append(value)
 
-        # Prep retrieved embeddings for kernel op based on behavior.
-        # NOTE: This assumes all subnets the same behavior, which should be
-        # true.
         if self._pass_groups['behavior']:
-            z_q, z_r = self.behavior.subnets[0].on_kernel_begin(z)
+            y_pred = self.behavior([stimulus_set, z, *inputs_list, groups])
         else:
-            z_q, z_r = self.behavior.on_kernel_begin(z)
-
-        # Pass through similarity kernel.
-        if self._pass_groups['kernel']:
-            sim_qr = self.kernel([z_q, z_r, groups])
-        else:
-            sim_qr = self.kernel([z_q, z_r])
-        # TensorShape([batch_size, sample_size, n_ref, n_outcome])  TODO
-
-        # Given behavior, prepare retrieved embeddings for kernel op.
-        # TODO this assumes all subnets the same behavior (should be true)
-        # TODO this assumes nesting is only one deep (bad assumption?)
-        if self._pass_groups['behavior']:
-            inputs_list = self.behavior.subnets[0].format_inputs(inputs)
-        else:
-            inputs_list = self.behavior.format_inputs(inputs)
-
-        # Predict behavioral outcomes.
-        # TODO problem: my dispatcher can't route inputs of type dictionary
-        if self._pass_groups['behavior']:
-            y_pred = self.behavior([sim_qr, *inputs_list, groups])
-        else:
-            y_pred = self.behavior([sim_qr, *inputs_list])
-
+            y_pred = self.behavior([stimulus_set, z, *inputs_list])
         return y_pred
 
     def train_step(self, data):
@@ -274,9 +238,7 @@ class Backbone(tf.keras.Model):
                 'ignore', category=UserWarning, module=r'.*indexed_slices'
             )
             with backprop.GradientTape() as tape:
-                # Forward-pass prediction.
                 y_pred = self(x, training=True)
-
                 # Average over samples (handling possible multi-output case).
                 y_pred = self._handle_predict_sample_dimension(y_pred)
 
@@ -328,11 +290,10 @@ class Backbone(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        # NOTE The first dimension of the Tensor returned from calling the
-        # model is assumed to be `sample_size`. If this is a singleton
-        # dimension, taking the mean is equivalent to a squeeze
-        # operation.
-        y_pred = tf.reduce_mean(self(x, training=False), axis=1)
+        y_pred = self(x, training=True)
+        # Average over samples (handling possible multi-output case).
+        y_pred = self._handle_predict_sample_dimension(y_pred)
+
         self.compiled_loss(
             y, y_pred, sample_weight, regularization_losses=self.losses
         )
@@ -355,7 +316,9 @@ class Backbone(tf.keras.Model):
 
         """
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        y_pred = tf.reduce_mean(self(x, training=False), axis=1)
+        y_pred = self(x, training=True)
+        # Average over samples (handling possible multi-output case).
+        y_pred = self._handle_predict_sample_dimension(y_pred)
         return y_pred
 
     def get_config(self):
@@ -364,12 +327,7 @@ class Backbone(tf.keras.Model):
         ver = '.'.join(ver.split('.')[:3])
 
         layer_configs = {
-            'stimuli': tf.keras.utils.serialize_keras_object(
-                self.stimuli
-            ),
-            'kernel': tf.keras.utils.serialize_keras_object(
-                self.kernel
-            ),
+            'stimuli': tf.keras.utils.serialize_keras_object(self.stimuli),
             'behavior': tf.keras.utils.serialize_keras_object(self.behavior)
         }
 
@@ -412,6 +370,10 @@ class Backbone(tf.keras.Model):
 
     def _handle_predict_sample_dimension(self, y_pred):
         """Handle sample dimension.
+
+        The axis=1 of the Tensor returned from calling the model is
+        assumed to be `sample_size`. If this is a singleton dimension,
+        taking the mean is equivalent to a squeeze operation.
 
         Args:
             y_pred: Tensor predictions of unkown structure that have an

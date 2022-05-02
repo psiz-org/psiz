@@ -19,6 +19,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+from psiz.keras.layers import DistanceBased, Minkowski, ExponentialSimilarity
+
 
 @pytest.fixture
 def paired_inputs_v0():
@@ -167,6 +169,24 @@ def group_v0():
         )
     )
     return group
+
+
+@pytest.fixture
+def kernel_v0():
+    kernel = DistanceBased(
+        distance=Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=tf.keras.initializers.Constant(.1),
+        )
+    )
+    return kernel
 
 
 @pytest.fixture

@@ -22,6 +22,9 @@ import tensorflow as tf
 from psiz.keras.layers import Drop
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras', name='Dummy'
+)
 class Dummy(tf.keras.layers.Layer):
     """A simple layer that passes inputs as outputs."""
 
@@ -154,3 +157,36 @@ def test_call_idx2(
     tf.debugging.assert_equal(
         inputs_v1, outputs[1]
     )
+
+
+def test_compute_output_shape():
+    """Test `compute_output_shape`."""
+    subnet = Dummy()
+    layer = Drop(subnet=subnet)
+
+    input_shape = [tf.TensorShape([16, 3]), tf.TensorShape([16, 2])]
+    output_shape = layer.compute_output_shape(input_shape)
+    tf.debugging.assert_equal(output_shape, tf.TensorShape([16, 3]))
+    # Call again to trigger skip branch in coverage.
+    output_shape = layer.compute_output_shape(input_shape)
+    tf.debugging.assert_equal(output_shape, tf.TensorShape([16, 3]))
+
+    # While here, call `_check_strip_inputs` to trigger execution branch that
+    # immediately returns to get code coverage since `_strip_inputs` was set
+    # during `compute_output_shapes`.
+    layer._check_strip_inputs(tf.TensorShape([16, 3]))
+
+
+def test_serialization():
+    """Test serialization"""
+    subnet = Dummy()
+    layer = Drop(subnet=subnet)
+
+    config = layer.get_config()
+    assert config['drop_index'] == -1
+    assert config['strip_inputs'] is True
+
+    recon_layer = Drop.from_config(config)
+    assert recon_layer.drop_index == -1
+
+

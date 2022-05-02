@@ -37,7 +37,6 @@ Please send in fixes and feature additions through Pull Requests.
 
 ## Versioning
 * Versions are released following [Semantic Versioning 2.0.0](https://semver.org/) which follows the MAJOR.MINOR.PATCH format.
-    * Currently, all releases are alpha which means 
 
 ---
 **WARNING:** This package is pre-release and the API is not stable. Minor version changes may contain breaking changes until `v1.0.0` is released.

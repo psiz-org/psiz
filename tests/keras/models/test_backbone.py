@@ -645,6 +645,7 @@ class TestRankSimilarity:
         tf.config.run_functions_eagerly(is_eager)
 
         model = bb_rank_1g_1g_mle
+
         compile_kwargs = {
             'loss': tf.keras.losses.CategoricalCrossentropy(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -654,6 +655,18 @@ class TestRankSimilarity:
         }
         model.compile(**compile_kwargs)
         call_fit_evaluate_predict(model, ds2_rank_docket_2g, ds2_rank_obs_2g)
+
+        # Get coverage of Stochastic model.
+        # TODO These tests probably belong somewhere else.
+        # Test setting `n_sample`.
+        model.n_sample = 2
+        assert model.n_sample == 2
+
+        # Test serialization.
+        config = model.get_config()
+        assert config['n_sample'] == 2
+        recon_model = psiz.keras.models.Backbone.from_config(config)
+        assert recon_model.n_sample == 2
 
     def test_mle_1g_2g(
         self, bb_rank_1g_2g_mle, ds2_rank_docket_2g, ds2_rank_obs_2g

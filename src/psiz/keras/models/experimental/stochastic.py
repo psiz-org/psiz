@@ -190,19 +190,6 @@ class Stochastic(tf.keras.Model):
         }
         return config
 
-    @classmethod
-    def from_config(cls, config):
-        """Create model from configuration.
-
-        Args:
-            config: A hierarchical configuration dictionary.
-
-        Returns:
-            An instantiated and configured TensorFlow model.
-
-        """
-        return cls(**config)
-
     def _repeat_samples_in_batch_axis(self, data):
         """Create "samples" for `y` or `sample_weight`.
 

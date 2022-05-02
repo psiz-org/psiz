@@ -138,6 +138,16 @@ def inputs_5x3x2_v0():
     return inputs_0
 
 
+def test_init_options():
+    """Test init options."""
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=[2],
+        name='branch5x1'
+    )
+    assert branch.groups_subset == 2
+    assert branch._groups_are_indices is True
+
+
 def test_2g_call_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0):
     """Test call.
 

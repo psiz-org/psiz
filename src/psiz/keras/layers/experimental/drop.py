@@ -50,6 +50,7 @@ class Drop(tf.keras.layers.Layer):
         super(Drop, self).__init__(**kwargs)
         self.subnet = subnet
         self.drop_index = drop_index
+        self._drop_index = drop_index
         self.strip_inputs = strip_inputs  # Indicates user's preference.
         self._strip_inputs = None  # Indicates if actually necessary.
 
@@ -57,13 +58,13 @@ class Drop(tf.keras.layers.Layer):
         """Build."""
         # To make things easier when we use addition on the index, we convert
         # '-1' to the actual index.
-        if self.drop_index == -1:
-            self.drop_index = len(input_shape) - 1
+        if self._drop_index == -1:
+            self._drop_index = len(input_shape) - 1
 
         # Drop requested tensor from `inputs`.
         input_shape_w_drop = (
-            input_shape[0:self.drop_index] +
-            input_shape[(self.drop_index + 1):]
+            input_shape[0:self._drop_index] +
+            input_shape[(self._drop_index + 1):]
         )
 
         # Determine how inputs should be pre-processed.
@@ -86,7 +87,7 @@ class Drop(tf.keras.layers.Layer):
         """
         # Drop requested tensor from `inputs`.
         inputs_less_drop = (
-            inputs[0:self.drop_index] + inputs[(self.drop_index + 1):]
+            inputs[0:self._drop_index] + inputs[(self._drop_index + 1):]
         )
 
         if self._strip_inputs:
@@ -98,7 +99,8 @@ class Drop(tf.keras.layers.Layer):
         config = super().get_config()
         config.update({
             'subnet': tf.keras.utils.serialize_keras_object(self.subnet),
-            'drop_index': int(self.groups_subset),
+            'drop_index': int(self.drop_index),
+            'strip_inputs': bool(self.strip_inputs),
         })
         return config
 
@@ -126,13 +128,13 @@ class Drop(tf.keras.layers.Layer):
         """
         # To make things easier when we use addition on the index, we convert
         # '-1' to the actual index.
-        if self.drop_index == -1:
-            self.drop_index = len(input_shape) - 1
+        if self._drop_index == -1:
+            self._drop_index = len(input_shape) - 1
 
         # Drop requested tensor from `input_shape`.
         input_shape_w_drop = (
-            input_shape[0:self.drop_index] +
-            input_shape[(self.drop_index + 1):]
+            input_shape[0:self._drop_index] +
+            input_shape[(self._drop_index + 1):]
         )
 
         # Determine how inputs should be pre-processed.

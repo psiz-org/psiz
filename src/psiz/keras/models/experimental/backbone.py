@@ -52,16 +52,14 @@ class Backbone(Groups, Stochastic):
         Args:
             percept: A percept layer.
             behavior: A behavior layer.
-            n_sample (optional): Integer indicating the number of
-                samples to draw for stochastic layers. Only useful if
-                using stochastic layers (e.g., variational models).
+            n_sample (optional): See psiz.keras.models.Stochastic.
             kwargs:  Additional key-word arguments.
 
         Raises:
             ValueError: If arguments are invalid.
 
         """
-        super().__init__(**kwargs)
+        super().__init__(n_sample=n_sample, **kwargs)
         self.supports_groups = True
 
         # Assign layers.

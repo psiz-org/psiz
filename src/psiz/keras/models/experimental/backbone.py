@@ -34,8 +34,9 @@ from psiz.utils import expand_dim_repeat
 class Backbone(Groups, tf.keras.Model):
     """A backbone-based psychological embedding model.
 
-    This model is intended to cover a large number of use-cases, but
-    can be used as a guide if users need to create a bespoke model.
+    This model is intended to cover a large number of pscyhological
+    modeling use-cases. If your use case is not covered, you can use
+    this model as a guide to create a bespoke model.
 
     Attributes:
         percept: A percept layer.

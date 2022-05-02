@@ -88,7 +88,6 @@ class PsychologicalEmbedding(tf.keras.Model):
             'behavior': use_group_behavior
         }
 
-        self._kl_weight = 0.
         self._n_sample = n_sample
 
     @property

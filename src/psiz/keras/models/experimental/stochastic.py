@@ -32,7 +32,9 @@ class Stochastic(tf.keras.Model):
 
     These models assume that the `call` method returns a Tensor or
     dictionary of Tensors where each Tensor has a "sample" axis at
-    axis=1, that represents `n_sample` samples.
+    axis=1, that represents `n_sample` samples. In `train_step` and
+    `test_step`, the "sample" axis is combined with the "batch" axis to
+    compute a batch-and-sample loss.
 
     Attributes:
         n_sample: Integer indicating the number of samples to draw for
@@ -56,7 +58,6 @@ class Stochastic(tf.keras.Model):
         """
         super().__init__(**kwargs)
         self._n_sample = n_sample
-        self._kl_weight = 0.  # TODO new mix-in?
 
     @property
     def n_sample(self):
@@ -78,73 +79,13 @@ class Stochastic(tf.keras.Model):
             Typically, the values of the `Model`'s metrics are
             returned. Example: `{'loss': 0.2, 'accuracy': 0.7}`.
 
-        Notes:
-            It is assumed that the loss uses SUM_OVER_BATCH_SIZE.
-            In the variational inference case, the loss for the entire
-            training set is essentially
-
-                loss = KL - CCE,                                (Eq. 1)
-
-            where CCE denotes the sum of the CCE for all observations.
-            It should be noted that CCE_all is also an expectation over
-            posterior samples.
-
-            There are two issues:
-
-            1) We are using a *batch* update strategy, which slightly
-            alters the equation and means we need to be careful not to
-            overcount the KL contribution. The `b` subscript indicates
-            an arbitrary batch:
-
-                loss_b = (KL / n_batch) - CCE_b.                (Eq. 2)
-
-            2) The default TF reduction strategy `SUM_OVER_BATCH_SIZE`
-            means that we are not actually computing a sum `CCE_b`, but
-            an average: CCE_bavg = CCE_b / batch_size. To fix this, we
-            need to proportionately scale the KL term,
-
-                loss_b = KL / (n_batch * batch_size) - CCE_bavg (Eq. 3)
-
-            Expressed more simply,
-
-            loss_batch = kl_weight * KL - CCE_bavg              (Eq. 4)
-
-            where kl_weight = 1 / train_size.
-
-            But wait, there's more! Observations may be weighted
-            differently, which yields a Frankensteinian CCE_bavg since
-            a proper average would divide by `effective_batch_size`
-            (i.e., the sum of the weights) not `batch_size`. There are
-            a few imperfect remedies:
-            1) Do not use `SUM_OVER_BATCH_SIZE`. This has many
-            side-effects: must manually handle regularization and
-            computation of mean loss. Mean loss is desirable for
-            optimization stability reasons, although it is not strictly
-            necessary.
-            2) Require the weights sum to n_sample. Close, but
-            not actually correct. To be correct you would actually
-            need the weights of each batch to sum to `batch_size`,
-            which means the semantics of the weights changes from batch
-            to batch.
-            3) Multiply Eq. 3 by (batch_size / effective_batch_size).
-            This is tricky since this must be done before non-KL
-            regularization is applied, which is handled inside
-            TF's `compiled_loss`. Could hack this by writing a custom
-            CCE that "pre-applies" correction term.
-
-                loss_b = KL / (n_batch * effective_batch_size) -
-                        (batch_size / effective_batch_size) * CCE_bavg
-
-                loss_b = KL / (effective_train_size) -
-                        (batch_size / effective_batch_size) * CCE_bavg
-
-            4) Pretend it's not a problem since both terms are being
-            divided by the same incorrect `effective_batch_size`.
-
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        # Adjust `y` and `sample_weight` batch axis to reflect multiple
+        # samples since `y_pred` has samples.
+        y = self._repeat_samples_in_batch_axis(y)
+        sample_weight = self._repeat_samples_in_batch_axis(sample_weight)
 
-        # TODO
         # NOTE: During computation of gradients, IndexedSlices are
         # created which generates a TensorFlow warning. I cannot
         # find an implementation that avoids IndexedSlices. The
@@ -156,9 +97,8 @@ class Stochastic(tf.keras.Model):
             )
             with backprop.GradientTape() as tape:
                 y_pred = self(x, training=True)
-                # Average over samples (handling possible multi-output case).
-                y_pred = self._handle_predict_sample_dimension(y_pred)
-
+                # Reshape `y_pred` samples axis into batch axis.
+                y_pred = self._reshape_samples_into_batch(y_pred)
                 loss = self.compiled_loss(
                     y, y_pred, sample_weight, regularization_losses=self.losses
                 )
@@ -207,9 +147,14 @@ class Stochastic(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        y_pred = self(x, training=True)
-        # Average over samples (handling possible multi-output case).
-        y_pred = self._handle_predict_sample_dimension(y_pred)
+        # Adjust `y` and `sample_weight` batch axis to reflect multiple
+        # samples since `y_pred` has samples.
+        y = self._repeat_samples_in_batch_axis(y)
+        sample_weight = self._repeat_samples_in_batch_axis(sample_weight)
+
+        y_pred = self(x, training=False)
+        # Reshape `y_pred` samples axis into batch axis.
+        y_pred = self._reshape_samples_into_batch(y_pred)
 
         self.compiled_loss(
             y, y_pred, sample_weight, regularization_losses=self.losses
@@ -228,14 +173,14 @@ class Stochastic(tf.keras.Model):
             data: A nested structure of `Tensor`s.
 
         Returns:
-            The result of one inference step, typically the output of
+            The result of one forward pass step, typically the output of
             calling the `Model` on data.
 
         """
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        y_pred = self(x, training=True)
-        # Average over samples (handling possible multi-output case).
-        y_pred = self._handle_predict_sample_dimension(y_pred)
+        y_pred = self(x, training=False)
+        # For prediction, we simply average over the sample axis.
+        y_pred = self._mean_of_sample_axis(y_pred)
         return y_pred
 
     def get_config(self):
@@ -258,12 +203,71 @@ class Stochastic(tf.keras.Model):
         """
         return cls(**config)
 
-    def _handle_predict_sample_dimension(self, y_pred):
-        """Handle sample dimension.
+    def _repeat_samples_in_batch_axis(self, data):
+        """Create "samples" for `y` or `sample_weight`.
+
+        Each batch is repeated `n_sample` times. Repeated batch items
+        occur in blocks. For example, if `n_sample=2` then each new
+        `data` Tensor is structured like:
+            `[batch_0, batch_0, batch_1, batch_1, ...]`.
+
+        The block structure is leveraged later when `tf.reshape` is
+        also used on `y_pred`, which also result in blocks of batch
+        items.
+
+        Args:
+            data: A Tensor or dictionary of Tensors representing target
+                outputs `y` or `sample_weight`.
+
+        Returns:
+            data: A Tensor or dictionary of Tensors that has been
+                adjusted.
+
+        """
+        if isinstance(data, dict):
+            for key in data:
+                data[key] = tf.repeat(data[key], repeats=self.n_sample, axis=0)
+        else:
+            data = tf.repeat(data, repeats=self.n_sample, axis=0)
+        return data
+
+    def _reshape_samples_into_batch(self, y_pred):
+        """Reshape sample axis into batch axis.
+
+        The reshape operation combines the batch and sample axis such
+        that samples for a given batch item occur in contiguous blocks.
+        The reshape operation uses "-1" to infer the shape of the new
+        batch-sample axis and explicitly grabs the shape of the
+        remaining axes.
+
+        Args:
+            y_pred: Tensor or dictionary of Tensors representing model
+                predictions (i.e., outputs).
+
+        Returns:
+            y_pred: A Tensor or dictionary of Tensors that has been
+                reshaped.
+
+        """
+        if isinstance(y_pred, dict):
+            for key in y_pred:
+                new_shape = tf.concat(
+                    [[-1], tf.shape(y_pred[key])[2:]], 0
+                )
+                y_pred[key] = tf.reshape(
+                    y_pred[key], new_shape
+                )
+        else:
+            new_shape = tf.concat([[-1], tf.shape(y_pred)[2:]], 0)
+            y_pred = tf.reshape(y_pred, new_shape)
+        return y_pred
+
+    def _mean_of_sample_axis(self, y_pred):
+        """Take the mean over the sample axis.
 
         The axis=1 of the Tensor returned from calling the model is
-        assumed to be `sample_size`. If this is a singleton dimension,
-        taking the mean is equivalent to a squeeze operation.
+        assumed to be a "sample" axis. If a singleton dimension, taking
+        the mean is equivalent to a squeeze operation.
 
         Args:
             y_pred: Tensor predictions of unkown structure that have an

@@ -24,13 +24,12 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from psiz.keras.layers.behaviors.behavior2 import Behavior2
-from psiz.keras.layers.experimental.groups import Groups
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RankSimilarity'
 )
-class RankSimilarity(Groups, Behavior2):
+class RankSimilarity(Behavior2):
     """A rank similarity behavior layer."""
     def __init__(self, kernel=None, **kwargs):
         """Initialize.
@@ -40,6 +39,7 @@ class RankSimilarity(Groups, Behavior2):
 
         """
         super(RankSimilarity, self).__init__(kernel=kernel, **kwargs)
+        self.supports_groups = True
 
     def on_kernel_begin(self, z):
         """Call at the start of kernel operation.

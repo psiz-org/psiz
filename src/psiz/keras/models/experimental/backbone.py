@@ -37,22 +37,20 @@ class Backbone(tf.keras.Model):
     can be used as a guide if users need to create a bespoke model.
 
     Attributes:
-        stimuli: An embedding layer.
+        percept: A percept layer.
         behavior: A behavior layer.
-        n_stimuli: The number of stimuli.
-        n_dim: The dimensionality of the embedding.
+        n_dim: The output dimensionality of the percept module.
         n_sample: The number of samples to draw on probalistic layers.
             This attribute is only advantageous if using probabilistic
             layers.
 
     """
 
-    def __init__(self, stimuli=None, behavior=None, n_sample=1, **kwargs):
+    def __init__(self, percept=None, behavior=None, n_sample=1, **kwargs):
         """Initialize.
 
         Args:
-            stimuli: An embedding layer representing the stimuli. Must
-                agree with n_stimuli, n_dim, n_group.
+            percept: A percept layer.
             behavior: A behavior layer.
             n_sample (optional): An integer indicating the
                 number of samples to use on the forward pass. This
@@ -67,7 +65,7 @@ class Backbone(tf.keras.Model):
         super().__init__(**kwargs)
 
         # Assign layers.
-        self.stimuli = stimuli
+        self.percept = percept
         self.behavior = behavior
 
         # Handle module switches.
@@ -78,7 +76,7 @@ class Backbone(tf.keras.Model):
                 return False
 
         self._pass_groups = {
-            'stimuli': supports_groups(stimuli),
+            'percept': supports_groups(percept),
             'behavior': supports_groups(behavior)
         }
 
@@ -90,10 +88,10 @@ class Backbone(tf.keras.Model):
         """Convenience method for `n_dim`."""
         try:
             # Assume embedding layer.
-            output_dim = self.stimuli.output_dim
+            output_dim = self.percept.output_dim
         except AttributeError:
             # Assume BraidGate layer.
-            output_dim = self.stimuli.subnets[0].output_dim
+            output_dim = self.percept.subnets[0].output_dim
 
         return output_dim
 
@@ -129,11 +127,11 @@ class Backbone(tf.keras.Model):
         )
         # TensorShape=(batch_size, n_sample, [n, m, ...])
 
-        # Embed stimuli indices in n-dimensional space:
-        if self._pass_groups['stimuli']:
-            z = self.stimuli([stimulus_set, groups])
+        # Embed stimuli indices in n-dimensional space.
+        if self._pass_groups['percept']:
+            z = self.percept([stimulus_set, groups])
         else:
-            z = self.stimuli(stimulus_set)
+            z = self.percept(stimulus_set)
         # TensorShape=(batch_size, n_sample, [n, m, ...] n_dim])
 
         # Convert remaining `inputs` dictionary to list, preserving order of
@@ -323,7 +321,7 @@ class Backbone(tf.keras.Model):
         ver = '.'.join(ver.split('.')[:3])
 
         layer_configs = {
-            'stimuli': tf.keras.utils.serialize_keras_object(self.stimuli),
+            'percept': tf.keras.utils.serialize_keras_object(self.percept),
             'behavior': tf.keras.utils.serialize_keras_object(self.behavior)
         }
 
@@ -358,7 +356,7 @@ class Backbone(tf.keras.Model):
             layer = tf.keras.layers.deserialize(layer_config)
             # Convert old saved models.
             if layer_name == 'embedding':
-                layer_name = 'stimuli'  # pragma: no cover
+                layer_name = 'percept'  # pragma: no cover
             built_layers[layer_name] = layer
 
         model_config.update(built_layers)

@@ -28,10 +28,10 @@ def call_fit_evaluate_predict(model, ds2_docket, ds2_obs):
     # Test call.
     for data in ds2_docket:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        outputs = model(x, training=False)
+        _ = model(x, training=False)
 
     # Test fit.
-    history = model.fit(ds2_obs, epochs=2)
+    model.fit(ds2_obs, epochs=2)
 
     # Test evaluate.
     model.evaluate(ds2_obs)
@@ -270,7 +270,7 @@ def bb_rank_1g_1g_mle():
     n_stimuli = 20
     n_dim = 3
 
-    stimuli = tf.keras.layers.Embedding(
+    percept = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
 
@@ -289,9 +289,7 @@ def bb_rank_1g_1g_mle():
     )
     rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
 
-    model = psiz.keras.models.Backbone(
-        stimuli=stimuli, behavior=rank
-    )
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
     return model
 
 
@@ -302,7 +300,7 @@ def bb_rank_1g_2g_mle():
     n_stimuli = 30
     n_dim = 10
 
-    stimuli = tf.keras.layers.Embedding(
+    percept = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
 
@@ -323,7 +321,6 @@ def bb_rank_1g_2g_mle():
         ),
         similarity=shared_similarity
     )
-
     kernel_1 = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_trainable=False,
@@ -334,14 +331,13 @@ def bb_rank_1g_2g_mle():
         ),
         similarity=shared_similarity
     )
-
-    kernel_group = psiz.keras.layers.BraidGate(
+    kernel = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
 
-    model = psiz.keras.models.Backbone(stimuli=stimuli, behavior=rank)
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
     return model
 
 
@@ -352,7 +348,7 @@ def bb_rank_1g_3g_mle():
     n_stimuli = 20
     n_dim = 3
 
-    stimuli = tf.keras.layers.Embedding(
+    percept = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True,
     )
 
@@ -367,13 +363,13 @@ def bb_rank_1g_3g_mle():
     kernel_0 = build_mle_kernel(shared_similarity, n_dim)
     kernel_1 = build_mle_kernel(shared_similarity, n_dim)
     kernel_2 = build_mle_kernel(shared_similarity, n_dim)
-    kernel_group = psiz.keras.layers.BraidGate(
+    kernel = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1, kernel_2], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
 
-    model = psiz.keras.models.Backbone(stimuli=stimuli, behavior=rank)
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
     return model
 
 
@@ -383,7 +379,7 @@ def bb_rank_2g_2g_mle():
     # TODO same as tests/conftest:rank_2stim_2kern_determ
     n_stimuli = 3
     n_dim = 2
-    stimuli_0 = tf.keras.layers.Embedding(
+    percept_0 = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
@@ -393,8 +389,7 @@ def bb_rank_2g_2g_mle():
             )
         )
     )
-
-    stimuli_1 = tf.keras.layers.Embedding(
+    percept_1 = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True,
         embeddings_initializer=tf.keras.initializers.Constant(
             np.array(
@@ -404,9 +399,8 @@ def bb_rank_2g_2g_mle():
             )
         )
     )
-
-    stimuli_group = psiz.keras.layers.BraidGate(
-        subnets=[stimuli_0, stimuli_1], groups_subset=0
+    percept = psiz.keras.layers.BraidGate(
+        subnets=[percept_0, percept_1], groups_subset=0
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -430,7 +424,6 @@ def bb_rank_2g_2g_mle():
         ),
         similarity=shared_similarity
     )
-
     kernel_1 = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_trainable=False,
@@ -444,14 +437,13 @@ def bb_rank_2g_2g_mle():
         ),
         similarity=shared_similarity
     )
-
-    kernel_group = psiz.keras.layers.BraidGate(
+    kernel = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
+    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
 
-    model = psiz.keras.models.Backbone(stimuli=stimuli_group, behavior=rank)
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
     return model
 
 
@@ -461,16 +453,14 @@ def bb_rank_2g_2g_2g_mle():
     # TODO same as tests/conftest:rank_2stim_2kern_2behav
     n_stimuli = 20
     n_dim = 2
-    stimuli_0 = tf.keras.layers.Embedding(
+    percept_0 = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
-
-    stimuli_1 = tf.keras.layers.Embedding(
+    percept_1 = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
-
-    stimuli_group = psiz.keras.layers.BraidGate(
-        subnets=[stimuli_0, stimuli_1], groups_subset=0
+    percept = psiz.keras.layers.BraidGate(
+        subnets=[percept_0, percept_1], groups_subset=0
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -494,7 +484,6 @@ def bb_rank_2g_2g_2g_mle():
         ),
         similarity=shared_similarity
     )
-
     kernel_1 = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_trainable=False,
@@ -508,21 +497,17 @@ def bb_rank_2g_2g_2g_mle():
         ),
         similarity=shared_similarity
     )
-
-    kernel_group = psiz.keras.layers.BraidGate(
+    kernel = psiz.keras.layers.BraidGate(
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    behavior_0 = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
-    behavior_1 = psiz.keras.layers.RankSimilarity(kernel=kernel_group)
-    behavior_group = psiz.keras.layers.BraidGate(
-        subnets=[behavior_0, behavior_1], groups_subset=0,
-        pass_groups=[True, True]  # TODO this is annoying to remember
+    behavior_0 = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    behavior_1 = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    behavior = psiz.keras.layers.BraidGate(
+        subnets=[behavior_0, behavior_1], groups_subset=0
     )
 
-    model = psiz.keras.models.Backbone(
-        stimuli=stimuli_group, behavior=behavior_group
-    )
+    model = psiz.keras.models.Backbone(percept=percept, behavior=behavior)
     return model
 
 
@@ -551,7 +536,7 @@ def bb_rank_1g_vi():
             loc_trainable=False,
         )
     )
-    stimuli = psiz.keras.layers.EmbeddingVariational(
+    percept = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
@@ -574,7 +559,7 @@ def bb_rank_1g_vi():
     rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
 
     model = psiz.keras.models.Backbone(
-        stimuli=stimuli, behavior=rank
+        percept=percept, behavior=rank
     )
     return model
 
@@ -585,7 +570,7 @@ def bb_rate_1g_mle():
     n_stimuli = 30
     n_dim = 10
 
-    stimuli = tf.keras.layers.Embedding(
+    percept = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
 
@@ -605,7 +590,7 @@ def bb_rate_1g_mle():
 
     rate = psiz.keras.layers.RateSimilarity(kernel=kernel)
 
-    model = psiz.keras.models.Backbone(stimuli=stimuli, behavior=rate)
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rate)
     return model
 
 
@@ -614,7 +599,7 @@ def bb_rank_rate_1g_mle():
     n_stimuli = 20
     n_dim = 3
 
-    stimuli = tf.keras.layers.Embedding(
+    percept = tf.keras.layers.Embedding(
         n_stimuli + 1, n_dim, mask_zero=True
     )
 
@@ -642,7 +627,7 @@ def bb_rank_rate_1g_mle():
     )
 
     model = psiz.keras.models.Backbone(
-        stimuli=stimuli, behavior=behav_branch
+        percept=percept, behavior=behav_branch
     )
     return model
 

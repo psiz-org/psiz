@@ -32,5 +32,12 @@ class Groups():
 
         """
         super().__init__(*args, **kwargs)
-        self.supports_groups = True
+        self.supports_groups = False
         self.inputs_group_idx = -1
+
+    def check_supports_groups(self, layer):
+        """Check if layer supports groups."""
+        if hasattr(layer, 'supports_groups'):
+            return layer.supports_groups
+        else:
+            return False

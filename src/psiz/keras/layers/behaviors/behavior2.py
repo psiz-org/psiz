@@ -22,8 +22,10 @@ Classes:
 
 import tensorflow as tf
 
+from psiz.keras.layers.experimental.groups import Groups
 
-class Behavior2(tf.keras.layers.Layer):
+
+class Behavior2(Groups, tf.keras.layers.Layer):
     """An abstract behavior layer."""
     def __init__(self, kernel=None, **kwargs):
         """Initialize.
@@ -37,13 +39,8 @@ class Behavior2(tf.keras.layers.Layer):
         self.kernel = kernel
 
         # Handle module switches.
-        def supports_groups(layer):
-            if hasattr(layer, 'supports_groups'):
-                return layer.supports_groups
-            else:
-                return False
         self._pass_groups = {}
-        self._pass_groups['kernel'] = supports_groups(kernel)
+        self._pass_groups['kernel'] = self.check_supports_groups(kernel)
 
     def call(self, inputs):
         raise NotImplementedError

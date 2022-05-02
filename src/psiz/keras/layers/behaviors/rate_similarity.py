@@ -25,13 +25,12 @@ from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.behaviors.behavior2 import Behavior2
-from psiz.keras.layers.experimental.groups import Groups
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RateSimilarity'
 )
-class RateSimilarity(Groups, Behavior2):
+class RateSimilarity(Behavior2):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized
@@ -73,6 +72,7 @@ class RateSimilarity(Groups, Behavior2):
 
         """
         super(RateSimilarity, self).__init__(kernel=kernel, **kwargs)
+        self.supports_groups = True
 
         self.lower_trainable = lower_trainable
         if lower_initializer is None:

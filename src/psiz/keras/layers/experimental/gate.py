@@ -72,8 +72,10 @@ class Gate(Groups, tf.keras.layers.Layer):
                 subnets.
             pass_groups (optional): Boolean 1D array-like indicating if
                 `groups` (last Tensor in `inputs`) should be passed
-                to the subnets. By default, this information is not
-                passed on to the subnetworks. If provided, the length
+                to the subnets. By default, each subnet will be
+                inspected to see if they support groups (i.e., the
+                layer implements `Groups` mixin). This argument can be
+                used to override the default. If provided, the length
                 must agree with the number of subnets.
                 shape=(n_subnet)
             strip_inputs (optional): Boolean 1D array-like indicating
@@ -91,10 +93,14 @@ class Gate(Groups, tf.keras.layers.Layer):
 
         """
         super(Gate, self).__init__(**kwargs)
+        self.supports_groups = True
+
         self.n_subnet = len(subnets)
 
         if pass_groups is None:
-            pass_groups = [False] * self.n_subnet
+            pass_groups = []
+            for subnet in subnets:
+                pass_groups.append(self.check_supports_groups(subnet))
         self.pass_groups = pass_groups
 
         if strip_inputs is None:

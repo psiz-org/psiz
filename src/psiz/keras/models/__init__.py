@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Model initialization file."""
+"""Keras models initialization file."""
 
+from psiz.keras.models.experimental.stochastic import Stochastic
+from psiz.keras.models.experimental.backbone import Backbone
 from psiz.keras.models.psych_embedding import PsychologicalEmbedding
 from psiz.keras.models.rank import Rank
 from psiz.keras.models.rate import Rate
 from psiz.keras.models.sort import Sort
-from psiz.keras.models.experimental.backbone import Backbone
 
-__all__ = ['PsychologicalEmbedding', 'Rank', 'Rate', 'Sort', 'Backbone']
+__all__ = [
+    'Stochastic', 'Backbone',
+    'PsychologicalEmbedding', 'Rank', 'Rate', 'Sort'
+]

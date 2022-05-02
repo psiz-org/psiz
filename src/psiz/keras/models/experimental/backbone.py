@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of psychological embedding models.
+"""Module of PsiZ models.
 
 Classes:
     Backbone:  A backbone-based psychological embedding model.
@@ -33,12 +33,11 @@ from psiz.utils import expand_dim_repeat
 class Backbone(tf.keras.Model):
     """A backbone-based psychological embedding model.
 
-    This model can be subclassed to infer a psychological embedding
-    from different types behavioral data.
+    This model is intended to cover a large number of use-cases, but
+    can be used as a guide if users need to create a bespoke model.
 
     Attributes:
-        embedding: An embedding layer.
-        kernel: A kernel layer.
+        stimuli: An embedding layer.
         behavior: A behavior layer.
         n_stimuli: The number of stimuli.
         n_dim: The dimensionality of the embedding.
@@ -139,10 +138,7 @@ class Backbone(tf.keras.Model):
 
         # Convert remaining `inputs` dictionary to list, preserving order of
         # dictionary.
-        # TODO is this ok, maybe create hook for users to control order?
-        inputs_list = []
-        for key, value in inputs.items():
-            inputs_list.append(value)
+        inputs_list = self._unpack_inputs(inputs)
 
         if self._pass_groups['behavior']:
             y_pred = self.behavior([stimulus_set, z, *inputs_list, groups])
@@ -390,3 +386,10 @@ class Backbone(tf.keras.Model):
         else:
             y_pred = tf.reduce_mean(y_pred, axis=1)
         return y_pred
+
+    def _unpack_inputs(self, inputs):
+        """Unpack inputs dictionary to list."""
+        inputs_list = []
+        for key, value in inputs.items():
+            inputs_list.append(value)
+        return inputs_list

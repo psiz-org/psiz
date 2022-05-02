@@ -27,10 +27,11 @@ import warnings
 import tensorflow as tf
 from tensorflow.python.eager import backprop
 
+from psiz.keras.layers.experimental.groups import Groups
 from psiz.utils import expand_dim_repeat
 
 
-class Backbone(tf.keras.Model):
+class Backbone(Groups, tf.keras.Model):
     """A backbone-based psychological embedding model.
 
     This model is intended to cover a large number of use-cases, but
@@ -63,21 +64,16 @@ class Backbone(tf.keras.Model):
 
         """
         super().__init__(**kwargs)
+        self.supports_groups = True
 
         # Assign layers.
         self.percept = percept
         self.behavior = behavior
 
         # Handle module switches.
-        def supports_groups(layer):
-            if hasattr(layer, 'supports_groups'):
-                return layer.supports_groups
-            else:
-                return False
-
         self._pass_groups = {
-            'percept': supports_groups(percept),
-            'behavior': supports_groups(behavior)
+            'percept': self.check_supports_groups(percept),
+            'behavior': self.check_supports_groups(behavior)
         }
 
         self._kl_weight = 0.

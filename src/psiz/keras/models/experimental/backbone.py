@@ -40,7 +40,6 @@ class Backbone(Groups, tf.keras.Model):
     Attributes:
         percept: A percept layer.
         behavior: A behavior layer.
-        n_dim: The output dimensionality of the percept module.
         n_sample: The number of samples to draw on probalistic layers.
             This attribute is only advantageous if using probabilistic
             layers.
@@ -78,18 +77,6 @@ class Backbone(Groups, tf.keras.Model):
 
         self._kl_weight = 0.
         self._n_sample = n_sample
-
-    @property
-    def n_dim(self):
-        """Convenience method for `n_dim`."""
-        try:
-            # Assume embedding layer.
-            output_dim = self.percept.output_dim
-        except AttributeError:
-            # Assume BraidGate layer.
-            output_dim = self.percept.subnets[0].output_dim
-
-        return output_dim
 
     @property
     def n_sample(self):

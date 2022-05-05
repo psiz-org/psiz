@@ -26,11 +26,11 @@ from importlib.metadata import version
 import tensorflow as tf
 
 from psiz.keras.models.experimental.stochastic import Stochastic
-from psiz.keras.layers.experimental.groups import Groups
+from psiz.keras.layers.experimental.groups import GroupsMixin
 from psiz.utils import expand_dim_repeat
 
 
-class Backbone(Groups, Stochastic):
+class Backbone(GroupsMixin, Stochastic):
     """A backbone-based psychological model.
 
     This model is intended to cover a large number of pscyhological

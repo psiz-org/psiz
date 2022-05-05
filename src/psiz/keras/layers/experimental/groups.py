@@ -16,13 +16,13 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    Groups: A multiple inheritance mixin for layers that support
+    GroupsMixin: A multiple inheritance mixin for layers that support
         groups.
 
 """
 
 
-class Groups():
+class GroupsMixin():
     """A multiple inheritance mixin for layers that support gating."""
 
     def __init__(self, *args, **kwargs):

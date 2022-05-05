@@ -22,10 +22,10 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.experimental.groups import Groups
+from psiz.keras.layers.experimental.groups import GroupsMixin
 
 
-class Behavior(Groups, tf.keras.layers.Layer):
+class Behavior(GroupsMixin, tf.keras.layers.Layer):
     """An abstract behavior layer.
 
     Sub-classes of this layer are responsible for three things:

@@ -24,13 +24,12 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
-from psiz.keras.layers.behaviors.behavior import Behavior
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RateBehavior'
 )
-class RateBehavior(Behavior):
+class RateBehavior(tf.keras.layers.Layer):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized

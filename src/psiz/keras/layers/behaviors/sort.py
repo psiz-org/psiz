@@ -22,13 +22,11 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.behaviors.behavior import Behavior
-
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='SortBehavior'
 )
-class SortBehavior(Behavior):
+class SortBehavior(tf.keras.layers.Layer):
     """A sort behavior layer.
 
     TODO

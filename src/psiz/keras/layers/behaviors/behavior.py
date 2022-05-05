@@ -22,14 +22,42 @@ Classes:
 
 import tensorflow as tf
 
+from psiz.keras.layers.experimental.groups import Groups
 
-class Behavior(tf.keras.layers.Layer):
-    """An abstract behavior layer."""
+
+class Behavior(Groups, tf.keras.layers.Layer):
+    """An abstract behavior layer.
+
+    Sub-classes of this layer are responsible for three things:
+    1) set `self.supports_groups = True` if the layer supports `groups`.
+    2) For each layer, set `self._pass_groups[<layer variable>]`. For
+    example, if a layer named `kernel` is provided:
+    3) Implementing a `call` method that routes inputs by using
+    appropriate `self._pass_groups`.
+
+    `self._pass_groups['kernel'] = self.check_supports_groups(kernel)`
+
+    """
+    def __init__(self, **kwargs):
+        """Initialize.
+
+        Args:
+            kwargs: Key-word arguments.
+
+        """
+        super(Behavior, self).__init__(**kwargs)
+
+        # Create placeholder for layer switches.
+        self._pass_groups = {}
+
+    def call(self, inputs):
+        raise NotImplementedError
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
         return config
 
-    def call(self, inputs):
-        raise NotImplementedError
+    @classmethod
+    def from_config(cls, config):
+        return super().from_config(config)

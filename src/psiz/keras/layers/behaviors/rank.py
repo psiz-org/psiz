@@ -22,13 +22,11 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.behaviors.behavior import Behavior
-
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RankBehavior'
 )
-class RankBehavior(Behavior):
+class RankBehavior(tf.keras.layers.Layer):
     """A rank behavior layer.
 
     Embodies a `_tf_ranked_sequence_probability` call.

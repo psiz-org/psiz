@@ -24,13 +24,13 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
-from psiz.keras.layers.behaviors.behavior2 import Behavior2
+from psiz.keras.layers.behaviors.behavior import Behavior
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RateSimilarity'
 )
-class RateSimilarity(Behavior2):
+class RateSimilarity(Behavior):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized
@@ -71,7 +71,11 @@ class RateSimilarity(Behavior2):
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(RateSimilarity, self).__init__(kernel=kernel, **kwargs)
+        super(RateSimilarity, self).__init__(**kwargs)
+        self.kernel = kernel
+
+        # Handle layer switches for GroupsMixin.
+        self._pass_groups['kernel'] = self.check_supports_groups(kernel)
         self.supports_groups = True
 
         self.lower_trainable = lower_trainable
@@ -184,6 +188,7 @@ class RateSimilarity(Behavior2):
         """Return layer configuration."""
         config = super().get_config()
         config.update({
+            'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
             'lower_trainable': self.lower_trainable,
             'upper_trainable': self.upper_trainable,
             'midpoint_trainable': self.midpoint_trainable,
@@ -202,3 +207,9 @@ class RateSimilarity(Behavior2):
             ),
         })
         return config
+
+    @classmethod
+    def from_config(cls, config):
+        kernel_serial = config['kernel']
+        config['kernel'] = tf.keras.layers.deserialize(kernel_serial)
+        return super().from_config(config)

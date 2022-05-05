@@ -23,13 +23,13 @@ Classes:
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from psiz.keras.layers.behaviors.behavior2 import Behavior2
+from psiz.keras.layers.behaviors.behavior import Behavior
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RankSimilarity'
 )
-class RankSimilarity(Behavior2):
+class RankSimilarity(Behavior):
     """A rank similarity behavior layer."""
     def __init__(self, kernel=None, **kwargs):
         """Initialize.
@@ -38,7 +38,11 @@ class RankSimilarity(Behavior2):
             kernel: A kernel layer.
 
         """
-        super(RankSimilarity, self).__init__(kernel=kernel, **kwargs)
+        super(RankSimilarity, self).__init__(**kwargs)
+        self.kernel = kernel
+
+        # Handle layer switches for GroupsMixin.
+        self._pass_groups['kernel'] = self.check_supports_groups(kernel)
         self.supports_groups = True
 
     def on_kernel_begin(self, z):
@@ -160,4 +164,13 @@ class RankSimilarity(Behavior2):
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
+        config.update({
+            'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
+        })
         return config
+
+    @classmethod
+    def from_config(cls, config):
+        kernel_serial = config['kernel']
+        config['kernel'] = tf.keras.layers.deserialize(kernel_serial)
+        return super().from_config(config)

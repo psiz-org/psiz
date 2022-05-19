@@ -27,8 +27,8 @@ from itertools import permutations
 import numpy as np
 import tensorflow as tf
 
-from psiz.trials.experimental.contents.content import Content
-from psiz.trials.experimental.unravel_timestep import unravel_timestep
+from psiz.data.contents.content import Content
+from psiz.data.unravel_timestep import unravel_timestep
 
 
 class RankSimilarity(Content):

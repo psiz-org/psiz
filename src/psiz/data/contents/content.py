@@ -25,7 +25,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
 
-from psiz.trials.experimental.trial_component import TrialComponent
+from psiz.data.trial_component import TrialComponent
 
 
 class Content(TrialComponent, metaclass=ABCMeta):

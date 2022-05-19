@@ -21,17 +21,17 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
-from psiz.trials.experimental.outcomes.continuous import Continuous
-from psiz.trials.experimental.contents.rank_similarity import (
+from psiz.data.outcomes.continuous import Continuous
+from psiz.data.contents.rank_similarity import (
     RankSimilarity
 )
-from psiz.trials.experimental.contents.rate_similarity import (
+from psiz.data.contents.rate_similarity import (
     RateSimilarity
 )
-from psiz.trials.experimental.outcomes.sparse_categorical import (
+from psiz.data.outcomes.sparse_categorical import (
     SparseCategorical
 )
-from psiz.trials.experimental.trial_dataset import TrialDataset
+from psiz.data.trial_dataset import TrialDataset
 
 
 def call_fit_evaluate_predict(model, ds2_obs):

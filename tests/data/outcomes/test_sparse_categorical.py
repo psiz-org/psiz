@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategorical
+from psiz.data.outcomes.sparse_categorical import SparseCategorical
 from psiz.trials import stack
 
 

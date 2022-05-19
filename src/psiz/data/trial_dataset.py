@@ -26,13 +26,13 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from psiz.trials.experimental.contents.rank_similarity import RankSimilarity
-from psiz.trials.experimental.contents.rate_similarity import RateSimilarity
-from psiz.trials.experimental.outcomes.continuous import Continuous
-from psiz.trials.experimental.outcomes.sparse_categorical import (
+from psiz.data.contents.rank_similarity import RankSimilarity
+from psiz.data.contents.rate_similarity import RateSimilarity
+from psiz.data.outcomes.continuous import Continuous
+from psiz.data.outcomes.sparse_categorical import (
     SparseCategorical
 )
-from psiz.trials.experimental.unravel_timestep import unravel_timestep
+from psiz.data.unravel_timestep import unravel_timestep
 
 
 class TrialDataset(object):

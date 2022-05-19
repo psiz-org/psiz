@@ -13,3 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+"""Module for trials.
+
+Classes:
+    Outcome: Abstract class for outcome data.
+
+"""
+
+from abc import ABCMeta
+
+from psiz.data.trial_component import TrialComponent
+
+
+class Outcome(TrialComponent, metaclass=ABCMeta):
+    """Abstract base class for outcome data."""
+
+    def __init__(self):
+        """Initialize."""
+        TrialComponent.__init__(self)

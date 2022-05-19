@@ -26,7 +26,7 @@ from psiz.trials.similarity.rank.rank_docket import RankDocket
 from psiz.trials.similarity.rank.rank_observations import RankObservations
 from psiz.trials.similarity.rate.rate_docket import RateDocket
 from psiz.trials.similarity.rate.rate_observations import RateObservations
-from psiz.trials.experimental.trial_dataset import TrialDataset
+from psiz.data.trial_dataset import TrialDataset
 
 
 def load_trials(filepath):

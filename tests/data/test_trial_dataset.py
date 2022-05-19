@@ -22,8 +22,8 @@ import pytest
 import tensorflow as tf
 
 from psiz.trials import load_trials
-from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategorical
-from psiz.trials.experimental.trial_dataset import TrialDataset
+from psiz.data.outcomes.sparse_categorical import SparseCategorical
+from psiz.data.trial_dataset import TrialDataset
 from psiz.trials import stack
 
 

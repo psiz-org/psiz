@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials.experimental.contents.rate_similarity import RateSimilarity
+from psiz.data.contents.rate_similarity import RateSimilarity
 from psiz.trials import stack
 
 

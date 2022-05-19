@@ -24,8 +24,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from psiz.trials.experimental.outcomes.outcome import Outcome
-from psiz.trials.experimental.unravel_timestep import unravel_timestep
+from psiz.data.outcomes.outcome import Outcome
+from psiz.data.unravel_timestep import unravel_timestep
 
 
 class SparseCategorical(Outcome):

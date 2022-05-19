@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials.experimental.outcomes.continuous import Continuous
+from psiz.data.outcomes.continuous import Continuous
 from psiz.trials import stack
 
 

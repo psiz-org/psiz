@@ -21,13 +21,13 @@ from scipy.stats import pearsonr
 import tensorflow as tf
 
 import psiz
-from psiz.trials.experimental.contents.rank_similarity import (
+from psiz.data.contents.rank_similarity import (
     RankSimilarity
 )
-from psiz.trials.experimental.outcomes.sparse_categorical import (
+from psiz.data.outcomes.sparse_categorical import (
     SparseCategorical
 )
-from psiz.trials.experimental.trial_dataset import TrialDataset
+from psiz.data.trial_dataset import TrialDataset
 
 
 def ground_truth(n_stimuli, n_dim, similarity_func, mask_zero):

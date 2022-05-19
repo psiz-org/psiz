@@ -51,7 +51,7 @@ class AddPairs(tf.keras.layers.Layer):
 
 
 class Select(tf.keras.layers.Layer):
-    """A simple layer that increments input by a value."""
+    """A simple layer that selects inputs of a specified index."""
 
     def __init__(self, index, **kwargs):
         """Initialize."""
@@ -84,26 +84,22 @@ def inputs_5x1_v0():
     return inputs_0
 
 
-# TODO copied from test_subnet_gate.py:pw_inputs_v1
 @pytest.fixture
 def inputs_5x3_v0():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
     inputs_0 = tf.constant(
-        np.array(
-            [
-                [0.0, 0.1, 0.2],
-                [1.0, 1.1, 1.2],
-                [2.0, 2.1, 2.2],
-                [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2]
-            ], dtype=np.float32
-        )
+        [
+            [0.0, 0.1, 0.2],
+            [1.0, 1.1, 1.2],
+            [2.0, 2.1, 2.2],
+            [3.0, 3.1, 3.2],
+            [4.0, 4.1, 4.2]
+        ], dtype=np.float32
     )
     return inputs_0
 
 
-# TODO copied from conftest.py:pw_inputs_v1
 @pytest.fixture
 def inputs_5x3_v1():
     inputs_1 = tf.constant(
@@ -277,7 +273,7 @@ def test_2g_call_5x1_intersecting(inputs_5x1_v0, groups_v2):
 def test_2g_call_5x3(inputs_5x3_v0, inputs_5x3_v1, groups_v0):
     """Test call.
 
-    Use `group_co=2` which results in [0, 0, 0, 1, 1].
+    Use `groups_subset=2` which results in [0, 0, 0, 1, 1].
 
     """
     inputs_v0 = inputs_5x3_v0
@@ -553,3 +549,66 @@ def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, groups_v0, is_eager):
     assert history.history['loss'] == zeros_2epochs
     assert history.history[name_branch_0 + '_loss'] == zeros_2epochs
     assert history.history[name_branch_1 + '_loss'] == zeros_2epochs
+
+
+def test_2g_call_5x3x2_timestep(inputs_5x3x2_v0, groups_5x3x3_index_v0):
+    """Test call using inputs with timestep axis.
+
+    Use `groups_subset=2` which results in:
+    [
+        [0, 0, 0],
+        [1, 1, 1],
+        [0, 0, 0],
+        [1, 1, 0],
+        [1, 0, 1],
+    ]
+
+    """
+    inputs_0 = inputs_5x3x2_v0
+    groups = groups_5x3x3_index_v0
+
+    # Branch 0.
+    holder = tf.constant([-0.1, -0.1])
+    added = inputs_0 - tf.constant(0.1)
+    desired_output_br0 = tf.stack(
+        [
+            tf.stack([added[0, 0], added[0, 1], added[0, 2]], axis=0),
+            tf.stack([holder, holder, holder], axis=0),
+            tf.stack([added[2, 0], added[2, 1], added[2, 2]], axis=0),
+            tf.stack([holder, holder, added[3, 2]], axis=0),
+            tf.stack([holder, added[4, 1], holder], axis=0),
+        ], axis=0
+    )
+
+    # Branch 1.
+    holder = tf.constant([0.1, 0.1])
+    added = inputs_0 + tf.constant(0.1)
+    desired_output_br1 = tf.stack(
+        [
+            tf.stack([holder, holder, holder], axis=0),
+            tf.stack([added[1, 0], added[1, 1], added[1, 2]], axis=0),
+            tf.stack([holder, holder, holder], axis=0),
+            tf.stack([added[3, 0], added[3, 1], holder], axis=0),
+            tf.stack([added[4, 0], holder, added[4, 2]], axis=0),
+        ], axis=0
+    )
+
+    inputs = [inputs_0, groups]
+
+    # Test default behavior when `output_names` is not provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=2,
+        name='branch5x3'
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['branch5x3_0'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['branch5x3_1'], desired_output_br1)
+
+    # Test behavior when `output_names` is provided.
+    branch = BranchGate(
+        subnets=[Increment(-0.1), Increment(0.1)], groups_subset=2,
+        name='branch5x3', output_names=['br_a', 'br_b']
+    )
+    outputs = branch(inputs)
+    tf.debugging.assert_equal(outputs['br_a'], desired_output_br0)
+    tf.debugging.assert_equal(outputs['br_b'], desired_output_br1)

@@ -41,11 +41,17 @@ class RankSimilarity(Behavior):
         super(RankSimilarity, self).__init__(**kwargs)
         self.kernel = kernel
 
-        # Handle layer switches for GroupsMixin.
+        # Satisfy `GroupsMixin` contract.
         self._pass_groups['kernel'] = self.check_supports_groups(kernel)
         self.supports_groups = True
 
-    def on_kernel_begin(self, z):
+        # Satisfy RNNCell contract.  TODO
+        self.state_size = [
+            tf.TensorShape([2]),
+            tf.TensorShape([2, 2])
+        ]
+
+    def _split_stimulus_set(self, z):
         """Call at the start of kernel operation.
 
         Args:
@@ -79,7 +85,7 @@ class RankSimilarity(Behavior):
 
         return z_q, z_r
 
-    def call(self, inputs):
+    def call(self, inputs, states):
         """Return probability of a ranked selection sequence.
 
         Args:
@@ -108,7 +114,7 @@ class RankSimilarity(Behavior):
         is_select = inputs[2][:, 1:, :]  # Drop "query" position.
 
         # Prep retrieved embeddings for kernel op based on behavior.
-        z_q, z_r = self.on_kernel_begin(z)
+        z_q, z_r = self._split_stimulus_set(z)
 
         if self._pass_groups['kernel']:
             groups = inputs[-1]
@@ -159,7 +165,7 @@ class RankSimilarity(Behavior):
         # Clean up numerical errors in probabilities.
         total_outcome_prob = tf.reduce_sum(outcome_prob, axis=2, keepdims=True)
         outcome_prob = outcome_prob / total_outcome_prob
-        return outcome_prob
+        return outcome_prob, states
 
     def get_config(self):
         """Return layer configuration."""

@@ -20,23 +20,29 @@ import pytest
 import tensorflow as tf
 
 
-# TODO taken from conftest.py:group_v0, note no "s".
 @pytest.fixture
-def groups_v0():
-    """A minibatch of group indices."""
+def groups_5x3x3_index_v0():
+    """A minibatch of group indices.
+
+    * 5 batches
+    * 3 timesteps
+    * 3 "group" columns
+        * one, three, and two groups respectively
+
+    """
     # Create a simple batch (batch_size=5).
-    group = tf.constant(
-        np.array(
-            [
-                [0, 0, 0],
-                [0, 1, 0],
-                [0, 2, 0],
-                [0, 1, 1],
-                [0, 2, 1]
-            ], dtype=np.int32
-        )
+    groups = tf.constant(
+        [
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+            [[0, 1, 1], [0, 1, 1], [0, 1, 1]],
+            [[0, 2, 0], [0, 2, 0], [0, 2, 0]],
+            # Last two batches intentionally have different groups for
+            # each timestep.
+            [[0, 1, 1], [0, 2, 1], [0, 2, 0]],
+            [[0, 2, 1], [0, 0, 0], [0, 1, 1]]
+        ], dtype=tf.int32
     )
-    return group
+    return groups
 
 
 @pytest.fixture
@@ -47,18 +53,16 @@ def groups_v1():
 
     """
     # Create a simple batch (batch_size=5).
-    group = tf.constant(
-        np.array(
-            [
-                [0, 1, 0],
-                [0, 1, 0],
-                [0, 1, 0],
-                [0, 0, 1],
-                [0, 0, 1]
-            ], dtype=np.int32
-        )
+    groups = tf.constant(
+        [
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [0, 0, 1]
+        ], dtype=np.int32
     )
-    return group
+    return groups
 
 
 @pytest.fixture
@@ -69,18 +73,16 @@ def groups_v2():
 
     """
     # Create a simple batch (batch_size=5).
-    group = tf.constant(
-        np.array(
-            [
-                [0, 1, 0],
-                [0, 1, 0],
-                [0, 1, 1],
-                [0, 0, 1],
-                [0, 0, 1]
-            ], dtype=np.int32
-        )
+    groups = tf.constant(
+        [
+            [0, 1, 0],
+            [0, 1, 0],
+            [0, 1, 1],
+            [0, 0, 1],
+            [0, 0, 1]
+        ], dtype=np.int32
     )
-    return group
+    return groups
 
 
 @pytest.fixture
@@ -91,15 +93,13 @@ def groups_v3():
 
     """
     # Create a simple batch (batch_size=5).
-    group = tf.constant(
-        np.array(
-            [
-                [0.0, 1.0, 0.0],
-                [0.0, 0.8, 0.2],
-                [0.0, 0.5, 0.5],
-                [0.0, 0.2, 0.8],
-                [0.0, 0.0, 1.0]
-            ], dtype=np.float32
-        )
+    groups = tf.constant(
+        [
+            [0.0, 1.0, 0.0],
+            [0.0, 0.8, 0.2],
+            [0.0, 0.5, 0.5],
+            [0.0, 0.2, 0.8],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float32
     )
-    return group
+    return groups

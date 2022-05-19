@@ -17,7 +17,7 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.python.keras import backend as K
 
 from psiz.keras.initializers import Dirichlet
 
@@ -44,8 +44,9 @@ def test_all():
     _ = initializer(tf_shape)
 
     _ = initializer(tf_shape, dtype=K.floatx())
-    
-    # TODO
+
+    # TODO Solve RNG seed issue so that the following test works
+    # locally and on CI servers.
     # desired_sample = tf.constant(
     #     [
     #         [

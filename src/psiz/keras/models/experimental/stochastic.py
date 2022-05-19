@@ -31,12 +31,13 @@ class Stochastic(tf.keras.Model):
     """An abstract Keras model that accomodates stochastic layers.
 
     These models assume that the `call` method returns a Tensor or
-    dictionary of Tensors where each Tensor has a "sample" axis at
-    axis=1, that represents `n_sample` samples. In `train_step` and
-    `test_step`, the "sample" axis is combined with the "batch" axis to
-    compute a batch-and-sample loss.
+    dictionary of Tensors where each Tensor has a "sample" axis, that
+    represents `n_sample` samples. In `train_step` and `test_step`, the
+    "sample" axis is combined with the "batch" axis to compute a
+    batch-and-sample loss.
 
     Attributes:
+        sample_axis: Integer indicating sample axis.
         n_sample: Integer indicating the number of samples to draw for
             stochastic layers. Only useful if using stochastic layers
             (e.g., variational models).
@@ -57,7 +58,12 @@ class Stochastic(tf.keras.Model):
 
         """
         super().__init__(**kwargs)
+        self._sample_axis = 2
         self._n_sample = n_sample
+
+    @property
+    def sample_axis(self):
+        return self._sample_axis
 
     @property
     def n_sample(self):
@@ -199,7 +205,7 @@ class Stochastic(tf.keras.Model):
             `[batch_0, batch_0, batch_1, batch_1, ...]`.
 
         The block structure is leveraged later when `tf.reshape` is
-        also used on `y_pred`, which also result in blocks of batch
+        also used on `y_pred`, which also results in blocks of batch
         items.
 
         Args:
@@ -223,9 +229,11 @@ class Stochastic(tf.keras.Model):
 
         The reshape operation combines the batch and sample axis such
         that samples for a given batch item occur in contiguous blocks.
-        The reshape operation uses "-1" to infer the shape of the new
-        batch-sample axis and explicitly grabs the shape of the
-        remaining axes.
+
+        First the timestep axis and sample axis are swapped, keeping
+        all other axes the same. Then a reshape operation uses "-1" to
+        infer the shape of the new batch-sample axis and explicitly
+        grabs the shape of the remaining axes.
 
         Args:
             y_pred: Tensor or dictionary of Tensors representing model
@@ -236,15 +244,26 @@ class Stochastic(tf.keras.Model):
                 reshaped.
 
         """
+        # TODO Write `new_order` in generic `sample_axis` way.
         if isinstance(y_pred, dict):
             for key in y_pred:
+                new_order = tf.concat(
+                    (
+                        tf.constant([0, 2, 1]),
+                        tf.range(tf.rank(y_pred[key]) - 3) + 3
+                    ), axis=0
+                )
+                y_pred[key] = tf.transpose(y_pred[key], perm=new_order)
                 new_shape = tf.concat(
                     [[-1], tf.shape(y_pred[key])[2:]], 0
                 )
-                y_pred[key] = tf.reshape(
-                    y_pred[key], new_shape
-                )
+                y_pred[key] = tf.reshape(y_pred[key], new_shape)
         else:
+            new_order = tf.concat(
+                (tf.constant([0, 2, 1]), tf.range(tf.rank(y_pred) - 3) + 3),
+                axis=0
+            )
+            y_pred = tf.transpose(y_pred, perm=new_order)
             new_shape = tf.concat([[-1], tf.shape(y_pred)[2:]], 0)
             y_pred = tf.reshape(y_pred, new_shape)
         return y_pred
@@ -267,7 +286,9 @@ class Stochastic(tf.keras.Model):
         """
         if isinstance(y_pred, dict):
             for key in y_pred:
-                y_pred[key] = tf.reduce_mean(y_pred[key], axis=1)
+                y_pred[key] = tf.reduce_mean(
+                    y_pred[key], axis=self._sample_axis
+                )
         else:
-            y_pred = tf.reduce_mean(y_pred, axis=1)
+            y_pred = tf.reduce_mean(y_pred, axis=self._sample_axis)
         return y_pred

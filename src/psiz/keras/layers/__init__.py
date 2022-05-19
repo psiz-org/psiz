@@ -20,6 +20,7 @@ from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.rate_similarity import RateSimilarity
+from psiz.keras.layers.experimental.alcove_cell import ALCOVECell
 from psiz.keras.layers.distances.mink import Minkowski
 from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
 from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
@@ -46,6 +47,7 @@ from psiz.keras.layers.variational import Variational
 
 __all__ = [
     'Behavior', 'RankSimilarity', 'RateSimilarity',
+    'ALCOVECell',
     'RankBehavior', 'RateBehavior', 'Minkowski',
     'MinkowskiStochastic', 'MinkowskiVariational', 'EmbeddingGammaDiag',
     'EmbeddingLaplaceDiag', 'EmbeddingLogNormalDiag',

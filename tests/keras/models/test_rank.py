@@ -769,31 +769,3 @@ def test_save_load_rank_wotrace(
 
     # Continue training without recompiling.
     reconstructed_model.fit(ds_rank_obs_2g, epochs=1)
-
-    # TODO test without compile
-
-    # np.testing.assert_array_equal(
-    #     loaded_embedding.z,
-    #     rank_1g_vi.z
-    # )
-    # np.testing.assert_array_equal(
-    #     loaded_embedding._z["value"],
-    #     rank_1g_vi._z["value"]
-    # )
-    # assert loaded_embedding._z['trainable'] == rank_1g_vi._z['trainable']
-
-    # assert loaded_embedding._theta == rank_1g_vi._theta
-
-    # np.testing.assert_array_equal(
-    #     loaded_embedding.w,
-    #     rank_1g_vi.w
-    # )
-    # for param_name in rank_1g_vi._phi:
-    #     np.testing.assert_array_equal(
-    #         loaded_embedding._phi[param_name]['value'],
-    #         rank_1g_vi._phi[param_name]['value']
-    #     )
-    #     np.testing.assert_array_equal(
-    #         loaded_embedding._phi[param_name]['trainable'],
-    #         rank_1g_vi._phi[param_name]['trainable']
-    #     )

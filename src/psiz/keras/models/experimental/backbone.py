@@ -77,12 +77,12 @@ class Backbone(GroupsMixin, Stochastic):
 
         Args:
             inputs: A dictionary of inputs. At a minimum, must contain:
-                stimulus_set: dtype=tf.int32, consisting of the
-                    integers on the interval [0, n_stimuli[
-                    shape=(batch_size, n_max_reference + 1, n_outcome)
+                stimulus_set: dtype=tf.int32, Integers denoting stimuli
+                    indices.
+                    shape=(batch_size, n_timestep, m, [n, ...])
                 groups: dtype=tf.int32, Integers indicating the
                     group membership of a trial.
-                    shape=(batch_size, k)
+                    shape=(batch_size, n_timestep, k)
 
         """
         # Pop universal inputs.
@@ -90,27 +90,25 @@ class Backbone(GroupsMixin, Stochastic):
         groups = inputs.pop('groups', None)
 
         # Repeat `stimulus_set` `n_sample` times in a newly inserted
-        # "sample" axis (axis=1).
-        stimulus_set = expand_dim_repeat(
-            stimulus_set, self.n_sample, axis=1
-        )
-        # TensorShape=(batch_size, n_sample, [n, m, ...])
+        # "sample" axis (axis=2).
+        stimulus_set = expand_dim_repeat(stimulus_set, self.n_sample, axis=2)
+        # TensorShape=(batch_size, n_timestep, n_sample, n, [m, ...])
 
         # Embed stimuli indices in n-dimensional space.
         if self._pass_groups['percept']:
             z = self.percept([stimulus_set, groups])
         else:
             z = self.percept(stimulus_set)
-        # TensorShape=(batch_size, n_sample, [n, m, ...] n_dim])
+        # TensorShape=(batch_size, n_sample, n, [m, ...] n_dim])
 
         # Convert remaining `inputs` dictionary to list, preserving order of
         # dictionary.
         inputs_list = self._unpack_inputs(inputs)
 
         if self._pass_groups['behavior']:
-            y_pred = self.behavior([stimulus_set, z, *inputs_list, groups])
+            y_pred = self.behavior((stimulus_set, z, *inputs_list, groups))
         else:
-            y_pred = self.behavior([stimulus_set, z, *inputs_list])
+            y_pred = self.behavior((stimulus_set, z, *inputs_list))
         return y_pred
 
     def get_config(self):

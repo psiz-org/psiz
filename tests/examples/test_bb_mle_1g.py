@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,13 @@ from scipy.stats import pearsonr
 import tensorflow as tf
 
 import psiz
+from psiz.trials.experimental.contents.rank_similarity import (
+    RankSimilarity
+)
+from psiz.trials.experimental.outcomes.sparse_categorical import (
+    SparseCategorical
+)
+from psiz.trials.experimental.trial_dataset import TrialDataset
 
 
 def ground_truth(n_stimuli, n_dim, similarity_func, mask_zero):
@@ -80,6 +87,72 @@ def ground_truth(n_stimuli, n_dim, similarity_func, mask_zero):
     return model
 
 
+def ground_truth_bb(n_stimuli, n_dim, similarity_func, mask_zero):
+    """Return a ground truth embedding."""
+    if mask_zero:
+        n_stimuli_emb = n_stimuli + 1
+    else:
+        n_stimuli_emb = n_stimuli
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli_emb, n_dim, mask_zero=mask_zero,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(
+            stddev=.17, seed=4
+        )
+    )
+
+    # Set similarity function.
+    if similarity_func == 'Exponential':
+        similarity = psiz.keras.layers.ExponentialSimilarity(
+            fit_tau=False, fit_gamma=False, fit_beta=False,
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+        )
+    elif similarity_func == 'StudentsT':
+        similarity = psiz.keras.layers.StudentsTSimilarity(
+            fit_tau=False, fit_alpha=False,
+            tau_initializer=tf.keras.initializers.Constant(2.),
+            alpha_initializer=tf.keras.initializers.Constant(1.),
+        )
+    elif similarity_func == 'HeavyTailed':
+        similarity = psiz.keras.layers.HeavyTailedSimilarity(
+            fit_tau=False, fit_kappa=False, fit_alpha=False,
+            tau_initializer=tf.keras.initializers.Constant(2.),
+            kappa_initializer=tf.keras.initializers.Constant(2.),
+            alpha_initializer=tf.keras.initializers.Constant(10.),
+        )
+    elif similarity_func == "Inverse":
+        similarity = psiz.keras.layers.InverseSimilarity(
+            fit_tau=False, fit_mu=False,
+            tau_initializer=tf.keras.initializers.Constant(2.),
+            mu_initializer=tf.keras.initializers.Constant(0.000001)
+        )
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=similarity
+    )
+
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
+    return model
+
+
 def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     """Build model.
 
@@ -93,13 +166,13 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 
     """
     if mask_zero:
-        stimuli = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True
-        )
+        n_stimuli_emb = n_stimuli + 1
     else:
-        stimuli = tf.keras.layers.Embedding(
-            n_stimuli, n_dim
-        )
+        n_stimuli_emb = n_stimuli
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli_emb, n_dim, mask_zero=mask_zero
+    )
 
     # Set similarity function.
     if similarity_func == 'Exponential':
@@ -115,8 +188,38 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
         distance=psiz.keras.layers.Minkowski(),
         similarity=similarity
     )
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
+
+
+def convert2dataset(obs, batch_size, shuffle=False):
+    """Convert to TF Dataset."""
+    # Convert to timestep dataset.
+    # TODO native generator.
+    content = RankSimilarity(obs.stimulus_set, n_select=obs.n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    ds = TrialDataset(content, outcome=outcome, groups=obs.groups).export()
+    if shuffle:
+        ds = ds.shuffle(
+            buffer_size=obs.n_trial, reshuffle_each_iteration=True
+        ).batch(batch_size, drop_remainder=False)
+    else:
+        ds = ds.batch(batch_size, drop_remainder=False)
+    return ds
 
 
 @pytest.mark.slow
@@ -144,7 +247,8 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     # Generate a random docket of trials.
     if mask_zero:
         generator = psiz.trials.RandomRank(
-            np.arange(n_stimuli) + 1, n_reference=8, n_select=2, mask_zero=True
+            np.arange(n_stimuli) + 1, n_reference=8, n_select=2,
+            mask_zero=True
         )
     else:
         generator = psiz.trials.RandomRank(
@@ -153,6 +257,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
+    # TODO RankAgent doesn't work with new Backbone model.
     agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
 
@@ -164,14 +269,19 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
 
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
-    # Convert validation and test to TF Dataset. Convert train dataset
-    # inside frame loop.
-    ds_obs_val = obs_val.as_dataset().batch(
-        batch_size, drop_remainder=False
-    )
-    # ds_obs_test = obs_test.as_dataset().batch(
+
+    # Convert to timestep dataset.
+    ds_obs_val = convert2dataset(obs_val, batch_size)
+
+    # TODO
+    # # Convert validation and test to TF Dataset. Convert train dataset
+    # # inside frame loop.
+    # ds_obs_val = obs_val.as_dataset().batch(
     #     batch_size, drop_remainder=False
     # )
+    # # ds_obs_test = obs_test.as_dataset().batch(
+    # #     batch_size, drop_remainder=False
+    # # )
 
     # Use early stopping.
     early_stop = tf.keras.callbacks.EarlyStopping(
@@ -182,14 +292,6 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         write_graph=False, write_images=False, update_freq='epoch',
         profile_batch=0, embeddings_freq=0, embeddings_metadata=None
     )
-
-    compile_kwargs = {
-        'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-        'weighted_metrics': [
-            tf.keras.metrics.CategoricalCrossentropy(name='cce')
-        ]
-    }
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:
@@ -205,9 +307,9 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         obs_round_train = obs_train.subset(include_idx)
 
         # Convert obs to dataset.
-        ds_obs_train = obs_round_train.as_dataset().shuffle(
-            buffer_size=obs_round_train.n_trial, reshuffle_each_iteration=True
-        ).batch(batch_size, drop_remainder=False)
+        ds_obs_train = convert2dataset(
+            obs_round_train, batch_size, shuffle=True
+        )
 
         # Use Tensorboard callback.
         callbacks = [early_stop, cb_board]
@@ -215,7 +317,6 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         model_inferred = build_model(
             n_stimuli, n_dim, similarity_func, mask_zero
         )
-        model_inferred.compile(**compile_kwargs)
 
         # Infer embedding.
         # MAYBE keras-tuner 3 restarts, monitor='val_loss'
@@ -228,7 +329,8 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         # similarity matrices implied by each model.
         simmat_infer = np.squeeze(
             psiz.utils.pairwise_similarity(
-                model_inferred.stimuli, model_inferred.kernel, ds_pairs
+                model_inferred.percept, model_inferred.behavior.cell.kernel,
+                ds_pairs
             ).numpy()
         )
         rho, _ = pearsonr(simmat_true, simmat_infer)

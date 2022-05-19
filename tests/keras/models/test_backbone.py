@@ -21,23 +21,34 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
+from psiz.trials.experimental.outcomes.continuous import Continuous
+from psiz.trials.experimental.contents.rank_similarity import (
+    RankSimilarity
+)
+from psiz.trials.experimental.contents.rate_similarity import (
+    RateSimilarity
+)
+from psiz.trials.experimental.outcomes.sparse_categorical import (
+    SparseCategorical
+)
+from psiz.trials.experimental.trial_dataset import TrialDataset
 
 
-def call_fit_evaluate_predict(model, ds2_docket, ds2_obs):
+def call_fit_evaluate_predict(model, ds2_obs):
     """Simple test of call, fit, evaluate, and predict."""
-    # Test call.
-    for data in ds2_docket:
-        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+    # Test isolated call.
+    for data in ds2_obs:
+        x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         _ = model(x, training=False)
 
     # Test fit.
-    model.fit(ds2_obs, epochs=2)
+    model.fit(ds2_obs, epochs=3)
 
     # Test evaluate.
     model.evaluate(ds2_obs)
 
     # Test predict.
-    model.predict(ds2_docket)
+    model.predict(ds2_obs)
 
 
 def build_mle_kernel(similarity, n_dim):
@@ -58,32 +69,9 @@ def build_mle_kernel(similarity, n_dim):
 
 
 @pytest.fixture(scope="module")
-def ds2_rank_docket_2g():
-    """Rank docket dataset."""
-    stimulus_set = np.array((
-        (1, 2, 3, 0, 0, 0, 0, 0, 0),
-        (10, 13, 8, 0, 0, 0, 0, 0, 0),
-        (4, 5, 6, 7, 8, 0, 0, 0, 0),
-        (4, 5, 6, 7, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
-
-    n_trial = 4
-    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    docket = psiz.trials.RankDocket(
-        stimulus_set, n_select=n_select, mask_zero=True
-    )
-
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-    ds2_docket = docket.as_dataset(
-        groups=groups
-    ).batch(n_trial, drop_remainder=False)
-
-    return ds2_docket
-
-
-@pytest.fixture(scope="module")
-def ds2_rank_obs_2g():
+def ds2_rank_2g():
     """Rank observations dataset."""
+    n_sequence = 4
     stimulus_set = np.array((
         (1, 2, 3, 0, 0, 0, 0, 0, 0),
         (10, 13, 8, 0, 0, 0, 0, 0, 0),
@@ -91,22 +79,25 @@ def ds2_rank_obs_2g():
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
 
-    n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
-    obs = psiz.trials.RankObservations(
-        stimulus_set, n_select=n_select, groups=groups, mask_zero=True
+    content = RankSimilarity(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
     )
-    ds2_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    ds = TrialDataset(content, outcome=outcome, groups=groups).export()
+    ds = ds.batch(n_sequence, drop_remainder=False)
 
-    return ds2_obs
+    return ds
 
 
 @pytest.fixture(scope="module")
-def ds_rank_obs_3g():
+def ds2_rank_3g():
     """Rank observations dataset."""
-    # TODO same as tests/keras/models/test_rank:ds_rank_obs_3g
+    # TODO copied from tests/keras/models/test_rank:ds_rank_obs_3g
+    n_sequence = 4
     stimulus_set = np.array((
         (1, 2, 3, 0, 0, 0, 0, 0, 0),
         (10, 13, 8, 0, 0, 0, 0, 0, 0),
@@ -114,86 +105,45 @@ def ds_rank_obs_3g():
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
 
-    n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
     groups = np.array(([0], [0], [1], [2]), dtype=np.int32)
 
-    obs = psiz.trials.RankObservations(
-        stimulus_set, n_select=n_select, groups=groups
+    content = RankSimilarity(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
     )
-    ds_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
+    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
+    ds = TrialDataset(content, outcome=outcome, groups=groups).export()
+    ds = ds.batch(n_sequence, drop_remainder=False)
 
-    return ds_obs
-
-
-@pytest.fixture(scope="module")
-def ds2_rate_docket_2g():
-    """Rate docket dataset."""
-    stimulus_set = np.array((
-        (1, 2),
-        (10, 13),
-        (4, 5),
-        (4, 18)
-    ), dtype=np.int32)
-
-    n_trial = 4
-    docket = psiz.trials.RateDocket(stimulus_set)
-
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-    ds2_docket = docket.as_dataset(
-        groups=groups
-    ).batch(n_trial, drop_remainder=False)
-
-    return ds2_docket
+    return ds
 
 
 @pytest.fixture(scope="module")
-def ds2_rate_obs_2g():
+def ds2_rate_2g():
     """Rate observations dataset."""
-    n_trial = 4
+    n_sequence = 4
     stimulus_set = np.array((
         (1, 2),
         (10, 13),
         (4, 5),
         (4, 18)
     ), dtype=np.int32)
-    rating = np.array([0.1, .4, .8, .9])
+    rating = np.array([[0.1], [.4], [.8], [.9]])
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
-    obs = psiz.trials.RateObservations(
-        stimulus_set, rating, groups=groups
-    )
-    ds2_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
-
-    return ds2_obs
-
-
-@pytest.fixture(scope="module")
-def ds2_rank_rate_docket_2g():
-    return None
+    content = RateSimilarity(stimulus_set)
+    outcome = Continuous(rating)
+    ds = TrialDataset(content, outcome=outcome, groups=groups).export()
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
 
 
 @pytest.fixture(scope="module")
-def ds2_rank_rate_obs_2g():
+def ds2_rank_rate_2g():
     n_trial = 8
-    # TODO
-    # stimulus_set = np.array(
-    #     [
-    #         # Rank trials.
-    #         [1, 2, 3, 0, 0, 0, 0, 0, 0],
-    #         [10, 13, 8, 0, 0, 0, 0, 0, 0],
-    #         [4, 5, 6, 7, 8, 0, 0, 0, 0],
-    #         [4, 5, 6, 7, 14, 15, 16, 17, 18],
-    #         # Rate trials.
-    #         [1, 2, 0, 0, 0, 0, 0, 0, 0],
-    #         [10, 13, 0, 0, 0, 0, 0, 0, 0],
-    #         [4, 5, 0, 0, 0, 0, 0, 0, 0],
-    #         [4, 18, 0, 0, 0, 0, 0, 0, 0],
-    #     ], dtype=np.int32
-    # )
 
-    # # Additional info for rank trials.
-    # n_select = np.array((1, 1, 1, 2, 0, 0, 0, 0), dtype=np.int32)
+    # Rank data for dataset.
     stimulus_set = np.array((
         (1, 2, 3, 0, 0, 0, 0, 0, 0),
         (10, 13, 8, 0, 0, 0, 0, 0, 0),
@@ -212,6 +162,7 @@ def ds2_rank_rate_obs_2g():
     y_rank = np.zeros([obs_rank.n_trial, stimulus_set_rank.shape[2]])
     y_rank[:, 0] = 1
     y_rank = np.concatenate([y_rank, np.zeros_like(y_rank)], axis=0)
+    y_rank = np.expand_dims(y_rank, axis=1)
 
     # Add on rate data.
     stimulus_set_rate = np.array(
@@ -239,20 +190,21 @@ def ds2_rank_rate_obs_2g():
     )
 
     x = {
-        'stimulus_set': stimulus_set,
-        'is_select': is_select_rank,
-        'groups': groups,
+        'stimulus_set': np.expand_dims(stimulus_set, axis=1),
+        'is_select': np.expand_dims(is_select_rank, axis=1),
+        'groups': np.expand_dims(groups, axis=1),
     }
 
     y_rate = np.array([0.0, 0.0, 0.0, 0.0, 0.1, .4, .8, .9])  # ratings
+    y_rate = np.expand_dims(y_rate, axis=1)
     y = {
         'rank_branch': tf.constant(y_rank, dtype=tf.float32),
         'rate_branch': tf.constant(y_rate, dtype=tf.float32)
     }
 
     # Define sample weights for each branch.
-    w_rank = tf.constant([1., 1., 1., 1., 0., 0., 0., 0.])
-    w_rate = tf.constant([0., 0., 0., 0., 1., 1., 1., 1.])
+    w_rank = tf.constant([[1.], [1.], [1.], [1.], [0.], [0.], [0.], [0.]])
+    w_rate = tf.constant([[0.], [0.], [0.], [0.], [1.], [1.], [1.], [1.]])
     w = {
         'rank_branch': w_rank,
         'rate_branch': w_rate
@@ -262,6 +214,57 @@ def ds2_rank_rate_obs_2g():
     )
 
     return ds
+
+
+@pytest.fixture(scope="module")
+def ds2_categorize_2g():
+    """A dummy dataset for categorize behavior.
+
+    Assumes:
+    * `mask_zero=True`
+    * 20 stimuli (not including 0 index)
+    * Three classes
+        * class 0: 1-10
+        * class 1: 11-15
+        * class 0: 16-20
+
+    """
+    n_sequence = 4
+    sequence_length = 10
+    # n_stimuli = 20
+    n_output = 3
+
+    groups = np.zeros([n_sequence, sequence_length, 1])
+
+    stimulus_set = np.array(
+        [
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+            [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+        ]
+    )
+    y = np.array(
+        [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+            [0, 0, 0, 0, 0, 1, 1, 1, 2, 2],
+            [0, 0, 0, 0, 0, 1, 1, 2, 2, 2],
+        ]
+    )
+    y_onehot = tf.one_hot(
+        y, n_output, on_value=1.0, off_value=0.0
+    )
+    x = {
+        'stimulus_set': tf.constant(stimulus_set),
+        'correct_label': tf.constant(np.expand_dims(y, axis=2)),
+        'groups': tf.constant(groups),
+    }
+    w = tf.constant(np.ones_like(y))
+    ds2_obs = tf.data.Dataset.from_tensor_slices((x, y_onehot, w)).batch(
+        n_sequence, drop_remainder=False
+    )
+    return ds2_obs
 
 
 @pytest.fixture(scope="module")
@@ -287,16 +290,26 @@ def bb_rank_1g_1g_mle():
             trainable=False,
         )
     )
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
     model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
 
 
-# TODO same as tests/keras/models/conftest:rank_2g_mle
 @pytest.fixture(scope="module")
 def bb_rank_1g_2g_mle():
     """A MLE rank model for two groups."""
+    # TODO copied from tests/keras/models/conftest:rank_2g_mle
     n_stimuli = 30
     n_dim = 10
 
@@ -335,16 +348,25 @@ def bb_rank_1g_2g_mle():
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
     model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
 
 
 @pytest.fixture(scope="module")
 def bb_rank_1g_3g_mle():
     """Rank, three groups, MLE."""
-    # TODO same as tests/keras/models/test_rank:rank_3g_mle_v2
+    # TODO copied from tests/keras/models/test_rank:rank_3g_mle_v2
     n_stimuli = 20
     n_dim = 3
 
@@ -367,7 +389,8 @@ def bb_rank_1g_3g_mle():
         subnets=[kernel_0, kernel_1, kernel_2], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
     model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
     return model
@@ -376,7 +399,7 @@ def bb_rank_1g_3g_mle():
 @pytest.fixture(scope="module")
 def bb_rank_2g_2g_mle():
     """Backbone model: """
-    # TODO same as tests/conftest:rank_2stim_2kern_determ
+    # TODO copied from tests/conftest:rank_2stim_2kern_determ
     n_stimuli = 3
     n_dim = 2
     percept_0 = tf.keras.layers.Embedding(
@@ -441,16 +464,26 @@ def bb_rank_2g_2g_mle():
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
     model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
 
 
 @pytest.fixture(scope="module")
 def bb_rank_2g_2g_2g_mle():
     """Backbone model."""
-    # TODO same as tests/conftest:rank_2stim_2kern_2behav
+    # TODO copied from tests/conftest:rank_2stim_2kern_2behav
     n_stimuli = 20
     n_dim = 2
     percept_0 = tf.keras.layers.Embedding(
@@ -501,13 +534,24 @@ def bb_rank_2g_2g_2g_mle():
         subnets=[kernel_0, kernel_1], groups_subset=0
     )
 
-    behavior_0 = psiz.keras.layers.RankSimilarity(kernel=kernel)
-    behavior_1 = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    behavior_cell_0 = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    behavior_cell_1 = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    behavior_0 = tf.keras.layers.RNN(behavior_cell_0, return_sequences=True)
+    behavior_1 = tf.keras.layers.RNN(behavior_cell_1, return_sequences=True)
     behavior = psiz.keras.layers.BraidGate(
         subnets=[behavior_0, behavior_1], groups_subset=0
     )
 
     model = psiz.keras.models.Backbone(percept=percept, behavior=behavior)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
 
 
@@ -556,11 +600,19 @@ def bb_rank_1g_vi():
         )
     )
 
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
-    model = psiz.keras.models.Backbone(
-        percept=percept, behavior=rank
-    )
+    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
 
 
@@ -588,9 +640,19 @@ def bb_rate_1g_mle():
         )
     )
 
-    rate = psiz.keras.layers.RateSimilarity(kernel=kernel)
+    rate_cell = psiz.keras.layers.RateSimilarity(kernel=kernel)
+    rate = tf.keras.layers.RNN(rate_cell, return_sequences=True)
 
     model = psiz.keras.models.Backbone(percept=percept, behavior=rate)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.MeanSquaredError(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.MeanSquaredError(name='mse')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
 
 
@@ -619,8 +681,10 @@ def bb_rank_rate_1g_mle():
     )
 
     # Define a multi-behavior module
-    rank = psiz.keras.layers.RankSimilarity(kernel=kernel)
-    rate = psiz.keras.layers.RateSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rate_cell = psiz.keras.layers.RateSimilarity(kernel=kernel)
+    rate = tf.keras.layers.RNN(rate_cell, return_sequences=True)
     behav_branch = psiz.keras.layers.BranchGate(
         subnets=[rank, rate], groups_subset=1, name="behav_branch",
         output_names=['rank_branch', 'rate_branch']
@@ -629,35 +693,78 @@ def bb_rank_rate_1g_mle():
     model = psiz.keras.models.Backbone(
         percept=percept, behavior=behav_branch
     )
+
+    compile_kwargs = {
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'loss': {
+            'rank_branch': tf.keras.losses.CategoricalCrossentropy(
+                name='rank_loss'
+            ),
+            'rate_branch': tf.keras.losses.MeanSquaredError(
+                name='rate_loss'
+            ),
+        },
+        'loss_weights': {'rank_branch': 1.0, 'rate_branch': 1.0},
+    }
+    model.compile(**compile_kwargs)
+    return model
+
+
+@pytest.fixture(scope="module")
+def bb_categorize_1g_1g_mle():
+    """Backbone model: Rank, one group, MLE."""
+    n_stimuli = 20
+    n_dim = 4
+    n_output = 3
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli + 1, n_dim, mask_zero=True
+    )
+
+    similarity = psiz.keras.layers.ExponentialSimilarity(
+        beta_initializer=tf.keras.initializers.Constant(3.0),
+        tau_initializer=tf.keras.initializers.Constant(1.0),
+        gamma_initializer=tf.keras.initializers.Constant(0.0),
+        trainable=False,
+    )
+
+    alcove_embedding = tf.keras.layers.Embedding(
+        n_stimuli + 1, n_dim, mask_zero=True,
+        trainable=False,
+    )
+    cell = psiz.keras.layers.ALCOVECell(
+        n_output, embedding=alcove_embedding, similarity=similarity,
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        temperature_initializer=tf.keras.initializers.Constant(1.0),
+        lr_attention_initializer=tf.keras.initializers.Constant(.03),
+        lr_association_initializer=tf.keras.initializers.Constant(.03),
+        trainable=False
+    )
+    categorize = tf.keras.layers.RNN(
+        cell, return_sequences=True, stateful=False
+    )
+
+    model = psiz.keras.models.Backbone(percept=percept, behavior=categorize)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalAccuracy(name='accuracy')
+        ]
+    }
+    model.compile(**compile_kwargs)
     return model
 
 
 class TestRankSimilarity:
     """Test w/ RankSimilarity behavior only."""
 
-    @pytest.mark.parametrize(
-        "is_eager", [True, False]
-    )
-    def test_mle_1g_1g(
-        self, bb_rank_1g_1g_mle, ds2_rank_docket_2g, ds2_rank_obs_2g, is_eager
-    ):
-        """Test MLE, one group."""
-        tf.config.run_functions_eagerly(is_eager)
-
+    def test_n_sample_and_serialization(self, bb_rank_1g_1g_mle):
+        """Test n_sample attribute and serialization."""
         model = bb_rank_1g_1g_mle
 
-        compile_kwargs = {
-            'loss': tf.keras.losses.CategoricalCrossentropy(),
-            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-            'weighted_metrics': [
-                tf.keras.metrics.CategoricalCrossentropy(name='cce')
-            ]
-        }
-        model.compile(**compile_kwargs)
-        call_fit_evaluate_predict(model, ds2_rank_docket_2g, ds2_rank_obs_2g)
-
         # Get coverage of Stochastic model.
-        # TODO These tests probably belong somewhere else.
         # Test setting `n_sample`.
         model.n_sample = 2
         assert model.n_sample == 2
@@ -668,123 +775,85 @@ class TestRankSimilarity:
         recon_model = psiz.keras.models.Backbone.from_config(config)
         assert recon_model.n_sample == 2
 
-    def test_mle_1g_2g(
-        self, bb_rank_1g_2g_mle, ds2_rank_docket_2g, ds2_rank_obs_2g
-    ):
-        """Test MLE, 2 groups."""
-        model = bb_rank_1g_2g_mle
-        compile_kwargs = {
-            'loss': tf.keras.losses.CategoricalCrossentropy(),
-            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-            'weighted_metrics': [
-                tf.keras.metrics.CategoricalCrossentropy(name='cce')
-            ]
-        }
-        model.compile(**compile_kwargs)
-        call_fit_evaluate_predict(model, ds2_rank_docket_2g, ds2_rank_obs_2g)
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_mle_1g_1g(self, bb_rank_1g_1g_mle, ds2_rank_2g, is_eager):
+        """Test MLE, one group."""
+        tf.config.run_functions_eagerly(is_eager)
 
-    def test_mle_2g_2g(
-        self, bb_rank_2g_2g_mle, ds2_rank_docket_2g, ds2_rank_obs_2g
-    ):
-        """Test MLE, 2 groups."""
-        model = bb_rank_2g_2g_mle
-        compile_kwargs = {
-            'loss': tf.keras.losses.CategoricalCrossentropy(),
-            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-            'weighted_metrics': [
-                tf.keras.metrics.CategoricalCrossentropy(name='cce')
-            ]
-        }
-        model.compile(**compile_kwargs)
-        call_fit_evaluate_predict(model, ds2_rank_docket_2g, ds2_rank_obs_2g)
-
-    def test_mle_2g_2g_2g(
-        self, bb_rank_2g_2g_2g_mle, ds2_rank_docket_2g, ds2_rank_obs_2g
-    ):
-        """Test MLE, 2 groups."""
-        model = bb_rank_2g_2g_2g_mle
-        compile_kwargs = {
-            'loss': tf.keras.losses.CategoricalCrossentropy(),
-            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-            'weighted_metrics': [
-                tf.keras.metrics.CategoricalCrossentropy(name='cce')
-            ]
-        }
-        model.compile(**compile_kwargs)
-        call_fit_evaluate_predict(model, ds2_rank_docket_2g, ds2_rank_obs_2g)
+        model = bb_rank_1g_1g_mle
+        call_fit_evaluate_predict(model, ds2_rank_2g)
 
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_vi_1g_1g(
-        self, bb_rank_1g_vi, ds2_rank_docket_2g, ds2_rank_obs_2g, is_eager
-    ):
+    def test_mle_1g_2g(self, bb_rank_1g_2g_mle, ds2_rank_2g, is_eager):
+        """Test MLE, 2 groups."""
+        tf.config.run_functions_eagerly(is_eager)
+        model = bb_rank_1g_2g_mle
+        call_fit_evaluate_predict(model, ds2_rank_2g)
+
+    def test_mle_2g_2g(self, bb_rank_2g_2g_mle, ds2_rank_2g):
+        """Test MLE, 2 groups."""
+        model = bb_rank_2g_2g_mle
+        call_fit_evaluate_predict(model, ds2_rank_2g)
+
+    def test_mle_2g_2g_2g(self, bb_rank_2g_2g_2g_mle, ds2_rank_2g):
+        """Test MLE, 2 groups."""
+        model = bb_rank_2g_2g_2g_mle
+        call_fit_evaluate_predict(model, ds2_rank_2g)
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_vi_1g_1g(self, bb_rank_1g_vi, ds2_rank_2g, is_eager):
         """Test VI, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
         model = bb_rank_1g_vi
-
-        # Compile
-        compile_kwargs = {
-            'loss': tf.keras.losses.CategoricalCrossentropy(),
-            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-            'weighted_metrics': [
-                tf.keras.metrics.CategoricalCrossentropy(name='cce')
-            ]
-        }
-        model.compile(**compile_kwargs)
-        call_fit_evaluate_predict(model, ds2_rank_docket_2g, ds2_rank_obs_2g)
+        call_fit_evaluate_predict(model, ds2_rank_2g)
 
 
 class TestRateSimilarity:
     """Test w/ RateSimilarity behavior only."""
 
-    def test_rate(self, bb_rate_1g_mle, ds2_rate_docket_2g, ds2_rate_obs_2g):
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_rate(self, bb_rate_1g_mle, ds2_rate_2g, is_eager):
         """Test rate behavior only."""
-        # TODO
-        is_eager = True
         tf.config.run_functions_eagerly(is_eager)
-
         model = bb_rate_1g_mle
-        # Compile
-        compile_kwargs = {
-            'loss': tf.keras.losses.MeanSquaredError(),
-            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-            'weighted_metrics': [
-                tf.keras.metrics.MeanSquaredError(name='mse')
-            ]
-        }
-        model.compile(**compile_kwargs)
-        call_fit_evaluate_predict(model, ds2_rate_docket_2g, ds2_rate_obs_2g)
+        call_fit_evaluate_predict(model, ds2_rate_2g)
 
 
 class TestMultiBehavior:
     """Test with multiple types of behavior."""
 
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
     def test_rank_rate(
-        self, bb_rank_rate_1g_mle, ds2_rank_rate_docket_2g,
-        ds2_rank_rate_obs_2g
+        self, bb_rank_rate_1g_mle, ds2_rank_rate_2g, is_eager
     ):
         """Test rank and rate."""
-        is_eager = True  # TODO
         tf.config.run_functions_eagerly(is_eager)
-
         model = bb_rank_rate_1g_mle
-        # Compile
-        compile_kwargs = {
-            'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-            'loss': {
-                'rank_branch': tf.keras.losses.CategoricalCrossentropy(
-                    name='rank_loss'
-                ),
-                'rate_branch': tf.keras.losses.MeanSquaredError(
-                    name='rate_loss'
-                ),
-            },
-            'loss_weights': {'rank_branch': 1.0, 'rate_branch': 1.0},
-        }
-        model.compile(**compile_kwargs)
-        # TODO one docket and one obs.
-        call_fit_evaluate_predict(
-            model, ds2_rank_rate_obs_2g, ds2_rank_rate_obs_2g
-        )
+        call_fit_evaluate_predict(model, ds2_rank_rate_2g)
+
+
+class TestCategorizeSequences:
+    """Test with sequence inputs and RNN cell."""
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_categorize_sequence(
+        self, bb_categorize_1g_1g_mle, ds2_categorize_2g, is_eager
+    ):
+        """Test MLE, one group."""
+        tf.config.run_functions_eagerly(is_eager)
+        model = bb_categorize_1g_1g_mle
+        ds_obs = ds2_categorize_2g
+        call_fit_evaluate_predict(model, ds_obs)

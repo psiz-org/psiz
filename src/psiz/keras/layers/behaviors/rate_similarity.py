@@ -74,9 +74,15 @@ class RateSimilarity(Behavior):
         super(RateSimilarity, self).__init__(**kwargs)
         self.kernel = kernel
 
-        # Handle layer switches for GroupsMixin.
+        # Satisfy `GroupsMixin` contract.
         self._pass_groups['kernel'] = self.check_supports_groups(kernel)
         self.supports_groups = True
+
+        # Satisfy RNNCell contract.  TODO
+        self.state_size = [
+            tf.TensorShape([2]),
+            tf.TensorShape([2, 2])
+        ]
 
         self.lower_trainable = lower_trainable
         if lower_initializer is None:
@@ -120,7 +126,7 @@ class RateSimilarity(Behavior):
             trainable=self.rate_trainable, name="rate", dtype=K.floatx(),
         )
 
-    def on_kernel_begin(self, z):
+    def _split_stimulus_set(self, z):
         """Call at the start of kernel operation.
 
         Args:
@@ -145,7 +151,7 @@ class RateSimilarity(Behavior):
         z_1 = z[:, :, 1]
         return z_0, z_1
 
-    def call(self, inputs):
+    def call(self, inputs, states):
         """Return predicted rating of a trial.
 
         Args:
@@ -167,7 +173,7 @@ class RateSimilarity(Behavior):
         z = inputs[1]
 
         # Prep retrieved embeddings for kernel op based on behavior.
-        z_q, z_r = self.on_kernel_begin(z)
+        z_q, z_r = self._split_stimulus_set(z)
 
         if self._pass_groups['kernel']:
             groups = inputs[-1]
@@ -180,9 +186,13 @@ class RateSimilarity(Behavior):
             1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint))
         )
 
+        # TODO temporary hack
+        if tf.rank(prob) > 2:
+            prob = prob[:, :, 0]
+
         # Add singleton trailing dimension since MSE assumes rank-2 Tensors.
-        prob = tf.expand_dims(prob, axis=-1)
-        return prob
+        # prob = tf.expand_dims(prob, axis=-1) TODO, not sure if this is necessary anymore since we have timestep version
+        return prob, states
 
     def get_config(self):
         """Return layer configuration."""

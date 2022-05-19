@@ -22,7 +22,7 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.python.keras import backend as K
 
 from psiz.trials.experimental.outcomes.outcome import Outcome
 from psiz.trials.experimental.unravel_timestep import unravel_timestep

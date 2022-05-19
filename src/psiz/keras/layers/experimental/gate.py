@@ -87,6 +87,14 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
                 provided, the length must agree with the number of
                 subnets.
 
+            TODO add docs on how _has_timestep_axis is determined
+            Add pointer in subclasses BranchGate and BraidGate
+            "To see more on how a potential timestep axis is handled, see
+            `Gate`.
+            has_timestep_axis=False,
+            has_timestep_axis (optional): Beolean indicating if second
+                axis should be interpretted as a timestep axis.
+
         Raises:
             ValueError if subnetwork's non-batch output shape is not
             fully defined.
@@ -129,6 +137,9 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         else:
             self._groups_are_indices = True
 
+        # Handle timestep axis attributes.
+        self._has_timestep_axis = None
+
     def _process_subnet(self, subnet, pass_groups, strip_inputs):
         """Process subnet.
 
@@ -164,6 +175,11 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
     def _process_groups(self, groups):
         """Process `groups` inputs.
 
+        The `tf.gather` op is on the last axis because groups may have:
+            shape=(batch_size, k) or
+            shape=(batch_size, n_timestep, k)
+        In either case, the "group" axis is the last axis.
+
         Args:
             groups: A float Tensor.
 
@@ -172,12 +188,12 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
 
         """
         if self._groups_are_indices:
-            idx_group = groups[:, self.groups_subset]
+            idx_group = tf.gather(groups, self.groups_subset, axis=-1)
             gates = tf.one_hot(
                 idx_group, self.n_subnet, on_value=1.0, off_value=0.0
             )
         else:
-            gates = tf.gather(groups, self.groups_subset, axis=1)
+            gates = tf.gather(groups, self.groups_subset, axis=-1)
         return gates
 
     @property
@@ -189,6 +205,13 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
+        # Determine if input has timestep axis.
+        groups_shape = input_shape[-1]
+        if groups_shape.rank == 3:
+            self._has_timestep_axis = True
+        else:
+            self._has_timestep_axis = False
+
         # Build subnets.
         for subnet in self._processed_subnets:
             subnet.build(input_shape)

@@ -84,12 +84,14 @@ class BranchGate(Gate):
         gates = self._process_groups(inputs[self.inputs_group_idx])
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
-        dispatcher = SparseDispatcher(self.n_subnet, gates)
+        dispatcher = SparseDispatcher(
+            self.n_subnet, gates, has_timestep_axis=self._has_timestep_axis
+        )
         subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
         subnet_outputs = {}
 
         for i in range(self.n_subnet):
-            out = self._processed_subnets[i](subnet_inputs[i])
+            out = self._processed_subnets[i](tuple(subnet_inputs[i]))  # TODO
             subnet_outputs[self.output_names[i]] = out
 
         return subnet_outputs

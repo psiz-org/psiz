@@ -54,23 +54,23 @@ def kernel_db_static_v1():
     return kernel
 
 
-def test_call_v0(paired_inputs_v1, group_v0, kernel_db_static_v0):
+def test_call_v0(paired_inputs_v1, groups_v0, kernel_db_static_v0):
     """Test call."""
     inputs_0 = paired_inputs_v1[0]
     inputs_1 = paired_inputs_v1[1]
     kernel = kernel_db_static_v0
-    outputs = kernel([inputs_0, inputs_1, group_v0])
+    outputs = kernel([inputs_0, inputs_1, groups_v0])
 
     # Since weights are randomly initialized just check shapes.
     assert outputs.shape == tf.TensorShape([5])
 
 
-def test_call_v1(paired_inputs_v1, group_v0, kernel_db_static_v1):
+def test_call_v1(paired_inputs_v1, groups_v0, kernel_db_static_v1):
     """Test call."""
     inputs_0 = paired_inputs_v1[0]
     inputs_1 = paired_inputs_v1[1]
     kernel = kernel_db_static_v1
-    outputs = kernel([inputs_0, inputs_1, group_v0])
+    outputs = kernel([inputs_0, inputs_1, groups_v0])
 
     desired_outputs = np.array([
         0.18692121,
@@ -85,7 +85,7 @@ def test_call_v1(paired_inputs_v1, group_v0, kernel_db_static_v1):
 
 
 def test_coompute_output_shape(
-        paired_inputs_v0, group_v0, kernel_db_static_v0):
+        paired_inputs_v0, groups_v0, kernel_db_static_v0):
     """Test compute_output_shape method."""
     inputs_0 = paired_inputs_v0[0]
     inputs_1 = paired_inputs_v0[1]
@@ -93,7 +93,7 @@ def test_coompute_output_shape(
 
     input_shape_0 = tf.shape(inputs_0).numpy().tolist()
     input_shape_1 = tf.shape(inputs_1).numpy().tolist()
-    group_shape = tf.shape(group_v0).numpy().tolist()
+    group_shape = tf.shape(groups_v0).numpy().tolist()
     input_shape = [input_shape_0, input_shape_1, group_shape]
 
     output_shape = kernel.compute_output_shape(input_shape)

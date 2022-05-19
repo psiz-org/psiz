@@ -24,12 +24,14 @@ import h5py
 from importlib.metadata import version
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.python.keras import backend as K
 
 from psiz.trials.experimental.contents.rank_similarity import RankSimilarity
 from psiz.trials.experimental.contents.rate_similarity import RateSimilarity
 from psiz.trials.experimental.outcomes.continuous import Continuous
-from psiz.trials.experimental.outcomes.sparse_categorical import SparseCategorical
+from psiz.trials.experimental.outcomes.sparse_categorical import (
+    SparseCategorical
+)
 from psiz.trials.experimental.unravel_timestep import unravel_timestep
 
 
@@ -216,13 +218,13 @@ class TrialDataset(object):
         return stacked
 
     def subset(self, idx):
-        """Return subset of trials as a new RankObservations object.
+        """Return subset of sequences as a new TrialDataset object.
 
         Args:
             idx: The indices corresponding to the subset.
 
         Returns:
-            A new RankObservations object.
+            A new TrialDataset object.
 
         """
         content_sub = self.content.subset(idx)

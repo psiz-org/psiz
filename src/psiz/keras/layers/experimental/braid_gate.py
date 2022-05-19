@@ -40,7 +40,7 @@ class BraidGate(Gate):
     output a single tensor. The final output shape must be the same for
     all subnetworks.
 
-    For more information see: `psiz.keras.layers.Gate`
+    For more information see `psiz.keras.layers.Gate`
 
     """
     def __init__(
@@ -77,18 +77,27 @@ class BraidGate(Gate):
         gates = self._process_groups(inputs[self.inputs_group_idx])
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
-        dispatcher = SparseDispatcher(self.n_subnet, gates)
-        subnet_inputs = dispatcher.dispatch_multi(inputs)
+        dispatcher = SparseDispatcher(
+            self.n_subnet, gates, has_timestep_axis=self._has_timestep_axis
+        )
+        subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
         subnet_outputs = []
         for i in range(self.n_subnet):
-            out = self._processed_subnets[i](subnet_inputs[i])
-            out, lost_shape = self._pre_combine(out)
+            out = self._processed_subnets[i](tuple(subnet_inputs[i]))
+            # TODO trying without reshape since every expert has full shape
+            # out, lost_shape = self._pre_combine(out)
+            out, lost_shape = self._pre_combine_2(out)
+            # Weight by gates.
+            if self._has_timestep_axis:
+                out = out * tf.expand_dims(gates[:, :, i], axis=2)
+            else:
+                out = out * tf.expand_dims(gates[:, i], axis=1)
             subnet_outputs.append(out)
 
-        outputs = dispatcher.combine(subnet_outputs, multiply_by_gates=True)
+        outputs = tf.math.add_n(subnet_outputs)
 
         # Handle reshaping of output.
-        outputs = self._post_combine(outputs, lost_shape)
+        outputs = tf.reshape(outputs, lost_shape)
 
         return outputs
 
@@ -114,6 +123,33 @@ class BraidGate(Gate):
             x, [x_shape[0], tf.reduce_prod(lost_shape)]
         )
         return x, lost_shape
+
+    def _pre_combine_2(self, x):
+        """Prepare Tensor for combine operation.
+
+        All non-batch dimensions must be flattened together to create a
+        final 2D Tensor.
+
+        Args:
+            x: Data Tensor.
+
+        Returns:
+            x: Transformed data Tensor.
+            lost_shape: A tensor recording the shape lost during
+                reshape.
+
+        """
+        # Flatten non-batch dimensions.
+        x_shape = tf.shape(x)
+        if self._has_timestep_axis:
+            x = tf.reshape(
+                x, [x_shape[0], x_shape[1], -1]
+            )
+        else:
+            x = tf.reshape(
+                x, [x_shape[0], -1]
+            )
+        return x, x_shape
 
     def _post_combine(self, x, lost_shape):
         """Handle post-combine operations."""

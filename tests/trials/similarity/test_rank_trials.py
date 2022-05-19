@@ -410,10 +410,6 @@ class TestRankDocket:
                 (16, 17, 18)
             )
         )
-        # TODO
-        # with pytest.raises(Exception) as e_info:
-        #     trials.RankDocket(stimulus_set)
-        # assert e_info.type == ValueError
         with pytest.warns(Warning):
             trials.RankDocket(stimulus_set)
 
@@ -454,10 +450,6 @@ class TestRankDocket:
                 (4, 5, 6, 7, 14, 15, 16, 17, 18)
             )
         )
-        # TODO
-        # with pytest.raises(Exception) as e_info:
-        #     trials.RankDocket(stimulus_set, mask_zero=True)
-        # assert e_info.type == ValueError
         with pytest.warns(Warning):
             trials.RankDocket(stimulus_set, mask_zero=True)
 
@@ -707,10 +699,6 @@ class TestRankObservations:
             (4, 5, 6),
             (16, 17, 18)
         ))
-        # TODO
-        # with pytest.raises(Exception) as e_info:
-        #     trials.RankObservations(stimulus_set)
-        # assert e_info.type == ValueError
         with pytest.warns(Warning):
             trials.RankObservations(stimulus_set)
 

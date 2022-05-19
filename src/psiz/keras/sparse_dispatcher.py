@@ -15,6 +15,7 @@
 #
 # Modified by The PsiZ Authors (2021). Updated to use TensorFlow 2.x modules
 # (e.g., tf.math). Removed dependency on external module (common_layers).
+# Updated to handle timestep axis.
 #
 # Copyright 2021 The PsiZ Authors. All Rights Reserved.
 #
@@ -113,18 +114,27 @@ class SparseDispatcher():
 
     """
 
-    def __init__(self, num_experts, gates):
+    def __init__(self, num_experts, gates, has_timestep_axis=False):
         """Create a SparseDispatcher.
 
         Args:
             num_experts: an integer.
-            gates: a `Tensor` of shape `[batch_size, num_experts]`.
+            gates: A `Tensor` of:
+                shape=(batch_size, num_experts) or
+                shape=(batch_size, n_timestep, num_experts)
+            has_timestep_axis (optional): Beolean indicating if second
+                axis should be interpretted as a timestep axis.
 
         Returns:
             a SparseDispatcher
 
         """
-        self._gates = gates
+        if has_timestep_axis:
+            self._has_timestep_axis = True
+            self._gates = tf.reshape(gates, [-1, num_experts])
+        else:
+            self._has_timestep_axis = False
+            self._gates = gates
         self._num_experts = num_experts
 
         # Determine locations of nonzero values of `gates`. Structure
@@ -132,8 +142,7 @@ class SparseDispatcher():
         # where the first column is the expert index and the second column
         # is an index in to the minibatch position.
         where = tf.cast(
-            tf.where(tf.transpose(gates) > 0),
-            tf.int32
+            tf.where(tf.transpose(self._gates) > 0), tf.int32
         )
 
         # Split `where` Tensor into two separate columns.
@@ -143,7 +152,7 @@ class SparseDispatcher():
 
         # Determine minibatch sizes for each expert.
         self._part_sizes_tensor = tf.reduce_sum(
-            tf.cast(gates > 0, tf.int32), [0]
+            tf.cast(self._gates > 0, tf.int32), [0]
         )
 
         # Grab nonzero gate values (in the same order as `where`).
@@ -172,6 +181,8 @@ class SparseDispatcher():
         return tf.split(inputs, self._part_sizes_tensor, 0)
 
     # @add_name_scope()
+    # TODO delete or refactor as private method that handles non-timestep
+    # version.
     def dispatch_multi(self, inputs):
         """Create inputs for each expert.
 
@@ -236,19 +247,42 @@ class SparseDispatcher():
         # Loop over inputs, creating expert-specific list of `inputs`.
         for inp in inputs:
             inp_shape = tf.shape(inp)
-            inp = tf.gather(inp, self._batch_index, axis=0)
-            inp = tf.split(inp, self._part_sizes_tensor, 0)
-            for i_expert in range(self._num_experts):
-                inp_expert = tf.scatter_nd(
-                    indices=indices[i_expert],
-                    updates=inp[i_expert],
-                    shape=inp_shape
+            if self._has_timestep_axis:
+                # Combine batch and timestep axis via `reshape`.
+                inp2 = tf.reshape(
+                    inp, tf.concat([[-1], inp_shape[2:]], axis=0)
                 )
-                expert_list[i_expert].append(inp_expert)
+                inp2_shape = tf.shape(inp2)
+                # Sort/replicate inputs for splitting.
+                inp2 = tf.gather(inp2, self._batch_index, axis=0)
+                # Split inputs for experts.
+                inp2 = tf.split(inp2, self._part_sizes_tensor, 0)
+                for i_expert in range(self._num_experts):
+                    # Perform scatter update in unrolled space.
+                    inp_expert = tf.scatter_nd(
+                        indices=indices[i_expert],
+                        updates=inp2[i_expert],
+                        shape=inp2_shape
+                    )
+                    # Reshape to include timestep axis.
+                    inp_expert = tf.reshape(inp_expert, inp_shape)
+                    expert_list[i_expert].append(inp_expert)
+            else:
+                inp = tf.gather(inp, self._batch_index, axis=0)
+                inp = tf.split(inp, self._part_sizes_tensor, 0)
+                for i_expert in range(self._num_experts):
+                    # Perform scatter update in unrolled space.
+                    inp_expert = tf.scatter_nd(
+                        indices=indices[i_expert],
+                        updates=inp[i_expert],
+                        shape=inp_shape
+                    )
+                    expert_list[i_expert].append(inp_expert)
 
         return expert_list
 
     # @add_name_scope()
+    # TODO delete `combine`?
     def combine(self, expert_out, multiply_by_gates=True):
         """Sum together the expert output, weighted by the gates.
 

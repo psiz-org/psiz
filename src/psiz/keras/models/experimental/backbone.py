@@ -100,15 +100,22 @@ class Backbone(GroupsMixin, Stochastic):
         else:
             z = self.percept(stimulus_set)
         # TensorShape=(batch_size, n_sample, n, [m, ...] n_dim])
+        mask = self.percept.compute_mask(stimulus_set)
+        # TODO HACK need to dynamically figure out how many axes to drop, or
+        # overload `compute_mask`.
+        # mask = mask[:, :, 0, 0, 0]  # for rank
+        mask = mask[:, :, 0]  # for categorize
 
         # Convert remaining `inputs` dictionary to list, preserving order of
         # dictionary.
         inputs_list = self._unpack_inputs(inputs)
 
         if self._pass_groups['behavior']:
-            y_pred = self.behavior((stimulus_set, z, *inputs_list, groups))
+            y_pred = self.behavior(
+                (stimulus_set, z, *inputs_list, groups), mask=mask
+            )
         else:
-            y_pred = self.behavior((stimulus_set, z, *inputs_list))
+            y_pred = self.behavior((stimulus_set, z, *inputs_list), mask=mask)
         return y_pred
 
     def get_config(self):

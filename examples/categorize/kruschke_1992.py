@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
+# ============================================================================
 """Example that reproduces Figure 5 and Figure 14 from Kruschke, 1992.
 
 Results are saved in the directory specified by `fp_project`. By

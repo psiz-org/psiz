@@ -244,6 +244,7 @@ def ds2_categorize_2g():
             [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
         ]
     )
+    # stimulus_set = np.expand_dims(np.expand_dims(stimulus_set, axis=2), axis=3) TODO delete
     y = np.array(
         [
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

@@ -57,7 +57,7 @@ def inputs_single():
 
 
 @pytest.fixture
-def inputs_multi():
+def inputs_list():
     """A minibatch of a list of inputs."""
     # Create a simple batch (batch_size=5).
     inputs_0 = tf.constant(
@@ -107,8 +107,8 @@ def gates_v0_timestep():
 
 
 @pytest.fixture
-def inputs_multi_timestep():
-    """A minibatch of inputs that have a timestep axis."""
+def inputs_list_timestep():
+    """A minibatch of list inputs that have a timestep axis."""
     # Create a simple batch (batch_size=5).
     inputs_0 = tf.constant(
         np.array(
@@ -135,4 +135,74 @@ def inputs_multi_timestep():
     )
 
     inputs = [inputs_0, inputs_1]
+    return inputs
+
+
+@pytest.fixture
+def inputs_dict():
+    """A minibatch of inputs formated as a dictionary."""
+    # Create a simple batch (batch_size=5).
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [0.0, 0.1, 0.2],
+                [1.0, 1.1, 1.2],
+                [2.0, 2.1, 2.2],
+                [3.0, 3.1, 3.2],
+                [4.0, 4.1, 4.2]
+            ], dtype=np.float32
+        )
+    )
+
+    inputs_1 = tf.constant(
+        np.array(
+            [
+                [10.0, 10.1, 10.2],
+                [11.0, 11.1, 11.2],
+                [12.0, 12.1, 12.2],
+                [13.0, 13.1, 13.2],
+                [14.0, 14.1, 14.2]
+            ], dtype=np.float32
+        )
+    )
+
+    inputs = {
+        'inputs_0': inputs_0,
+        'inputs_1': inputs_1
+    }
+    return inputs
+
+
+@pytest.fixture
+def inputs_dict_timestep():
+    """A minibatch of dictionary inputs that have a timestep axis."""
+    # Create a simple batch (batch_size=5).
+    inputs_0 = tf.constant(
+        np.array(
+            [
+                [[0.0, 0.1, 0.2], [0.01, 0.11, 0.21]],
+                [[1.0, 1.1, 1.2], [1.01, 1.11, 1.21]],
+                [[2.0, 2.1, 2.2], [2.01, 2.11, 2.21]],
+                [[3.0, 3.1, 3.2], [3.01, 3.11, 3.21]],
+                [[4.0, 4.1, 4.2], [4.01, 4.11, 4.21]],
+            ], dtype=np.float32
+        )
+    )
+
+    inputs_1 = tf.constant(
+        np.array(
+            [
+                [[10.0, 10.1, 10.2], [10.01, 10.11, 10.21]],
+                [[11.0, 11.1, 11.2], [11.01, 11.11, 11.21]],
+                [[12.0, 12.1, 12.2], [12.01, 12.11, 12.21]],
+                [[13.0, 13.1, 13.2], [13.01, 13.11, 13.21]],
+                [[14.0, 14.1, 14.2], [14.01, 14.11, 14.21]],
+            ], dtype=np.float32
+        )
+    )
+
+    inputs = {
+        'inputs_0': inputs_0,
+        'inputs_1': inputs_1
+    }
     return inputs

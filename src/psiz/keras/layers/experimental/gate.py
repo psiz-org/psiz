@@ -59,7 +59,8 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         Args:
             subnets: A non-empty list of sub-networks. It is assumed
                 that all subnetworks have the same `input_shape` and
-                `output_shape`.
+                `output_shape`. TODO is this still universally True?
+                obviously true for BraidGate, but what about BranchGate
             groups_subset (optional): Integer or list of integers
                 indicating the group column(s) on which to gate inputs
                 to the subnetworks.
@@ -140,6 +141,9 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         # Handle timestep axis attributes.
         self._has_timestep_axis = None
 
+        # Handle inputs information attributes.
+        self._inputs_is_dict = None
+
     def _process_subnet(self, subnet, pass_groups, strip_inputs):
         """Process subnet.
 
@@ -160,6 +164,8 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         if pass_groups:
             return subnet
         else:
+            # TODO do we need special consideration for dictionaries?
+            # TODO does Drop need to accommodate dictionaries?
             return Drop(
                 subnet=subnet, drop_index=self.inputs_group_idx,
                 strip_inputs=strip_inputs
@@ -172,8 +178,8 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         else:
             return subnet
 
-    def _process_groups(self, groups):
-        """Process `groups` inputs.
+    def _process_groups(self, inputs):
+        """Process `groups` part of inputs.
 
         The `tf.gather` op is on the last axis because groups may have:
             shape=(batch_size, k) or
@@ -181,12 +187,18 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         In either case, the "group" axis is the last axis.
 
         Args:
-            groups: A float Tensor.
+            inputs: A data structure of layer inputs, may be a list of
+                Tensors or a single-level dictionary of tensors.
 
         Returns:
             gates: A float Tensor.
 
         """
+        if self._inputs_is_dict:
+            groups = inputs['groups']
+        else:
+            groups = inputs[self.inputs_group_idx]
+
         if self._groups_are_indices:
             idx_group = tf.gather(groups, self.groups_subset, axis=-1)
             gates = tf.one_hot(
@@ -205,8 +217,16 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
+        is_dict = False
+        if isinstance(input_shape, dict):
+            is_dict = True
+        self._inputs_is_dict = is_dict
+
         # Determine if input has timestep axis.
-        groups_shape = input_shape[-1]
+        if self._inputs_is_dict:
+            groups_shape = input_shape['groups']
+        else:
+            groups_shape = input_shape[-1]
         if groups_shape.rank == 3:
             self._has_timestep_axis = True
         else:
@@ -246,6 +266,8 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         config['subnets'] = subnets
         return super().from_config(config)
 
+    # TODO does this need to be moved to BraidGate and BranchGate since, they
+    # have different logic for deducing output shape
     def compute_output_shape(self, input_shape):
         """Computes the output shape of the layer.
 

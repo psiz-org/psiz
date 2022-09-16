@@ -74,7 +74,7 @@ class BraidGate(Gate):
                 groups Tensor: shape=(batch, g)
 
         """
-        gates = self._process_groups(inputs[self.inputs_group_idx])
+        gates = self._process_groups(inputs)
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
         dispatcher = SparseDispatcher(
@@ -83,7 +83,7 @@ class BraidGate(Gate):
         subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
         subnet_outputs = []
         for i in range(self.n_subnet):
-            out = self._processed_subnets[i](tuple(subnet_inputs[i]))
+            out = self._processed_subnets[i](subnet_inputs[i])
             # TODO trying without reshape since every expert has full shape
             # out, lost_shape = self._pre_combine(out)
             out, lost_shape = self._pre_combine_2(out)
@@ -101,6 +101,7 @@ class BraidGate(Gate):
 
         return outputs
 
+    # TODO delete?
     def _pre_combine(self, x):
         """Prepare Tensor for combine operation.
 
@@ -151,6 +152,7 @@ class BraidGate(Gate):
             )
         return x, x_shape
 
+    # TODO delete?
     def _post_combine(self, x, lost_shape):
         """Handle post-combine operations."""
         batch_size = tf.expand_dims(tf.shape(x)[0], axis=0)

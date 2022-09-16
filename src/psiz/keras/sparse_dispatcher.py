@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Modified by The PsiZ Authors (2021). Updated to use TensorFlow 2.x modules
-# (e.g., tf.math). Removed dependency on external module (common_layers).
-# Updated to handle timestep axis.
+# Modified by The PsiZ Authors (2022).
+# - Updated to use TensorFlow 2.x modules (e.g., tf.math).
+# - Removed dependency on external module (common_layers).
+# - Updated to accommodate inputs that are lists of Tensors.
+# - Updated to accommodate inputs that are one-level dictionaries of Tensors.
+# - Updated to acommodate a timestep axis.
 #
-# Copyright 2021 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -163,6 +166,7 @@ class SparseDispatcher():
         )
 
     # @add_name_scope()
+    # TODO can we delete this method?
     def dispatch_single(self, inputs):
         """Create one input Tensor for each expert.
 
@@ -235,8 +239,15 @@ class SparseDispatcher():
                 shape=(batch_size, [n, m, ...])
 
         """
-        # Initialize empty list for each expert.
-        expert_list = [[] for _ in range(self._num_experts)]
+        inputs_is_dict = False
+        if isinstance(inputs, dict):
+            inputs_is_dict = True
+
+        # Initialize empty data structure for each expert (dictionary or list).
+        if inputs_is_dict:
+            expert_list = [{} for _ in range(self._num_experts)]
+        else:
+            expert_list = [[] for _ in range(self._num_experts)]
 
         # Create indices that track original batch location of inputs
         # for later `scatter_nd` update.
@@ -246,6 +257,9 @@ class SparseDispatcher():
 
         # Loop over inputs, creating expert-specific list of `inputs`.
         for inp in inputs:
+            if inputs_is_dict:
+                key = inp
+                inp = inputs[key]
             inp_shape = tf.shape(inp)
             if self._has_timestep_axis:
                 # Combine batch and timestep axis via `reshape`.
@@ -266,7 +280,10 @@ class SparseDispatcher():
                     )
                     # Reshape to include timestep axis.
                     inp_expert = tf.reshape(inp_expert, inp_shape)
-                    expert_list[i_expert].append(inp_expert)
+                    if inputs_is_dict:
+                        expert_list[i_expert][key] = inp_expert
+                    else:
+                        expert_list[i_expert].append(inp_expert)
             else:
                 inp = tf.gather(inp, self._batch_index, axis=0)
                 inp = tf.split(inp, self._part_sizes_tensor, 0)
@@ -277,12 +294,22 @@ class SparseDispatcher():
                         updates=inp[i_expert],
                         shape=inp_shape
                     )
-                    expert_list[i_expert].append(inp_expert)
+                    if inputs_is_dict:
+                        expert_list[i_expert][key] = inp_expert
+                    else:
+                        expert_list[i_expert].append(inp_expert)
+
+        # Convert list to tuple so some TF layers don't freak out.
+        # TODO is this still necessary?
+        if not inputs_is_dict:
+            for i_expert in range(self._num_experts):
+                expert_list[i_expert] = tuple(expert_list[i_expert])
 
         return expert_list
 
     # @add_name_scope()
-    # TODO delete `combine`?
+    # TODO delete `combine`? bc no longer have mismatched batch lenght that
+    # requires sophisticated stitching.
     def combine(self, expert_out, multiply_by_gates=True):
         """Sum together the expert output, weighted by the gates.
 

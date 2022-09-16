@@ -93,12 +93,6 @@ def build_model(
         beta=None, lr_attention=None, lr_association=None, temperature=None,
         feature_matrix=None):
     """Build model for Kruschke simulation experiments."""
-    percept = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True,
-        embeddings_initializer=tf.keras.initializers.Constant(feature_matrix),
-        trainable=False,
-    )
-
     similarity = psiz.keras.layers.ExponentialSimilarity(
         beta_initializer=tf.keras.initializers.Constant(beta),
         tau_initializer=tf.keras.initializers.Constant(tau),
@@ -110,8 +104,8 @@ def build_model(
         embeddings_initializer=tf.keras.initializers.Constant(feature_matrix),
         trainable=False,
     )
-    cell = psiz.keras.layers.ALCOVECell(
-        n_output, embedding=alcove_embedding, similarity=similarity,
+    cell = psiz.keras.layers.ALCOVECellV2(
+        n_output, percept=alcove_embedding, similarity=similarity,
         rho_initializer=tf.keras.initializers.Constant(rho),
         temperature_initializer=tf.keras.initializers.Constant(temperature),
         lr_attention_initializer=tf.keras.initializers.Constant(lr_attention),
@@ -124,7 +118,7 @@ def build_model(
         cell, return_sequences=True, stateful=False
     )
 
-    model = psiz.keras.models.Backbone(percept=percept, behavior=categorize)
+    model = psiz.keras.models.BackboneV2(net=categorize)
 
     # Compile model.
     compile_kwargs = {

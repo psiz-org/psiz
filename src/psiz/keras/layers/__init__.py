@@ -16,7 +16,7 @@
 """Keras layers initialization file."""
 
 from psiz.keras.layers.drop import Drop
-from psiz.keras.layers.groups import GroupsMixin
+from psiz.keras.layers.groups_mixin import GroupsMixin
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
 from psiz.keras.layers.behaviors.alcove_cell_v2 import ALCOVECellV2

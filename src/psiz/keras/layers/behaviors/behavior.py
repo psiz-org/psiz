@@ -22,7 +22,7 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.groups import GroupsMixin
+from psiz.keras.layers.groups_mixin import GroupsMixin
 
 
 class Behavior(GroupsMixin, tf.keras.layers.Layer):

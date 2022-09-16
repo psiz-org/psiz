@@ -26,7 +26,7 @@ from importlib.metadata import version
 import tensorflow as tf
 
 from psiz.keras.models.experimental.stochastic import Stochastic
-from psiz.keras.layers.groups import GroupsMixin
+from psiz.keras.layers.groups_mixin import GroupsMixin
 from psiz.utils import expand_dim_repeat
 
 

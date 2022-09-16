@@ -36,11 +36,11 @@ from psiz.keras.layers.embeddings.shared import EmbeddingShared
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag
 from psiz.keras.layers.embeddings.variational import EmbeddingVariational
-from psiz.keras.layers.experimental.gate import Gate
-from psiz.keras.layers.experimental.braid_gate import BraidGate
-from psiz.keras.layers.experimental.branch_gate import BranchGate
 from psiz.keras.layers.experimental.drop import Drop
 from psiz.keras.layers.experimental.groups import GroupsMixin
+from psiz.keras.layers.gates.gate import Gate
+from psiz.keras.layers.gates.braid_gate import BraidGate
+from psiz.keras.layers.gates.branch_gate import BranchGate
 from psiz.keras.layers.kernels.distance_based import DistanceBased
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
 from psiz.keras.layers.similarities.heavy_tailed import HeavyTailedSimilarity
@@ -60,7 +60,10 @@ __all__ = [
     'EmbeddingLogitNormalDiag', 'EmbeddingNormalDiag', 'EmbeddingShared',
     'StochasticEmbedding', 'EmbeddingTruncatedNormalDiag',
     'EmbeddingVariational',
-    'Gate', 'Drop', 'BraidGate', 'BranchGate', 'GroupsMixin',
+    'Gate',
+    'BraidGate',
+    'BranchGate',
+    'Drop', 'GroupsMixin',
     'DistanceBased', 'ExponentialSimilarity', 'HeavyTailedSimilarity',
     'InverseSimilarity', 'StudentsTSimilarity', 'Variational'
 ]

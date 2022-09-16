@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+from psiz.keras.layers.groups_mixin import GroupsMixin
 from psiz.keras.layers.gates.branch_gate import BranchGate
 
 
@@ -66,14 +67,13 @@ class Select(tf.keras.layers.Layer):
         return inputs[:, self.index]
 
 
-class IncrementDict(tf.keras.layers.Layer):
+class IncrementDict(GroupsMixin, tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(IncrementDict, self).__init__(**kwargs)
         self.v = tf.constant(v)
-        self.supports_groups = True
 
     def call(self, inputs):
         """Call."""
@@ -81,14 +81,13 @@ class IncrementDict(tf.keras.layers.Layer):
 
 
 # Copied from test_sparse_dispatcher:AddPairsDict.
-class AddPairsDict(tf.keras.layers.Layer):
+class AddPairsDict(GroupsMixin, tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(AddPairsDict, self).__init__(**kwargs)
         self.v = tf.constant(v)
-        self.supports_groups = True
 
     def call(self, inputs):
         """Call."""

@@ -76,7 +76,6 @@ class RateSimilarity(Behavior):
 
         # Satisfy `GroupsMixin` contract.
         self._pass_groups['kernel'] = self.check_supports_groups(kernel)
-        self.supports_groups = True
 
         # Satisfy RNNCell contract.  TODO
         self.state_size = [

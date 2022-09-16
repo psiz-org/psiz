@@ -25,7 +25,7 @@ import tensorflow as tf
 
 
 class GroupsMixin():
-    """A multiple inheritance mixin for layers that support gating."""
+    """A mixin for layers that support `groups` input."""
 
     def __init__(self, *args, **kwargs):
         """Initialize.
@@ -34,17 +34,15 @@ class GroupsMixin():
 
         """
         super().__init__(*args, **kwargs)
-        self.supports_groups = False
+        self.supports_groups = True
         self.inputs_group_idx = -1
 
     def check_supports_groups(self, layer):
         """Check if layer supports groups."""
-        # friendly_list = [
-        #     tf.keras.layers.RNN,
-        # ]
         # Check if implements `GroupsMixin`.
         if hasattr(layer, 'supports_groups'):
             return layer.supports_groups
+
         # Check RNN cell.
         elif isinstance(layer, tf.keras.layers.RNN):
             return self.check_supports_groups(layer.cell)

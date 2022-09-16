@@ -102,7 +102,6 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
 
         """
         super(Gate, self).__init__(**kwargs)
-        self.supports_groups = True
 
         self.n_subnet = len(subnets)
 

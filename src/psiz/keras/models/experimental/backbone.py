@@ -60,13 +60,12 @@ class Backbone(GroupsMixin, Stochastic):
 
         """
         super().__init__(n_sample=n_sample, **kwargs)
-        self.supports_groups = True
 
         # Assign layers.
         self.percept = percept
         self.behavior = behavior
 
-        # Handle module switches.
+        # Satisfy GroupsMixin contract.
         self._pass_groups = {
             'percept': self.check_supports_groups(percept),
             'behavior': self.check_supports_groups(behavior)

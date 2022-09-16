@@ -29,10 +29,11 @@ class Behavior(GroupsMixin, tf.keras.layers.Layer):
     """An abstract behavior layer.
 
     Sub-classes of this layer are responsible for three things:
-    1) set `self.supports_groups = True` if the layer supports `groups`.
+    1) Set `self.supports_groups = False` if the layer does not
+    support `groups` input.
     2) For each layer, set `self._pass_groups[<layer variable>]`. For
     example, if a layer named `kernel` is provided:
-    3) Implementing a `call` method that routes inputs by using
+    3) Implement a `call` method that routes inputs by using
     appropriate `self._pass_groups`.
 
     `self._pass_groups['kernel'] = self.check_supports_groups(kernel)`

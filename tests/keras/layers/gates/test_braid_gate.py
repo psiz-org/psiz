@@ -27,6 +27,7 @@ from psiz.keras.layers import BraidGate
 from psiz.keras.layers import Minkowski
 from psiz.keras.layers import MinkowskiStochastic
 from psiz.keras.layers import MinkowskiVariational
+from psiz.keras.layers.groups_mixin import GroupsMixin
 
 
 def build_vi_kernel(similarity, n_dim, kl_weight):
@@ -84,14 +85,13 @@ class AddPairs(tf.keras.layers.Layer):
 
 
 # Copied from test_sparse_dispatcher:AddPairsDict.
-class AddPairsDict(tf.keras.layers.Layer):
+class AddPairsDict(GroupsMixin, tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(AddPairsDict, self).__init__(**kwargs)
         self.v = tf.constant(v)
-        self.supports_groups = True
 
     def call(self, inputs):
         """Call."""

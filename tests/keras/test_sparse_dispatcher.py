@@ -17,6 +17,7 @@
 
 import tensorflow as tf
 
+from psiz.keras.layers.groups_mixin import GroupsMixin
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 
@@ -46,14 +47,13 @@ class AddPairs(tf.keras.layers.Layer):
         return inputs[0] + inputs[1] + self.v
 
 
-class AddPairsDict(tf.keras.layers.Layer):
+class AddPairsDict(GroupsMixin, tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(AddPairsDict, self).__init__(**kwargs)
         self.v = tf.constant(v)
-        self.supports_groups = True
 
     def call(self, inputs):
         """Call."""

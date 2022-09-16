@@ -23,8 +23,8 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.experimental.drop import Drop
-from psiz.keras.layers.experimental.groups import GroupsMixin
+from psiz.keras.layers.drop import Drop
+from psiz.keras.layers.groups import GroupsMixin
 
 
 @tf.keras.utils.register_keras_serializable(

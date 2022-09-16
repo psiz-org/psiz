@@ -24,7 +24,7 @@ Classes:
 import tensorflow as tf
 
 from psiz.keras.sparse_dispatcher import SparseDispatcher
-from psiz.keras.layers.experimental.gate import Gate
+from psiz.keras.layers.gates.gate import Gate
 
 
 @tf.keras.utils.register_keras_serializable(

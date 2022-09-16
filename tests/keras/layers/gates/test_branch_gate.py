@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.keras.layers.experimental.branch_gate import BranchGate
+from psiz.keras.layers.gates.branch_gate import BranchGate
 
 
 # Copied from test_sparse_dispatcher:Increment.

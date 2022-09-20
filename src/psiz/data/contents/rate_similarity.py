@@ -202,7 +202,9 @@ class RateSimilarity(Content):
             if timestep is False:
                 stimulus_set = unravel_timestep(stimulus_set)
             x = {
-                'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32)
+                'rate_similarity_stimulus_set': tf.constant(
+                    stimulus_set, dtype=tf.int32
+                )
             }
         else:
             raise ValueError(

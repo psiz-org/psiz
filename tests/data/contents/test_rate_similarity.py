@@ -285,7 +285,9 @@ def test_export_0(rate_sim_3):
             ]
         ], dtype=np.int32
     )
-    tf.debugging.assert_equal(desired_stimulus_set, x['stimulus_set'])
+    tf.debugging.assert_equal(
+        desired_stimulus_set, x['rate_similarity_stimulus_set']
+    )
 
 
 def test_export_1(rate_sim_3):
@@ -307,7 +309,9 @@ def test_export_1(rate_sim_3):
             [3, 4]
         ], dtype=np.int32
     )
-    tf.debugging.assert_equal(desired_stimulus_set, x['stimulus_set'])
+    tf.debugging.assert_equal(
+        desired_stimulus_set, x['rate_similarity_stimulus_set']
+    )
 
 
 def test_export_wrong(rate_sim_3):

@@ -466,8 +466,12 @@ class RankSimilarity(Content):
                 stimulus_set = unravel_timestep(stimulus_set)
                 is_select = unravel_timestep(is_select)
             x = {
-                'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
-                'is_select': tf.constant(is_select, dtype=tf.bool)
+                'rank_similarity_stimulus_set': tf.constant(
+                    stimulus_set, dtype=tf.int32
+                ),
+                'rank_similarity_is_select': tf.constant(
+                    is_select, dtype=tf.bool
+                )
             }
         else:
             raise ValueError(

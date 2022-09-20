@@ -656,8 +656,12 @@ def test_export_0(rank_sim_4):
         ),
         dtype=tf.bool
     )
-    tf.debugging.assert_equal(desired_stimulus_set, x['stimulus_set'])
-    tf.debugging.assert_equal(desired_is_select, x['is_select'])
+    tf.debugging.assert_equal(
+            desired_stimulus_set, x['rank_similarity_stimulus_set']
+    )
+    tf.debugging.assert_equal(
+        desired_is_select, x['rank_similarity_is_select']
+    )
 
 
 def test_export_1(rank_sim_4):
@@ -726,8 +730,12 @@ def test_export_1(rank_sim_4):
         ),
         dtype=tf.bool
     )
-    tf.debugging.assert_equal(desired_stimulus_set, x['stimulus_set'])
-    tf.debugging.assert_equal(desired_is_select, x['is_select'])
+    tf.debugging.assert_equal(
+        desired_stimulus_set, x['rank_similarity_stimulus_set']
+    )
+    tf.debugging.assert_equal(
+        desired_is_select, x['rank_similarity_is_select']
+    )
 
 
 def test_export_wrong(rank_sim_4):

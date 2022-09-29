@@ -40,7 +40,7 @@ class EmbeddingVariational(Variational):
         """
         super(EmbeddingVariational, self).__init__(**kwargs)
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         """Call."""
         # Run forward pass through variational posterior layer.
         outputs = self.posterior(inputs)

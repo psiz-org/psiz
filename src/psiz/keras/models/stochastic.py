@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of PsiZ models.
+"""Module of models.
 
 Classes:
     Stochastic:  An abstract Keras model that accomodates stochastic
-        layers.
+        layers via a "sample axis".
 
 """
 
+import copy
 import warnings
 
 import tensorflow as tf
@@ -30,8 +31,8 @@ from tensorflow.python.eager import backprop
 class Stochastic(tf.keras.Model):
     """An abstract Keras model that accomodates stochastic layers.
 
-    These models assume that the `call` method returns a Tensor or
-    dictionary of Tensors where each Tensor has a "sample" axis, that
+    The model assume that the `call` method returns a Tensor or
+    dictionary of Tensors where each Tensor has a "sample axis", that
     represents `n_sample` samples. In `train_step` and `test_step`, the
     "sample" axis is combined with the "batch" axis to compute a
     batch-and-sample loss.
@@ -41,16 +42,29 @@ class Stochastic(tf.keras.Model):
         n_sample: Integer indicating the number of samples to draw for
             stochastic layers. Only useful if using stochastic layers
             (e.g., variational models).
+        inputs_to_ignore: List indicating which keys to ignore (if
+            the inputs are structured as a dictionary).
 
     """
 
-    def __init__(self, n_sample=1, **kwargs):
+    def __init__(
+            self, sample_axis=None, n_sample=1, inputs_to_ignore=None,
+            **kwargs):
         """Initialize.
 
         Args:
-            n_sample (optional): Integer indicating the number of
-                samples to draw for stochastic layers. Only useful if
-                using stochastic layers (e.g., variational models).
+            sample_axis: Integer indicating which axis in the Tensor
+                will serve as the "sample axis". Valid values are `1`
+                or `2`.
+            n_sample (optional): A positive integer indicating the
+                number of samples that will appear in the `sample_axis`
+                of the output(s). Only useful if using stochastic
+                layers (e.g., variational models).
+            inputs_to_ignore (optional): A list of strings that
+                indicate which key values should be ignored if `inputs`
+                is a dictionary. If ignored, a sample axis is not
+                added for that particular input key. By default, no
+                keys are ignored.
             kwargs:  Additional key-word arguments.
 
         Raises:
@@ -58,8 +72,27 @@ class Stochastic(tf.keras.Model):
 
         """
         super().__init__(**kwargs)
-        self._sample_axis = 2
-        self._n_sample = n_sample
+
+        if sample_axis is None:
+            raise TypeError(
+                'You must provide an integer (1 or 2) indicating the '
+                '`sample_axis`.'
+            )
+        if sample_axis not in [1, 2]:
+            raise ValueError(
+                'The `sample_axis` must be 1 or 2.'
+            )
+        self._sample_axis = int(sample_axis)
+        self._n_sample = int(n_sample)
+
+        if inputs_to_ignore is None:
+            self.inputs_to_ignore = []
+        else:
+            self.inputs_to_ignore = inputs_to_ignore
+
+    def build(self, input_shape):
+        """Build."""
+        self._set_stochastic_mixin(self.layers)
 
     @property
     def sample_axis(self):
@@ -69,9 +102,26 @@ class Stochastic(tf.keras.Model):
     def n_sample(self):
         return self._n_sample
 
+    # NOTE: There is no setter for `sample_axis` because (in general) the
+    # model cannot be safely changed after instantiation. The layers may
+    # make assumptions about the location of the `sample_axis`.
+
     @n_sample.setter
     def n_sample(self, n_sample):
-        self._n_sample = n_sample
+        n_sample = int(n_sample)
+        if n_sample != self._n_sample:
+            self._n_sample = n_sample
+            # Propogate change to children.
+            self._set_stochastic_mixin(self.layers)
+
+    def __call__(self, inputs, training=None, mask=None):
+        """Call method."""
+        # Adjust `x` to include a singleton `sample_axis`.
+        copied_inputs = copy.copy(inputs)
+        copied_inputs = self._add_singleton_sample_axis_to_inputs(
+            copied_inputs
+        )
+        return super().__call__(copied_inputs, training=training)
 
     def train_step(self, data):
         """Logic for one training step.
@@ -87,6 +137,7 @@ class Stochastic(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        # NOTE: `x` sample axis is added in Model's __call__ method.
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = self._repeat_samples_in_batch_axis(y)
@@ -153,6 +204,7 @@ class Stochastic(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        # NOTE: `x` sample axis is added in Model's __call__ method.
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = self._repeat_samples_in_batch_axis(y)
@@ -184,6 +236,7 @@ class Stochastic(tf.keras.Model):
 
         """
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        # NOTE: `x` sample axis is added in Model's __call__ method.
         y_pred = self(x, training=False)
         # For prediction, we simply average over the sample axis.
         y_pred = self._mean_of_sample_axis(y_pred)
@@ -192,9 +245,39 @@ class Stochastic(tf.keras.Model):
     def get_config(self):
         """Return model configuration."""
         config = {
+            'sample_axis': self.sample_axis,
             'n_sample': self.n_sample,
         }
+        if len(self.inputs_to_ignore) != 0:
+            config.update({
+                'inputs_to_ignore': self.inputs_to_ignore
+            })
         return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
+    def _add_singleton_sample_axis_to_inputs(self, data):
+        """Add a singleton sample axis to all Tensors."""
+        # NOTE: We assume inputs are a dictionary or a single Tensor.
+        if isinstance(data, dict):
+            # Pop keys that should be ignored, i.e., that should not have a
+            # sample axis added.
+            ignored_dict = {}
+            for ignored_key in self.inputs_to_ignore:
+                ignored_value = data.pop(ignored_key, None)
+                if ignored_value is not None:
+                    ignored_dict[ignored_key] = ignored_value
+
+            key_list = data.keys()
+            for key in key_list:
+                data[key] = tf.expand_dims(data[key], axis=self._sample_axis)
+            # Recombine non-ignored and ignored dictionaries.
+            data = data | ignored_dict
+        else:
+            data = tf.expand_dims(data, axis=self._sample_axis)
+        return data
 
     def _repeat_samples_in_batch_axis(self, data):
         """Create "samples" for `y` or `sample_weight`.
@@ -230,9 +313,10 @@ class Stochastic(tf.keras.Model):
         The reshape operation combines the batch and sample axis such
         that samples for a given batch item occur in contiguous blocks.
 
-        First the timestep axis and sample axis are swapped, keeping
-        all other axes the same. Then a reshape operation uses "-1" to
-        infer the shape of the new batch-sample axis and explicitly
+        First the sample axis is moved to axis=1, keeping all other
+        axes the same. Then a reshape operation is performed to combine
+        axis=0 (batch) and axis=1 (sample). The argument "-1" is used
+        to infer the shape of the new batch-sample axis and explicitly
         grabs the shape of the remaining axes.
 
         Args:
@@ -244,29 +328,51 @@ class Stochastic(tf.keras.Model):
                 reshaped.
 
         """
-        # TODO Write `new_order` in generic `sample_axis` way.
         if isinstance(y_pred, dict):
             for key in y_pred:
-                new_order = tf.concat(
-                    (
-                        tf.constant([0, 2, 1]),
-                        tf.range(tf.rank(y_pred[key]) - 3) + 3
-                    ), axis=0
-                )
-                y_pred[key] = tf.transpose(y_pred[key], perm=new_order)
-                new_shape = tf.concat(
-                    [[-1], tf.shape(y_pred[key])[2:]], 0
-                )
-                y_pred[key] = tf.reshape(y_pred[key], new_shape)
+                y_pred[key] = self._move_sample_axis_to_axis1(y_pred[key])
+                y_pred[key] = self._combine_axis0_axis1(y_pred[key])
         else:
-            new_order = tf.concat(
-                (tf.constant([0, 2, 1]), tf.range(tf.rank(y_pred) - 3) + 3),
-                axis=0
-            )
-            y_pred = tf.transpose(y_pred, perm=new_order)
-            new_shape = tf.concat([[-1], tf.shape(y_pred)[2:]], 0)
-            y_pred = tf.reshape(y_pred, new_shape)
+            y_pred = self._move_sample_axis_to_axis1(y_pred)
+            y_pred = self._combine_axis0_axis1(y_pred)
         return y_pred
+
+    def _move_sample_axis_to_axis1(self, x):
+        """Move sample axis to axis 1.
+
+        Args:
+            x: Tensor
+
+        Returns
+            Tensor with sample axis at axis 1.
+
+        """
+        # MAYBE Write in a way that accomdates scenarios other than
+        # sample_axis=1 or sample_axis=2. The trick is figuring out
+        # how to write `new_order` in generic `sample_axis` way.
+        if self.sample_axis == 2:
+            # Only need to rearrange axes when `sample_axis!=1`.
+            # NOTE: This implementation assumes sample_axis=2.
+            new_order = tf.concat(
+                (
+                    tf.constant([0, 2, 1]), tf.range(tf.rank(x) - 3) + 3
+                ), axis=0
+            )
+            x = tf.transpose(x, perm=new_order)
+        return x
+
+    def _combine_axis0_axis1(self, x):
+        """Combine axis 0 and axis 1 of Tensor.
+
+        Arguments:
+            x: Tensor
+
+        Returns:
+            Reshaped Tensor with axis 0 and axis 1 combined.
+
+        """
+        new_shape = tf.concat([[-1], tf.shape(x)[2:]], 0)
+        return tf.reshape(x, new_shape)
 
     def _mean_of_sample_axis(self, y_pred):
         """Take the mean over the sample axis.
@@ -292,3 +398,14 @@ class Stochastic(tf.keras.Model):
         else:
             y_pred = tf.reduce_mean(y_pred, axis=self._sample_axis)
         return y_pred
+
+    def _set_stochastic_mixin(self, layers, is_model_level=True):
+        """Set stochastic mixin attributes of all children layers."""
+        for layer in layers:
+            if hasattr(layer, 'sample_axis'):
+                layer.sample_axis = self._sample_axis
+                layer.n_sample = self._n_sample
+            if is_model_level:
+                self._set_stochastic_mixin(
+                    layer.submodules, is_model_level=False
+                )

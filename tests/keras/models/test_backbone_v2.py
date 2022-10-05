@@ -20,7 +20,7 @@ import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-import psiz
+import psiz  # TODO simplify imports
 from psiz.data.outcomes.continuous import Continuous
 from psiz.data.contents.rank_similarity import (
     RankSimilarity
@@ -39,6 +39,7 @@ def call_fit_evaluate_predict(model, ds2_obs):
     # Test isolated call.
     for data in ds2_obs:
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x = model.expand_inputs_with_sample_axis(x)
         _ = model(x, training=False)
 
     # Test fit.
@@ -167,18 +168,21 @@ def ds2_rank_rate_2g():
     # Add on rate data.
     stimulus_set_rate = np.array(
         [
-            [1, 2, 0, 0, 0, 0, 0, 0, 0],
-            [10, 13, 0, 0, 0, 0, 0, 0, 0],
-            [4, 5, 0, 0, 0, 0, 0, 0, 0],
-            [4, 18, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0],  # Placeholder, no rate trial.
+            [0, 0],  # Placeholder, no rate trial.
+            [0, 0],  # Placeholder, no rate trial.
+            [0, 0],  # Placeholder, no rate trial.
+            [1, 2],
+            [10, 13],
+            [4, 5],
+            [4, 18],
         ]
     )
-    stimulus_set_rate = np.expand_dims(stimulus_set_rate, axis=2)
-    stimulus_set_rate = np.repeat(stimulus_set_rate, 56, axis=2)
-    stimulus_set = np.concatenate(
-        [stimulus_set_rank, stimulus_set_rate], axis=0
+
+    # Add placeholder for rate trials.
+    stimulus_set_rank = np.concatenate(
+        (stimulus_set_rank, np.zeros_like(stimulus_set_rank)), axis=0
     )
-    # placeholder
     is_select_rank = np.concatenate(
         (is_select_rank, np.zeros_like(is_select_rank)), axis=0
     )
@@ -190,8 +194,13 @@ def ds2_rank_rate_2g():
     )
 
     x = {
-        'stimulus_set': np.expand_dims(stimulus_set, axis=1),
-        'is_select': np.expand_dims(is_select_rank, axis=1),
+        'rank_similarity_stimulus_set': np.expand_dims(
+            stimulus_set_rank, axis=1
+        ),
+        'rank_similarity_is_select': np.expand_dims(is_select_rank, axis=1),
+        'rate_similarity_stimulus_set': np.expand_dims(
+            stimulus_set_rate, axis=1
+        ),
         'groups': np.expand_dims(groups, axis=1),
     }
 
@@ -256,8 +265,8 @@ def ds2_categorize_2g():
         y, n_output, on_value=1.0, off_value=0.0
     )
     x = {
-        'stimulus_set': tf.constant(stimulus_set),
-        'correct_label': tf.constant(np.expand_dims(y, axis=2)),
+        'categorize_stimulus_set': tf.constant(stimulus_set),
+        'categorize_correct_label': tf.constant(np.expand_dims(y, axis=2)),
         'groups': tf.constant(groups),
     }
     w = tf.constant(np.ones_like(y))
@@ -267,8 +276,7 @@ def ds2_categorize_2g():
     return ds2_obs
 
 
-@pytest.fixture(scope="module")
-def bb_rank_1g_1g_mle():
+def bb_cell_rank_1g_1g_mle():
     """Backbone model: Rank, one group, MLE."""
     n_stimuli = 20
     n_dim = 3
@@ -289,10 +297,10 @@ def bb_rank_1g_1g_mle():
             trainable=False,
         )
     )
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    cell = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=cell)
 
     model = psiz.keras.models.BackboneV2(net=rank)
 
@@ -307,8 +315,47 @@ def bb_rank_1g_1g_mle():
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_rank_1g_2g_mle():
+def bb_rnn_rank_1g_1g_mle():
+    """Backbone model: Rank, one group, MLE."""
+    n_stimuli = 20
+    n_dim = 3
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli + 1, n_dim, mask_zero=True
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            trainable=False,
+        )
+    )
+    cell = psiz.keras.layers.RankSimilarityCellV2(
+        percept=percept, kernel=kernel
+    )
+    rnn = tf.keras.layers.RNN(cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
+
+    model = psiz.keras.models.BackboneV2(net=rank)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
+    return model
+
+
+def bb_rnn_rank_1g_2g_mle():
     """A MLE rank model for two groups."""
     # TODO copied from tests/keras/models/conftest:rank_2g_mle
     n_stimuli = 30
@@ -352,7 +399,8 @@ def bb_rank_1g_2g_mle():
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
     model = psiz.keras.models.BackboneV2(net=rank)
     compile_kwargs = {
@@ -366,8 +414,7 @@ def bb_rank_1g_2g_mle():
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_rank_1g_3g_mle():
+def bb_rnn_rank_1g_3g_mle():
     """Rank, three groups, MLE."""
     # TODO copied from tests/keras/models/test_rank:rank_3g_mle_v2
     n_stimuli = 20
@@ -393,14 +440,14 @@ def bb_rank_1g_3g_mle():
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(kernel=kernel)
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
     model = psiz.keras.models.BackboneV2(percept=percept, behavior=rank)
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_rank_2g_2g_mle():
+def bb_rnn_rank_2g_2g_mle():
     """Backbone model: """
     # TODO copied from tests/conftest:rank_2stim_2kern_determ
     n_stimuli = 3
@@ -470,7 +517,8 @@ def bb_rank_2g_2g_mle():
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
     model = psiz.keras.models.BackboneV2(net=rank)
 
@@ -485,8 +533,7 @@ def bb_rank_2g_2g_mle():
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_rank_2g_2g_2g_mle():
+def bb_rnn_rank_2g_2g_2g_mle():
     """Backbone model."""
     # TODO copied from tests/conftest:rank_2stim_2kern_2behav
     n_stimuli = 20
@@ -544,11 +591,13 @@ def bb_rank_2g_2g_2g_mle():
     behavior_cell_0 = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept, kernel=kernel
     )
+    rnn_0 = tf.keras.layers.RNN(behavior_cell_0, return_sequences=True)
     behavior_cell_1 = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    behavior_0 = tf.keras.layers.RNN(behavior_cell_0, return_sequences=True)
-    behavior_1 = tf.keras.layers.RNN(behavior_cell_1, return_sequences=True)
+    rnn_1 = tf.keras.layers.RNN(behavior_cell_1, return_sequences=True)
+    behavior_0 = psiz.keras.layers.BehaviorWrapper(net=rnn_0)
+    behavior_1 = psiz.keras.layers.BehaviorWrapper(net=rnn_1)
     behavior = psiz.keras.layers.BraidGate(
         subnets=[behavior_0, behavior_1], groups_subset=0
     )
@@ -566,8 +615,7 @@ def bb_rank_2g_2g_2g_mle():
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_rank_1g_vi():
+def bb_cell_rank_1g_vi():
     """Backbone model: Rank, one group, VI."""
     n_stimuli = 20
     n_dim = 3
@@ -614,7 +662,7 @@ def bb_rank_1g_vi():
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=rank_cell)
 
     model = psiz.keras.models.BackboneV2(net=rank)
 
@@ -629,8 +677,70 @@ def bb_rank_1g_vi():
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_rate_1g_mle():
+def bb_rnn_rank_1g_vi():
+    """Backbone model: Rank, one group, VI."""
+    n_stimuli = 20
+    n_dim = 3
+    kl_weight = .1
+
+    prior_scale = .2
+    embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+        n_stimuli + 1, n_dim, mask_zero=True,
+        scale_initializer=tf.keras.initializers.Constant(
+            tfp.math.softplus_inverse(prior_scale).numpy()
+        )
+    )
+    embedding_prior = psiz.keras.layers.EmbeddingShared(
+        n_stimuli + 1, n_dim, mask_zero=True,
+        embedding=psiz.keras.layers.EmbeddingNormalDiag(
+            1, 1,
+            loc_initializer=tf.keras.initializers.Constant(0.),
+            scale_initializer=tf.keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ),
+            loc_trainable=False,
+        )
+    )
+    percept = psiz.keras.layers.EmbeddingVariational(
+        posterior=embedding_posterior, prior=embedding_prior,
+        kl_weight=kl_weight, kl_n_sample=30
+    )
+
+    mink = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.),
+        w_initializer=tf.keras.initializers.Constant(1.),
+        trainable=False
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=mink,
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
+    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+        percept=percept, kernel=kernel
+    )
+    rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
+
+    model = psiz.keras.models.BackboneV2(net=rank)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
+    return model
+
+
+def bb_cell_rate_1g_mle():
     """Backbone model: A MLE rate model."""
     n_stimuli = 30
     n_dim = 10
@@ -656,7 +766,7 @@ def bb_rate_1g_mle():
     rate_cell = psiz.keras.layers.RateSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    rate = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+    rate = psiz.keras.layers.BehaviorWrapper(net=rate_cell)
 
     model = psiz.keras.models.BackboneV2(net=rate)
 
@@ -671,8 +781,49 @@ def bb_rate_1g_mle():
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_categorize_1g_1g_mle():
+def bb_rnn_rate_1g_mle():
+    """Backbone model: A MLE rate model."""
+    n_stimuli = 30
+    n_dim = 10
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli + 1, n_dim, mask_zero=True
+    )
+
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(3.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.),
+        )
+    )
+
+    rate_cell = psiz.keras.layers.RateSimilarityCellV2(
+        percept=percept, kernel=kernel
+    )
+    rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+    rate = psiz.keras.layers.BehaviorWrapper(net=rnn)
+
+    model = psiz.keras.models.BackboneV2(net=rate)
+
+    compile_kwargs = {
+        'loss': tf.keras.losses.MeanSquaredError(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.MeanSquaredError(name='mse')
+        ]
+    }
+    model.compile(**compile_kwargs)
+    return model
+
+
+def bb_rnn_categorize_1g_1g_mle():
     """Backbone model: Rank, one group, MLE."""
     n_stimuli = 20
     n_dim = 4
@@ -698,9 +849,8 @@ def bb_categorize_1g_1g_mle():
         lr_association_initializer=tf.keras.initializers.Constant(.03),
         trainable=False
     )
-    categorize = tf.keras.layers.RNN(
-        cell, return_sequences=True, stateful=False
-    )
+    rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
+    categorize = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
     model = psiz.keras.models.BackboneV2(net=categorize)
 
@@ -715,8 +865,7 @@ def bb_categorize_1g_1g_mle():
     return model
 
 
-@pytest.fixture(scope="module")
-def bb_rank_rate_1g_mle():
+def bb_rnn_rank_rate_1g_mle():
     n_stimuli = 20
     n_dim = 3
 
@@ -743,11 +892,13 @@ def bb_rank_rate_1g_mle():
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank_rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+    rank = psiz.keras.layers.BehaviorWrapper(net=rank_rnn)
     rate_cell = psiz.keras.layers.RateSimilarityCellV2(
         percept=percept, kernel=kernel
     )
-    rate = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+    rate_rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+    rate = psiz.keras.layers.BehaviorWrapper(net=rate_rnn)
     behav_branch = psiz.keras.layers.BranchGate(
         subnets=[rank, rate], groups_subset=1, name="behav_branch",
         output_names=['rank_branch', 'rate_branch']
@@ -774,60 +925,181 @@ def bb_rank_rate_1g_mle():
 class TestRankSimilarity:
     """Test w/ RankSimilarity behavior only."""
 
-    def test_n_sample_and_serialization(self, bb_rank_1g_1g_mle):
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_cell_n_sample_and_serialization(
+            self, ds2_rank_2g, is_eager, tmpdir):
         """Test n_sample attribute and serialization."""
-        model = bb_rank_1g_1g_mle
+        tf.config.run_functions_eagerly(is_eager)
+
+        ds = ds2_rank_2g
+        model = bb_cell_rank_1g_1g_mle()
 
         # Get coverage of Stochastic model.
         # Test setting `n_sample`.
         model.n_sample = 2
+        assert model.sample_axis == 2
         assert model.n_sample == 2
-        # TODO add test assertion for sub layers
+        assert model.layers[0].net.sample_axis == 2
+        assert model.layers[0].net.sample_axis_in_cell == 1
+        assert model.layers[0].net.n_sample == 2
 
-        # Test serialization.
+        # Test in-memory serialization.
+        config = model.get_config()
+        assert config['n_sample'] == 2
+        recon_model = psiz.keras.models.BackboneV2.from_config(config)
+        assert recon_model.sample_axis == 2
+        assert recon_model.n_sample == 2
+        tf.keras.backend.clear_session()
+
+        # Test storage serialization.
+        fp_model = tmpdir.join('test_model')
+        model.fit(ds, epochs=1)
+        model.save(fp_model)
+        del model
+        # Load the saved model.
+        # NOTE: We don't need to use the argument `custom_objects={
+        # "BackboneV2": psiz.keras.models.BackboneV2}` since the model
+        # class is registered.
+        loaded = tf.keras.models.load_model(fp_model)
+
+        # Test for model equality.
+        assert loaded.sample_axis == 2
+        assert loaded.n_sample == 2
+        assert loaded.layers[0].net.sample_axis == 2
+        assert loaded.layers[0].net.sample_axis_in_cell == 1
+        assert loaded.layers[0].net.n_sample == 2
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_rnn_n_sample_and_serialization(
+            self, ds2_rank_2g, is_eager, tmpdir):
+        """Test n_sample attribute and serialization."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        ds = ds2_rank_2g
+        model = bb_rnn_rank_1g_1g_mle()
+
+        # Get coverage of Stochastic model.
+        # Test setting `n_sample`.
+        model.n_sample = 2
+        assert model.sample_axis == 2
+        assert model.n_sample == 2
+        assert model.layers[0].net.cell.sample_axis == 2
+        assert model.layers[0].net.cell.sample_axis_in_cell == 1
+        assert model.layers[0].net.cell.n_sample == 2
+
+        # Test in-memory serialization.
         config = model.get_config()
         assert config['n_sample'] == 2
         recon_model = psiz.keras.models.BackboneV2.from_config(config)
         assert recon_model.n_sample == 2
+        tf.keras.backend.clear_session()
+
+        # Test storage serialization.
+        fp_model = tmpdir.join('test_model')
+        model.fit(ds, epochs=1)
+        model.save(fp_model)
+        del model
+        # Load the saved model.
+        # NOTE: We don't need to use the argument `custom_objects={
+        # "BackboneV2": psiz.keras.models.BackboneV2}` since the model
+        # class is registered.
+        loaded = tf.keras.models.load_model(fp_model)
+
+        # Test for model equality.
+        assert loaded.sample_axis == 2
+        assert loaded.n_sample == 2
+        assert loaded.layers[0].net.cell.sample_axis == 2
+        assert loaded.layers[0].net.cell.sample_axis_in_cell == 1
+        assert loaded.layers[0].net.cell.n_sample == 2
 
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_mle_1g_1g(self, bb_rank_1g_1g_mle, ds2_rank_2g, is_eager):
+    def test_cell_mle_1g_1g(self, ds2_rank_2g, is_eager):
         """Test MLE, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        model = bb_rank_1g_1g_mle
+        model = bb_cell_rank_1g_1g_mle()
         call_fit_evaluate_predict(model, ds2_rank_2g)
+        tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_mle_1g_2g(self, bb_rank_1g_2g_mle, ds2_rank_2g, is_eager):
+    def test_rnn_mle_1g_1g(self, ds2_rank_2g, is_eager):
+        """Test MLE, one group."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        model = bb_rnn_rank_1g_1g_mle()
+        call_fit_evaluate_predict(model, ds2_rank_2g)
+        tf.keras.backend.clear_session()
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_rnn_mle_1g_2g(self, ds2_rank_2g, is_eager):
         """Test MLE, 2 groups."""
         tf.config.run_functions_eagerly(is_eager)
-        model = bb_rank_1g_2g_mle
-        call_fit_evaluate_predict(model, ds2_rank_2g)
 
-    def test_mle_2g_2g(self, bb_rank_2g_2g_mle, ds2_rank_2g):
-        """Test MLE, 2 groups."""
-        model = bb_rank_2g_2g_mle
+        model = bb_rnn_rank_1g_2g_mle()
         call_fit_evaluate_predict(model, ds2_rank_2g)
-
-    def test_mle_2g_2g_2g(self, bb_rank_2g_2g_2g_mle, ds2_rank_2g):
-        """Test MLE, 2 groups."""
-        model = bb_rank_2g_2g_2g_mle
-        call_fit_evaluate_predict(model, ds2_rank_2g)
+        tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_vi_1g_1g(self, bb_rank_1g_vi, ds2_rank_2g, is_eager):
+    def test_rnn_mle_2g_2g(self, ds2_rank_2g, is_eager):
+        """Test MLE, 2 groups."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        model = bb_rnn_rank_2g_2g_mle()
+        call_fit_evaluate_predict(model, ds2_rank_2g)
+        tf.keras.backend.clear_session()
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_rnn_mle_2g_2g_2g(self, ds2_rank_2g, is_eager):
+        """Test MLE, 2 groups."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        model = bb_rnn_rank_2g_2g_2g_mle()
+        call_fit_evaluate_predict(model, ds2_rank_2g)
+        tf.keras.backend.clear_session()
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_cell_vi_1g_1g(self, ds2_rank_2g, is_eager):
         """Test VI, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        model = bb_rank_1g_vi
+        model = bb_cell_rank_1g_vi()
         call_fit_evaluate_predict(model, ds2_rank_2g)
+        tf.keras.backend.clear_session()
+
+    @pytest.mark.parametrize(
+        "is_eager", [
+            True,
+            pytest.param(
+                False,
+                marks=pytest.mark.xfail(
+                    reason="'add_loss' does not work inside RNN cell."
+                )
+            ),
+        ]
+    )
+    def test_rnn_vi_1g_1g(self, ds2_rank_2g, is_eager):
+        """Test VI, one group."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        model = bb_rnn_rank_1g_vi()
+        call_fit_evaluate_predict(model, ds2_rank_2g)
+        tf.keras.backend.clear_session()
 
 
 class TestRateSimilarity:
@@ -836,27 +1108,42 @@ class TestRateSimilarity:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_rate(self, bb_rate_1g_mle, ds2_rate_2g, is_eager):
+    def test_cell_rate(self, ds2_rate_2g, is_eager):
         """Test rate behavior only."""
         tf.config.run_functions_eagerly(is_eager)
-        model = bb_rate_1g_mle
+
+        model = bb_cell_rate_1g_mle()
         call_fit_evaluate_predict(model, ds2_rate_2g)
-
-
-class TestCategorizeSequences:
-    """Test with sequence inputs and RNN cell."""
+        tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_categorize_sequence(
-        self, bb_categorize_1g_1g_mle, ds2_categorize_2g, is_eager
+    def test_rnn_rate(self, ds2_rate_2g, is_eager):
+        """Test rate behavior only."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        model = bb_rnn_rate_1g_mle()
+        call_fit_evaluate_predict(model, ds2_rate_2g)
+        tf.keras.backend.clear_session()
+
+
+class TestCategorizeSequences:
+    """Test Categorize behavior."""
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_rnn_categorize_sequence(
+        self, ds2_categorize_2g, is_eager
     ):
         """Test MLE, one group."""
         tf.config.run_functions_eagerly(is_eager)
-        model = bb_categorize_1g_1g_mle
+
+        model = bb_rnn_categorize_1g_1g_mle()
         ds_obs = ds2_categorize_2g
         call_fit_evaluate_predict(model, ds_obs)
+        tf.keras.backend.clear_session()
 
 
 class TestMultiBehavior:
@@ -865,10 +1152,12 @@ class TestMultiBehavior:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_rank_rate(
-        self, bb_rank_rate_1g_mle, ds2_rank_rate_2g, is_eager
+    def test_rnn_rank_rate(
+        self, ds2_rank_rate_2g, is_eager
     ):
         """Test rank and rate."""
         tf.config.run_functions_eagerly(is_eager)
-        model = bb_rank_rate_1g_mle
+
+        model = bb_rnn_rank_rate_1g_mle()
         call_fit_evaluate_predict(model, ds2_rank_rate_2g)
+        tf.keras.backend.clear_session()

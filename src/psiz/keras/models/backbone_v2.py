@@ -26,22 +26,33 @@ from importlib.metadata import version
 import tensorflow as tf
 
 from psiz.keras.models.stochastic import Stochastic
-from psiz.keras.layers.groups_mixin import GroupsMixin
-from psiz.utils import expand_dim_repeat
+from psiz.keras.mixins.groups_mixin import GroupsMixin
 
 
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.models', name='BackboneV2'
+)
 class BackboneV2(GroupsMixin, Stochastic):
-    """A backbone-based psychological model.
+    """A general-purpose model.
 
-    This model is intended to cover a large number of pscyhological
-    modeling use cases. If your use case is not covered, you can use
-    this model as a guide to create a bespoke model.
+    This model is intended to be a convenience `Model` that covers a
+    large number of pscyhological modeling use cases by bringing
+    together a number of capabilities:
+        1. Supports sequences. Assumes a "timestep axis" at axis=1. If
+            your input data is not composed of sequences use a
+            singleton dimension for this axis.
+        2. Supports stochastic sampling. Assumes a "sample axis" at
+            axis=2 and `StochasticMixin` is used appropriately.
+        3. Supports multiple measures synthesis and hierarchical
+            modeling via data routing. Data routing assumes `groups` is
+            specified in the input dictionary and the `GroupsMixin` is
+            used appropriately.
+
+    If your use case is not covered, you can use this model as a guide
+    to create a bespoke model.
 
     Attributes:
         net: The network.
-        n_sample: Integer indicating the number of samples to draw for
-            stochastic layers. Only useful if using stochastic layers
-            (e.g., variational models).
 
     """
 
@@ -49,47 +60,47 @@ class BackboneV2(GroupsMixin, Stochastic):
         """Initialize.
 
         Args:
-            net: A TODO layer.
-            n_sample (optional): See psiz.keras.models.Stochastic.
+            net: A Keras layer.
+            n_sample (optional): See `psiz.keras.models.Stochastic`.
             kwargs:  Additional key-word arguments.
 
         Raises:
             ValueError: If arguments are invalid.
 
         """
-        super().__init__(n_sample=n_sample, **kwargs)
+        sample_axis = kwargs.pop('sample_axis', None)
+        if sample_axis is None:
+            sample_axis = 2
+        else:
+            if sample_axis != 2:
+                raise ValueError('BackboneV2 requires sample_axis=2.')
+
+        inputs_to_ignore = kwargs.pop('inputs_to_ignore', None)
+        if inputs_to_ignore is None:
+            inputs_to_ignore = ['groups']
+
+        super().__init__(
+            sample_axis=sample_axis, n_sample=n_sample,
+            inputs_to_ignore=inputs_to_ignore, **kwargs
+        )
 
         # Assign layers.
         self.net = net
-
-        # TODO HACK Traverse network and set `n_sample` appropriately.
-        # make this a more explicit contract somehow?
-        try:
-            self.net.cell.n_sample = self.n_sample
-        except:
-            self.net.subnets[0].cell.n_sample = self.n_sample
-            self.net.subnets[1].cell.n_sample = self.n_sample
 
         # Satisfy GroupsMixin contract.
         self._pass_groups = {
             'net': self.check_supports_groups(net)
         }
 
-    def call(self, inputs):
+    def call(self, inputs, training=None):
         """Call.
 
         Args:
             inputs: A dictionary of inputs.
+            training (optional): Boolean indicating if training mode.
 
         """
-        # Repeat `stimulus_set` `n_sample` times in a newly inserted
-        # "sample" axis (axis=2).
-        inputs['stimulus_set'] = expand_dim_repeat(
-            inputs['stimulus_set'], self.n_sample, axis=2
-        )
-        # TensorShape=(batch_size, n_timestep, n_sample, n, [m, ...])
-
-        return self.net(inputs)
+        return self.net(inputs, training=training)
 
     def get_config(self):
         """Return model configuration."""

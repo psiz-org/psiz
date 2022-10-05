@@ -34,8 +34,10 @@ class GroupsMixin():
 
         """
         super().__init__(*args, **kwargs)
-        self.supports_groups = True
+        self.supports_groups = tf.constant(True)
         self.inputs_group_idx = -1
+        # Create placeholder for layer switches.
+        self._pass_groups = {}
 
     def check_supports_groups(self, layer):
         """Check if layer supports groups."""
@@ -47,4 +49,4 @@ class GroupsMixin():
         elif isinstance(layer, tf.keras.layers.RNN):
             return self.check_supports_groups(layer.cell)
         else:
-            return False
+            return tf.constant(False)

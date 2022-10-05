@@ -82,15 +82,16 @@ class RankSimilarityCellV2(Behavior):
         # The tf.split op does not infer split dimension shape. We know that
         # z_q will always have shape=1, but we don't know `max_n_reference`
         # ahead of time.
-        # z_q.set_shape([None, self.n_sample, 1, None, None])  # TODO necessary?
+        z_q.set_shape([None, self.n_sample, 1, None, None])  # TODO necessary?
 
         return z_q, z_r
 
-    # TODO
+    # TODO better if we build?
     # def build(self, input_shape):
     #     """Build."""
     #     self.percept.build(input_shape)
 
+    # TODO beter if we compute here?
     # def compute_output_shape(self, input_shape):
     #     """Compute output shape."""
     #     output_shape = None

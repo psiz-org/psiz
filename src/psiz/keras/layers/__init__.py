@@ -16,11 +16,11 @@
 """Keras layers initialization file."""
 
 from psiz.keras.layers.drop import Drop
-from psiz.keras.layers.groups_mixin import GroupsMixin
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
 from psiz.keras.layers.behaviors.alcove_cell_v2 import ALCOVECellV2
 from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.layers.behaviors.behavior_wrapper import BehaviorWrapper
 from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
 from psiz.keras.layers.behaviors.rank_similarity_cell_v2 import RankSimilarityCellV2
@@ -54,6 +54,7 @@ __all__ = [
     'RateSimilarityCellV2',
     'ALCOVECell',
     'ALCOVECellV2',
+    'BehaviorWrapper',
     'RankBehavior', 'RateBehavior', 'Minkowski',
     'MinkowskiStochastic', 'MinkowskiVariational', 'EmbeddingGammaDiag',
     'EmbeddingLaplaceDiag', 'EmbeddingLogNormalDiag',
@@ -63,7 +64,7 @@ __all__ = [
     'Gate',
     'BraidGate',
     'BranchGate',
-    'Drop', 'GroupsMixin',
+    'Drop',
     'DistanceBased', 'ExponentialSimilarity', 'HeavyTailedSimilarity',
     'InverseSimilarity', 'StudentsTSimilarity', 'Variational'
 ]

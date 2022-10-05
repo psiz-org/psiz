@@ -24,7 +24,7 @@ Classes:
 import tensorflow as tf
 
 from psiz.keras.layers.drop import Drop
-from psiz.keras.layers.groups_mixin import GroupsMixin
+from psiz.keras.mixins.groups_mixin import GroupsMixin
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -57,10 +57,7 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
         """Initialize.
 
         Args:
-            subnets: A non-empty list of sub-networks. It is assumed
-                that all subnetworks have the same `input_shape` and
-                `output_shape`. TODO is this still universally True?
-                obviously true for BraidGate, but what about BranchGate
+            subnets: A non-empty list of sub-networks.
             groups_subset (optional): Integer or list of integers
                 indicating the group column(s) on which to gate inputs
                 to the subnetworks.
@@ -87,14 +84,6 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
                 (e.g., Embedding). By default, this is True. If
                 provided, the length must agree with the number of
                 subnets.
-
-            TODO add docs on how _has_timestep_axis is determined
-            Add pointer in subclasses BranchGate and BraidGate
-            "To see more on how a potential timestep axis is handled, see
-            `Gate`.
-            has_timestep_axis=False,
-            has_timestep_axis (optional): Beolean indicating if second
-                axis should be interpretted as a timestep axis.
 
         Raises:
             ValueError if subnetwork's non-batch output shape is not
@@ -142,6 +131,8 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
 
         # Handle inputs information attributes.
         self._inputs_is_dict = None
+
+        self.supports_masking = True
 
     def _process_subnet(self, subnet, pass_groups, strip_inputs):
         """Process subnet.

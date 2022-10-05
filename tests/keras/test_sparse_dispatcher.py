@@ -17,7 +17,7 @@
 
 import tensorflow as tf
 
-from psiz.keras.layers.groups_mixin import GroupsMixin
+from psiz.keras.mixins.groups_mixin import GroupsMixin
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 

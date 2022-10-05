@@ -53,6 +53,7 @@ class Drop(tf.keras.layers.Layer):
         self._drop_index = drop_index
         self.strip_inputs = strip_inputs  # Indicates user's preference.
         self._strip_inputs = None  # Indicates if actually necessary.
+        self.supports_masking = True
 
     def build(self, input_shape):
         """Build."""
@@ -78,11 +79,13 @@ class Drop(tf.keras.layers.Layer):
 
         super().build(input_shape)
 
-    def call(self, inputs):
+    def call(self, inputs, mask=None):
         """Call.
 
         Args:
             inputs: a n-tuple or list containing Tensors.
+            mask (optional): A Tensor indicating which timesteps should
+                be masked.
 
         """
         # Drop requested tensor from `inputs`.
@@ -92,7 +95,11 @@ class Drop(tf.keras.layers.Layer):
 
         if self._strip_inputs:
             inputs_less_drop = inputs_less_drop[0]
-        return self.subnet(inputs_less_drop)
+
+        if mask is not None and self.subnet.supports_masking:
+            return self.subnet(inputs_less_drop, mask=mask)
+        else:
+            return self.subnet(inputs_less_drop)
 
     def get_config(self):
         """Return layer configuration."""

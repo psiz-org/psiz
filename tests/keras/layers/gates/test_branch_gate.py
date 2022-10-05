@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.keras.layers.groups_mixin import GroupsMixin
+from psiz.keras.mixins.groups_mixin import GroupsMixin
 from psiz.keras.layers.gates.branch_gate import BranchGate
 
 
@@ -89,7 +89,7 @@ class AddPairsDict(GroupsMixin, tf.keras.layers.Layer):
         super(AddPairsDict, self).__init__(**kwargs)
         self.v = tf.constant(v)
 
-    def call(self, inputs):
+    def call(self, inputs, mask=None):
         """Call."""
         return inputs['inputs_0'] + inputs['inputs_1'] + self.v
 

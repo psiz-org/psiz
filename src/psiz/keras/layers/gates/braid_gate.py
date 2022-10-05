@@ -63,15 +63,19 @@ class BraidGate(Gate):
             subnets=subnets, groups_subset=groups_subset,
             pass_groups=pass_groups, strip_inputs=strip_inputs, **kwargs)
 
-    def call(self, inputs):
+    def call(self, inputs, mask=None):
         """Call.
 
         Args:
-            inputs: a n-tuple containing a data Tensor and a trailing
-                group Tensor.
-                list format: [data Tensor, [data Tensor, ...], groups Tensor]
+            inputs: Data Tensors. Can be an n-tuple or single-level
+                dictionary containing Tensors. If n-tuple, the trailing
+                Tensor is assumed to be a `groups` Tensor. If a
+                dictionary, one of the fields is assumed to be `groups`.
+                tuple format: [data Tensor, [data Tensor, ...], groups Tensor]
                 data Tensor(s): shape=(batch, m, [n, ...])
                 groups Tensor: shape=(batch, g)
+            mask (optional): A Tensor indicating which timesteps should
+                be masked.
 
         """
         gates = self._process_groups(inputs)
@@ -83,7 +87,10 @@ class BraidGate(Gate):
         subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
         subnet_outputs = []
         for i in range(self.n_subnet):
-            out = self._processed_subnets[i](subnet_inputs[i])
+            if mask is None:
+                out = self._processed_subnets[i](subnet_inputs[i])
+            else:
+                out = self._processed_subnets[i](subnet_inputs[i], mask=mask)
             # TODO trying without reshape since every expert has full shape
             # out, lost_shape = self._pre_combine(out)
             out, lost_shape = self._pre_combine_2(out)

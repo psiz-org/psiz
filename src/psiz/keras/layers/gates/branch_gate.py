@@ -68,7 +68,7 @@ class BranchGate(Gate):
                 output_names.append(self.name + '_{0}'.format(i_subnet))
         self.output_names = output_names
 
-    def call(self, inputs):
+    def call(self, inputs, mask=None):
         """Call.
 
         Args:
@@ -77,6 +77,8 @@ class BranchGate(Gate):
                 list format: [data Tensor, [data Tensor, ...], groups Tensor]
                 data Tensor(s): shape=(batch, m, [n, ...])
                 groups Tensor: shape=(batch, g)
+            mask (optional): A Tensor indicating which timesteps should
+                be masked.
 
         Returns:
             outputs: A dictionary of Tensors.
@@ -91,7 +93,10 @@ class BranchGate(Gate):
         subnet_outputs = {}
 
         for i in range(self.n_subnet):
-            out = self._processed_subnets[i](subnet_inputs[i])
+            if mask is None:
+                out = self._processed_subnets[i](subnet_inputs[i])
+            else:
+                out = self._processed_subnets[i](subnet_inputs[i], mask=mask)
             subnet_outputs[self.output_names[i]] = out
 
         return subnet_outputs

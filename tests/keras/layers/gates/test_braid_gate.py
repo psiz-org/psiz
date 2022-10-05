@@ -27,7 +27,7 @@ from psiz.keras.layers import BraidGate
 from psiz.keras.layers import Minkowski
 from psiz.keras.layers import MinkowskiStochastic
 from psiz.keras.layers import MinkowskiVariational
-from psiz.keras.layers.groups_mixin import GroupsMixin
+from psiz.keras.mixins.groups_mixin import GroupsMixin
 
 
 def build_vi_kernel(similarity, n_dim, kl_weight):

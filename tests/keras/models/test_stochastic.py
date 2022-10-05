@@ -368,7 +368,7 @@ def test_mse_model_ax1(ds_rank2_x0_x1_x2, is_eager):
     # Check "sample axis" added correctly to inputs.
     for data in ds:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        x = model._add_singleton_sample_axis_to_inputs(x)
+        x = model.expand_inputs_with_sample_axis(x)
         tf.debugging.assert_equal(x['x0'], x0_desired)
         tf.debugging.assert_equal(x['x1'], x1_desired)
         tf.debugging.assert_equal(x['x2'], x2_desired)
@@ -376,7 +376,8 @@ def test_mse_model_ax1(ds_rank2_x0_x1_x2, is_eager):
     # Perform a `test_step`.
     for data in ds:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-
+        # Adjust `x` to include singleton "sample axis".
+        x = model.expand_inputs_with_sample_axis(x)
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = model._repeat_samples_in_batch_axis(y)
@@ -473,7 +474,7 @@ def test_mse_model_ax2(ds_rank2_x0_x1_x2, is_eager):
     # Check "sample axis" added correctly to inputs.
     for data in ds:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        x = model._add_singleton_sample_axis_to_inputs(x)
+        x = model.expand_inputs_with_sample_axis(x)
         tf.debugging.assert_equal(x['x0'], x0_desired)
         tf.debugging.assert_equal(x['x1'], x1_desired)
         tf.debugging.assert_equal(x['x2'], x2_desired)
@@ -481,7 +482,8 @@ def test_mse_model_ax2(ds_rank2_x0_x1_x2, is_eager):
     # Perform a `test_step`.
     for data in ds:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-
+        # Adjust `x` to include singleton "sample axis".
+        x = model.expand_inputs_with_sample_axis(x)
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = model._repeat_samples_in_batch_axis(y)
@@ -578,7 +580,7 @@ def test_mse_model_ax2_ignore(ds_rank2_x0_x1_x2, is_eager):
     # Check "sample axis" added correctly to inputs.
     for data in ds:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        x = model._add_singleton_sample_axis_to_inputs(x)
+        x = model.expand_inputs_with_sample_axis(x)
         tf.debugging.assert_equal(x['x0'], x0_desired)
         tf.debugging.assert_equal(x['x1'], x1_desired)
         tf.debugging.assert_equal(x['x2'], x2_desired)
@@ -586,7 +588,8 @@ def test_mse_model_ax2_ignore(ds_rank2_x0_x1_x2, is_eager):
     # Perform a `test_step`.
     for data in ds:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-
+        # Adjust `x` to include singleton "sample axis".
+        x = model.expand_inputs_with_sample_axis(x)
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = model._repeat_samples_in_batch_axis(y)
@@ -677,7 +680,8 @@ def test_model_nsample_change(ds_rank2_x0_x1_x2, is_eager):
     # Perform a `test_step` to verify `n_sample` took effect.
     for data in ds:
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-
+        # Adjust `x` to include singleton "sample axis".
+        x = model.expand_inputs_with_sample_axis(x)
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = model._repeat_samples_in_batch_axis(y)

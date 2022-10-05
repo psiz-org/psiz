@@ -21,7 +21,6 @@ Classes:
 
 """
 
-import copy
 import warnings
 
 import tensorflow as tf
@@ -114,15 +113,6 @@ class Stochastic(tf.keras.Model):
             # Propogate change to children.
             self._set_stochastic_mixin(self.layers)
 
-    def __call__(self, inputs, training=None, mask=None):
-        """Call method."""
-        # Adjust `x` to include a singleton `sample_axis`.
-        copied_inputs = copy.copy(inputs)
-        copied_inputs = self._add_singleton_sample_axis_to_inputs(
-            copied_inputs
-        )
-        return super().__call__(copied_inputs, training=training)
-
     def train_step(self, data):
         """Logic for one training step.
 
@@ -137,7 +127,8 @@ class Stochastic(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        # NOTE: `x` sample axis is added in Model's __call__ method.
+        # Adjust `x` to include a singleton `sample_axis`.
+        x = self.expand_inputs_with_sample_axis(x)
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = self._repeat_samples_in_batch_axis(y)
@@ -204,7 +195,8 @@ class Stochastic(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        # NOTE: `x` sample axis is added in Model's __call__ method.
+        # Adjust `x` to include a singleton `sample_axis`.
+        x = self.expand_inputs_with_sample_axis(x)
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = self._repeat_samples_in_batch_axis(y)
@@ -236,7 +228,8 @@ class Stochastic(tf.keras.Model):
 
         """
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        # NOTE: `x` sample axis is added in Model's __call__ method.
+        # Adjust `x` to include a singleton `sample_axis`.
+        x = self.expand_inputs_with_sample_axis(x)
         y_pred = self(x, training=False)
         # For prediction, we simply average over the sample axis.
         y_pred = self._mean_of_sample_axis(y_pred)
@@ -258,8 +251,8 @@ class Stochastic(tf.keras.Model):
     def from_config(cls, config):
         return cls(**config)
 
-    def _add_singleton_sample_axis_to_inputs(self, data):
-        """Add a singleton sample axis to all Tensors."""
+    def expand_inputs_with_sample_axis(self, data):
+        """Expand input Tensor(s) with singleton 'sample axis'."""
         # NOTE: We assume inputs are a dictionary or a single Tensor.
         if isinstance(data, dict):
             # Pop keys that should be ignored, i.e., that should not have a

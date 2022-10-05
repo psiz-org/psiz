@@ -83,8 +83,7 @@ class RateSimilarityCellV2(Behavior):
 
         # Satisfy RNNCell contract.  TODO
         self.state_size = [
-            tf.TensorShape([2]),
-            tf.TensorShape([2, 2])
+            tf.TensorShape([1])
         ]
 
         self.lower_trainable = lower_trainable
@@ -154,7 +153,19 @@ class RateSimilarityCellV2(Behavior):
         z_1 = z[:, :, 1]
         return z_0, z_1
 
-    def call(self, inputs, states):
+    def get_mask(self, inputs):
+        """Return appropriate mask."""
+        mask = tf.not_equal(inputs['rate_similarity_stimulus_set'], 0)
+        return mask[:, :, 0, 0]
+
+    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
+        """Get initial state."""
+        initial_state = [
+            tf.zeros([batch_size, 1], name='rate_cell_initial_state')
+        ]
+        return initial_state
+
+    def call(self, inputs, states, training=None):
         """Return predicted rating of a trial.
 
         Args:
@@ -170,8 +181,14 @@ class RateSimilarityCellV2(Behavior):
                 logistic function.
 
         """
-        stimulus_set = inputs['stimulus_set']
+        stimulus_set = inputs['rate_similarity_stimulus_set']
         groups = inputs['groups']
+
+        # Expand `sample_axis` of `stimulus_set` for stochastic
+        # functionality (e.g., variational inference).
+        stimulus_set = tf.repeat(
+            stimulus_set, self.n_sample, axis=self.sample_axis_in_cell
+        )
 
         # Embed stimuli indices in n-dimensional space.
         if self._pass_groups['percept']:
@@ -193,12 +210,6 @@ class RateSimilarityCellV2(Behavior):
             1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint))
         )
 
-        # TODO temporary hack
-        if tf.rank(prob) > 2:
-            prob = prob[:, :, 0]
-
-        # Add singleton trailing dimension since MSE assumes rank-2 Tensors.
-        # prob = tf.expand_dims(prob, axis=-1) TODO, not sure if this is necessary anymore since we have timestep version
         return prob, states
 
     def get_config(self):

@@ -81,7 +81,6 @@ class ALCOVECellV2(Behavior):
         # Misc. attributes.
         self.units = units
         self.output_logits = False
-        self.n_sample = 1
 
         # Process incoming layers.
         self.similarity = similarity
@@ -198,7 +197,12 @@ class ALCOVECellV2(Behavior):
                 dtype=K.floatx(), constraint=self.lr_association_constraint
             )
 
-    def call(self, inputs, states):
+    def get_mask(self, inputs):
+        """Return appropriate mask."""
+        mask = tf.not_equal(inputs['categorize_stimulus_set'], 0)
+        return mask[:, :, 0]
+
+    def call(self, inputs, states, training=None):
         """Call.
 
         Args:
@@ -217,14 +221,20 @@ class ALCOVECellV2(Behavior):
                     class output activitiy.
 
         """
-        stimulus_set = inputs['stimulus_set']
-        correct_label_idx = inputs['correct_label']
+        stimulus_set = inputs['categorize_stimulus_set']
+        correct_label_idx = inputs['categorize_correct_label']
         groups = inputs['groups']
 
         attention = states[0]  # Previous attention weights state.
         association = states[1]  # Previous association weights state.
 
         batch_size = tf.shape(stimulus_set)[0]
+
+        # Expand `sample_axis` of `stimulus_set` for stochastic
+        # functionality (e.g., variational inference).
+        stimulus_set = tf.repeat(
+            stimulus_set, self.n_sample, axis=self.sample_axis_in_cell
+        )
 
         # Embed stimuli indices in n-dimensional space.
         if self._pass_groups['percept']:

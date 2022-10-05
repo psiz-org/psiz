@@ -22,10 +22,11 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.groups_mixin import GroupsMixin
+from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
 
-class Behavior(GroupsMixin, tf.keras.layers.Layer):
+class Behavior(StochasticMixin, GroupsMixin, tf.keras.layers.Layer):
     """An abstract behavior layer.
 
     Sub-classes of this layer are responsible for three things:
@@ -48,17 +49,16 @@ class Behavior(GroupsMixin, tf.keras.layers.Layer):
         """
         super(Behavior, self).__init__(**kwargs)
 
-        # Create placeholder for layer switches.
-        self._pass_groups = {}
+    def get_mask(self, inputs, states, training=None):
+        raise NotImplementedError
 
     def call(self, inputs):
         raise NotImplementedError
 
     def get_config(self):
         """Return layer configuration."""
-        config = super().get_config()
-        return config
+        return super(Behavior, self).get_config()
 
     @classmethod
     def from_config(cls, config):
-        return super().from_config(config)
+        return cls(**config)

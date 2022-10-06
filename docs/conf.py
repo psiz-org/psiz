@@ -29,7 +29,7 @@ author = 'Brett D. Roads'
 release = '0.7.0'
 version = '0.7'
 # release = get_version("psiz")
-# ver = '.'.join(release.split('.')[:3])  # TODO why ver? is it necessary?
+# ver = '.'.join(release.split('.')[:3])  # TODO(roads): why is ver necessary?
 # version = ver
 
 # -- General configuration ---------------------------------------------------

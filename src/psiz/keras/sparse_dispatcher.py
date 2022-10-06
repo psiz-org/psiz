@@ -44,7 +44,7 @@ import tensorflow as tf
 # from tensorflow.python.framework import function
 
 
-# TODO do we need this, if so why does it break during eager?
+# TODO(roads): do we need this, if so why does it break during eager?
 # @function.Defun(
 #     python_grad_func=lambda x, dy: tf.convert_to_tensor(dy),
 #     shape_func=lambda op: [op.inputs[0].get_shape()])
@@ -166,7 +166,7 @@ class SparseDispatcher():
         )
 
     # @add_name_scope()
-    # TODO can we delete this method?
+    # TODO(roads): can we delete this method?
     def dispatch_single(self, inputs):
         """Create one input Tensor for each expert.
 
@@ -185,7 +185,7 @@ class SparseDispatcher():
         return tf.split(inputs, self._part_sizes_tensor, 0)
 
     # @add_name_scope()
-    # TODO delete or refactor as private method that handles non-timestep
+    # TODO(roads): delete or refactor as private method that handles non-timestep
     # version.
     def dispatch_multi(self, inputs):
         """Create inputs for each expert.
@@ -300,7 +300,7 @@ class SparseDispatcher():
                         expert_list[i_expert].append(inp_expert)
 
         # Convert list to tuple so some TF layers don't freak out.
-        # TODO is this still necessary?
+        # TODO(roads): is this still necessary?
         if not inputs_is_dict:
             for i_expert in range(self._num_experts):
                 expert_list[i_expert] = tuple(expert_list[i_expert])
@@ -308,7 +308,7 @@ class SparseDispatcher():
         return expert_list
 
     # @add_name_scope()
-    # TODO delete `combine`? bc no longer have mismatched batch lenght that
+    # TODO(roads): delete `combine`? bc no longer have mismatched batch lenght that
     # requires sophisticated stitching.
     def combine(self, expert_out, multiply_by_gates=True):
         """Sum together the expert output, weighted by the gates.
@@ -327,7 +327,7 @@ class SparseDispatcher():
             a `Tensor` with shape `[batch_size, <extra_output_dims>]`.
 
         """
-        # TODO potential issue, original file was concerned with tf.concat
+        # TODO(roads): potential issue, original file was concerned with tf.concat
         # efficiency. See tensor2tensor comments on
         # `common_layers.convert_gradient_to_tensor`.
         # stitched = common_layers.convert_gradient_to_tensor(

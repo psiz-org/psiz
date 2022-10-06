@@ -66,7 +66,7 @@ class Catalog():
         self.n_stimuli = len(stimulus_id)
         stimulus_id = self._check_id(stimulus_id)
         # self.common_path = os.path.commonpath(stimulus_filepath)
-        # TODO modify check, move away from numpy array.
+        # TODO(roads): modify check, move away from numpy array.
         stimulus_filepath = self._check_filepath(stimulus_filepath)
 
         if class_id is None:

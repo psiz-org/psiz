@@ -15,10 +15,10 @@
 # ============================================================================
 """Keras mixins initialization file."""
 
-from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.gate_mixin import GateMixin
 from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
 __all__ = [
-    'GroupsMixin',
+    'GateMixin',
     'StochasticMixin',
 ]

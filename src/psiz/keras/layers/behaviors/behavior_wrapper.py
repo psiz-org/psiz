@@ -24,13 +24,13 @@ import copy
 
 import tensorflow as tf
 
-from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.gate_mixin import GateMixin
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='BehaviorWrapper'
 )
-class BehaviorWrapper(GroupsMixin, tf.keras.layers.Layer):
+class BehaviorWrapper(GateMixin, tf.keras.layers.Layer):
     """A rank similarity behavior layer."""
     def __init__(self, net, **kwargs):
         """Initialize.

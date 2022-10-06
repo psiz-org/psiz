@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.gate_mixin import GateMixin
 from psiz.keras.layers.gates.branch_gate import BranchGate
 
 
@@ -67,7 +67,7 @@ class Select(tf.keras.layers.Layer):
         return inputs[:, self.index]
 
 
-class IncrementDict(GroupsMixin, tf.keras.layers.Layer):
+class IncrementDict(GateMixin, tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
@@ -81,7 +81,7 @@ class IncrementDict(GroupsMixin, tf.keras.layers.Layer):
 
 
 # Copied from test_sparse_dispatcher:AddPairsDict.
-class AddPairsDict(GroupsMixin, tf.keras.layers.Layer):
+class AddPairsDict(GateMixin, tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):

@@ -22,11 +22,11 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.gate_mixin import GateMixin
 from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
 
-class Behavior(StochasticMixin, GroupsMixin, tf.keras.layers.Layer):
+class Behavior(StochasticMixin, GateMixin, tf.keras.layers.Layer):
     """An abstract behavior layer.
 
     Sub-classes of this layer are responsible for three things:

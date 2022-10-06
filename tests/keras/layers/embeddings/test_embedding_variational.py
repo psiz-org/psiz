@@ -102,7 +102,7 @@ def ds_v1():
     return ds
 
 
-class TempNoRNN(psiz.keras.mixins.GroupsMixin, psiz.keras.models.Stochastic):
+class TempNoRNN(psiz.keras.mixins.GateMixin, psiz.keras.models.Stochastic):
     """A basic model for testing.
 
     Attributes:
@@ -130,7 +130,7 @@ class TempNoRNN(psiz.keras.mixins.GroupsMixin, psiz.keras.models.Stochastic):
         # Assign layers.
         self.net = net
 
-        # Satisfy GroupsMixin contract.
+        # Satisfy GateMixin contract.
         self._pass_groups = {
             'net': self.check_supports_groups(net)
         }
@@ -161,7 +161,7 @@ class TempNoRNN(psiz.keras.mixins.GroupsMixin, psiz.keras.models.Stochastic):
         return output
 
 
-class TempRNN(psiz.keras.mixins.GroupsMixin, psiz.keras.models.Stochastic):
+class TempRNN(psiz.keras.mixins.GateMixin, psiz.keras.models.Stochastic):
     """A basic model for testing.
 
     Attributes:
@@ -189,7 +189,7 @@ class TempRNN(psiz.keras.mixins.GroupsMixin, psiz.keras.models.Stochastic):
         # Assign layers.
         self.net = tf.keras.layers.RNN(net, return_sequences=True)
 
-        # Satisfy GroupsMixin contract.
+        # Satisfy GateMixin contract.
         self._pass_groups = {
             'net': self.check_supports_groups(net)
         }

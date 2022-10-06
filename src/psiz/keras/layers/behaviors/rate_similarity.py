@@ -74,7 +74,7 @@ class RateSimilarity(Behavior):
         super(RateSimilarity, self).__init__(**kwargs)
         self.kernel = kernel
 
-        # Satisfy `GroupsMixin` contract.
+        # Satisfy `GateMixin` contract.
         self._pass_groups['kernel'] = self.check_supports_groups(kernel)
 
         # Satisfy RNNCell contract.  TODO

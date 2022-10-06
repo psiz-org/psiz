@@ -24,13 +24,13 @@ Classes:
 import tensorflow as tf
 
 from psiz.keras.layers.drop import Drop
-from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.gate_mixin import GateMixin
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras', name='Gate'
 )
-class Gate(GroupsMixin, tf.keras.layers.Layer):
+class Gate(GateMixin, tf.keras.layers.Layer):
     """Abstract layer that routes inputs to group-specific subnetworks.
 
     Note: All subnetworks must be able to handle batch_size=0 calls. If
@@ -72,7 +72,7 @@ class Gate(GroupsMixin, tf.keras.layers.Layer):
                 `groups` (last Tensor in `inputs`) should be passed
                 to the subnets. By default, each subnet will be
                 inspected to see if they support groups (i.e., the
-                layer implements `GroupsMixin` mixin). This argument
+                layer implements `GateMixin` mixin). This argument
                 can be used to override the default. If provided, the
                 length must agree with the number of subnets.
                 shape=(n_subnet)

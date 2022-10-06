@@ -16,7 +16,7 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    GroupsMixin: A multiple inheritance mixin for layers that support
+    GateMixin: A multiple inheritance mixin for layers that support
         groups.
 
 """
@@ -24,7 +24,7 @@ Classes:
 import tensorflow as tf
 
 
-class GroupsMixin():
+class GateMixin():
     """A mixin for layers that support `groups` input."""
 
     def __init__(self, *args, **kwargs):
@@ -41,7 +41,7 @@ class GroupsMixin():
 
     def check_supports_groups(self, layer):
         """Check if layer supports groups."""
-        # Check if implements `GroupsMixin`.
+        # Check if implements `GateMixin`.
         if hasattr(layer, 'supports_groups'):
             return layer.supports_groups
 

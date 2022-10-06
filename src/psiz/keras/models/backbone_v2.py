@@ -26,13 +26,13 @@ from importlib.metadata import version
 import tensorflow as tf
 
 from psiz.keras.models.stochastic import Stochastic
-from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.gate_mixin import GateMixin
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.models', name='BackboneV2'
 )
-class BackboneV2(GroupsMixin, Stochastic):
+class BackboneV2(GateMixin, Stochastic):
     """A general-purpose model.
 
     This model is intended to be a convenience `Model` that covers a
@@ -45,7 +45,7 @@ class BackboneV2(GroupsMixin, Stochastic):
             axis=2 and `StochasticMixin` is used appropriately.
         3. Supports multiple measures synthesis and hierarchical
             modeling via data routing. Data routing assumes `groups` is
-            specified in the input dictionary and the `GroupsMixin` is
+            specified in the input dictionary and the `GateMixin` is
             used appropriately.
 
     If your use case is not covered, you can use this model as a guide
@@ -87,7 +87,7 @@ class BackboneV2(GroupsMixin, Stochastic):
         # Assign layers.
         self.net = net
 
-        # Satisfy GroupsMixin contract.
+        # Satisfy GateMixin contract.
         self._pass_groups = {
             'net': self.check_supports_groups(net)
         }

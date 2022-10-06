@@ -26,11 +26,11 @@ from importlib.metadata import version
 import tensorflow as tf
 
 from psiz.keras.models.stochastic import Stochastic
-from psiz.keras.mixins.groups_mixin import GroupsMixin
+from psiz.keras.mixins.gate_mixin import GateMixin
 from psiz.utils import expand_dim_repeat
 
 
-class Backbone(GroupsMixin, Stochastic):
+class Backbone(GateMixin, Stochastic):
     """A backbone-based psychological model.
 
     This model is intended to cover a large number of pscyhological
@@ -65,7 +65,7 @@ class Backbone(GroupsMixin, Stochastic):
         self.percept = percept
         self.behavior = behavior
 
-        # Satisfy GroupsMixin contract.
+        # Satisfy GateMixin contract.
         self._pass_groups = {
             'percept': self.check_supports_groups(percept),
             'behavior': self.check_supports_groups(behavior)

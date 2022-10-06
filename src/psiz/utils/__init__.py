@@ -29,9 +29,16 @@ from psiz.utils.standard_split import standard_split
 from psiz.utils.stratified_group_kfold import StratifiedGroupKFold
 
 __all__ = [
-    'affine_mvn', 'choice_wo_replace', 'expand_dim_repeat',
-    'generate_group_matrix', 'pairwise_index_dataset',
-    'pairwise_similarity', 'procrustes_rotation',
-    'ProgressBarRe', 'rotation_matrix', 'random_combinations',
-    'standard_split', 'StratifiedGroupKFold'
+    'affine_mvn',
+    'choice_wo_replace',
+    'expand_dim_repeat',
+    'generate_group_matrix',
+    'pairwise_index_dataset',
+    'pairwise_similarity',
+    'procrustes_rotation',
+    'ProgressBarRe',
+    'rotation_matrix',
+    'random_combinations',
+    'standard_split',
+    'StratifiedGroupKFold'
 ]

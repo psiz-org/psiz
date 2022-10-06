@@ -18,4 +18,7 @@
 from psiz.catalog.catalog import Catalog
 from psiz.catalog.load_catalog import load_catalog
 
-__all__ = ['Catalog', 'load_catalog']
+__all__ = [
+    'Catalog',
+    'load_catalog'
+]

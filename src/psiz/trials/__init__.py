@@ -32,7 +32,17 @@ from psiz.trials.similarity.rate.rate_docket import RateDocket
 from psiz.trials.similarity.rate.rate_observations import RateObservations
 
 __all__ = [
-    'stack', 'load_trials', 'sample_qr_sets', 'DocketGenerator', 'ActiveRank',
-    'RandomRank', 'RankTrials', 'RankDocket', 'RankObservations', 'RandomRate',
-    'RateTrials', 'RateDocket', 'RateObservations'
+    'stack',
+    'load_trials',
+    'sample_qr_sets',
+    'DocketGenerator',
+    'ActiveRank',
+    'RandomRank',
+    'RankTrials',
+    'RankDocket',
+    'RankObservations',
+    'RandomRate',
+    'RateTrials',
+    'RateDocket',
+    'RateObservations'
 ]

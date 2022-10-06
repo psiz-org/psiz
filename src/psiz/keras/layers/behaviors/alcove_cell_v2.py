@@ -73,8 +73,8 @@ class ALCOVECellV2(Behavior):
         super(ALCOVECellV2, self).__init__(**kwargs)
 
         # Satisfy `GateMixin` contract.
-        self._pass_groups['percept'] = self.check_supports_groups(percept)
-        self._pass_groups['similarity'] = self.check_supports_groups(
+        self._pass_gate_weights['percept'] = self.check_supports_gating(percept)
+        self._pass_gate_weights['similarity'] = self.check_supports_gating(
             similarity
         )
 
@@ -237,7 +237,7 @@ class ALCOVECellV2(Behavior):
         )
 
         # Embed stimuli indices in n-dimensional space.
-        if self._pass_groups['percept']:
+        if self._pass_gate_weights['percept']:
             z_in = self.percept([stimulus_set, groups])
         else:
             z_in = self.percept(stimulus_set)

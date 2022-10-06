@@ -30,14 +30,14 @@ class Behavior(StochasticMixin, GateMixin, tf.keras.layers.Layer):
     """An abstract behavior layer.
 
     Sub-classes of this layer are responsible for three things:
-    1) Set `self.supports_groups = False` if the layer does not
+    1) Set `self.supports_gating = False` if the layer does not
     support `groups` input.
-    2) For each layer, set `self._pass_groups[<layer variable>]`. For
+    2) For each layer, set `self._pass_gate_weights[<layer variable>]`. For
     example, if a layer named `kernel` is provided:
     3) Implement a `call` method that routes inputs by using
-    appropriate `self._pass_groups`.
+    appropriate `self._pass_gate_weights`.
 
-    `self._pass_groups['kernel'] = self.check_supports_groups(kernel)`
+    `self._pass_gate_weights['kernel'] = self.check_supports_gating(kernel)`
 
     """
     def __init__(self, **kwargs):

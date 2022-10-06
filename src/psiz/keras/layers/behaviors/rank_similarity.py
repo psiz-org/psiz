@@ -42,7 +42,7 @@ class RankSimilarity(Behavior):
         self.kernel = kernel
 
         # Satisfy `GateMixin` contract.
-        self._pass_groups['kernel'] = self.check_supports_groups(kernel)
+        self._pass_gate_weights['kernel'] = self.check_supports_gating(kernel)
 
         # Satisfy RNNCell contract.  TODO
         self.state_size = [
@@ -115,7 +115,7 @@ class RankSimilarity(Behavior):
         # Prep retrieved embeddings for kernel op based on behavior.
         z_q, z_r = self._split_stimulus_set(z)
 
-        if self._pass_groups['kernel']:
+        if self._pass_gate_weights['kernel']:
             groups = inputs[-1]
             sim_qr = self.kernel([z_q, z_r, groups])
         else:

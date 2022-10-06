@@ -44,8 +44,8 @@ class RankSimilarityCellV2(Behavior):
         self.kernel = kernel
 
         # Satisfy `GateMixin` contract.
-        self._pass_groups['percept'] = self.check_supports_groups(percept)
-        self._pass_groups['kernel'] = self.check_supports_groups(kernel)
+        self._pass_gate_weights['percept'] = self.check_supports_gating(percept)
+        self._pass_gate_weights['kernel'] = self.check_supports_gating(kernel)
 
         # Satisfy RNNCell contract.
         self.state_size = [
@@ -143,7 +143,7 @@ class RankSimilarityCellV2(Behavior):
         )
 
         # Embed stimuli indices in n-dimensional space.
-        if self._pass_groups['percept']:
+        if self._pass_gate_weights['percept']:
             z = self.percept([stimulus_set, groups])
         else:
             z = self.percept(stimulus_set)
@@ -152,7 +152,7 @@ class RankSimilarityCellV2(Behavior):
         # Prep retrieved embeddings for kernel op based on behavior.
         z_q, z_r = self._split_stimulus_set(z)
 
-        if self._pass_groups['kernel']:
+        if self._pass_gate_weights['kernel']:
             sim_qr = self.kernel([z_q, z_r, groups])
         else:
             sim_qr = self.kernel([z_q, z_r])

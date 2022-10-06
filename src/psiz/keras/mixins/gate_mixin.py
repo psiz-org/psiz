@@ -25,7 +25,7 @@ import tensorflow as tf
 
 
 class GateMixin():
-    """A mixin for layers that support `groups` input."""
+    """A mixin for modules that support gating of input."""
 
     def __init__(self, *args, **kwargs):
         """Initialize.
@@ -34,19 +34,19 @@ class GateMixin():
 
         """
         super().__init__(*args, **kwargs)
-        self.supports_groups = tf.constant(True)
-        self.inputs_group_idx = -1
+        self.supports_gating = tf.constant(True)
+        self.inputs_gate_idx = -1
         # Create placeholder for layer switches.
-        self._pass_groups = {}
+        self._pass_gate_weights = {}
 
-    def check_supports_groups(self, layer):
+    def check_supports_gating(self, layer):
         """Check if layer supports groups."""
         # Check if implements `GateMixin`.
-        if hasattr(layer, 'supports_groups'):
-            return layer.supports_groups
+        if hasattr(layer, 'supports_gating'):
+            return layer.supports_gating
 
         # Check RNN cell.
         elif isinstance(layer, tf.keras.layers.RNN):
-            return self.check_supports_groups(layer.cell)
+            return self.check_supports_gating(layer.cell)
         else:
             return tf.constant(False)

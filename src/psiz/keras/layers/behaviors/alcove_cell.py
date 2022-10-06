@@ -73,8 +73,8 @@ class ALCOVECell(Behavior):
         super(ALCOVECell, self).__init__(**kwargs)
 
         # Satisfy `GateMixin` contract.
-        self.supports_groups = False
-        self._pass_groups['similarity'] = self.check_supports_groups(
+        self.supports_gating = False
+        self._pass_gate_weights['similarity'] = self.check_supports_gating(
             similarity
         )
 

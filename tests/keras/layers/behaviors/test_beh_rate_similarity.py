@@ -26,4 +26,4 @@ def test_serialization(kernel_v0):
     config = layer.get_config()
 
     recon_layer = RateSimilarity.from_config(config)
-    assert recon_layer.supports_groups is True
+    assert recon_layer.supports_gating is True

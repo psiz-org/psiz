@@ -66,9 +66,9 @@ class Backbone(GateMixin, Stochastic):
         self.behavior = behavior
 
         # Satisfy GateMixin contract.
-        self._pass_groups = {
-            'percept': self.check_supports_groups(percept),
-            'behavior': self.check_supports_groups(behavior)
+        self._pass_gate_weights = {
+            'percept': self.check_supports_gating(percept),
+            'behavior': self.check_supports_gating(behavior)
         }
 
     def call(self, inputs):
@@ -94,7 +94,7 @@ class Backbone(GateMixin, Stochastic):
         # TensorShape=(batch_size, n_timestep, n_sample, n, [m, ...])
 
         # Embed stimuli indices in n-dimensional space.
-        if self._pass_groups['percept']:
+        if self._pass_gate_weights['percept']:
             z = self.percept([stimulus_set, groups])
         else:
             z = self.percept(stimulus_set)
@@ -109,7 +109,7 @@ class Backbone(GateMixin, Stochastic):
         # dictionary.
         inputs_list = self._unpack_inputs(inputs)
 
-        if self._pass_groups['behavior']:
+        if self._pass_gate_weights['behavior']:
             y_pred = self.behavior(
                 (stimulus_set, z, *inputs_list, groups), mask=mask
             )

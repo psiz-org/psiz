@@ -131,8 +131,8 @@ class TempNoRNN(psiz.keras.mixins.GateMixin, psiz.keras.models.Stochastic):
         self.net = net
 
         # Satisfy GateMixin contract.
-        self._pass_groups = {
-            'net': self.check_supports_groups(net)
+        self._pass_gate_weights = {
+            'net': self.check_supports_gating(net)
         }
 
     def call(self, inputs, training=None):
@@ -190,8 +190,8 @@ class TempRNN(psiz.keras.mixins.GateMixin, psiz.keras.models.Stochastic):
         self.net = tf.keras.layers.RNN(net, return_sequences=True)
 
         # Satisfy GateMixin contract.
-        self._pass_groups = {
-            'net': self.check_supports_groups(net)
+        self._pass_gate_weights = {
+            'net': self.check_supports_gating(net)
         }
 
     def call(self, inputs, training=None):

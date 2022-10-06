@@ -97,7 +97,7 @@ class Gate(GateMixin, tf.keras.layers.Layer):
         if pass_groups is None:
             pass_groups = []
             for subnet in subnets:
-                pass_groups.append(self.check_supports_groups(subnet))
+                pass_groups.append(self.check_supports_gating(subnet))
         self.pass_groups = pass_groups
 
         if strip_inputs is None:
@@ -157,7 +157,7 @@ class Gate(GateMixin, tf.keras.layers.Layer):
             # TODO do we need special consideration for dictionaries?
             # TODO does Drop need to accommodate dictionaries?
             return Drop(
-                subnet=subnet, drop_index=self.inputs_group_idx,
+                subnet=subnet, drop_index=self.inputs_gate_idx,
                 strip_inputs=strip_inputs
             )
 
@@ -187,7 +187,7 @@ class Gate(GateMixin, tf.keras.layers.Layer):
         if self._inputs_is_dict:
             groups = inputs['groups']
         else:
-            groups = inputs[self.inputs_group_idx]
+            groups = inputs[self.inputs_gate_idx]
 
         if self._groups_are_indices:
             idx_group = tf.gather(groups, self.groups_subset, axis=-1)

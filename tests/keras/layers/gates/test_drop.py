@@ -188,5 +188,3 @@ def test_serialization():
 
     recon_layer = Drop.from_config(config)
     assert recon_layer.drop_index == -1
-
-

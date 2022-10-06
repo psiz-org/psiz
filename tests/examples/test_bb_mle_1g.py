@@ -137,10 +137,12 @@ def ground_truth_bb(n_stimuli, n_dim, similarity_func, mask_zero):
         similarity=similarity
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+        percept=percept, kernel=kernel
+    )
     rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
-    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+    model = psiz.keras.models.BackboneV2(net=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -188,10 +190,12 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
         distance=psiz.keras.layers.Minkowski(),
         similarity=similarity
     )
-    rank_cell = psiz.keras.layers.RankSimilarity(kernel=kernel)
+    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+        percept=percept, kernel=kernel
+    )
     rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
-    model = psiz.keras.models.Backbone(percept=percept, behavior=rank)
+    model = psiz.keras.models.BackboneV2(net=rank)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -257,7 +261,6 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     docket = generator.generate(n_trial)
 
     # Simulate similarity judgments.
-    # TODO RankAgent doesn't work with new Backbone model.
     agent = psiz.agents.RankAgent(model_true)
     obs = agent.simulate(docket)
 
@@ -329,8 +332,8 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         # similarity matrices implied by each model.
         simmat_infer = np.squeeze(
             psiz.utils.pairwise_similarity(
-                model_inferred.percept, model_inferred.behavior.cell.kernel,
-                ds_pairs
+                model_inferred.net.cell.percept,
+                model_inferred.net.cell.kernel, ds_pairs
             ).numpy()
         )
         rho, _ = pearsonr(simmat_true, simmat_infer)

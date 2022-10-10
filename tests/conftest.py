@@ -156,7 +156,7 @@ def rank_2g_mle_determ():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], groups_subset=0
+        subnets=[kernel_0, kernel_1], gate_weights_idx=-1
     )
 
     behavior = psiz.keras.layers.RankBehavior()
@@ -195,7 +195,7 @@ def rank_2stim_2kern_determ():
     )
 
     stimuli_group = psiz.keras.layers.BraidGate(
-        subnets=[stimuli_0, stimuli_1], groups_subset=0
+        subnets=[stimuli_0, stimuli_1], gate_weights_idx=-1
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -235,7 +235,7 @@ def rank_2stim_2kern_determ():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], groups_subset=0
+        subnets=[kernel_0, kernel_1], gate_weights_idx=-1
     )
 
     behavior = psiz.keras.layers.RankBehavior()
@@ -274,7 +274,7 @@ def rank_2stim_2kern_nomask_determ():
     )
 
     stimuli_group = psiz.keras.layers.BraidGate(
-        subnets=[stimuli_0, stimuli_1], groups_subset=0
+        subnets=[stimuli_0, stimuli_1], gate_weights_idx=-1
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -314,7 +314,7 @@ def rank_2stim_2kern_nomask_determ():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], groups_subset=0
+        subnets=[kernel_0, kernel_1], gate_weights_idx=-1
     )
 
     behavior = psiz.keras.layers.RankBehavior()
@@ -339,7 +339,7 @@ def rank_2stim_2kern_2behav():
     )
 
     stimuli_group = psiz.keras.layers.BraidGate(
-        subnets=[stimuli_0, stimuli_1], groups_subset=0
+        subnets=[stimuli_0, stimuli_1], gate_weights_idx=-1
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -379,13 +379,13 @@ def rank_2stim_2kern_2behav():
     )
 
     kernel_group = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], groups_subset=0
+        subnets=[kernel_0, kernel_1], gate_weights_idx=-1
     )
 
     behavior_0 = psiz.keras.layers.RankBehavior()
     behavior_1 = psiz.keras.layers.RankBehavior()
     behavior_group = psiz.keras.layers.BraidGate(
-        subnets=[behavior_0, behavior_1], groups_subset=0
+        subnets=[behavior_0, behavior_1], gate_weights_idx=-1
     )
 
     model = psiz.keras.models.Rank(

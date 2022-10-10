@@ -35,7 +35,7 @@ class GateMixin():
         """
         super().__init__(*args, **kwargs)
         self.supports_gating = tf.constant(True)
-        self.inputs_gate_idx = -1
+        self.gate_weights_idx = -1
         # Create placeholder for layer switches.
         self._pass_gate_weights = {}
 
@@ -44,7 +44,6 @@ class GateMixin():
         # Check if implements `GateMixin`.
         if hasattr(layer, 'supports_gating'):
             return layer.supports_gating
-
         # Check RNN cell.
         elif isinstance(layer, tf.keras.layers.RNN):
             return self.check_supports_gating(layer.cell)

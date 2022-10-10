@@ -98,8 +98,8 @@ def gates_v0_timestep():
             [[0.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
             [[0.0, 0.0, 1.0], [0.0, 0.0, 1.0]],
             [[0.0, 0.3, 0.7], [0.0, 0.3, 0.7]],
-            # NOTE: The last batch is intentionally different at the two
-            # timesteps.
+            # NOTE: The last batch is intentionally different for the
+            # two timesteps.
             [[0.5, 0.0, 0.0], [0.0, 0.5, 0.0]]
         ], dtype=tf.float32
     )

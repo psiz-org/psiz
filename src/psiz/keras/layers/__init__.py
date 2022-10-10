@@ -42,6 +42,7 @@ from psiz.keras.layers.embeddings.variational import EmbeddingVariational
 from psiz.keras.layers.gates.gate import Gate
 from psiz.keras.layers.gates.braid_gate import BraidGate
 from psiz.keras.layers.gates.branch_gate import BranchGate
+from psiz.keras.layers.gates.split_gate import SplitGate
 from psiz.keras.layers.kernels.distance_based import DistanceBased
 from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
 from psiz.keras.layers.similarities.heavy_tailed import HeavyTailedSimilarity
@@ -74,6 +75,7 @@ __all__ = [
     'Gate',
     'BraidGate',
     'BranchGate',
+    'SplitGate',
     'Drop',
     'DistanceBased',
     'ExponentialSimilarity',

@@ -87,11 +87,6 @@ class BackboneV2(GateMixin, Stochastic):
         # Assign layers.
         self.net = net
 
-        # Satisfy GateMixin contract.
-        self._pass_gate_weights = {
-            'net': self.check_supports_gating(net)
-        }
-
     def call(self, inputs, training=None):
         """Call.
 

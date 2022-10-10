@@ -24,14 +24,14 @@ Classes:
 import tensorflow as tf
 
 from psiz.keras.sparse_dispatcher import SparseDispatcher
-from psiz.keras.layers.gates.gate import Gate
+from psiz.keras.layers.gates.split_gate import SplitGate
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras', name='BranchGate'
 )
-class BranchGate(Gate):
-    """A layer that routes inputs to group-specific subnetworks.
+class BranchGate(SplitGate):
+    """A layer that routes inputs to subnetworks.
 
     In a `BranchGate` the subnetworks are not combined at the end (in
     contrast to a `BraidGate`).
@@ -40,14 +40,13 @@ class BranchGate(Gate):
 
     """
     def __init__(
-            self, subnets=None, groups_subset=0, pass_groups=None,
-            strip_inputs=None, output_names=None, **kwargs):
+            self, subnets=None, pass_gate_weights=None, strip_inputs=None,
+            output_names=None, **kwargs):
         """Initialize.
 
         Args:
             subnets: see `Gate`.
-            groups_subset (optional): see `Gate`.
-            pass_groups (optional): see `Gate`.
+            pass_gate_weights (optional): see `Gate`.
             strip_inputs (optional): see `Gate`.
             output_names (optional): A list of names to apply to the
                 outputs of each subnet. Useful if using different
@@ -60,8 +59,8 @@ class BranchGate(Gate):
 
         """
         super(BranchGate, self).__init__(
-            subnets=subnets, groups_subset=groups_subset,
-            pass_groups=pass_groups, strip_inputs=strip_inputs, **kwargs)
+            subnets=subnets, pass_gate_weights=pass_gate_weights,
+            strip_inputs=strip_inputs, **kwargs)
         if output_names is None:
             output_names = []
             for i_subnet in range(self.n_subnet):
@@ -73,17 +72,18 @@ class BranchGate(Gate):
 
         Args:
             inputs: a n-tuple containing a data Tensor and a trailing
-                group Tensor.
-                list format: [data Tensor, [data Tensor, ...], groups Tensor]
+                "gate weights" Tensor.
+                tuple format:
+                  [data Tensor, [data Tensor, ...], gate_weights Tensor]
                 data Tensor(s): shape=(batch, m, [n, ...])
-                groups Tensor: shape=(batch, g)
+                gate_weights Tensor: shape=(batch, g)
             mask (optional): A Tensor indicating which timesteps should
                 be masked.
 
         Returns:
             outputs: A dictionary of Tensors.
         """
-        gates = self._process_groups(inputs)
+        gates = self._process_gate_weights(inputs)
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
         dispatcher = SparseDispatcher(

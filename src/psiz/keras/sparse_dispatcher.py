@@ -185,8 +185,8 @@ class SparseDispatcher():
         return tf.split(inputs, self._part_sizes_tensor, 0)
 
     # @add_name_scope()
-    # TODO(roads): delete or refactor as private method that handles non-timestep
-    # version.
+    # TODO(roads): delete or refactor as private method that handles
+    # non-timestep version.
     def dispatch_multi(self, inputs):
         """Create inputs for each expert.
 
@@ -308,8 +308,8 @@ class SparseDispatcher():
         return expert_list
 
     # @add_name_scope()
-    # TODO(roads): delete `combine`? bc no longer have mismatched batch lenght that
-    # requires sophisticated stitching.
+    # TODO(roads): delete `combine`? bc no longer have mismatched batch length
+    # that requires sophisticated stitching.
     def combine(self, expert_out, multiply_by_gates=True):
         """Sum together the expert output, weighted by the gates.
 
@@ -327,8 +327,8 @@ class SparseDispatcher():
             a `Tensor` with shape `[batch_size, <extra_output_dims>]`.
 
         """
-        # TODO(roads): potential issue, original file was concerned with tf.concat
-        # efficiency. See tensor2tensor comments on
+        # TODO(roads): potential issue, original file was concerned with
+        # tf.concat efficiency. See tensor2tensor comments on
         # `common_layers.convert_gradient_to_tensor`.
         # stitched = common_layers.convert_gradient_to_tensor(
         #     tf.concat(expert_out, 0)

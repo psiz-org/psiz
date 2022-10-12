@@ -31,7 +31,7 @@ from psiz.keras.mixins.gate_mixin import GateMixin
     package='psiz.keras.layers', name='BehaviorWrapper'
 )
 class BehaviorWrapper(GateMixin, tf.keras.layers.Layer):
-    """A rank similarity behavior layer."""
+    """A layer for wrapping a behavior."""
     def __init__(self, net, **kwargs):
         """Initialize.
 
@@ -66,9 +66,9 @@ class BehaviorWrapper(GateMixin, tf.keras.layers.Layer):
 
     def _drop_timestep_axis(self, x):
         """Drop timestep axis."""
-        # TODO Handle different data structures.
+        # TODO Handle other data structures.
         # NOTE: Must make a copy since we are not allowed to modify any
-        # lists or dicts passed as arguents to call().
+        # lists or dicts passed as arguments to call().
         x_copied = copy.copy(x)
         groups = x_copied.pop('groups', None)
         key_list = x_copied.keys()
@@ -80,7 +80,7 @@ class BehaviorWrapper(GateMixin, tf.keras.layers.Layer):
 
     def _add_timestep_axis(self, x):
         """Add timestep axis."""
-        # TODO Handle different data structures.
+        # TODO Handle other data structures.
         x = tf.expand_dims(x, axis=1)
         return x
 

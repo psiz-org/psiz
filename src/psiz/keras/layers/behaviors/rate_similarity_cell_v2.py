@@ -114,7 +114,8 @@ class RateSimilarityCellV2(Behavior):
             format_inputs_as_tuple=True
         )
 
-        # Satisfy RNNCell contract.  TODO
+        # Satisfy RNNCell contract.
+        # NOTE: A placeholder state.
         self.state_size = [
             tf.TensorShape([1])
         ]

@@ -78,6 +78,7 @@ class RankSimilarityCellV2(Behavior):
         )
 
         # Satisfy RNNCell contract.
+        # NOTE: A placeholder state.
         self.state_size = [
             tf.TensorShape([1])
         ]

@@ -16,7 +16,7 @@
 """Module of PsiZ models.
 
 Classes:
-    BackboneV2:  A backbone-based psychological embedding model.
+    Backbone:  A backbone-based psychological embedding model.
 
 """
 
@@ -29,9 +29,9 @@ from psiz.keras.models.stochastic import Stochastic
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.models', name='BackboneV2'
+    package='psiz.keras.models', name='Backbone'
 )
-class BackboneV2(Stochastic):
+class Backbone(Stochastic):
     """A general-purpose model.
 
     This model is intended to be a convenience `Model` that covers a
@@ -74,7 +74,7 @@ class BackboneV2(Stochastic):
             sample_axis = 2
         else:
             if sample_axis != 2:
-                raise ValueError('BackboneV2 requires sample_axis=2.')
+                raise ValueError('Backbone requires sample_axis=2.')
 
         super().__init__(
             sample_axis=sample_axis, n_sample=n_sample, **kwargs

@@ -118,7 +118,7 @@ def build_model(
         cell, return_sequences=True, stateful=False
     )
 
-    model = psiz.keras.models.BackboneV2(net=categorize)
+    model = psiz.keras.models.Backbone(net=categorize)
 
     # Compile model.
     compile_kwargs = {

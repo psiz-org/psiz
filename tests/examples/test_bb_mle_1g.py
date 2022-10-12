@@ -142,7 +142,7 @@ def ground_truth_bb(n_stimuli, n_dim, similarity_func, mask_zero):
     )
     rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.Backbone(net=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -195,7 +195,7 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     )
     rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.Backbone(net=rank)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),

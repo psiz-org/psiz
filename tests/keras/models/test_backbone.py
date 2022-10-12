@@ -303,7 +303,7 @@ def bb_cell_rank_1g_1g_mle():
     )
     rank = psiz.keras.layers.BehaviorWrapper(net=cell)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.Backbone(net=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -343,7 +343,7 @@ def bb_rnn_rank_1g_1g_mle():
     rnn = tf.keras.layers.RNN(cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.Backbone(net=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -403,7 +403,7 @@ def bb_rnn_rank_1g_2g_mle():
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(
+    model = psiz.keras.models.Backbone(
         net=rank, inputs_to_ignore=['groups']
     )
     compile_kwargs = {
@@ -449,7 +449,7 @@ def bb_rnn_rank_1g_3g_mle():
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(
+    model = psiz.keras.models.Backbone(
         net=rank, inputs_to_ignore=['groups']
     )
     return model
@@ -531,7 +531,7 @@ def bb_rnn_rank_2g_2g_mle():
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(
+    model = psiz.keras.models.Backbone(
         net=rank, inputs_to_ignore=['groups']
     )
 
@@ -621,7 +621,7 @@ def bb_rnn_rank_2g_2g_2g_mle():
         subnets=[behavior_0, behavior_1], gating_key='groups'
     )
 
-    model = psiz.keras.models.BackboneV2(
+    model = psiz.keras.models.Backbone(
         net=behavior, inputs_to_ignore=['groups']
     )
 
@@ -685,7 +685,7 @@ def bb_cell_rank_1g_vi():
     )
     rank = psiz.keras.layers.BehaviorWrapper(net=rank_cell)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.Backbone(net=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -748,7 +748,7 @@ def bb_rnn_rank_1g_vi():
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.Backbone(net=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -789,7 +789,7 @@ def bb_cell_rate_1g_mle():
     )
     rate = psiz.keras.layers.BehaviorWrapper(net=rate_cell)
 
-    model = psiz.keras.models.BackboneV2(net=rate)
+    model = psiz.keras.models.Backbone(net=rate)
 
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
@@ -831,7 +831,7 @@ def bb_rnn_rate_1g_mle():
     rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
     rate = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=rate)
+    model = psiz.keras.models.Backbone(net=rate)
 
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
@@ -873,7 +873,7 @@ def bb_rnn_categorize_1g_1g_mle():
     rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
     categorize = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=categorize, n_sample=2)
+    model = psiz.keras.models.Backbone(net=categorize, n_sample=2)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -925,7 +925,7 @@ def bb_rnn_rank_rate_1g_mle():
         output_names=['rank_branch', 'rate_branch']
     )
 
-    model = psiz.keras.models.BackboneV2(
+    model = psiz.keras.models.Backbone(
         net=behav_branch, inputs_to_ignore=['groups']
     )
 
@@ -971,7 +971,7 @@ class TestRankSimilarity:
         # Test in-memory serialization.
         config = model.get_config()
         assert config['n_sample'] == 2
-        recon_model = psiz.keras.models.BackboneV2.from_config(config)
+        recon_model = psiz.keras.models.Backbone.from_config(config)
         assert recon_model.sample_axis == 2
         assert recon_model.n_sample == 2
         tf.keras.backend.clear_session()
@@ -983,7 +983,7 @@ class TestRankSimilarity:
         del model
         # Load the saved model.
         # NOTE: We don't need to use the argument `custom_objects={
-        # "BackboneV2": psiz.keras.models.BackboneV2}` since the model
+        # "Backbone": psiz.keras.models.Backbone}` since the model
         # class is registered.
         loaded = tf.keras.models.load_model(fp_model)
 
@@ -1017,7 +1017,7 @@ class TestRankSimilarity:
         # Test in-memory serialization.
         config = model.get_config()
         assert config['n_sample'] == 2
-        recon_model = psiz.keras.models.BackboneV2.from_config(config)
+        recon_model = psiz.keras.models.Backbone.from_config(config)
         assert recon_model.n_sample == 2
         tf.keras.backend.clear_session()
 
@@ -1028,7 +1028,7 @@ class TestRankSimilarity:
         del model
         # Load the saved model.
         # NOTE: We don't need to use the argument `custom_objects={
-        # "BackboneV2": psiz.keras.models.BackboneV2}` since the model
+        # "Backbone": psiz.keras.models.Backbone}` since the model
         # class is registered.
         loaded = tf.keras.models.load_model(fp_model)
 

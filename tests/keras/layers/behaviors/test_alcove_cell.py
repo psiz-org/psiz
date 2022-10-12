@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test ALCOVECell."""
+"""Test ALCOVECellV2."""
 
 import tensorflow as tf
 
-from psiz.keras.layers import ALCOVECell, ExponentialSimilarity
+from psiz.keras.layers import ALCOVECellV2, ExponentialSimilarity
 
 
 def test_serialization():
@@ -32,10 +32,10 @@ def test_serialization():
     embedding = tf.keras.layers.Embedding(
         11, 4, mask_zero=True, trainable=False,
     )
-    layer = ALCOVECell(units, similarity=similarity, embedding=embedding)
+    layer = ALCOVECellV2(units, similarity=similarity, percept=embedding)
     config = layer.get_config()
 
-    recon_layer = ALCOVECell.from_config(config)
+    recon_layer = ALCOVECellV2.from_config(config)
     tf.debugging.assert_equal(recon_layer.similarity.beta, 3.2)
     tf.debugging.assert_equal(recon_layer.similarity.tau, 1.0)
     assert recon_layer.units == units

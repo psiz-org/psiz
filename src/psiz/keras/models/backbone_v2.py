@@ -76,13 +76,8 @@ class BackboneV2(Stochastic):
             if sample_axis != 2:
                 raise ValueError('BackboneV2 requires sample_axis=2.')
 
-        inputs_to_ignore = kwargs.pop('inputs_to_ignore', None)
-        if inputs_to_ignore is None:
-            inputs_to_ignore = []
-
         super().__init__(
-            sample_axis=sample_axis, n_sample=n_sample,
-            inputs_to_ignore=inputs_to_ignore, **kwargs
+            sample_axis=sample_axis, n_sample=n_sample, **kwargs
         )
 
         # Assign layers.

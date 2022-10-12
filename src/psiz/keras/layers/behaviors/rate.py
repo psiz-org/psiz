@@ -20,7 +20,7 @@ Classes:
 
 """
 
-import warnings as warn
+from warnings import warn
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K

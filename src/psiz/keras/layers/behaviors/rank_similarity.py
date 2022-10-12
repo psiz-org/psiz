@@ -23,13 +23,14 @@ Classes:
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.mixins.gate_mixin import GateMixin
+from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RankSimilarity'
 )
-class RankSimilarity(Behavior):
+class RankSimilarity(GateMixin, StochasticMixin, tf.keras.layers.Layer):
     """A rank similarity behavior layer."""
     def __init__(self, kernel=None, **kwargs):
         """Initialize.

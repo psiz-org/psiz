@@ -24,13 +24,14 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
-from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.mixins.gate_mixin import GateMixin
+from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RateSimilarity'
 )
-class RateSimilarity(Behavior):
+class RateSimilarity(GateMixin, StochasticMixin, tf.keras.layers.Layer):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized
@@ -190,7 +191,9 @@ class RateSimilarity(Behavior):
             prob = prob[:, :, 0]
 
         # Add singleton trailing dimension since MSE assumes rank-2 Tensors.
-        # prob = tf.expand_dims(prob, axis=-1) TODO, not sure if this is necessary anymore since we have timestep version
+        # TODO, not sure if this is necessary anymore since we have timestep
+        # version.
+        # prob = tf.expand_dims(prob, axis=-1)
         return prob, states
 
     def get_config(self):

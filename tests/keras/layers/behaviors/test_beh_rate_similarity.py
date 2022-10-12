@@ -15,6 +15,7 @@
 # ============================================================================
 """Test RankSimilarity."""
 
+import tensorflow as tf
 
 from psiz.keras.layers import RateSimilarity
 
@@ -26,4 +27,4 @@ def test_serialization(kernel_v0):
     config = layer.get_config()
 
     recon_layer = RateSimilarity.from_config(config)
-    assert recon_layer.supports_gating is True
+    tf.debugging.assert_equal(recon_layer.supports_gating, tf.constant(True))

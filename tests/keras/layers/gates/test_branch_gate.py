@@ -276,10 +276,10 @@ def groups_5x3x3_index_v0_2():
 def test_init_options():
     """Test init options."""
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x1'
     )
-    assert branch.gate_weights_idx == -1
+    assert branch.gating_index == -1
 
 
 def test_bad_instantiation_tuple(inputs_5x1_v0, groups_v0_2):
@@ -287,7 +287,7 @@ def test_bad_instantiation_tuple(inputs_5x1_v0, groups_v0_2):
     inputs_v0 = inputs_5x1_v0
     inputs = [inputs_v0, groups_v0_2]
 
-    # Test bad instantiation that is missing `gate_weights_idx`.
+    # Test bad instantiation that is missing `gating_index`.
     branch = BranchGate(
         subnets=[Increment(-0.1), Increment(0.1)], name='branch5x1'
     )
@@ -318,7 +318,7 @@ def test_call_2g_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0_2):
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x1'
     )
     outputs = branch(inputs)
@@ -327,7 +327,7 @@ def test_call_2g_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0_2):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x1', output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
@@ -356,7 +356,7 @@ def test_call_2g_5x1_disjoint(inputs_5x1_v0, groups_v1_12):
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x1'
     )
     outputs = branch(inputs)
@@ -365,7 +365,7 @@ def test_call_2g_5x1_disjoint(inputs_5x1_v0, groups_v1_12):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x1', output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
@@ -394,7 +394,7 @@ def test_call_2g_5x1_intersecting(inputs_5x1_v0, groups_v2_12):
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x1'
     )
     outputs = branch(inputs)
@@ -403,7 +403,7 @@ def test_call_2g_5x1_intersecting(inputs_5x1_v0, groups_v2_12):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x1', output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
@@ -433,7 +433,7 @@ def test_call_2g_5x3(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2):
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[AddPairs(-0.1), AddPairs(0.1)], gate_weights_idx=-1,
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], gating_index=-1,
         name='branch5x3'
     )
     outputs = branch(inputs)
@@ -442,7 +442,7 @@ def test_call_2g_5x3(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[AddPairs(-0.1), AddPairs(0.1)], gate_weights_idx=-1,
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], gating_index=-1,
         name='branch5x3', output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
@@ -480,7 +480,7 @@ def test_call_3g_5x3x2(inputs_5x3x2_v0, groups_v0_1):
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[Select(1), Select(0), Select(2)], gate_weights_idx=-1,
+        subnets=[Select(1), Select(0), Select(2)], gating_index=-1,
         name='branch5x3x2'
     )
     outputs = branch(inputs)
@@ -490,7 +490,7 @@ def test_call_3g_5x3x2(inputs_5x3x2_v0, groups_v0_1):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[Select(1), Select(0), Select(2)], gate_weights_idx=-1,
+        subnets=[Select(1), Select(0), Select(2)], gating_index=-1,
         name='branch5x3x2', output_names=['br_a', 'br_b', 'br_c']
     )
     outputs = branch(inputs)
@@ -531,7 +531,7 @@ def test_fit_5x3_functional(
     name_branch_0 = "branch"
     name_branch_1 = "branch_1"
     outputs = BranchGate(
-        subnets=[AddPairs(-0.1), AddPairs(0.1)], gate_weights_idx=-1,
+        subnets=[AddPairs(-0.1), AddPairs(0.1)], gating_index=-1,
         output_names=[name_branch_0, name_branch_1], name="branch"
     )([input_0, input_1, input_2])
     model = tf.keras.Model(
@@ -619,7 +619,7 @@ def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2, is_eager):
             super(MyModel, self).__init__()
             self.branch = BranchGate(
                 subnets=[AddPairs(-0.1), AddPairs(0.1)],
-                gate_weights_idx=-1,
+                gating_index=-1,
                 output_names=[name_branch_0, name_branch_1],
                 name="branch"
             )
@@ -732,7 +732,7 @@ def test_call_2g_5x3x2_timestep(inputs_5x3x2_v0, groups_5x3x3_index_v0_2):
 
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x3'
     )
     outputs = branch(inputs)
@@ -741,7 +741,7 @@ def test_call_2g_5x3x2_timestep(inputs_5x3x2_v0, groups_5x3x3_index_v0_2):
 
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
-        subnets=[Increment(-0.1), Increment(0.1)], gate_weights_idx=-1,
+        subnets=[Increment(-0.1), Increment(0.1)], gating_index=-1,
         name='branch5x3', output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
@@ -754,7 +754,7 @@ def test_bad_instantiation_dict(inputs_5x1_v0, groups_v0_2):
     inputs_v0 = inputs_5x1_v0
     inputs = {'inputs_0': inputs_v0, 'groups': groups_v0_2}
 
-    # Check bad instantiation that is missing `gate_weights_key` argument.
+    # Check bad instantiation that is missing `gating_key` argument.
     branch = BranchGate(
         subnets=[IncrementDict(-0.1), IncrementDict(0.1)],
         name='branch5x1'
@@ -790,7 +790,7 @@ def test_call_dictinputs_2g_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0_2):
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
         subnets=[IncrementDict(-0.1), IncrementDict(0.1)],
-        gate_weights_key='groups', name='branch5x1'
+        gating_key='groups', name='branch5x1'
     )
     outputs = branch(inputs)
     tf.debugging.assert_equal(outputs['branch5x1_0'], desired_output_br0)
@@ -799,7 +799,7 @@ def test_call_dictinputs_2g_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0_2):
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
         subnets=[IncrementDict(-0.1), IncrementDict(0.1)],
-        gate_weights_key='groups', name='branch5x1',
+        gating_key='groups', name='branch5x1',
         output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)
@@ -855,7 +855,7 @@ def test_call_dictinputs_2g_5x3x2_timestep(
     # Test default behavior when `output_names` is not provided.
     branch = BranchGate(
         subnets=[IncrementDict(-0.1), IncrementDict(0.1)],
-        gate_weights_key='groups', name='branch5x3'
+        gating_key='groups', name='branch5x3'
     )
     outputs = branch(inputs)
     tf.debugging.assert_equal(outputs['branch5x3_0'], desired_output_br0)
@@ -864,7 +864,8 @@ def test_call_dictinputs_2g_5x3x2_timestep(
     # Test behavior when `output_names` is provided.
     branch = BranchGate(
         subnets=[IncrementDict(-0.1), IncrementDict(0.1)],
-        gate_weights_key='groups', name='branch5x3',
+        gating_key='groups',
+        name='branch5x3',
         output_names=['br_a', 'br_b']
     )
     outputs = branch(inputs)

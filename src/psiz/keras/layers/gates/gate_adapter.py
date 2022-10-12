@@ -30,7 +30,7 @@ import tensorflow as tf
 class GateAdapter(tf.keras.layers.Layer):
     """An input adapter."""
     def __init__(
-            self, subnet=None, input_keys=None, gate_weights_keys=None,
+            self, subnet=None, input_keys=None, gating_keys=None,
             format_inputs_as_tuple=None, **kwargs):
         """Initialize.
 
@@ -38,7 +38,7 @@ class GateAdapter(tf.keras.layers.Layer):
             subnet: A Keras Layer.
             input_keys: List of strings indicating required dictionary
                 keys.
-            gate_weights_keys (optional): List of strings indicating
+            gating_keys (optional): List of strings indicating
                 dictionary keys for gate weights.
             format_inputs_as_tuple (optional): Boolean indicating if
                 inputs should be passed as tuple instead of dictionary.
@@ -51,9 +51,9 @@ class GateAdapter(tf.keras.layers.Layer):
                 'The argument `input_keys` is not optional.'
             )
         self.input_keys = input_keys
-        if gate_weights_keys is None:
-            gate_weights_keys = []
-        self.gate_weights_keys = gate_weights_keys
+        if gating_keys is None:
+            gating_keys = []
+        self.gating_keys = gating_keys
         self.format_inputs_as_tuple = tf.constant(format_inputs_as_tuple)
 
         self._strip_inputs = None
@@ -70,7 +70,7 @@ class GateAdapter(tf.keras.layers.Layer):
             )
 
         # Add keys of "gate weights" to list of input keys.
-        for key in self.gate_weights_keys:
+        for key in self.gating_keys:
             self.input_keys.append(key)
 
         if len(self.input_keys) == 1:

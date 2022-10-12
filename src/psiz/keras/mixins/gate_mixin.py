@@ -35,7 +35,7 @@ class GateMixin():
         """
         super().__init__(*args, **kwargs)
         self.supports_gating = tf.constant(True)
-        self.gate_weights_idx = -1
+        self.gating_index = -1
         # Create placeholder for layer switches.
         self._pass_gate_weights = {}
 

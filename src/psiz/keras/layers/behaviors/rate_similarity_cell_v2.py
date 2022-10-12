@@ -52,8 +52,8 @@ class RateSimilarityCellV2(Behavior):
         self,
         percept=None,
         kernel=None,
-        percept_gate_weights_keys=None,
-        kernel_gate_weights_keys=None,
+        percept_gating_keys=None,
+        kernel_gating_keys=None,
         lower_initializer=None,
         upper_initializer=None,
         midpoint_initializer=None,
@@ -69,13 +69,13 @@ class RateSimilarityCellV2(Behavior):
         Args:
             percept: A Keras Layer for computing perceptual embeddings.
             kernel: A Keras Layer for computing kernel similarity.
-            percept_gate_weights_keys (optional): A list of dictionary
+            percept_gating_keys (optional): A list of dictionary
                 keys pointing to gate weights that should be passed to
                 the `percept` layer. Since the `percept` layer assumes
                 a tuple is passed to the `call` method, the weights are
                 appended at the end of the "standard" Tensors, in the
                 same order specified by the user.
-            kernel_gate_weights_keys (optional): A list of dictionary
+            kernel_gating_keys (optional): A list of dictionary
                 keys pointing to gate weights that should be passed to
                 the `kernel` layer. Since the `kernel` layer assumes a
                 tuple is passed to the `call` method, the weights are
@@ -104,13 +104,13 @@ class RateSimilarityCellV2(Behavior):
         self._percept_adapter = GateAdapter(
             subnet=percept,
             input_keys=['rate_similarity_stimset_samples'],
-            gate_weights_keys=percept_gate_weights_keys,
+            gating_keys=percept_gating_keys,
             format_inputs_as_tuple=True
         )
         self._kernel_adapter = GateAdapter(
             subnet=kernel,
             input_keys=['rate_similarity_z_q', 'rate_similarity_z_q'],
-            gate_weights_keys=kernel_gate_weights_keys,
+            gating_keys=kernel_gating_keys,
             format_inputs_as_tuple=True
         )
 
@@ -253,10 +253,10 @@ class RateSimilarityCellV2(Behavior):
         config.update({
             'percept': tf.keras.utils.serialize_keras_object(self.percept),
             'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
-            'percept_gate_weights_keys': (
-                self._percept_adapter.gate_weights_keys
+            'percept_gating_keys': (
+                self._percept_adapter.gating_keys
             ),
-            'kernel_gate_weights_keys': self._kernel_adapter.gate_weights_keys,
+            'kernel_gating_keys': self._kernel_adapter.gating_keys,
             'lower_trainable': self.lower_trainable,
             'upper_trainable': self.upper_trainable,
             'midpoint_trainable': self.midpoint_trainable,

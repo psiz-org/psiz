@@ -394,11 +394,11 @@ def bb_rnn_rank_1g_2g_mle():
         similarity=shared_similarity
     )
     kernel = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], gate_weights_idx=-1
+        subnets=[kernel_0, kernel_1], gating_index=-1
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
-        percept=percept, kernel=kernel, kernel_gate_weights_keys=['groups']
+        percept=percept, kernel=kernel, kernel_gating_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
@@ -440,11 +440,11 @@ def bb_rnn_rank_1g_3g_mle():
     kernel_1 = build_mle_kernel(shared_similarity, n_dim)
     kernel_2 = build_mle_kernel(shared_similarity, n_dim)
     kernel = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1, kernel_2], gate_weights_idx=-1
+        subnets=[kernel_0, kernel_1, kernel_2], gating_index=-1
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
-        percept=percept, kernel=kernel, kernel_gate_weights_keys=['groups']
+        percept=percept, kernel=kernel, kernel_gating_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
@@ -482,7 +482,7 @@ def bb_rnn_rank_2g_2g_mle():
         )
     )
     percept = psiz.keras.layers.BraidGate(
-        subnets=[percept_0, percept_1], gate_weights_idx=-1
+        subnets=[percept_0, percept_1], gating_index=-1
     )
 
     # Define group-specific kernels.
@@ -519,14 +519,14 @@ def bb_rnn_rank_2g_2g_mle():
         similarity=shared_similarity
     )
     kernel = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], gate_weights_idx=-1
+        subnets=[kernel_0, kernel_1], gating_index=-1
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept,
         kernel=kernel,
-        percept_gate_weights_keys=['groups'],
-        kernel_gate_weights_keys=['groups']
+        percept_gating_keys=['groups'],
+        kernel_gating_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
@@ -559,7 +559,7 @@ def bb_rnn_rank_2g_2g_2g_mle():
         n_stimuli + 1, n_dim, mask_zero=True
     )
     percept = psiz.keras.layers.BraidGate(
-        subnets=[percept_0, percept_1], gate_weights_idx=-1
+        subnets=[percept_0, percept_1], gating_index=-1
     )
 
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(
@@ -597,28 +597,28 @@ def bb_rnn_rank_2g_2g_2g_mle():
         similarity=shared_similarity
     )
     kernel = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1], gate_weights_idx=-1
+        subnets=[kernel_0, kernel_1], gating_index=-1
     )
 
     # Define group-specific behavior cells.
     behavior_cell_0 = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept,
         kernel=kernel,
-        percept_gate_weights_keys=['groups'],
-        kernel_gate_weights_keys=['groups']
+        percept_gating_keys=['groups'],
+        kernel_gating_keys=['groups']
     )
     rnn_0 = tf.keras.layers.RNN(behavior_cell_0, return_sequences=True)
     behavior_cell_1 = psiz.keras.layers.RankSimilarityCellV2(
         percept=percept,
         kernel=kernel,
-        percept_gate_weights_keys=['groups'],
-        kernel_gate_weights_keys=['groups']
+        percept_gating_keys=['groups'],
+        kernel_gating_keys=['groups']
     )
     rnn_1 = tf.keras.layers.RNN(behavior_cell_1, return_sequences=True)
     behavior_0 = psiz.keras.layers.BehaviorWrapper(net=rnn_0)
     behavior_1 = psiz.keras.layers.BehaviorWrapper(net=rnn_1)
     behavior = psiz.keras.layers.BraidGate(
-        subnets=[behavior_0, behavior_1], gate_weights_key='groups'
+        subnets=[behavior_0, behavior_1], gating_key='groups'
     )
 
     model = psiz.keras.models.BackboneV2(
@@ -921,7 +921,7 @@ def bb_rnn_rank_rate_1g_mle():
     rate_rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
     rate = psiz.keras.layers.BehaviorWrapper(net=rate_rnn)
     behav_branch = psiz.keras.layers.BranchGate(
-        subnets=[rank, rate], gate_weights_key='groups', name="behav_branch",
+        subnets=[rank, rate], gating_key='groups', name="behav_branch",
         output_names=['rank_branch', 'rate_branch']
     )
 

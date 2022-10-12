@@ -40,7 +40,7 @@ class ALCOVECellV2(Behavior):
         self,
         units=None,
         percept=None,
-        percept_gate_weights_keys=None,
+        percept_gating_keys=None,
         similarity=None,
         rho_trainable=True,
         rho_initializer=None,
@@ -67,7 +67,7 @@ class ALCOVECellV2(Behavior):
             percept: A Keras Layer for computing perceptual embeddings.
             similarity: A Keras Layer for mapping distance to
                 similarity.
-            percept_gate_weights_keys (optional): A list of dictionary
+            percept_gating_keys (optional): A list of dictionary
                 keys pointing to gate weights that should be passed to
                 the `percept` layer. Since the `percept` layer assumes
                 a tuple is passed to the `call` method, the weights are
@@ -100,7 +100,7 @@ class ALCOVECellV2(Behavior):
         self._percept_adapter = GateAdapter(
             subnet=percept,
             input_keys=['alcove_stimset_samples'],
-            gate_weights_keys=percept_gate_weights_keys,
+            gating_keys=percept_gating_keys,
             format_inputs_as_tuple=True
         )
         # NOTE: The second adapter uses the same underlying embedding
@@ -108,7 +108,7 @@ class ALCOVECellV2(Behavior):
         self._alcove_adapter = GateAdapter(
             subnet=percept,
             input_keys=['alcove_idx'],
-            gate_weights_keys=percept_gate_weights_keys,
+            gating_keys=percept_gating_keys,
             format_inputs_as_tuple=True
         )
 
@@ -427,8 +427,8 @@ class ALCOVECellV2(Behavior):
             'similarity': tf.keras.utils.serialize_keras_object(
                 self.similarity
             ),
-            'percept_gate_weights_keys': (
-                self._percept_adapter.gate_weights_keys
+            'percept_gating_keys': (
+                self._percept_adapter.gating_keys
             ),
             'rho_initializer':
                 tf.keras.initializers.serialize(self.rho_initializer),

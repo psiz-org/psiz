@@ -31,13 +31,13 @@ from psiz.keras.layers import GateAdapter, BraidGate
 class OuterPassesTuple(tf.keras.layers.Layer):
     """A layer that calls inner layer with tuple-formated inputs."""
 
-    def __init__(self, inner=None, inner_gate_weights_keys=None, **kwargs):
+    def __init__(self, inner=None, inner_gating_keys=None, **kwargs):
         """Initialize."""
         super(OuterPassesTuple, self).__init__(**kwargs)
         self._inner_layer_socket = GateAdapter(
             subnet=inner,
             input_keys=['x0', 'x1'],
-            gate_weights_keys=inner_gate_weights_keys,
+            gating_keys=inner_gating_keys,
             format_inputs_as_tuple=True
         )
 
@@ -50,13 +50,13 @@ class OuterPassesTuple(tf.keras.layers.Layer):
 class OuterPassesDict(tf.keras.layers.Layer):
     """A layer that calls inner layer with dictionary-formated inputs."""
 
-    def __init__(self, inner=None, inner_gate_weights_keys=None, **kwargs):
+    def __init__(self, inner=None, inner_gating_keys=None, **kwargs):
         """Initialize."""
         super(OuterPassesDict, self).__init__(**kwargs)
         self._inner_layer_socket = GateAdapter(
             subnet=inner,
             input_keys=['x0', 'x1'],
-            gate_weights_keys=inner_gate_weights_keys,
+            gating_keys=inner_gating_keys,
             format_inputs_as_tuple=False
         )
 
@@ -258,11 +258,11 @@ class TestInnerNeedsTuple:
         inner_a = InnerNeedsTuple(factor=1., name="inner_a")
         inner_b = InnerNeedsTuple(factor=2., name="inner_b")
         branch_a_b = BraidGate(
-            subnets=[inner_a, inner_b], gate_weights_idx=-1
+            subnets=[inner_a, inner_b], gating_index=-1
         )
         outer = OuterPassesTuple(
             inner=branch_a_b,
-            inner_gate_weights_keys=['groups0'],
+            inner_gating_keys=['groups0'],
             name="outer"
         )
         outputs = outer(inputs)
@@ -286,13 +286,13 @@ class TestInnerNeedsTuple:
         inner_b = InnerNeedsTuple(factor=2., name="inner_b")
         inner_c = InnerNeedsTuple(factor=3., name="inner_b")
         branch_a_b = BraidGate(
-            subnets=[inner_a, inner_b], gate_weights_idx=-1
+            subnets=[inner_a, inner_b], gating_index=-1
         )
         branch_ab_c = BraidGate(
-            subnets=[branch_a_b, inner_c], gate_weights_idx=-1
+            subnets=[branch_a_b, inner_c], gating_index=-1
         )
         outer = OuterPassesTuple(
-            inner=branch_ab_c, inner_gate_weights_keys=['groups0', 'groups1'],
+            inner=branch_ab_c, inner_gating_keys=['groups0', 'groups1'],
             name="outer"
         )
         outputs = outer(inputs)
@@ -329,10 +329,10 @@ class TestInnerNeedsDict:
         inner_a = InnerNeedsDict(factor=1., name="inner_a")
         inner_b = InnerNeedsDict(factor=2., name="inner_b")
         inner = BraidGate(
-            subnets=[inner_a, inner_b], gate_weights_key='groups0'
+            subnets=[inner_a, inner_b], gating_key='groups0'
         )
         outer = OuterPassesDict(
-            inner=inner, inner_gate_weights_keys=['groups0'], name="outer"
+            inner=inner, inner_gating_keys=['groups0'], name="outer"
         )
         outputs = outer(inputs)
 
@@ -355,14 +355,14 @@ class TestInnerNeedsDict:
         inner_b = InnerNeedsDict(factor=2., name="inner_b")
         inner_c = InnerNeedsDict(factor=3., name="inner_b")
         branch_a_b = BraidGate(
-            subnets=[inner_a, inner_b], gate_weights_key='groups0'
+            subnets=[inner_a, inner_b], gating_key='groups0'
         )
         branch_ab_c = BraidGate(
-            subnets=[branch_a_b, inner_c], gate_weights_key='groups1'
+            subnets=[branch_a_b, inner_c], gating_key='groups1'
         )
         outer = OuterPassesDict(
             inner=branch_ab_c,
-            inner_gate_weights_keys=['groups0', 'groups1'],
+            inner_gating_keys=['groups0', 'groups1'],
             name="outer"
         )
         outputs = outer(inputs)

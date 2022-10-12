@@ -31,34 +31,35 @@ from psiz.keras.layers.drop import Drop
 )
 class Gate(tf.keras.layers.Layer):
     """Abstract layer that routes inputs to subnetworks."""
-    def __init__(self, gate_weights_idx=None, gate_weights_key=None, **kwargs):
+    def __init__(self, gating_index=None, gating_key=None, **kwargs):
         """Initialize.
 
-        Initialization must provide either `gate_weights_idx` (if
-        `inputs` to call is a tuple) or `gate_weights_key` (if `inputs`
-        to call is a dictionary). If using a `GateAdapter` upstream
-        that converts dictionary-formatted inputs to tuple-formated
-        inputs, you must provide both arguments.
+        Initialization must provide either `gating_index` (if `inputs`
+        to call is a tuple) or `gating_key` (if `inputs` to call is a
+        dictionary). If using a `GateAdapter` upstream that converts
+        dictionary-formatted inputs to tuple-formated inputs, you must
+        provide `gating_index`.
 
         Args:
-            gate_weights_idx (optional): If inputs
-            gate_weights_key (optional): If inputs are formatted as a
-                dictionary, the dictionary key name containing the gate
-                weights.
+            gating_index (optional): If inputs are tuple-formatte,
+                the index position of the gate weights.
+            gating_key (optional): If inputs are dictionary-
+                formatted, the dictionary key name of the gate weights.
 
         Notes:
-        Gate weights may be provided as integers respresenting indices
-        or as floats representing mixing coefficients. If `gate_weights`
-        axis=1 is a singleton dimension, then values are assumed to be
-        indices. Otherwise assumed to be raw mixing coefficients.
+        It is assumed that gate weights are either a) integers
+        respresenting indices or b) floats representing mixing
+        coefficients. If gate weights axis=1 is a singleton dimension,
+        then values are assumed to be indices. Otherwise assumed to be
+        the raw mixing coefficients.
 
         """
         super(Gate, self).__init__(**kwargs)
         self.supports_gating = True
 
         # Handle "gate weights" attributes.
-        self.gate_weights_idx = gate_weights_idx
-        self.gate_weights_key = gate_weights_key
+        self.gating_index = gating_index
+        self.gating_key = gating_key
         self._gate_weights_are_indices = None
 
         # Handle masking support.
@@ -80,25 +81,25 @@ class Gate(tf.keras.layers.Layer):
 
         # Check if appropriate argument has been provided.
         if are_inputs_dict:
-            if self.gate_weights_key is None:
+            if self.gating_key is None:
                 raise ValueError(
                     'When `inputs` to layer is a dictionary, user must '
-                    'instantiate `Gate` layer with `gate_weights_key` '
+                    'instantiate `Gate` layer with `gating_key` '
                     'argument.'
                 )
         else:
-            if self.gate_weights_idx is None:
+            if self.gating_index is None:
                 raise ValueError(
                     'When `inputs` to layer is a tuple, user must '
-                    'instantiate `Gate` layer with `gate_weights_idx` '
+                    'instantiate `Gate` layer with `gating_index` '
                     'argument.'
                 )
 
         # Get `gate_weights` shape.
         if self.are_inputs_dict:
-            gate_weights_shape = input_shape[self.gate_weights_key]
+            gate_weights_shape = input_shape[self.gating_key]
         else:
-            gate_weights_shape = input_shape[self.gate_weights_idx]
+            gate_weights_shape = input_shape[self.gating_index]
 
         # Determine if `gate_weights` are indices based on the shape of the
         # last axis. If singleton, assume indices.
@@ -137,7 +138,7 @@ class Gate(tf.keras.layers.Layer):
             return subnet
         else:
             return Drop(
-                subnet=subnet, drop_index=self.gate_weights_idx,
+                subnet=subnet, drop_index=self.gating_index,
                 strip_inputs=strip_inputs
             )
 
@@ -160,9 +161,9 @@ class Gate(tf.keras.layers.Layer):
 
         """
         if self.are_inputs_dict:
-            gate_weights = inputs[self.gate_weights_key]
+            gate_weights = inputs[self.gating_key]
         else:
-            gate_weights = inputs[self.gate_weights_idx]
+            gate_weights = inputs[self.gating_index]
 
         # Convert indices to one-hot encoding if necessary.
         if self._gate_weights_are_indices:
@@ -180,14 +181,10 @@ class Gate(tf.keras.layers.Layer):
     def get_config(self):
         """Return layer configuration."""
         config = super(Gate, self).get_config()
-        if self.gate_weights_idx is not None:
-            config.update({
-                'gate_weights_idx': int(self.gate_weights_idx)
-            })
-        if self.gate_weights_key is not None:
-            config.update({
-                'gate_weights_key': self.gate_weights_key,
-            })
+        if self.gating_index is not None:
+            config.update({'gating_index': int(self.gating_index)})
+        if self.gating_key is not None:
+            config.update({'gating_key': self.gating_key})
         return config
 
     @classmethod

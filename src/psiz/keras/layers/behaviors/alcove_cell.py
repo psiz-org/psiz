@@ -16,7 +16,7 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    ALCOVECellV2: An RNN-compatible cell implementing the ALCOVE Model.
+    ALCOVECell: An RNN-compatible cell implementing the ALCOVE Model.
 
 """
 
@@ -31,9 +31,9 @@ from psiz.utils import expand_dim_repeat
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='ALCOVECellV2'
+    package='psiz.keras', name='ALCOVECell'
 )
-class ALCOVECellV2(Behavior):
+class ALCOVECell(Behavior):
     """An RNN-compatible cell implementing ALCOVE."""
 
     def __init__(
@@ -91,7 +91,7 @@ class ALCOVECellV2(Behavior):
             lr_association_constraint (optional):
 
         """
-        super(ALCOVECellV2, self).__init__(**kwargs)
+        super(ALCOVECell, self).__init__(**kwargs)
 
         self.percept = percept
         self.similarity = similarity

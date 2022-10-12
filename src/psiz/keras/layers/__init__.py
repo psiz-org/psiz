@@ -17,7 +17,7 @@
 
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational
-from psiz.keras.layers.behaviors.alcove_cell_v2 import ALCOVECellV2
+from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
 from psiz.keras.layers.behaviors.behavior import Behavior
 from psiz.keras.layers.behaviors.behavior_wrapper import BehaviorWrapper
 from psiz.keras.layers.behaviors.rank import RankBehavior
@@ -55,7 +55,7 @@ __all__ = [
     'RateSimilarity',
     'RankSimilarityCellV2',
     'RateSimilarityCellV2',
-    'ALCOVECellV2',
+    'ALCOVECell',
     'BehaviorWrapper',
     'RankBehavior',
     'RateBehavior',

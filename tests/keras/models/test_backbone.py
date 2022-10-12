@@ -862,7 +862,7 @@ def bb_rnn_categorize_1g_1g_mle():
         trainable=False,
     )
 
-    cell = psiz.keras.layers.ALCOVECellV2(
+    cell = psiz.keras.layers.ALCOVECell(
         n_output, percept=alcove_embedding, similarity=similarity,
         rho_initializer=tf.keras.initializers.Constant(2.0),
         temperature_initializer=tf.keras.initializers.Constant(1.0),

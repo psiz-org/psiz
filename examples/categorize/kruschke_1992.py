@@ -104,7 +104,7 @@ def build_model(
         embeddings_initializer=tf.keras.initializers.Constant(feature_matrix),
         trainable=False,
     )
-    cell = psiz.keras.layers.ALCOVECellV2(
+    cell = psiz.keras.layers.ALCOVECell(
         n_output, percept=alcove_embedding, similarity=similarity,
         rho_initializer=tf.keras.initializers.Constant(rho),
         temperature_initializer=tf.keras.initializers.Constant(temperature),

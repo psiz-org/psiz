@@ -409,7 +409,7 @@ def test_fit_no_rnn(ds_v0, is_eager):
         )
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=embedding_variational, kernel=kernel
     )
 
@@ -486,7 +486,7 @@ def test_fit_with_rnn(ds_v1, is_eager):
         )
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=embedding_variational, kernel=kernel
     )
 

@@ -22,7 +22,7 @@ from psiz.keras.layers.behaviors.behavior import Behavior
 from psiz.keras.layers.behaviors.behavior_wrapper import BehaviorWrapper
 from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
-from psiz.keras.layers.behaviors.rank_similarity_cell_v2 import RankSimilarityCellV2
+from psiz.keras.layers.behaviors.rank_similarity_cell import RankSimilarityCell
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.rate_similarity import RateSimilarity
 from psiz.keras.layers.behaviors.rate_similarity_cell_v2 import RateSimilarityCellV2
@@ -53,7 +53,7 @@ __all__ = [
     'Behavior',
     'RankSimilarity',
     'RateSimilarity',
-    'RankSimilarityCellV2',
+    'RankSimilarityCell',
     'RateSimilarityCellV2',
     'ALCOVECell',
     'BehaviorWrapper',

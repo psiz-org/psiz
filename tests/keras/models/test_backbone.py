@@ -298,7 +298,7 @@ def bb_cell_rank_1g_1g_mle():
             trainable=False,
         )
     )
-    cell = psiz.keras.layers.RankSimilarityCellV2(
+    cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
     rank = psiz.keras.layers.BehaviorWrapper(net=cell)
@@ -337,7 +337,7 @@ def bb_rnn_rank_1g_1g_mle():
             trainable=False,
         )
     )
-    cell = psiz.keras.layers.RankSimilarityCellV2(
+    cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
     rnn = tf.keras.layers.RNN(cell, return_sequences=True)
@@ -397,7 +397,7 @@ def bb_rnn_rank_1g_2g_mle():
         subnets=[kernel_0, kernel_1], gating_index=-1
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel, kernel_gating_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
@@ -443,7 +443,7 @@ def bb_rnn_rank_1g_3g_mle():
         subnets=[kernel_0, kernel_1, kernel_2], gating_index=-1
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel, kernel_gating_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
@@ -522,7 +522,7 @@ def bb_rnn_rank_2g_2g_mle():
         subnets=[kernel_0, kernel_1], gating_index=-1
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept,
         kernel=kernel,
         percept_gating_keys=['groups'],
@@ -601,14 +601,14 @@ def bb_rnn_rank_2g_2g_2g_mle():
     )
 
     # Define group-specific behavior cells.
-    behavior_cell_0 = psiz.keras.layers.RankSimilarityCellV2(
+    behavior_cell_0 = psiz.keras.layers.RankSimilarityCell(
         percept=percept,
         kernel=kernel,
         percept_gating_keys=['groups'],
         kernel_gating_keys=['groups']
     )
     rnn_0 = tf.keras.layers.RNN(behavior_cell_0, return_sequences=True)
-    behavior_cell_1 = psiz.keras.layers.RankSimilarityCellV2(
+    behavior_cell_1 = psiz.keras.layers.RankSimilarityCell(
         percept=percept,
         kernel=kernel,
         percept_gating_keys=['groups'],
@@ -680,7 +680,7 @@ def bb_cell_rank_1g_vi():
         )
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
     rank = psiz.keras.layers.BehaviorWrapper(net=rank_cell)
@@ -742,7 +742,7 @@ def bb_rnn_rank_1g_vi():
         )
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
@@ -910,7 +910,7 @@ def bb_rnn_rank_rate_1g_mle():
     )
 
     # Define a multi-behavior module
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
     rank_rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)

@@ -16,7 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    RankSimilarityCellV2: A rank behavior layer.
+    RankSimilarityCell: A rank behavior layer.
 
 """
 
@@ -28,9 +28,9 @@ from psiz.keras.layers.gates.gate_adapter import GateAdapter
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RankSimilarityCellV2'
+    package='psiz.keras.layers', name='RankSimilarityCell'
 )
-class RankSimilarityCellV2(Behavior):
+class RankSimilarityCell(Behavior):
     """A rank similarity behavior layer."""
     def __init__(
         self,
@@ -59,7 +59,7 @@ class RankSimilarityCellV2(Behavior):
                 same order specified by the user.
 
         """
-        super(RankSimilarityCellV2, self).__init__(**kwargs)
+        super(RankSimilarityCell, self).__init__(**kwargs)
         self.percept = percept
         self.kernel = kernel
 

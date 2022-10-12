@@ -137,7 +137,7 @@ def ground_truth_bb(n_stimuli, n_dim, similarity_func, mask_zero):
         similarity=similarity
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
     rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
@@ -190,7 +190,7 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
         distance=psiz.keras.layers.Minkowski(),
         similarity=similarity
     )
-    rank_cell = psiz.keras.layers.RankSimilarityCellV2(
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
     rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)

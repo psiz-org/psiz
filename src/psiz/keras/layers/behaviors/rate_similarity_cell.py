@@ -16,7 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    RateSimilarityCellV2: A rate similarity layer.
+    RateSimilarityCell: A rate similarity layer.
 
 """
 
@@ -29,9 +29,9 @@ from psiz.keras.layers.gates.gate_adapter import GateAdapter
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RateSimilarityCellV2'
+    package='psiz.keras.layers', name='RateSimilarityCell'
 )
-class RateSimilarityCellV2(Behavior):
+class RateSimilarityCell(Behavior):
     """A rate behavior layer.
 
     Similarities are converted to probabilities using a parameterized
@@ -96,7 +96,7 @@ class RateSimilarityCellV2(Behavior):
             kwargs (optional): Additional keyword arguments.
 
         """
-        super(RateSimilarityCellV2, self).__init__(**kwargs)
+        super(RateSimilarityCell, self).__init__(**kwargs)
         self.percept = percept
         self.kernel = kernel
 

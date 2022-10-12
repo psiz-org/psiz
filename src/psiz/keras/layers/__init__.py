@@ -25,7 +25,7 @@ from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
 from psiz.keras.layers.behaviors.rank_similarity_cell import RankSimilarityCell
 from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.rate_similarity import RateSimilarity
-from psiz.keras.layers.behaviors.rate_similarity_cell_v2 import RateSimilarityCellV2
+from psiz.keras.layers.behaviors.rate_similarity_cell import RateSimilarityCell
 from psiz.keras.layers.distances.mink import Minkowski
 from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
 from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
@@ -54,7 +54,7 @@ __all__ = [
     'RankSimilarity',
     'RateSimilarity',
     'RankSimilarityCell',
-    'RateSimilarityCellV2',
+    'RateSimilarityCell',
     'ALCOVECell',
     'BehaviorWrapper',
     'RankBehavior',

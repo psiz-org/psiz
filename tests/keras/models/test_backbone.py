@@ -784,7 +784,7 @@ def bb_cell_rate_1g_mle():
         )
     )
 
-    rate_cell = psiz.keras.layers.RateSimilarityCellV2(
+    rate_cell = psiz.keras.layers.RateSimilarityCell(
         percept=percept, kernel=kernel
     )
     rate = psiz.keras.layers.BehaviorWrapper(net=rate_cell)
@@ -825,7 +825,7 @@ def bb_rnn_rate_1g_mle():
         )
     )
 
-    rate_cell = psiz.keras.layers.RateSimilarityCellV2(
+    rate_cell = psiz.keras.layers.RateSimilarityCell(
         percept=percept, kernel=kernel
     )
     rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
@@ -915,7 +915,7 @@ def bb_rnn_rank_rate_1g_mle():
     )
     rank_rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rank_rnn)
-    rate_cell = psiz.keras.layers.RateSimilarityCellV2(
+    rate_cell = psiz.keras.layers.RateSimilarityCell(
         percept=percept, kernel=kernel
     )
     rate_rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)

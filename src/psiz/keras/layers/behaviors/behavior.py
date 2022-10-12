@@ -22,24 +22,11 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.mixins.gate_mixin import GateMixin
 from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
 
-class Behavior(StochasticMixin, GateMixin, tf.keras.layers.Layer):
-    """An abstract behavior layer.
-
-    Sub-classes of this layer are responsible for three things:
-    1) Set `self.supports_gating = False` if the layer does not
-    support `groups` input.
-    2) For each layer, set `self._pass_gate_weights[<layer variable>]`. For
-    example, if a layer named `kernel` is provided:
-    3) Implement a `call` method that routes inputs by using
-    appropriate `self._pass_gate_weights`.
-
-    `self._pass_gate_weights['kernel'] = self.check_supports_gating(kernel)`
-
-    """
+class Behavior(StochasticMixin, tf.keras.layers.Layer):
+    """An abstract behavior layer."""
     def __init__(self, **kwargs):
         """Initialize.
 

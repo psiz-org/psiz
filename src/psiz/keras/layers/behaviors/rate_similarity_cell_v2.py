@@ -25,6 +25,7 @@ from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.layers.gates.gate_adapter import GateAdapter
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -48,16 +49,38 @@ class RateSimilarityCellV2(Behavior):
     """
 
     def __init__(
-            self, percept=None, kernel=None, lower_initializer=None,
-            upper_initializer=None, midpoint_initializer=None,
-            rate_initializer=None, lower_trainable=False,
-            upper_trainable=False, midpoint_trainable=True,
-            rate_trainable=True, **kwargs):
+        self,
+        percept=None,
+        kernel=None,
+        percept_gate_weights_keys=None,
+        kernel_gate_weights_keys=None,
+        lower_initializer=None,
+        upper_initializer=None,
+        midpoint_initializer=None,
+        rate_initializer=None,
+        lower_trainable=False,
+        upper_trainable=False,
+        midpoint_trainable=True,
+        rate_trainable=True,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
-            percept: A percept layer.
-            kernel: A kernel layer.
+            percept: A Keras Layer for computing perceptual embeddings.
+            kernel: A Keras Layer for computing kernel similarity.
+            percept_gate_weights_keys (optional): A list of dictionary
+                keys pointing to gate weights that should be passed to
+                the `percept` layer. Since the `percept` layer assumes
+                a tuple is passed to the `call` method, the weights are
+                appended at the end of the "standard" Tensors, in the
+                same order specified by the user.
+            kernel_gate_weights_keys (optional): A list of dictionary
+                keys pointing to gate weights that should be passed to
+                the `kernel` layer. Since the `kernel` layer assumes a
+                tuple is passed to the `call` method, the weights are
+                appended at the end of the "standard" Tensors, in the
+                same order specified by the user.
             lower_initializer (optional): TensorFlow initializer.
             upper_initializer (optional): TensorFlow initializer.
             midpoint_initializer (optional): TensorFlow initializer.
@@ -77,9 +100,19 @@ class RateSimilarityCellV2(Behavior):
         self.percept = percept
         self.kernel = kernel
 
-        # Satisfy `GateMixin` contract.
-        self._pass_gate_weights['percept'] = self.check_supports_gating(percept)
-        self._pass_gate_weights['kernel'] = self.check_supports_gating(kernel)
+        # Set up adapters based on provided gate weights.
+        self._percept_adapter = GateAdapter(
+            subnet=percept,
+            input_keys=['rate_similarity_stimset_samples'],
+            gate_weights_keys=percept_gate_weights_keys,
+            format_inputs_as_tuple=True
+        )
+        self._kernel_adapter = GateAdapter(
+            subnet=kernel,
+            input_keys=['rate_similarity_z_q', 'rate_similarity_z_q'],
+            gate_weights_keys=kernel_gate_weights_keys,
+            format_inputs_as_tuple=True
+        )
 
         # Satisfy RNNCell contract.  TODO
         self.state_size = [
@@ -169,12 +202,13 @@ class RateSimilarityCellV2(Behavior):
         """Return predicted rating of a trial.
 
         Args:
-            inputs: dictionary with the following keys:
-                stimulus_set: A tensor containing indices that define
-                    the stimuli used in each trial.
+            inputs: A dictionary containing the following information:
+                rate_similarity_stimulus_set: A tensor containing
+                    indices that define the stimuli used in each trial.
                     shape=(batch_size, n_sample, n_stimuli_per_trial)
-                groups (optional): A tensor containing group membership
-                    information.
+                gate_weights (optional): Tensor(s) containing gate
+                    weights. The actual key value(s) will depend on how
+                    the user initialized the layer.
 
         Returns:
             probs: The probabilites as determined by a parameterized
@@ -182,7 +216,6 @@ class RateSimilarityCellV2(Behavior):
 
         """
         stimulus_set = inputs['rate_similarity_stimulus_set']
-        groups = inputs['groups']
 
         # Expand `sample_axis` of `stimulus_set` for stochastic
         # functionality (e.g., variational inference).
@@ -191,19 +224,20 @@ class RateSimilarityCellV2(Behavior):
         )
 
         # Embed stimuli indices in n-dimensional space.
-        if self._pass_gate_weights['percept']:
-            z = self.percept([stimulus_set, groups])
-        else:
-            z = self.percept(stimulus_set)
+        inputs.update({
+            'rate_similarity_stimset_samples': stimulus_set
+        })
+        z = self._percept_adapter(inputs)
         # TensorShape=(batch_size, n_sample, 2, n_dim])
 
-        # Prep retrieved embeddings for kernel op.
+        # Prepare retrieved embeddings point for kernel and then compute
+        # similarity.
         z_q, z_r = self._split_stimulus_set(z)
-
-        if self._pass_gate_weights['kernel']:
-            sim_qr = self.kernel([z_q, z_r, groups])
-        else:
-            sim_qr = self.kernel([z_q, z_r])
+        inputs.update({
+            'rate_similarity_z_q': z_q,
+            'rate_similarity_z_r': z_r
+        })
+        sim_qr = self._kernel_adapter(inputs)
 
         prob = self.lower + tf.math.divide(
             self.upper - self.lower,
@@ -218,6 +252,10 @@ class RateSimilarityCellV2(Behavior):
         config.update({
             'percept': tf.keras.utils.serialize_keras_object(self.percept),
             'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
+            'percept_gate_weights_keys': (
+                self._percept_adapter.gate_weights_keys
+            ),
+            'kernel_gate_weights_keys': self._kernel_adapter.gate_weights_keys,
             'lower_trainable': self.lower_trainable,
             'upper_trainable': self.upper_trainable,
             'midpoint_trainable': self.midpoint_trainable,

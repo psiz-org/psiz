@@ -25,6 +25,7 @@ from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.tf.ops.wpnorm import wpnorm
 from psiz.utils import expand_dim_repeat
 
@@ -36,22 +37,42 @@ class ALCOVECellV2(Behavior):
     """An RNN-compatible cell implementing ALCOVE."""
 
     def __init__(
-            self, units=None, percept=None, similarity=None,
-            rho_trainable=True, rho_initializer=None,
-            rho_regularizer=None, rho_constraint=None,
-            temperature_trainable=True, temperature_initializer=None,
-            temperature_regularizer=None, temperature_constraint=None,
-            lr_attention_trainable=True, lr_attention_initializer=None,
-            lr_attention_regularizer=None, lr_attention_constraint=None,
-            lr_association_trainable=True, lr_association_initializer=None,
-            lr_association_regularizer=None, lr_association_constraint=None,
-            **kwargs):
+        self,
+        units=None,
+        percept=None,
+        percept_gate_weights_keys=None,
+        similarity=None,
+        rho_trainable=True,
+        rho_initializer=None,
+        rho_regularizer=None,
+        rho_constraint=None,
+        temperature_trainable=True,
+        temperature_initializer=None,
+        temperature_regularizer=None,
+        temperature_constraint=None,
+        lr_attention_trainable=True,
+        lr_attention_initializer=None,
+        lr_attention_regularizer=None,
+        lr_attention_constraint=None,
+        lr_association_trainable=True,
+        lr_association_initializer=None,
+        lr_association_regularizer=None,
+        lr_association_constraint=None,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
             units: Positive integer indicating the number of output classes.
-            percept: An percept layer.
-            similarity: A similarity layer.
+            percept: A Keras Layer for computing perceptual embeddings.
+            similarity: A Keras Layer for mapping distance to
+                similarity.
+            percept_gate_weights_keys (optional): A list of dictionary
+                keys pointing to gate weights that should be passed to
+                the `percept` layer. Since the `percept` layer assumes
+                a tuple is passed to the `call` method, the weights are
+                appended at the end of the "standard" Tensors, in the
+                same order specified by the user.
             rho_trainable (optional):
             rho_initializer (optional):
             rho_regularizer (optional):
@@ -72,10 +93,23 @@ class ALCOVECellV2(Behavior):
         """
         super(ALCOVECellV2, self).__init__(**kwargs)
 
-        # Satisfy `GateMixin` contract.
-        self._pass_gate_weights['percept'] = self.check_supports_gating(percept)
-        self._pass_gate_weights['similarity'] = self.check_supports_gating(
-            similarity
+        self.percept = percept
+        self.similarity = similarity
+
+        # Set up adapters based on provided gate weights.
+        self._percept_adapter = GateAdapter(
+            subnet=percept,
+            input_keys=['alcove_stimset_samples'],
+            gate_weights_keys=percept_gate_weights_keys,
+            format_inputs_as_tuple=True
+        )
+        # NOTE: The second adapter uses the same underlying embedding
+        # and gate weights, but takes a different set of indices.
+        self._alcove_adapter = GateAdapter(
+            subnet=percept,
+            input_keys=['alcove_idx'],
+            gate_weights_keys=percept_gate_weights_keys,
+            format_inputs_as_tuple=True
         )
 
         # Misc. attributes.
@@ -83,8 +117,6 @@ class ALCOVECellV2(Behavior):
         self.output_logits = False
 
         # Process incoming layers.
-        self.similarity = similarity
-        self.percept = percept
         self.n_dim = percept.output_dim
         n_rbf = percept.input_dim
         if self.percept.mask_zero:
@@ -197,6 +229,25 @@ class ALCOVECellV2(Behavior):
                 dtype=K.floatx(), constraint=self.lr_association_constraint
             )
 
+    def build(self, input_shape):
+        """Build."""
+        batch_size = input_shape['categorize_stimulus_set'][0]
+
+        # Precompute indices for all ALCOVE RBFs.
+        alcove_idx = tf.range(self._n_rbf)
+        if self.percept.mask_zero:
+            alcove_idx = alcove_idx + 1
+        # Add "batch" axis.
+        alcove_idx = expand_dim_repeat(
+            alcove_idx, batch_size, axis=0
+        )
+        # Add "sample" axis.
+        alcove_idx = expand_dim_repeat(
+            alcove_idx, self.n_sample, axis=self.sample_axis_in_cell
+        )
+        # shape=(batch_size, n_sample, n_ref)
+        self._alcove_idx = alcove_idx
+
     def get_mask(self, inputs):
         """Return appropriate mask."""
         mask = tf.not_equal(inputs['categorize_stimulus_set'], 0)
@@ -206,12 +257,15 @@ class ALCOVECellV2(Behavior):
         """Call.
 
         Args:
-            inputs: A dictionary of Tensors with fields:
-                stimulus_set: The indices of the stimuli.
+            inputs: A dictionary containting the following information:
+                categorize_stimulus_set: The indices of the stimuli.
                     shape=(batch_size, n_sample)
-                correct_label: Correct label index of stimulus.
+                categorize_correct_label: Correct label index of
+                    stimulus.
                     shape=(batch_size, n_sample)
-                groups: A group-membership Tensor.
+                gate_weights (optional): Tensor(s) containing gate
+                    weights. The actual key value(s) will depend on how
+                    the user initialized the layer.
             states:
                 states[0]: A tensor representing batch-specific
                     attention weights that modify the Minkowski
@@ -223,12 +277,9 @@ class ALCOVECellV2(Behavior):
         """
         stimulus_set = inputs['categorize_stimulus_set']
         correct_label_idx = inputs['categorize_correct_label']
-        groups = inputs['groups']
 
         attention = states[0]  # Previous attention weights state.
         association = states[1]  # Previous association weights state.
-
-        batch_size = tf.shape(stimulus_set)[0]
 
         # Expand `sample_axis` of `stimulus_set` for stochastic
         # functionality (e.g., variational inference).
@@ -237,10 +288,11 @@ class ALCOVECellV2(Behavior):
         )
 
         # Embed stimuli indices in n-dimensional space.
-        if self._pass_gate_weights['percept']:
-            z_in = self.percept([stimulus_set, groups])
-        else:
-            z_in = self.percept(stimulus_set)
+        inputs.update({
+            'alcove_stimset_samples': stimulus_set,
+            'alcove_idx': self._alcove_idx,
+        })
+        z_in = self._percept_adapter(inputs)
         # TensorShape=(batch_size, n_sample, n_dim])
 
         # Compute RBF activations.
@@ -249,18 +301,7 @@ class ALCOVECellV2(Behavior):
         # shape=(batch_size, n_sample, 1, n_dim)
 
         # Retrive ALCOVE RBF embeddings.
-        alcove_idx = tf.range(self._n_rbf)
-        if self.percept.mask_zero:
-            alcove_idx = alcove_idx + 1
-        z_alcove = self.percept(alcove_idx)
-        # Add "sample" axis.
-        z_alcove = expand_dim_repeat(
-            z_alcove, self.n_sample, axis=0
-        )
-        # Add "batch" axis.
-        z_alcove = expand_dim_repeat(
-            z_alcove, batch_size, axis=0
-        )
+        z_alcove = self._alcove_adapter(inputs)
         # shape=(batch_size, n_sample, n_ref, n_dim)
 
         # Use TensorFlow gradients to update model state.
@@ -382,10 +423,13 @@ class ALCOVECellV2(Behavior):
         config = super().get_config()
         config.update({
             'units': self.units,
+            'percept': tf.keras.utils.serialize_keras_object(self.percept),
             'similarity': tf.keras.utils.serialize_keras_object(
                 self.similarity
             ),
-            'percept': tf.keras.utils.serialize_keras_object(self.percept),
+            'percept_gate_weights_keys': (
+                self._percept_adapter.gate_weights_keys
+            ),
             'rho_initializer':
                 tf.keras.initializers.serialize(self.rho_initializer),
             'rho_regularizer':

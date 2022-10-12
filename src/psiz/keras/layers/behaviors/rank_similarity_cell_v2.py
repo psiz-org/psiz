@@ -24,6 +24,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from psiz.keras.layers.behaviors.behavior import Behavior
+from psiz.keras.layers.gates.gate_adapter import GateAdapter
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -31,21 +32,50 @@ from psiz.keras.layers.behaviors.behavior import Behavior
 )
 class RankSimilarityCellV2(Behavior):
     """A rank similarity behavior layer."""
-    def __init__(self, percept=None, kernel=None, **kwargs):
+    def __init__(
+        self,
+        percept=None,
+        kernel=None,
+        percept_gate_weights_keys=None,
+        kernel_gate_weights_keys=None,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
-            percept: A percept layer.
-            kernel: A kernel layer.
+            percept: A Keras Layer for computing perceptual embeddings.
+            kernel: A Keras Layer for computing kernel similarity.
+            percept_gate_weights_keys (optional): A list of dictionary
+                keys pointing to gate weights that should be passed to
+                the `percept` layer. Since the `percept` layer assumes
+                a tuple is passed to the `call` method, the weights are
+                appended at the end of the "standard" Tensors, in the
+                same order specified by the user.
+            kernel_gate_weights_keys (optional): A list of dictionary
+                keys pointing to gate weights that should be passed to
+                the `kernel` layer. Since the `kernel` layer assumes a
+                tuple is passed to the `call` method, the weights are
+                appended at the end of the "standard" Tensors, in the
+                same order specified by the user.
 
         """
         super(RankSimilarityCellV2, self).__init__(**kwargs)
         self.percept = percept
         self.kernel = kernel
 
-        # Satisfy `GateMixin` contract.
-        self._pass_gate_weights['percept'] = self.check_supports_gating(percept)
-        self._pass_gate_weights['kernel'] = self.check_supports_gating(kernel)
+        # Set up adapters based on provided gate weights.
+        self._percept_adapter = GateAdapter(
+            subnet=percept,
+            input_keys=['rank_similarity_stimset_samples'],
+            gate_weights_keys=percept_gate_weights_keys,
+            format_inputs_as_tuple=True
+        )
+        self._kernel_adapter = GateAdapter(
+            subnet=kernel,
+            input_keys=['rank_similarity_z_q', 'rank_similarity_z_q'],
+            gate_weights_keys=kernel_gate_weights_keys,
+            format_inputs_as_tuple=True
+        )
 
         # Satisfy RNNCell contract.
         self.state_size = [
@@ -86,17 +116,6 @@ class RankSimilarityCellV2(Behavior):
 
         return z_q, z_r
 
-    # TODO better if we build?
-    # def build(self, input_shape):
-    #     """Build."""
-    #     self.percept.build(input_shape)
-
-    # TODO beter if we compute here?
-    # def compute_output_shape(self, input_shape):
-    #     """Compute output shape."""
-    #     output_shape = None
-    #     return output_shape
-
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
         initial_state = [
@@ -113,15 +132,17 @@ class RankSimilarityCellV2(Behavior):
         """Return probability of a ranked selection sequence.
 
         Args:
-            inputs: dictionary containing with the following keys:
-                stimulus_set: A tensor containing indices that define
-                    the stimuli used in each trial.
+            inputs: A dictionary containing the following information:
+                rank_similarity_stimulus_set: A tensor containing
+                    indices that define the stimuli used in each trial.
                     shape=(batch_size, 1, max_reference + 1, n_outcome)
-                is_select: A float tensor indicating if a
-                    reference was selected, which indicates a true event.
+                rank_similarity_is_select: A float tensor indicating if
+                    a reference was selected, which corresponds to a
+                    "true" probabilistic event.
                     shape = (batch_size, 1, n_max_reference + 1, 1)
-                groups (optional): A tensor containing group membership
-                    information.
+                gate_weights (optional): Tensor(s) containing gate
+                    weights. The actual key value(s) will depend on how
+                    the user initialized the layer.
 
         Returns:
             outcome_prob: Probability of different behavioral outcomes.
@@ -134,7 +155,6 @@ class RankSimilarityCellV2(Behavior):
         stimulus_set = inputs['rank_similarity_stimulus_set']
         # NOTE: We drop the "query" position in `is_select`.
         is_select = inputs['rank_similarity_is_select'][:, :, 1:, :]
-        groups = inputs['groups']
 
         # Expand `sample_axis` of `stimulus_set` for stochastic
         # functionality (e.g., variational inference).
@@ -143,26 +163,27 @@ class RankSimilarityCellV2(Behavior):
         )
 
         # Embed stimuli indices in n-dimensional space.
-        if self._pass_gate_weights['percept']:
-            z = self.percept([stimulus_set, groups])
-        else:
-            z = self.percept(stimulus_set)
+        inputs.update({
+            'rank_similarity_stimset_samples': stimulus_set
+        })
+        z = self._percept_adapter(inputs)
         # TensorShape=(batch_size, n_sample, n, [m, ...] n_dim])
 
-        # Prep retrieved embeddings for kernel op based on behavior.
+        # Prepare retrieved embeddings points for kernel and then compute
+        # similarity.
         z_q, z_r = self._split_stimulus_set(z)
-
-        if self._pass_gate_weights['kernel']:
-            sim_qr = self.kernel([z_q, z_r, groups])
-        else:
-            sim_qr = self.kernel([z_q, z_r])
+        inputs.update({
+            'rank_similarity_z_q': z_q,
+            'rank_similarity_z_r': z_r
+        })
+        sim_qr = self._kernel_adapter(inputs)
 
         # Zero out similarities involving placeholder IDs by creating
         # a mask based on reference indices. We drop the query indices
         # because they have effectively been "consumed" by the similarity
         # operation.
         is_present = tf.cast(
-            tf.math.not_equal(stimulus_set[:, :, 1:], 0), K.floatx()  # TODO
+            tf.math.not_equal(stimulus_set[:, :, 1:], 0), K.floatx()
         )
         sim_qr = tf.math.multiply(
             sim_qr, is_present, name='rank_zero_nonpresent'
@@ -208,6 +229,10 @@ class RankSimilarityCellV2(Behavior):
         config.update({
             'percept': tf.keras.utils.serialize_keras_object(self.percept),
             'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
+            'percept_gate_weights_keys': (
+                self._percept_adapter.gate_weights_keys
+            ),
+            'kernel_gate_weights_keys': self._kernel_adapter.gate_weights_keys,
         })
         return config
 

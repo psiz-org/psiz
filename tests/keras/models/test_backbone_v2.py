@@ -398,7 +398,7 @@ def bb_rnn_rank_1g_2g_mle():
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
-        percept=percept, kernel=kernel
+        percept=percept, kernel=kernel, kernel_gate_weights_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
@@ -415,6 +415,7 @@ def bb_rnn_rank_1g_2g_mle():
     return model
 
 
+# TODO not used
 def bb_rnn_rank_1g_3g_mle():
     """Rank, three groups, MLE."""
     # TODO copied from tests/keras/models/test_rank:rank_3g_mle_v2
@@ -441,7 +442,7 @@ def bb_rnn_rank_1g_3g_mle():
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
-        percept=percept, kernel=kernel
+        percept=percept, kernel=kernel, kernel_gate_weights_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
@@ -518,7 +519,10 @@ def bb_rnn_rank_2g_2g_mle():
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCellV2(
-        percept=percept, kernel=kernel
+        percept=percept,
+        kernel=kernel,
+        percept_gate_weights_keys=['groups'],
+        kernel_gate_weights_keys=['groups']
     )
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
@@ -592,11 +596,17 @@ def bb_rnn_rank_2g_2g_2g_mle():
 
     # Define group-specific behavior cells.
     behavior_cell_0 = psiz.keras.layers.RankSimilarityCellV2(
-        percept=percept, kernel=kernel
+        percept=percept,
+        kernel=kernel,
+        percept_gate_weights_keys=['groups'],
+        kernel_gate_weights_keys=['groups']
     )
     rnn_0 = tf.keras.layers.RNN(behavior_cell_0, return_sequences=True)
     behavior_cell_1 = psiz.keras.layers.RankSimilarityCellV2(
-        percept=percept, kernel=kernel
+        percept=percept,
+        kernel=kernel,
+        percept_gate_weights_keys=['groups'],
+        kernel_gate_weights_keys=['groups']
     )
     rnn_1 = tf.keras.layers.RNN(behavior_cell_1, return_sequences=True)
     behavior_0 = psiz.keras.layers.BehaviorWrapper(net=rnn_0)
@@ -855,7 +865,7 @@ def bb_rnn_categorize_1g_1g_mle():
     rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
     categorize = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=categorize)
+    model = psiz.keras.models.BackboneV2(net=categorize, n_sample=2)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),

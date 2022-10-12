@@ -17,7 +17,6 @@
 
 import tensorflow as tf
 
-from psiz.keras.mixins.gate_mixin import GateMixin
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 
@@ -47,7 +46,7 @@ class AddPairs(tf.keras.layers.Layer):
         return inputs[0] + inputs[1] + self.v
 
 
-class AddPairsDict(GateMixin, tf.keras.layers.Layer):
+class AddPairsDict(tf.keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):

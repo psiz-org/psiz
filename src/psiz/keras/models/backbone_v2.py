@@ -26,13 +26,12 @@ from importlib.metadata import version
 import tensorflow as tf
 
 from psiz.keras.models.stochastic import Stochastic
-from psiz.keras.mixins.gate_mixin import GateMixin
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.models', name='BackboneV2'
 )
-class BackboneV2(GateMixin, Stochastic):
+class BackboneV2(Stochastic):
     """A general-purpose model.
 
     This model is intended to be a convenience `Model` that covers a
@@ -44,9 +43,11 @@ class BackboneV2(GateMixin, Stochastic):
         2. Supports stochastic sampling. Assumes a "sample axis" at
             axis=2 and `StochasticMixin` is used appropriately.
         3. Supports multiple measures synthesis and hierarchical
-            modeling via data routing. Data routing assumes `groups` is
-            specified in the input dictionary and the `GateMixin` is
-            used appropriately.
+            modeling via data routing using gates. Data routing assumes
+            user provides the necessary "gate weights" in dictionary-
+            formatted `inputs`. The caller may want to list the
+            corresponding keys in the argument `inputs_to_ignore` to
+            prevent a "sample axis" from being added to these inputs.
 
     If your use case is not covered, you can use this model as a guide
     to create a bespoke model.
@@ -77,7 +78,7 @@ class BackboneV2(GateMixin, Stochastic):
 
         inputs_to_ignore = kwargs.pop('inputs_to_ignore', None)
         if inputs_to_ignore is None:
-            inputs_to_ignore = ['groups']
+            inputs_to_ignore = []
 
         super().__init__(
             sample_axis=sample_axis, n_sample=n_sample,

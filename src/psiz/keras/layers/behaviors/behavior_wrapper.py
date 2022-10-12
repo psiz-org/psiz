@@ -24,13 +24,11 @@ import copy
 
 import tensorflow as tf
 
-from psiz.keras.mixins.gate_mixin import GateMixin
-
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='BehaviorWrapper'
 )
-class BehaviorWrapper(GateMixin, tf.keras.layers.Layer):
+class BehaviorWrapper(tf.keras.layers.Layer):
     """A layer for wrapping a behavior."""
     def __init__(self, net, **kwargs):
         """Initialize.
@@ -70,12 +68,12 @@ class BehaviorWrapper(GateMixin, tf.keras.layers.Layer):
         # NOTE: Must make a copy since we are not allowed to modify any
         # lists or dicts passed as arguments to call().
         x_copied = copy.copy(x)
-        groups = x_copied.pop('groups', None)
+        groups = x_copied.pop('groups', None)  # TODO can't reference groups
         key_list = x_copied.keys()
         for key in key_list:
             x_copied[key] = x_copied[key][:, 0]
         if groups is not None:
-            x_copied['groups'] = groups
+            x_copied['groups'] = groups  # TODO can't reference groups
         return x_copied
 
     def _add_timestep_axis(self, x):

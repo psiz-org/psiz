@@ -403,7 +403,9 @@ def bb_rnn_rank_1g_2g_mle():
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.BackboneV2(
+        net=rank, inputs_to_ignore=['groups']
+    )
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -447,7 +449,9 @@ def bb_rnn_rank_1g_3g_mle():
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.BackboneV2(
+        net=rank, inputs_to_ignore=['groups']
+    )
     return model
 
 
@@ -527,7 +531,9 @@ def bb_rnn_rank_2g_2g_mle():
     rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
     rank = psiz.keras.layers.BehaviorWrapper(net=rnn)
 
-    model = psiz.keras.models.BackboneV2(net=rank)
+    model = psiz.keras.models.BackboneV2(
+        net=rank, inputs_to_ignore=['groups']
+    )
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -615,7 +621,9 @@ def bb_rnn_rank_2g_2g_2g_mle():
         subnets=[behavior_0, behavior_1], gate_weights_key='groups'
     )
 
-    model = psiz.keras.models.BackboneV2(net=behavior)
+    model = psiz.keras.models.BackboneV2(
+        net=behavior, inputs_to_ignore=['groups']
+    )
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -917,7 +925,9 @@ def bb_rnn_rank_rate_1g_mle():
         output_names=['rank_branch', 'rate_branch']
     )
 
-    model = psiz.keras.models.BackboneV2(net=behav_branch)
+    model = psiz.keras.models.BackboneV2(
+        net=behav_branch, inputs_to_ignore=['groups']
+    )
 
     compile_kwargs = {
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),

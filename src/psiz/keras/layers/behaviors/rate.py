@@ -20,6 +20,8 @@ Classes:
 
 """
 
+import warnings as warn
+
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
@@ -45,6 +47,17 @@ class RateBehavior(tf.keras.layers.Layer):
     `rate`: The growth rate of the logistic function.
 
     """
+    def __init_subclass__(cls, **kwargs):
+        """Subclassing initlazation."""
+        warn(
+            (
+                f'{cls.__name__} is deprecated and will be removed; '
+                'version_added=0.8.0; version_removed=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init_subclass__(**kwargs)
 
     def __init__(
             self, lower_initializer=None, upper_initializer=None,
@@ -69,6 +82,14 @@ class RateBehavior(tf.keras.layers.Layer):
             kwargs (optional): Additional keyword arguments.
 
         """
+        warn(
+            (
+                f'{self.__class__.__name__} is deprecated and will be '
+                'removed; version_added=0.8.0; version_removed=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
         super().__init__(**kwargs)
 
         self.lower_trainable = lower_trainable

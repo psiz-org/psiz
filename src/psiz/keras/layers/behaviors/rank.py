@@ -20,6 +20,8 @@ Classes:
 
 """
 
+import warnings as warn
+
 import tensorflow as tf
 
 
@@ -32,6 +34,29 @@ class RankBehavior(tf.keras.layers.Layer):
     Embodies a `_tf_ranked_sequence_probability` call.
 
     """
+    def __init_subclass__(cls, **kwargs):
+        """Subclassing initlazation."""
+        warn(
+            (
+                f'{cls.__name__} is deprecated and will be removed; '
+                'version_added=0.8.0; version_removed=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init_subclass__(**kwargs)
+
+    def __init__(self, *args, **kwargs):
+        """Initialize."""
+        warn(
+            (
+                f'{self.__class__.__name__} is deprecated and will be '
+                'removed; version_added=0.8.0; version_removed=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(*args, **kwargs)
 
     def call(self, inputs):
         """Return probability of a ranked selection sequence.

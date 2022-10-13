@@ -44,6 +44,12 @@ class BehaviorWrapper(tf.keras.layers.Layer):
         self._net_is_rnn = tf.constant(False)
         if isinstance(net, tf.keras.layers.RNN):
             self._net_is_rnn = tf.constant(True)
+        self._inputs_are_dict = None
+
+    def build(self, inputs_shape):
+        """Build."""
+        inputs_are_dict = isinstance(inputs_shape)
+        self._inputs_are_dict = tf.constant(inputs_are_dict)
 
     def call(
             self, inputs, mask=None, training=None, initial_state=None,
@@ -63,21 +69,26 @@ class BehaviorWrapper(tf.keras.layers.Layer):
         return outputs
 
     def _drop_timestep_axis(self, x):
-        """Drop timestep axis."""
+        """Drop timestep axis.
+
+        Assumes timestep axis=1.
+
+        """
         # TODO Handle other data structures.
         # NOTE: Must make a copy since we are not allowed to modify any
         # lists or dicts passed as arguments to call().
         x_copied = copy.copy(x)
-        groups = x_copied.pop('groups', None)  # TODO can't reference groups
         key_list = x_copied.keys()
         for key in key_list:
             x_copied[key] = x_copied[key][:, 0]
-        if groups is not None:
-            x_copied['groups'] = groups  # TODO can't reference groups
         return x_copied
 
     def _add_timestep_axis(self, x):
-        """Add timestep axis."""
+        """Add timestep axis.
+        
+        Assumes single Tensor.
+
+        """
         # TODO Handle other data structures.
         x = tf.expand_dims(x, axis=1)
         return x

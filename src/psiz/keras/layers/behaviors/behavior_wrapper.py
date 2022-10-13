@@ -85,7 +85,7 @@ class BehaviorWrapper(tf.keras.layers.Layer):
 
     def _add_timestep_axis(self, x):
         """Add timestep axis.
-        
+
         Assumes single Tensor.
 
         """

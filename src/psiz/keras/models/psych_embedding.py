@@ -46,6 +46,17 @@ class PsychologicalEmbedding(tf.keras.Model):
             layers.
 
     """
+    def __init_subclass__(cls, **kwargs):
+        """Subclassing initialization."""
+        warnings.warn(
+            (
+                f'{cls.__name__} is deprecated and will be removed; '
+                'version_added=0.8.0; version_removed=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init_subclass__(**kwargs)
 
     def __init__(
             self, stimuli=None, kernel=None, behavior=None, n_sample=1,
@@ -74,6 +85,14 @@ class PsychologicalEmbedding(tf.keras.Model):
             ValueError: If arguments are invalid.
 
         """
+        warnings.warn(
+            (
+                f'{self.__class__.__name__} is deprecated and will be '
+                'removed; version_added=0.8.0; version_removed=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
         super().__init__(**kwargs)
 
         # Assign layers.

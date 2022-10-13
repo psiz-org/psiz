@@ -35,7 +35,7 @@ class RankBehavior(tf.keras.layers.Layer):
 
     """
     def __init_subclass__(cls, **kwargs):
-        """Subclassing initlazation."""
+        """Subclassing initialization."""
         warn(
             (
                 f'{cls.__name__} is deprecated and will be removed; '

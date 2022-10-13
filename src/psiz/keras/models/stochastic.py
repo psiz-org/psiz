@@ -33,21 +33,18 @@ class Stochastic(tf.keras.Model):
     The model assume that the `call` method returns a Tensor or
     dictionary of Tensors where each Tensor has a "sample axis", that
     represents `n_sample` samples. In `train_step` and `test_step`, the
-    "sample" axis is combined with the "batch" axis to compute a
+    "sample axis" is combined with the "batch axis" to compute a
     batch-and-sample loss.
 
     Attributes:
-        sample_axis: Integer indicating sample axis.
-        n_sample: Integer indicating the number of samples to draw for
-            stochastic layers. Only useful if using stochastic layers
-            (e.g., variational models).
-        inputs_to_ignore: List indicating which keys to ignore (if
-            the inputs are structured as a dictionary).
+        sample_axis: See `init` method.
+        n_sample: See `init` method.
+        preserved_inputs: See `init` method.
 
     """
 
     def __init__(
-            self, sample_axis=None, n_sample=1, inputs_to_ignore=None,
+            self, sample_axis=None, n_sample=1, preserved_inputs=None,
             **kwargs):
         """Initialize.
 
@@ -56,14 +53,13 @@ class Stochastic(tf.keras.Model):
                 will serve as the "sample axis". Valid values are `1`
                 or `2`.
             n_sample (optional): A positive integer indicating the
-                number of samples that will appear in the `sample_axis`
-                of the output(s). Only useful if using stochastic
-                layers (e.g., variational models).
-            inputs_to_ignore (optional): A list of strings that
-                indicate which key values should be ignored if `inputs`
-                is a dictionary. If ignored, a sample axis is not
-                added for that particular input key. By default, no
-                keys are ignored.
+                number of samples that will populate the "sample axis".
+                Only useful if using stochastic layers (e.g.,
+                variational models).
+            preserved_inputs (optional): List of dictionary keys
+                indicating which values of `inputs` should not be
+                expanded with a sample axis. Only applies if `inputs`
+                is a dictionary. By default, no keys are preserved.
             kwargs:  Additional key-word arguments.
 
         Raises:
@@ -84,12 +80,14 @@ class Stochastic(tf.keras.Model):
         self._sample_axis = int(sample_axis)
         self._n_sample = int(n_sample)
 
-        if inputs_to_ignore is None:
-            self.inputs_to_ignore = []
+        if preserved_inputs is None:
+            self.preserved_inputs = []
         else:
-            self.inputs_to_ignore = inputs_to_ignore
+            self.preserved_inputs = preserved_inputs
 
-    def build(self, input_shape):
+        self._inputs_are_dict = None
+
+    def build(self, inputs_shape):
         """Build."""
         self._set_stochastic_mixin(self.layers)
 
@@ -241,9 +239,9 @@ class Stochastic(tf.keras.Model):
             'sample_axis': self.sample_axis,
             'n_sample': self.n_sample,
         }
-        if len(self.inputs_to_ignore) != 0:
+        if len(self.preserved_inputs) != 0:
             config.update({
-                'inputs_to_ignore': self.inputs_to_ignore
+                'preserved_inputs': self.preserved_inputs
             })
         return config
 
@@ -255,19 +253,19 @@ class Stochastic(tf.keras.Model):
         """Expand input Tensor(s) with singleton 'sample axis'."""
         # NOTE: We assume inputs are a dictionary or a single Tensor.
         if isinstance(data, dict):
-            # Pop keys that should be ignored, i.e., that should not have a
+            # Pop keys that should be preserved, i.e., that should not have a
             # sample axis added.
-            ignored_dict = {}
-            for ignored_key in self.inputs_to_ignore:
-                ignored_value = data.pop(ignored_key, None)
-                if ignored_value is not None:
-                    ignored_dict[ignored_key] = ignored_value
+            preserved_dict = {}
+            for preserved_key in self.preserved_inputs:
+                preserved_value = data.pop(preserved_key, None)
+                if preserved_value is not None:
+                    preserved_dict[preserved_key] = preserved_value
 
             key_list = data.keys()
             for key in key_list:
                 data[key] = tf.expand_dims(data[key], axis=self._sample_axis)
-            # Recombine non-ignored and ignored dictionaries.
-            data = data | ignored_dict
+            # Recombine altered and preserved dictionaries.
+            data = data | preserved_dict
         else:
             data = tf.expand_dims(data, axis=self._sample_axis)
         return data

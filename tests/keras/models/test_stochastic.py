@@ -243,7 +243,9 @@ def ds_rank2_x0():
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
     ds = ds.batch(n_example, drop_remainder=False)
 
-    return ds
+    inputs_shape = tf.TensorShape(x.shape)
+
+    return {'ds': ds, 'inputs_shape': inputs_shape}
 
 
 @pytest.fixture(scope="module")
@@ -293,7 +295,13 @@ def ds_rank2_x0_x1_x2():
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
     ds = ds.batch(n_example, drop_remainder=False)
 
-    return ds
+    inputs_shape = {
+        'x0': tf.TensorShape(x0.shape),
+        'x1': tf.TensorShape(x1.shape),
+        'x2': tf.TensorShape(x2.shape),
+    }
+
+    return {'ds': ds, 'inputs_shape': inputs_shape}
 
 
 @pytest.mark.parametrize(
@@ -302,9 +310,20 @@ def ds_rank2_x0_x1_x2():
 def test_mse_model_ax1(ds_rank2_x0_x1_x2, is_eager):
     """Test MSE model with sample_axis=1."""
     tf.config.run_functions_eagerly(is_eager)
+    ds = ds_rank2_x0_x1_x2['ds']
+    inputs_shape = ds_rank2_x0_x1_x2['inputs_shape']
 
-    ds = ds_rank2_x0_x1_x2
     model = CustomModelC(sample_axis=1, n_sample=2)
+    model.build(inputs_shape)
+
+    # Explicilty check that `sample_axis` and `n_sample` attributes of child
+    # layers were set correctly.
+    assert model.sample_axis == 1
+    assert model.n_sample == 2
+    assert model.branch_0.sample_axis == 1
+    assert model.branch_0.n_sample == 2
+    assert model.branch_1.sample_axis == 1
+    assert model.branch_1.n_sample == 2
 
     x0_desired = tf.constant([
         [[0.1, 1.1, 2.1]],
@@ -392,15 +411,6 @@ def test_mse_model_ax1(ds_rank2_x0_x1_x2, is_eager):
         # Assert `y_pred` handled correctly.
         tf.debugging.assert_near(y_pred, y_pred_desired)
 
-    # Explicilty check that `sample_axis` and `n_sample` attributes of child
-    # layers were set correctly.
-    assert model.sample_axis == 1
-    assert model.n_sample == 2
-    assert model.branch_0.sample_axis == 1
-    assert model.branch_0.n_sample == 2
-    assert model.branch_1.sample_axis == 1
-    assert model.branch_1.n_sample == 2
-
 
 @pytest.mark.parametrize(
     "is_eager", [True, False]
@@ -409,8 +419,19 @@ def test_mse_model_ax2(ds_rank2_x0_x1_x2, is_eager):
     """Test MSE model with sample_axis=2."""
     tf.config.run_functions_eagerly(is_eager)
 
-    ds = ds_rank2_x0_x1_x2
+    ds = ds_rank2_x0_x1_x2['ds']
+    inputs_shape = ds_rank2_x0_x1_x2['inputs_shape']
     model = CustomModelC(sample_axis=2, n_sample=2)
+    model.build(inputs_shape)
+
+    # Explicilty check that `sample_axis` and `n_sample` attributes of child
+    # Layer were set correctly.
+    assert model.sample_axis == 2
+    assert model.n_sample == 2
+    assert model.branch_0.sample_axis == 2
+    assert model.branch_0.n_sample == 2
+    assert model.branch_1.sample_axis == 2
+    assert model.branch_1.n_sample == 2
 
     x0_desired = tf.constant([
         [[0.1], [1.1], [2.1]],
@@ -498,15 +519,6 @@ def test_mse_model_ax2(ds_rank2_x0_x1_x2, is_eager):
         # Assert `y_pred` handled correctly.
         tf.debugging.assert_near(y_pred, y_pred_desired)
 
-    # Explicilty check that `sample_axis` and `n_sample` attributes of child
-    # Layer were set correctly.
-    assert model.sample_axis == 2
-    assert model.n_sample == 2
-    assert model.branch_0.sample_axis == 2
-    assert model.branch_0.n_sample == 2
-    assert model.branch_1.sample_axis == 2
-    assert model.branch_1.n_sample == 2
-
 
 @pytest.mark.parametrize(
     "is_eager", [True, False]
@@ -514,9 +526,16 @@ def test_mse_model_ax2(ds_rank2_x0_x1_x2, is_eager):
 def test_mse_model_ax2_ignore(ds_rank2_x0_x1_x2, is_eager):
     """Test MSE model with sample_axis=2."""
     tf.config.run_functions_eagerly(is_eager)
+    ds = ds_rank2_x0_x1_x2['ds']
+    inputs_shape = ds_rank2_x0_x1_x2['inputs_shape']
 
-    ds = ds_rank2_x0_x1_x2
-    model = CustomModelC(sample_axis=2, n_sample=2, inputs_to_ignore=['x2'])
+    model = CustomModelC(sample_axis=2, n_sample=2, preserved_inputs=['x2'])
+    model.build(inputs_shape)
+
+    # Explicilty check that `sample_axis` and `n_sample` attributes of child
+    # Layer were set correctly.
+    assert model.branch_0.sample_axis == 2
+    assert model.branch_0.n_sample == 2
 
     x0_desired = tf.constant([
         [[0.1], [1.1], [2.1]],
@@ -604,11 +623,6 @@ def test_mse_model_ax2_ignore(ds_rank2_x0_x1_x2, is_eager):
         # Assert `y_pred` handled correctly.
         tf.debugging.assert_near(y_pred, y_pred_desired)
 
-    # Explicilty check that `sample_axis` and `n_sample` attributes of child
-    # Layer were set correctly.
-    assert model.branch_0.sample_axis == 2
-    assert model.branch_0.n_sample == 2
-
 
 @pytest.mark.parametrize(
     "is_eager", [True, False]
@@ -616,8 +630,8 @@ def test_mse_model_ax2_ignore(ds_rank2_x0_x1_x2, is_eager):
 def test_model_nsample_change(ds_rank2_x0_x1_x2, is_eager):
     """Test model where number of samples changes between use."""
     tf.config.run_functions_eagerly(is_eager)
+    ds = ds_rank2_x0_x1_x2['ds']
 
-    ds = ds_rank2_x0_x1_x2
     model = CustomModelC(sample_axis=2, n_sample=2)
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
@@ -704,7 +718,7 @@ def test_model_nsample_change(ds_rank2_x0_x1_x2, is_eager):
 def test_model_control_serialization(ds_rank2_x0, is_eager, tmpdir):
     """Test model serialization."""
     tf.config.run_functions_eagerly(is_eager)
-    ds = ds_rank2_x0
+    ds = ds_rank2_x0['ds']
 
     model = CustomModelControl()
     compile_kwargs = {
@@ -728,7 +742,7 @@ def test_model_control_serialization(ds_rank2_x0, is_eager, tmpdir):
 def test_model_a_serialization(ds_rank2_x0, is_eager, tmpdir):
     """Test model serialization."""
     tf.config.run_functions_eagerly(is_eager)
-    ds = ds_rank2_x0
+    ds = ds_rank2_x0['ds']
 
     model = CustomModelA(sample_axis=1, n_sample=2)
     compile_kwargs = {
@@ -749,7 +763,7 @@ def test_model_a_serialization(ds_rank2_x0, is_eager, tmpdir):
     # Test for model equality.
     assert loaded.sample_axis == 1
     assert loaded.n_sample == 2
-    assert len(loaded.inputs_to_ignore) == 0
+    assert len(loaded.preserved_inputs) == 0
     assert results_0['loss'] == results_1['loss']
 
 
@@ -759,7 +773,7 @@ def test_model_a_serialization(ds_rank2_x0, is_eager, tmpdir):
 def test_model_b_serialization(ds_rank2_x0, is_eager, tmpdir):
     """Test model serialization."""
     tf.config.run_functions_eagerly(is_eager)
-    ds = ds_rank2_x0
+    ds = ds_rank2_x0['ds']
 
     model = CustomModelB(sample_axis=1, n_sample=2)
     compile_kwargs = {
@@ -782,7 +796,7 @@ def test_model_b_serialization(ds_rank2_x0, is_eager, tmpdir):
     assert loaded.n_sample == 2
     assert loaded.dense_layer.sample_axis == 1
     assert loaded.dense_layer.n_sample == 2
-    assert len(loaded.inputs_to_ignore) == 0
+    assert len(loaded.preserved_inputs) == 0
     assert results_0['loss'] == results_1['loss']
 
 
@@ -792,9 +806,9 @@ def test_model_b_serialization(ds_rank2_x0, is_eager, tmpdir):
 def test_model_c_serialization(ds_rank2_x0_x1_x2, is_eager, tmpdir):
     """Test model serialization."""
     tf.config.run_functions_eagerly(is_eager)
-    ds = ds_rank2_x0_x1_x2
+    ds = ds_rank2_x0_x1_x2['ds']
 
-    model = CustomModelC(sample_axis=2, n_sample=7, inputs_to_ignore=['x2'])
+    model = CustomModelC(sample_axis=2, n_sample=7, preserved_inputs=['x2'])
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -821,6 +835,6 @@ def test_model_c_serialization(ds_rank2_x0_x1_x2, is_eager, tmpdir):
     assert loaded.branch_0.n_sample == 7
     assert loaded.branch_1.sample_axis == 2
     assert loaded.branch_1.n_sample == 7
-    assert len(loaded.inputs_to_ignore) == 1
-    assert loaded.inputs_to_ignore[0] == 'x2'
+    assert len(loaded.preserved_inputs) == 1
+    assert loaded.preserved_inputs[0] == 'x2'
     assert results_0['loss'] == results_1['loss']

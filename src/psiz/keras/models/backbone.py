@@ -46,7 +46,7 @@ class Backbone(Stochastic):
             modeling via data routing using gates. Data routing assumes
             user provides the necessary "gate weights" in dictionary-
             formatted `inputs`. The caller may want to list the
-            corresponding keys in the argument `inputs_to_ignore` to
+            corresponding keys in the argument `preserved_inputs` to
             prevent a "sample axis" from being added to these inputs.
 
     If your use case is not covered, you can use this model as a guide

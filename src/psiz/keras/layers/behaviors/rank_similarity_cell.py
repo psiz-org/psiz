@@ -83,37 +83,78 @@ class RankSimilarityCell(Behavior):
             tf.TensorShape([1])
         ]
 
+    def build(self, inputs_shape):
+        """Build.
+
+        Expect:
+        rank_similarity_stimulus_set:
+        shape=(batch_size, [1], max_reference + 1, n_outcome)
+
+        rank_similarity_is_select:
+        shape = (batch_size, [1], n_max_reference + 1, 1)
+
+        """
+        # We assume axes semantics based on relative position from last axis.
+        stimuli_axis = -2  # i.e., query and reference indices.
+        outcome_axis = -1  # i.e., the different judgment outcomes.
+
+        # Convert from *relative* axis index to *absolute* axis index.
+        n_axis = inputs_shape['rank_similarity_stimulus_set'].rank
+        self._stimuli_axis = n_axis + stimuli_axis
+        self._outcome_axis = n_axis + outcome_axis
+
+        # Determine the maximum number of references and precompute an index
+        # Tensor to grab references only (i.e., drop query index).
+        max_n_reference = (
+            inputs_shape['rank_similarity_stimulus_set'][self._stimuli_axis]
+        ) - 1
+        self._max_n_reference = max_n_reference
+        self._reference_indices = tf.range(1, max_n_reference + 1)
+
+        # Determine what the shape of `z_q` `z_r` for the "stimulus axis".
+        # NOTE: We use `n_axis + 1` in anticipation of the added "embedding
+        # dimension axis".
+        z_q_shape = [None] * (n_axis + 1)
+        z_q_shape[self._stimuli_axis] = 1
+        self._z_q_shape = z_q_shape
+        z_r_shape = [None] * (n_axis + 1)
+        z_r_shape[self._stimuli_axis] = max_n_reference
+        self._z_r_shape = z_r_shape
+
+        # TODO HACK
+        if self.sample_axis is None:
+            self._has_sample_axis = tf.constant(False)
+        else:
+            self._has_sample_axis = tf.constant(True)
+
     def _split_stimulus_set(self, z):
         """Split stimulus set into query and reference.
 
         Args:
             z: A tensor of embeddings.
                 shape=TensorShape(
-                    [batch_size, n_sample, n_ref + 1, n_outcome, n_dim]
+                    [batch_size, [n_sample,] n_ref + 1, n_outcome, n_dim]
                 )
 
         Returns:
             z_q: A tensor of embeddings for the query.
                 shape=TensorShape(
-                    [batch_size, n_sample, 1, n_outcome, n_dim]
+                    [batch_size, [n_sample,] 1, n_outcome, n_dim]
                 )
             z_r: A tensor of embeddings for the references.
                 shape=TensorShape(
-                    [batch_size, n_sample, n_ref, n_outcome, n_dim]
+                    [batch_size, [n_sample,] n_ref, n_outcome, n_dim]
                 )
 
         """
-        # Define some useful variables before manipulating inputs.
-        max_n_reference = tf.shape(z)[-3] - 1
-
         # Split query and reference embeddings:
-        # z_q: TensorShape([batch_size, sample_size, 1, n_outcome, n_dim]
-        # z_r: TensorShape([batch_size, sample_size, n_ref, n_outcome, n_dim]
-        z_q, z_r = tf.split(z, [1, max_n_reference], -3)
-        # The tf.split op does not infer split dimension shape. We know that
-        # z_q will always have shape=1, but we don't know `max_n_reference`
-        # ahead of time.
-        z_q.set_shape([None, self.n_sample, 1, None, None])  # TODO necessary?
+        z_q, z_r = tf.split(z, [1, self._max_n_reference], self._stimuli_axis)
+
+        # The `tf.split` op does not infer split dimension shape.
+        # TODO Is this still necessary given `_max_n_reference` defined in
+        # `build` method?
+        z_q.set_shape(self._z_q_shape)
+        z_r.set_shape(self._z_r_shape)
 
         return z_q, z_r
 
@@ -126,6 +167,7 @@ class RankSimilarityCell(Behavior):
 
     def get_mask(self, inputs):
         """Return appropriate mask."""
+        # TODO this is not a general case solution.
         mask = tf.not_equal(inputs['rank_similarity_stimulus_set'], 0)
         return mask[:, :, 0, 0, 0]
 
@@ -136,11 +178,11 @@ class RankSimilarityCell(Behavior):
             inputs: A dictionary containing the following information:
                 rank_similarity_stimulus_set: A tensor containing
                     indices that define the stimuli used in each trial.
-                    shape=(batch_size, 1, max_reference + 1, n_outcome)
+                    shape=(batch_size, [1,] max_reference + 1, n_outcome)
                 rank_similarity_is_select: A float tensor indicating if
                     a reference was selected, which corresponds to a
                     "true" probabilistic event.
-                    shape = (batch_size, 1, n_max_reference + 1, 1)
+                    shape = (batch_size, [1,] n_max_reference + 1, 1)
                 gate_weights (optional): Tensor(s) containing gate
                     weights. The actual key value(s) will depend on how
                     the user initialized the layer.
@@ -155,20 +197,28 @@ class RankSimilarityCell(Behavior):
         """
         stimulus_set = inputs['rank_similarity_stimulus_set']
         # NOTE: We drop the "query" position in `is_select`.
-        is_select = inputs['rank_similarity_is_select'][:, :, 1:, :]
+        # NOTE: When a sample axis is present, equivalent to:
+        #     is_select = inputs['rank_similarity_is_select'][:, :, 1:]
+        is_select = tf.gather(
+            inputs['rank_similarity_is_select'],
+            indices=self._reference_indices,
+            axis=self._stimuli_axis
+        )
 
+        # TODO HACK this needs to be moved somewhere else.
         # Expand `sample_axis` of `stimulus_set` for stochastic
         # functionality (e.g., variational inference).
-        stimulus_set = tf.repeat(
-            stimulus_set, self.n_sample, axis=self.sample_axis_in_cell
-        )
+        if self._has_sample_axis:
+            stimulus_set = tf.repeat(
+                stimulus_set, self.n_sample, axis=self.sample_axis_in_cell
+            )
 
         # Embed stimuli indices in n-dimensional space.
         inputs.update({
             'rank_similarity_stimset_samples': stimulus_set
         })
         z = self._percept_adapter(inputs)
-        # TensorShape=(batch_size, n_sample, n, [m, ...] n_dim])
+        # TensorShape=(batch_size, [n_sample,] n, [m, ...] n_dim])
 
         # Prepare retrieved embeddings points for kernel and then compute
         # similarity.
@@ -183,24 +233,35 @@ class RankSimilarityCell(Behavior):
         # a mask based on reference indices. We drop the query indices
         # because they have effectively been "consumed" by the similarity
         # operation.
-        is_present = tf.cast(
-            tf.math.not_equal(stimulus_set[:, :, 1:], 0), K.floatx()
+        # NOTE: When sample axis is present, equivalent to:
+        #     is_present = stimulus_set[:, :, 1:]
+        is_present = tf.gather(
+            stimulus_set,
+            indices=self._reference_indices,
+            axis=self._stimuli_axis
         )
+        is_present = tf.cast(tf.math.not_equal(is_present, 0), K.floatx())
+
+        # Zero out non-present similarities.
         sim_qr = tf.math.multiply(
-            sim_qr, is_present, name='rank_zero_nonpresent'
+            sim_qr, is_present, name='rank_sim_zero_out_nonpresent'
         )
 
         # Determine if outcome is legitimate by checking if at least one
         # reference is present. This is important because not all trials have
         # the same number of possible outcomes and we need to infer the
         # "zero-padding" of the outcome axis.
-        is_outcome = is_present[:, :, 0, :]
+        # NOTE: When sample axis present, equivalent to:
+        #     is_outcome = is_present[:, :, 0]
+        is_outcome = tf.gather(
+            is_present, indices=tf.constant(0), axis=self._stimuli_axis
+        )
 
         # Compute denominator based on formulation of Luce's choice rule by
         # summing over the different references present in a trial. Note that
         # the similarity for placeholder references will be zero since they
-        # were zeroed out by the caller.
-        denom = tf.cumsum(sim_qr, axis=2, reverse=True)
+        # were zeroed out by the multiply op with `is_present` above.
+        denom = tf.cumsum(sim_qr, axis=self._stimuli_axis, reverse=True)
 
         # Compute log-probability of each selection, assuming all selections
         # occurred. Add fuzz factor to avoid log(0)
@@ -213,12 +274,16 @@ class RankSimilarityCell(Behavior):
         event_logprob = is_select * event_logprob
 
         # Compute log-probability of outcome (i.e., a sequence of events).
-        outcome_logprob = tf.reduce_sum(event_logprob, axis=2)
+        outcome_logprob = tf.reduce_sum(event_logprob, axis=self._stimuli_axis)
         outcome_prob = tf.math.exp(outcome_logprob)
         outcome_prob = is_outcome * outcome_prob
 
         # Clean up numerical errors in probabilities.
-        total_outcome_prob = tf.reduce_sum(outcome_prob, axis=2, keepdims=True)
+        # NOTE: The `reduce_sum` op above means that the outcome axis has been
+        # shifted by one, so the next op uses `self._outcome_axis - 1`.
+        total_outcome_prob = tf.reduce_sum(
+            outcome_prob, axis=(self._outcome_axis - 1), keepdims=True
+        )
         outcome_prob = outcome_prob / total_outcome_prob
 
         states_tplus1 = [states[0] + 1]

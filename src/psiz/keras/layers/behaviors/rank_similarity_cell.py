@@ -16,7 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    RankSimilarityCell: A rank behavior layer.
+    RankSimilarityCell: An RNN cell rank similarity layer.
 
 """
 
@@ -83,33 +83,39 @@ class RankSimilarityCell(Behavior):
             tf.TensorShape([1])
         ]
 
-    def build(self, inputs_shape):
+    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
+        """Get initial state."""
+        initial_state = [
+            tf.zeros([batch_size, 1], name='rank_cell_initial_state')
+        ]
+        return initial_state
+
+    def build(self, input_shape):
         """Build.
 
         Expect:
         rank_similarity_stimulus_set:
-        shape=(batch_size, [1], max_reference + 1, n_outcome)
+        shape=(batch_size, [1,] max_reference + 1, n_outcome)
 
         rank_similarity_is_select:
-        shape = (batch_size, [1], n_max_reference + 1, 1)
+        shape = (batch_size, [1,] n_max_reference + 1, 1)
 
         """
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -2  # i.e., query and reference indices.
         outcome_axis = -1  # i.e., the different judgment outcomes.
-
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = inputs_shape['rank_similarity_stimulus_set'].rank
-        self._stimuli_axis = n_axis + stimuli_axis
-        self._outcome_axis = n_axis + outcome_axis
+        n_axis = input_shape['rank_similarity_stimulus_set'].rank
+        self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
+        self._outcome_axis = tf.constant(n_axis + outcome_axis)
 
         # Determine the maximum number of references and precompute an index
         # Tensor to grab references only (i.e., drop query index).
         max_n_reference = (
-            inputs_shape['rank_similarity_stimulus_set'][self._stimuli_axis]
+            input_shape['rank_similarity_stimulus_set'][self._stimuli_axis]
         ) - 1
-        self._max_n_reference = max_n_reference
-        self._reference_indices = tf.range(1, max_n_reference + 1)
+        self._max_n_reference = tf.constant(max_n_reference)
+        self._reference_indices = tf.range(tf.constant(1), max_n_reference + 1)
 
         # Determine what the shape of `z_q` `z_r` for the "stimulus axis".
         # NOTE: We use `n_axis + 1` in anticipation of the added "embedding
@@ -120,12 +126,6 @@ class RankSimilarityCell(Behavior):
         z_r_shape = [None] * (n_axis + 1)
         z_r_shape[self._stimuli_axis] = max_n_reference
         self._z_r_shape = z_r_shape
-
-        # TODO HACK
-        if self.sample_axis is None:
-            self._has_sample_axis = tf.constant(False)
-        else:
-            self._has_sample_axis = tf.constant(True)
 
     def _split_stimulus_set(self, z):
         """Split stimulus set into query and reference.
@@ -157,13 +157,6 @@ class RankSimilarityCell(Behavior):
         z_r.set_shape(self._z_r_shape)
 
         return z_q, z_r
-
-    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
-        """Get initial state."""
-        initial_state = [
-            tf.zeros([batch_size, 1], name='rank_cell_initial_state')
-        ]
-        return initial_state
 
     def get_mask(self, inputs):
         """Return appropriate mask."""
@@ -205,13 +198,12 @@ class RankSimilarityCell(Behavior):
             axis=self._stimuli_axis
         )
 
-        # TODO HACK this needs to be moved somewhere else.
-        # Expand `sample_axis` of `stimulus_set` for stochastic
-        # functionality (e.g., variational inference).
-        if self._has_sample_axis:
-            stimulus_set = tf.repeat(
-                stimulus_set, self.n_sample, axis=self.sample_axis_in_cell
-            )
+        # TODO
+        # Fill sample axis if necessary.
+        # if self._has_sample_axis:
+        #     stimulus_set = tf.repeat(
+        #         stimulus_set, self.n_sample, axis=self.sample_axis
+        #     )
 
         # Embed stimuli indices in n-dimensional space.
         inputs.update({

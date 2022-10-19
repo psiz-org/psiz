@@ -162,29 +162,37 @@ class RateSimilarityCell(Behavior):
             trainable=self.rate_trainable, name="rate", dtype=K.floatx(),
         )
 
+    def build(self, input_shape):
+        """Build."""
+        # We assume axes semantics based on relative position from last axis.
+        stimuli_axis = -1  # i.e., stimuli indices.
+        # Convert from *relative* axis index to *absolute* axis index.
+        n_axis = input_shape['rate_similarity_stimulus_set'].rank
+        self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
+
     def _split_stimulus_set(self, z):
         """Split stimulus set into pairs.
 
         Args:
             z: A tensor of embeddings.
                 shape=TensorShape(
-                    [batch_size, n_sample, 2, n_dim]
+                    [batch_size, [n_sample,] 2, n_dim]
                 )
 
         Returns:
             z_0: A tensor of embeddings for one part of the pair.
                 shape=TensorShape(
-                    [batch_size, n_sample, 1, n_dim]
+                    [batch_size, [n_sample,] 1, n_dim]
                 )
             z_1: A tensor of embeddings for the other part of the pair.
                 shape=TensorShape(
-                    [batch_size, n_sample, 1, n_dim]
+                    [batch_size, [n_sample,] 1, n_dim]
                 )
 
         """
-        # Divide up stimuli sets for kernel call.
-        z_0 = z[:, :, 0]
-        z_1 = z[:, :, 1]
+        # Divide up stimuli for kernel call.
+        z_0 = tf.gather(z, indices=tf.constant(0), axis=self._stimuli_axis)
+        z_1 = tf.gather(z, indices=tf.constant(1), axis=self._stimuli_axis)
         return z_0, z_1
 
     def get_mask(self, inputs):
@@ -218,11 +226,12 @@ class RateSimilarityCell(Behavior):
         """
         stimulus_set = inputs['rate_similarity_stimulus_set']
 
+        # TODO delete
         # Expand `sample_axis` of `stimulus_set` for stochastic
         # functionality (e.g., variational inference).
-        stimulus_set = tf.repeat(
-            stimulus_set, self.n_sample, axis=self.sample_axis_in_cell
-        )
+        # stimulus_set = tf.repeat(
+        #     stimulus_set, self.n_sample, axis=self.sample_axis
+        # )
 
         # Embed stimuli indices in n-dimensional space.
         inputs.update({

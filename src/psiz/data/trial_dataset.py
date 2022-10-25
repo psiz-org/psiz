@@ -126,6 +126,33 @@ class TrialDataset(object):
                 ds = tf.data.Dataset.from_tensor_slices((x, y, w))
             else:
                 ds = tf.data.Dataset.from_tensor_slices((x))
+        elif export_format == 'tensors':  # TODO HACK
+            # Assemble model input.
+            x = self.content.export(
+                export_format='tf', timestep=timestep
+            )
+            groups = self.groups
+            if timestep is False:
+                groups = unravel_timestep(groups)
+            x.update({
+                'groups': tf.constant(groups, dtype=tf.int32)
+            })
+
+            # Assemble model output
+            if self.outcome is not None:
+                y = self.outcome.export(
+                    export_format='tf', timestep=timestep
+                )
+            else:
+                raise ValueError("No outcome has been specified.")
+
+            # Assemble weights.
+            w = self.weight
+            if timestep is False:
+                w = unravel_timestep(w)
+            w = tf.constant(w, dtype=K.floatx())
+
+            ds = (x, y, w)
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)

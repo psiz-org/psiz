@@ -72,6 +72,20 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
+class ALCOVEModel(tf.keras.Model):
+    """An `ALCOVECell` model."""
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(ALCOVEModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs, training=None):
+        """Call."""
+        mask = tf.not_equal(inputs['categorize_stimulus_set'], 0)[:, :, 0]
+        return self.behavior(inputs, mask=mask)
+
+
 def main():
     """Run script."""
     # Settings.
@@ -118,7 +132,7 @@ def build_model(
         cell, return_sequences=True, stateful=False
     )
 
-    model = psiz.keras.models.Backbone(net=categorize)
+    model = ALCOVEModel(behavior=categorize)
 
     # Compile model.
     compile_kwargs = {
@@ -406,7 +420,7 @@ def generate_fig5_stimulus_sequences(
     cat_idx_all = np.zeros([n_sequence, n_epoch * n_stimuli], dtype=int)
     for i_seq in range(n_sequence):
         curr_cat_idx = np.array([], dtype=int)
-        for i_epoch in range(n_epoch):
+        for _ in range(n_epoch):
             curr_cat_idx = np.hstack(
                 [curr_cat_idx, np.random.permutation(cat_idx)]
             )
@@ -414,16 +428,17 @@ def generate_fig5_stimulus_sequences(
 
     y = class_id_in[cat_idx_all]
 
-    sequence_length = n_epoch * n_stimuli
-    groups = np.zeros([n_sequence, sequence_length, 1])
+    # sequence_length = n_epoch * n_stimuli
+
     # Must be at least rank 3 for RNN cell.
     y_onehot = tf.one_hot(y, n_output, on_value=1.0, off_value=0.0)
     x = {
-        'stimulus_set': tf.constant(cat_idx_all + 1),
-        # TODO `correct_label` added dim should be inside class for sample axis
-        # TODO `correct_label` should we pass in one-hot rep instead?
-        'correct_label': tf.constant(np.expand_dims(y, axis=2)),
-        'groups': tf.constant(groups),
+        'categorize_stimulus_set': tf.constant(
+            np.expand_dims(cat_idx_all + 1, axis=2)
+        ),
+        'categorize_correct_label': tf.constant(
+            np.expand_dims(y, axis=2)
+        ),
     }
     w = tf.constant(np.ones_like(y))
     ds = tf.data.Dataset.from_tensor_slices((x, y_onehot, w)).batch(
@@ -448,7 +463,7 @@ def generate_fig14_stimulus_sequences(
     )
     for i_seq in range(n_sequence):
         curr_cat_idx = np.array([], dtype=int)
-        for i_epoch in range(n_epoch):
+        for _ in range(n_epoch):
             curr_cat_idx = np.hstack(
                 [curr_cat_idx, np.random.permutation(epoch_cat_idx)]
             )
@@ -456,19 +471,21 @@ def generate_fig14_stimulus_sequences(
 
     class_id = class_id_in[cat_idx_all]
 
-    sequence_length = class_id.shape[1]
-    groups = np.zeros([n_sequence, sequence_length, 1])
+    # sequence_length = class_id.shape[1]
 
-    y = class_id
+    y = tf.constant(np.expand_dims(class_id, axis=2))
     y_onehot = tf.one_hot(
         class_id, n_output, on_value=1.0, off_value=0.0
     ).numpy()
     x = {
-        'stimulus_set': cat_idx_all + 1,
-        'correct_label': np.expand_dims(class_id, axis=2),
-        'groups': groups,
+        'categorize_stimulus_set': tf.constant(
+            np.expand_dims(cat_idx_all + 1, axis=2)
+        ),
+        'categorize_correct_label': tf.constant(
+            np.expand_dims(class_id, axis=2)
+        ),
     }
-    w = np.ones_like(y)
+    w = tf.constant(np.ones_like(class_id))
     ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
         n_sequence, drop_remainder=False
     )

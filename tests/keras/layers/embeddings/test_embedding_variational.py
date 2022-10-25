@@ -138,6 +138,7 @@ class TempNoRNN(psiz.keras.models.StochasticModel):
             training (optional): Boolean indicating if training mode.
 
         """
+        inputs = self.expand_inputs_with_sample_axis(inputs)
         # Initialize states placeholder since not using RNN functionality
         states = tf.constant([0.])
 
@@ -192,6 +193,7 @@ class TempRNN(psiz.keras.models.StochasticModel):
             training (optional): Boolean indicating if training mode.
 
         """
+        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.net(inputs, training=training)
 
 

@@ -38,7 +38,7 @@ $ pip install "psiz[test]"
 ### Using git
 ```
 # Clone the PsiZ repository from GitHub to your local machine.
-$ git clone https://github.com/roads/psiz.git
+$ git clone https://github.com/psiz-org/psiz.git
 # Use `pip` to install the cloned repository.
 $ pip install /local/path/to/psiz
 ```
@@ -48,7 +48,7 @@ $ pip install /local/path/to/psiz
 * PsiZ versions <=0.5.0 must be installed using git clone and editable mode (e.g., `pip install -e /local/path/to/psiz`).
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`
-    * using git: `git clone https://github.com/roads/psiz.git --branch v0.5.1`
+    * using git: `git clone https://github.com/psiz-org/psiz.git --branch v0.5.1`
 
 ## Attribution
 If you use PsiZ in your work please cite at least one of the following:

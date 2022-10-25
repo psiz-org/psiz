@@ -39,7 +39,7 @@ You can also install PsiZ via `git`. You first clone the PsiZ repository from Gi
 
 .. code:: bash
 
-    git clone https://github.com/roads/psiz.git
+    git clone https://github.com/psiz-org/psiz.git
     pip install /local/path/to/psiz
 
 
@@ -68,4 +68,4 @@ Explore PsiZ's most powerful applications.
 
 Code Examples
 -------------
-Dive into pure code `examples <https://github.com/roads/psiz/tree/main/examples>`_ that demonstrate different applications of PsiZ.
+Dive into pure code `examples <https://github.com/psiz-org/psiz/tree/main/examples>`_ that demonstrate different applications of PsiZ.

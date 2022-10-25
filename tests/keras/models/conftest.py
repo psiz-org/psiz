@@ -24,6 +24,390 @@ import psiz
 
 
 @pytest.fixture(scope="module")
+def ds_ranksim_v0():
+    """Dataset.
+
+    Rank similarity, no timestep, no gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = psiz.data.SparseCategorical(
+        outcome_idx, depth=content.max_outcome
+    )
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=False, export_format='tensors')
+    x.pop('groups')
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_ranksim_v1():
+    """Dataset.
+
+    Rank similarity, no timestep, with kernel gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = psiz.data.SparseCategorical(
+        outcome_idx, depth=content.max_outcome
+    )
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=False, export_format='tensors')
+    kernel_gate_weights = x.pop('groups')
+    x['kernel_gate_weights'] = kernel_gate_weights
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_ranksim_v2():
+    """Dataset.
+
+    Rank similarity, no timestep, with percept and kernel gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = psiz.data.SparseCategorical(
+        outcome_idx, depth=content.max_outcome
+    )
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=False, export_format='tensors')
+    gate_weights = x.pop('groups')
+    x['kernel_gate_weights'] = gate_weights
+    x['percept_gate_weights'] = gate_weights
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_ranksimcell_v0():
+    """Dataset.
+
+    Rank similarity, with timestep, no gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = psiz.data.SparseCategorical(
+        outcome_idx, depth=content.max_outcome
+    )
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=True, export_format='tensors')
+    x.pop('groups')
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_ratesim_v0():
+    """Dataset.
+
+    Rate similarity, no timestep, no gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2),
+        (10, 13),
+        (4, 5),
+        (4, 18)
+    ), dtype=np.int32)
+    rating = np.array([[0.1], [0.4], [0.8], [0.9]])
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RateSimilarity(stimulus_set)
+    outcome = psiz.data.Continuous(rating)
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=False, export_format='tensors')
+    x.pop('groups')
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_ratesimcell_v0():
+    """Dataset.
+
+    Rate similarity, no timestep, no gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2),
+        (10, 13),
+        (4, 5),
+        (4, 18)
+    ), dtype=np.int32)
+    rating = np.array([[0.1], [.4], [.8], [.9]])
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RateSimilarity(stimulus_set)
+    outcome = psiz.data.Continuous(rating)
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=True, export_format='tensors')
+    x.pop('groups')
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_ratesim_v1():
+    """Dataset.
+
+    Rate similarity, no timestep, with behavior gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2),
+        (10, 13),
+        (4, 5),
+        (4, 18)
+    ), dtype=np.int32)
+    rating = np.array([[0.1], [.4], [.8], [.9]])
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RateSimilarity(stimulus_set)
+    outcome = psiz.data.Continuous(rating)
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=False, export_format='tensors')
+    gate_weights = x.pop('groups')
+    x['behavior_gate_weights'] = gate_weights
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_categorize_v0():
+    """Dataset.
+
+    Categorize, with timestep
+
+    """
+    n_sequence = 4
+    # sequence_length = 10
+    # n_stimuli = 20
+    n_output = 3
+
+    stimulus_set = tf.constant(
+        [
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+            [2, 4, 6, 8, 10, 12, 14, 16, 0, 0],  # NOTE: 2 masked trials
+        ], dtype=tf.int32
+    )
+    y = tf.constant(
+        [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+            [0, 0, 0, 0, 0, 1, 1, 1, 2, 2],
+            [0, 0, 0, 0, 0, 1, 1, 2, 0, 0],
+        ], dtype=tf.int32
+    )
+    y_onehot = tf.one_hot(y, n_output, on_value=1.0, off_value=0.0)
+    # NOTE: We add a trailing axis to represent "stimuli axis" and because
+    # RNN layer complains if tensor rank is less than 3.
+    x = {
+        'categorize_stimulus_set': tf.expand_dims(stimulus_set, axis=2),
+        'categorize_correct_label': tf.expand_dims(y, axis=2),
+    }
+    w = tf.constant(
+        [
+            [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
+            [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
+            [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
+            [1., 1., 1., 1., 1., 1., 1., 1., 0., 0.]
+        ]
+    )
+    ds = tf.data.Dataset.from_tensor_slices((x, y_onehot, w)).batch(
+        n_sequence, drop_remainder=False
+    )
+    return ds
+
+
+@pytest.fixture(scope="module")
+def ds_ranksim_ratesim_v0():
+    """Dataset.
+
+    RankSimilarity and RateSimilarity, no timestep, with behavior gate
+    weights.
+
+    """
+    n_trial = 8
+
+    # Rank data for dataset.
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    gate_weights_behavior = np.array(([0], [0], [1], [1]), dtype=np.int32)
+    obs_rank = psiz.trials.RankObservations(
+        stimulus_set,
+        n_select=n_select,
+        groups=gate_weights_behavior,
+        mask_zero=True
+    )
+
+    # Rank data for dataset.
+    stimulus_set_rank = obs_rank.all_outcomes()
+    is_select_rank = np.expand_dims(obs_rank.is_select(compress=False), axis=2)
+    y_rank = np.zeros([obs_rank.n_trial, stimulus_set_rank.shape[2]])
+    y_rank[:, 0] = 1
+    y_rank = np.concatenate([y_rank, np.zeros_like(y_rank)], axis=0)
+
+    # Add on rate data.
+    stimulus_set_rate = np.array(
+        [
+            [0, 0],  # Placeholder, no rate trial.
+            [0, 0],  # Placeholder, no rate trial.
+            [0, 0],  # Placeholder, no rate trial.
+            [0, 0],  # Placeholder, no rate trial.
+            [1, 2],
+            [10, 13],
+            [4, 5],
+            [4, 18],
+        ]
+    )
+
+    # Add placeholder for rate trials.
+    stimulus_set_rank = np.concatenate(
+        (stimulus_set_rank, np.zeros_like(stimulus_set_rank)), axis=0
+    )
+    is_select_rank = np.concatenate(
+        (is_select_rank, np.zeros_like(is_select_rank)), axis=0
+    )
+
+    gate_weights_behavior = np.array(
+        [
+            [0], [0], [0], [0], [1], [1], [1], [1]
+        ], dtype=np.int32
+    )
+
+    # Expand dimensions to account for timestep axis.
+    x = {
+        'rank_similarity_stimulus_set': tf.constant(stimulus_set_rank),
+        'rank_similarity_is_select': tf.constant(is_select_rank),
+        'rate_similarity_stimulus_set': tf.constant(stimulus_set_rate),
+        'gate_weights_behavior': tf.constant(gate_weights_behavior),
+    }
+
+    y_rate = np.array([0.0, 0.0, 0.0, 0.0, 0.1, .4, .8, .9])  # ratings
+    y_rate = np.expand_dims(y_rate, axis=1)
+    y = {
+        'rank_branch': tf.constant(y_rank, dtype=tf.float32),
+        'rate_branch': tf.constant(y_rate, dtype=tf.float32)
+    }
+
+    # Define sample weights for each branch.
+    w_rank = tf.constant([1., 1., 1., 1., 0., 0., 0., 0.])
+    w_rate = tf.constant([0., 0., 0., 0., 1., 1., 1., 1.])
+    w = {
+        'rank_branch': w_rank,
+        'rate_branch': w_rate
+    }
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
+        n_trial, drop_remainder=False
+    )
+
+    return ds
+
+
+@pytest.fixture(scope="module")
 def ds_rank_docket():
     """Rank docket dataset."""
     stimulus_set = np.array((

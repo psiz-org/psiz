@@ -15,16 +15,14 @@
 # ============================================================================
 """Keras models initialization file."""
 
-from psiz.keras.models.backbone import Backbone
 from psiz.keras.models.psych_embedding import PsychologicalEmbedding
 from psiz.keras.models.rank import Rank
 from psiz.keras.models.rate import Rate
-from psiz.keras.models.stochastic import Stochastic
+from psiz.keras.models.stochastic_model import StochasticModel
 
 __all__ = [
-    'Backbone',
     'PsychologicalEmbedding',
     'Rank',
     'Rate',
-    'Stochastic'
+    'StochasticModel'
 ]

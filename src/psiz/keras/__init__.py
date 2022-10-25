@@ -21,8 +21,8 @@ Modules:
     initializers
     layers
     losses
-    metrics
     regularizers
+
 """
 
 import psiz.keras.callbacks
@@ -32,4 +32,8 @@ import psiz.keras.layers
 import psiz.keras.models
 import psiz.keras.regularizers
 
-__all__ = []
+# Promote `StochasticModel` to `psiz.keras` namespace for convenience and to
+# mirror TensorFlow organization.
+from psiz.keras.models.stochastic_model import StochasticModel
+
+__all__ = ['StochasticModel']

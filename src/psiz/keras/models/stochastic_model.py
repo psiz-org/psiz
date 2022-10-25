@@ -16,19 +16,29 @@
 """Module of models.
 
 Classes:
-    Stochastic:  An abstract Keras model that accomodates stochastic
+    StochasticModel:  An abstract Keras model that accomodates stochastic
         layers via a "sample axis".
 
 """
 
+import copy
 import warnings
 
 import tensorflow as tf
 from tensorflow.python.eager import backprop
 
+from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
-class Stochastic(tf.keras.Model):
+
+@tf.keras.utils.register_keras_serializable(
+    package='psiz.keras.models', name='StochasticModel'
+)
+class StochasticModel(tf.keras.Model):
     """An abstract Keras model that accomodates stochastic layers.
+
+    When subclassing, your `call` method should first call
+    `inputs = self.expand_inputs_with_sample_axis(inputs)`. This method
+    will add a sample axis to all the input Tensors.
 
     The model assume that the `call` method returns a Tensor or
     dictionary of Tensors where each Tensor has a "sample axis", that
@@ -40,6 +50,13 @@ class Stochastic(tf.keras.Model):
         sample_axis: See `init` method.
         n_sample: See `init` method.
         preserved_inputs: See `init` method.
+
+    Methods:
+        See `tf.keras.Model` for inherited methods.
+        expand_inputs_with_sample_axis: Expands `inputs` with a sample
+            axis. Default behavior assumes `inputs` is a dictionary.
+            The user can override the method to handle different
+            input formats.
 
     """
 
@@ -66,7 +83,7 @@ class Stochastic(tf.keras.Model):
             ValueError: If arguments are invalid.
 
         """
-        super().__init__(**kwargs)
+        super(StochasticModel, self).__init__(**kwargs)
 
         if sample_axis is None:
             raise TypeError(
@@ -77,7 +94,7 @@ class Stochastic(tf.keras.Model):
             raise ValueError(
                 'The `sample_axis` must be 1 or 2.'
             )
-        self._sample_axis = int(sample_axis)
+        self._sample_axis_outermost = int(sample_axis)
         self._n_sample = int(n_sample)
 
         if preserved_inputs is None:
@@ -87,13 +104,14 @@ class Stochastic(tf.keras.Model):
 
         self._inputs_are_dict = None
 
-    def build(self, inputs_shape):
+    def build(self, input_shape):
         """Build."""
+        # Propogate "stochastic settings" to all layers with `StochasticMixin`.
         self._set_stochastic_mixin(self.layers)
 
     @property
     def sample_axis(self):
-        return self._sample_axis
+        return self._sample_axis_outermost
 
     @property
     def n_sample(self):
@@ -111,6 +129,21 @@ class Stochastic(tf.keras.Model):
             # Propogate change to children.
             self._set_stochastic_mixin(self.layers)
 
+    def call(self, inputs, training=None):
+        """Call.
+
+        When subclassing, your `call` method should make the follwing
+        call first:
+
+        inputs = self.expand_inputs_with_sample_axis(inputs)
+
+        """
+        raise NotImplementedError(
+            "Unimplemented `tf.keras.StochasticModel.call()`: "
+            "subclass `StochasticModel` with an overridden `call()` "
+            " method."
+        )
+
     def train_step(self, data):
         """Logic for one training step.
 
@@ -125,8 +158,7 @@ class Stochastic(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        # Adjust `x` to include a singleton `sample_axis`.
-        x = self.expand_inputs_with_sample_axis(x)
+        # NOTE: Inputs `x` is adjusted inside the `call` method.
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = self._repeat_samples_in_batch_axis(y)
@@ -193,8 +225,7 @@ class Stochastic(tf.keras.Model):
 
         """
         x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-        # Adjust `x` to include a singleton `sample_axis`.
-        x = self.expand_inputs_with_sample_axis(x)
+        # NOTE: Inputs `x` is adjusted inside the `call` method.
         # Adjust `y` and `sample_weight` batch axis to reflect multiple
         # samples since `y_pred` has samples.
         y = self._repeat_samples_in_batch_axis(y)
@@ -226,8 +257,7 @@ class Stochastic(tf.keras.Model):
 
         """
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        # Adjust `x` to include a singleton `sample_axis`.
-        x = self.expand_inputs_with_sample_axis(x)
+        # NOTE: Inputs `x` is adjusted inside the `call` method.
         y_pred = self(x, training=False)
         # For prediction, we simply average over the sample axis.
         y_pred = self._mean_of_sample_axis(y_pred)
@@ -235,10 +265,11 @@ class Stochastic(tf.keras.Model):
 
     def get_config(self):
         """Return model configuration."""
-        config = {
+        config = super(StochasticModel, self).get_config()
+        config.update({
             'sample_axis': self.sample_axis,
             'n_sample': self.n_sample,
-        }
+        })
         if len(self.preserved_inputs) != 0:
             config.update({
                 'preserved_inputs': self.preserved_inputs
@@ -249,26 +280,49 @@ class Stochastic(tf.keras.Model):
     def from_config(cls, config):
         return cls(**config)
 
-    def expand_inputs_with_sample_axis(self, data):
-        """Expand input Tensor(s) with singleton 'sample axis'."""
-        # NOTE: We assume inputs are a dictionary or a single Tensor.
-        if isinstance(data, dict):
-            # Pop keys that should be preserved, i.e., that should not have a
-            # sample axis added.
-            preserved_dict = {}
-            for preserved_key in self.preserved_inputs:
-                preserved_value = data.pop(preserved_key, None)
-                if preserved_value is not None:
-                    preserved_dict[preserved_key] = preserved_value
+    def expand_inputs_with_sample_axis(self, inputs):
+        """Expand input Tensor(s) with singleton 'sample axis'.
 
-            key_list = data.keys()
-            for key in key_list:
-                data[key] = tf.expand_dims(data[key], axis=self._sample_axis)
-            # Recombine altered and preserved dictionaries.
-            data = data | preserved_dict
-        else:
-            data = tf.expand_dims(data, axis=self._sample_axis)
-        return data
+        NOTE: The default implementation assumes `inputs` is a
+        dictionary. The user can override with method to accomodate
+        non-dictionary `inputs`. For example, for `inputs` that is a
+        single Tensor, the method would look like:
+
+        ```
+        def expand_inputs_with_sample_axis(self, inputs):
+            inputs_with_sample_axis = tf.expand_dims(
+                inputs, axis=self._sample_axis_outermost
+            )
+            return inputs_with_sample_axis
+        ```
+
+        Args:
+            inputs
+
+        Returns:
+            inputs_with_sample_axis
+
+        """
+        inputs_with_sample_axis = copy.copy(inputs)
+        # Pop keys that should be preserved, i.e., that should not have a
+        # sample axis added.
+        preserved_dict = {}
+        for preserved_key in self.preserved_inputs:
+            preserved_value = inputs_with_sample_axis.pop(
+                preserved_key, None
+            )
+            if preserved_value is not None:
+                preserved_dict[preserved_key] = preserved_value
+
+        key_list = inputs_with_sample_axis.keys()
+        for key in key_list:
+            inputs_with_sample_axis[key] = tf.expand_dims(
+                inputs_with_sample_axis[key],
+                axis=self._sample_axis_outermost
+            )
+        # Recombine altered and preserved dictionaries.
+        inputs_with_sample_axis = inputs_with_sample_axis | preserved_dict
+        return inputs_with_sample_axis
 
     def _repeat_samples_in_batch_axis(self, data):
         """Create "samples" for `y` or `sample_weight`.
@@ -384,19 +438,42 @@ class Stochastic(tf.keras.Model):
         if isinstance(y_pred, dict):
             for key in y_pred:
                 y_pred[key] = tf.reduce_mean(
-                    y_pred[key], axis=self._sample_axis
+                    y_pred[key], axis=self._sample_axis_outermost
                 )
         else:
-            y_pred = tf.reduce_mean(y_pred, axis=self._sample_axis)
+            y_pred = tf.reduce_mean(y_pred, axis=self._sample_axis_outermost)
         return y_pred
 
-    def _set_stochastic_mixin(self, layers, is_model_level=True):
-        """Set stochastic mixin attributes of all children layers."""
+    def _set_stochastic_mixin(self, layers, is_inside_rnn=False):
+        """Build `StochasticMixin` for relevant layers.
+
+        The objective of this method is to synchronize all layers that
+        inherit from `StochasticMixin`. The method loops over all
+        layers---while keeping track of the layer context (i.e., RNN
+        context)---and sets layer-owned stochastic attributes.
+
+        Args:
+            layers: A list of Keras Layers.
+            is_inside_rnn: Boolean indicating if layer context is
+                inside an RNN Layer (i.e., an RNN cell).
+
+        """
         for layer in layers:
-            if hasattr(layer, 'sample_axis'):
-                layer.sample_axis = self._sample_axis
-                layer.n_sample = self._n_sample
-            if is_model_level:
+            # Check if current Layer is an RNN and set `is_next_inside_rnn`
+            # for next recursive call.
+            if isinstance(layer, tf.keras.layers.RNN):
+                is_next_inside_rnn = True
+            else:
+                is_next_inside_rnn = is_inside_rnn
+
+            # Set `StochasticMixin` attributes of current Layer (if member).
+            if isinstance(layer, StochasticMixin):
+                layer.set_stochastic_mixin(
+                    self._sample_axis_outermost, self._n_sample, is_inside_rnn
+                )
+
+            # Recurse to next level if current layer has children.
+            if len(layer.submodules) > 0:
                 self._set_stochastic_mixin(
-                    layer.submodules, is_model_level=False
+                    layer.submodules, is_inside_rnn=is_next_inside_rnn
                 )

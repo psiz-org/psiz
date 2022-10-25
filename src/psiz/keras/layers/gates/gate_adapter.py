@@ -50,9 +50,13 @@ class GateAdapter(tf.keras.layers.Layer):
             raise ValueError(
                 'The argument `input_keys` is not optional.'
             )
+        elif not isinstance(input_keys, list):
+            input_keys = [input_keys]
         self.input_keys = input_keys
         if gating_keys is None:
             gating_keys = []
+        elif not isinstance(gating_keys, list):
+            gating_keys = [gating_keys]
         self.gating_keys = gating_keys
         self.format_inputs_as_tuple = tf.constant(format_inputs_as_tuple)
 

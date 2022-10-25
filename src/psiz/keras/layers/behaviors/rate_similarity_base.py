@@ -34,7 +34,7 @@ from psiz.keras.layers.gates.gate_adapter import GateAdapter
 class RateSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
     """A base layer for rate similarity behavior.
 
-    Similarities are converted to probabilities using a parameterized
+    Similarities are converted to ratings using a parameterized
     logistic function,
 
     p(x) = lower + ((upper - lower) / (1 + exp(-rate*(x - midpoint))))

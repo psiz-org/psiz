@@ -82,8 +82,8 @@ class RateSimilarityCell(RateSimilarityBase):
                     the user initialized the layer.
 
         Returns:
-            probs: The probabilites as determined by a parameterized
-                logistic function.
+            rating: The ratings (on a 0-1 scale) as determined by a
+                parameterized logistic function.
 
         """
         # NOTE: The inputs are copied, because modifying the original `inputs`
@@ -116,9 +116,9 @@ class RateSimilarityCell(RateSimilarityBase):
         })
         sim_qr = self._kernel_adapter(inputs_copied)
 
-        prob = self.lower + tf.math.divide(
+        rating = self.lower + tf.math.divide(
             self.upper - self.lower,
             1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint))
         )
 
-        return prob, states
+        return rating, states

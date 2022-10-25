@@ -81,7 +81,7 @@ def test_emb_heatmap(is_dist, mask_zero, cmap, ax_present):
     ax = fig.add_subplot(gs[0, 0])
 
     if cmap:
-        cmap = matplotlib.cm.get_cmap('Blues')
+        cmap = matplotlib.colormaps['Blues']
         heatmap_embeddings(emb, ax=ax, cmap=cmap)
     else:
         if ax_present:

@@ -41,7 +41,7 @@ def heatmap_embeddings(embedding, ax=None, cmap=None):
         ax = plt.gca()
 
     if cmap is None:
-        cmap = matplotlib.cm.get_cmap('Greys')
+        cmap = matplotlib.colormaps['Greys']
 
     if isinstance(embedding.embeddings, tfp.distributions.Distribution):
         # Handle distribution.

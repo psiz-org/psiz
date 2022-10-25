@@ -21,16 +21,27 @@ from scipy.stats import pearsonr
 import tensorflow as tf
 
 import psiz
-from psiz.data.contents.rank_similarity import (
-    RankSimilarity
-)
-from psiz.data.outcomes.sparse_categorical import (
-    SparseCategorical
-)
-from psiz.data.trial_dataset import TrialDataset
 
 
-def ground_truth(n_stimuli, n_dim, similarity_func, mask_zero):
+class RankModel(tf.keras.Model):
+    """A `RankSimilarity` model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(RankModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs, training=None):
+        """Call."""
+        return self.behavior(inputs)
+
+
+# TODO factor out
+def build_grouth_truth_old(n_stimuli, n_dim, similarity_func, mask_zero):
     """Return a ground truth embedding."""
     if mask_zero:
         stimuli = tf.keras.layers.Embedding(
@@ -87,7 +98,7 @@ def ground_truth(n_stimuli, n_dim, similarity_func, mask_zero):
     return model
 
 
-def ground_truth_bb(n_stimuli, n_dim, similarity_func, mask_zero):
+def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
     """Return a ground truth embedding."""
     if mask_zero:
         n_stimuli_emb = n_stimuli + 1
@@ -137,12 +148,11 @@ def ground_truth_bb(n_stimuli, n_dim, similarity_func, mask_zero):
         similarity=similarity
     )
 
-    rank_cell = psiz.keras.layers.RankSimilarityCell(
+    rank = psiz.keras.layers.RankSimilarity(
         percept=percept, kernel=kernel
     )
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
-    model = psiz.keras.models.Backbone(net=rank)
+    model = RankModel(behavior=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -178,7 +188,13 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 
     # Set similarity function.
     if similarity_func == 'Exponential':
-        similarity = psiz.keras.layers.ExponentialSimilarity()
+        similarity = psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(10.),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            fit_beta=False,
+            fit_tau=False,
+        )
     elif similarity_func == 'StudentsT':
         similarity = psiz.keras.layers.StudentsTSimilarity()
     elif similarity_func == 'HeavyTailed':
@@ -190,12 +206,11 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
         distance=psiz.keras.layers.Minkowski(),
         similarity=similarity
     )
-    rank_cell = psiz.keras.layers.RankSimilarityCell(
+    rank = psiz.keras.layers.RankSimilarity(
         percept=percept, kernel=kernel
     )
-    rank = tf.keras.layers.RNN(rank_cell, return_sequences=True)
 
-    model = psiz.keras.models.Backbone(net=rank)
+    model = RankModel(behavior=rank)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -208,15 +223,21 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 
 
 def convert2dataset(obs, batch_size, shuffle=False):
-    """Convert to TF Dataset."""
-    # Convert to timestep dataset.
-    # TODO native generator.
-    content = RankSimilarity(obs.stimulus_set, n_select=obs.n_select)
+    """Convert to TF Dataset.
+
+    No timestep.
+
+    """
+    content = psiz.data.RankSimilarity(obs.stimulus_set, n_select=obs.n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.max_timestep], dtype=np.int32
     )
-    outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
-    ds = TrialDataset(content, outcome=outcome, groups=obs.groups).export()
+    outcome = psiz.data.SparseCategorical(
+        outcome_idx, depth=content.max_outcome
+    )
+    ds = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=obs.groups
+    ).export(timestep=False)
     if shuffle:
         ds = ds.shuffle(
             buffer_size=obs.n_trial, reshuffle_each_iteration=True
@@ -226,6 +247,8 @@ def convert2dataset(obs, batch_size, shuffle=False):
     return ds
 
 
+# TODO The coordinate space may need to be scaled so that it is
+# "learnable" by the other similarity functions.
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "similarity_func", ["Exponential"]
@@ -233,8 +256,13 @@ def convert2dataset(obs, batch_size, shuffle=False):
 @pytest.mark.parametrize(
     "mask_zero", [True]
 )
-def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
+@pytest.mark.parametrize(
+    "is_eager", [True]
+)
+def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     """A crude MLE functional test that asserts more data helps."""
+    tf.config.run_functions_eagerly(is_eager)
+
     # Settings.
     n_stimuli = 30
     n_dim = 3
@@ -244,9 +272,18 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     n_frame = 2
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(n_stimuli)
+    if mask_zero:
+        ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+            np.arange(n_stimuli) + 1, elements='upper'
+        )
+    else:
+        ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+            n_stimuli, elements='upper'
+        )
 
-    model_true = ground_truth(n_stimuli, n_dim, similarity_func, mask_zero)
+    model_true = build_grouth_truth_old(
+        n_stimuli, n_dim, similarity_func, mask_zero
+    )
 
     # Generate a random docket of trials.
     if mask_zero:
@@ -259,6 +296,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
             n_stimuli, n_reference=8, n_select=2
         )
     docket = generator.generate(n_trial)
+    docket = docket.subset(np.random.permutation(docket.n_trial))
 
     # Simulate similarity judgments.
     agent = psiz.agents.RankAgent(model_true)
@@ -273,10 +311,9 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     # Partition observations into 80% train, 10% validation and 10% test set.
     obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
 
-    # Convert to timestep dataset.
+    # Convert to dataset.
     ds_obs_val = convert2dataset(obs_val, batch_size)
 
-    # TODO
     # # Convert validation and test to TF Dataset. Convert train dataset
     # # inside frame loop.
     # ds_obs_val = obs_val.as_dataset().batch(
@@ -332,8 +369,8 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         # similarity matrices implied by each model.
         simmat_infer = np.squeeze(
             psiz.utils.pairwise_similarity(
-                model_inferred.net.cell.percept,
-                model_inferred.net.cell.kernel, ds_pairs
+                model_inferred.behavior.percept,
+                model_inferred.behavior.kernel, ds_pairs
             ).numpy()
         )
         rho, _ = pearsonr(simmat_true, simmat_infer)
@@ -342,11 +379,9 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
         r2[i_frame] = rho**2
 
     # Assert that more data helps inference.
-    assert r2[0] < r2[-1]
+    assert r2[-1] > r2[0]
 
     # Strong test: Assert that the last frame (the most data) has an R^2 value
     # greater than 0.9. This indicates that inference has found a model that
     # closely matches the ground truth (which is never directly observed).
     # assert r2[-1] > .9
-    # I think the coordianate space needs to be scaled so that it is
-    # "learnable" by the selected similarity function.

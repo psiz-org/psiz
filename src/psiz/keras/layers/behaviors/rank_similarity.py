@@ -16,7 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    RankSimilarityCell: An RNN cell rank similarity layer.
+    RankSimilarity: A (stateless) layer for rank-similarity judgments.
 
 """
 
@@ -28,10 +28,10 @@ from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RankSimilarityCell'
+    package='psiz.keras.layers', name='RankSimilarity'
 )
-class RankSimilarityCell(RankSimilarityBase):
-    """A stateful rank similarity behavior layer."""
+class RankSimilarity(RankSimilarityBase):
+    """A rank similarity behavior layer."""
     def __init__(self, **kwargs):
         """Initialize.
 
@@ -39,22 +39,9 @@ class RankSimilarityCell(RankSimilarityBase):
             kwargs: See `RankSimilarityBase`
 
         """
-        super(RankSimilarityCell, self).__init__(**kwargs)
+        super(RankSimilarity, self).__init__(**kwargs)
 
-        # Satisfy RNNCell contract.
-        # NOTE: A placeholder state.
-        self.state_size = [
-            tf.TensorShape([1])
-        ]
-
-    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
-        """Get initial state."""
-        initial_state = [
-            tf.zeros([batch_size, 1], name='rank_cell_initial_state')
-        ]
-        return initial_state
-
-    def call(self, inputs, states, training=None):
+    def call(self, inputs, training=None):
         """Return probability of a ranked selection sequence.
 
         Args:
@@ -72,10 +59,6 @@ class RankSimilarityCell(RankSimilarityBase):
 
         Returns:
             outcome_prob: Probability of different behavioral outcomes.
-
-        NOTE: This computation takes advantage of log-probability
-            space, exploiting the fact that log(prob=1)=1 to make
-            vectorization cleaner.
 
         """
         # NOTE: The inputs are copied, because modifying the original `inputs`
@@ -120,5 +103,4 @@ class RankSimilarityCell(RankSimilarityBase):
             stimulus_set, is_select, sim_qr
         )
 
-        states_tplus1 = [states[0] + 1]
-        return outcome_prob, states_tplus1
+        return outcome_prob

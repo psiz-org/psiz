@@ -266,12 +266,6 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         # Precompute indices for all ALCOVE RBFs.
         self._alcove_idx = self._precompue_alcove_indices()
 
-    # TODO delete
-    def get_mask(self, inputs):
-        """Return appropriate mask."""
-        mask = tf.not_equal(inputs['categorize_stimulus_set'], 0)
-        return mask[:, :, 0]
-
     def call(self, inputs, states, training=None):
         """Call.
 
@@ -303,6 +297,10 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
 
         stimulus_set = inputs_copied['categorize_stimulus_set']
         correct_label_idx = inputs_copied['categorize_correct_label']
+        # Drop RNN required axis.
+        correct_label_idx = tf.gather(
+            correct_label_idx, indices=0, axis=self._stimuli_axis
+        )
 
         # Make sure `correct_label_idx` dtype is not altered during save.
         dtype = K.dtype(correct_label_idx)
@@ -449,7 +447,7 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
 
     def get_config(self):
         """Return layer configuration."""
-        config = super().get_config()
+        config = super(ALCOVECell, self).get_config()
         config.update({
             'units': self.units,
             'percept': tf.keras.utils.serialize_keras_object(self.percept),
@@ -498,9 +496,9 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
     def from_config(cls, config):
         similarity_serial = config['similarity']
         config['similarity'] = tf.keras.layers.deserialize(similarity_serial)
-        embedding_serial = config['percept']
-        config['percept'] = tf.keras.layers.deserialize(embedding_serial)
-        return super().from_config(config)
+        percept_serial = config['percept']
+        config['percept'] = tf.keras.layers.deserialize(percept_serial)
+        return cls(**config)
 
     def _precompue_alcove_indices(self):
         """Precompue indices for all ALCOVE RBFs."""

@@ -16,7 +16,7 @@
 """Module of TensorFlow behavior layers.
 
 Classes:
-    RateSimilarityCell: A rate similarity layer.
+    RateSimilarity: A (stateless) layer for rate-similarity judgments.
 
 """
 
@@ -28,25 +28,10 @@ from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RateSimilarityCell'
+    package='psiz.keras.layers', name='RateSimilarity'
 )
-class RateSimilarityCell(RateSimilarityBase):
-    """A stateful rate behavior layer.
-
-    Similarities are converted to probabilities using a parameterized
-    logistic function,
-
-    p(x) = lower + ((upper - lower) / (1 + exp(-rate*(x - midpoint))))
-
-    with the following variable meanings:
-    `lower`: The lower asymptote of the function's range.
-    `upper`: The upper asymptote of the function's range.
-    `midpoint`: The midpoint of the function's domain and point of
-        maximum growth.
-    `rate`: The growth rate of the logistic function.
-
-    """
-
+class RateSimilarity(RateSimilarityBase):
+    """A rate similarity behavior layer."""
     def __init__(self, **kwargs):
         """Initialize.
 
@@ -54,29 +39,16 @@ class RateSimilarityCell(RateSimilarityBase):
             See `RateSimilarityBase`
 
         """
-        super(RateSimilarityCell, self).__init__(**kwargs)
+        super(RateSimilarity, self).__init__(**kwargs)
 
-        # Satisfy RNNCell contract.
-        # NOTE: A placeholder state.
-        self.state_size = [
-            tf.TensorShape([1])
-        ]
-
-    def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
-        """Get initial state."""
-        initial_state = [
-            tf.zeros([batch_size, 1], name='rate_cell_initial_state')
-        ]
-        return initial_state
-
-    def call(self, inputs, states, training=None):
+    def call(self, inputs, training=None):
         """Return predicted rating of a trial.
 
         Args:
             inputs: A dictionary containing the following information:
                 rate_similarity_stimulus_set: A tensor containing
                     indices that define the stimuli used in each trial.
-                    shape=(batch_size, n_sample, n_stimuli_per_trial)
+                    shape=(batch_size, [n_sample,] n_stimuli_per_trial)
                 gate_weights (optional): Tensor(s) containing gate
                     weights. The actual key value(s) will depend on how
                     the user initialized the layer.
@@ -121,4 +93,4 @@ class RateSimilarityCell(RateSimilarityBase):
             1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint))
         )
 
-        return prob, states
+        return prob

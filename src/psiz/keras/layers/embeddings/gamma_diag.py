@@ -25,7 +25,6 @@ from tensorflow.python.keras import backend as K
 from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import embedding_ops
-from tensorflow.python.ops import math_ops
 import tensorflow_probability as tfp
 
 import psiz.keras.constraints
@@ -170,9 +169,7 @@ class EmbeddingGammaDiag(StochasticEmbedding):
 
     def call(self, inputs):
         """Call."""
-        dtype = K.dtype(inputs)
-        if dtype != 'int32' and dtype != 'int64':
-            inputs = math_ops.cast(inputs, 'int32')
+        inputs = super().call(inputs)
 
         # Delay reification until end of subclass call in order to
         # generate independent samples for each instance in batch_size.

@@ -102,7 +102,7 @@ def ds_v1():
     return ds
 
 
-class TempNoRNN(psiz.keras.models.Stochastic):
+class TempNoRNN(psiz.keras.models.StochasticModel):
     """A basic model for testing.
 
     Attributes:
@@ -118,7 +118,7 @@ class TempNoRNN(psiz.keras.models.Stochastic):
 
         Args:
             net: A Keras layer.
-            n_sample (optional): See psiz.keras.models.Stochastic.
+            n_sample (optional): See psiz.keras.models.StochasticModel.
             kwargs:  Additional key-word arguments.
 
         Raises:
@@ -156,7 +156,7 @@ class TempNoRNN(psiz.keras.models.Stochastic):
         return output
 
 
-class TempRNN(psiz.keras.models.Stochastic):
+class TempRNN(psiz.keras.models.StochasticModel):
     """A basic model for testing.
 
     Attributes:
@@ -172,7 +172,7 @@ class TempRNN(psiz.keras.models.Stochastic):
 
         Args:
             net: A Keras layer.
-            n_sample (optional): See psiz.keras.models.Stochastic.
+            n_sample (optional): See psiz.keras.models.StochasticModel.
             kwargs:  Additional key-word arguments.
 
         Raises:

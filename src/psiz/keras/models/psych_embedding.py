@@ -51,7 +51,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         warnings.warn(
             (
                 f'{cls.__name__} is deprecated and will be removed; '
-                'version_added=0.8.0; version_removed=0.9.0'
+                'version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
             stacklevel=2
@@ -88,7 +88,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         warnings.warn(
             (
                 f'{self.__class__.__name__} is deprecated and will be '
-                'removed; version_added=0.8.0; version_removed=0.9.0'
+                'removed; version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
             stacklevel=2

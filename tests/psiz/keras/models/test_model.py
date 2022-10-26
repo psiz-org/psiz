@@ -116,10 +116,15 @@ class RankModelB(tf.keras.Model):
         kernel = psiz.keras.layers.BraidGate(
             subnets=[kernel_0, kernel_1], gating_index=-1
         )
+
+        kernel_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys='kernel_gate_weights',
+            format_inputs_as_tuple=True
+        )
         behavior = psiz.keras.layers.RankSimilarity(
             percept=percept,
             kernel=kernel,
-            kernel_gating_keys=['kernel_gate_weights']
+            kernel_adapter=kernel_adapter
         )
         self.behavior = behavior
 
@@ -210,11 +215,19 @@ class RankModelC(tf.keras.Model):
             subnets=[kernel_0, kernel_1], gating_index=-1
         )
 
+        percept_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys=['percept_gate_weights'],
+            format_inputs_as_tuple=True
+        )
+        kernel_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys=['kernel_gate_weights'],
+            format_inputs_as_tuple=True
+        )
         behavior = psiz.keras.layers.RankSimilarity(
             percept=percept,
             kernel=kernel,
-            percept_gating_keys=['percept_gate_weights'],
-            kernel_gating_keys=['kernel_gate_weights']
+            percept_adapter=percept_adapter,
+            kernel_adapter=kernel_adapter
         )
         self.behavior = behavior
 
@@ -294,8 +307,14 @@ class RankModelD(tf.keras.Model):
         percept = psiz.keras.layers.BraidGate(
             subnets=[percept_01, percept_23], gating_index=-1, name='percept'
         )
+        percept_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys=[
+                'percept_gate_weights_1', 'percept_gate_weights_0'
+            ],
+            format_inputs_as_tuple=True
+        )
 
-        # Define group-specific kernel layers.
+        # Define kernel.
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
@@ -316,11 +335,7 @@ class RankModelD(tf.keras.Model):
         )
 
         behavior = psiz.keras.layers.RankSimilarity(
-            percept=percept,
-            kernel=kernel,
-            percept_gating_keys=[
-                'percept_gate_weights_1', 'percept_gate_weights_0'
-            ],
+            percept=percept, kernel=kernel, percept_adapter=percept_adapter
         )
         self.behavior = behavior
 

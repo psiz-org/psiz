@@ -91,30 +91,7 @@ class RateSimilarityCell(RateSimilarityBase):
         # a model.
         inputs_copied = copy.copy(inputs)
 
-        stimulus_set = inputs_copied['rate_similarity_stimulus_set']
-
-        # TODO delete
-        # Expand `sample_axis` of `stimulus_set` for stochastic
-        # functionality (e.g., variational inference).
-        # stimulus_set = tf.repeat(
-        #     stimulus_set, self.n_sample, axis=self.sample_axis
-        # )
-
-        # Embed stimuli indices in n-dimensional space.
-        inputs_copied.update({
-            'rate_similarity_stimset_samples': stimulus_set
-        })
-        z = self._percept_adapter(inputs_copied)
-        # TensorShape=(batch_size, [n_sample,] 2, n_dim])
-
-        # Prepare retrieved embeddings point for kernel and then compute
-        # similarity.
-        z_q, z_r = self._split_stimulus_set(z)
-        inputs_copied.update({
-            'rate_similarity_z_q': z_q,
-            'rate_similarity_z_r': z_r
-        })
-        sim_qr = self._kernel_adapter(inputs_copied)
+        sim_qr = self._pairwise_similarity(inputs_copied)
 
         rating = self.lower + tf.math.divide(
             self.upper - self.lower,

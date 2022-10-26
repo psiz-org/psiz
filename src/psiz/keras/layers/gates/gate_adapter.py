@@ -16,8 +16,7 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    GateAdapter: A context-aware layer that regulates the pass-through
-        of inputs based on the "plugged" layer.
+    GateAdapter: A layer that regulates the pass-through of inputs.
 
 """
 
@@ -28,44 +27,65 @@ import tensorflow as tf
     package='psiz.keras', name='GateAdapter'
 )
 class GateAdapter(tf.keras.layers.Layer):
-    """An input adapter."""
+    """An inputs adapter for networks with `Gates`.
+
+    Attributes:
+        input_keys: List of strings indicating required dictionary
+            keys.
+        gating_keys: See `__init__` method.
+        format_inputs_as_tuple: See `__init__` method.
+
+    """
     def __init__(
-            self, subnet=None, input_keys=None, gating_keys=None,
-            format_inputs_as_tuple=None, **kwargs):
+        self, gating_keys=None, format_inputs_as_tuple=None, **kwargs
+    ):
         """Initialize.
 
         Args:
-            subnet: A Keras Layer.
-            input_keys: List of strings indicating required dictionary
-                keys.
             gating_keys (optional): List of strings indicating
                 dictionary keys for gate weights.
             format_inputs_as_tuple (optional): Boolean indicating if
                 inputs should be passed as tuple instead of dictionary.
+                Default is `True`.
 
         """
         super(GateAdapter, self).__init__(**kwargs)
-        self.subnet = subnet
-        if input_keys is None:
-            raise ValueError(
-                'The argument `input_keys` is not optional.'
-            )
-        elif not isinstance(input_keys, list):
-            input_keys = [input_keys]
-        self.input_keys = input_keys
+        self._all_keys = []
+        self._input_keys = []
         if gating_keys is None:
             gating_keys = []
         elif not isinstance(gating_keys, list):
             gating_keys = [gating_keys]
         self.gating_keys = gating_keys
+        if format_inputs_as_tuple is None:
+            format_inputs_as_tuple = True
         self.format_inputs_as_tuple = tf.constant(format_inputs_as_tuple)
 
         self._strip_inputs = None
+
+    @property
+    def input_keys(self):
+        return self._input_keys
+
+    @input_keys.setter
+    def input_keys(self, input_keys):
+        if input_keys is None:
+            raise ValueError(
+                'The argument `input_keys` cannot be `None`.'
+            )
+        elif not isinstance(input_keys, list):
+            input_keys = [input_keys]
+        self._input_keys = input_keys
 
     def build(self, input_shape):
         """Build."""
         super(GateAdapter, self).build(input_shape)
 
+        if self._input_keys is None:
+            raise ValueError(
+                'The attribute `input_keys` cannot be `None`. It should '
+                'be set by an external caller.'
+            )
         # Make sure inputs are a dictionary.
         if not isinstance(input_shape, dict):
             raise ValueError(
@@ -73,11 +93,14 @@ class GateAdapter(tf.keras.layers.Layer):
                 '`inputs`.'
             )
 
-        # Add keys of "gate weights" to list of input keys.
+        # Add input keys to list of all keys.
+        for key in self._input_keys:
+            self._all_keys.append(key)
+        # Add keys of "gate weights" to list of all keys.
         for key in self.gating_keys:
-            self.input_keys.append(key)
+            self._all_keys.append(key)
 
-        if len(self.input_keys) == 1:
+        if len(self._all_keys) == 1:
             self._strip_inputs = tf.constant(True)
         else:
             self._strip_inputs = tf.constant(False)
@@ -93,7 +116,7 @@ class GateAdapter(tf.keras.layers.Layer):
         """
         if self.format_inputs_as_tuple:
             formatted_inputs = []
-            for key in self.input_keys:
+            for key in self._all_keys:
                 formatted_inputs.append(inputs[key])
             if self._strip_inputs:
                 formatted_inputs = formatted_inputs[0]
@@ -101,4 +124,13 @@ class GateAdapter(tf.keras.layers.Layer):
                 formatted_inputs = tuple(formatted_inputs)
         else:
             formatted_inputs = inputs
-        return self.subnet(formatted_inputs)
+        return formatted_inputs
+
+    def get_config(self):
+        """Get configuration."""
+        config = super(GateAdapter, self).get_config()
+        config.update({
+            'gating_keys': self.gating_keys,
+            'format_inputs_as_tuple': bool(self.format_inputs_as_tuple),
+        })
+        return config

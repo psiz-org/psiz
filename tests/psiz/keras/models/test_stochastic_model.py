@@ -484,6 +484,10 @@ class RankModelC(StochasticModel):
         percept = psiz.keras.layers.BraidGate(
             subnets=[percept_0, percept_1], gating_index=-1
         )
+        percept_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys=['percept_gate_weights'],
+            format_inputs_as_tuple=True
+        )
 
         mink = psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -502,7 +506,7 @@ class RankModelC(StochasticModel):
         behavior = psiz.keras.layers.RankSimilarity(
             percept=percept,
             kernel=kernel,
-            percept_gating_keys=['percept_gate_weights']
+            percept_adapter=percept_adapter
         )
         self.behavior = behavior
 

@@ -42,7 +42,7 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         self,
         units=None,
         percept=None,
-        percept_gating_keys=None,
+        percept_adapter=None,
         similarity=None,
         rho_trainable=True,
         rho_initializer=None,
@@ -67,14 +67,11 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         Args:
             units: Positive integer indicating the number of output classes.
             percept: A Keras Layer for computing perceptual embeddings.
+            percept_adapter (optional): A layer for adapting inputs
+                to match the assumptions of the provided `percept`
+                layer.
             similarity: A Keras Layer for mapping distance to
                 similarity.
-            percept_gating_keys (optional): A list of dictionary
-                keys pointing to gate weights that should be passed to
-                the `percept` layer. Since the `percept` layer assumes
-                a tuple is passed to the `call` method, the weights are
-                appended at the end of the "standard" Tensors, in the
-                same order specified by the user.
             rho_trainable (optional):
             rho_initializer (optional):
             rho_regularizer (optional):
@@ -98,21 +95,23 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         self.percept = percept
         self.similarity = similarity
 
-        # Set up adapters based on provided gate weights.
-        self._percept_adapter = GateAdapter(
-            subnet=percept,
-            input_keys=['alcove_stimset_samples'],
-            gating_keys=percept_gating_keys,
-            format_inputs_as_tuple=True
+        # Configure percept adapter.
+        if percept_adapter is None:
+            # Default adapter has no gating keys.
+            percept_adapter = GateAdapter(
+                format_inputs_as_tuple=True
+            )
+        # NOTE: The second adapter uses the same underlying embedding and
+        # gate weights, but takes a different set of indices.
+        alcove_adapter = percept_adapter.__class__.from_config(
+            percept_adapter.get_config()
         )
-        # NOTE: The second adapter uses the same underlying embedding
-        # and gate weights, but takes a different set of indices.
-        self._alcove_adapter = GateAdapter(
-            subnet=percept,
-            input_keys=['alcove_idx'],
-            gating_keys=percept_gating_keys,
-            format_inputs_as_tuple=True
-        )
+        self.percept_adapter = percept_adapter
+        self._alcove_adapter = alcove_adapter
+
+        # Set required input keys.
+        self.percept_adapter.input_keys = ['alcove_stimset_samples']
+        self._alcove_adapter.input_keys = ['alcove_idx']
 
         # Misc. attributes.
         self.units = units
@@ -310,28 +309,19 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         attention = states[0]  # Previous attention weights state.
         association = states[1]  # Previous association weights state.
 
-        # TODO
-        # Fill sample axis if necessary.
-        # if self._has_sample_axis:
-        #     stimulus_set = tf.repeat(
-        #         stimulus_set, self.n_sample, axis=self.sample_axis
-        #     )
-        #     alcove_idx = tf.repeat(
-        #         alcove_idx, self.n_sample, axis=self.sample_axis
-        #     )
-        # TODO if using above expansion, use `alcove_idx` below
-
         # Embed stimuli indices in n-dimensional space.
         inputs_copied.update({
             'alcove_stimset_samples': stimulus_set,
             'alcove_idx': tf.repeat(self._alcove_idx, batch_size, axis=0),
         })
-        z_in = self._percept_adapter(inputs_copied)
+        inputs_percept = self.percept_adapter(inputs_copied)
+        z_in = self.percept(inputs_percept)
         # TensorShape=(batch_size, [n_sample,] 1, n_dim])
 
         # To compute RBF activations (i.e., similarity), start by retrieving
         # the ALCOVE RBF embeddings.
-        z_alcove = self._alcove_adapter(inputs_copied)
+        inputs_alcove = self._alcove_adapter(inputs_copied)
+        z_alcove = self.percept(inputs_alcove)
         # shape=(batch_size, [n_sample,] n_ref, n_dim)
 
         # Use TensorFlow gradients to update model state.
@@ -454,8 +444,8 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
             'similarity': tf.keras.utils.serialize_keras_object(
                 self.similarity
             ),
-            'percept_gating_keys': (
-                self._percept_adapter.gating_keys
+            'percept_adapter': tf.keras.utils.serialize_keras_object(
+                self.percept_adapter
             ),
             'rho_initializer':
                 tf.keras.initializers.serialize(self.rho_initializer),
@@ -498,6 +488,10 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         config['similarity'] = tf.keras.layers.deserialize(similarity_serial)
         percept_serial = config['percept']
         config['percept'] = tf.keras.layers.deserialize(percept_serial)
+        percept_adapter_serial = config['percept_adapter']
+        config['percept_adapter'] = tf.keras.layers.deserialize(
+            percept_adapter_serial
+        )
         return cls(**config)
 
     def _precompue_alcove_indices(self):

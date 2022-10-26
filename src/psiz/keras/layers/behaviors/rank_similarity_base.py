@@ -36,8 +36,8 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         self,
         percept=None,
         kernel=None,
-        percept_gating_keys=None,
-        kernel_gating_keys=None,
+        percept_adapter=None,
+        kernel_adapter=None,
         **kwargs
     ):
         """Initialize.
@@ -45,37 +45,38 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         Args:
             percept: A Keras Layer for computing perceptual embeddings.
             kernel: A Keras Layer for computing kernel similarity.
-            percept_gating_keys (optional): A list of dictionary
-                keys pointing to gate weights that should be passed to
-                the `percept` layer. Since the `percept` layer assumes
-                a tuple is passed to the `call` method, the weights are
-                appended at the end of the "standard" Tensors, in the
-                same order specified by the user.
-            kernel_gating_keys (optional): A list of dictionary
-                keys pointing to gate weights that should be passed to
-                the `kernel` layer. Since the `kernel` layer assumes a
-                tuple is passed to the `call` method, the weights are
-                appended at the end of the "standard" Tensors, in the
-                same order specified by the user.
+            percept_adapter (optional): A layer for adapting inputs
+                to match the assumptions of the provided `percept`
+                layer.
+            kernel_adapter (optional): A layer for adapting inputs
+                to match the assumptions of the provided `kernel`
+                layer.
 
         """
         super(RankSimilarityBase, self).__init__(**kwargs)
         self.percept = percept
         self.kernel = kernel
 
-        # Set up adapters based on provided gate weights.
-        self._percept_adapter = GateAdapter(
-            subnet=percept,
-            input_keys=['rank_similarity_stimulus_set'],
-            gating_keys=percept_gating_keys,
-            format_inputs_as_tuple=True
-        )
-        self._kernel_adapter = GateAdapter(
-            subnet=kernel,
-            input_keys=['rank_similarity_z_q', 'rank_similarity_z_r'],
-            gating_keys=kernel_gating_keys,
-            format_inputs_as_tuple=True
-        )
+        # Configure percept adapter.
+        if percept_adapter is None:
+            # Default adapter has no gating keys.
+            percept_adapter = GateAdapter(
+                format_inputs_as_tuple=True
+            )
+        self.percept_adapter = percept_adapter
+        # Set required input keys.
+        self.percept_adapter.input_keys = ['rank_similarity_stimulus_set']
+
+        # Configure kernel adapter.
+        if kernel_adapter is None:
+            # Default adapter has not gating keys.
+            kernel_adapter = GateAdapter(
+                format_inputs_as_tuple=True
+            )
+        self.kernel_adapter = kernel_adapter
+        self.kernel_adapter.input_keys = [
+            'rank_similarity_z_q', 'rank_similarity_z_r'
+        ]
 
     def build(self, input_shape):
         """Build.
@@ -165,6 +166,24 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         # NOTE: Assumes `mask_zero=True`.
         return tf.math.not_equal(reference_stimulus_set, 0)
 
+    def _pairwise_similarity(self, inputs_copied):
+        """Compute pairwise similarity."""
+        # Embed stimuli indices in n-dimensional space.
+        inputs_percept = self.percept_adapter(inputs_copied)
+        z = self.percept(inputs_percept)
+        # TensorShape=(batch_size, [n_sample,] n, [m, ...] n_dim])
+
+        # Prepare retrieved embeddings points for kernel and then compute
+        # similarity.
+        z_q, z_r = self._split_stimulus_set(z)
+        inputs_copied.update({
+            'rank_similarity_z_q': z_q,
+            'rank_similarity_z_r': z_r
+        })
+        inputs_kernel = self.kernel_adapter(inputs_copied)
+        sim_qr = self.kernel(inputs_kernel)
+        return sim_qr
+
     def _compute_outcome_probability(
         self, is_reference_present, is_select, sim_qr
     ):
@@ -232,31 +251,18 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         )
         return outcome_prob
 
-    def _pairwise_similarity(self, inputs_copied):
-        # Embed stimuli indices in n-dimensional space.
-        z = self._percept_adapter(inputs_copied)
-        # TensorShape=(batch_size, [n_sample,] n, [m, ...] n_dim])
-
-        # Prepare retrieved embeddings points for kernel and then compute
-        # similarity.
-        z_q, z_r = self._split_stimulus_set(z)
-        inputs_copied.update({
-            'rank_similarity_z_q': z_q,
-            'rank_similarity_z_r': z_r
-        })
-        sim_qr = self._kernel_adapter(inputs_copied)
-        return sim_qr
-
     def get_config(self):
         """Return layer configuration."""
-        config = super().get_config()
+        config = super(RankSimilarityBase, self).get_config()
         config.update({
             'percept': tf.keras.utils.serialize_keras_object(self.percept),
             'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
-            'percept_gating_keys': (
-                self._percept_adapter.gating_keys
+            'percept_adapter': tf.keras.utils.serialize_keras_object(
+                self.percept_adapter
             ),
-            'kernel_gating_keys': self._kernel_adapter.gating_keys,
+            'kernel_adapter': tf.keras.utils.serialize_keras_object(
+                self.kernel_adapter
+            ),
         })
         return config
 
@@ -264,6 +270,14 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
     def from_config(cls, config):
         percept_serial = config['percept']
         kernel_serial = config['kernel']
+        percept_adapter_serial = config['percept_adapter']
+        kernel_adapter_serial = config['kernel_adapter']
         config['percept'] = tf.keras.layers.deserialize(percept_serial)
         config['kernel'] = tf.keras.layers.deserialize(kernel_serial)
+        config['percept_adapter'] = tf.keras.layers.deserialize(
+            percept_adapter_serial
+        )
+        config['kernel_adapter'] = tf.keras.layers.deserialize(
+            kernel_adapter_serial
+        )
         return super().from_config(config)

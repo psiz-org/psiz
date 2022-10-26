@@ -18,6 +18,7 @@
 import numpy as np
 import pytest
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 import psiz
 
@@ -59,7 +60,7 @@ class RankModelA(tf.keras.Model):
 
         self.behavior = behavior
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -128,7 +129,7 @@ class RankModelB(tf.keras.Model):
         )
         self.behavior = behavior
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -231,7 +232,7 @@ class RankModelC(tf.keras.Model):
         )
         self.behavior = behavior
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -339,7 +340,7 @@ class RankModelD(tf.keras.Model):
         )
         self.behavior = behavior
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -385,7 +386,7 @@ class RankCellModelA(tf.keras.Model):
         rnn = tf.keras.layers.RNN(cell, return_sequences=True)
         self.behavior = rnn
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -430,7 +431,7 @@ class RateModelA(tf.keras.Model):
         )
         self.behavior = behavior
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -512,7 +513,7 @@ class RateModelB(tf.keras.Model):
         )
         self.behavior = behavior
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -558,7 +559,7 @@ class RateCellModelA(tf.keras.Model):
         rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
         self.behavior = rnn
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -606,7 +607,7 @@ class ALCOVEModelA(tf.keras.Model):
         rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
         self.behavior = rnn
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 
@@ -664,7 +665,7 @@ class RankRateModelA(tf.keras.Model):
         )
         self.behavior = behavior_branch
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
 

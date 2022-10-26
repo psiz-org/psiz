@@ -66,7 +66,7 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         # Set up adapters based on provided gate weights.
         self._percept_adapter = GateAdapter(
             subnet=percept,
-            input_keys=['rank_similarity_stimset_samples'],
+            input_keys=['rank_similarity_stimulus_set'],
             gating_keys=percept_gating_keys,
             format_inputs_as_tuple=True
         )
@@ -115,7 +115,7 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         self._z_r_shape = z_r_shape
 
     def _split_stimulus_set(self, z):
-        """Split stimulus set into query and reference.
+        """Split embedded stimulus set into query and reference.
 
         Args:
             z: A tensor of embeddings.
@@ -145,7 +145,29 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
 
         return z_q, z_r
 
-    def _compute_outcome_probability(self, stimulus_set, is_select, sim_qr):
+    def _is_reference_present(self, stimulus_set):
+        """Determine if reference stimulus is present in set.
+
+        Args:
+            stimulus_set
+
+        Returns:
+            Boolean Tensor indicating if reference is present.
+
+        """
+        # NOTE: When sample axis is present, equivalent to:
+        #     is_reference_present = stimulus_set[:, :, 1:]
+        reference_stimulus_set = tf.gather(
+            stimulus_set,
+            indices=self._reference_indices,
+            axis=self._stimuli_axis
+        )
+        # NOTE: Assumes `mask_zero=True`.
+        return tf.math.not_equal(reference_stimulus_set, 0)
+
+    def _compute_outcome_probability(
+        self, is_reference_present, is_select, sim_qr
+    ):
         """Compute outcome probability.
 
         NOTE: This computation takes advantage of log-probability
@@ -153,22 +175,14 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
             vectorization cleaner.
 
         """
-        # Zero out similarities involving placeholder IDs by creating
-        # a mask based on reference indices. We drop the query indices
-        # because they have effectively been "consumed" by the similarity
-        # operation.
-        # NOTE: When sample axis is present, equivalent to:
-        #     is_present = stimulus_set[:, :, 1:]
-        is_present = tf.gather(
-            stimulus_set,
-            indices=self._reference_indices,
-            axis=self._stimuli_axis
-        )
-        is_present = tf.cast(tf.math.not_equal(is_present, 0), K.floatx())
-
+        # Zero out similarities involving placeholder/mask IDs using a
+        # mask based on reference indices.
+        # NOTE: Using presence of references only, since query indices have
+        # effectively been "consumed" by the similarity operation.
+        is_reference_present = tf.cast(is_reference_present, K.floatx())
         # Zero out non-present similarities.
         sim_qr = tf.math.multiply(
-            sim_qr, is_present, name='rank_sim_zero_out_nonpresent'
+            sim_qr, is_reference_present, name='rank_sim_zero_out_nonpresent'
         )
 
         # Determine if outcome is legitimate by checking if at least one
@@ -176,15 +190,17 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         # the same number of possible outcomes and we need to infer the
         # "zero-padding" of the outcome axis.
         # NOTE: When sample axis present, equivalent to:
-        #     is_outcome = is_present[:, :, 0]
+        #     is_outcome = is_reference_present[:, :, 0]
         is_outcome = tf.gather(
-            is_present, indices=tf.constant(0), axis=self._stimuli_axis
+            is_reference_present,
+            indices=tf.constant(0),
+            axis=self._stimuli_axis
         )
 
         # Compute denominator based on formulation of Luce's choice rule by
         # summing over the different references present in a trial. Note that
         # the similarity for placeholder references will be zero since they
-        # were zeroed out by the multiply op with `is_present` above.
+        # were zeroed out by the multiply op with `is_reference_present` above.
         denom = tf.cumsum(sim_qr, axis=self._stimuli_axis, reverse=True)
 
         # Compute log-probability of each selection, assuming all selections
@@ -215,6 +231,21 @@ class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
             outcome_prob, total_outcome_prob, name=None
         )
         return outcome_prob
+
+    def _pairwise_similarity(self, inputs_copied):
+        # Embed stimuli indices in n-dimensional space.
+        z = self._percept_adapter(inputs_copied)
+        # TensorShape=(batch_size, [n_sample,] n, [m, ...] n_dim])
+
+        # Prepare retrieved embeddings points for kernel and then compute
+        # similarity.
+        z_q, z_r = self._split_stimulus_set(z)
+        inputs_copied.update({
+            'rank_similarity_z_q': z_q,
+            'rank_similarity_z_r': z_r
+        })
+        sim_qr = self._kernel_adapter(inputs_copied)
+        return sim_qr
 
     def get_config(self):
         """Return layer configuration."""

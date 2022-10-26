@@ -75,32 +75,13 @@ class RankSimilarity(RankSimilarityBase):
             indices=self._reference_indices,
             axis=self._stimuli_axis
         )
+        is_reference_present = self._is_reference_present(stimulus_set)
 
-        # TODO
-        # Fill sample axis if necessary.
-        # if self._has_sample_axis:
-        #     stimulus_set = tf.repeat(
-        #         stimulus_set, self.n_sample, axis=self.sample_axis
-        #     )
-
-        # Embed stimuli indices in n-dimensional space.
-        inputs_copied.update({
-            'rank_similarity_stimset_samples': stimulus_set
-        })
-        z = self._percept_adapter(inputs_copied)
-        # TensorShape=(batch_size, [n_sample,] n, [m, ...] n_dim])
-
-        # Prepare retrieved embeddings points for kernel and then compute
-        # similarity.
-        z_q, z_r = self._split_stimulus_set(z)
-        inputs_copied.update({
-            'rank_similarity_z_q': z_q,
-            'rank_similarity_z_r': z_r
-        })
-        sim_qr = self._kernel_adapter(inputs_copied)
+        # Compute pairwise similarity between query and references.
+        sim_qr = self._pairwise_similarity(inputs_copied)
 
         outcome_prob = self._compute_outcome_probability(
-            stimulus_set, is_select, sim_qr
+            is_reference_present, is_select, sim_qr
         )
 
         return outcome_prob

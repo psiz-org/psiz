@@ -138,6 +138,45 @@ def ds_ranksim_v2():
 
 
 @pytest.fixture(scope="module")
+def ds_ranksim_v3():
+    """Dataset.
+
+    Rank similarity, no timestep, with percept and kernel gate weights.
+
+    """
+    n_sequence = 4
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content.n_sequence, content.max_timestep], dtype=np.int32
+    )
+    outcome = psiz.data.SparseCategorical(
+        outcome_idx, depth=content.max_outcome
+    )
+
+    # TODO HACK intercept and modify
+    (x, y, w) = psiz.data.TrialDataset(
+        content, outcome=outcome, groups=groups
+    ).export(timestep=False, export_format='tensors')
+    gate_weights = x.pop('groups')
+    x['percept_gate_weights_0'] = gate_weights
+    x['percept_gate_weights_1'] = gate_weights
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    ds = ds.batch(n_sequence, drop_remainder=False)
+    return ds
+
+
+@pytest.fixture(scope="module")
 def ds_ranksimcell_v0():
     """Dataset.
 

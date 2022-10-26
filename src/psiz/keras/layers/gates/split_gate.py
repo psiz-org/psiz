@@ -41,11 +41,10 @@ class SplitGate(Gate):
             pass_gate_weights (optional): Applies to tuple-formatted
                 `input` only. Boolean 1D array-like indicating if
                 "gate weights"  should be passed to the subnets. By
-                default, each subnet will be inspected to see if any
-                submodules are an instance of `Gate` (e.g.,
-                `BraidGate`). This argument can be used to override the
-                default behavior. If provided, the length must agree
-                with the number of subnets.
+                default, gate weights will not be passed. This argument
+                can be used to override the default behavior. If
+                provided by the user, the length must agree with the
+                number of subnets.
                 shape=(n_subnet)
             strip_inputs (optional): Applies to tuple-formatted
                 `input` only. Boolean 1D array-like indicating if
@@ -68,9 +67,7 @@ class SplitGate(Gate):
         self._subnets = subnets
 
         if pass_gate_weights is None:
-            pass_gate_weights = []
-            for subnet in subnets:
-                pass_gate_weights.append(self.does_subnet_contain_gate(subnet))
+            pass_gate_weights = [False] * self.n_subnet
         self.pass_gate_weights = pass_gate_weights
 
         if strip_inputs is None:

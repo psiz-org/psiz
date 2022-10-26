@@ -227,6 +227,112 @@ class RankModelC(tf.keras.Model):
         return config
 
 
+class RankModelD(tf.keras.Model):
+    """A `RankSimilarity` model.
+
+    Gates:
+        Percept layer (BraidGate:2, BraidGate:2)
+
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize."""
+        super(RankModelD, self).__init__(**kwargs)
+
+        n_stimuli = 3
+        n_dim = 2
+
+        # Define heirarchical percept layers.
+        percept_0 = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array(
+                    [
+                        [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
+                    ], dtype=np.float32
+                )
+            )
+        )
+        percept_1 = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array(
+                    [
+                        [0.0, 0.0], [.15, .2], [.4, .5], [.1, .1]
+                    ], dtype=np.float32
+                )
+            )
+        )
+        percept_01 = psiz.keras.layers.BraidGate(
+            subnets=[percept_0, percept_1], gating_index=-1, name='percept_01'
+        )
+
+        percept_2 = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array(
+                    [
+                        [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
+                    ], dtype=np.float32
+                )
+            )
+        )
+        percept_3 = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True,
+            embeddings_initializer=tf.keras.initializers.Constant(
+                np.array(
+                    [
+                        [0.0, 0.0], [.15, .2], [.4, .5], [.1, .1]
+                    ], dtype=np.float32
+                )
+            )
+        )
+        percept_23 = psiz.keras.layers.BraidGate(
+            subnets=[percept_2, percept_3], gating_index=-1, name='percept_23'
+        )
+
+        percept = psiz.keras.layers.BraidGate(
+            subnets=[percept_01, percept_23], gating_index=-1, name='percept'
+        )
+
+        # Define group-specific kernel layers.
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.),
+                w_initializer=tf.keras.initializers.Constant(
+                    [1.2, .8]
+                ),
+                w_constraint=psiz.keras.constraints.NonNegNorm(
+                    scale=n_dim, p=1.
+                ),
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
+                trainable=False,
+                beta_initializer=tf.keras.initializers.Constant(10.),
+                tau_initializer=tf.keras.initializers.Constant(1.),
+                gamma_initializer=tf.keras.initializers.Constant(0.)
+            )
+        )
+
+        behavior = psiz.keras.layers.RankSimilarity(
+            percept=percept,
+            kernel=kernel,
+            percept_gating_keys=[
+                'percept_gate_weights_1', 'percept_gate_weights_0'
+            ],
+        )
+        self.behavior = behavior
+
+    def call(self, inputs, training=None):
+        """Call."""
+        return self.behavior(inputs)
+
+    def get_config(self):
+        config = super(RankModelD, self).get_config()
+        return config
+
+
 class RankCellModelA(tf.keras.Model):
     """A `RankSimilarityCell` model.
 
@@ -649,6 +755,24 @@ def build_ranksim_subclass_c():
 
     """
     model = RankModelC()
+    compile_kwargs = {
+        'loss': tf.keras.losses.CategoricalCrossentropy(),
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'weighted_metrics': [
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    }
+    model.compile(**compile_kwargs)
+    return model
+
+
+def build_ranksim_subclass_d():
+    """Build subclassed `Model`.
+
+    RankSimilarity, two kernels, MLE.
+
+    """
+    model = RankModelD()
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -1146,6 +1270,18 @@ class TestRankSimilarity:
 
         ds = ds_ranksim_v2
         model = build_ranksim_subclass_c()
+        call_fit_evaluate_predict(model, ds)
+        tf.keras.backend.clear_session()
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_usage_subclass_d(self, ds_ranksim_v3, is_eager):
+        """Test model using subclass API."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        ds = ds_ranksim_v3
+        model = build_ranksim_subclass_d()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
 

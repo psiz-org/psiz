@@ -198,18 +198,3 @@ class Gate(tf.keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
-
-    def does_subnet_contain_gate(self, subnet):
-        """Check if subnet contains a gate.
-
-        Args:
-            subnet: A Keras module (e.g., a Keras Layer).
-
-        Returns:
-            Boolean indicating if module supports gating.
-
-        """
-        contains_gate = False
-        for submodule in subnet.submodules:
-            contains_gate = contains_gate or isinstance(submodule, Gate)
-        return contains_gate

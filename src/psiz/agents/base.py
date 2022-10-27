@@ -21,6 +21,7 @@ Classes:
 """
 
 from abc import ABCMeta, abstractmethod
+import warnings
 
 
 class Agent():  # pylint: disable=too-few-public-methods
@@ -33,8 +34,28 @@ class Agent():  # pylint: disable=too-few-public-methods
 
     __metaclass__ = ABCMeta
 
+    def __init_subclass__(cls, **kwargs):
+        """Subclassing initialization."""
+        warnings.warn(
+            (
+                f'{cls.__name__} is deprecated and will be removed; '
+                'version_announced=0.8.0; version_scheduled=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init_subclass__(**kwargs)
+
     def __init__(self):
         """Initialize."""
+        warnings.warn(
+            (
+                f'{self.__class__.__name__} is deprecated and will be '
+                'removed; version_announced=0.8.0; version_scheduled=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
 
     @abstractmethod
     def simulate(self, docket, batch_size=None):

@@ -1301,6 +1301,30 @@ class TestRankSimilarity:
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
 
+    @pytest.mark.parametrize(
+        "is_eager", [True]  # TODO add False
+    )
+    def test_agent_subclass_a(self, ds_ranksim_v0, is_eager):
+        """Test usage in 'agent mode'."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        ds = ds_ranksim_v0
+        model = build_ranksim_subclass_a()
+
+        def simulate_agent(x):
+            depth = 56  # TODO
+            outcome_probs = model(x)
+            outcome_distribution = tfp.distributions.Categorical(
+                probs=outcome_probs
+            )
+            outcome_idx = outcome_distribution.sample()
+            outcome_one_hot = tf.one_hot(outcome_idx, depth)
+            return outcome_one_hot
+
+        _ = ds.map(lambda x, y, w: (x, simulate_agent(x), w))
+
+        tf.keras.backend.clear_session()
+
 
 class TestRankSimilarityCell:
     """Test using `RankSimilaritycell` layer."""

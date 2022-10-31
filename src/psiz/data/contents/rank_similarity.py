@@ -489,7 +489,6 @@ class RankSimilarity(Content):
         h5_grp.create_dataset("class_name", data="RankSimilarity")
         h5_grp.create_dataset("stimulus_set", data=self.stimulus_set)
         h5_grp.create_dataset("n_select", data=self.n_select)
-        return None
 
     @classmethod
     def load(cls, h5_grp):

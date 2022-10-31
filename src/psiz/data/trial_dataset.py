@@ -367,7 +367,6 @@ class TrialDataset(object):
         """
         for gate_key, gate_weights in self.groups.items():
             h5_grp.create_dataset(gate_key, data=gate_weights)
-        return None
 
     def _export_groups(self, export_format='tf', with_timestep_axis=True):
         """Export groups."""

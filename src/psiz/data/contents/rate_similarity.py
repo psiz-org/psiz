@@ -221,7 +221,6 @@ class RateSimilarity(Content):
         """
         h5_grp.create_dataset("class_name", data="RateSimilarity")
         h5_grp.create_dataset("stimulus_set", data=self.stimulus_set)
-        return None
 
     @classmethod
     def load(cls, h5_grp):

@@ -165,7 +165,6 @@ class Continuous(Outcome):
         """
         h5_grp.create_dataset("class_name", data="Continuous")
         h5_grp.create_dataset("value", data=self.value)
-        return None
 
     @classmethod
     def load(cls, h5_grp):

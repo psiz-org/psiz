@@ -177,7 +177,6 @@ class SparseCategorical(Outcome):
         h5_grp.create_dataset("class_name", data="SparseCategorical")
         h5_grp.create_dataset("index", data=self.index)
         h5_grp.create_dataset("depth", data=self.depth)
-        return None
 
     @classmethod
     def load(cls, h5_grp):

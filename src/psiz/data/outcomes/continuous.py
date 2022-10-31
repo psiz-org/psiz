@@ -46,7 +46,7 @@ class Continuous(Outcome):
 
         """
         Outcome.__init__(self)
-        self.value = self._check_value(value)
+        self.value = self._validate_value(value)
         self.n_sequence = self.value.shape[0]
         self.max_timestep = self.value.shape[1]
         self.n_unit = self.value.shape[2]
@@ -116,8 +116,8 @@ class Continuous(Outcome):
         value_sub = self.value[idx]
         return Continuous(value_sub)
 
-    def _check_value(self, value):
-        """Check validity of `value`."""
+    def _validate_value(self, value):
+        """Validate `value`."""
         if value.ndim == 2:
             # Assume trials are independent and add singleton dimension for
             # `timestep`.

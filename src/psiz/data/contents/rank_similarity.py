@@ -62,14 +62,14 @@ class RankSimilarity(Content):
 
         """
         Content.__init__(self)
-        stimulus_set = self._check_stimulus_set(stimulus_set)
+        stimulus_set = self._validate_stimulus_set(stimulus_set)
 
         # Trim excess placeholder padding off of timestep (axis=1).
         is_present = np.not_equal(stimulus_set, self.mask_value)
         # Logical or across last `set` dimension.
         is_present = np.any(is_present, axis=2)
         n_timestep = np.sum(is_present, axis=1, dtype=np.int32)
-        self.n_timestep = self._check_n_timestep(n_timestep)
+        self.n_timestep = self._validate_n_timestep(n_timestep)
         max_timestep = np.amax(self.n_timestep)
         self.max_timestep = max_timestep
         stimulus_set = stimulus_set[:, 0:max_timestep, :]
@@ -77,7 +77,7 @@ class RankSimilarity(Content):
         # Trim any excess placeholder padding off of n_reference (axis=2).
         is_present = np.not_equal(stimulus_set, self.mask_value)
         n_reference = np.sum(is_present, axis=2, dtype=np.int32) - 1
-        self.n_reference = self._check_n_reference(n_reference)
+        self.n_reference = self._validate_n_reference(n_reference)
         self.max_n_reference = np.amax(self.n_reference)
         stimulus_set = stimulus_set[:, :, 0:self.max_n_reference + 1]
 
@@ -88,7 +88,7 @@ class RankSimilarity(Content):
             # Assume `n_select` is 1 for all actual trials.
             n_select = self.is_actual.astype(np.int32)
         else:
-            n_select = self._check_n_select(n_select)
+            n_select = self._validate_n_select(n_select)
         self.n_select = n_select
 
     @property
@@ -267,8 +267,8 @@ class RankSimilarity(Content):
         )
         return stimulus_set_expand
 
-    def _check_n_reference(self, n_reference):
-        """Check validity of `n_reference`.
+    def _validate_n_reference(self, n_reference):
+        """Validate `n_reference`.
 
         NOTE: At this point n_reference=-1 for trials that are timestep
         placeholders (i.e., completely empty trials).
@@ -293,8 +293,8 @@ class RankSimilarity(Content):
 
         return n_reference
 
-    def _check_n_select(self, n_select):
-        """Check validity of `n_select`.
+    def _validate_n_select(self, n_select):
+        """Validate `n_select`.
 
         Raises:
             ValueError
@@ -345,8 +345,8 @@ class RankSimilarity(Content):
 
         return n_select
 
-    def _check_n_timestep(self, n_timestep):
-        """Check validity of `n_timestep`.
+    def _validate_n_timestep(self, n_timestep):
+        """Validate `n_timestep`.
 
         Args:
             n_stimstep: A 1D np.ndarray.
@@ -361,8 +361,8 @@ class RankSimilarity(Content):
                 "valid timestep per sequence."))
         return n_timestep
 
-    def _check_stimulus_set(self, stimulus_set):
-        """Check validity of `stimulus_set`.
+    def _validate_stimulus_set(self, stimulus_set):
+        """Validate `stimulus_set`.
 
         Raises:
             ValueError

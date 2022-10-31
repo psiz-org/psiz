@@ -73,14 +73,14 @@ class TrialDataset(object):
 
         # Handle outcome initialization.
         if outcome is not None:
-            self._check_outcome(outcome)
+            self._validate_outcome(outcome)
         self.outcome = outcome
 
         # Handle `weight` initialization.
         if weight is None:
             weight = self.content.is_actual.astype(float)
         else:
-            weight = self._check_weight(weight)
+            weight = self._validate_weight(weight)
         self.weight = weight
 
     def export(
@@ -265,8 +265,8 @@ class TrialDataset(object):
             weight=self.weight[idx]
         )
 
-    def _check_weight(self, weight):
-        """Check the validity of `weight`."""
+    def _validate_weight(self, weight):
+        """Validite `weight`."""
         # Cast `weight` to float if necessary.
         weight = weight.astype(float)
 
@@ -341,7 +341,8 @@ class TrialDataset(object):
             )
         return gate_weights
 
-    def _check_outcome(self, outcome):
+    def _validate_outcome(self, outcome):
+        """Validate outcome."""
         # Check rank of `groups`.
         if outcome.n_sequence != self.n_sequence:
             raise ValueError(

@@ -52,14 +52,14 @@ class RateSimilarity(Content):
 
         """
         Content.__init__(self)
-        stimulus_set = self._check_stimulus_set(stimulus_set)
+        stimulus_set = self._validate_stimulus_set(stimulus_set)
 
         # Trim excess placeholder padding off of axis=1.
         is_present = np.not_equal(stimulus_set, self.mask_value)
         # Logical or across last `set` dimension.
         is_present = np.any(is_present, axis=2)
         n_timestep = np.sum(is_present, axis=1, dtype=np.int32)
-        self.n_timestep = self._check_n_timestep(n_timestep)
+        self.n_timestep = self._validate_n_timestep(n_timestep)
         max_timestep = np.amax(self.n_timestep)
         self.max_timestep = max_timestep
         stimulus_set = stimulus_set[:, 0:max_timestep, :]
@@ -126,8 +126,8 @@ class RateSimilarity(Content):
         stimulus_set_sub = self.stimulus_set[idx]
         return RateSimilarity(stimulus_set_sub)
 
-    def _check_stimulus_set(self, stimulus_set):
-        """Check validity of `stimulus_set`.
+    def _validate_stimulus_set(self, stimulus_set):
+        """Validate `stimulus_set`.
 
         Raises:
             ValueError
@@ -169,8 +169,8 @@ class RateSimilarity(Content):
             ))
         return stimulus_set.astype(np.int32)
 
-    def _check_n_timestep(self, n_timestep):
-        """Check validity of `n_timestep`.
+    def _validate_n_timestep(self, n_timestep):
+        """Validate `n_timestep`.
 
         Args:
             n_stimstep: A 1D np.ndarray.

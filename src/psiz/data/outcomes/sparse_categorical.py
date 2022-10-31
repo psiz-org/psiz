@@ -46,7 +46,7 @@ class SparseCategorical(Outcome):
 
         """
         Outcome.__init__(self)
-        self.index = self._check_index(index)
+        self.index = self._validate_index(index)
         self.n_sequence = self.index.shape[0]
         self.max_timestep = self.index.shape[1]
         self.depth = depth
@@ -108,8 +108,8 @@ class SparseCategorical(Outcome):
         index_sub = self.index[idx]
         return SparseCategorical(index_sub, depth=self.depth)
 
-    def _check_index(self, index):
-        """Check validity of `index`."""
+    def _validate_index(self, index):
+        """Validate `index`."""
         # Check that provided values are integers.
         if not issubclass(index.dtype.type, np.integer):
             raise ValueError(

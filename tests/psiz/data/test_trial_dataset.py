@@ -543,7 +543,7 @@ def test_export_1(rank_sim_4):
 def test_export_2(rank_sim_4):
     """Test export.
 
-    Return dataset using `timestep=False`.
+    Return dataset using `with_timestep_axis=False`.
 
     """
     content = rank_sim_4
@@ -565,7 +565,7 @@ def test_export_2(rank_sim_4):
         content, outcome=outcome, groups=groups, weight=weight
     )
 
-    ds = trials.export(timestep=False).batch(6, drop_remainder=False)
+    ds = trials.export(with_timestep_axis=False).batch(6, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0][0]
     y = ds_list[0][1]

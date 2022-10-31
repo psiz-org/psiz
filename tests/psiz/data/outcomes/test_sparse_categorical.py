@@ -165,7 +165,7 @@ def test_export_1(sparse_cat_1):
 def test_export_2(sparse_cat_1):
     """Test export.
 
-    Use timestep=False
+    Use with_timestep_axis=False
 
     """
     desired_y = tf.constant(
@@ -178,14 +178,14 @@ def test_export_2(sparse_cat_1):
             ], dtype=np.float32
         )
     )
-    y = sparse_cat_1.export(timestep=False)
+    y = sparse_cat_1.export(with_timestep_axis=False)
     tf.debugging.assert_equal(desired_y, y)
 
 
 def test_export_3(sparse_cat_2):
     """Test export.
 
-    Use timestep=False
+    Use with_timestep_axis=False
 
     """
     desired_y = tf.constant(
@@ -206,7 +206,7 @@ def test_export_3(sparse_cat_2):
             ], dtype=np.float32
         )
     )
-    y = sparse_cat_2.export(timestep=False)
+    y = sparse_cat_2.export(with_timestep_axis=False)
     tf.debugging.assert_equal(desired_y, y)
 
 

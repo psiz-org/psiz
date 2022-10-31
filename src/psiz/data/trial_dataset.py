@@ -83,13 +83,15 @@ class TrialDataset(object):
             weight = self._check_weight(weight)
         self.weight = weight
 
-    def export(self, timestep=True, export_format='tf', inputs_only=False):
+    def export(
+        self, with_timestep_axis=True, export_format='tf', inputs_only=False
+    ):
         """Export trial data as model-consumable object.
 
         Args:
-            timestep (optional): Boolean indicating if data should be
-                returned with a timestep axis. If `False`, data is
-                reshaped.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. If `False`,
+                data is reshaped.
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
@@ -101,24 +103,27 @@ class TrialDataset(object):
         """
         # Assemble model input.
         x = self.content.export(
-            export_format=export_format, timestep=timestep
+            export_format=export_format, with_timestep_axis=with_timestep_axis
         )
         if self.groups is not None:
             groups = self._export_groups(
-                export_format=export_format, timestep=timestep
+                export_format=export_format,
+                with_timestep_axis=with_timestep_axis
             )
             x.update(groups)
 
         # Assemble model output
         if self.outcome is not None and not inputs_only:
             y = self.outcome.export(
-                export_format=export_format, timestep=timestep
+                export_format=export_format,
+                with_timestep_axis=with_timestep_axis
             )
 
         # Assemble weights.
         if not inputs_only:
             w = self._export_weight(
-                export_format=export_format, timestep=timestep
+                export_format=export_format,
+                with_timestep_axis=with_timestep_axis
             )
 
         if export_format == 'tf':
@@ -363,19 +368,19 @@ class TrialDataset(object):
             h5_grp.create_dataset(gate_key, data=gate_weights)
         return None
 
-    def _export_groups(self, export_format='tf', timestep=True):
+    def _export_groups(self, export_format='tf', with_timestep_axis=True):
         """Export groups."""
         groups = self.groups
         for gating_key, gate_weights in groups.items():
-            if timestep is False:
+            if with_timestep_axis is False:
                 groups[gating_key] = unravel_timestep(gate_weights)
             groups[gating_key] = tf.constant(groups[gating_key])
         return groups
 
-    def _export_weight(self, export_format='tf', timestep=True):
+    def _export_weight(self, export_format='tf', with_timestep_axis=True):
         """Export weight."""
         w = self.weight
-        if timestep is False:
+        if with_timestep_axis is False:
             w = unravel_timestep(w)
         return tf.constant(w, dtype=K.floatx())
 

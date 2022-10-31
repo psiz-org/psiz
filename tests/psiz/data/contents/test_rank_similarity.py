@@ -667,10 +667,10 @@ def test_export_0(rank_sim_4):
 def test_export_1(rank_sim_4):
     """Test export.
 
-    Use timestep=False.
+    Use with_timestep_axis=False.
 
     """
-    x = rank_sim_4.export(timestep=False)
+    x = rank_sim_4.export(with_timestep_axis=False)
     desired_stimulus_set = tf.constant(
         np.array([
             [

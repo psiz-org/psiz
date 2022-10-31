@@ -293,10 +293,10 @@ def test_export_0(rate_sim_3):
 def test_export_1(rate_sim_3):
     """Test export.
 
-    Use timestep=False.
+    Use with_timestep_axis=False.
 
     """
-    x = rate_sim_3.export(timestep=False)
+    x = rate_sim_3.export(with_timestep_axis=False)
     desired_stimulus_set = np.array(
         [
             [3, 1],

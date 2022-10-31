@@ -237,7 +237,7 @@ def convert2dataset(obs, batch_size, shuffle=False):
     )
     ds = psiz.data.TrialDataset(
         content, outcome=outcome, groups=obs.groups
-    ).export(timestep=False)
+    ).export(with_timestep_axis=False)
     if shuffle:
         ds = ds.shuffle(
             buffer_size=obs.n_trial, reshuffle_each_iteration=True

@@ -160,7 +160,7 @@ def test_export_2a(continuous_2):
 def test_export_2b(continuous_2):
     """Test for_dataset
 
-    Use timestep=False
+    Use with_timestep_axis=False
 
     """
     desired_y = tf.constant(
@@ -172,7 +172,7 @@ def test_export_2b(continuous_2):
         )
     )
 
-    y = continuous_2.export(timestep=False)
+    y = continuous_2.export(with_timestep_axis=False)
     tf.debugging.assert_equal(desired_y, y)
 
 
@@ -194,7 +194,7 @@ def test_export_3a(continuous_3):
 def test_export_3b(continuous_3):
     """Test for_dataset
 
-    Use timestep=False
+    Use with_timestep_axis=False
 
     """
     desired_y = tf.constant(
@@ -208,7 +208,7 @@ def test_export_3b(continuous_3):
         )
     )
 
-    y = continuous_3.export(timestep=False)
+    y = continuous_3.export(with_timestep_axis=False)
     tf.debugging.assert_equal(desired_y, y)
 
 

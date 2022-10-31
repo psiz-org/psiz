@@ -106,7 +106,7 @@ def ds_rank_v0():
     # axis agnostic
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=False, export_format='tensors')
+    ).export(with_timestep_axis=False, export_format='tensors')
     x.pop('groups')
 
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
@@ -145,7 +145,7 @@ def ds_rank_v1():
     # axis agnostic
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=True, export_format='tensors')
+    ).export(with_timestep_axis=True, export_format='tensors')
     x.pop('groups')
 
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
@@ -184,7 +184,7 @@ def ds_rank_v2():
     # axis agnostic
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=True, export_format='tensors')
+    ).export(with_timestep_axis=True, export_format='tensors')
     x['rank_similarity_stimulus_set'] = tf.expand_dims(
         x['rank_similarity_stimulus_set'], axis=2
     )

@@ -138,23 +138,23 @@ class SparseCategorical(Outcome):
 
         return index
 
-    def export(self, export_format='tf', timestep=True):
+    def export(self, export_format='tf', with_timestep_axis=True):
         """Return appropriately formatted data.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-            timestep (optional): Boolean indicating if data should be
-                returned with a timestep axis. If `False`, data is
-                reshaped.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. If `False`,
+                data is reshaped.
 
         """
         if export_format == 'tf':
             # Convert from sparse to one-hot-encoding (along new trailing
             # axis).
             index = self.index
-            if timestep is False:
+            if with_timestep_axis is False:
                 index = unravel_timestep(index)
             # pylint: disable=unexpected-keyword-arg
             y = tf.one_hot(

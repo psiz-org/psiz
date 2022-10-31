@@ -185,21 +185,21 @@ class RateSimilarity(Content):
                 "valid timestep per sequence."))
         return n_timestep
 
-    def export(self, export_format='tf', timestep=True):
+    def export(self, export_format='tf', with_timestep_axis=True):
         """Prepare trial content data for dataset.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-            timestep (optional): Boolean indicating if data should be
+            with_timestep_axis (optional): Boolean indicating if data should be
                 returned with a timestep axis. If `False`, data is
                 reshaped.
 
         """
         if export_format == 'tf':
             stimulus_set = self.stimulus_set
-            if timestep is False:
+            if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
             x = {
                 'rate_similarity_stimulus_set': tf.constant(

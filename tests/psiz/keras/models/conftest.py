@@ -52,7 +52,7 @@ def ds_ranksim_v0():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=False, export_format='tensors')
+    ).export(with_timestep_axis=False, export_format='tensors')
     x.pop('groups')
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
 
@@ -89,7 +89,7 @@ def ds_ranksim_v1():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=False, export_format='tensors')
+    ).export(with_timestep_axis=False, export_format='tensors')
     kernel_gate_weights = x.pop('groups')
     x['kernel_gate_weights'] = kernel_gate_weights
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
@@ -127,7 +127,7 @@ def ds_ranksim_v2():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=False, export_format='tensors')
+    ).export(with_timestep_axis=False, export_format='tensors')
     gate_weights = x.pop('groups')
     x['kernel_gate_weights'] = gate_weights
     x['percept_gate_weights'] = gate_weights
@@ -166,7 +166,7 @@ def ds_ranksim_v3():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=False, export_format='tensors')
+    ).export(with_timestep_axis=False, export_format='tensors')
     gate_weights = x.pop('groups')
     x['percept_gate_weights_0'] = gate_weights
     x['percept_gate_weights_1'] = gate_weights
@@ -205,7 +205,7 @@ def ds_ranksimcell_v0():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=True, export_format='tensors')
+    ).export(with_timestep_axis=True, export_format='tensors')
     x.pop('groups')
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
 
@@ -236,7 +236,7 @@ def ds_ratesim_v0():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=False, export_format='tensors')
+    ).export(with_timestep_axis=False, export_format='tensors')
     x.pop('groups')
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
 
@@ -267,7 +267,7 @@ def ds_ratesimcell_v0():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=True, export_format='tensors')
+    ).export(with_timestep_axis=True, export_format='tensors')
     x.pop('groups')
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))
 
@@ -298,7 +298,7 @@ def ds_ratesim_v1():
     # TODO HACK intercept and modify
     (x, y, w) = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(timestep=False, export_format='tensors')
+    ).export(with_timestep_axis=False, export_format='tensors')
     gate_weights = x.pop('groups')
     x['behavior_gate_weights'] = gate_weights
     ds = tf.data.Dataset.from_tensor_slices((x, y, w))

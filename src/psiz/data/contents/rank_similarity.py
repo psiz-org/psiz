@@ -443,14 +443,14 @@ class RankSimilarity(Content):
 
         return is_select
 
-    def export(self, export_format='tf', timestep=True):
+    def export(self, export_format='tf', with_timestep_axis=True):
         """Prepare trial content data for dataset.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-            timestep (optional): Boolean indicating if data should be
+            with_timestep_axis (optional): Boolean indicating if data should be
                 returned with a timestep axis. If `False`, data is
                 reshaped.
 
@@ -462,7 +462,7 @@ class RankSimilarity(Content):
             is_select = self._is_select(compress=False)
             is_select = np.expand_dims(is_select, axis=-1)
 
-            if timestep is False:
+            if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
                 is_select = unravel_timestep(is_select)
             x = {

@@ -133,21 +133,21 @@ class Continuous(Outcome):
 
         return value
 
-    def export(self, export_format='tf', timestep=True):
+    def export(self, export_format='tf', with_timestep_axis=True):
         """Return appropriately formatted data.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-            timestep (optional): Boolean indicating if data should be
-                returned with a timestep axis. If `False`, data is
-                reshaped.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. If `False`,
+                data is reshaped.
 
         """
         if export_format == 'tf':
             value = self.value
-            if timestep is False:
+            if with_timestep_axis is False:
                 value = unravel_timestep(value)
             y = tf.constant(value, dtype=K.floatx())
         else:

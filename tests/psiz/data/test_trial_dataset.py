@@ -59,7 +59,7 @@ def test_init_1(rank_sim_1):
 def test_init_2(rank_sim_1):
     """Test initialization.
 
-    Include outcome, group, and weight argument.
+    Include outcome, group, and sample_weight argument.
 
     """
     content = rank_sim_1
@@ -73,14 +73,16 @@ def test_init_2(rank_sim_1):
             2, size=[content.n_sequence, content.max_timestep, 1]
         ).astype(dtype=int)
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
-    TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    TrialDataset(
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
+    )
 
 
 def test_init_3(rank_sim_1):
     """Test initialization.
 
-    Include outcome, group, and weight argument.
+    Include outcome, group, and sample_weight argument.
     Pass in 2D group instead of 3D to force internal handling.
 
     """
@@ -95,12 +97,14 @@ def test_init_3(rank_sim_1):
             2, size=[content.n_sequence, content.max_timestep, 1]
         ).astype(dtype=int)
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
-    TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    TrialDataset(
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
+    )
 
 
 def test_invalid_init_0(rank_sim_1):
-    """Test invalid weight initialization."""
+    """Test invalid sample_weight initialization."""
     content = rank_sim_1
     outcome_idx = np.zeros(
         [content.n_sequence, content.max_timestep], dtype=np.int32
@@ -113,26 +117,45 @@ def test_invalid_init_0(rank_sim_1):
         ).astype(dtype=int)
     }
 
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep, 2])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep, 2])
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
 
-    weight = .9 * np.ones([content.n_sequence + 1, content.max_timestep])
+    sample_weight = .9 * np.ones(
+        [content.n_sequence + 1, content.max_timestep]
+    )
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "The argument 'weight' must have "
+        "The argument 'sample_weight' must have "
         "shape=(n_squence, max_timestep) as determined by `content`."
     )
 
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep + 1])
+    sample_weight = .9 * np.ones(
+        [content.n_sequence, content.max_timestep + 1]
+    )
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "The argument 'weight' must have "
+        "The argument 'sample_weight' must have "
         "shape=(n_squence, max_timestep) as determined by `content`."
     )
 
@@ -151,7 +174,7 @@ def test_invalid_init_1(rank_sim_1):
         [content.n_sequence, content.max_timestep], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
 
     rng = default_rng()
     groups = {
@@ -160,7 +183,12 @@ def test_invalid_init_1(rank_sim_1):
         ).astype(dtype=int)
     }
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The group weights for the dictionary key 'condition_id' must be a "
@@ -175,7 +203,12 @@ def test_invalid_init_1(rank_sim_1):
         ).astype(dtype=int)
     }
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The group weights for the dictionary key 'condition_id' must have a "
@@ -188,7 +221,12 @@ def test_invalid_init_1(rank_sim_1):
         ).astype(dtype=int)
     }
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The group weights for the dictionary key 'condition_id' must have a "
@@ -201,7 +239,12 @@ def test_invalid_init_1(rank_sim_1):
         ])
     }
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The group weights for the dictionary key 'condition_id' contain "
@@ -227,9 +270,14 @@ def test_invalid_init_2(rank_sim_1):
             2, size=[content.n_sequence, content.max_timestep, 1]
         ).astype(dtype=int)
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The user-provided 'outcome' object must agree with the "
@@ -242,7 +290,12 @@ def test_invalid_init_2(rank_sim_1):
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     with pytest.raises(Exception) as e_info:
-        TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
+        TrialDataset(
+            content,
+            outcome=outcome,
+            groups=groups,
+            sample_weight=sample_weight
+        )
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The user-provided 'outcome' object must agree with the "
@@ -291,9 +344,9 @@ def test_export_0(rank_sim_4):
             ]
         )
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
     trials = TrialDataset(
-        content, outcome=outcome, groups=groups, weight=weight
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     ds = trials.export().batch(4, drop_remainder=False)
@@ -444,9 +497,9 @@ def test_export_1(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
     trials = TrialDataset(
-        content, outcome=outcome, groups=groups, weight=weight
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     ds = trials.export(inputs_only=True).batch(4, drop_remainder=False)
@@ -560,9 +613,9 @@ def test_export_2(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
     trials = TrialDataset(
-        content, outcome=outcome, groups=groups, weight=weight
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     ds = trials.export(with_timestep_axis=False).batch(6, drop_remainder=False)
@@ -778,9 +831,9 @@ def test_invalid_export_0(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
     trials = TrialDataset(
-        content, outcome=outcome, groups=groups, weight=weight
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     with pytest.raises(Exception) as e_info:
@@ -813,7 +866,9 @@ def test_persistence_0(rank_sim_4, tmpdir):
     )
     np.testing.assert_array_equal(trials.groups, reconstructed.groups)
     assert trials.outcome == reconstructed.outcome
-    np.testing.assert_array_equal(trials.weight, reconstructed.weight)
+    np.testing.assert_array_equal(
+        trials.sample_weight, reconstructed.sample_weight
+    )
 
     ver = version("psiz")
     ver = '.'.join(ver.split('.')[:3])
@@ -845,9 +900,9 @@ def test_persistence_1(rank_sim_4, tmpdir):
             ], dtype=np.int32
         )
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
     trials = TrialDataset(
-        content, outcome=outcome, groups=groups, weight=weight
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     trials.save(fn)
@@ -865,7 +920,9 @@ def test_persistence_1(rank_sim_4, tmpdir):
     np.testing.assert_array_equal(
         trials.outcome.index, reconstructed.outcome.index
     )
-    np.testing.assert_array_equal(trials.weight, reconstructed.weight)
+    np.testing.assert_array_equal(
+        trials.sample_weight, reconstructed.sample_weight
+    )
 
 
 def test_subset_0(rank_sim_4):
@@ -935,9 +992,9 @@ def test_subset_1(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
     trials = TrialDataset(
-        content, outcome=outcome, groups=groups, weight=weight
+        content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     trials_sub = trials.subset(np.array([1, 2]))
@@ -1009,9 +1066,11 @@ def test_stack_0(rank_sim_4, rank_sim_5):
             ], dtype=np.int32
         )
     }
-    weight = .4 * np.ones([rank_sim_4.n_sequence, rank_sim_4.max_timestep])
+    sample_weight = .4 * np.ones(
+        [rank_sim_4.n_sequence, rank_sim_4.max_timestep]
+    )
     trials_4 = TrialDataset(
-        rank_sim_4, outcome=outcome, groups=groups, weight=weight
+        rank_sim_4, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     outcome_idx = np.zeros(
@@ -1026,9 +1085,11 @@ def test_stack_0(rank_sim_4, rank_sim_5):
             ], dtype=np.int32
         )
     }
-    weight = .5 * np.ones([rank_sim_5.n_sequence, rank_sim_5.max_timestep])
+    sample_weight = .5 * np.ones(
+        [rank_sim_5.n_sequence, rank_sim_5.max_timestep]
+    )
     trials_5 = TrialDataset(
-        rank_sim_5, outcome=outcome, groups=groups, weight=weight
+        rank_sim_5, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     stacked = stack((trials_4, trials_5, trials_4))
@@ -1086,7 +1147,7 @@ def test_stack_0(rank_sim_4, rank_sim_5):
         ], dtype=np.int32
     )
     desired_max_n_referece = 3
-    desired_weight = np.array(
+    desired_sample_weight = np.array(
         [
             [0.4, 0.4, 0.0],
             [0.4, 0.4, 0.0],
@@ -1140,7 +1201,7 @@ def test_stack_0(rank_sim_4, rank_sim_5):
         stacked.groups['anonymous_id'], desired_anonymous_id
     )
     np.testing.assert_array_equal(
-        desired_weight, stacked.weight
+        desired_sample_weight, stacked.sample_weight
     )
 
 
@@ -1164,9 +1225,11 @@ def test_invalid_stack_0(rank_sim_4, rank_sim_5):
             ], dtype=np.int32
         )
     }
-    weight = .4 * np.ones([rank_sim_4.n_sequence, rank_sim_4.max_timestep])
+    sample_weight = .4 * np.ones(
+        [rank_sim_4.n_sequence, rank_sim_4.max_timestep]
+    )
     trials_4 = TrialDataset(
-        rank_sim_4, outcome=outcome, groups=groups, weight=weight
+        rank_sim_4, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     outcome_idx = np.zeros(
@@ -1181,9 +1244,11 @@ def test_invalid_stack_0(rank_sim_4, rank_sim_5):
             ], dtype=np.int32
         )
     }
-    weight = .5 * np.ones([rank_sim_5.n_sequence, rank_sim_5.max_timestep])
+    sample_weight = .5 * np.ones(
+        [rank_sim_5.n_sequence, rank_sim_5.max_timestep]
+    )
     trials_5 = TrialDataset(
-        rank_sim_5, outcome=outcome, groups=groups, weight=weight
+        rank_sim_5, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     with pytest.raises(Exception) as e_info:
@@ -1216,9 +1281,11 @@ def test_invalid_stack_1(rank_sim_4, rank_sim_5):
             ], dtype=np.int32
         )
     }
-    weight = .4 * np.ones([rank_sim_4.n_sequence, rank_sim_4.max_timestep])
+    sample_weight = .4 * np.ones(
+        [rank_sim_4.n_sequence, rank_sim_4.max_timestep]
+    )
     trials_4 = TrialDataset(
-        rank_sim_4, outcome=outcome, groups=groups, weight=weight
+        rank_sim_4, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     outcome_idx = np.zeros(
@@ -1233,9 +1300,11 @@ def test_invalid_stack_1(rank_sim_4, rank_sim_5):
             ], dtype=np.int32
         )
     }
-    weight = .5 * np.ones([rank_sim_5.n_sequence, rank_sim_5.max_timestep])
+    sample_weight = .5 * np.ones(
+        [rank_sim_5.n_sequence, rank_sim_5.max_timestep]
+    )
     trials_5 = TrialDataset(
-        rank_sim_5, outcome=outcome, groups=groups, weight=weight
+        rank_sim_5, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     with pytest.raises(Exception) as e_info:

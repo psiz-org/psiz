@@ -40,7 +40,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 class TrialDataset(object):
     """Generic composite class for trial data."""
 
-    def __init__(self, content, outcome=None, groups=None, weight=None):
+    def __init__(self, content, outcome=None, groups=None, sample_weight=None):
         """Initialize.
 
         Args:
@@ -51,8 +51,8 @@ class TrialDataset(object):
                 each value is an np.ndarray that must be rank-2 or
                 rank-3.
                 dict value shape=(n_sequence, [max_timestep], n_col)
-            weight (optional): 2D np.ndarray of floats.
-                shape=(n_sequence, max_timestep)
+            sample_weight (optional): A 1D or 2D np.ndarray of floats.
+                shape=(n_sequence, [max_timestep])
 
         """
         self._timestep_axis = 1  # TODO
@@ -76,12 +76,14 @@ class TrialDataset(object):
             self._validate_outcome(outcome)
         self.outcome = outcome
 
-        # Handle `weight` initialization.
-        if weight is None:
-            weight = self.content.is_actual.astype(float)
+        # Handle `sample_weight` initialization.
+        if sample_weight is None:
+            sample_weight = self.content.is_actual.astype(float)
         else:
-            weight = self._validate_weight(weight)
-        self.weight = weight
+            # TODO should we validate no matter what? yes, in case of custom
+            # content layer
+            sample_weight = self._validate_sample_weight(sample_weight)
+        self.sample_weight = sample_weight
 
     def export(
         self, with_timestep_axis=True, export_format='tf', inputs_only=False
@@ -121,7 +123,7 @@ class TrialDataset(object):
 
         # Assemble weights.
         if not inputs_only:
-            w = self._export_weight(
+            w = self._export_sample_weight(
                 export_format=export_format,
                 with_timestep_axis=with_timestep_axis
             )
@@ -165,10 +167,13 @@ class TrialDataset(object):
         content = cls._load_h5_group(f, 'content')
         groups = cls._load_h5_group(f, 'groups')
         outcome = cls._load_h5_group(f, 'outcome')
-        weight = f["weight"][()]
+        sample_weight = f["sample_weight"][()]
 
         trials = TrialDataset(
-            content, groups=groups, outcome=outcome, weight=weight,
+            content,
+            groups=groups,
+            outcome=outcome,
+            sample_weight=sample_weight
         )
         return trials
 
@@ -202,7 +207,7 @@ class TrialDataset(object):
             self.outcome.save(grp_outcome)
 
         # Add weights (always exists because of default initialization).
-        f.create_dataset("weight", data=self.weight)
+        f.create_dataset("sample_weight", data=self.sample_weight)
         f.close()
 
     def stack(self, trials_list):
@@ -228,11 +233,14 @@ class TrialDataset(object):
             outcome_list.append(i_trials.outcome)
 
         groups = self._stack_groups(trials_list, max_timestep)
-        weight = self._stack_weight(trials_list, max_timestep)
+        sample_weight = self._stack_sample_weight(trials_list, max_timestep)
         content = content_list[0].stack(content_list)
         outcome = outcome_list[0].stack(outcome_list)
         stacked = TrialDataset(
-            content, groups=groups, outcome=outcome, weight=weight
+            content,
+            groups=groups,
+            outcome=outcome,
+            sample_weight=sample_weight
         )
         return stacked
 
@@ -262,32 +270,32 @@ class TrialDataset(object):
             content_sub,
             groups=groups_sub,
             outcome=outcome_sub,
-            weight=self.weight[idx]
+            sample_weight=self.sample_weight[idx]
         )
 
-    def _validate_weight(self, weight):
-        """Validite `weight`."""
-        # Cast `weight` to float if necessary.
-        weight = weight.astype(float)
+    def _validate_sample_weight(self, sample_weight):
+        """Validite `sample_weight`."""
+        # Cast `sample_weight` to float if necessary.
+        sample_weight = sample_weight.astype(float)
 
-        # Check rank of `weight`.
-        if not (weight.ndim == 2):
+        # Check rank of `sample_weight`.
+        if not (sample_weight.ndim == 2):
             raise ValueError(
-                "The argument 'weight' must be a rank-2 ND array."
+                "The argument 'sample_weight' must be a rank-2 ND array."
             )
 
         # Check shape agreement.
-        if not (weight.shape[0] == self.n_sequence):
+        if not (sample_weight.shape[0] == self.n_sequence):
             raise ValueError(
-                "The argument 'weight' must have "
+                "The argument 'sample_weight' must have "
                 "shape=(n_squence, max_timestep) as determined by `content`."
             )
-        if not (weight.shape[1] == self.max_timestep):
+        if not (sample_weight.shape[1] == self.max_timestep):
             raise ValueError(
-                "The argument 'weight' must have "
+                "The argument 'sample_weight' must have "
                 "shape=(n_squence, max_timestep) as determined by `content`."
             )
-        return weight
+        return sample_weight
 
     def _validate_group_weights(self, group_key, group_weights):
         """Validate group weights."""
@@ -377,12 +385,14 @@ class TrialDataset(object):
             groups[group_key] = tf.constant(groups[group_key])
         return groups
 
-    def _export_weight(self, export_format='tf', with_timestep_axis=True):
-        """Export weight."""
-        w = self.weight
+    def _export_sample_weight(
+        self, export_format='tf', with_timestep_axis=True
+    ):
+        """Export sample_weight."""
+        sample_weight = self.sample_weight
         if with_timestep_axis is False:
-            w = unravel_timestep(w)
-        return tf.constant(w, dtype=K.floatx())
+            sample_weight = unravel_timestep(sample_weight)
+        return tf.constant(sample_weight, dtype=K.floatx())
 
     @staticmethod
     def _load_h5_group(f, grp_name):
@@ -469,13 +479,13 @@ class TrialDataset(object):
 
         return groups_stacked
 
-    def _stack_weight(self, trials_list, max_timestep):
-        """Stack `weight` data."""
+    def _stack_sample_weight(self, trials_list, max_timestep):
+        """Stack `sample_weight` data."""
         # Start by padding first entry in list.
         timestep_pad = max_timestep - trials_list[0].max_timestep
         pad_width = ((0, 0), (0, timestep_pad))
-        weight = np.pad(
-            trials_list[0].weight,
+        sample_weight = np.pad(
+            trials_list[0].sample_weight,
             pad_width, mode='constant', constant_values=0
         )
 
@@ -483,13 +493,13 @@ class TrialDataset(object):
         for i_trials in trials_list[1:]:
             timestep_pad = max_timestep - i_trials.max_timestep
             pad_width = ((0, 0), (0, timestep_pad))
-            curr_groups = np.pad(
-                i_trials.weight,
+            curr_sample_weight = np.pad(
+                i_trials.sample_weight,
                 pad_width, mode='constant', constant_values=0
             )
 
-            weight = np.concatenate(
-                (weight, curr_groups), axis=0
+            sample_weight = np.concatenate(
+                (sample_weight, curr_sample_weight), axis=0
             )
 
-        return weight
+        return sample_weight

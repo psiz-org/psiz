@@ -72,22 +72,22 @@ class TrialComponent(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def save(self, grp):
+    def save(self, h5_grp):
         """Add relevant datasets to group.
 
         Args:
-            grp: H5 group for saving data.
+            h5_grp: H5 group for saving data.
 
         Example:
-        grp.create_dataset("my_data_name", data=my_data)
+        h5_grp.create_dataset("my_data_name", data=my_data)
 
         """
 
     @abstractmethod
-    def load(self, grp):
+    def load(self, h5_grp):
         """Retrieve relevant datasets from group.
 
         Args:
-            grp: H5 group from which to load data.
+            h5_grp: H5 group from which to load data.
 
         """

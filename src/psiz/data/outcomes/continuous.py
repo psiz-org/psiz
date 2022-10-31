@@ -156,24 +156,24 @@ class Continuous(Outcome):
             )
         return y
 
-    def save(self, grp):
+    def save(self, h5_grp):
         """Add relevant data to H5 group.
 
         Args:
-            grp: H5 group for saving data.
+            h5_grp: H5 group for saving data.
 
         """
-        grp.create_dataset("class_name", data="Continuous")
-        grp.create_dataset("value", data=self.value)
+        h5_grp.create_dataset("class_name", data="Continuous")
+        h5_grp.create_dataset("value", data=self.value)
         return None
 
     @classmethod
-    def load(cls, grp):
+    def load(cls, h5_grp):
         """Retrieve relevant datasets from group.
 
         Args:
-            grp: H5 group from which to load data.
+            h5_grp: H5 group from which to load data.
 
         """
-        value = grp["value"][()]
+        value = h5_grp["value"][()]
         return cls(value)

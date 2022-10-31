@@ -167,26 +167,26 @@ class SparseCategorical(Outcome):
             )
         return y
 
-    def save(self, grp):
+    def save(self, h5_grp):
         """Add relevant data to H5 group.
 
         Args:
-            grp: H5 group for saving data.
+            h5_grp: H5 group for saving data.
 
         """
-        grp.create_dataset("class_name", data="SparseCategorical")
-        grp.create_dataset("index", data=self.index)
-        grp.create_dataset("depth", data=self.depth)
+        h5_grp.create_dataset("class_name", data="SparseCategorical")
+        h5_grp.create_dataset("index", data=self.index)
+        h5_grp.create_dataset("depth", data=self.depth)
         return None
 
     @classmethod
-    def load(cls, grp):
+    def load(cls, h5_grp):
         """Retrieve relevant datasets from group.
 
         Args:
-            grp: H5 group from which to load data.
+            h5_grp: H5 group from which to load data.
 
         """
-        index = grp["index"][()]
-        depth = grp["depth"][()]
+        index = h5_grp["index"][()]
+        depth = h5_grp["depth"][()]
         return cls(index, depth=depth)

@@ -343,13 +343,13 @@ def test_persistence(rate_sim_3, tmpdir):
 
     # Load group.
     f = h5py.File(fn, "r")
-    grp = f[group_name]
+    h5_grp = f[group_name]
     # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
     try:
-        class_name = grp["class_name"].asstr()[()]
+        class_name = h5_grp["class_name"].asstr()[()]
     except AttributeError:
-        class_name = grp["class_name"][()]
-    reconstructed = RateSimilarity.load(grp)
+        class_name = h5_grp["class_name"][()]
+    reconstructed = RateSimilarity.load(h5_grp)
     f.close()
 
     # Check for equivalency.

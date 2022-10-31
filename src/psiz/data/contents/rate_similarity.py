@@ -212,24 +212,24 @@ class RateSimilarity(Content):
             )
         return x
 
-    def save(self, grp):
+    def save(self, h5_grp):
         """Add relevant data to H5 group.
 
         Args:
-            grp: H5 group for saving data.
+            h5_grp: H5 group for saving data.
 
         """
-        grp.create_dataset("class_name", data="RateSimilarity")
-        grp.create_dataset("stimulus_set", data=self.stimulus_set)
+        h5_grp.create_dataset("class_name", data="RateSimilarity")
+        h5_grp.create_dataset("stimulus_set", data=self.stimulus_set)
         return None
 
     @classmethod
-    def load(cls, grp):
+    def load(cls, h5_grp):
         """Retrieve relevant datasets from group.
 
         Args:
-            grp: H5 group from which to load data.
+            h5_grp: H5 group from which to load data.
 
         """
-        stimulus_set = grp["stimulus_set"][()]
+        stimulus_set = h5_grp["stimulus_set"][()]
         return cls(stimulus_set)

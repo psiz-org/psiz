@@ -37,9 +37,9 @@ class Continuous(Outcome):
         Args:
             value: Ab np.ndarray of floats indicating the outcome
                 values. Must be rank-2 or rank-3. If rank-2,
-                it is assumed that n_timestep=1 and a singleton
+                it is assumed that sequence_length=1 and a singleton
                 dimension is added. If rank-3, the first two axis are
-                interpretted as `n_sequence` and `n_timestep`.
+                interpretted as `samples` and `sequence_length`.
 
         Raises:
             ValueError if improper arguments are provided.
@@ -48,7 +48,7 @@ class Continuous(Outcome):
         Outcome.__init__(self)
         self.value = self._validate_value(value)
         self.n_sequence = self.value.shape[0]
-        self.max_timestep = self.value.shape[1]
+        self.sequence_length = self.value.shape[1]
         self.n_unit = self.value.shape[2]
 
     def stack(self, component_list):
@@ -71,17 +71,17 @@ class Continuous(Outcome):
             if i_component.n_unit != n_unit:
                 raise ValueError(
                     'The `n_unit` for the different components must be'
-                    'identical to stack `Continous` output.'
+                    'identical to stack `Continous` outcomes.'
                 )
 
         # Determine maximum number of timesteps.
-        max_timestep = 0
+        sequence_length = 0
         for i_component in component_list:
-            if i_component.max_timestep > max_timestep:
-                max_timestep = i_component.max_timestep
+            if i_component.sequence_length > sequence_length:
+                sequence_length = i_component.sequence_length
 
         # Start by padding first entry in list.
-        timestep_pad = max_timestep - component_list[0].max_timestep
+        timestep_pad = sequence_length - component_list[0].sequence_length
         pad_width = ((0, 0), (0, timestep_pad), (0, 0))
         value = np.pad(
             component_list[0].value,
@@ -90,7 +90,7 @@ class Continuous(Outcome):
 
         # Loop over remaining list.
         for i_component in component_list[1:]:
-            timestep_pad = max_timestep - i_component.max_timestep
+            timestep_pad = sequence_length - i_component.sequence_length
             pad_width = ((0, 0), (0, timestep_pad), (0, 0))
             curr_value = np.pad(
                 i_component.value,
@@ -127,8 +127,8 @@ class Continuous(Outcome):
         if not value.ndim == 3:
             raise ValueError(
                 "The argument `value` must be a rank-2 or rank-3 "
-                "ndarray with a shape corresponding to (n_sequence, "
-                "[n_timestep,] n_unit)."
+                "ndarray with a shape corresponding to (samples, "
+                "[sequence_length,] n_unit)."
             )
 
         return value

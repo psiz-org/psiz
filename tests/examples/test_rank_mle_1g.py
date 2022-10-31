@@ -230,7 +230,7 @@ def convert2dataset(obs, batch_size, shuffle=False):
     """
     content = psiz.data.RankSimilarity(obs.stimulus_set, n_select=obs.n_select)
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome

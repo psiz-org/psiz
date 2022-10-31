@@ -59,7 +59,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
 
         Returns:
             is_actual:
-                shape=(n_sequence, max_timestep)
+                shape=(samples, sequence_length)
 
         """
 
@@ -72,12 +72,12 @@ class Content(TrialComponent, metaclass=ABCMeta):
 
         Will call subclass `_config_attrs` in order to determine
         unique configuraitons. It is assumed that all return attributes
-        have shape=(n_sequence, max_timestep)
+        have shape=(samples, sequence_length)
 
         Returns:
             config_idx: A unique index for each type of trial
                 configuration.
-                shape=(n_sequence, max_timestep)
+                shape=(samples, sequence_length)
             df_config: A DataFrame containing all the unique
                 trial configurations.
 
@@ -85,12 +85,12 @@ class Content(TrialComponent, metaclass=ABCMeta):
         attr_list = self._config_attrs()
         if len(attr_list) == 0:
             config_idx = np.zeros(
-                [self.n_sequence, self.max_timestep], dtype=np.int32
+                [self.n_sequence, self.sequence_length], dtype=np.int32
             )
             df_config = None
         else:
             # Assemble dictionary of relevant attributes (as flattened array).
-            n_trial = self.n_sequence * self.max_timestep
+            n_trial = self.n_sequence * self.sequence_length
             d = {}
             for attr in attr_list:
                 d.update({
@@ -106,7 +106,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
             # Loop over distinct configurations in order to determine
             # configuration index for all trials.
             config_idx = np.zeros(
-                [self.n_sequence, self.max_timestep], dtype=np.int32
+                [self.n_sequence, self.sequence_length], dtype=np.int32
             )
             for index, row in df_config.iterrows():
                 bidx = self._find_trials_matching_config(row)
@@ -135,7 +135,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
                 configuration.
 
         """
-        bidx = np.ones([self.n_sequence, self.max_timestep], dtype=bool)
+        bidx = np.ones([self.n_sequence, self.sequence_length], dtype=bool)
         for index, value in row.items():
             bidx_key = np.equal(getattr(self, index), value)
             # Determine intersection.

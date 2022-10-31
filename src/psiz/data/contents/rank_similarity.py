@@ -41,21 +41,21 @@ class RankSimilarity(Content):
             stimulus_set: An np.ndarray of non-negative integers
                 indicating specific stimuli. The value "0" can be used
                 as a placeholder. Must be rank-2 or rank-3. If rank-2,
-                it is assumed that n_timestep=1 and a singleton
+                it is assumed that sequence_length=1 and a singleton
                 dimension is added.
                 shape=
-                    (n_sequence, max(n_reference) + 1)
+                    (samples, max(n_reference) + 1)
                     OR
-                    (n_sequence, n_timestep, max(n_reference) + 1)
+                    (samples, sequence_length, max(n_reference) + 1)
             n_select (optional): A np.ndarray of non-negative integers
                 indicating how many references are selected on a given
                 trial. Must be rank-1 or rank-2. If rank-1, it is
-                assumed that n_timestep=1 and a singleton dimension is
-                added.
+                assumed that sequence_length=1 and a singleton
+                dimension is added.
                 shape=
-                    (n_sequence,)
+                    (samples,)
                     OR
-                    (n_sequence, n_timestep)
+                    (samples, sequence_length)
 
         Raises:
             ValueError if improper arguments are provided.
@@ -65,14 +65,16 @@ class RankSimilarity(Content):
         stimulus_set = self._validate_stimulus_set(stimulus_set)
 
         # Trim excess placeholder padding off of timestep (axis=1).
+        # TODO
         is_present = np.not_equal(stimulus_set, self.mask_value)
         # Logical or across last `set` dimension.
         is_present = np.any(is_present, axis=2)
         n_timestep = np.sum(is_present, axis=1, dtype=np.int32)
+        # TODO why do we keep track of n_timestep? is this for auto-pruning?
         self.n_timestep = self._validate_n_timestep(n_timestep)
-        max_timestep = np.amax(self.n_timestep)
-        self.max_timestep = max_timestep
-        stimulus_set = stimulus_set[:, 0:max_timestep, :]
+        sequence_length = np.amax(self.n_timestep)
+        self.sequence_length = sequence_length
+        stimulus_set = stimulus_set[:, 0:sequence_length, :]
 
         # Trim any excess placeholder padding off of n_reference (axis=2).
         is_present = np.not_equal(stimulus_set, self.mask_value)
@@ -130,15 +132,15 @@ class RankSimilarity(Content):
         # Determine maximum number of references and maximum number of
         # timesteps.
         max_n_reference = 0
-        max_timestep = 0
+        sequence_length = 0
         for i_component in component_list:
             if i_component.max_n_reference > max_n_reference:
                 max_n_reference = i_component.max_n_reference
-            if i_component.max_timestep > max_timestep:
-                max_timestep = i_component.max_timestep
+            if i_component.sequence_length > sequence_length:
+                sequence_length = i_component.sequence_length
 
         # Start by padding first entry in list.
-        timestep_pad = max_timestep - component_list[0].max_timestep
+        timestep_pad = sequence_length - component_list[0].sequence_length
         n_pad = max_n_reference - component_list[0].max_n_reference
         pad_width = ((0, 0), (0, timestep_pad), (0, n_pad))
         stimulus_set = np.pad(
@@ -154,7 +156,7 @@ class RankSimilarity(Content):
         # Loop over remaining list.
         for i_component in component_list[1:]:
 
-            timestep_pad = max_timestep - i_component.max_timestep
+            timestep_pad = sequence_length - i_component.sequence_length
             n_pad = max_n_reference - i_component.max_n_reference
             pad_width = ((0, 0), (0, timestep_pad), (0, n_pad))
             curr_stimulus_set = np.pad(
@@ -205,9 +207,9 @@ class RankSimilarity(Content):
             if n_outcome > max_n_outcome:  # pragma: no branch
                 max_n_outcome = n_outcome
 
-        # Combine `n_sequence` and `max_timestep` axis for `stimulus_set` and
+        # Combine `samples` and `sequence_length` axis for `stimulus_set` and
         # corresponding `config_idx` to enable reuse of existing code.
-        n_trial = self.n_sequence * self.max_timestep
+        n_trial = self.n_sequence * self.sequence_length
         stimulus_set_flat = np.reshape(
             self.stimulus_set, [n_trial, self.max_n_reference + 1]
         )
@@ -261,7 +263,9 @@ class RankSimilarity(Content):
         stimulus_set_expand = np.reshape(
             stimulus_set_flat_expand,
             [
-                self.n_sequence, self.max_timestep, self.max_n_reference + 1,
+                self.n_sequence,
+                self.sequence_length,
+                self.max_n_reference + 1,
                 max_n_outcome
             ]
         )
@@ -314,7 +318,7 @@ class RankSimilarity(Content):
             )
 
         # Trim empty timesteps if necessary.
-        n_select = n_select[:, 0:self.max_timestep]
+        n_select = n_select[:, 0:self.sequence_length]
 
         # Check shape agreement.
         if not (n_select.shape[0] == self.n_sequence):
@@ -391,8 +395,8 @@ class RankSimilarity(Content):
         if not stimulus_set.ndim == 3:
             raise ValueError(
                 "The argument `stimulus_set` must be a rank-2 or rank-3 "
-                "ndarray with a shape corresponding to (n_sequence, "
-                "n_timestep, n_stimuli_per_trial)."
+                "ndarray with a shape corresponding to (samples, "
+                "sequence_length, n_stimuli_per_trial)."
             )
 
         # Check values are in int32 range.

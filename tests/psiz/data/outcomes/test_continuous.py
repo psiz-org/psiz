@@ -34,7 +34,7 @@ def test_init_0(continuous_0):
     )
 
     assert desired_n_sequence == continuous_0.n_sequence
-    assert desired_max_timestep == continuous_0.max_timestep
+    assert desired_max_timestep == continuous_0.sequence_length
     assert desired_n_unit == continuous_0.n_unit
     np.testing.assert_array_equal(
         desired_value, continuous_0.value
@@ -51,7 +51,7 @@ def test_init_1(continuous_1):
     )
 
     assert desired_n_sequence == continuous_1.n_sequence
-    assert desired_max_timestep == continuous_1.max_timestep
+    assert desired_max_timestep == continuous_1.sequence_length
     assert desired_n_unit == continuous_1.n_unit
     np.testing.assert_array_equal(
         desired_value, continuous_1.value
@@ -73,7 +73,7 @@ def test_init_2(continuous_2):
     )
 
     assert desired_n_sequence == continuous_2.n_sequence
-    assert desired_max_timestep == continuous_2.max_timestep
+    assert desired_max_timestep == continuous_2.sequence_length
     assert desired_n_unit == continuous_2.n_unit
     np.testing.assert_array_equal(
         desired_value, continuous_2.value
@@ -95,7 +95,7 @@ def test_init_3(continuous_3):
     )
 
     assert desired_n_sequence == continuous_3.n_sequence
-    assert desired_max_timestep == continuous_3.max_timestep
+    assert desired_max_timestep == continuous_3.sequence_length
     assert desired_n_unit == continuous_3.n_unit
     np.testing.assert_array_equal(
         desired_value, continuous_3.value
@@ -253,7 +253,7 @@ def test_persistence(continuous_2, tmpdir):
     # Check for equivalency.
     assert class_name == "Continuous"
     assert original.n_sequence == reconstructed.n_sequence
-    assert original.max_timestep == reconstructed.max_timestep
+    assert original.sequence_length == reconstructed.sequence_length
     np.testing.assert_array_equal(
         original.value, reconstructed.value
     )
@@ -274,7 +274,7 @@ def test_subset_3(continuous_3):
     sub = continuous_3.subset(np.array([1, 2]))
 
     assert desired_n_sequence == sub.n_sequence
-    assert desired_max_timestep == sub.max_timestep
+    assert desired_max_timestep == sub.sequence_length
     assert desired_n_unit == sub.n_unit
     np.testing.assert_array_equal(
         desired_value, sub.value
@@ -300,7 +300,7 @@ def test_stack_0(continuous_3, continuous_4):
     stacked = stack((continuous_3, continuous_4))
 
     assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.max_timestep
+    assert desired_max_timestep == stacked.sequence_length
     np.testing.assert_array_equal(
         desired_value, stacked.value
     )

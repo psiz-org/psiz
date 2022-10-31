@@ -48,7 +48,7 @@ class SparseCategorical(Outcome):
         Outcome.__init__(self)
         self.index = self._validate_index(index)
         self.n_sequence = self.index.shape[0]
-        self.max_timestep = self.index.shape[1]
+        self.sequence_length = self.index.shape[1]
         self.depth = depth
 
     def stack(self, component_list):
@@ -63,16 +63,16 @@ class SparseCategorical(Outcome):
 
         """
         # Determine maximum number of timesteps.
-        max_timestep = 0
+        sequence_length = 0
         max_depth = 0
         for i_component in component_list:
-            if i_component.max_timestep > max_timestep:
-                max_timestep = i_component.max_timestep
+            if i_component.sequence_length > sequence_length:
+                sequence_length = i_component.sequence_length
             if i_component.depth > max_depth:
                 max_depth = i_component.depth
 
         # Start by padding first entry in list.
-        timestep_pad = max_timestep - component_list[0].max_timestep
+        timestep_pad = sequence_length - component_list[0].sequence_length
         pad_width = ((0, 0), (0, timestep_pad))
         index = np.pad(
             component_list[0].index,
@@ -82,7 +82,7 @@ class SparseCategorical(Outcome):
         # Loop over remaining list.
         for i_component in component_list[1:]:
 
-            timestep_pad = max_timestep - i_component.max_timestep
+            timestep_pad = sequence_length - i_component.sequence_length
             pad_width = ((0, 0), (0, timestep_pad))
             curr_index = np.pad(
                 i_component.index,
@@ -133,7 +133,7 @@ class SparseCategorical(Outcome):
         if not (index.ndim == 2):
             raise ValueError(
                 "The argument `index` must be a rank-2 ndarray with a "
-                "shape corresponding to (n_sequence, n_timestep)."
+                "shape corresponding to (samples, sequence_length)."
             )
 
         return index

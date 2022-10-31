@@ -38,7 +38,7 @@ def test_init_0(rank_sim_1):
     td = TrialDataset(content)
 
     assert td.n_sequence == content.n_sequence
-    assert td.max_timestep == content.max_timestep
+    assert td.sequence_length == content.sequence_length
 
 
 def test_init_1(rank_sim_1):
@@ -50,7 +50,7 @@ def test_init_1(rank_sim_1):
     content = rank_sim_1
 
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     TrialDataset(content, outcome=outcome)
@@ -64,16 +64,16 @@ def test_init_2(rank_sim_1):
     """
     content = rank_sim_1
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     rng = default_rng()
     groups = {
         'condition_id': rng.choice(
-            2, size=[content.n_sequence, content.max_timestep, 1]
+            2, size=[content.n_sequence, content.sequence_length, 1]
         ).astype(dtype=int)
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -88,16 +88,16 @@ def test_init_3(rank_sim_1):
     """
     content = rank_sim_1
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     rng = default_rng()
     groups = {
         'condition_id': rng.choice(
-            2, size=[content.n_sequence, content.max_timestep, 1]
+            2, size=[content.n_sequence, content.sequence_length, 1]
         ).astype(dtype=int)
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -107,17 +107,19 @@ def test_invalid_init_0(rank_sim_1):
     """Test invalid sample_weight initialization."""
     content = rank_sim_1
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     rng = default_rng()
     groups = {
         'condition_id': rng.choice(
-            2, size=[content.n_sequence, content.max_timestep, 1]
+            2, size=[content.n_sequence, content.sequence_length, 1]
         ).astype(dtype=int)
     }
 
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep, 2])
+    sample_weight = .9 * np.ones(
+        [content.n_sequence, content.sequence_length, 2]
+    )
     with pytest.raises(Exception) as e_info:
         TrialDataset(
             content,
@@ -128,7 +130,7 @@ def test_invalid_init_0(rank_sim_1):
     assert e_info.type == ValueError
 
     sample_weight = .9 * np.ones(
-        [content.n_sequence + 1, content.max_timestep]
+        [content.n_sequence + 1, content.sequence_length]
     )
     with pytest.raises(Exception) as e_info:
         TrialDataset(
@@ -140,11 +142,11 @@ def test_invalid_init_0(rank_sim_1):
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The argument 'sample_weight' must have "
-        "shape=(n_squence, max_timestep) as determined by `content`."
+        "shape=(samples, sequence_length) as determined by `content`."
     )
 
     sample_weight = .9 * np.ones(
-        [content.n_sequence, content.max_timestep + 1]
+        [content.n_sequence, content.sequence_length + 1]
     )
     with pytest.raises(Exception) as e_info:
         TrialDataset(
@@ -156,7 +158,7 @@ def test_invalid_init_0(rank_sim_1):
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The argument 'sample_weight' must have "
-        "shape=(n_squence, max_timestep) as determined by `content`."
+        "shape=(samples, sequence_length) as determined by `content`."
     )
 
 
@@ -166,20 +168,20 @@ def test_invalid_init_1(rank_sim_1):
     Bad group shapes:
     * invalid rank 4 groups.
     * mismatch in n_sequence
-    * mismatch in max_timestep
+    * mismatch in sequence_length
 
     """
     content = rank_sim_1
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
 
     rng = default_rng()
     groups = {
         'condition_id': rng.choice(
-            2, size=[content.n_sequence, content.max_timestep, 1, 1]
+            2, size=[content.n_sequence, content.sequence_length, 1, 1]
         ).astype(dtype=int)
     }
     with pytest.raises(Exception) as e_info:
@@ -199,7 +201,7 @@ def test_invalid_init_1(rank_sim_1):
 
     groups = {
         'condition_id': rng.choice(
-            2, size=[content.n_sequence + 1, content.max_timestep, 1]
+            2, size=[content.n_sequence + 1, content.sequence_length, 1]
         ).astype(dtype=int)
     }
     with pytest.raises(Exception) as e_info:
@@ -217,7 +219,7 @@ def test_invalid_init_1(rank_sim_1):
 
     groups = {
         'condition_id': rng.choice(
-            2, size=[content.n_sequence, content.max_timestep + 1, 1]
+            2, size=[content.n_sequence, content.sequence_length + 1, 1]
         ).astype(dtype=int)
     }
     with pytest.raises(Exception) as e_info:
@@ -230,7 +232,7 @@ def test_invalid_init_1(rank_sim_1):
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The group weights for the dictionary key 'condition_id' must have a "
-        "shape that agrees with 'max_timestep' of the 'content'."
+        "shape that agrees with 'sequence_length' of the 'content'."
     )
 
     groups = {
@@ -261,16 +263,16 @@ def test_invalid_init_2(rank_sim_1):
     """
     content = rank_sim_1
     outcome_idx = np.zeros(
-        [content.n_sequence + 1, content.max_timestep], dtype=np.int32
+        [content.n_sequence + 1, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     rng = default_rng()
     groups = {
         'condition_id': rng.choice(
-            2, size=[content.n_sequence, content.max_timestep, 1]
+            2, size=[content.n_sequence, content.sequence_length, 1]
         ).astype(dtype=int)
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     with pytest.raises(Exception) as e_info:
         TrialDataset(
             content,
@@ -286,7 +288,7 @@ def test_invalid_init_2(rank_sim_1):
     )
 
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep + 1], dtype=np.int32
+        [content.n_sequence, content.sequence_length + 1], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     with pytest.raises(Exception) as e_info:
@@ -299,7 +301,7 @@ def test_invalid_init_2(rank_sim_1):
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The user-provided 'outcome' object must agree with the "
-        "`max_timestep` attribute of the user-provided "
+        "`sequence_length` attribute of the user-provided "
         "`content` object."
     )
 
@@ -307,7 +309,7 @@ def test_invalid_init_2(rank_sim_1):
 def test_is_actual(rank_sim_2):
     """Test is_actual."""
     outcome_idx = np.zeros(
-        [rank_sim_2.n_sequence, rank_sim_2.max_timestep], dtype=np.int32
+        [rank_sim_2.n_sequence, rank_sim_2.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_2.max_outcome)
     trials_4 = TrialDataset(rank_sim_2, outcome=outcome)
@@ -332,7 +334,7 @@ def test_export_0(rank_sim_4):
     """
     content = rank_sim_4
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     groups = {
@@ -344,7 +346,7 @@ def test_export_0(rank_sim_4):
             ]
         )
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     trials = TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -485,7 +487,7 @@ def test_export_1(rank_sim_4):
     """
     content = rank_sim_4
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     groups = {
@@ -497,7 +499,7 @@ def test_export_1(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     trials = TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -601,7 +603,7 @@ def test_export_2(rank_sim_4):
     """
     content = rank_sim_4
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     groups = {
@@ -613,7 +615,7 @@ def test_export_2(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     trials = TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -819,7 +821,7 @@ def test_invalid_export_0(rank_sim_4):
     """
     content = rank_sim_4
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     groups = {
@@ -831,7 +833,7 @@ def test_invalid_export_0(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     trials = TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -860,7 +862,7 @@ def test_persistence_0(rank_sim_4, tmpdir):
     reconstructed = load_trials(fn)
 
     assert trials.n_sequence == reconstructed.n_sequence
-    assert trials.max_timestep == reconstructed.max_timestep
+    assert trials.sequence_length == reconstructed.sequence_length
     np.testing.assert_array_equal(
         trials.content.stimulus_set, reconstructed.content.stimulus_set
     )
@@ -888,7 +890,7 @@ def test_persistence_1(rank_sim_4, tmpdir):
 
     content = rank_sim_4
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     groups = {
@@ -900,7 +902,7 @@ def test_persistence_1(rank_sim_4, tmpdir):
             ], dtype=np.int32
         )
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     trials = TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -910,7 +912,7 @@ def test_persistence_1(rank_sim_4, tmpdir):
     reconstructed = load_trials(fn)
 
     assert trials.n_sequence == reconstructed.n_sequence
-    assert trials.max_timestep == reconstructed.max_timestep
+    assert trials.sequence_length == reconstructed.sequence_length
     np.testing.assert_array_equal(
         trials.content.stimulus_set, reconstructed.content.stimulus_set
     )
@@ -954,7 +956,7 @@ def test_subset_0(rank_sim_4):
     desired_max_outcome = 3
 
     assert trials_sub.n_sequence == desired_n_sequence
-    assert trials_sub.max_timestep == desired_max_timestep
+    assert trials_sub.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         trials_sub.content.stimulus_set, desired_stimulus_set
     )
@@ -980,7 +982,7 @@ def test_subset_1(rank_sim_4):
     """
     content = rank_sim_4
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=content.max_outcome)
     groups = {
@@ -992,7 +994,7 @@ def test_subset_1(rank_sim_4):
             ], dtype=np.int32
         )
     }
-    sample_weight = .9 * np.ones([content.n_sequence, content.max_timestep])
+    sample_weight = .9 * np.ones([content.n_sequence, content.sequence_length])
     trials = TrialDataset(
         content, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
@@ -1027,7 +1029,7 @@ def test_subset_1(rank_sim_4):
     )
 
     assert trials_sub.n_sequence == desired_n_sequence
-    assert trials_sub.max_timestep == desired_max_timestep
+    assert trials_sub.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         trials_sub.content.stimulus_set, desired_stimulus_set
     )
@@ -1054,7 +1056,7 @@ def test_stack_0(rank_sim_4, rank_sim_5):
     """Test stack."""
     # Creat two trial datasets.
     outcome_idx = np.zeros(
-        [rank_sim_4.n_sequence, rank_sim_4.max_timestep], dtype=np.int32
+        [rank_sim_4.n_sequence, rank_sim_4.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_4.max_outcome)
     groups = {
@@ -1067,14 +1069,14 @@ def test_stack_0(rank_sim_4, rank_sim_5):
         )
     }
     sample_weight = .4 * np.ones(
-        [rank_sim_4.n_sequence, rank_sim_4.max_timestep]
+        [rank_sim_4.n_sequence, rank_sim_4.sequence_length]
     )
     trials_4 = TrialDataset(
         rank_sim_4, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     outcome_idx = np.zeros(
-        [rank_sim_5.n_sequence, rank_sim_5.max_timestep], dtype=np.int32
+        [rank_sim_5.n_sequence, rank_sim_5.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_5.max_outcome)
     groups = {
@@ -1086,7 +1088,7 @@ def test_stack_0(rank_sim_4, rank_sim_5):
         )
     }
     sample_weight = .5 * np.ones(
-        [rank_sim_5.n_sequence, rank_sim_5.max_timestep]
+        [rank_sim_5.n_sequence, rank_sim_5.sequence_length]
     )
     trials_5 = TrialDataset(
         rank_sim_5, groups=groups, outcome=outcome, sample_weight=sample_weight
@@ -1189,7 +1191,7 @@ def test_stack_0(rank_sim_4, rank_sim_5):
     )
 
     assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.max_timestep
+    assert desired_max_timestep == stacked.sequence_length
     assert desired_max_n_referece == stacked.content.max_n_reference
     np.testing.assert_array_equal(
         desired_stimulus_set, stacked.content.stimulus_set
@@ -1213,7 +1215,7 @@ def test_invalid_stack_0(rank_sim_4, rank_sim_5):
     """
     # Creat two trial datasets.
     outcome_idx = np.zeros(
-        [rank_sim_4.n_sequence, rank_sim_4.max_timestep], dtype=np.int32
+        [rank_sim_4.n_sequence, rank_sim_4.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_4.max_outcome)
     groups = {
@@ -1226,14 +1228,14 @@ def test_invalid_stack_0(rank_sim_4, rank_sim_5):
         )
     }
     sample_weight = .4 * np.ones(
-        [rank_sim_4.n_sequence, rank_sim_4.max_timestep]
+        [rank_sim_4.n_sequence, rank_sim_4.sequence_length]
     )
     trials_4 = TrialDataset(
         rank_sim_4, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     outcome_idx = np.zeros(
-        [rank_sim_5.n_sequence, rank_sim_5.max_timestep], dtype=np.int32
+        [rank_sim_5.n_sequence, rank_sim_5.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_5.max_outcome)
     groups = {
@@ -1245,7 +1247,7 @@ def test_invalid_stack_0(rank_sim_4, rank_sim_5):
         )
     }
     sample_weight = .5 * np.ones(
-        [rank_sim_5.n_sequence, rank_sim_5.max_timestep]
+        [rank_sim_5.n_sequence, rank_sim_5.sequence_length]
     )
     trials_5 = TrialDataset(
         rank_sim_5, groups=groups, outcome=outcome, sample_weight=sample_weight
@@ -1269,7 +1271,7 @@ def test_invalid_stack_1(rank_sim_4, rank_sim_5):
     """
     # Creat two trial datasets.
     outcome_idx = np.zeros(
-        [rank_sim_4.n_sequence, rank_sim_4.max_timestep], dtype=np.int32
+        [rank_sim_4.n_sequence, rank_sim_4.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_4.max_outcome)
     groups = {
@@ -1282,14 +1284,14 @@ def test_invalid_stack_1(rank_sim_4, rank_sim_5):
         )
     }
     sample_weight = .4 * np.ones(
-        [rank_sim_4.n_sequence, rank_sim_4.max_timestep]
+        [rank_sim_4.n_sequence, rank_sim_4.sequence_length]
     )
     trials_4 = TrialDataset(
         rank_sim_4, groups=groups, outcome=outcome, sample_weight=sample_weight
     )
 
     outcome_idx = np.zeros(
-        [rank_sim_5.n_sequence, rank_sim_5.max_timestep], dtype=np.int32
+        [rank_sim_5.n_sequence, rank_sim_5.sequence_length], dtype=np.int32
     )
     outcome = SparseCategorical(outcome_idx, depth=rank_sim_5.max_outcome)
     groups = {
@@ -1301,7 +1303,7 @@ def test_invalid_stack_1(rank_sim_4, rank_sim_5):
         )
     }
     sample_weight = .5 * np.ones(
-        [rank_sim_5.n_sequence, rank_sim_5.max_timestep]
+        [rank_sim_5.n_sequence, rank_sim_5.sequence_length]
     )
     trials_5 = TrialDataset(
         rank_sim_5, groups=groups, outcome=outcome, sample_weight=sample_weight

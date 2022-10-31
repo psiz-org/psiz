@@ -91,7 +91,7 @@ def inputs_list():
 @pytest.fixture
 def gates_v0_timestep():
     """A minibatch of gates."""
-    # Create a batch with timesteps (batch_size=5, n_timestep=2).
+    # Create a batch with timesteps (batch_size=5, sequence_length=2).
     gates = tf.constant(
         [
             [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]],

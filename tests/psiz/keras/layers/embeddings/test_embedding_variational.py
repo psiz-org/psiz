@@ -58,7 +58,7 @@ def ds_v0():
 
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome
@@ -89,7 +89,7 @@ def ds_v1():
 
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome

@@ -50,9 +50,9 @@ class TrialDataset(object):
             groups (optional): A dictionary composed of values where
                 each value is an np.ndarray that must be rank-2 or
                 rank-3.
-                dict value shape=(n_sequence, [max_timestep], n_col)
+                dict value shape=(samples, [sequence_length], n_col)
             sample_weight (optional): A 1D or 2D np.ndarray of floats.
-                shape=(n_sequence, [max_timestep])
+                shape=(samples, [sequence_length])
 
         """
         self._timestep_axis = 1  # TODO
@@ -60,7 +60,7 @@ class TrialDataset(object):
 
         # Anchor initialization on `content`.
         self.n_sequence = content.n_sequence
-        self.max_timestep = content.max_timestep
+        self.sequence_length = content.sequence_length
 
         # Handle `groups` intialization.
         if groups is not None:
@@ -114,7 +114,7 @@ class TrialDataset(object):
             )
             x.update(groups)
 
-        # Assemble model output
+        # Assemble model outcomes.
         if self.outcome is not None and not inputs_only:
             y = self.outcome.export(
                 export_format=export_format,
@@ -150,7 +150,7 @@ class TrialDataset(object):
 
         Returns:
             is_actual:
-                shape=(n_sequence, max_timestep)
+                shape=(samples, sequence_length)
 
         """
         return self.content.is_actual
@@ -222,18 +222,18 @@ class TrialDataset(object):
 
         """
         # Determine maximum number of timesteps and decouple content and
-        # outputs.
-        max_timestep = 0
+        # outcomes.
+        sequence_length = 0
         content_list = []
         outcome_list = []
         for i_trials in trials_list:
-            if i_trials.max_timestep > max_timestep:
-                max_timestep = i_trials.max_timestep
+            if i_trials.sequence_length > sequence_length:
+                sequence_length = i_trials.sequence_length
             content_list.append(i_trials.content)
             outcome_list.append(i_trials.outcome)
 
-        groups = self._stack_groups(trials_list, max_timestep)
-        sample_weight = self._stack_sample_weight(trials_list, max_timestep)
+        groups = self._stack_groups(trials_list, sequence_length)
+        sample_weight = self._stack_sample_weight(trials_list, sequence_length)
         content = content_list[0].stack(content_list)
         outcome = outcome_list[0].stack(outcome_list)
         stacked = TrialDataset(
@@ -288,12 +288,12 @@ class TrialDataset(object):
         if not (sample_weight.shape[0] == self.n_sequence):
             raise ValueError(
                 "The argument 'sample_weight' must have "
-                "shape=(n_squence, max_timestep) as determined by `content`."
+                "shape=(samples, sequence_length) as determined by `content`."
             )
-        if not (sample_weight.shape[1] == self.max_timestep):
+        if not (sample_weight.shape[1] == self.sequence_length):
             raise ValueError(
                 "The argument 'sample_weight' must have "
-                "shape=(n_squence, max_timestep) as determined by `content`."
+                "shape=(samples, sequence_length) as determined by `content`."
             )
         return sample_weight
 
@@ -330,10 +330,10 @@ class TrialDataset(object):
                 "a shape that agrees with 'n_squence' of the 'content'"
                 ".".format(group_key)
             )
-        if not (group_weights.shape[1] == self.max_timestep):
+        if not (group_weights.shape[1] == self.sequence_length):
             raise ValueError(
                 "The group weights for the dictionary key '{0}' must have "
-                "a shape that agrees with 'max_timestep' of the 'content'"
+                "a shape that agrees with 'sequence_length' of the 'content'"
                 ".".format(group_key)
             )
 
@@ -359,10 +359,10 @@ class TrialDataset(object):
                 "`content` object."
             )
 
-        if outcome.max_timestep != self.max_timestep:
+        if outcome.sequence_length != self.sequence_length:
             raise ValueError(
                 "The user-provided 'outcome' object must agree with the "
-                "`max_timestep` attribute of the user-provided "
+                "`sequence_length` attribute of the user-provided "
                 "`content` object."
             )
 
@@ -426,7 +426,7 @@ class TrialDataset(object):
                 d[key] = h5_grp[key][()]
             return d
 
-    def _stack_groups(self, trials_list, max_timestep):
+    def _stack_groups(self, trials_list, sequence_length):
         """Stack `groups` data."""
         # First check that groups keys are compatible.
         # NOTE: It is not safe to simply pad an missing key with zeros, since
@@ -456,7 +456,7 @@ class TrialDataset(object):
                     )
 
             # Start by padding first entry in list.
-            timestep_pad = max_timestep - trials_list[0].max_timestep
+            timestep_pad = sequence_length - trials_list[0].sequence_length
             pad_width = ((0, 0), (0, timestep_pad), (0, 0))
             groups = np.pad(
                 trials_list[0].groups[key],
@@ -465,7 +465,7 @@ class TrialDataset(object):
 
             # Loop over remaining list.
             for i_trials in trials_list[1:]:
-                timestep_pad = max_timestep - i_trials.max_timestep
+                timestep_pad = sequence_length - i_trials.sequence_length
                 pad_width = ((0, 0), (0, timestep_pad), (0, 0))
                 curr_groups = np.pad(
                     i_trials.groups[key],
@@ -479,10 +479,10 @@ class TrialDataset(object):
 
         return groups_stacked
 
-    def _stack_sample_weight(self, trials_list, max_timestep):
+    def _stack_sample_weight(self, trials_list, sequence_length):
         """Stack `sample_weight` data."""
         # Start by padding first entry in list.
-        timestep_pad = max_timestep - trials_list[0].max_timestep
+        timestep_pad = sequence_length - trials_list[0].sequence_length
         pad_width = ((0, 0), (0, timestep_pad))
         sample_weight = np.pad(
             trials_list[0].sample_weight,
@@ -491,7 +491,7 @@ class TrialDataset(object):
 
         # Loop over remaining list.
         for i_trials in trials_list[1:]:
-            timestep_pad = max_timestep - i_trials.max_timestep
+            timestep_pad = sequence_length - i_trials.sequence_length
             pad_width = ((0, 0), (0, timestep_pad))
             curr_sample_weight = np.pad(
                 i_trials.sample_weight,

@@ -34,7 +34,7 @@ def test_init_0(sparse_cat_0):
     desired_depth = 3
 
     assert sparse_cat_0.n_sequence == desired_n_sequence
-    assert sparse_cat_0.max_timestep == desired_max_timestep
+    assert sparse_cat_0.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_index, sparse_cat_0.index
     )
@@ -51,7 +51,7 @@ def test_init_1(sparse_cat_1):
     desired_depth = 5
 
     assert sparse_cat_1.n_sequence == desired_n_sequence
-    assert sparse_cat_1.max_timestep == desired_max_timestep
+    assert sparse_cat_1.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_index, sparse_cat_1.index
     )
@@ -68,7 +68,7 @@ def test_init_2(sparse_cat_2):
     desired_depth = 3
 
     assert sparse_cat_2.n_sequence == desired_n_sequence
-    assert sparse_cat_2.max_timestep == desired_max_timestep
+    assert sparse_cat_2.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_index, sparse_cat_2.index
     )
@@ -266,7 +266,7 @@ def test_persistence(sparse_cat_2, tmpdir):
     # Check for equivalency.
     assert class_name == "SparseCategorical"
     assert original.n_sequence == reconstructed.n_sequence
-    assert original.max_timestep == reconstructed.max_timestep
+    assert original.sequence_length == reconstructed.sequence_length
     assert original.depth == reconstructed.depth
     np.testing.assert_array_equal(
         original.index, reconstructed.index
@@ -284,14 +284,14 @@ def test_subset_0(rank_sim_4):
 
     content = rank_sim_4
     outcome_idx = np.zeros(
-        [content.n_sequence, content.max_timestep], dtype=np.int32
+        [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     sparse_cat = SparseCategorical(outcome_idx, depth=content.max_outcome)
 
     sub = sparse_cat.subset(np.array([1, 2]))
 
     assert sub.n_sequence == desired_n_sequence
-    assert sub.max_timestep == desired_max_timestep
+    assert sub.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_index, sub.index
     )
@@ -321,7 +321,7 @@ def test_stack_0(sparse_cat_1, sparse_cat_2, sparse_cat_3):
     stacked = stack((sparse_cat_1, sparse_cat_2, sparse_cat_3))
 
     assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.max_timestep
+    assert desired_max_timestep == stacked.sequence_length
     np.testing.assert_array_equal(
         desired_index, stacked.index
     )

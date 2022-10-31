@@ -30,7 +30,7 @@ class TrialComponent(metaclass=ABCMeta):
         """Initialize."""
         # Attributes determined by concrete class.
         self.n_sequence = None
-        self.max_timestep = None
+        self.sequence_length = None
 
     @abstractmethod
     def stack(self, component_list):

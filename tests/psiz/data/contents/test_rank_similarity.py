@@ -40,7 +40,7 @@ def test_init_0(rank_sim_0):
     desired_max_outcome = 56
 
     assert rank_sim_0.n_sequence == desired_n_sequence
-    assert rank_sim_0.max_timestep == desired_max_timestep
+    assert rank_sim_0.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rank_sim_0.stimulus_set
     )
@@ -72,7 +72,7 @@ def test_init_1(rank_sim_1):
     desired_max_outcome = 56
 
     assert rank_sim_1.n_sequence == desired_n_sequence
-    assert rank_sim_1.max_timestep == desired_max_timestep
+    assert rank_sim_1.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rank_sim_1.stimulus_set
     )
@@ -122,7 +122,7 @@ def test_init_2(rank_sim_2):
     desired_max_outcome = 56
 
     assert rank_sim_2.n_sequence == desired_n_sequence
-    assert rank_sim_2.max_timestep == desired_max_timestep
+    assert rank_sim_2.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rank_sim_2.stimulus_set
     )
@@ -172,7 +172,7 @@ def test_init_3(rank_sim_3):
     desired_max_outcome = 56
 
     assert rank_sim_3.n_sequence == desired_n_sequence
-    assert rank_sim_3.max_timestep == desired_max_timestep
+    assert rank_sim_3.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rank_sim_3.stimulus_set
     )
@@ -779,7 +779,7 @@ def test_persistence(rank_sim_4, tmpdir):
     # Check for equivalency.
     assert class_name == "RankSimilarity"
     assert original.n_sequence == reconstructed.n_sequence
-    assert original.max_timestep == reconstructed.max_timestep
+    assert original.sequence_length == reconstructed.sequence_length
     np.testing.assert_array_equal(
         original.stimulus_set, reconstructed.stimulus_set
     )
@@ -809,7 +809,7 @@ def test_subset_0(rank_sim_1):
 
     sub = rank_sim_1.subset(np.array([1, 2]))
     assert sub.n_sequence == desired_n_sequence
-    assert sub.max_timestep == desired_max_timestep
+    assert sub.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, sub.stimulus_set
     )
@@ -846,7 +846,7 @@ def test_subset_1(rank_sim_4):
 
     sub = rank_sim_4.subset(np.array([1, 2]))
     assert sub.n_sequence == desired_n_sequence
-    assert sub.max_timestep == desired_max_timestep
+    assert sub.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, sub.stimulus_set
     )
@@ -941,7 +941,7 @@ def test_stack(rank_sim_4, rank_sim_5, rank_sim_6):
     stacked = stack((rank_sim_4, rank_sim_5, rank_sim_4, rank_sim_6))
 
     assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.max_timestep
+    assert desired_max_timestep == stacked.sequence_length
     assert desired_max_n_referece == stacked.max_n_reference
     np.testing.assert_array_equal(
         desired_stimulus_set, stacked.stimulus_set

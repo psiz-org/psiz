@@ -124,7 +124,7 @@ class SparseDispatcher():
             num_experts: an integer.
             gates: A `Tensor` of:
                 shape=(batch_size, num_experts) or
-                shape=(batch_size, n_timestep, num_experts)
+                shape=(batch_size, sequence_length, num_experts)
             has_timestep_axis (optional): Beolean indicating if second
                 axis should be interpretted as a timestep axis.
 

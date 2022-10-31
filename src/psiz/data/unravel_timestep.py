@@ -25,21 +25,21 @@ import numpy as np
 
 
 def unravel_timestep(x):
-    """Unravel sequence and timestep axis into a single axis.
+    """Unravel sample and timestep axis into a single axis.
 
-    Argumetns:
+    Arguments:
         x: A time-step based data structure.
-            shape=(n_sequence, max_timestep, [m, n, ...])
+            shape=(samples, sequence_length, [m, n, ...])
 
     Returns:
         New data structure.
-            shape=(n_sequence*max_timestep, [m, n, ...])
+            shape=(samples * sequence_length, [m, n, ...])
 
     """
     x_shape = x.shape
     n_sequence = x_shape[0]
-    max_timestep = x_shape[1]
+    sequence_length = x_shape[1]
     new_shape = np.hstack(
-        ([n_sequence * max_timestep], x_shape[2:])
+        ([n_sequence * sequence_length], x_shape[2:])
     ).astype(dtype=int)
     return np.reshape(x, new_shape)

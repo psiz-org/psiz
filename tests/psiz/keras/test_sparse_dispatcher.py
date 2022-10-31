@@ -231,9 +231,9 @@ def test_list_dispatch_timestep(gates_v0_timestep, inputs_list_timestep):
 
     Args:
         gates: a float32 `Tensor`
-        shape=(batch_size, n_timestep, num_experts)
+        shape=(batch_size, sequence_length, num_experts)
         inputs: A list of float32 `Tensor`
-            shape=(batch_size, n_timestep, input_size)
+            shape=(batch_size, sequence_length, input_size)
         experts: A list of length `num_experts` containing sub-networks.
 
     """
@@ -419,9 +419,9 @@ def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
 
     Args:
         gates: a float32 `Tensor`
-        shape=(batch_size, n_timestep, num_experts)
+        shape=(batch_size, sequence_length, num_experts)
         inputs: A list of float32 `Tensor`
-            shape=(batch_size, n_timestep, input_size)
+            shape=(batch_size, sequence_length, input_size)
         experts: A list of length `num_experts` containing sub-networks.
 
     """

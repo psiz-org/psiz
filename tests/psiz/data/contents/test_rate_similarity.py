@@ -37,7 +37,7 @@ def test_init_0(rate_sim_0):
     desired_n_timestep = np.array([1, 1, 1, 1], dtype=np.int32)
 
     assert rate_sim_0.n_sequence == desired_n_sequence
-    assert rate_sim_0.max_timestep == desired_max_timestep
+    assert rate_sim_0.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_0.stimulus_set
     )
@@ -60,7 +60,7 @@ def test_init_1(rate_sim_1):
     desired_n_timestep = np.array([1, 1, 1, 1], dtype=np.int32)
 
     assert rate_sim_1.n_sequence == desired_n_sequence
-    assert rate_sim_1.max_timestep == desired_max_timestep
+    assert rate_sim_1.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_1.stimulus_set
     )
@@ -97,7 +97,7 @@ def test_init_2(rate_sim_2):
     desired_n_timestep = np.array([2, 1, 2, 2], dtype=np.int32)
 
     assert rate_sim_2.n_sequence == desired_n_sequence
-    assert rate_sim_2.max_timestep == desired_max_timestep
+    assert rate_sim_2.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_2.stimulus_set
     )
@@ -134,7 +134,7 @@ def test_init_3(rate_sim_3):
     desired_n_timestep = np.array([2, 1, 2, 2], dtype=np.int32)
 
     assert rate_sim_3.n_sequence == desired_n_sequence
-    assert rate_sim_3.max_timestep == desired_max_timestep
+    assert rate_sim_3.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_3.stimulus_set
     )
@@ -355,7 +355,7 @@ def test_persistence(rate_sim_3, tmpdir):
     # Check for equivalency.
     assert class_name == "RateSimilarity"
     assert original.n_sequence == reconstructed.n_sequence
-    assert original.max_timestep == reconstructed.max_timestep
+    assert original.sequence_length == reconstructed.sequence_length
     np.testing.assert_array_equal(
         original.stimulus_set, reconstructed.stimulus_set
     )
@@ -384,7 +384,7 @@ def test_subset_0(rate_sim_3):
 
     sub = rate_sim_3.subset(np.array([1, 2]))
     assert sub.n_sequence == desired_n_sequence
-    assert sub.max_timestep == desired_max_timestep
+    assert sub.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
         desired_stimulus_set, sub.stimulus_set
     )
@@ -454,7 +454,7 @@ def test_stack_0(rate_sim_3, rate_sim_4):
     stacked = stack((rate_sim_3, rate_sim_4, rate_sim_3))
 
     assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.max_timestep
+    assert desired_max_timestep == stacked.sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, stacked.stimulus_set
     )

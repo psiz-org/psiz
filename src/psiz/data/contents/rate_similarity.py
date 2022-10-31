@@ -40,12 +40,12 @@ class RateSimilarity(Content):
             stimulus_set:  A np.ndarray of non-negative integers
                 indicating specific stimuli. The value "0" can be used
                 as a placeholder. Must be rank-2 or rank-3. If rank-2,
-                it is assumed that n_timestep=1 and a singleton
+                it is assumed that sequence_length=1 and a singleton
                 dimension is added.
                 shape=
-                    (n_sequence, 2)
+                    (samples, 2)
                     OR
-                    (n_sequence, n_timestep, 2)
+                    (samples, sequence_length, 2)
 
         Raises:
             ValueError if improper arguments are provided.
@@ -60,9 +60,9 @@ class RateSimilarity(Content):
         is_present = np.any(is_present, axis=2)
         n_timestep = np.sum(is_present, axis=1, dtype=np.int32)
         self.n_timestep = self._validate_n_timestep(n_timestep)
-        max_timestep = np.amax(self.n_timestep)
-        self.max_timestep = max_timestep
-        stimulus_set = stimulus_set[:, 0:max_timestep, :]
+        sequence_length = np.amax(self.n_timestep)
+        self.sequence_length = sequence_length
+        stimulus_set = stimulus_set[:, 0:sequence_length, :]
 
         self.stimulus_set = stimulus_set
         self.n_sequence = stimulus_set.shape[0]
@@ -84,13 +84,13 @@ class RateSimilarity(Content):
 
         """
         # Determine maximum number of timesteps.
-        max_timestep = 0
+        sequence_length = 0
         for i_component in component_list:
-            if i_component.max_timestep > max_timestep:
-                max_timestep = i_component.max_timestep
+            if i_component.sequence_length > sequence_length:
+                sequence_length = i_component.sequence_length
 
         # Start by padding first entry in list.
-        timestep_pad = max_timestep - component_list[0].max_timestep
+        timestep_pad = sequence_length - component_list[0].sequence_length
         pad_width = ((0, 0), (0, timestep_pad), (0, 0))
         stimulus_set = np.pad(
             component_list[0].stimulus_set,
@@ -100,7 +100,7 @@ class RateSimilarity(Content):
         # Loop over remaining list.
         for i_component in component_list[1:]:
 
-            timestep_pad = max_timestep - i_component.max_timestep
+            timestep_pad = sequence_length - i_component.sequence_length
             pad_width = ((0, 0), (0, timestep_pad), (0, 0))
             curr_stimulus_set = np.pad(
                 i_component.stimulus_set,
@@ -151,8 +151,8 @@ class RateSimilarity(Content):
         if not ((stimulus_set.ndim == 2) or (stimulus_set.ndim == 3)):
             raise ValueError(
                 "The argument `stimulus_set` must be a rank-2 or rank-3 "
-                "ndarray with a shape corresponding to (n_sequence, "
-                "n_timestep, n_stimuli_per_trial)."
+                "ndarray with a shape corresponding to (samples, "
+                "sequence_length, n_stimuli_per_trial)."
             )
 
         if stimulus_set.ndim == 2:

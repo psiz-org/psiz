@@ -48,8 +48,8 @@ class TrialDataset(object):
             outcome (optional): A subclass of a psiz.trials.Outcome
                 object.
             groups (optional): A dictionary composed of values where
-                each value is an np.ndarray of integers that must be
-                rank-2 or rank-3.
+                each value is an np.ndarray that must be rank-2 or
+                rank-3.
                 dict value shape=(n_sequence, [max_timestep], n_col)
             weight (optional): 2D np.ndarray of floats.
                 shape=(n_sequence, max_timestep)
@@ -64,11 +64,11 @@ class TrialDataset(object):
 
         # Handle `groups` intialization.
         if groups is not None:
-            for gate_key, gate_weights in groups.items():
-                gate_weights = self._validate_gate_weights(
-                    gate_key, gate_weights
+            for group_key, group_weights in groups.items():
+                group_weights = self._validate_group_weights(
+                    group_key, group_weights
                 )
-                groups[gate_key] = gate_weights
+                groups[group_key] = group_weights
         self.groups = groups
 
         # Handle outcome initialization.
@@ -289,57 +289,57 @@ class TrialDataset(object):
             )
         return weight
 
-    def _validate_gate_weights(self, gate_key, gate_weights):
-        """Validate gate weight values."""
-        if gate_weights.ndim == 2:
+    def _validate_group_weights(self, group_key, group_weights):
+        """Validate group weights."""
+        if group_weights.ndim == 2:
             # Assume independent trials and add singleton timestep axis.
-            gate_weights = np.expand_dims(
-                gate_weights, axis=self._timestep_axis
+            group_weights = np.expand_dims(
+                group_weights, axis=self._timestep_axis
             )
 
-        # Check rank of `gate_weights`.
-        if not (gate_weights.ndim == 3):
+        # Check rank of `group_weights`.
+        if not (group_weights.ndim == 3):
             raise ValueError(
-                "The gate weights for the dictionary key '{0}' must be a "
+                "The group weights for the dictionary key '{0}' must be a "
                 "rank-2 or rank-3 ND array. If using a sparse coding format, "
                 "make sure you have a trailing singleton dimension to meet "
-                "this requirement.".format(gate_key)
+                "this requirement.".format(group_key)
             )
 
-        # If `gate_weights` looks like sparse coding format, check data type.
-        if gate_weights.shape[-1] == 1:
-            if not isinstance(gate_weights[0, 0, 0], (int, np.integer)):
+        # If `group_weights` looks like sparse coding format, check data type.
+        if group_weights.shape[-1] == 1:
+            if not isinstance(group_weights[0, 0, 0], (int, np.integer)):
                 warnings.warn(
-                    "The gate weights for the dictionary key '{0}' appear to "
+                    "The group weights for the dictionary key '{0}' appear to "
                     "use a sparse coding. To improve efficiency, these "
-                    "weights should have an integer dtype.".format(gate_key)
+                    "weights should have an integer dtype.".format(group_key)
                 )
 
         # Check shape agreement.
-        if not (gate_weights.shape[0] == self.n_sequence):
+        if not (group_weights.shape[0] == self.n_sequence):
             raise ValueError(
-                "The gate weights for the dictionary key '{0}' must have "
+                "The group weights for the dictionary key '{0}' must have "
                 "a shape that agrees with 'n_squence' of the 'content'"
-                ".".format(gate_key)
+                ".".format(group_key)
             )
-        if not (gate_weights.shape[1] == self.max_timestep):
+        if not (group_weights.shape[1] == self.max_timestep):
             raise ValueError(
-                "The gate weights for the dictionary key '{0}' must have "
+                "The group weights for the dictionary key '{0}' must have "
                 "a shape that agrees with 'max_timestep' of the 'content'"
-                ".".format(gate_key)
+                ".".format(group_key)
             )
 
         # Check lowerbound support limit.
-        bad_locs = gate_weights < 0
+        bad_locs = group_weights < 0
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
             raise ValueError(
-                "The gate weights for the dictionary key '{0}' contain "
+                "The group weights for the dictionary key '{0}' contain "
                 "values less than 0. Found {1} bad trial(s).".format(
-                    gate_key, n_bad
+                    group_key, n_bad
                 )
             )
-        return gate_weights
+        return group_weights
 
     def _validate_outcome(self, outcome):
         """Validate outcome."""
@@ -365,16 +365,16 @@ class TrialDataset(object):
             h5_grp: H5 group for saving data.
 
         """
-        for gate_key, gate_weights in self.groups.items():
-            h5_grp.create_dataset(gate_key, data=gate_weights)
+        for group_key, group_weights in self.groups.items():
+            h5_grp.create_dataset(group_key, data=group_weights)
 
     def _export_groups(self, export_format='tf', with_timestep_axis=True):
         """Export groups."""
         groups = self.groups
-        for gating_key, gate_weights in groups.items():
+        for group_key, group_weights in groups.items():
             if with_timestep_axis is False:
-                groups[gating_key] = unravel_timestep(gate_weights)
-            groups[gating_key] = tf.constant(groups[gating_key])
+                groups[group_key] = unravel_timestep(group_weights)
+            groups[group_key] = tf.constant(groups[group_key])
         return groups
 
     def _export_weight(self, export_format='tf', with_timestep_axis=True):
@@ -421,24 +421,23 @@ class TrialDataset(object):
         # First check that groups keys are compatible.
         # NOTE: It is not safe to simply pad an missing key with zeros, since
         # zero likely has user-defined semantics.
-        gating_keys = trials_list[0].groups.keys()
+        group_keys = trials_list[0].groups.keys()
         for i_trials in trials_list[1:]:
-            i_gating_keys = i_trials.groups.keys()
-            if gating_keys != i_gating_keys:
+            i_group_keys = i_trials.groups.keys()
+            if group_keys != i_group_keys:
                 raise ValueError(
                     'The dictionary keys of `groups` must be identical '
                     'for all TrialDatasets. Got a mismatch: {0} and '
-                    '{1}.'.format(str(gating_keys), str(i_gating_keys))
+                    '{1}.'.format(str(group_keys), str(i_group_keys))
                 )
 
         # Loop over each key in groups.
         groups_stacked = {}
-        for key in gating_keys:
+        for key in group_keys:
             # Check that shapes are compatible.
             value_shape = trials_list[0].groups[key].shape
             for i_trials in trials_list[1:]:
                 i_value_shape = i_trials.groups[key].shape
-                # is_axis_1_ok = value_shape[1] == i_value_shape[1]  TODO
                 is_axis_2_ok = value_shape[2] == i_value_shape[2]
                 if not is_axis_2_ok:
                     raise ValueError(

@@ -163,7 +163,7 @@ def test_invalid_init_1(rank_sim_1):
         TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "The gate weights for the dictionary key 'condition_id' must be a "
+        "The group weights for the dictionary key 'condition_id' must be a "
         "rank-2 or rank-3 ND array. If using a sparse coding format, make "
         "sure you have a trailing singleton dimension to meet this "
         "requirement."
@@ -178,7 +178,7 @@ def test_invalid_init_1(rank_sim_1):
         TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "The gate weights for the dictionary key 'condition_id' must have a "
+        "The group weights for the dictionary key 'condition_id' must have a "
         "shape that agrees with 'n_squence' of the 'content'."
     )
 
@@ -191,7 +191,7 @@ def test_invalid_init_1(rank_sim_1):
         TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "The gate weights for the dictionary key 'condition_id' must have a "
+        "The group weights for the dictionary key 'condition_id' must have a "
         "shape that agrees with 'max_timestep' of the 'content'."
     )
 
@@ -204,7 +204,7 @@ def test_invalid_init_1(rank_sim_1):
         TrialDataset(content, outcome=outcome, groups=groups, weight=weight)
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "The gate weights for the dictionary key 'condition_id' contain "
+        "The group weights for the dictionary key 'condition_id' contain "
         "values less than 0. Found 2 bad trial(s)."
     )
 

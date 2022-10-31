@@ -32,7 +32,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 
 
 class RankSimilarity(Content):
-    """Trial content requiring ranked similarity judgments."""
+    """Content that prompts ranked similarity judgments."""
 
     def __init__(self, stimulus_set, n_select=None):
         """Initialize.

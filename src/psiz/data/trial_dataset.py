@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ Classes:
 
 """
 
+import warnings
+
 import h5py
 from importlib.metadata import version
 import numpy as np
@@ -38,20 +40,22 @@ from psiz.data.unravel_timestep import unravel_timestep
 class TrialDataset(object):
     """Generic composite class for trial data."""
 
-    def __init__(self, content, groups=None, outcome=None, weight=None):
+    def __init__(self, content, outcome=None, groups=None, weight=None):
         """Initialize.
 
         Args:
             content: A subclass of a psiz.trials.Content object.
-            groups (optional): A np.ndarray of integers. Must be rank-2
-                or rank-3.
-                shape=(n_sequence, [max_timestep], n_col)
             outcome (optional): A subclass of a psiz.trials.Outcome
                 object.
+            groups (optional): A dictionary composed of values where
+                each value is an np.ndarray of integers that must be
+                rank-2 or rank-3.
+                dict value shape=(n_sequence, [max_timestep], n_col)
             weight (optional): 2D np.ndarray of floats.
                 shape=(n_sequence, max_timestep)
 
         """
+        self._timestep_axis = 1  # TODO
         self.content = content
 
         # Anchor initialization on `content`.
@@ -59,12 +63,12 @@ class TrialDataset(object):
         self.max_timestep = content.max_timestep
 
         # Handle `groups` intialization.
-        if groups is None:
-            groups = np.zeros(
-                [self.n_sequence, self.max_timestep, 1], dtype=int
-            )
-        else:
-            groups = self._check_groups(groups)
+        if groups is not None:
+            for gate_key, gate_weights in groups.items():
+                gate_weights = self._validate_gate_weights(
+                    gate_key, gate_weights
+                )
+                groups[gate_key] = gate_weights
         self.groups = groups
 
         # Handle outcome initialization.
@@ -79,80 +83,54 @@ class TrialDataset(object):
             weight = self._check_weight(weight)
         self.weight = weight
 
-    def export(self, input_only=False, timestep=True, export_format='tf'):
+    def export(self, timestep=True, export_format='tf', inputs_only=False):
         """Export trial data as model-consumable object.
 
         Args:
-            input_only (optional): Boolean indicating if only the input
-                should be returned.
             timestep (optional): Boolean indicating if data should be
                 returned with a timestep axis. If `False`, data is
                 reshaped.
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-
+            inputs_only (optional): Boolean indicating if only the input
+                should be returned.
         Returns:
             ds: A dataset that can be consumed by a model.
 
         """
-        if export_format == 'tf':
-            # Assemble model input.
-            x = self.content.export(
+        # Assemble model input.
+        x = self.content.export(
+            export_format=export_format, timestep=timestep
+        )
+        if self.groups is not None:
+            groups = self._export_groups(
                 export_format=export_format, timestep=timestep
             )
-            groups = self.groups
-            if timestep is False:
-                groups = unravel_timestep(groups)
-            x.update({
-                'groups': tf.constant(groups, dtype=tf.int32)
-            })
+            x.update(groups)
 
-            if not input_only:
-                # Assemble model output
-                if self.outcome is not None:
-                    y = self.outcome.export(
-                        export_format=export_format, timestep=timestep
-                    )
-                else:
-                    raise ValueError("No outcome has been specified.")
+        # Assemble model output
+        if self.outcome is not None and not inputs_only:
+            y = self.outcome.export(
+                export_format=export_format, timestep=timestep
+            )
 
-                # Assemble weights.
-                w = self.weight
-                if timestep is False:
-                    w = unravel_timestep(w)
-                w = tf.constant(w, dtype=K.floatx())
+        # Assemble weights.
+        if not inputs_only:
+            w = self._export_weight(
+                export_format=export_format, timestep=timestep
+            )
 
+        if export_format == 'tf':
+            try:
                 ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-            else:
+            except NameError:
                 ds = tf.data.Dataset.from_tensor_slices((x))
         elif export_format == 'tensors':  # TODO HACK
-            # Assemble model input.
-            x = self.content.export(
-                export_format='tf', timestep=timestep
-            )
-            groups = self.groups
-            if timestep is False:
-                groups = unravel_timestep(groups)
-            x.update({
-                'groups': tf.constant(groups, dtype=tf.int32)
-            })
-
-            # Assemble model output
-            if self.outcome is not None:
-                y = self.outcome.export(
-                    export_format='tf', timestep=timestep
-                )
-            else:
-                raise ValueError("No outcome has been specified.")
-
-            # Assemble weights.
-            w = self.weight
-            if timestep is False:
-                w = unravel_timestep(w)
-            w = tf.constant(w, dtype=K.floatx())
-
-            ds = (x, y, w)
+            try:
+                ds = (x, y, w)
+            except NameError:
+                ds = (x)
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)
@@ -179,9 +157,9 @@ class TrialDataset(object):
 
         """
         f = h5py.File(filepath, "r")
-        content = cls._load_h5_group(f['content'])
-        groups = f["groups"][()]
-        outcome = cls._load_h5_group(f['outcome'])
+        content = cls._load_h5_group(f, 'content')
+        groups = cls._load_h5_group(f, 'groups')
+        outcome = cls._load_h5_group(f, 'outcome')
         weight = f["weight"][()]
 
         trials = TrialDataset(
@@ -196,20 +174,29 @@ class TrialDataset(object):
             filepath: String specifying the path to save the data.
 
         """
+        f = h5py.File(filepath, "w")
+
+        # Add class name and versioning information.
         ver = version("psiz")
         ver = '.'.join(ver.split('.')[:3])
-
-        f = h5py.File(filepath, "w")
         f.create_dataset("class_name", data="TrialDataset")
         f.create_dataset("psiz_version", data=ver)
+
+        # Add content (always exists).
         grp_content = f.create_group("content")
         self.content.save(grp_content)
-        f.create_dataset("groups", data=self.groups)
-        grp_outcome = f.create_group("outcome")
+
+        # Add groups (sometimes exsits).
+        if self.groups is not None:
+            grp_groups = f.create_group("groups")
+            self._save_groups(grp_groups)
+
+        # Add outcomes (sometimes exists).
         if self.outcome is not None:
+            grp_outcome = f.create_group("outcome")
             self.outcome.save(grp_outcome)
-        else:
-            grp_outcome.create_dataset("class_name", data="None")
+
+        # Add weights (always exists because of default initialization).
         f.create_dataset("weight", data=self.weight)
         f.close()
 
@@ -260,9 +247,15 @@ class TrialDataset(object):
         if self.outcome is not None:
             outcome_sub = self.outcome.subset(idx)
 
+        groups_sub = None
+        if self.groups is not None:
+            groups_sub = {}
+            for key, value in self.groups.items():
+                groups_sub[key] = value[idx]
+
         return TrialDataset(
             content_sub,
-            groups=self.groups[idx],
+            groups=groups_sub,
             outcome=outcome_sub,
             weight=self.weight[idx]
         )
@@ -275,7 +268,7 @@ class TrialDataset(object):
         # Check rank of `weight`.
         if not (weight.ndim == 2):
             raise ValueError(
-                "The argument 'weight' must be a rank 2 ND array."
+                "The argument 'weight' must be a rank-2 ND array."
             )
 
         # Check shape agreement.
@@ -291,42 +284,57 @@ class TrialDataset(object):
             )
         return weight
 
-    def _check_groups(self, groups):
-        """Check the validity of `groups`."""
-        # Cast `groups` to int if necessary.
-        groups = groups.astype(np.int32)
-
-        if groups.ndim == 2:
+    def _validate_gate_weights(self, gate_key, gate_weights):
+        """Validate gate weight values."""
+        if gate_weights.ndim == 2:
             # Assume independent trials and add singleton timestep axis.
-            groups = np.expand_dims(groups, axis=1)
-
-        # Check rank of `groups`.
-        if not (groups.ndim == 3):
-            raise ValueError(
-                "The argument 'groups' must be a rank 3 ND array."
+            gate_weights = np.expand_dims(
+                gate_weights, axis=self._timestep_axis
             )
+
+        # Check rank of `gate_weights`.
+        if not (gate_weights.ndim == 3):
+            raise ValueError(
+                "The gate weights for the dictionary key '{0}' must be a "
+                "rank-2 or rank-3 ND array. If using a sparse coding format, "
+                "make sure you have a trailing singleton dimension to meet "
+                "this requirement.".format(gate_key)
+            )
+
+        # If `gate_weights` looks like sparse coding format, check data type.
+        if gate_weights.shape[-1] == 1:
+            if not isinstance(gate_weights[0, 0, 0], (int, np.integer)):
+                warnings.warn(
+                    "The gate weights for the dictionary key '{0}' appear to "
+                    "use a sparse coding. To improve efficiency, these "
+                    "weights should have an integer dtype.".format(gate_key)
+                )
 
         # Check shape agreement.
-        if not (groups.shape[0] == self.n_sequence):
+        if not (gate_weights.shape[0] == self.n_sequence):
             raise ValueError(
-                "The argument 'groups' must have "
-                "shape=(n_squence, max_timestep) as determined by `content`."
+                "The gate weights for the dictionary key '{0}' must have "
+                "a shape that agrees with 'n_squence' of the 'content'"
+                ".".format(gate_key)
             )
-        if not (groups.shape[1] == self.max_timestep):
+        if not (gate_weights.shape[1] == self.max_timestep):
             raise ValueError(
-                "The argument 'groups' must have "
-                "shape=(n_squence, max_timestep) as determined by `content`."
+                "The gate weights for the dictionary key '{0}' must have "
+                "a shape that agrees with 'max_timestep' of the 'content'"
+                ".".format(gate_key)
             )
 
         # Check lowerbound support limit.
-        bad_locs = groups < 0
+        bad_locs = gate_weights < 0
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
             raise ValueError(
-                "The parameter 'groups' contains integers less than 0. "
-                "Found {0} bad trial(s).".format(n_bad)
+                "The gate weights for the dictionary key '{0}' contain "
+                "values less than 0. Found {1} bad trial(s).".format(
+                    gate_key, n_bad
+                )
             )
-        return groups
+        return gate_weights
 
     def _check_outcome(self, outcome):
         # Check rank of `groups`.
@@ -344,64 +352,118 @@ class TrialDataset(object):
                 "`content` object."
             )
 
+    def _save_groups(self, h5_grp):
+        """Add relevant data to H5 group.
+
+        Args:
+            h5_grp: H5 group for saving data.
+
+        """
+        for gate_key, gate_weights in self.groups.items():
+            h5_grp.create_dataset(gate_key, data=gate_weights)
+        return None
+
+    def _export_groups(self, export_format='tf', timestep=True):
+        """Export groups."""
+        groups = self.groups
+        for gating_key, gate_weights in groups.items():
+            if timestep is False:
+                groups[gating_key] = unravel_timestep(gate_weights)
+            groups[gating_key] = tf.constant(groups[gating_key])
+        return groups
+
+    def _export_weight(self, export_format='tf', timestep=True):
+        """Export weight."""
+        w = self.weight
+        if timestep is False:
+            w = unravel_timestep(w)
+        return tf.constant(w, dtype=K.floatx())
+
     @staticmethod
-    def _load_h5_group(grp):
-        # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
-        # call. The `setup.cfg` file notes this minimum version requirement.
-        class_name = grp["class_name"].asstr()[()]
-        custom_objects = {
-            'RankSimilarity': RankSimilarity,
-            'RateSimilarity': RateSimilarity,
-            'SparseCategorical': SparseCategorical,
-            'Continuous': Continuous,
-        }
-        if class_name == 'None':
+    def _load_h5_group(f, grp_name):
+        """Load H5 group."""
+        try:
+            h5_grp = f[grp_name]
+        except KeyError:
             return None
-        else:
+
+        try:
+            # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
+            # call. The minimum requirements are reflected in `setup.cfg`.
+            class_name = h5_grp["class_name"].asstr()[()]
+            custom_objects = {
+                'RankSimilarity': RankSimilarity,
+                'RateSimilarity': RateSimilarity,
+                'SparseCategorical': SparseCategorical,
+                'Continuous': Continuous,
+            }
             if class_name in custom_objects:
                 group_class = custom_objects[class_name]
             else:
                 raise NotImplementedError
 
-            return group_class.load(grp)
+            return group_class.load(h5_grp)
+        except KeyError:
+            # Assume a dictionary.
+            d_keys = list(h5_grp.keys())
+            d = {}
+            for key in d_keys:
+                d[key] = h5_grp[key][()]
+            return d
 
     def _stack_groups(self, trials_list, max_timestep):
         """Stack `groups` data."""
-        # Before doing anything, check that `groups` shape is compatible.
-        n_group = trials_list[0].groups.shape[2]
+        # First check that groups keys are compatible.
+        # NOTE: It is not safe to simply pad an missing key with zeros, since
+        # zero likely has user-defined semantics.
+        gating_keys = trials_list[0].groups.keys()
         for i_trials in trials_list[1:]:
-            if i_trials.groups.shape[2] != n_group:
-                # NOTE: The axis=2 for `groups` must agree because this axis
-                # indicates group membership of a particular sequence. It is
-                # not safe to simply pad with zeros, since zero may have
-                # special user-defined semantics.
+            i_gating_keys = i_trials.groups.keys()
+            if gating_keys != i_gating_keys:
                 raise ValueError(
-                    'The shape of `groups` for the different TrialDatasets '
-                    'must be identical on axis=2.'
+                    'The dictionary keys of `groups` must be identical '
+                    'for all TrialDatasets. Got a mismatch: {0} and '
+                    '{1}.'.format(str(gating_keys), str(i_gating_keys))
                 )
 
-        # Start by padding first entry in list.
-        timestep_pad = max_timestep - trials_list[0].max_timestep
-        pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-        groups = np.pad(
-            trials_list[0].groups,
-            pad_width, mode='constant', constant_values=0
-        )
+        # Loop over each key in groups.
+        groups_stacked = {}
+        for key in gating_keys:
+            # Check that shapes are compatible.
+            value_shape = trials_list[0].groups[key].shape
+            for i_trials in trials_list[1:]:
+                i_value_shape = i_trials.groups[key].shape
+                # is_axis_1_ok = value_shape[1] == i_value_shape[1]  TODO
+                is_axis_2_ok = value_shape[2] == i_value_shape[2]
+                if not is_axis_2_ok:
+                    raise ValueError(
+                        "The shape of 'groups's '{0}' is not compatible. They "
+                        "must be identical on axis=2.".format(key)
+                    )
 
-        # Loop over remaining list.
-        for i_trials in trials_list[1:]:
-            timestep_pad = max_timestep - i_trials.max_timestep
+            # Start by padding first entry in list.
+            timestep_pad = max_timestep - trials_list[0].max_timestep
             pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-            curr_groups = np.pad(
-                i_trials.groups,
+            groups = np.pad(
+                trials_list[0].groups[key],
                 pad_width, mode='constant', constant_values=0
             )
 
-            groups = np.concatenate(
-                (groups, curr_groups), axis=0
-            )
+            # Loop over remaining list.
+            for i_trials in trials_list[1:]:
+                timestep_pad = max_timestep - i_trials.max_timestep
+                pad_width = ((0, 0), (0, timestep_pad), (0, 0))
+                curr_groups = np.pad(
+                    i_trials.groups[key],
+                    pad_width, mode='constant', constant_values=0
+                )
 
-        return groups
+                groups = np.concatenate(
+                    (groups, curr_groups), axis=0
+                )
+            groups_stacked[key] = groups
+
+        return groups_stacked
 
     def _stack_weight(self, trials_list, max_timestep):
         """Stack `weight` data."""

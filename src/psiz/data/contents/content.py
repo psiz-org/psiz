@@ -96,7 +96,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
                 d.update({
                     attr: np.reshape(getattr(self, attr), [n_trial])
                 })
-            # Determine unique content configurations by exploiting pandas
+            # Determine unique content configurations by leveraging pandas
             # DataFrame.
             df_config = pd.DataFrame(d)
             df_config = df_config.drop_duplicates()

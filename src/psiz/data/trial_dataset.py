@@ -133,11 +133,6 @@ class TrialDataset(object):
                 ds = tf.data.Dataset.from_tensor_slices((x, y, w))
             except NameError:
                 ds = tf.data.Dataset.from_tensor_slices((x))
-        elif export_format == 'tensors':  # TODO HACK
-            try:
-                ds = (x, y, w)
-            except NameError:
-                ds = (x)
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)

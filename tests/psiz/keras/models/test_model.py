@@ -15,6 +15,8 @@
 # ============================================================================
 """Module for testing models."""
 
+import copy
+
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -674,6 +676,120 @@ class RankRateModelA(tf.keras.Model):
         return config
 
 
+class RankSimilarityRT(psiz.keras.layers.RankSimilarityBase):
+    """A rank similarity behavior layer."""
+    def __init__(self, **kwargs):
+        """Initialize.
+
+        Args:
+            kwargs: See `RankSimilarityBase`
+
+        """
+        super(RankSimilarityRT, self).__init__(**kwargs)
+
+    def call(self, inputs, training=None):
+        """Return probability of a ranked selection sequence.
+
+        Args:
+            inputs: A dictionary containing the following information:
+                rank_similarity_stimulus_set: A tensor containing
+                    indices that define the stimuli used in each trial.
+                    shape=(batch_size, [1,] max_reference + 1, n_outcome)
+                rank_similarity_is_select: A float tensor indicating if
+                    a reference was selected, which corresponds to a
+                    "true" probabilistic event.
+                    shape = (batch_size, [1,] n_max_reference + 1, 1)
+                gate_weights (optional): Tensor(s) containing gate
+                    weights. The actual key value(s) will depend on how
+                    the user initialized the layer.
+
+        Returns:
+            outcome_prob: Probability of different behavioral outcomes.
+
+        """
+        # NOTE: The inputs are copied, because modifying the original `inputs`
+        # is bad practice in TF. For example, it creates issues when saving
+        # a model.
+        inputs_copied = copy.copy(inputs)
+
+        stimulus_set = inputs_copied['rank_similarity_stimulus_set']
+        # NOTE: We drop the "query" position in `is_select`.
+        # NOTE: When a sample axis is present, equivalent to:
+        #     is_select = inputs['rank_similarity_is_select'][:, :, 1:]
+        is_select = tf.gather(
+            inputs_copied['rank_similarity_is_select'],
+            indices=self._reference_indices,
+            axis=self._stimuli_axis
+        )
+        is_reference_present = self._is_reference_present(stimulus_set)
+
+        # Compute pairwise similarity between query and references.
+        sim_qr = self._pairwise_similarity(inputs_copied)
+
+        outcome_prob = self._compute_outcome_probability(
+            is_reference_present, is_select, sim_qr
+        )
+
+        # TODO replace dummy RT computation with something else.
+        outcome_rt = tf.reduce_sum(outcome_prob, axis=1, keepdims=True)
+
+        return [outcome_prob, outcome_rt]
+
+
+class RankRTModelA(tf.keras.Model):
+    """A `RankSimilarity` with response times model.
+
+    Gates:
+        None
+
+    """
+
+    def __init__(self, **kwargs):
+        """Initialize."""
+        super(RankRTModelA, self).__init__(**kwargs)
+
+        n_stimuli = 20
+        n_dim = 3
+
+        # Define a percept layer that will be shared across behaviors.
+        percept = tf.keras.layers.Embedding(
+            n_stimuli + 1, n_dim, mask_zero=True
+        )
+        # Define a kernel layer that will be shared across behaviors.
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.),
+                w_initializer=tf.keras.initializers.Constant(1.),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
+                beta_initializer=tf.keras.initializers.Constant(10.),
+                tau_initializer=tf.keras.initializers.Constant(1.),
+                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                trainable=False,
+            )
+        )
+
+        # Define a multi-behavior module
+        rank = RankSimilarityRT(
+            percept=percept, kernel=kernel
+        )
+        self.behavior = rank
+
+    def call(self, inputs):
+        """Call."""
+        rank_outcome_prob, rank_rt = self.behavior(inputs)
+        outputs = {
+            'rank_choice_branch': rank_outcome_prob,
+            'rank_rt_branch': rank_rt,
+        }
+        return outputs
+
+    def get_config(self):
+        config = super(RankRTModelA, self).get_config()
+        return config
+
+
 def build_ranksim_subclass_a():
     """Build subclassed `Model`.
 
@@ -1166,6 +1282,25 @@ def build_ranksim_ratesim_functional_v0():
     return model
 
 
+def buld_ranksim_rt_subclass_a():
+    """Build subclassed `Model`."""
+    model = RankRTModelA()
+    compile_kwargs = {
+        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        'loss': {
+            'rank_choice_branch': tf.keras.losses.CategoricalCrossentropy(
+                name='choice_loss'
+            ),
+            'rank_rt_branch': tf.keras.losses.MeanSquaredError(
+                name='rt_loss'
+            ),
+        },
+        'loss_weights': {'rank_choice_branch': 1.0, 'rank_rt_branch': 1.0},
+    }
+    model.compile(**compile_kwargs)
+    return model
+
+
 def call_fit_evaluate_predict(model, ds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
@@ -1302,7 +1437,7 @@ class TestRankSimilarity:
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
-        "is_eager", [True]  # TODO add False
+        "is_eager", [True, False]
     )
     def test_agent_subclass_a(self, ds_ranksim_v0, is_eager):
         """Test usage in 'agent mode'."""
@@ -1312,7 +1447,7 @@ class TestRankSimilarity:
         model = build_ranksim_subclass_a()
 
         def simulate_agent(x):
-            depth = 56  # TODO
+            depth = 56  # TODO programmatic version?
             outcome_probs = model(x)
             outcome_distribution = tfp.distributions.Categorical(
                 probs=outcome_probs
@@ -1768,3 +1903,19 @@ class TestJointRankRate:
         # is computed.
         assert result0['rank_branch_loss'] == result1['rank_branch_loss']
         assert result0['rate_branch_loss'] == result1['rate_branch_loss']
+
+
+class TestRankRT:
+    """Test using `RankSimilarityRT`  layers."""
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_usage_subclass_a(self, ds_ranksim_rt_v0, is_eager):
+        """Test model using subclass API."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        ds = ds_ranksim_rt_v0
+        model = buld_ranksim_rt_subclass_a()
+        call_fit_evaluate_predict(model, ds)
+        tf.keras.backend.clear_session()

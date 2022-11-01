@@ -447,6 +447,65 @@ def ds_ranksim_ratesim_v0():
 
 
 @pytest.fixture(scope="module")
+def ds_ranksim_rt_v0():
+    """Dataset.
+
+    RankSimilarity and response time output.
+    * no timestep
+
+    """
+    n_trial = 8
+
+    # Rank data for dataset.
+    stimulus_set = np.array((
+        (1, 2, 3, 0, 0, 0, 0, 0, 0),
+        (10, 13, 8, 0, 0, 0, 0, 0, 0),
+        (4, 5, 6, 7, 8, 0, 0, 0, 0),
+        (4, 5, 6, 7, 14, 15, 16, 17, 18)
+    ), dtype=np.int32)
+    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    gate_weights_behavior = np.array(([0], [0], [1], [1]), dtype=np.int32)
+    obs_rank = psiz.trials.RankObservations(
+        stimulus_set,
+        n_select=n_select,
+        groups=gate_weights_behavior,
+        mask_zero=True
+    )
+
+    # Rank data for dataset.
+    stimulus_set_rank = obs_rank.all_outcomes()
+    is_select_rank = np.expand_dims(obs_rank.is_select(compress=False), axis=2)
+    y_rank = np.zeros([obs_rank.n_trial, stimulus_set_rank.shape[2]])
+    y_rank[:, 0] = 1
+
+    # Gather inputs.
+    x = {
+        'rank_similarity_stimulus_set': tf.constant(stimulus_set_rank),
+        'rank_similarity_is_select': tf.constant(is_select_rank),
+    }
+
+    y_rt = np.array([4.0, 6.0, 7.0, 11.0])  # Response time in seconds.
+    y_rt = np.expand_dims(y_rt, axis=1)
+    y = {
+        'rank_choice_branch': tf.constant(y_rank, dtype=tf.float32),
+        'rank_rt_branch': tf.constant(y_rt, dtype=tf.float32)
+    }
+
+    # Define sample weights for each branch.
+    w_rank = tf.constant([1., 1., 1., 1.])
+    w_rt = tf.constant([1., 1., 1., 1.])
+    w = {
+        'rank_choice_branch': w_rank,
+        'rank_rt_branch': w_rt,
+    }
+    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
+        n_trial, drop_remainder=False
+    )
+
+    return ds
+
+
+@pytest.fixture(scope="module")
 def ds_rank_docket():
     """Rank docket dataset."""
     stimulus_set = np.array((

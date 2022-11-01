@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for trials.
+"""Module for data.
 
 Classes:
     TrialDataset: Generic composite class for trial data.

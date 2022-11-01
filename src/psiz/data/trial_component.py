@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for trials.
+"""Module for data.
 
 Classes:
     TrialComponent: Abstract class for trial component.
@@ -24,7 +24,7 @@ from abc import ABCMeta, abstractmethod
 
 
 class TrialComponent(metaclass=ABCMeta):
-    """Abstract class for trial content data."""
+    """Abstract class for trial component."""
 
     def __init__(self):
         """Initialize."""

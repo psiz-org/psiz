@@ -63,20 +63,9 @@ class RankSimilarity(Content):
         """
         Content.__init__(self)
         stimulus_set = self._validate_stimulus_set(stimulus_set)
+        self.sequence_length = stimulus_set.shape[1]
 
-        # Trim excess placeholder padding off of timestep (axis=1).
-        # TODO
-        is_present = np.not_equal(stimulus_set, self.mask_value)
-        # Logical or across last `set` dimension.
-        is_present = np.any(is_present, axis=2)
-        n_timestep = np.sum(is_present, axis=1, dtype=np.int32)
-        # TODO why do we keep track of n_timestep? is this for auto-pruning?
-        self.n_timestep = self._validate_n_timestep(n_timestep)
-        sequence_length = np.amax(self.n_timestep)
-        self.sequence_length = sequence_length
-        stimulus_set = stimulus_set[:, 0:sequence_length, :]
-
-        # Trim any excess placeholder padding off of n_reference (axis=2).
+        # Trim any excess placeholder padding off of reference axis (axis=2).
         is_present = np.not_equal(stimulus_set, self.mask_value)
         n_reference = np.sum(is_present, axis=2, dtype=np.int32) - 1
         self.n_reference = self._validate_n_reference(n_reference)
@@ -349,22 +338,6 @@ class RankSimilarity(Content):
 
         return n_select
 
-    def _validate_n_timestep(self, n_timestep):
-        """Validate `n_timestep`.
-
-        Args:
-            n_stimstep: A 1D np.ndarray.
-
-        Raises:
-            ValueError
-
-        """
-        if np.sum(np.equal(n_timestep, 0)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must contain at least one "
-                "valid timestep per sequence."))
-        return n_timestep
-
     def _validate_stimulus_set(self, stimulus_set):
         """Validate `stimulus_set`.
 
@@ -399,6 +372,7 @@ class RankSimilarity(Content):
                 "sequence_length, n_stimuli_per_trial)."
             )
 
+        # TODO is this really the right policy?
         # Check values are in int32 range.
         ii32 = np.iinfo(np.int32)
         if np.sum(np.greater(stimulus_set, ii32.max)) > 0:

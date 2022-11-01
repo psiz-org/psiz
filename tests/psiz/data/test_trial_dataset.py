@@ -939,7 +939,7 @@ def test_subset_0(rank_sim_4):
     trials_sub = trials.subset(np.array([1, 2]))
 
     desired_n_sequence = 2
-    desired_max_timestep = 2
+    desired_sequence_length = 2
     desired_stimulus_set = np.array([
         [
             [7, 8, 9, 0],
@@ -952,11 +952,10 @@ def test_subset_0(rank_sim_4):
     ], dtype=np.int32)
     desired_n_reference = np.array([[2, 0], [3, 2]], dtype=np.int32)
     desired_n_select = np.array([[1, 0], [1, 1]], dtype=np.int32)
-    desired_n_timestep = np.array([1, 2], dtype=np.int32)
     desired_max_outcome = 3
 
     assert trials_sub.n_sequence == desired_n_sequence
-    assert trials_sub.sequence_length == desired_max_timestep
+    assert trials_sub.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         trials_sub.content.stimulus_set, desired_stimulus_set
     )
@@ -965,9 +964,6 @@ def test_subset_0(rank_sim_4):
     )
     np.testing.assert_array_equal(
         trials_sub.content.n_select, desired_n_select
-    )
-    np.testing.assert_array_equal(
-        trials_sub.content.n_timestep, desired_n_timestep
     )
     assert trials_sub.content.max_outcome == desired_max_outcome
     assert trials_sub.groups is None
@@ -1002,7 +998,7 @@ def test_subset_1(rank_sim_4):
     trials_sub = trials.subset(np.array([1, 2]))
 
     desired_n_sequence = 2
-    desired_max_timestep = 2
+    desired_sequence_length = 2
     desired_stimulus_set = np.array([
         [
             [7, 8, 9, 0],
@@ -1015,7 +1011,6 @@ def test_subset_1(rank_sim_4):
     ], dtype=np.int32)
     desired_n_reference = np.array([[2, 0], [3, 2]], dtype=np.int32)
     desired_n_select = np.array([[1, 0], [1, 1]], dtype=np.int32)
-    desired_n_timestep = np.array([1, 2], dtype=np.int32)
     desired_max_outcome = 3
     desired_index = np.array(
         [[0, 0], [0, 0]], dtype=np.int32
@@ -1029,7 +1024,7 @@ def test_subset_1(rank_sim_4):
     )
 
     assert trials_sub.n_sequence == desired_n_sequence
-    assert trials_sub.sequence_length == desired_max_timestep
+    assert trials_sub.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         trials_sub.content.stimulus_set, desired_stimulus_set
     )
@@ -1038,9 +1033,6 @@ def test_subset_1(rank_sim_4):
     )
     np.testing.assert_array_equal(
         trials_sub.content.n_select, desired_n_select
-    )
-    np.testing.assert_array_equal(
-        trials_sub.content.n_timestep, desired_n_timestep
     )
     assert trials_sub.content.max_outcome == desired_max_outcome
     np.testing.assert_array_equal(
@@ -1097,7 +1089,7 @@ def test_stack_0(rank_sim_4, rank_sim_5):
     stacked = stack((trials_4, trials_5, trials_4))
 
     desired_n_sequence = 8
-    desired_max_timestep = 3
+    desired_sequence_length = 3
     desired_stimulus_set = np.array(
         [
             [
@@ -1191,7 +1183,7 @@ def test_stack_0(rank_sim_4, rank_sim_5):
     )
 
     assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.sequence_length
+    assert desired_sequence_length == stacked.sequence_length
     assert desired_max_n_referece == stacked.content.max_n_reference
     np.testing.assert_array_equal(
         desired_stimulus_set, stacked.content.stimulus_set

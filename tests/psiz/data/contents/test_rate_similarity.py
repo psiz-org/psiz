@@ -27,22 +27,18 @@ from psiz.trials import stack
 def test_init_0(rate_sim_0):
     """Test initialization with minimal rank arguments."""
     desired_n_sequence = 4
-    desired_max_timestep = 1
+    desired_sequence_length = 1
     desired_stimulus_set = np.array([
         [[3, 1]],
         [[9, 12]],
         [[3, 4]],
         [[3, 4]]
     ], dtype=np.int32)
-    desired_n_timestep = np.array([1, 1, 1, 1], dtype=np.int32)
 
     assert rate_sim_0.n_sequence == desired_n_sequence
-    assert rate_sim_0.sequence_length == desired_max_timestep
+    assert rate_sim_0.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_0.stimulus_set
-    )
-    np.testing.assert_array_equal(
-        desired_n_timestep, rate_sim_0.n_timestep
     )
     assert rate_sim_0.mask_zero
 
@@ -50,22 +46,18 @@ def test_init_0(rate_sim_0):
 def test_init_1(rate_sim_1):
     """Test initialization with true rank arguments."""
     desired_n_sequence = 4
-    desired_max_timestep = 1
+    desired_sequence_length = 1
     desired_stimulus_set = np.array([
         [[3, 1]],
         [[9, 12]],
         [[3, 4]],
         [[3, 4]]
     ], dtype=np.int32)
-    desired_n_timestep = np.array([1, 1, 1, 1], dtype=np.int32)
 
     assert rate_sim_1.n_sequence == desired_n_sequence
-    assert rate_sim_1.sequence_length == desired_max_timestep
+    assert rate_sim_1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_1.stimulus_set
-    )
-    np.testing.assert_array_equal(
-        desired_n_timestep, rate_sim_1.n_timestep
     )
     assert rate_sim_1.mask_zero
 
@@ -73,7 +65,7 @@ def test_init_1(rate_sim_1):
 def test_init_2(rate_sim_2):
     """Test initialization with true rank arguments."""
     desired_n_sequence = 4
-    desired_max_timestep = 2
+    desired_sequence_length = 2
     desired_stimulus_set = np.array(
         [
             [
@@ -94,61 +86,88 @@ def test_init_2(rate_sim_2):
             ]
         ], dtype=np.int32
     )
-    desired_n_timestep = np.array([2, 1, 2, 2], dtype=np.int32)
 
     assert rate_sim_2.n_sequence == desired_n_sequence
-    assert rate_sim_2.sequence_length == desired_max_timestep
+    assert rate_sim_2.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_2.stimulus_set
-    )
-    np.testing.assert_array_equal(
-        desired_n_timestep, rate_sim_2.n_timestep
     )
     assert rate_sim_2.mask_zero
 
 
 def test_init_3(rate_sim_3):
-    """Test initialization with true rank arguments."""
+    """Test initialization.
+
+    Do not auto-trim empty sequence.
+
+    """
     desired_n_sequence = 4
-    desired_max_timestep = 2
+    desired_sequence_length = 3
     desired_stimulus_set = np.array(
         [
             [
                 [3, 1],
-                [3, 1]
+                [3, 1],
+                [0, 0]
             ],
             [
                 [9, 12],
+                [0, 0],
                 [0, 0]
             ],
             [
                 [3, 4],
-                [3, 4]
+                [3, 4],
+                [0, 0]
             ],
             [
                 [3, 4],
-                [3, 4]
+                [3, 4],
+                [0, 0]
             ]
         ], dtype=np.int32
     )
-    desired_n_timestep = np.array([2, 1, 2, 2], dtype=np.int32)
 
     assert rate_sim_3.n_sequence == desired_n_sequence
-    assert rate_sim_3.sequence_length == desired_max_timestep
+    assert rate_sim_3.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, rate_sim_3.stimulus_set
     )
-    np.testing.assert_array_equal(
-        desired_n_timestep, rate_sim_3.n_timestep
-    )
     assert rate_sim_3.mask_zero
+
+
+def test_init_4():
+    """Test initialization.
+
+    Do not raise error even though some trials do not have stimuli.
+
+    """
+    stimulus_set = np.array([
+        [
+            [3, 1],
+            [9, 12]
+        ],
+        [
+            [0, 0],
+            [0, 0]
+        ],
+        [
+            [3, 4],
+            [2, 4]
+        ],
+        [
+            [3, 4],
+            [2, 4]
+        ]
+    ])
+    RateSimilarity(stimulus_set)
 
 
 def test_invalid_stimulus_set():
     """Test handling of invalid `stimulus_set` argument."""
     # Non-integer input.
     stimulus_set = np.array((
-        (3., 1),
+        (3.1, 1),
         (9, 12),
         (3, 4),
         (3, 4)
@@ -208,29 +227,6 @@ def test_invalid_stimulus_set():
         RateSimilarity(stimulus_set)
     assert e_info.type == ValueError
 
-    # Does not contain enough stimuli for each trial.
-    stimulus_set = np.array([
-        [
-            [3, 1],
-            [9, 12]
-        ],
-        [
-            [0, 0],
-            [0, 0]
-        ],
-        [
-            [3, 4],
-            [2, 4]
-        ],
-        [
-            [3, 4],
-            [2, 4]
-        ]
-    ])
-    with pytest.raises(Exception) as e_info:
-        RateSimilarity(stimulus_set)
-    assert e_info.type == ValueError
-
 
 def test_is_actual(rate_sim_2):
     """Test is_actual method."""
@@ -269,19 +265,23 @@ def test_export_0(rate_sim_3):
         [
             [
                 [3, 1],
-                [3, 1]
+                [3, 1],
+                [0, 0]
             ],
             [
                 [9, 12],
+                [0, 0],
                 [0, 0]
             ],
             [
                 [3, 4],
-                [3, 4]
+                [3, 4],
+                [0, 0]
             ],
             [
                 [3, 4],
-                [3, 4]
+                [3, 4],
+                [0, 0]
             ]
         ], dtype=np.int32
     )
@@ -301,12 +301,16 @@ def test_export_1(rate_sim_3):
         [
             [3, 1],
             [3, 1],
+            [0, 0],
             [9, 12],
+            [0, 0],
             [0, 0],
             [3, 4],
             [3, 4],
+            [0, 0],
             [3, 4],
-            [3, 4]
+            [3, 4],
+            [0, 0],
         ], dtype=np.int32
     )
     tf.debugging.assert_equal(
@@ -359,44 +363,39 @@ def test_persistence(rate_sim_3, tmpdir):
     np.testing.assert_array_equal(
         original.stimulus_set, reconstructed.stimulus_set
     )
-    np.testing.assert_array_equal(
-        original.n_timestep, reconstructed.n_timestep
-    )
 
 
 def test_subset_0(rate_sim_3):
     """Test subset."""
     desired_n_sequence = 2
-    desired_max_timestep = 2
+    desired_sequence_length = 3
     desired_stimulus_set = np.array(
         [
             [
                 [9, 12],
                 [0, 0],
+                [0, 0],
             ],
             [
                 [3, 4],
                 [3, 4],
+                [0, 0],
             ]
         ], dtype=np.int32
     )
-    desired_n_timestep = np.array([1, 2], dtype=np.int32)
 
     sub = rate_sim_3.subset(np.array([1, 2]))
     assert sub.n_sequence == desired_n_sequence
-    assert sub.sequence_length == desired_max_timestep
+    assert sub.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, sub.stimulus_set
-    )
-    np.testing.assert_array_equal(
-        desired_n_timestep, sub.n_timestep
     )
 
 
 def test_stack_0(rate_sim_3, rate_sim_4):
     """Test stack."""
     desired_n_sequence = 10
-    desired_max_timestep = 3
+    desired_sequence_length = 3
     desired_stimulus_set = np.array(
         [
             [
@@ -454,7 +453,7 @@ def test_stack_0(rate_sim_3, rate_sim_4):
     stacked = stack((rate_sim_3, rate_sim_4, rate_sim_3))
 
     assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.sequence_length
+    assert desired_sequence_length == stacked.sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, stacked.stimulus_set
     )

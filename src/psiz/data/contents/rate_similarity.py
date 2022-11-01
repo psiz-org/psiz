@@ -53,19 +53,9 @@ class RateSimilarity(Content):
         """
         Content.__init__(self)
         stimulus_set = self._validate_stimulus_set(stimulus_set)
-
-        # Trim excess placeholder padding off of axis=1.
-        is_present = np.not_equal(stimulus_set, self.mask_value)
-        # Logical or across last `set` dimension.
-        is_present = np.any(is_present, axis=2)
-        n_timestep = np.sum(is_present, axis=1, dtype=np.int32)
-        self.n_timestep = self._validate_n_timestep(n_timestep)
-        sequence_length = np.amax(self.n_timestep)
-        self.sequence_length = sequence_length
-        stimulus_set = stimulus_set[:, 0:sequence_length, :]
-
         self.stimulus_set = stimulus_set
         self.n_sequence = stimulus_set.shape[0]
+        self.sequence_length = stimulus_set.shape[1]
 
     @property
     def is_actual(self):
@@ -168,22 +158,6 @@ class RateSimilarity(Content):
                 "in the int32 range."
             ))
         return stimulus_set.astype(np.int32)
-
-    def _validate_n_timestep(self, n_timestep):
-        """Validate `n_timestep`.
-
-        Args:
-            n_stimstep: A 1D np.ndarray.
-
-        Raises:
-            ValueError
-
-        """
-        if np.sum(np.equal(n_timestep, 0)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must contain at least one "
-                "valid timestep per sequence."))
-        return n_timestep
 
     def export(self, export_format='tf', with_timestep_axis=True):
         """Prepare trial content data for dataset.

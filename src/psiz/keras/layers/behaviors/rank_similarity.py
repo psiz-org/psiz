@@ -64,6 +64,7 @@ class RankSimilarity(RankSimilarityBase):
         # NOTE: The inputs are copied, because modifying the original `inputs`
         # is bad practice in TF. For example, it creates issues when saving
         # a model.
+        # TODO move into _pairwise_similarity
         inputs_copied = copy.copy(inputs)
 
         stimulus_set = inputs_copied['rank_similarity_stimulus_set']

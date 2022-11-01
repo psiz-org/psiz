@@ -81,6 +81,7 @@ def ds_rank_v0():
 
     No timestep axis.
     No sample axis.
+    No groups.
 
     """
     n_sequence = 4
@@ -92,7 +93,6 @@ def ds_rank_v0():
     ), dtype=np.int32)
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
@@ -101,15 +101,9 @@ def ds_rank_v0():
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome
     )
-    # HACK intercept and modify
-    # TODO timestep=False, requires re-writing behavior layers to be sample
-    # axis agnostic
-    (x, y, w) = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=False, export_format='tensors')
-    x.pop('groups')
-
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+    ds = psiz.data.TrialDataset(content, outcome=outcome).export(
+        with_timestep_axis=False, export_format='tf'
+    )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -118,8 +112,9 @@ def ds_rank_v0():
 def ds_rank_v1():
     """Dataset.
 
-    Timestep axis.
-    No sample axis
+    * No timestep axis
+    * Sample axis
+    * No groups
 
     """
     n_sequence = 4
@@ -131,71 +126,69 @@ def ds_rank_v1():
     ), dtype=np.int32)
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome
     )
-    # HACK intercept and modify
-    # TODO timestep=False, requires re-writing behavior layers to be sample
-    # axis agnostic
-    (x, y, w) = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=True, export_format='tensors')
-    x.pop('groups')
 
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+    # HACK using timestep axis for sample axis.
+    ds = psiz.data.TrialDataset(content, outcome=outcome).export(
+        with_timestep_axis=True, export_format='tf'
+    )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
 
-@pytest.fixture(scope="module")
-def ds_rank_v2():
-    """Dataset.
+# TODO write custom dataset to test non-standard inputs with extra axis.
+# @pytest.fixture(scope="module")
+# def ds_rank_v2():
+#     """Dataset.
 
-    Timestep axis.
-    Sample axis
+#     * No timestep axis
+#     * Sample axis
+#     * Additional axis
+#     * No groups
 
-    """
-    n_sequence = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 0, 0, 0, 0, 0, 0),
-        (10, 13, 8, 0, 0, 0, 0, 0, 0),
-        (4, 5, 6, 7, 8, 0, 0, 0, 0),
-        (4, 5, 6, 7, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+#     """
+#     n_sequence = 4
+#     stimulus_set = np.array((
+#         (1, 2, 3, 0, 0, 0, 0, 0, 0),
+#         (10, 13, 8, 0, 0, 0, 0, 0, 0),
+#         (4, 5, 6, 7, 8, 0, 0, 0, 0),
+#         (4, 5, 6, 7, 14, 15, 16, 17, 18)
+#     ), dtype=np.int32)
 
-    n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+#     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+#     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
 
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
-    outcome_idx = np.zeros(
-        [content.n_sequence, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
-    )
-    # HACK intercept and modify
-    # TODO timestep=False, requires re-writing behavior layers to be sample
-    # axis agnostic
-    (x, y, w) = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=True, export_format='tensors')
-    x['rank_similarity_stimulus_set'] = tf.expand_dims(
-        x['rank_similarity_stimulus_set'], axis=2
-    )
-    x['rank_similarity_is_select'] = tf.expand_dims(
-        x['rank_similarity_is_select'], axis=2
-    )
-    x.pop('groups')
+#     outcome_idx = np.zeros(
+#         [content.n_sequence, content.sequence_length], dtype=np.int32
+#     )
+#     outcome = psiz.data.SparseCategorical(
+#         outcome_idx, depth=content.max_outcome
+#     )
 
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    ds = ds.batch(n_sequence, drop_remainder=False)
-    return ds
+#     # HACK intercept and modify
+#     # (x, y, w) = psiz.data.TrialDataset(content, outcome=outcome).export(
+#     #     with_timestep_axis=True, export_format='tensors'
+#     # )
+#     # x['rank_similarity_stimulus_set'] = tf.expand_dims(
+#     #     x['rank_similarity_stimulus_set'], axis=2
+#     # )
+#     # x['rank_similarity_is_select'] = tf.expand_dims(
+#     #     x['rank_similarity_is_select'], axis=2
+#     # )
+#     # ds = tf.data.Dataset.from_tensor_slices((x, y, w))
+#     # TODO HACK using timestep axis for sample axis
+#     ds = psiz.data.TrialDataset(content, outcome=outcome).export(
+#         with_timestep_axis=True, export_format='tf'
+#     )
+#     ds = ds.batch(n_sequence, drop_remainder=False)
+#     return ds
 
 
 def test_call_v0(ds_rank_v0):
@@ -210,7 +203,11 @@ def test_call_v0(ds_rank_v0):
 
 
 def test_call_v1(ds_rank_v1):
-    """Test call."""
+    """Test call.
+
+    With additional (unused) sample axis.
+
+    """
     percept = percept_static_v0()
     kernel = kernel_v0()
     rank_cell = psiz.keras.layers.RankSimilarityCell(
@@ -220,23 +217,18 @@ def test_call_v1(ds_rank_v1):
     tf.debugging.assert_equal(tf.shape(outputs), tf.TensorShape([4, 1, 56]))
 
 
-def test_call_v2(ds_rank_v2):
-    """Test call."""
-    percept = percept_static_v0()
-    kernel = kernel_v0()
-    rank_cell = psiz.keras.layers.RankSimilarityCell(
-        percept=percept, kernel=kernel
-    )
-    outputs, states_t1 = rank_similarity_cell_call(ds_rank_v2, rank_cell)
-    tf.debugging.assert_equal(tf.shape(outputs), tf.TensorShape([4, 1, 1, 56]))
+def test_call_v2(ds_rank_v1):
+    """Test call.
 
+    With additional (used) sample axis.
 
-def test_call_v3(ds_rank_v2):
-    """Test call."""
-    percept = percept_stochastic_v0()
+    """
+    # Imitate being insdie RNN.
     sample_axis_outermost = 2
+    is_inside_rnn = True
+
+    percept = percept_stochastic_v0()
     n_sample = 10
-    is_inside_rnn = False
     percept.set_stochastic_mixin(
         sample_axis_outermost, n_sample, is_inside_rnn
     )
@@ -245,7 +237,25 @@ def test_call_v3(ds_rank_v2):
     rank_cell = psiz.keras.layers.RankSimilarityCell(
         percept=percept, kernel=kernel
     )
-    outputs, states_t1 = rank_similarity_cell_call(ds_rank_v2, rank_cell)
+    outputs, states_t1 = rank_similarity_cell_call(ds_rank_v1, rank_cell)
     tf.debugging.assert_equal(
-        tf.shape(outputs), tf.TensorShape([4, 1, 10, 56])
+        tf.shape(outputs), tf.TensorShape([4, 10, 56])
     )
+
+
+# TODO used when ds_rank_v2 is ready.
+# def test_call_v3(ds_rank_v2):
+#     """Test call.
+
+#     With additional (unused) sample axis and (unused) unnamed axis.
+
+#     """
+#     percept = percept_static_v0()
+#     kernel = kernel_v0()
+#     rank_cell = psiz.keras.layers.RankSimilarityCell(
+#         percept=percept, kernel=kernel
+#     )
+#     outputs, states_t1 = rank_similarity_cell_call(ds_rank_v2, rank_cell)
+#     tf.debugging.assert_equal(
+#         tf.shape(outputs), tf.TensorShape([4, 1, 1, 56])
+#     )

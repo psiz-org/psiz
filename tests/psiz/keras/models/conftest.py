@@ -417,7 +417,7 @@ def ds_ranksim_ratesim_v0():
         ], dtype=np.int32
     )
 
-    # Expand dimensions to account for timestep axis.
+    # Gather inputs.
     x = {
         'rank_similarity_stimulus_set': tf.constant(stimulus_set_rank),
         'rank_similarity_is_select': tf.constant(is_select_rank),

@@ -39,10 +39,9 @@ def ds_ranksim_v0():
         (4, 5, 6, 7, 8, 0, 0, 0, 0),
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
-
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
@@ -73,13 +72,13 @@ def ds_ranksim_v1():
         (4, 5, 6, 7, 8, 0, 0, 0, 0),
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
-
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    
     groups = {
         'kernel_gate_weights': np.array(([0], [0], [1], [1]), dtype=np.int32)
     }
 
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
@@ -110,13 +109,14 @@ def ds_ranksim_v2():
         (4, 5, 6, 7, 8, 0, 0, 0, 0),
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
-
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+
     groups = {
         'kernel_gate_weights': np.array(([0], [0], [1], [1]), dtype=np.int32),
         'percept_gate_weights': np.array(([0], [0], [1], [1]), dtype=np.int32)
     }
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
@@ -147,8 +147,9 @@ def ds_ranksim_v3():
         (4, 5, 6, 7, 8, 0, 0, 0, 0),
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
-
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+
     groups = {
         'percept_gate_weights_0': np.array(
             ([0], [0], [1], [1]), dtype=np.int32
@@ -157,7 +158,7 @@ def ds_ranksim_v3():
             ([0], [0], [1], [1]), dtype=np.int32
         )
     }
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
@@ -249,9 +250,9 @@ def ds_ratesimcell_v0():
         (4, 5),
         (4, 18)
     ), dtype=np.int32)
-    rating = np.array([[0.1], [.4], [.8], [.9]])
     content = psiz.data.RateSimilarity(stimulus_set)
 
+    rating = np.array([[0.1], [.4], [.8], [.9]])
     outcome = psiz.data.Continuous(rating)
 
     ds = psiz.data.TrialDataset(content, outcome=outcome).export(
@@ -277,14 +278,15 @@ def ds_ratesim_v1():
         (4, 5),
         (4, 18)
     ), dtype=np.int32)
-    rating = np.array([[0.1], [.4], [.8], [.9]])
+    content = psiz.data.RateSimilarity(stimulus_set)
+
     groups = {
         'behavior_gate_weights': np.array(
             [[0], [0], [1], [1]], dtype=np.int32
         )
     }
-    content = psiz.data.RateSimilarity(stimulus_set)
 
+    rating = np.array([[0.1], [.4], [.8], [.9]])
     outcome = psiz.data.Continuous(rating)
 
     ds = psiz.data.TrialDataset(
@@ -545,15 +547,15 @@ def ds_rank_docket_2g():
 @pytest.fixture(scope="module")
 def ds_rank_obs_2g():
     """Rank observations dataset."""
+    n_trial = 4
     stimulus_set = np.array((
         (1, 2, 3, 0, 0, 0, 0, 0, 0),
         (10, 13, 8, 0, 0, 0, 0, 0, 0),
         (4, 5, 6, 7, 8, 0, 0, 0, 0),
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
-
-    n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
+
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     obs = psiz.trials.RankObservations(

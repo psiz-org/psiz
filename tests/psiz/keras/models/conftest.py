@@ -27,7 +27,9 @@ import psiz
 def ds_ranksim_v0():
     """Dataset.
 
-    Rank similarity, no timestep, no gate weights.
+    Rank similarity
+    * no timestep
+    * no groups
 
     """
     n_sequence = 4
@@ -39,7 +41,6 @@ def ds_ranksim_v0():
     ), dtype=np.int32)
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
@@ -49,13 +50,9 @@ def ds_ranksim_v0():
         outcome_idx, depth=content.max_outcome
     )
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=False, export_format='tensors')
-    x.pop('groups')
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ds = psiz.data.TrialDataset(content, outcome=outcome).export(
+        export_format='tf', with_timestep_axis=False
+    )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -64,7 +61,9 @@ def ds_ranksim_v0():
 def ds_ranksim_v1():
     """Dataset.
 
-    Rank similarity, no timestep, with kernel gate weights.
+    Rank similarity
+    * no timestep
+    * with groups (kernel gate weights)
 
     """
     n_sequence = 4
@@ -76,7 +75,9 @@ def ds_ranksim_v1():
     ), dtype=np.int32)
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
+    groups = {
+        'kernel_gate_weights': np.array(([0], [0], [1], [1]), dtype=np.int32)
+    }
 
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
@@ -86,14 +87,9 @@ def ds_ranksim_v1():
         outcome_idx, depth=content.max_outcome
     )
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
+    ds = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=False, export_format='tensors')
-    kernel_gate_weights = x.pop('groups')
-    x['kernel_gate_weights'] = kernel_gate_weights
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ).export(export_format='tf', with_timestep_axis=False)
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -102,7 +98,9 @@ def ds_ranksim_v1():
 def ds_ranksim_v2():
     """Dataset.
 
-    Rank similarity, no timestep, with percept and kernel gate weights.
+    Rank similarity
+    * no timestep
+    * with groups (percept and kernel gate weights).
 
     """
     n_sequence = 4
@@ -114,8 +112,10 @@ def ds_ranksim_v2():
     ), dtype=np.int32)
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-
+    groups = {
+        'kernel_gate_weights': np.array(([0], [0], [1], [1]), dtype=np.int32),
+        'percept_gate_weights': np.array(([0], [0], [1], [1]), dtype=np.int32)
+    }
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
@@ -124,15 +124,9 @@ def ds_ranksim_v2():
         outcome_idx, depth=content.max_outcome
     )
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
+    ds = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=False, export_format='tensors')
-    gate_weights = x.pop('groups')
-    x['kernel_gate_weights'] = gate_weights
-    x['percept_gate_weights'] = gate_weights
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ).export(with_timestep_axis=False, export_format='tf')
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -141,7 +135,9 @@ def ds_ranksim_v2():
 def ds_ranksim_v3():
     """Dataset.
 
-    Rank similarity, no timestep, with percept and kernel gate weights.
+    Rank similarity
+    * no timestep
+    * wigh groups (percept and kernel gate weights)
 
     """
     n_sequence = 4
@@ -153,8 +149,14 @@ def ds_ranksim_v3():
     ), dtype=np.int32)
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-
+    groups = {
+        'percept_gate_weights_0': np.array(
+            ([0], [0], [1], [1]), dtype=np.int32
+        ),
+        'percept_gate_weights_1': np.array(
+            ([0], [0], [1], [1]), dtype=np.int32
+        )
+    }
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
@@ -163,15 +165,9 @@ def ds_ranksim_v3():
         outcome_idx, depth=content.max_outcome
     )
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
+    ds = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=False, export_format='tensors')
-    gate_weights = x.pop('groups')
-    x['percept_gate_weights_0'] = gate_weights
-    x['percept_gate_weights_1'] = gate_weights
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ).export(with_timestep_axis=False, export_format='tf')
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -180,7 +176,9 @@ def ds_ranksim_v3():
 def ds_ranksimcell_v0():
     """Dataset.
 
-    Rank similarity, with timestep, no gate weights.
+    Rank similarity
+    * with timestep
+    * no groups
 
     """
     n_sequence = 4
@@ -190,11 +188,9 @@ def ds_ranksimcell_v0():
         (4, 5, 6, 7, 8, 0, 0, 0, 0),
         (4, 5, 6, 7, 14, 15, 16, 17, 18)
     ), dtype=np.int32)
-
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-
     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
@@ -202,13 +198,9 @@ def ds_ranksimcell_v0():
         outcome_idx, depth=content.max_outcome
     )
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=True, export_format='tensors')
-    x.pop('groups')
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ds = psiz.data.TrialDataset(content, outcome=outcome).export(
+        with_timestep_axis=True, export_format='tf'
+    )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -217,7 +209,9 @@ def ds_ranksimcell_v0():
 def ds_ratesim_v0():
     """Dataset.
 
-    Rate similarity, no timestep, no gate weights.
+    Rate similarity
+    * no timestep
+    * no groups
 
     """
     n_sequence = 4
@@ -228,18 +222,13 @@ def ds_ratesim_v0():
         (4, 18)
     ), dtype=np.int32)
     rating = np.array([[0.1], [0.4], [0.8], [0.9]])
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-
     content = psiz.data.RateSimilarity(stimulus_set)
+
     outcome = psiz.data.Continuous(rating)
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=False, export_format='tensors')
-    x.pop('groups')
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ds = psiz.data.TrialDataset(content, outcome=outcome).export(
+        with_timestep_axis=False, export_format='tf'
+    )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -248,7 +237,9 @@ def ds_ratesim_v0():
 def ds_ratesimcell_v0():
     """Dataset.
 
-    Rate similarity, no timestep, no gate weights.
+    Rate similarity
+    * no timestep
+    * no groups
 
     """
     n_sequence = 4
@@ -259,18 +250,13 @@ def ds_ratesimcell_v0():
         (4, 18)
     ), dtype=np.int32)
     rating = np.array([[0.1], [.4], [.8], [.9]])
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-
     content = psiz.data.RateSimilarity(stimulus_set)
+
     outcome = psiz.data.Continuous(rating)
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=True, export_format='tensors')
-    x.pop('groups')
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ds = psiz.data.TrialDataset(content, outcome=outcome).export(
+        with_timestep_axis=True, export_format='tf'
+    )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -279,7 +265,9 @@ def ds_ratesimcell_v0():
 def ds_ratesim_v1():
     """Dataset.
 
-    Rate similarity, no timestep, with behavior gate weights.
+    Rate similarity
+    * no timestep
+    * with groups (behavior gate weights)
 
     """
     n_sequence = 4
@@ -290,19 +278,18 @@ def ds_ratesim_v1():
         (4, 18)
     ), dtype=np.int32)
     rating = np.array([[0.1], [.4], [.8], [.9]])
-    groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
-
+    groups = {
+        'behavior_gate_weights': np.array(
+            [[0], [0], [1], [1]], dtype=np.int32
+        )
+    }
     content = psiz.data.RateSimilarity(stimulus_set)
+
     outcome = psiz.data.Continuous(rating)
 
-    # TODO HACK intercept and modify
-    (x, y, w) = psiz.data.TrialDataset(
+    ds = psiz.data.TrialDataset(
         content, outcome=outcome, groups=groups
-    ).export(with_timestep_axis=False, export_format='tensors')
-    gate_weights = x.pop('groups')
-    x['behavior_gate_weights'] = gate_weights
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-
+    ).export(with_timestep_axis=False, export_format='tf')
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
 
@@ -366,6 +353,7 @@ def ds_ranksim_ratesim_v0():
     """
     n_trial = 8
 
+    # TODO refactor to use psiz.data objects
     # Rank data for dataset.
     stimulus_set = np.array((
         (1, 2, 3, 0, 0, 0, 0, 0, 0),
@@ -456,6 +444,7 @@ def ds_ranksim_rt_v0():
     """
     n_trial = 8
 
+    # TODO refactor to use psiz.data objects
     # Rank data for dataset.
     stimulus_set = np.array((
         (1, 2, 3, 0, 0, 0, 0, 0, 0),

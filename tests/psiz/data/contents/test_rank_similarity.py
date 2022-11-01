@@ -584,7 +584,7 @@ def test_export_0(rank_sim_4):
     """Test export."""
     x = rank_sim_4.export()
     desired_stimulus_set = tf.constant(
-        np.array([
+        [
             [
                 [
                     [1, 1, 0],
@@ -627,29 +627,25 @@ def test_export_0(rank_sim_4):
                     [0, 0, 0]
                 ]
             ]
-        ]), dtype=tf.int32
+        ], dtype=tf.int32
     )
     desired_is_select = tf.constant(
-        np.expand_dims(
-            np.array(
-                [
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 0, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ]
-                ], dtype=bool
-            ), axis=-1
-        ),
-        dtype=tf.bool
+        [
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+            ],
+            [
+                [False, True, False, False],
+                [False, False, False, False],
+            ],
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+            ]
+        ]
     )
+    desired_is_select = tf.expand_dims(desired_is_select, axis=-1)
     tf.debugging.assert_equal(
             desired_stimulus_set, x['rank_similarity_stimulus_set']
     )
@@ -666,7 +662,7 @@ def test_export_1(rank_sim_4):
     """
     x = rank_sim_4.export(with_timestep_axis=False)
     desired_stimulus_set = tf.constant(
-        np.array([
+        [
             [
                 [
                     [1, 1, 0],
@@ -705,25 +701,21 @@ def test_export_1(rank_sim_4):
                     [0, 0, 0]
                 ]
             ]
-        ]), dtype=tf.int32
+        ], dtype=tf.int32
     )
     desired_is_select = tf.constant(
-        np.expand_dims(
-            np.array(
-                [
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ]
-                ], dtype=bool
-            ), axis=-1
-        ),
-        dtype=tf.bool
+        [
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+                [False, True, False, False],
+                [False, False, False, False],
+                [False, True, False, False],
+                [False, True, False, False],
+            ]
+        ]
     )
+    desired_is_select = tf.expand_dims(desired_is_select, axis=-1)
     tf.debugging.assert_equal(
         desired_stimulus_set, x['rank_similarity_stimulus_set']
     )

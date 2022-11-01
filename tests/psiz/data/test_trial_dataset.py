@@ -358,7 +358,7 @@ def test_export_0(rank_sim_4):
     w = ds_list[0][2]
 
     desired_x_stimulus_set = tf.constant(
-        np.array([
+        [
             [
                 [
                     [1, 1, 0],
@@ -401,28 +401,25 @@ def test_export_0(rank_sim_4):
                     [0, 0, 0]
                 ]
             ]
-        ]), dtype=tf.int32
+        ], dtype=tf.int32
     )
-    desired_x_is_select = tf.constant(
-        np.expand_dims(
-            np.array(
+    desired_x_is_select = tf.expand_dims(
+        tf.constant(
+            [
                 [
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 0, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ]
-                ], dtype=bool
-            ), axis=-1
-        ),
-        dtype=tf.bool
+                    [False, True, False, False],
+                    [False, True, False, False],
+                ],
+                [
+                    [False, True, False, False],
+                    [False, False, False, False],
+                ],
+                [
+                    [False, True, False, False],
+                    [False, True, False, False],
+                ]
+            ]
+        ), axis=-1
     )
     desired_condition_id = tf.constant(
         [
@@ -432,31 +429,27 @@ def test_export_0(rank_sim_4):
         ]
     )
     desired_y = tf.constant(
-        np.array(
+        [
             [
-                [
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                ],
-                [
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                ],
-                [
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                ]
-            ], dtype=np.float32
-        )
+                [1., 0., 0.],
+                [1., 0., 0.],
+            ],
+            [
+                [1., 0., 0.],
+                [1., 0., 0.],
+            ],
+            [
+                [1., 0., 0.],
+                [1., 0., 0.],
+            ]
+        ], dtype=tf.float32
     )
     desired_w = tf.constant(
-        np.array(
-            [
-                [0.9, 0.9],
-                [0.9, 0.9],
-                [0.9, 0.9],
-            ], dtype=np.float32
-        )
+        [
+            [0.9, 0.9],
+            [0.9, 0.9],
+            [0.9, 0.9],
+        ], dtype=tf.float32
     )
     desired_condition_id = tf.constant(
         [
@@ -509,7 +502,7 @@ def test_export_1(rank_sim_4):
     x = ds_list[0]
 
     desired_x_stimulus_set = tf.constant(
-        np.array([
+        [
             [
                 [
                     [1, 1, 0],
@@ -552,29 +545,25 @@ def test_export_1(rank_sim_4):
                     [0, 0, 0]
                 ]
             ]
-        ]), dtype=tf.int32
+        ], dtype=tf.int32
     )
     desired_x_is_select = tf.constant(
-        np.expand_dims(
-            np.array(
-                [
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 0, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ]
-                ], dtype=bool
-            ), axis=-1
-        ),
-        dtype=tf.bool
+        [
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+            ],
+            [
+                [False, True, False, False],
+                [False, False, False, False],
+            ],
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+            ]
+        ]
     )
+    desired_x_is_select = tf.expand_dims(desired_x_is_select, axis=-1)
     desired_condition_id = tf.constant(
         [
             [[0], [0]],
@@ -627,7 +616,7 @@ def test_export_2(rank_sim_4):
     w = ds_list[0][2]
 
     desired_x_stimulus_set = tf.constant(
-        np.array([
+        [
             [
                 [
                     [1, 1, 0],
@@ -666,48 +655,40 @@ def test_export_2(rank_sim_4):
                     [0, 0, 0]
                 ]
             ]
-        ]), dtype=tf.int32
+        ], dtype=tf.int32
     )
     desired_x_is_select = tf.constant(
-        np.expand_dims(
-            np.array(
-                [
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ]
-                ], dtype=bool
-            ), axis=-1
-        ),
-        dtype=tf.bool
+        [
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+                [False, True, False, False],
+                [False, False, False, False],
+                [False, True, False, False],
+                [False, True, False, False],
+            ]
+        ], dtype=tf.bool
     )
+    desired_x_is_select = tf.expand_dims(desired_x_is_select, axis=-1)
     desired_condition_id = tf.constant(
         [
             [0], [0], [1], [1], [0], [0]
         ], dtype=tf.int32
     )
     desired_y = tf.constant(
-        np.array(
+        [
             [
-                [
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                    [1., 0., 0.],
-                ]
-            ], dtype=np.float32
-        )
+                [1., 0., 0.],
+                [1., 0., 0.],
+                [1., 0., 0.],
+                [1., 0., 0.],
+                [1., 0., 0.],
+                [1., 0., 0.],
+            ]
+        ], dtype=tf.float32
     )
     desired_w = tf.constant(
-        np.array(
-            [0.9, 0.9, 0.9, 0.9, 0.9, 0.9], dtype=np.float32
-        )
+        [0.9, 0.9, 0.9, 0.9, 0.9, 0.9], dtype=tf.float32
     )
     tf.debugging.assert_equal(
         desired_x_stimulus_set, x['rank_similarity_stimulus_set']
@@ -736,7 +717,7 @@ def test_export_3(rank_sim_4):
     x = ds_list[0]
 
     desired_x_stimulus_set = tf.constant(
-        np.array([
+        [
             [
                 [
                     [1, 1, 0],
@@ -779,29 +760,25 @@ def test_export_3(rank_sim_4):
                     [0, 0, 0]
                 ]
             ]
-        ]), dtype=tf.int32
+        ], dtype=tf.int32
     )
-    desired_x_is_select = tf.constant(
-        np.expand_dims(
-            np.array(
-                [
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 0, 0, 0],
-                    ],
-                    [
-                        [0, 1, 0, 0],
-                        [0, 1, 0, 0],
-                    ]
-                ], dtype=bool
-            ), axis=-1
-        ),
-        dtype=tf.bool
+    desired_x_is_select = tf.constant(   
+        [
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+            ],
+            [
+                [False, True, False, False],
+                [False, False, False, False],
+            ],
+            [
+                [False, True, False, False],
+                [False, True, False, False],
+            ]
+        ]
     )
+    desired_x_is_select = tf.expand_dims(desired_x_is_select, axis=-1)
     tf.debugging.assert_equal(
         desired_x_stimulus_set, x['rank_similarity_stimulus_set']
     )

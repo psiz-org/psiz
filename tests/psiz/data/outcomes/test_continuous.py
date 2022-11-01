@@ -123,10 +123,7 @@ def test_init_wrong():
 
 def test_export_0(continuous_0):
     desired_y = tf.constant(
-        np.array(
-            [[[0.0]], [[2.0]], [[-.1]], [[1.3]]],
-            dtype=np.float32
-        )
+        [[[0.0]], [[2.0]], [[-.1]], [[1.3]]], dtype=tf.float32
     )
 
     tf.debugging.assert_equal(desired_y, continuous_0.export())
@@ -134,9 +131,7 @@ def test_export_0(continuous_0):
 
 def test_export_1(continuous_1):
     desired_y = tf.constant(
-        np.array(
-            [[[0.0]], [[2.0]], [[-0.1]], [[1.3]]], dtype=np.float32
-        )
+            [[[0.0]], [[2.0]], [[-0.1]], [[1.3]]], dtype=tf.float32
     )
 
     tf.debugging.assert_equal(desired_y, continuous_1.export())
@@ -144,14 +139,12 @@ def test_export_1(continuous_1):
 
 def test_export_2a(continuous_2):
     desired_y = tf.constant(
-        np.array(
-            [
-                [[0.0], [0.0], [0.0]],
-                [[2.0], [0.0], [0.0]],
-                [[-0.1], [-1.0], [0.3]],
-                [[1.0], [1.0], [1.0]],
-            ], dtype=np.float32
-        )
+        [
+            [[0.0], [0.0], [0.0]],
+            [[2.0], [0.0], [0.0]],
+            [[-0.1], [-1.0], [0.3]],
+            [[1.0], [1.0], [1.0]],
+        ], dtype=tf.float32
     )
 
     tf.debugging.assert_equal(desired_y, continuous_2.export())
@@ -164,12 +157,10 @@ def test_export_2b(continuous_2):
 
     """
     desired_y = tf.constant(
-        np.array(
-            [
-                [0.0], [0.0], [0.0], [2.0], [0.0], [0.0], [-0.1], [-1.0],
-                [0.3], [1.0], [1.0], [1.0]
-            ], dtype=np.float32
-        )
+        [
+            [0.0], [0.0], [0.0], [2.0], [0.0], [0.0], [-0.1], [-1.0],
+            [0.3], [1.0], [1.0], [1.0]
+        ], dtype=tf.float32
     )
 
     y = continuous_2.export(with_timestep_axis=False)
@@ -178,14 +169,12 @@ def test_export_2b(continuous_2):
 
 def test_export_3a(continuous_3):
     desired_y = tf.constant(
-        np.array(
-            [
-                [[0.0, 0.1], [0.0, 0.2], [0.0, 0.3]],
-                [[2.0, 0.4], [0.0, 0.5], [0.0, 0.6]],
-                [[-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9]],
-                [[1.0, 1.1], [1.0, 1.2], [1.0, 1.3]],
-            ], dtype=np.float32
-        )
+        [
+            [[0.0, 0.1], [0.0, 0.2], [0.0, 0.3]],
+            [[2.0, 0.4], [0.0, 0.5], [0.0, 0.6]],
+            [[-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9]],
+            [[1.0, 1.1], [1.0, 1.2], [1.0, 1.3]],
+        ], dtype=tf.float32
     )
 
     tf.debugging.assert_equal(desired_y, continuous_3.export())
@@ -198,14 +187,12 @@ def test_export_3b(continuous_3):
 
     """
     desired_y = tf.constant(
-        np.array(
-            [
-                [0.0, 0.1], [0.0, 0.2], [0.0, 0.3],
-                [2.0, 0.4], [0.0, 0.5], [0.0, 0.6],
-                [-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9],
-                [1.0, 1.1], [1.0, 1.2], [1.0, 1.3],
-            ], dtype=np.float32
-        )
+        [
+            [0.0, 0.1], [0.0, 0.2], [0.0, 0.3],
+            [2.0, 0.4], [0.0, 0.5], [0.0, 0.6],
+            [-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9],
+            [1.0, 1.1], [1.0, 1.2], [1.0, 1.3],
+        ], dtype=tf.float32
     )
 
     y = continuous_3.export(with_timestep_axis=False)

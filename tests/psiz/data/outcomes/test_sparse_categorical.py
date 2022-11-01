@@ -134,14 +134,12 @@ def test_init_wrong_2():
 
 def test_export_0(sparse_cat_0):
     desired_y = tf.constant(
-        np.array(
-            [
-                [[1., 0., 0.]],
-                [[0., 0., 1.]],
-                [[1., 0., 0.]],
-                [[0., 1., 0.]],
-            ], dtype=np.float32
-        )
+        [
+            [[1., 0., 0.]],
+            [[0., 0., 1.]],
+            [[1., 0., 0.]],
+            [[0., 1., 0.]],
+        ], dtype=tf.float32
     )
 
     tf.debugging.assert_equal(desired_y, sparse_cat_0.export())
@@ -149,14 +147,12 @@ def test_export_0(sparse_cat_0):
 
 def test_export_1(sparse_cat_1):
     desired_y = tf.constant(
-        np.array(
-            [
-                [[1., 0., 0., 0., 0.]],
-                [[0., 0., 1., 0., 0.]],
-                [[1., 0., 0., 0., 0.]],
-                [[0., 1., 0., 0., 0.]],
-            ], dtype=np.float32
-        )
+        [
+            [[1., 0., 0., 0., 0.]],
+            [[0., 0., 1., 0., 0.]],
+            [[1., 0., 0., 0., 0.]],
+            [[0., 1., 0., 0., 0.]],
+        ], dtype=tf.float32
     )
 
     tf.debugging.assert_equal(desired_y, sparse_cat_1.export())
@@ -169,14 +165,12 @@ def test_export_2(sparse_cat_1):
 
     """
     desired_y = tf.constant(
-        np.array(
-            [
-                [1., 0., 0., 0., 0.],
-                [0., 0., 1., 0., 0.],
-                [1., 0., 0., 0., 0.],
-                [0., 1., 0., 0., 0.],
-            ], dtype=np.float32
-        )
+        [
+            [1., 0., 0., 0., 0.],
+            [0., 0., 1., 0., 0.],
+            [1., 0., 0., 0., 0.],
+            [0., 1., 0., 0., 0.],
+        ], dtype=tf.float32
     )
     y = sparse_cat_1.export(with_timestep_axis=False)
     tf.debugging.assert_equal(desired_y, y)
@@ -189,22 +183,20 @@ def test_export_3(sparse_cat_2):
 
     """
     desired_y = tf.constant(
-        np.array(
-            [
-                [1., 0., 0.],
-                [1., 0., 0.],
-                [1., 0., 0.],
-                [0., 0., 1.],
-                [1., 0., 0.],
-                [1., 0., 0.],
-                [1., 0., 0.],
-                [0., 1., 0.],
-                [1., 0., 0.],
-                [0., 1., 0.],
-                [0., 1., 0.],
-                [0., 1., 0.]
-            ], dtype=np.float32
-        )
+        [
+            [1., 0., 0.],
+            [1., 0., 0.],
+            [1., 0., 0.],
+            [0., 0., 1.],
+            [1., 0., 0.],
+            [1., 0., 0.],
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [0., 1., 0.],
+            [0., 1., 0.]
+        ], dtype=tf.float32
     )
     y = sparse_cat_2.export(with_timestep_axis=False)
     tf.debugging.assert_equal(desired_y, y)
@@ -226,14 +218,12 @@ def test_export_wrong(sparse_cat_2):
 
 def test_for_dataset(sparse_cat_2):
     desired_y = tf.constant(
-        np.array(
-            [
-                [[1., 0., 0.], [1., 0., 0.], [1., 0., 0.]],
-                [[0., 0., 1.], [1., 0., 0.], [1., 0., 0.]],
-                [[1., 0., 0.], [0., 1., 0.], [1., 0., 0.]],
-                [[0., 1., 0.], [0., 1., 0.], [0., 1., 0.]]
-            ], dtype=np.float32
-        )
+        [
+            [[1., 0., 0.], [1., 0., 0.], [1., 0., 0.]],
+            [[0., 0., 1.], [1., 0., 0.], [1., 0., 0.]],
+            [[1., 0., 0.], [0., 1., 0.], [1., 0., 0.]],
+            [[0., 1., 0.], [0., 1., 0.], [0., 1., 0.]]
+        ], dtype=tf.float32
     )
 
     tf.debugging.assert_equal(desired_y, sparse_cat_2.export())

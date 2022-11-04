@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2021 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ from psiz.data.trial_dataset import TrialDataset
 from psiz.data.contents.content import Content
 from psiz.data.contents.rank_similarity import RankSimilarity
 from psiz.data.contents.rate_similarity import RateSimilarity
+from psiz.data.groups.group import Group
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.outcomes.continuous import Continuous
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
@@ -32,6 +33,7 @@ __all__ = [
     'Content',
     'RankSimilarity',
     'RateSimilarity',
+    'Group',
     'Outcome',
     'Continuous',
     'SparseCategorical',

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test trials module."""
+"""Test data module."""
 
 import h5py
 import numpy as np
@@ -21,61 +21,113 @@ import pytest
 import tensorflow as tf
 
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
-from psiz.trials import stack
+# from psiz.trials import stack TODO delete or finish
 
 
-def test_init_0(sparse_cat_0):
-    """Test initialization."""
+def test_init_0(o_sparsecat_a_4x1):
+    """Test initialization.
+
+    * Default sample_weight
+
+    """
+    desired_name = 'sparsecat_a'
     desired_n_sequence = 4
-    desired_max_timestep = 1
+    desired_sequence_length = 1
     desired_index = np.array(
         [[0], [2], [0], [1]], dtype=np.int32
     )
     desired_depth = 3
+    desired_sample_weight = np.ones([4, 1], dtype=np.float32)
 
-    assert sparse_cat_0.n_sequence == desired_n_sequence
-    assert sparse_cat_0.sequence_length == desired_max_timestep
+    assert desired_name == o_sparsecat_a_4x1.name
+    assert o_sparsecat_a_4x1.n_sequence == desired_n_sequence
+    assert o_sparsecat_a_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
-        desired_index, sparse_cat_0.index
+        desired_index, o_sparsecat_a_4x1.index
     )
-    assert desired_depth == sparse_cat_0.depth
+    assert desired_depth == o_sparsecat_a_4x1.depth
+    np.testing.assert_array_equal(
+        desired_sample_weight, o_sparsecat_a_4x1.sample_weight
+    )
 
 
-def test_init_1(sparse_cat_1):
+def test_init_1(o_sparsecat_aa_4x1):
     """Test initialization."""
+    desired_name = 'sparsecat_aa'
     desired_n_sequence = 4
-    desired_max_timestep = 1
+    desired_sequence_length = 1
     desired_index = np.array(
         [[0], [2], [0], [1]], dtype=np.int32
     )
     desired_depth = 5
+    desired_sample_weight = np.ones([4, 1], dtype=np.float32)
 
-    assert sparse_cat_1.n_sequence == desired_n_sequence
-    assert sparse_cat_1.sequence_length == desired_max_timestep
+    assert o_sparsecat_aa_4x1.name == desired_name
+    assert o_sparsecat_aa_4x1.n_sequence == desired_n_sequence
+    assert o_sparsecat_aa_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
-        desired_index, sparse_cat_1.index
+        desired_index, o_sparsecat_aa_4x1.index
     )
-    assert desired_depth == sparse_cat_1.depth
+    assert desired_depth == o_sparsecat_aa_4x1.depth
+    np.testing.assert_array_equal(
+        desired_sample_weight, o_sparsecat_aa_4x1.sample_weight
+    )
 
 
-def test_init_2(sparse_cat_2):
+def test_init_2(o_sparsecat_b_4x3):
     """Test initialization."""
+    desired_name = 'sparsecat_b'
     desired_n_sequence = 4
-    desired_max_timestep = 3
+    desired_sequence_length = 3
     desired_index = np.array(
         [[0, 0, 0], [2, 0, 0], [0, 1, 0], [1, 1, 1]], dtype=np.int32
     )
     desired_depth = 3
+    desired_sample_weight = np.ones([4, 3], dtype=np.float32)
 
-    assert sparse_cat_2.n_sequence == desired_n_sequence
-    assert sparse_cat_2.sequence_length == desired_max_timestep
+    assert o_sparsecat_b_4x3.name == desired_name
+    assert o_sparsecat_b_4x3.n_sequence == desired_n_sequence
+    assert o_sparsecat_b_4x3.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
-        desired_index, sparse_cat_2.index
+        desired_index, o_sparsecat_b_4x3.index
     )
-    assert desired_depth == sparse_cat_2.depth
+    assert desired_depth == o_sparsecat_b_4x3.depth
+    np.testing.assert_array_equal(
+        desired_sample_weight, o_sparsecat_b_4x3.sample_weight
+    )
 
 
-def test_init_wrong_0():
+def test_init_3(o_sparsecat_d_4x3):
+    """Test initialization."""
+    desired_name = 'sparsecat_d'
+    desired_n_sequence = 4
+    desired_sequence_length = 3
+    desired_index = np.array(
+        [[0, 0, 0], [2, 0, 0], [0, 1, 0], [1, 1, 1]], dtype=np.int32
+    )
+    desired_depth = 3
+    desired_sample_weight = np.array(
+        [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
+            [0.7, 0.8, 0.9],
+            [1.0, 1.0, 0.0],
+        ], dtype=np.float32
+    )
+
+    assert o_sparsecat_d_4x3.name == desired_name
+    assert o_sparsecat_d_4x3.n_sequence == desired_n_sequence
+    assert o_sparsecat_d_4x3.sequence_length == desired_sequence_length
+    np.testing.assert_array_equal(
+        desired_index, o_sparsecat_d_4x3.index
+    )
+    assert desired_depth == o_sparsecat_d_4x3.depth
+    np.testing.assert_array_equal(
+        desired_sample_weight, o_sparsecat_d_4x3.sample_weight
+    )
+
+
+def test_invalid_init_0():
     """Test initialization.
 
     Indices are not integers.
@@ -92,7 +144,7 @@ def test_init_wrong_0():
     assert e_info.type == ValueError
 
 
-def test_init_wrong_1():
+def test_invalid_init_1():
     """Test initialization.
 
     Indices are not greater than placeholder.
@@ -109,7 +161,7 @@ def test_init_wrong_1():
     assert e_info.type == ValueError
 
 
-def test_init_wrong_2():
+def test_invalid_init_2():
     """Test initialization.
 
     Indices are not rank-2 ndarray.
@@ -132,7 +184,55 @@ def test_init_wrong_2():
     assert e_info.type == ValueError
 
 
-def test_export_0(sparse_cat_0):
+def test_invalid_init_3():
+    """Test invalid sample_weight initialization."""
+    n_sequence = 4
+    sequence_length = 1
+    depth = 4
+    outcome_idx = np.zeros([n_sequence, sequence_length], dtype=np.int32)
+
+    sample_weight = .9 * np.ones(
+        [n_sequence, sequence_length, 2]
+    )
+    with pytest.raises(Exception) as e_info:
+        SparseCategorical(
+            outcome_idx, depth=depth, sample_weight=sample_weight
+        )
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'sample_weight' must be a rank-2 ND array."
+    )
+
+    sample_weight = .9 * np.ones(
+        [n_sequence + 1, sequence_length]
+    )
+    with pytest.raises(Exception) as e_info:
+        SparseCategorical(
+            outcome_idx, depth=depth, sample_weight=sample_weight
+        )
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'sample_weight' must have "
+        "shape=(samples, sequence_length) that agrees with the rest of "
+        "the object."
+    )
+
+    sample_weight = .9 * np.ones(
+        [n_sequence, sequence_length + 1]
+    )
+    with pytest.raises(Exception) as e_info:
+        SparseCategorical(
+            outcome_idx, depth=depth, sample_weight=sample_weight
+        )
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument 'sample_weight' must have "
+        "shape=(samples, sequence_length) that agrees with the rest of "
+        "the object."
+    )
+
+
+def test_export_0(o_sparsecat_a_4x1):
     desired_y = tf.constant(
         [
             [[1., 0., 0.]],
@@ -141,11 +241,17 @@ def test_export_0(sparse_cat_0):
             [[0., 1., 0.]],
         ], dtype=tf.float32
     )
+    desired_w = tf.constant(
+        [[1.0], [1.0], [1.0], [1.0]]
+    )
+    desired_name = 'sparsecat_a'
 
-    tf.debugging.assert_equal(desired_y, sparse_cat_0.export())
+    y, w = o_sparsecat_a_4x1.export(export_format='tf')
+    tf.debugging.assert_equal(desired_y, y[desired_name])
+    tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
-def test_export_1(sparse_cat_1):
+def test_export_1(o_sparsecat_aa_4x1):
     desired_y = tf.constant(
         [
             [[1., 0., 0., 0., 0.]],
@@ -154,11 +260,17 @@ def test_export_1(sparse_cat_1):
             [[0., 1., 0., 0., 0.]],
         ], dtype=tf.float32
     )
+    desired_w = tf.constant(
+        [[1.0], [1.0], [1.0], [1.0]]
+    )
+    desired_name = 'sparsecat_aa'
 
-    tf.debugging.assert_equal(desired_y, sparse_cat_1.export())
+    y, w = o_sparsecat_aa_4x1.export(export_format='tf')
+    tf.debugging.assert_equal(desired_y, y[desired_name])
+    tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
-def test_export_2(sparse_cat_1):
+def test_export_2(o_sparsecat_aa_4x1):
     """Test export.
 
     Use with_timestep_axis=False
@@ -172,11 +284,36 @@ def test_export_2(sparse_cat_1):
             [0., 1., 0., 0., 0.],
         ], dtype=tf.float32
     )
-    y = sparse_cat_1.export(with_timestep_axis=False)
-    tf.debugging.assert_equal(desired_y, y)
+    desired_w = tf.constant(
+        [1.0, 1.0, 1.0, 1.0]
+    )
+    desired_name = 'sparsecat_aa'
+
+    y, w = o_sparsecat_aa_4x1.export(
+        export_format='tf', with_timestep_axis=False
+    )
+    tf.debugging.assert_equal(desired_y, y[desired_name])
+    tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
-def test_export_3(sparse_cat_2):
+def test_export_3a(o_sparsecat_b_4x3):
+    desired_y = tf.constant(
+        [
+            [[1., 0., 0.], [1., 0., 0.], [1., 0., 0.]],
+            [[0., 0., 1.], [1., 0., 0.], [1., 0., 0.]],
+            [[1., 0., 0.], [0., 1., 0.], [1., 0., 0.]],
+            [[0., 1., 0.], [0., 1., 0.], [0., 1., 0.]]
+        ], dtype=tf.float32
+    )
+    desired_w = tf.ones([4, 3], dtype=tf.float32)
+    desired_name = 'sparsecat_b'
+
+    y, w = o_sparsecat_b_4x3.export(export_format='tf')
+    tf.debugging.assert_equal(desired_y, y[desired_name])
+    tf.debugging.assert_equal(desired_w, w[desired_name])
+
+
+def test_export_3b(o_sparsecat_b_4x3):
     """Test export.
 
     Use with_timestep_axis=False
@@ -198,53 +335,133 @@ def test_export_3(sparse_cat_2):
             [0., 1., 0.]
         ], dtype=tf.float32
     )
-    y = sparse_cat_2.export(with_timestep_axis=False)
-    tf.debugging.assert_equal(desired_y, y)
+    desired_w = tf.ones([12], dtype=tf.float32)
+    desired_name = 'sparsecat_b'
+
+    y, w = o_sparsecat_b_4x3.export(
+        export_format='tf', with_timestep_axis=False
+    )
+    tf.debugging.assert_equal(desired_y, y[desired_name])
+    tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
-def test_export_wrong(sparse_cat_2):
+def test_export_4a(o_sparsecat_d_4x3):
+    desired_y = tf.constant(
+        [
+            [[1, 0, 0], [1, 0, 0], [1, 0, 0]],
+            [[0, 0, 1], [1, 0, 0], [1, 0, 0]],
+            [[1, 0, 0], [0, 1, 0], [1, 0, 0]],
+            [[0, 1, 0], [0, 1, 0], [0, 1, 0]],
+        ], dtype=tf.float32
+    )
+    desired_w = tf.constant(
+        [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
+            [0.7, 0.8, 0.9],
+            [1.0, 1.0, 0.0],
+        ], dtype=tf.float32
+    )
+    desired_name = 'sparsecat_d'
+
+    y, w = o_sparsecat_d_4x3.export(export_format='tf')
+    tf.debugging.assert_equal(desired_y, y[desired_name])
+    tf.debugging.assert_equal(desired_w, w[desired_name])
+
+
+def test_invalid_export_0(o_sparsecat_b_4x3):
     """Test export.
 
     Using incorrect `export_format`.
 
     """
     with pytest.raises(Exception) as e_info:
-        sparse_cat_2.export(export_format='garbage')
+        o_sparsecat_b_4x3.export(export_format='garbage')
     assert e_info.type == ValueError
     assert (
         str(e_info.value) == "Unrecognized `export_format` 'garbage'."
     )
 
 
-def test_for_dataset(sparse_cat_2):
-    desired_y = tf.constant(
+def test_subset_0(o_sparsecat_d_4x3):
+    """Test subset."""
+    desired_name = 'sparsecat_d'
+    desired_n_sequence = 2
+    desired_sequence_length = 3
+    desired_index = np.array(
+        [[2, 0, 0], [0, 1, 0]], dtype=np.int32
+    )
+    desired_depth = 3
+    desired_sample_weight = np.array(
         [
-            [[1., 0., 0.], [1., 0., 0.], [1., 0., 0.]],
-            [[0., 0., 1.], [1., 0., 0.], [1., 0., 0.]],
-            [[1., 0., 0.], [0., 1., 0.], [1., 0., 0.]],
-            [[0., 1., 0.], [0., 1., 0.], [0., 1., 0.]]
-        ], dtype=tf.float32
+            [0.4, 0.5, 0.6],
+            [0.7, 0.8, 0.9],
+        ], dtype=np.float32
     )
 
-    tf.debugging.assert_equal(desired_y, sparse_cat_2.export())
+    sub = o_sparsecat_d_4x3.subset(np.array([1, 2]))
+
+    assert sub.name == desired_name
+    assert sub.n_sequence == desired_n_sequence
+    assert sub.sequence_length == desired_sequence_length
+    np.testing.assert_array_equal(
+        desired_index, sub.index
+    )
+    assert desired_depth == sub.depth
+    np.testing.assert_array_equal(
+        desired_sample_weight, sub.sample_weight
+    )
 
 
-def test_persistence(sparse_cat_2, tmpdir):
+# TODO delete or finish
+# def test_stack_0(o_sparsecat_aa_4x1, o_sparsecat_b_4x3, o_sparsecat_c_2x3):
+#     """Test stack."""
+#     desired_n_sequence = 10
+#     desired_sequence_length = 3
+#     desired_index = np.array(
+#         [
+#             [0, 0, 0],
+#             [2, 0, 0],
+#             [0, 0, 0],
+#             [1, 0, 0],
+#             [0, 0, 0],
+#             [2, 0, 0],
+#             [0, 1, 0],
+#             [1, 1, 1],
+#             [0, 2, 1],
+#             [1, 2, 2],
+#         ], dtype=np.int32
+#     )
+#     desired_depth = 5
+
+#     stacked = stack(
+#         (o_sparsecat_aa_4x1, o_sparsecat_b_4x3, o_sparsecat_c_2x3)
+#     )
+
+#     assert desired_n_sequence == stacked.n_sequence
+#     assert desired_sequence_length == stacked.sequence_length
+#     np.testing.assert_array_equal(
+#         desired_index, stacked.index
+#     )
+#     assert desired_depth == stacked.depth
+
+
+def test_persistence(o_sparsecat_b_4x3, tmpdir):
     """Test save and load."""
-    group_name = "outcome"
+    h5_grp_name = "sparsecat"
 
-    original = sparse_cat_2
+    original = o_sparsecat_b_4x3
     fn = tmpdir.join('persistence_test.hdf5')
 
     # Save group.
     f = h5py.File(fn, "w")
-    grp_stimulus = f.create_group(group_name)
-    original.save(grp_stimulus)
+    h5_grp = f.create_group(h5_grp_name)
+    original.save(h5_grp)
     f.close()
 
     # Load group.
     f = h5py.File(fn, "r")
-    h5_grp = f[group_name]
+    h5_grp = f[h5_grp_name]
     # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
     try:
         class_name = h5_grp["class_name"].asstr()[()]
@@ -254,65 +471,14 @@ def test_persistence(sparse_cat_2, tmpdir):
     f.close()
 
     # Check for equivalency.
-    assert class_name == "SparseCategorical"
+    assert class_name == "psiz.data.SparseCategorical"
+    assert original.name == reconstructed.name
     assert original.n_sequence == reconstructed.n_sequence
     assert original.sequence_length == reconstructed.sequence_length
     assert original.depth == reconstructed.depth
     np.testing.assert_array_equal(
         original.index, reconstructed.index
     )
-
-
-def test_subset_0(rank_sim_4):
-    """Test subset."""
-    desired_n_sequence = 2
-    desired_max_timestep = 2
-    desired_index = np.array(
-        [[0, 0], [0, 0]], dtype=np.int32
-    )
-    desired_depth = 3
-
-    content = rank_sim_4
-    outcome_idx = np.zeros(
-        [content.n_sequence, content.sequence_length], dtype=np.int32
-    )
-    sparse_cat = SparseCategorical(outcome_idx, depth=content.max_outcome)
-
-    sub = sparse_cat.subset(np.array([1, 2]))
-
-    assert sub.n_sequence == desired_n_sequence
-    assert sub.sequence_length == desired_max_timestep
     np.testing.assert_array_equal(
-        desired_index, sub.index
+        original.sample_weight, reconstructed.sample_weight
     )
-    assert desired_depth == sub.depth
-
-
-def test_stack_0(sparse_cat_1, sparse_cat_2, sparse_cat_3):
-    """Test stack."""
-    desired_n_sequence = 10
-    desired_max_timestep = 3
-    desired_index = np.array(
-        [
-            [0, 0, 0],
-            [2, 0, 0],
-            [0, 0, 0],
-            [1, 0, 0],
-            [0, 0, 0],
-            [2, 0, 0],
-            [0, 1, 0],
-            [1, 1, 1],
-            [0, 2, 1],
-            [1, 2, 2],
-        ], dtype=np.int32
-    )
-    desired_depth = 5
-
-    stacked = stack((sparse_cat_1, sparse_cat_2, sparse_cat_3))
-
-    assert desired_n_sequence == stacked.n_sequence
-    assert desired_max_timestep == stacked.sequence_length
-    np.testing.assert_array_equal(
-        desired_index, stacked.index
-    )
-    assert desired_depth == stacked.depth

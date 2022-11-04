@@ -20,70 +20,118 @@ Classes:
 
 """
 
-import warnings
-
 import h5py
 from importlib.metadata import version
-import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
 
+from psiz.data.trial_component import TrialComponent
+from psiz.data.contents.content import Content
 from psiz.data.contents.rank_similarity import RankSimilarity
 from psiz.data.contents.rate_similarity import RateSimilarity
+from psiz.data.groups.group import Group
+from psiz.data.outcomes.outcome import Outcome
 from psiz.data.outcomes.continuous import Continuous
 from psiz.data.outcomes.sparse_categorical import (
     SparseCategorical
 )
-from psiz.data.unravel_timestep import unravel_timestep
 
 
 class TrialDataset(object):
     """Generic composite class for trial data."""
 
-    def __init__(self, content, outcome=None, groups=None, sample_weight=None):
+    def __init__(self, trial_components):
         """Initialize.
 
         Args:
-            content: A subclass of a psiz.trials.Content object.
-            outcome (optional): A subclass of a psiz.trials.Outcome
-                object.
-            groups (optional): A dictionary composed of values where
-                each value is an np.ndarray that must be rank-2 or
-                rank-3.
-                dict value shape=(samples, [sequence_length], n_col)
-            sample_weight (optional): A 1D or 2D np.ndarray of floats.
-                shape=(samples, [sequence_length])
+            trial_components: List of TrialComponent objects. List
+                should include at least one `psiz.data.Content` object.
+                Other valid objects include `psiz.data.Outcome` objects
+                and `psiz.data.Group` objects.
 
         """
-        self._timestep_axis = 1  # TODO
-        self.content = content
+        n_sequence, sequence_length = self._validate_trial_components(
+            trial_components
+        )
+        self.n_sequence = n_sequence
+        self.sequence_length = sequence_length
 
-        # Anchor initialization on `content`.
-        self.n_sequence = content.n_sequence
-        self.sequence_length = content.sequence_length
+        content_list, group_list, outcome_list = self._sort_trial_components(
+            trial_components
+        )
+        self.content_list = content_list
+        self.group_list = group_list
+        self.outcome_list = outcome_list
 
-        # Handle `groups` intialization.
-        if groups is not None:
-            for group_key, group_weights in groups.items():
-                group_weights = self._validate_group_weights(
-                    group_key, group_weights
+    def _validate_trial_components(self, trial_components):
+        """Validate all trial components."""
+        # Anchor on first TrialComponent.
+        n_sequence = trial_components[0].n_sequence
+        sequence_length = trial_components[0].sequence_length
+
+        for component_idx, trial_component in enumerate(trial_components[1:]):
+            if not isinstance(trial_component, TrialComponent):
+                raise ValueError(
+                    "The object in position {0} is not a "
+                    "`TrialComponent`.".format(component_idx + 1)
                 )
-                groups[group_key] = group_weights
-        self.groups = groups
 
-        # Handle outcome initialization.
-        if outcome is not None:
-            self._validate_outcome(outcome)
-        self.outcome = outcome
+            # Check shape of TrialComponent.
+            if trial_component.n_sequence != n_sequence:
+                raise ValueError(
+                    "All user-provided 'TrialComponent' objects must have the "
+                    "same `n_sequence`. The 'TrialComponent' in position {0} "
+                    "does not match the previous components.".format(
+                        component_idx + 1
+                    )
+                )
 
-        # Handle `sample_weight` initialization.
-        if sample_weight is None:
-            sample_weight = self.content.is_actual.astype(float)
-        else:
-            # TODO should we validate no matter what? yes, in case of custom
-            # content layer
-            sample_weight = self._validate_sample_weight(sample_weight)
-        self.sample_weight = sample_weight
+            if trial_component.sequence_length != sequence_length:
+                raise ValueError(
+                    "All user-provided 'TrialComponent' objects must have the "
+                    "same `sequence_length`. The 'TrialComponent' in position "
+                    "{0} does not match the previous components.".format(
+                        component_idx + 1
+                    )
+                )
+
+        return n_sequence, sequence_length
+
+    def _sort_trial_components(self, trial_components):
+        """Sort trial components."""
+        content_list = []
+        group_list = []
+        outcome_list = []
+
+        for component_idx, trial_component in enumerate(trial_components):
+            if isinstance(trial_component, Content):
+                content_list.append(trial_component)
+            elif isinstance(trial_component, Outcome):
+                outcome_list.append(trial_component)
+            elif isinstance(trial_component, Group):
+                group_list.append(trial_component)
+            else:
+                # TODO write test that raises this error
+                raise ValueError(
+                    "The 'TrialComponent' in position {0} must be an  "
+                    "instance of psiz.data.Content, psiz.data.Outcome, or "
+                    "psiz.data.Group to use TrialDataset.".format(
+                        component_idx
+                    )
+                )
+
+        return content_list, group_list, outcome_list
+
+    @property
+    def trial_components(self):
+        """Return all trial components."""
+        trial_components = []
+        for content in self.content_list:
+            trial_components.append(content)
+        for group in self.group_list:
+            trial_components.append(group)
+        for outcome in self.outcome_list:
+            trial_components.append(outcome)
+        return trial_components
 
     def export(
         self, with_timestep_axis=True, export_format='tf', inputs_only=False
@@ -104,32 +152,38 @@ class TrialDataset(object):
 
         """
         # Assemble model input.
-        x = self.content.export(
-            export_format=export_format, with_timestep_axis=with_timestep_axis
-        )
-        if self.groups is not None:
-            groups = self._export_groups(
+        x = {}
+        for content in self.content_list:
+            x_i = content.export(
                 export_format=export_format,
                 with_timestep_axis=with_timestep_axis
             )
-            x.update(groups)
+            x.update(x_i)
+        # Add groups (if present).
+        if len(self.group_list) > 0:
+            for group in self.group_list:
+                x_i = group.export(
+                    export_format=export_format,
+                    with_timestep_axis=with_timestep_axis
+                )
+                x.update(x_i)
 
-        # Assemble model outcomes.
-        if self.outcome is not None and not inputs_only:
-            y = self.outcome.export(
-                export_format=export_format,
-                with_timestep_axis=with_timestep_axis
-            )
-
-        # Assemble weights.
-        if not inputs_only:
-            w = self._export_sample_weight(
-                export_format=export_format,
-                with_timestep_axis=with_timestep_axis
-            )
+        # Assemble outcomes (if present and not suppressed).
+        if len(self.outcome_list) > 0 and not inputs_only:
+            y = {}
+            w = {}
+            for outcome in self.outcome_list:
+                y_i, w_i = outcome.export(
+                    export_format=export_format,
+                    with_timestep_axis=with_timestep_axis
+                )
+                y.update(y_i)
+                w.update(w_i)
 
         if export_format == 'tf':
             try:
+                y = self._prepare_for_tf_dataset(y)
+                w = self._prepare_for_tf_dataset(w)
                 ds = tf.data.Dataset.from_tensor_slices((x, y, w))
             except NameError:
                 ds = tf.data.Dataset.from_tensor_slices((x))
@@ -139,16 +193,22 @@ class TrialDataset(object):
             )
         return ds
 
-    @property
-    def is_actual(self):
-        """Return 2D Boolean array indicating trials with actual content.
+    def subset(self, idx):
+        """Return subset of sequences as a new TrialDataset object.
+
+        Args:
+            idx: The indices corresponding to the subset.
 
         Returns:
-            is_actual:
-                shape=(samples, sequence_length)
+            A new TrialDataset object.
 
         """
-        return self.content.is_actual
+        trial_components_sub = []
+        for component in self.trial_components:
+            trial_components_sub.append(
+                component.subset(idx)
+            )
+        return TrialDataset(trial_components_sub)
 
     @classmethod
     def load(cls, filepath):
@@ -159,18 +219,19 @@ class TrialDataset(object):
 
         """
         f = h5py.File(filepath, "r")
-        content = cls._load_h5_group(f, 'content')
-        groups = cls._load_h5_group(f, 'groups')
-        outcome = cls._load_h5_group(f, 'outcome')
-        sample_weight = f["sample_weight"][()]
 
-        trials = TrialDataset(
-            content,
-            groups=groups,
-            outcome=outcome,
-            sample_weight=sample_weight
-        )
-        return trials
+        # Grab H5 group of all trial components.
+        h5_trial_components = f['trial_components']
+        component_keys = list(h5_trial_components.keys())
+
+        # Loop over components and load.
+        trial_components = []
+        for key in component_keys:
+            trial_components.append(
+                cls._load_h5_component(h5_trial_components, key)
+            )
+
+        return TrialDataset(trial_components)
 
     def save(self, filepath):
         """Save the TrialDataset object as an HDF5 file.
@@ -187,29 +248,22 @@ class TrialDataset(object):
         f.create_dataset("class_name", data="TrialDataset")
         f.create_dataset("psiz_version", data=ver)
 
-        # Add content (always exists).
-        grp_content = f.create_group("content")
-        self.content.save(grp_content)
+        trial_components = self.trial_components
+        h5_grp = f.create_group("trial_components")
+        for component_idx, component in enumerate(trial_components):
+            h5_subgrp = h5_grp.create_group(
+                "component_{0}".format(component_idx)
+            )
+            component.save(h5_subgrp)
 
-        # Add groups (sometimes exsits).
-        if self.groups is not None:
-            grp_groups = f.create_group("groups")
-            self._save_groups(grp_groups)
-
-        # Add outcomes (sometimes exists).
-        if self.outcome is not None:
-            grp_outcome = f.create_group("outcome")
-            self.outcome.save(grp_outcome)
-
-        # Add weights (always exists because of default initialization).
-        f.create_dataset("sample_weight", data=self.sample_weight)
         f.close()
 
-    def stack(self, trials_list):
+    # TODO delete stack
+    def stack(self, dataset_list):
         """Return new object with sequence-stacked data.
 
         Args:
-            trials_list: A tuple of TrialDataset objects to be
+            dataset_list: A tuple of TrialDataset objects to be
                 stacked. All objects must be the same class.
 
         Returns:
@@ -221,14 +275,16 @@ class TrialDataset(object):
         sequence_length = 0
         content_list = []
         outcome_list = []
-        for i_trials in trials_list:
+        for i_trials in dataset_list:
             if i_trials.sequence_length > sequence_length:
                 sequence_length = i_trials.sequence_length
             content_list.append(i_trials.content)
             outcome_list.append(i_trials.outcome)
 
-        groups = self._stack_groups(trials_list, sequence_length)
-        sample_weight = self._stack_sample_weight(trials_list, sequence_length)
+        groups = self._stack_groups(dataset_list, sequence_length)
+        sample_weight = self._stack_sample_weight(
+            dataset_list, sequence_length
+        )
         content = content_list[0].stack(content_list)
         outcome = outcome_list[0].stack(outcome_list)
         stacked = TrialDataset(
@@ -239,262 +295,43 @@ class TrialDataset(object):
         )
         return stacked
 
-    def subset(self, idx):
-        """Return subset of sequences as a new TrialDataset object.
-
-        Args:
-            idx: The indices corresponding to the subset.
-
-        Returns:
-            A new TrialDataset object.
-
-        """
-        content_sub = self.content.subset(idx)
-
-        outcome_sub = None
-        if self.outcome is not None:
-            outcome_sub = self.outcome.subset(idx)
-
-        groups_sub = None
-        if self.groups is not None:
-            groups_sub = {}
-            for key, value in self.groups.items():
-                groups_sub[key] = value[idx]
-
-        return TrialDataset(
-            content_sub,
-            groups=groups_sub,
-            outcome=outcome_sub,
-            sample_weight=self.sample_weight[idx]
-        )
-
-    def _validate_sample_weight(self, sample_weight):
-        """Validite `sample_weight`."""
-        # Cast `sample_weight` to float if necessary.
-        sample_weight = sample_weight.astype(float)
-
-        # Check rank of `sample_weight`.
-        if not (sample_weight.ndim == 2):
-            raise ValueError(
-                "The argument 'sample_weight' must be a rank-2 ND array."
-            )
-
-        # Check shape agreement.
-        if not (sample_weight.shape[0] == self.n_sequence):
-            raise ValueError(
-                "The argument 'sample_weight' must have "
-                "shape=(samples, sequence_length) as determined by `content`."
-            )
-        if not (sample_weight.shape[1] == self.sequence_length):
-            raise ValueError(
-                "The argument 'sample_weight' must have "
-                "shape=(samples, sequence_length) as determined by `content`."
-            )
-        return sample_weight
-
-    def _validate_group_weights(self, group_key, group_weights):
-        """Validate group weights."""
-        if group_weights.ndim == 2:
-            # Assume independent trials and add singleton timestep axis.
-            group_weights = np.expand_dims(
-                group_weights, axis=self._timestep_axis
-            )
-
-        # Check rank of `group_weights`.
-        if not (group_weights.ndim == 3):
-            raise ValueError(
-                "The group weights for the dictionary key '{0}' must be a "
-                "rank-2 or rank-3 ND array. If using a sparse coding format, "
-                "make sure you have a trailing singleton dimension to meet "
-                "this requirement.".format(group_key)
-            )
-
-        # If `group_weights` looks like sparse coding format, check data type.
-        if group_weights.shape[-1] == 1:
-            if not isinstance(group_weights[0, 0, 0], (int, np.integer)):
-                warnings.warn(
-                    "The group weights for the dictionary key '{0}' appear to "
-                    "use a sparse coding. To improve efficiency, these "
-                    "weights should have an integer dtype.".format(group_key)
-                )
-
-        # Check shape agreement.
-        if not (group_weights.shape[0] == self.n_sequence):
-            raise ValueError(
-                "The group weights for the dictionary key '{0}' must have "
-                "a shape that agrees with 'n_squence' of the 'content'"
-                ".".format(group_key)
-            )
-        if not (group_weights.shape[1] == self.sequence_length):
-            raise ValueError(
-                "The group weights for the dictionary key '{0}' must have "
-                "a shape that agrees with 'sequence_length' of the 'content'"
-                ".".format(group_key)
-            )
-
-        # Check lowerbound support limit.
-        bad_locs = group_weights < 0
-        n_bad = np.sum(bad_locs)
-        if n_bad != 0:
-            raise ValueError(
-                "The group weights for the dictionary key '{0}' contain "
-                "values less than 0. Found {1} bad trial(s).".format(
-                    group_key, n_bad
-                )
-            )
-        return group_weights
-
-    def _validate_outcome(self, outcome):
-        """Validate outcome."""
-        # Check rank of `groups`.
-        if outcome.n_sequence != self.n_sequence:
-            raise ValueError(
-                "The user-provided 'outcome' object must agree with the "
-                "`n_sequence` attribute of the user-provided"
-                "`content` object."
-            )
-
-        if outcome.sequence_length != self.sequence_length:
-            raise ValueError(
-                "The user-provided 'outcome' object must agree with the "
-                "`sequence_length` attribute of the user-provided "
-                "`content` object."
-            )
-
-    def _save_groups(self, h5_grp):
-        """Add relevant data to H5 group.
-
-        Args:
-            h5_grp: H5 group for saving data.
-
-        """
-        for group_key, group_weights in self.groups.items():
-            h5_grp.create_dataset(group_key, data=group_weights)
-
-    def _export_groups(self, export_format='tf', with_timestep_axis=True):
-        """Export groups."""
-        groups = self.groups
-        for group_key, group_weights in groups.items():
-            if with_timestep_axis is False:
-                groups[group_key] = unravel_timestep(group_weights)
-            groups[group_key] = tf.constant(groups[group_key])
-        return groups
-
-    def _export_sample_weight(
-        self, export_format='tf', with_timestep_axis=True
-    ):
-        """Export sample_weight."""
-        sample_weight = self.sample_weight
-        if with_timestep_axis is False:
-            sample_weight = unravel_timestep(sample_weight)
-        return tf.constant(sample_weight, dtype=K.floatx())
-
     @staticmethod
-    def _load_h5_group(f, grp_name):
-        """Load H5 group."""
-        try:
-            h5_grp = f[grp_name]
-        except KeyError:
-            return None
+    def _load_h5_component(f, h5_component_name):
+        """Load H5 trial component (an H5 group)."""
+        h5_component = f[h5_component_name]
 
-        try:
-            # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
-            # call. The minimum requirements are reflected in `setup.cfg`.
-            class_name = h5_grp["class_name"].asstr()[()]
-            custom_objects = {
-                'RankSimilarity': RankSimilarity,
-                'RateSimilarity': RateSimilarity,
-                'SparseCategorical': SparseCategorical,
-                'Continuous': Continuous,
-            }
-            if class_name in custom_objects:
-                group_class = custom_objects[class_name]
-            else:
-                raise NotImplementedError
+        # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
+        # call. The minimum requirements are reflected in `setup.cfg`.
+        class_name = h5_component["class_name"].asstr()[()]
+        custom_objects = {
+            'psiz.data.RankSimilarity': RankSimilarity,
+            'psiz.data.RateSimilarity': RateSimilarity,
+            'psiz.data.Group': Group,
+            'psiz.data.SparseCategorical': SparseCategorical,
+            'psiz.data.Continuous': Continuous,
+        }
+        if class_name in custom_objects:
+            component_class = custom_objects[class_name]
+        else:
+            raise NotImplementedError
 
-            return group_class.load(h5_grp)
-        except KeyError:
-            # Assume a dictionary.
-            d_keys = list(h5_grp.keys())
-            d = {}
-            for key in d_keys:
-                d[key] = h5_grp[key][()]
+        return component_class.load(h5_component)
+
+    def _prepare_for_tf_dataset(self, d):
+        """Prepare `y` and `w` for TensorFlow Dataset.
+
+        If only one key in dictionary, abandon dictionary structure and
+        just use the Tensor since TensorFlow/Keras does not need it. If
+        there is more than one key, we assume a multiple-output model
+        that requires all outputs and sample weights to be labeled via
+        dictionary keys.
+
+        Args:
+            d: A dictionary of TF Tensors.
+
+        """
+        if len(d) == 1:
+            key, tensor = d.popitem()
+            return tensor
+        else:
             return d
-
-    def _stack_groups(self, trials_list, sequence_length):
-        """Stack `groups` data."""
-        # First check that groups keys are compatible.
-        # NOTE: It is not safe to simply pad an missing key with zeros, since
-        # zero likely has user-defined semantics.
-        group_keys = trials_list[0].groups.keys()
-        for i_trials in trials_list[1:]:
-            i_group_keys = i_trials.groups.keys()
-            if group_keys != i_group_keys:
-                raise ValueError(
-                    'The dictionary keys of `groups` must be identical '
-                    'for all TrialDatasets. Got a mismatch: {0} and '
-                    '{1}.'.format(str(group_keys), str(i_group_keys))
-                )
-
-        # Loop over each key in groups.
-        groups_stacked = {}
-        for key in group_keys:
-            # Check that shapes are compatible.
-            value_shape = trials_list[0].groups[key].shape
-            for i_trials in trials_list[1:]:
-                i_value_shape = i_trials.groups[key].shape
-                is_axis_2_ok = value_shape[2] == i_value_shape[2]
-                if not is_axis_2_ok:
-                    raise ValueError(
-                        "The shape of 'groups's '{0}' is not compatible. They "
-                        "must be identical on axis=2.".format(key)
-                    )
-
-            # Start by padding first entry in list.
-            timestep_pad = sequence_length - trials_list[0].sequence_length
-            pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-            groups = np.pad(
-                trials_list[0].groups[key],
-                pad_width, mode='constant', constant_values=0
-            )
-
-            # Loop over remaining list.
-            for i_trials in trials_list[1:]:
-                timestep_pad = sequence_length - i_trials.sequence_length
-                pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-                curr_groups = np.pad(
-                    i_trials.groups[key],
-                    pad_width, mode='constant', constant_values=0
-                )
-
-                groups = np.concatenate(
-                    (groups, curr_groups), axis=0
-                )
-            groups_stacked[key] = groups
-
-        return groups_stacked
-
-    def _stack_sample_weight(self, trials_list, sequence_length):
-        """Stack `sample_weight` data."""
-        # Start by padding first entry in list.
-        timestep_pad = sequence_length - trials_list[0].sequence_length
-        pad_width = ((0, 0), (0, timestep_pad))
-        sample_weight = np.pad(
-            trials_list[0].sample_weight,
-            pad_width, mode='constant', constant_values=0
-        )
-
-        # Loop over remaining list.
-        for i_trials in trials_list[1:]:
-            timestep_pad = sequence_length - i_trials.sequence_length
-            pad_width = ((0, 0), (0, timestep_pad))
-            curr_sample_weight = np.pad(
-                i_trials.sample_weight,
-                pad_width, mode='constant', constant_values=0
-            )
-
-            sample_weight = np.concatenate(
-                (sample_weight, curr_sample_weight), axis=0
-            )
-
-        return sample_weight

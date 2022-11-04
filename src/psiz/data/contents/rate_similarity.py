@@ -32,8 +32,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 class RateSimilarity(Content):
     """Trial content requiring similarity ratings."""
 
-    def __init__(
-            self, stimulus_set):
+    def __init__(self, stimulus_set):
         """Initialize.
 
         Args:
@@ -52,10 +51,11 @@ class RateSimilarity(Content):
 
         """
         Content.__init__(self)
-        stimulus_set = self._validate_stimulus_set(stimulus_set)
-        self.stimulus_set = stimulus_set
+        stimulus_set = self._rectify_shape(stimulus_set)
         self.n_sequence = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
+        stimulus_set = self._validate_stimulus_set(stimulus_set)
+        self.stimulus_set = stimulus_set
 
     @property
     def is_actual(self):
@@ -116,6 +116,16 @@ class RateSimilarity(Content):
         stimulus_set_sub = self.stimulus_set[idx]
         return RateSimilarity(stimulus_set_sub)
 
+    def _rectify_shape(self, stimulus_set):
+        """Rectify shape of `stimulus_set`."""
+        if stimulus_set.ndim == 2:
+            # Assume trials are independent and add singleton dimension for
+            # timestep axis.
+            stimulus_set = np.expand_dims(
+                stimulus_set, axis=self.timestep_axis
+            )
+        return stimulus_set
+
     def _validate_stimulus_set(self, stimulus_set):
         """Validate `stimulus_set`.
 
@@ -138,18 +148,14 @@ class RateSimilarity(Content):
             )
 
         # Check shape.
-        if not ((stimulus_set.ndim == 2) or (stimulus_set.ndim == 3)):
+        if not stimulus_set.ndim == 3:
             raise ValueError(
                 "The argument `stimulus_set` must be a rank-2 or rank-3 "
                 "ndarray with a shape corresponding to (samples, "
                 "sequence_length, n_stimuli_per_trial)."
             )
 
-        if stimulus_set.ndim == 2:
-            # Assume trials are independent and add singleton dimension for
-            # `timestep`.
-            stimulus_set = np.expand_dims(stimulus_set, axis=1)
-
+        # TODO is this really the right policy?
         # Check values are in int32 range.
         ii32 = np.iinfo(np.int32)
         if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
@@ -193,7 +199,7 @@ class RateSimilarity(Content):
             h5_grp: H5 group for saving data.
 
         """
-        h5_grp.create_dataset("class_name", data="RateSimilarity")
+        h5_grp.create_dataset("class_name", data="psiz.data.RateSimilarity")
         h5_grp.create_dataset("stimulus_set", data=self.stimulus_set)
 
     @classmethod

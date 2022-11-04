@@ -31,7 +31,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 class SparseCategorical(Outcome):
     """A categorical outcome."""
 
-    def __init__(self, index, depth=None):
+    def __init__(self, index, depth=None, **kwargs):
         """Initialize.
 
         Args:
@@ -40,73 +40,28 @@ class SparseCategorical(Outcome):
             depth: Integer indicating the maximum number of
                 outcomes. This value determines the length of the
                 one-hot encoding.
+            kwargs: Additional key-word arguments.
 
         Raises:
             ValueError if improper arguments are provided.
 
         """
-        Outcome.__init__(self)
-        self.index = self._validate_index(index)
-        self.n_sequence = self.index.shape[0]
-        self.sequence_length = self.index.shape[1]
+        Outcome.__init__(self, **kwargs)
+        index = self._rectify_shape(index)
+        self.n_sequence = index.shape[0]
+        self.sequence_length = index.shape[1]
+        index = self._validate_index(index)
+        self.index = index
         self.depth = depth
+        self.process_sample_weight()
 
-    def stack(self, component_list):
-        """Return new object with sequence-stacked data.
-
-        Args:
-            component_list: A tuple of TrialComponent objects to be
-                stacked. All objects must be the same class.
-
-        Returns:
-            A new object.
-
-        """
-        # Determine maximum number of timesteps.
-        sequence_length = 0
-        max_depth = 0
-        for i_component in component_list:
-            if i_component.sequence_length > sequence_length:
-                sequence_length = i_component.sequence_length
-            if i_component.depth > max_depth:
-                max_depth = i_component.depth
-
-        # Start by padding first entry in list.
-        timestep_pad = sequence_length - component_list[0].sequence_length
-        pad_width = ((0, 0), (0, timestep_pad))
-        index = np.pad(
-            component_list[0].index,
-            pad_width, mode='constant', constant_values=0
-        )
-
-        # Loop over remaining list.
-        for i_component in component_list[1:]:
-
-            timestep_pad = sequence_length - i_component.sequence_length
-            pad_width = ((0, 0), (0, timestep_pad))
-            curr_index = np.pad(
-                i_component.index,
-                pad_width, mode='constant', constant_values=0
-            )
-
-            index = np.concatenate(
-                (index, curr_index), axis=0
-            )
-
-        return SparseCategorical(index, depth=max_depth)
-
-    def subset(self, idx):
-        """Return subset of data as a new object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new object.
-
-        """
-        index_sub = self.index[idx]
-        return SparseCategorical(index_sub, depth=self.depth)
+    def _rectify_shape(self, index):
+        """Rectify shape of index."""
+        if index.ndim == 1:
+            # Assume trials are independent and add singleton dimension for
+            # timestep axis.
+            index = np.expand_dims(index, axis=self.timestep_axis)
+        return index
 
     def _validate_index(self, index):
         """Validate `index`."""
@@ -123,11 +78,6 @@ class SparseCategorical(Outcome):
                 "The argument `index` must contain non-negative "
                 "integers."
             )
-
-        if index.ndim == 1:
-            # Assume trials are independent and add singleton dimension for
-            # `timestep`.
-            index = np.expand_dims(index, axis=1)
 
         # Check shape.
         if not (index.ndim == 2):
@@ -150,13 +100,19 @@ class SparseCategorical(Outcome):
                 data is reshaped.
 
         """
+        w = super(SparseCategorical, self).export(
+            export_format=export_format, with_timestep_axis=with_timestep_axis
+        )
+
+        index = self.index
+        if with_timestep_axis is False:
+            index = unravel_timestep(index)
+
         if export_format == 'tf':
             # Convert from sparse to one-hot-encoding (along new trailing
             # axis).
-            index = self.index
-            if with_timestep_axis is False:
-                index = unravel_timestep(index)
             # pylint: disable=unexpected-keyword-arg
+            # NOTE: A float for loss computation.
             y = tf.one_hot(
                 index, self.depth, on_value=1.0, off_value=0.0,
                 dtype=K.floatx()
@@ -165,7 +121,7 @@ class SparseCategorical(Outcome):
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
-        return y
+        return {self.name: y}, w
 
     def save(self, h5_grp):
         """Add relevant data to H5 group.
@@ -174,9 +130,11 @@ class SparseCategorical(Outcome):
             h5_grp: H5 group for saving data.
 
         """
-        h5_grp.create_dataset("class_name", data="SparseCategorical")
+        h5_grp.create_dataset("class_name", data="psiz.data.SparseCategorical")
         h5_grp.create_dataset("index", data=self.index)
         h5_grp.create_dataset("depth", data=self.depth)
+        h5_grp.create_dataset("name", data=self.name)
+        h5_grp.create_dataset("sample_weight", data=self.sample_weight)
 
     @classmethod
     def load(cls, h5_grp):
@@ -188,4 +146,70 @@ class SparseCategorical(Outcome):
         """
         index = h5_grp["index"][()]
         depth = h5_grp["depth"][()]
-        return cls(index, depth=depth)
+        name = h5_grp["name"].asstr()[()]
+        sample_weight = h5_grp["sample_weight"][()]
+        return cls(index, depth=depth, name=name, sample_weight=sample_weight)
+
+    def subset(self, idx):
+        """Return subset of data as a new object.
+
+        Args:
+            index: The indices corresponding to the subset.
+
+        Returns:
+            A new object.
+
+        """
+        index_sub = self.index[idx]
+        sample_weight_sub = self._subset_sample_weight(idx)
+        return SparseCategorical(
+            index_sub,
+            depth=self.depth,
+            sample_weight=sample_weight_sub,
+            name=self.name
+        )
+
+    # TODO delete stack
+    # def stack(self, component_list):
+    #     """Return new object with sequence-stacked data.
+
+    #     Args:
+    #         component_list: A tuple of TrialComponent objects to be
+    #             stacked. All objects must be the same class.
+
+    #     Returns:
+    #         A new object.
+
+    #     """
+    #     # Determine maximum number of timesteps.
+    #     sequence_length = 0
+    #     max_depth = 0
+    #     for i_component in component_list:
+    #         if i_component.sequence_length > sequence_length:
+    #             sequence_length = i_component.sequence_length
+    #         if i_component.depth > max_depth:
+    #             max_depth = i_component.depth
+
+    #     # Start by padding first entry in list.
+    #     timestep_pad = sequence_length - component_list[0].sequence_length
+    #     pad_width = ((0, 0), (0, timestep_pad))
+    #     index = np.pad(
+    #         component_list[0].index,
+    #         pad_width, mode='constant', constant_values=0
+    #     )
+
+    #     # Loop over remaining list.
+    #     for i_component in component_list[1:]:
+
+    #         timestep_pad = sequence_length - i_component.sequence_length
+    #         pad_width = ((0, 0), (0, timestep_pad))
+    #         curr_index = np.pad(
+    #             i_component.index,
+    #             pad_width, mode='constant', constant_values=0
+    #         )
+
+    #         index = np.concatenate(
+    #             (index, curr_index), axis=0
+    #         )
+
+    #     return SparseCategorical(index, depth=max_depth)

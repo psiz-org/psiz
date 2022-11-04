@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test trials module."""
+"""Test data module."""
 
 import h5py
 import numpy as np
@@ -24,7 +24,7 @@ from psiz.data.contents.rate_similarity import RateSimilarity
 from psiz.trials import stack
 
 
-def test_init_0(rate_sim_0):
+def test_init_0(c_rate_a_4x1):
     """Test initialization with minimal rank arguments."""
     desired_n_sequence = 4
     desired_sequence_length = 1
@@ -35,15 +35,15 @@ def test_init_0(rate_sim_0):
         [[3, 4]]
     ], dtype=np.int32)
 
-    assert rate_sim_0.n_sequence == desired_n_sequence
-    assert rate_sim_0.sequence_length == desired_sequence_length
+    assert c_rate_a_4x1.n_sequence == desired_n_sequence
+    assert c_rate_a_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
-        desired_stimulus_set, rate_sim_0.stimulus_set
+        desired_stimulus_set, c_rate_a_4x1.stimulus_set
     )
-    assert rate_sim_0.mask_zero
+    assert c_rate_a_4x1.mask_zero
 
 
-def test_init_1(rate_sim_1):
+def test_init_1(c_rate_aa_4x1):
     """Test initialization with true rank arguments."""
     desired_n_sequence = 4
     desired_sequence_length = 1
@@ -54,15 +54,15 @@ def test_init_1(rate_sim_1):
         [[3, 4]]
     ], dtype=np.int32)
 
-    assert rate_sim_1.n_sequence == desired_n_sequence
-    assert rate_sim_1.sequence_length == desired_sequence_length
+    assert c_rate_aa_4x1.n_sequence == desired_n_sequence
+    assert c_rate_aa_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
-        desired_stimulus_set, rate_sim_1.stimulus_set
+        desired_stimulus_set, c_rate_aa_4x1.stimulus_set
     )
-    assert rate_sim_1.mask_zero
+    assert c_rate_aa_4x1.mask_zero
 
 
-def test_init_2(rate_sim_2):
+def test_init_2(c_rate_b_4x2):
     """Test initialization with true rank arguments."""
     desired_n_sequence = 4
     desired_sequence_length = 2
@@ -87,15 +87,15 @@ def test_init_2(rate_sim_2):
         ], dtype=np.int32
     )
 
-    assert rate_sim_2.n_sequence == desired_n_sequence
-    assert rate_sim_2.sequence_length == desired_sequence_length
+    assert c_rate_b_4x2.n_sequence == desired_n_sequence
+    assert c_rate_b_4x2.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
-        desired_stimulus_set, rate_sim_2.stimulus_set
+        desired_stimulus_set, c_rate_b_4x2.stimulus_set
     )
-    assert rate_sim_2.mask_zero
+    assert c_rate_b_4x2.mask_zero
 
 
-def test_init_3(rate_sim_3):
+def test_init_3(c_rate_c_4x3):
     """Test initialization.
 
     Do not auto-trim empty sequence.
@@ -128,12 +128,12 @@ def test_init_3(rate_sim_3):
         ], dtype=np.int32
     )
 
-    assert rate_sim_3.n_sequence == desired_n_sequence
-    assert rate_sim_3.sequence_length == desired_sequence_length
+    assert c_rate_c_4x3.n_sequence == desired_n_sequence
+    assert c_rate_c_4x3.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
-        desired_stimulus_set, rate_sim_3.stimulus_set
+        desired_stimulus_set, c_rate_c_4x3.stimulus_set
     )
-    assert rate_sim_3.mask_zero
+    assert c_rate_c_4x3.mask_zero
 
 
 def test_init_4():
@@ -228,7 +228,7 @@ def test_invalid_stimulus_set():
     assert e_info.type == ValueError
 
 
-def test_is_actual(rate_sim_2):
+def test_is_actual(c_rate_b_4x2):
     """Test is_actual method."""
     desired_is_actual = np.array(
         [
@@ -238,12 +238,12 @@ def test_is_actual(rate_sim_2):
             [1, 1]
         ], dtype=bool
     )
-    np.testing.assert_array_equal(desired_is_actual, rate_sim_2.is_actual)
+    np.testing.assert_array_equal(desired_is_actual, c_rate_b_4x2.is_actual)
 
 
-def test_unique_configurations(rate_sim_2):
+def test_unique_configurations(c_rate_b_4x2):
     """Test unique configurations."""
-    config_idx, df_config = rate_sim_2.unique_configurations
+    config_idx, df_config = c_rate_b_4x2.unique_configurations
     config_idx_desired = np.array(
         [
             [0, 0],
@@ -258,9 +258,9 @@ def test_unique_configurations(rate_sim_2):
     assert df_config is None
 
 
-def test_export_0(rate_sim_3):
+def test_export_0(c_rate_c_4x3):
     """Test export."""
-    x = rate_sim_3.export()
+    x = c_rate_c_4x3.export()
     desired_stimulus_set = np.array(
         [
             [
@@ -290,13 +290,13 @@ def test_export_0(rate_sim_3):
     )
 
 
-def test_export_1(rate_sim_3):
+def test_export_1(c_rate_c_4x3):
     """Test export.
 
     Use with_timestep_axis=False.
 
     """
-    x = rate_sim_3.export(with_timestep_axis=False)
+    x = c_rate_c_4x3.export(with_timestep_axis=False)
     desired_stimulus_set = np.array(
         [
             [3, 1],
@@ -318,25 +318,25 @@ def test_export_1(rate_sim_3):
     )
 
 
-def test_export_wrong(rate_sim_3):
+def test_export_wrong(c_rate_c_4x3):
     """Test export.
 
     Using incorrect `export_format`.
 
     """
     with pytest.raises(Exception) as e_info:
-        rate_sim_3.export(export_format='garbage')
+        c_rate_c_4x3.export(export_format='garbage')
     assert e_info.type == ValueError
     assert (
         str(e_info.value) == "Unrecognized `export_format` 'garbage'."
     )
 
 
-def test_persistence(rate_sim_3, tmpdir):
+def test_persistence(c_rate_c_4x3, tmpdir):
     """Test save and load."""
     group_name = "content"
 
-    original = rate_sim_3
+    original = c_rate_c_4x3
     fn = tmpdir.join('content_test.hdf5')
 
     # Save group.
@@ -357,7 +357,7 @@ def test_persistence(rate_sim_3, tmpdir):
     f.close()
 
     # Check for equivalency.
-    assert class_name == "RateSimilarity"
+    assert class_name == "psiz.data.RateSimilarity"
     assert original.n_sequence == reconstructed.n_sequence
     assert original.sequence_length == reconstructed.sequence_length
     np.testing.assert_array_equal(
@@ -365,7 +365,7 @@ def test_persistence(rate_sim_3, tmpdir):
     )
 
 
-def test_subset_0(rate_sim_3):
+def test_subset_0(c_rate_c_4x3):
     """Test subset."""
     desired_n_sequence = 2
     desired_sequence_length = 3
@@ -384,7 +384,7 @@ def test_subset_0(rate_sim_3):
         ], dtype=np.int32
     )
 
-    sub = rate_sim_3.subset(np.array([1, 2]))
+    sub = c_rate_c_4x3.subset(np.array([1, 2]))
     assert sub.n_sequence == desired_n_sequence
     assert sub.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
@@ -392,7 +392,7 @@ def test_subset_0(rate_sim_3):
     )
 
 
-def test_stack_0(rate_sim_3, rate_sim_4):
+def test_stack_0(c_rate_c_4x3, c_rate_d_2x3):
     """Test stack."""
     desired_n_sequence = 10
     desired_sequence_length = 3
@@ -450,7 +450,7 @@ def test_stack_0(rate_sim_3, rate_sim_4):
             ],
         ], dtype=np.int32
     )
-    stacked = stack((rate_sim_3, rate_sim_4, rate_sim_3))
+    stacked = stack((c_rate_c_4x3, c_rate_d_2x3, c_rate_c_4x3))
 
     assert desired_n_sequence == stacked.n_sequence
     assert desired_sequence_length == stacked.sequence_length

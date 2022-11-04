@@ -62,8 +62,10 @@ class RankSimilarity(Content):
 
         """
         Content.__init__(self)
-        stimulus_set = self._validate_stimulus_set(stimulus_set)
+        stimulus_set = self._rectify_shape(stimulus_set)
+        self.n_sequence = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
+        stimulus_set = self._validate_stimulus_set(stimulus_set)
 
         # Trim any excess placeholder padding off of reference axis (axis=2).
         is_present = np.not_equal(stimulus_set, self.mask_value)
@@ -73,7 +75,6 @@ class RankSimilarity(Content):
         stimulus_set = stimulus_set[:, :, 0:self.max_n_reference + 1]
 
         self.stimulus_set = stimulus_set
-        self.n_sequence = stimulus_set.shape[0]
 
         if n_select is None:
             # Assume `n_select` is 1 for all actual trials.
@@ -338,6 +339,16 @@ class RankSimilarity(Content):
 
         return n_select
 
+    def _rectify_shape(self, stimulus_set):
+        """Rectify shape of `stimulus_set`."""
+        if stimulus_set.ndim == 2:
+            # Assume trials are independent and add singleton dimension for
+            # timestep axis.
+            stimulus_set = np.expand_dims(
+                stimulus_set, axis=self.timestep_axis
+            )
+        return stimulus_set
+
     def _validate_stimulus_set(self, stimulus_set):
         """Validate `stimulus_set`.
 
@@ -358,11 +369,6 @@ class RankSimilarity(Content):
                 "The argument `stimulus_set` must contain integers "
                 "greater than or equal to 0."
             )
-
-        if stimulus_set.ndim == 2:
-            # Assume trials are independent and add singleton dimension for
-            # `timestep`.
-            stimulus_set = np.expand_dims(stimulus_set, axis=1)
 
         # Check shape.
         if not stimulus_set.ndim == 3:
@@ -464,7 +470,7 @@ class RankSimilarity(Content):
             h5_grp: H5 group for saving data.
 
         """
-        h5_grp.create_dataset("class_name", data="RankSimilarity")
+        h5_grp.create_dataset("class_name", data="psiz.data.RankSimilarity")
         h5_grp.create_dataset("stimulus_set", data=self.stimulus_set)
         h5_grp.create_dataset("n_select", data=self.n_select)
 

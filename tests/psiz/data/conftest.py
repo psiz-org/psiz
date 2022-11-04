@@ -13,20 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test data module."""
+"""Test data module.
+
+TrialComponent pytest fixtures follow the naming convention:
+x_y_z_mxn
+x: trial component type (c: content, o: outcome, g: group)
+y: helpful name (rank, rate, rt, continous, catsparse)
+z: variant identifier
+mxn: n_sequence x sequence_length
+
+"""
 
 import numpy as np
 import pytest
 
 from psiz.data.contents.rank_similarity import RankSimilarity
 from psiz.data.contents.rate_similarity import RateSimilarity
+from psiz.data.groups.group import Group
 from psiz.data.outcomes.continuous import Continuous
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
 
 
 @pytest.fixture(scope="module")
-def rank_sim_0():
-    """Content RankedSimilarity with minimal rank arguments."""
+def c_rank_a_4x1():
+    """Content RankedSimilarity with rank-2 arguments."""
     stimulus_set = np.array(
         [
             [3, 1, 2, 0, 0, 0, 0, 0, 0, 0],
@@ -41,8 +51,8 @@ def rank_sim_0():
 
 
 @pytest.fixture(scope="module")
-def rank_sim_1():
-    """Content RankSimilarity with true rank arguments.
+def c_rank_aa_4x1():
+    """Content RankSimilarity with rank-3 arguments.
 
     Notes:
     The input arguments are full rank, but singleton on the
@@ -65,8 +75,22 @@ def rank_sim_1():
 
 
 @pytest.fixture(scope="module")
-def rank_sim_2():
-    """Content RankedSimilarity with true rank arguments.
+def o_rank_aa_4x1():
+    outcome_idx = np.zeros([4, 1], dtype=np.int32)
+    sample_weight = .9 * np.ones([4, 1])
+    max_outcome = 56
+    rank_outcome = SparseCategorical(
+        outcome_idx,
+        depth=max_outcome,
+        sample_weight=sample_weight,
+        name='rank_prob'
+    )
+    return rank_outcome
+
+
+@pytest.fixture(scope="module")
+def c_rank_b_4x2():
+    """Content RankedSimilarity with rank-3 arguments.
 
     Notes:
     There is intentionally an extra reference placeholder that should
@@ -101,11 +125,11 @@ def rank_sim_2():
 
 
 @pytest.fixture(scope="module")
-def rank_sim_3():
-    """Content RankedSimilarity with true rank arguments.
+def c_rank_c_4x3():
+    """Content RankedSimilarity with rank-3 arguments.
 
-    This instance also has an extra timestep and reference that should
-    be trimmed at initialization.
+    * An extra sequence that should not be trimmed.
+    * An extra reference that should be trimmed at initialization.
 
     """
     stimulus_set = np.array(
@@ -140,8 +164,22 @@ def rank_sim_3():
 
 
 @pytest.fixture(scope="module")
-def rank_sim_4():
-    """Content RankedSimilarity with true rank arguments.
+def o_rank_c_4x3():
+    outcome_idx = np.zeros([4, 3], dtype=np.int32)
+    sample_weight = .9 * np.ones([4, 3])
+    max_outcome = 56
+    rank_outcome = SparseCategorical(
+        outcome_idx,
+        depth=max_outcome,
+        sample_weight=sample_weight,
+        name='rank_prob'
+    )
+    return rank_outcome
+
+
+@pytest.fixture(scope="module")
+def c_rank_d_3x2():
+    """Content RankedSimilarity with rank-3 arguments.
 
     A set of trials with relatively simple outcomes.
 
@@ -170,8 +208,37 @@ def rank_sim_4():
 
 
 @pytest.fixture(scope="module")
-def rank_sim_5():
-    """Content RankedSimilarity with true rank arguments.
+def o_rank_d_3x2():
+    outcome_idx = np.zeros([3, 2], dtype=np.int32)
+    sample_weight = .9 * np.ones([3, 2])
+    max_outcome = 3
+    rank_outcome = SparseCategorical(
+        outcome_idx,
+        depth=max_outcome,
+        sample_weight=sample_weight,
+        name='rank_prob'
+    )
+    return rank_outcome
+
+
+@pytest.fixture(scope="module")
+def o_rt_a_3x2():
+    rt = np.array(
+        [
+            [[4.1], [4.2]],
+            [[5.1], [5.2]],
+            [[6.1], [6.2]],
+        ]
+    )
+    sample_weight = .8 * np.ones([3, 2])
+    return Continuous(
+        rt, sample_weight=sample_weight, name='rt'
+    )
+
+
+@pytest.fixture(scope="module")
+def c_rank_e_2x3():
+    """Content RankedSimilarity with rank-3 arguments.
 
     A set of trials with relatively simple outcomes.
 
@@ -198,8 +265,8 @@ def rank_sim_5():
 
 
 @pytest.fixture(scope="module")
-def rank_sim_6():
-    """Content RankedSimilarity with true rank arguments.
+def c_rank_f_2x4():
+    """Content RankedSimilarity with rank-3 arguments.
 
     A set of trials with relatively simple outcomes.
 
@@ -228,7 +295,7 @@ def rank_sim_6():
 
 
 @pytest.fixture(scope="module")
-def rate_sim_0():
+def c_rate_a_4x1():
     """Content RateSimilarity with minimal rank arguments."""
     stimulus_set = np.array(
         [
@@ -243,8 +310,8 @@ def rate_sim_0():
 
 
 @pytest.fixture(scope="module")
-def rate_sim_1():
-    """Content RateSimilarity with true rank arguments.
+def c_rate_aa_4x1():
+    """Content RateSimilarity with rank-3 arguments.
 
     Notes:
     The input arguments are full rank, but singleton on the
@@ -266,8 +333,8 @@ def rate_sim_1():
 
 
 @pytest.fixture(scope="module")
-def rate_sim_2():
-    """Content RateSimilarity with true rank arguments.
+def c_rate_b_4x2():
+    """Content RateSimilarity with rank-3 arguments.
 
     Notes:
     There is intentionally an extra reference placeholder that should
@@ -299,8 +366,8 @@ def rate_sim_2():
 
 
 @pytest.fixture(scope="module")
-def rate_sim_3():
-    """Content RateSimilarity with true rank arguments.
+def c_rate_c_4x3():
+    """Content RateSimilarity with rank-3 arguments.
 
     This instance also has an extra timestep and reference that should
     be trimmed at initialization.
@@ -335,8 +402,8 @@ def rate_sim_3():
 
 
 @pytest.fixture(scope="module")
-def rate_sim_4():
-    """Content RateSimilarity with true rank arguments.
+def c_rate_d_2x3():
+    """Content RateSimilarity with rank-3 arguments.
 
     Used in test_stack.
 
@@ -360,25 +427,71 @@ def rate_sim_4():
 
 
 @pytest.fixture(scope="module")
-def continuous_0():
+def c_rate_e_3x2():
+    """Content RateSimilarity with rank-3 arguments."""
+    stimulus_set = np.array(
+        [
+            [
+                [5, 6],
+                [7, 8],
+            ],
+            [
+                [1, 9],
+                [8, 7],
+            ],
+            [
+                [1, 2],
+                [3, 4]
+            ]
+        ], dtype=np.int32
+    )
+
+    return RateSimilarity(stimulus_set)
+
+
+@pytest.fixture(scope="module")
+def o_rate_a_3x2():
+    """Content RateSimilarity with rank-3 arguments."""
+    ratings = np.array(
+        [
+            [
+                [0.5, 0.6],
+                [0.7, 0.8],
+            ],
+            [
+                [1.0, 0.9],
+                [0.8, 0.7],
+            ],
+            [
+                [0.1, 0.2],
+                [0.3, 0.4]
+            ]
+        ], dtype=np.float32
+    )
+
+    return Continuous(ratings, name="rate_a")
+
+
+@pytest.fixture(scope="module")
+def o_continuous_a_4x1():
     """Outcome Continuous with minimal rank arguments."""
     outcome = np.array(
         [[0.0], [2.0], [-0.1], [1.3]], dtype=np.float32
     )
-    return Continuous(outcome)
+    return Continuous(outcome, name='continuous_a')
 
 
 @pytest.fixture(scope="module")
-def continuous_1():
+def o_continuous_aa_4x1():
     """Outcome Continuous with full rank arguments (singleton)."""
     outcome = np.array(
         [[[0.0]], [[2.0]], [[-0.1]], [[1.3]]], dtype=np.float32
     )
-    return Continuous(outcome)
+    return Continuous(outcome, name='continuous_aa')
 
 
 @pytest.fixture(scope="module")
-def continuous_2():
+def o_continuous_b_4x3():
     """Outcome Continuous with full rank arguments."""
     outcome = np.array(
         [
@@ -388,11 +501,11 @@ def continuous_2():
             [[1.0], [1.0], [1.0]],
         ], dtype=np.float32
     )
-    return Continuous(outcome)
+    return Continuous(outcome, name='continuous_b')
 
 
 @pytest.fixture(scope="module")
-def continuous_3():
+def o_continuous_c_4x3():
     """Outcome Continuous with full rank arguments."""
     outcome = np.array(
         [
@@ -402,11 +515,11 @@ def continuous_3():
             [[1.0, 1.1], [1.0, 1.2], [1.0, 1.3]],
         ], dtype=np.float32
     )
-    return Continuous(outcome)
+    return Continuous(outcome, name='continuous_c')
 
 
 @pytest.fixture(scope="module")
-def continuous_4():
+def o_continuous_d_2x3():
     """Outcome Continuous with full rank arguments."""
     outcome = np.array(
         [
@@ -414,29 +527,57 @@ def continuous_4():
             [[3.0, 3.4], [3.0, 3.5], [3.0, 3.6]],
         ], dtype=np.float32
     )
-    return Continuous(outcome)
+    return Continuous(outcome, name='continuous_d')
 
 
 @pytest.fixture(scope="module")
-def sparse_cat_0():
+def o_continuous_e_4x3():
+    """Outcome Continuous with full rank arguments.
+
+    * with sample weights
+
+    """
+    outcome = np.array(
+        [
+            [[0.0], [0.0], [0.0]],
+            [[2.0], [0.0], [0.0]],
+            [[-0.1], [-1.0], [0.3]],
+            [[1.0], [1.0], [1.0]],
+        ], dtype=np.float32
+    )
+    sample_weight = np.array(
+        [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
+            [0.7, 0.8, 0.9],
+            [1.0, 1.0, 0.0],
+        ], dtype=np.float32
+    )
+    return Continuous(
+        outcome, name='continuous_e', sample_weight=sample_weight
+    )
+
+
+@pytest.fixture(scope="module")
+def o_sparsecat_a_4x1():
     """Outcome SparseCategorical with minimal rank arguments."""
     outcome_idx = np.array(
         [0, 2, 0, 1], dtype=np.int32
     )
-    return SparseCategorical(outcome_idx, depth=3)
+    return SparseCategorical(outcome_idx, depth=3, name='sparsecat_a')
 
 
 @pytest.fixture(scope="module")
-def sparse_cat_1():
+def o_sparsecat_aa_4x1():
     """Outcome SparseCategorical with full rank arguments (singleton)."""
     outcome_idx = np.array(
         [[0], [2], [0], [1]], dtype=np.int32
     )
-    return SparseCategorical(outcome_idx, depth=5)
+    return SparseCategorical(outcome_idx, depth=5, name='sparsecat_aa')
 
 
 @pytest.fixture(scope="module")
-def sparse_cat_2():
+def o_sparsecat_b_4x3():
     """Outcome SparseCategorical with full rank arguments."""
     outcome_idx = np.array(
         [
@@ -446,11 +587,11 @@ def sparse_cat_2():
             [1, 1, 1],
         ], dtype=np.int32
     )
-    return SparseCategorical(outcome_idx, depth=3)
+    return SparseCategorical(outcome_idx, depth=3, name='sparsecat_b')
 
 
 @pytest.fixture(scope="module")
-def sparse_cat_3():
+def o_sparsecat_c_2x3():
     """Outcome SparseCategorical with full rank arguments."""
     outcome_idx = np.array(
         [
@@ -458,4 +599,87 @@ def sparse_cat_3():
             [1, 2, 2],
         ], dtype=np.int32
     )
-    return SparseCategorical(outcome_idx, depth=3)
+    return SparseCategorical(outcome_idx, depth=3, name='sparsecat_c')
+
+
+@pytest.fixture(scope="module")
+def o_sparsecat_d_4x3():
+    """Outcome SparseCategorical with full rank arguments."""
+    outcome_idx = np.array(
+        [
+            [0, 0, 0],
+            [2, 0, 0],
+            [0, 1, 0],
+            [1, 1, 1],
+        ], dtype=np.int32
+    )
+    sample_weight = np.array(
+        [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
+            [0.7, 0.8, 0.9],
+            [1.0, 1.0, 0.0],
+        ], dtype=np.float32
+    )
+    return SparseCategorical(
+        outcome_idx, depth=3, sample_weight=sample_weight, name='sparsecat_d'
+    )
+
+
+@pytest.fixture(scope="module")
+def g_condition_id_4x1():
+    group_weights = np.array(
+        [
+            [[0]],
+            [[1]],
+            [[0]],
+            [[0]],
+        ]
+    )
+    return Group(
+        group_weights=group_weights, name='condition_id'
+    )
+
+
+@pytest.fixture(scope="module")
+def g_condition_id_4x3():
+    group_weights = np.array(
+        [
+            [[0], [0], [0]],
+            [[1], [1], [1]],
+            [[0], [0], [0]],
+            [[0], [0], [0]],
+        ]
+    )
+    return Group(
+        group_weights=group_weights, name='condition_id'
+    )
+
+
+@pytest.fixture(scope="module")
+def g_condition_id_3x2():
+    group_weights = np.array(
+        [
+            [[0], [0]],
+            [[1], [1]],
+            [[0], [0]]
+        ], dtype=np.int32
+    )
+    return Group(
+        group_weights=group_weights, name='condition_id'
+    )
+
+
+@pytest.fixture(scope="module")
+def g_mix2_4x3():
+    group_weights = np.array(
+        [
+            [[0.5, 0.5], [0.6, 0.4], [0.7, 0.3]],
+            [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
+            [[0.8, 0.2], [0.8, 0.2], [0.8, 0.2]],
+            [[0.2, 0.8], [0.2, 0.8], [0.2, 0.8]],
+        ], dtype=np.float32
+    )
+    return Group(
+        group_weights=group_weights, name='mix2'
+    )

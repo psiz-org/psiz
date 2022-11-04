@@ -28,22 +28,27 @@ class TrialComponent(metaclass=ABCMeta):
 
     def __init__(self):
         """Initialize."""
-        # Attributes determined by concrete class.
         self.n_sequence = None
         self.sequence_length = None
+        self._timestep_axis = 1
 
-    @abstractmethod
-    def stack(self, component_list):
-        """Return new object with sequence-stacked data.
+    # TODO delete stack
+    # @abstractmethod
+    # def stack(self, component_list):
+    #     """Return new object with sequence-stacked data.
 
-        Args:
-            component_list: A tuple of TrialComponent objects to be
-                stacked. All objects must be the same class.
+    #     Args:
+    #         component_list: A tuple of TrialComponent objects to be
+    #             stacked. All objects must be the same class.
 
-        Returns:
-            A new object.
+    #     Returns:
+    #         A new object.
 
-        """
+    #     """
+
+    @property
+    def timestep_axis(self):
+        return self._timestep_axis
 
     @abstractmethod
     def subset(self, idx):

@@ -182,7 +182,7 @@ class RateSimilarity(Content):
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
             x = {
-                'rate_similarity_stimulus_set': tf.constant(
+                'rate2/stimulus_set': tf.constant(
                     stimulus_set, dtype=tf.int32
                 )
             }

@@ -93,6 +93,11 @@ class RateSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         self.percept = percept
         self.kernel = kernel
 
+        # Derive prefix from configuration.
+        n_stimuli = 2  # TODO Make an argument for layer.
+        input_prefix = 'rate{0}'.format(n_stimuli)
+        self.input_prefix = input_prefix
+
         # Configure percept adapter.
         if percept_adapter is None:
             # Default adapter has no gating keys.
@@ -101,7 +106,9 @@ class RateSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
             )
         self.percept_adapter = percept_adapter
         # Set required input keys.
-        self.percept_adapter.input_keys = ['rate_similarity_stimulus_set']
+        self.percept_adapter.input_keys = [
+            self.input_prefix + '/stimulus_set'
+        ]
 
         # Configure kernel adapter.
         if kernel_adapter is None:
@@ -111,7 +118,7 @@ class RateSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
             )
         self.kernel_adapter = kernel_adapter
         self.kernel_adapter.input_keys = [
-            'rate_similarity_z_q', 'rate_similarity_z_r'
+            self.input_prefix + '/z_q', self.input_prefix + '/z_r'
         ]
 
         self.lower_trainable = lower_trainable
@@ -161,7 +168,7 @@ class RateSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1  # i.e., stimuli indices.
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape['rate_similarity_stimulus_set'])
+        n_axis = len(input_shape[self.input_prefix + '/stimulus_set'])
         self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
 
     def _split_stimulus_set(self, z):
@@ -202,8 +209,8 @@ class RateSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
         # similarity.
         z_q, z_r = self._split_stimulus_set(z)
         inputs_copied.update({
-            'rate_similarity_z_q': z_q,
-            'rate_similarity_z_r': z_r
+            self.input_prefix + '/z_q': z_q,
+            self.input_prefix + '/z_r': z_r
         })
         inputs_kernel = self.kernel_adapter(inputs_copied)
         sim_qr = self.kernel(inputs_kernel)

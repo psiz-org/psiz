@@ -251,14 +251,14 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         """Build.
 
         Expect:
-        categorize_stimulus_set:
-        shape =(batch_size, [1,])
+        "categorize/stimulus_set":
+            shape =(batch_size, [1,])
 
         """
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape['categorize_stimulus_set'])
+        n_axis = len(input_shape['categorize/stimulus_set'])
         self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
         # TODO MAYBE issue warning if `stimuli_axis = 0`.
 
@@ -270,9 +270,9 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
 
         Args:
             inputs: A dictionary containting the following information:
-                categorize_stimulus_set: The indices of the stimuli.
+                stimulus_set: The indices of the stimuli.
                     shape=(batch_size, [n_sample,], 1)
-                categorize_correct_label: Correct label index of
+                correct_label: Correct label index of
                     stimulus.
                     shape=(batch_size, [n_sample], 1)
                 gate_weights (optional): Tensor(s) containing gate
@@ -292,10 +292,10 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         # a model.
         inputs_copied = copy.copy(inputs)
 
-        batch_size = tf.shape(inputs_copied['categorize_stimulus_set'])[0]
+        batch_size = tf.shape(inputs_copied['categorize/stimulus_set'])[0]
 
-        stimulus_set = inputs_copied['categorize_stimulus_set']
-        correct_label_idx = inputs_copied['categorize_correct_label']
+        stimulus_set = inputs_copied['categorize/stimulus_set']
+        correct_label_idx = inputs_copied['categorize/correct_label']
         # Drop RNN required axis.
         correct_label_idx = tf.gather(
             correct_label_idx, indices=0, axis=self._stimuli_axis

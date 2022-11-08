@@ -45,17 +45,19 @@ class RankSimilarity(RankSimilarityBase):
         """Return probability of a ranked selection sequence.
 
         Args:
-            inputs: A dictionary containing the following information:
-                rank_similarity_stimulus_set: A tensor containing
-                    indices that define the stimuli used in each trial.
+            inputs: A dictionary containing the following information
+                (the actual keys will depend on how the user
+                initialized the layer.
+
+                stimulus_set: A tensor containing indices that define
+                the stimuli used in each trial.
                     shape=(batch_size, [1,] max_reference + 1, n_outcome)
-                rank_similarity_is_select: A float tensor indicating if
-                    a reference was selected, which corresponds to a
-                    "true" probabilistic event.
+                is_select: A float tensor indicating if a reference was
+                    selected, which corresponds to a "true"
+                    probabilistic event.
                     shape = (batch_size, [1,] n_max_reference + 1, 1)
                 gate_weights (optional): Tensor(s) containing gate
-                    weights. The actual key value(s) will depend on how
-                    the user initialized the layer.
+                    weights.
 
         Returns:
             outcome_prob: Probability of different behavioral outcomes.
@@ -67,12 +69,12 @@ class RankSimilarity(RankSimilarityBase):
         # TODO move into _pairwise_similarity
         inputs_copied = copy.copy(inputs)
 
-        stimulus_set = inputs_copied['rank_similarity_stimulus_set']
+        stimulus_set = inputs_copied[self.input_prefix + '/stimulus_set']
         # NOTE: We drop the "query" position in `is_select`.
         # NOTE: When a sample axis is present, equivalent to:
         #     is_select = inputs['rank_similarity_is_select'][:, :, 1:]
         is_select = tf.gather(
-            inputs_copied['rank_similarity_is_select'],
+            inputs_copied[self.input_prefix + '/is_select'],
             indices=self._reference_indices,
             axis=self._stimuli_axis
         )

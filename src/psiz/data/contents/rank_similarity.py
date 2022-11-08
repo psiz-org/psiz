@@ -32,7 +32,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 
 
 class RankSimilarity(Content):
-    """Content that prompts ranked similarity judgments."""
+    """Content for ranked similarity judgments."""
 
     def __init__(self, stimulus_set, n_select=None):
         """Initialize.
@@ -42,61 +42,52 @@ class RankSimilarity(Content):
                 indicating specific stimuli. The value "0" can be used
                 as a placeholder. Must be rank-2 or rank-3. If rank-2,
                 it is assumed that sequence_length=1 and a singleton
-                dimension is added.
+                timestep axis is added.
                 shape=
                     (samples, max(n_reference) + 1)
                     OR
                     (samples, sequence_length, max(n_reference) + 1)
-            n_select (optional): A np.ndarray of non-negative integers
-                indicating how many references are selected on a given
-                trial. Must be rank-1 or rank-2. If rank-1, it is
-                assumed that sequence_length=1 and a singleton
-                dimension is added.
-                shape=
-                    (samples,)
-                    OR
-                    (samples, sequence_length)
+            n_select (optional): An integer indicating how many
+                references are selected on non-placeholder trials.
 
         Raises:
             ValueError if improper arguments are provided.
 
         """
         Content.__init__(self)
+        self._reference_axis = 2
         stimulus_set = self._rectify_shape(stimulus_set)
         self.n_sequence = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
         stimulus_set = self._validate_stimulus_set(stimulus_set)
 
-        # Trim any excess placeholder padding off of reference axis (axis=2).
-        is_present = np.not_equal(stimulus_set, self.mask_value)
-        n_reference = np.sum(is_present, axis=2, dtype=np.int32) - 1
-        self.n_reference = self._validate_n_reference(n_reference)
-        self.max_n_reference = np.amax(self.n_reference)
-        stimulus_set = stimulus_set[:, :, 0:self.max_n_reference + 1]
+        # Validate references and create private array-based attribute and
+        # public scalar attribute.
+        self.n_reference, self._n_reference = self._validate_n_reference(
+            stimulus_set
+        )
 
+        # Trim any excess placeholder padding off of reference axis before
+        # setting public attribute.
+        stimulus_set = stimulus_set[:, :, 0:self.n_reference + 1]
         self.stimulus_set = stimulus_set
 
-        if n_select is None:
-            # Assume `n_select` is 1 for all actual trials.
-            n_select = self.is_actual.astype(np.int32)
-        else:
-            n_select = self._validate_n_select(n_select)
-        self.n_select = n_select
+        self.n_select, self._n_select = self._validate_n_select(n_select)
 
     @property
     def max_outcome(self):
         """Getter method for `max_outcome`.
 
         Returns:
-            The max number of outcomes for any trial in the dataset.
+            The maximum number of outcomes for a trial.
 
         """
         _, df_config = self.unique_configurations
 
         max_n_outcome = 0
         for _, row in df_config.iterrows():
-            outcome_idx = self._possible_outcomes(
-                row['n_reference'], row['n_select']
+            outcome_idx = self.possible_outcomes(
+                row['_n_reference'], row['_n_select']
             )
             n_outcome = outcome_idx.shape[0]
             if n_outcome > max_n_outcome:
@@ -108,6 +99,7 @@ class RankSimilarity(Content):
         """Return 2D Boolean array indicating trials with actual content."""
         return np.not_equal(self.stimulus_set[:, :, 0], self.mask_value)
 
+    # TODO delete
     def stack(self, component_list):
         """Return new object with sequence-stacked data.
 
@@ -178,103 +170,28 @@ class RankSimilarity(Content):
 
         """
         stimulus_set_sub = self.stimulus_set[idx]
-        n_select_sub = self.n_select[idx]
-        return RankSimilarity(stimulus_set_sub, n_select=n_select_sub)
+        return RankSimilarity(stimulus_set_sub, n_select=self.n_select)
 
-    def _stimulus_set_with_outcomes(self):
-        """Inflate `stimulus_set` for all possible outcomes."""
-        config_idx, df_config = self.unique_configurations
-
-        # Precompute possible outcomes for each content configuration.
-        outcome_idx_hash = {}
-        max_n_outcome = 0
-        for index, row in df_config.iterrows():
-            outcome_idx = self._possible_outcomes(
-                row['n_reference'], row['n_select']
-            )
-            outcome_idx_hash[index] = outcome_idx
-            n_outcome = outcome_idx.shape[0]
-            if n_outcome > max_n_outcome:  # pragma: no branch
-                max_n_outcome = n_outcome
-
-        # Combine `samples` and `sequence_length` axis for `stimulus_set` and
-        # corresponding `config_idx` to enable reuse of existing code.
-        n_trial = self.n_sequence * self.sequence_length
-        stimulus_set_flat = np.reshape(
-            self.stimulus_set, [n_trial, self.max_n_reference + 1]
-        )
-        config_idx = np.reshape(config_idx, [n_trial])
-
-        # Pre-allocate `stimulus_set` that has additional axis for outcomes.
-        stimulus_set_flat_expand = np.full(
-            [n_trial, self.max_n_reference + 1, max_n_outcome],
-            self.mask_value, dtype=np.int32
-        )
-
-        for index, row in df_config.iterrows():
-            # Identify relevant trials.
-            trial_locs = config_idx == index
-            n_trial_config = np.sum(trial_locs)
-
-            outcome_idx = outcome_idx_hash[index]
-            n_outcome = outcome_idx.shape[0]
-
-            if n_outcome != 1:
-                # NOTE: if n_outcome == 1, this is a placeholder trial, which
-                # we would fill with placeholder values. Since the pre-
-                # allocation used placeholder values, we do not need to do
-                # anything.
-
-                # Add query index, increment references to accommodate query.
-                stimulus_set_idx = np.hstack(
-                    [np.zeros([n_outcome, 1], dtype=int), outcome_idx + 1]
-                )
-
-                curr_stimulus_set_copy = stimulus_set_flat[trial_locs, :]
-                curr_stimulus_set_expand = np.full(
-                    [n_trial_config, self.max_n_reference + 1, max_n_outcome],
-                    self.mask_value, dtype=np.int32
-                )
-                for i_outcome in range(n_outcome):
-                    curr_stimulus_set_idx = stimulus_set_idx[i_outcome, :]
-                    # Append placeholder indices.
-                    curr_idx = np.hstack([
-                        curr_stimulus_set_idx,
-                        np.arange(
-                            np.max(curr_stimulus_set_idx) + 1,
-                            self.max_n_reference + 1
-                        )
-                    ])
-                    curr_stimulus_set_expand[:, :, i_outcome] = (
-                        curr_stimulus_set_copy[:, curr_idx]
-                    )
-                stimulus_set_flat_expand[trial_locs] = curr_stimulus_set_expand
-
-        stimulus_set_expand = np.reshape(
-            stimulus_set_flat_expand,
-            [
-                self.n_sequence,
-                self.sequence_length,
-                self.max_n_reference + 1,
-                max_n_outcome
-            ]
-        )
-        return stimulus_set_expand
-
-    def _validate_n_reference(self, n_reference):
-        """Validate `n_reference`.
-
-        NOTE: At this point n_reference=-1 for trials that are timestep
-        placeholders (i.e., completely empty trials).
+    def _validate_n_reference(self, stimulus_set):
+        """Validate implied `n_reference` in `stimulus_set`.
 
         Raises:
             ValueError
 
         """
-        # Restrict check to non-placeholder trials.
-        bidx = np.not_equal(n_reference, -1)
-        n_reference_not_empty = n_reference[bidx]
+        is_present = np.not_equal(stimulus_set, self.mask_value)
+        n_reference_arr = np.sum(
+            is_present, axis=self._reference_axis, dtype=np.int32
+        ) - 1
+        # NOTE: At this point n_reference_arr=-1 for trials that are
+        # placeholders (i.e., completely empty trials).
 
+        # Restrict check to non-placeholder trials.
+        bidx = np.not_equal(n_reference_arr, -1)
+        n_reference_not_empty = n_reference_arr[bidx]
+
+        # First check there are a sufficient number of references for each
+        # trial.
         if np.sum(np.less(n_reference_not_empty, 2)) > 0:
             raise ValueError(
                 "The argument `stimulus_set` must contain at least three "
@@ -282,62 +199,58 @@ class RankSimilarity(Content):
                 "least two reference stimuli."
             )
 
+        # Check how many unique (non-placeholder) referenes there are.
+        unique_n_reference = len(np.unique(n_reference_not_empty))
+        # TODO test that raises error
+        if unique_n_reference != 1:
+            raise ValueError(
+                "When creating a RankSimilarity TrialComponent, all non-"
+                "placeholder trials must have the same number of references. "
+                "Detected {0} different reference counts.".format(
+                    unique_n_reference
+                )
+            )
+
         # Floor at zero since timestep placeholders yield -1.
-        n_reference = np.maximum(n_reference, 0)
+        n_reference_arr = np.maximum(n_reference_arr, 0)
 
-        return n_reference
+        n_reference_sclar = np.amax(n_reference_arr)
+        return n_reference_sclar, n_reference_arr
 
-    def _validate_n_select(self, n_select):
-        """Validate `n_select`.
+    def _validate_n_select(self, n_select_scalar):
+        """Validate `n_select_scalar`.
 
         Raises:
             ValueError
 
         """
-        # Cast if necessary.
-        n_select = n_select.astype(np.int32)
+        if n_select_scalar is None:
+            # Assume `n_select_scalar` is 1 for all actual trials.
+            n_select_scalar = 1
+        else:
+            # Cast in order to generate TypeError if non-int was given.
+            try:
+                n_select_scalar = int(n_select_scalar)
+            except TypeError:
+                raise ValueError(
+                    "The argument `n_select` must be an integer."
+                )
 
-        # Check rank.
-        if n_select.ndim == 1:
-            # Assume passed in trials are all independent.
-            n_select = np.expand_dims(n_select, axis=1)
-
-        if n_select.ndim != 2:
+        # Check lowerbound support limit.
+        if n_select_scalar < 1:
             raise ValueError(
-                "The argument `n_select` must be a rank 2 np.ndarray."
-            )
-
-        # Trim empty timesteps if necessary.
-        n_select = n_select[:, 0:self.sequence_length]
-
-        # Check shape agreement.
-        if not (n_select.shape[0] == self.n_sequence):
-            raise ValueError(
-                "The argument `n_select` must have the same shape as the "
-                "first two axes of the argument 'stimulus_set'."
-            )
-
-        # Check lowerbound support limit, but restrict to trials that
-        # that actually have references.
-        bidx = np.not_equal(self.n_reference, 0)
-        bad_locs = n_select[bidx] < 1
-        n_bad = np.sum(bad_locs)
-        if n_bad != 0:
-            raise ValueError(
-                "The argument `n_select` contains integers less than 1. "
-                "Found {0} bad trial(s).".format(n_bad)
+                "The argument `n_select` must be greater than 0."
             )
         # Check upperbound support limit.
-        bad_locs = np.greater_equal(n_select[bidx], self.n_reference[bidx])
-        n_bad = np.sum(bad_locs)
-        if n_bad != 0:
+        if n_select_scalar > self.n_reference:
             raise ValueError(
-                "The argument `n_select` contains integers greater than "
-                "or equal to the corresponding 'n_reference'. Found {0} bad "
-                "trial(s).".format(n_bad)
+                "The argument `n_select` can not be greater than "
+                "`n_reference`."
             )
 
-        return n_select
+        # Derive array which indicates `n_select` for every trial.
+        n_select_arr = self.is_actual.astype(np.int32) * n_select_scalar
+        return n_select_scalar, n_select_arr
 
     def _rectify_shape(self, stimulus_set):
         """Rectify shape of `stimulus_set`."""
@@ -391,7 +304,7 @@ class RankSimilarity(Content):
     @classmethod
     def _config_attrs(cls):
         """Return attributes that govern trial configurations."""
-        return ['n_reference', 'n_select']
+        return ['_n_reference', '_n_select']
 
     def _is_select(self, compress=False):
         """Indicate if a stimulus was selected.
@@ -417,9 +330,9 @@ class RankSimilarity(Content):
 
         """
         is_select = np.zeros(self.stimulus_set.shape, dtype=bool)
-        max_n_select = np.max(self.n_select)
+        max_n_select = np.max(self._n_select)
         for n_select in range(1, max_n_select + 1):
-            locs = np.less_equal(n_select, self.n_select)
+            locs = np.less_equal(n_select, self._n_select)
             is_select[locs, n_select] = True
 
         if compress:
@@ -439,23 +352,23 @@ class RankSimilarity(Content):
                 reshaped.
 
         """
+        name_prefix = '{0}rank{1}'.format(self.n_reference, self.n_select)
+
         if export_format == 'tf':
-            # Create appropriate `stimulus_set` for all possible outcomes.
-            stimulus_set = self._stimulus_set_with_outcomes()
-            # Expand `is_select` to add axis for outcomes.
+            stimulus_set = self.stimulus_set
             is_select = self._is_select(compress=False)
-            is_select = np.expand_dims(is_select, axis=-1)
 
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
                 is_select = unravel_timestep(is_select)
+
             x = {
-                'rank_similarity_stimulus_set': tf.constant(
+                name_prefix + '/stimulus_set': tf.constant(
                     stimulus_set, dtype=tf.int32
                 ),
-                'rank_similarity_is_select': tf.constant(
+                name_prefix + '/is_select': tf.constant(
                     is_select, dtype=tf.bool
-                )
+                ),
             }
         else:
             raise ValueError(
@@ -486,8 +399,9 @@ class RankSimilarity(Content):
         n_select = h5_grp['n_select'][()]
         return cls(stimulus_set, n_select=n_select)
 
+    # TODO maybe move elsewhere
     @staticmethod
-    def _possible_outcomes(n_reference, n_select):
+    def possible_outcomes(n_reference, n_select):
         """Return the possible outcomes of a ranked trial.
 
         Args:

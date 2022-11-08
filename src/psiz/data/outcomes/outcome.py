@@ -63,6 +63,13 @@ class Outcome(TrialComponent):
             sample_weight = np.ones(
                 [self.n_sequence, self.sequence_length], dtype=np.float32
             )
+        else:
+            if sample_weight.ndim == 1:
+                # Assume trials are independent and add singleton dimension for
+                # timestep axis.
+                sample_weight = np.expand_dims(
+                    sample_weight, axis=self.timestep_axis
+                )
         self._sample_weight = self._validate_sample_weight(sample_weight)
 
     def _validate_sample_weight(self, sample_weight):

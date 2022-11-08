@@ -37,7 +37,6 @@ class Group(TrialComponent):
 
         """
         TrialComponent.__init__(self)
-        # TODO rename group_weights to weights?
         group_weights = self._rectify_shape(group_weights)
         group_weights = self._validate_group_weights(
             name, group_weights

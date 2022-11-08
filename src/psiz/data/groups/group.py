@@ -138,61 +138,6 @@ class Group(TrialComponent):
         """
         return Group(group_weights=self.group_weights[idx], name=self.name)
 
-    # TODO delete stack
-    # def stack(self, trials_list, sequence_length):
-    #     """Stack `groups` data."""
-
-    #     # First check that groups keys are compatible.
-    #     # NOTE: It is not safe to simply pad an missing key with zeros, since
-    #     # zero likely has user-defined semantics.
-    #     group_keys = trials_list[0].groups.keys()
-    #     for i_trials in trials_list[1:]:
-    #         i_group_keys = i_trials.groups.keys()
-    #         if group_keys != i_group_keys:
-    #             raise ValueError(
-    #                 'The dictionary keys of `groups` must be identical '
-    #                 'for all TrialDatasets. Got a mismatch: {0} and '
-    #                 '{1}.'.format(str(group_keys), str(i_group_keys))
-    #             )
-
-    #     # Loop over each key in groups.
-    #     groups_stacked = {}
-    #     for key in group_keys:
-    #         # Check that shapes are compatible.
-    #         value_shape = trials_list[0].groups[key].shape
-    #         for i_trials in trials_list[1:]:
-    #             i_value_shape = i_trials.groups[key].shape
-    #             is_axis_2_ok = value_shape[2] == i_value_shape[2]
-    #             if not is_axis_2_ok:
-    #                 raise ValueError(
-    #                     "The shape of 'groups's '{0}' is not compatible. They "
-    #                     "must be identical on axis=2.".format(key)
-    #                 )
-
-    #         # Start by padding first entry in list.
-    #         timestep_pad = sequence_length - trials_list[0].sequence_length
-    #         pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-    #         groups = np.pad(
-    #             trials_list[0].groups[key],
-    #             pad_width, mode='constant', constant_values=0
-    #         )
-
-    #         # Loop over remaining list.
-    #         for i_trials in trials_list[1:]:
-    #             timestep_pad = sequence_length - i_trials.sequence_length
-    #             pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-    #             curr_groups = np.pad(
-    #                 i_trials.groups[key],
-    #                 pad_width, mode='constant', constant_values=0
-    #             )
-
-    #             groups = np.concatenate(
-    #                 (groups, curr_groups), axis=0
-    #             )
-    #         groups_stacked[key] = groups
-
-    #     return groups_stacked
-
     @classmethod
     def load(cls, h5_grp):
         """Retrieve relevant datasets from group.

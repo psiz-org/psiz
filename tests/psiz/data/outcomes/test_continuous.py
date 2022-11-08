@@ -21,7 +21,6 @@ import pytest
 import tensorflow as tf
 
 from psiz.data.outcomes.continuous import Continuous
-# from psiz.trials import stack  TODO delete or finish
 
 
 def test_init_0(o_continuous_a_4x1):
@@ -369,45 +368,6 @@ def test_subset_0(o_continuous_c_4x3):
     np.testing.assert_array_equal(
         desired_sample_weight, sub.sample_weight
     )
-
-
-# TODO delete or finish
-# def test_stack_0(o_continuous_c_4x3, o_continuous_d_2x3):
-#     """Test stack."""
-#     desired_n_sequence = 6
-#     desired_sequence_length = 3
-#     desired_value = np.array(
-#         [
-#             [[0.0, 0.1], [0.0, 0.2], [0.0, 0.3]],
-#             [[2.0, 0.4], [0.0, 0.5], [0.0, 0.6]],
-#             [[-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9]],
-#             [[1.0, 1.1], [1.0, 1.2], [1.0, 1.3]],
-#             [[2.0, 2.1], [2.0, 2.2], [2.0, 2.3]],
-#             [[3.0, 3.4], [3.0, 3.5], [3.0, 3.6]],
-#         ], dtype=np.float32
-#     )
-#     desired_n_unit = 2
-
-#     stacked = stack((o_continuous_c_4x3, o_continuous_d_2x3))
-
-#     assert desired_n_sequence == stacked.n_sequence
-#     assert desired_sequence_length == stacked.sequence_length
-#     np.testing.assert_array_equal(
-#         desired_value, stacked.value
-#     )
-#     assert desired_n_unit == stacked.n_unit
-
-
-# TODO delete or finish
-# def test_invalid_stack_0(o_continuous_b_4x3, o_continuous_c_4x3):
-#     """Test stack.
-
-#     Incompatible `n_unit`.
-
-#     """
-#     with pytest.raises(Exception) as e_info:
-#         stack((o_continuous_b_4x3, o_continuous_c_4x3))
-#     assert e_info.type == ValueError
 
 
 def test_persistence(o_continuous_b_4x3, tmpdir):

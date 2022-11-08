@@ -258,44 +258,6 @@ class TrialDataset(object):
 
         f.close()
 
-    # TODO delete stack
-    def stack(self, dataset_list):
-        """Return new object with sequence-stacked data.
-
-        Args:
-            dataset_list: A tuple of TrialDataset objects to be
-                stacked. All objects must be the same class.
-
-        Returns:
-            A new object.
-
-        """
-        # Determine maximum number of timesteps and decouple content and
-        # outcomes.
-        sequence_length = 0
-        content_list = []
-        outcome_list = []
-        for i_trials in dataset_list:
-            if i_trials.sequence_length > sequence_length:
-                sequence_length = i_trials.sequence_length
-            content_list.append(i_trials.content)
-            outcome_list.append(i_trials.outcome)
-
-        groups = self._stack_groups(dataset_list, sequence_length)
-        sample_weight = self._stack_sample_weight(
-            dataset_list, sequence_length
-        )
-        content = content_list[0].stack(content_list)
-        outcome = outcome_list[0].stack(outcome_list)
-        stacked = TrialDataset(
-            content,
-            groups=groups,
-            outcome=outcome,
-            sample_weight=sample_weight
-        )
-        return stacked
-
-    @staticmethod
     def _load_h5_component(f, h5_component_name):
         """Load H5 trial component (an H5 group)."""
         h5_component = f[h5_component_name]

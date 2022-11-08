@@ -21,7 +21,6 @@ import pytest
 import tensorflow as tf
 
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
-# from psiz.trials import stack TODO delete or finish
 
 
 def test_init_0(o_sparsecat_a_4x1):
@@ -411,39 +410,6 @@ def test_subset_0(o_sparsecat_d_4x3):
     np.testing.assert_array_equal(
         desired_sample_weight, sub.sample_weight
     )
-
-
-# TODO delete or finish
-# def test_stack_0(o_sparsecat_aa_4x1, o_sparsecat_b_4x3, o_sparsecat_c_2x3):
-#     """Test stack."""
-#     desired_n_sequence = 10
-#     desired_sequence_length = 3
-#     desired_index = np.array(
-#         [
-#             [0, 0, 0],
-#             [2, 0, 0],
-#             [0, 0, 0],
-#             [1, 0, 0],
-#             [0, 0, 0],
-#             [2, 0, 0],
-#             [0, 1, 0],
-#             [1, 1, 1],
-#             [0, 2, 1],
-#             [1, 2, 2],
-#         ], dtype=np.int32
-#     )
-#     desired_depth = 5
-
-#     stacked = stack(
-#         (o_sparsecat_aa_4x1, o_sparsecat_b_4x3, o_sparsecat_c_2x3)
-#     )
-
-#     assert desired_n_sequence == stacked.n_sequence
-#     assert desired_sequence_length == stacked.sequence_length
-#     np.testing.assert_array_equal(
-#         desired_index, stacked.index
-#     )
-#     assert desired_depth == stacked.depth
 
 
 def test_persistence(o_sparsecat_b_4x3, tmpdir):

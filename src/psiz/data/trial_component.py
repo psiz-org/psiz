@@ -32,20 +32,6 @@ class TrialComponent(metaclass=ABCMeta):
         self.sequence_length = None
         self._timestep_axis = 1
 
-    # TODO delete stack
-    # @abstractmethod
-    # def stack(self, component_list):
-    #     """Return new object with sequence-stacked data.
-
-    #     Args:
-    #         component_list: A tuple of TrialComponent objects to be
-    #             stacked. All objects must be the same class.
-
-    #     Returns:
-    #         A new object.
-
-    #     """
-
     @property
     def timestep_axis(self):
         return self._timestep_axis

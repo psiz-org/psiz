@@ -21,7 +21,6 @@ import pytest
 import tensorflow as tf
 
 from psiz.data.contents.rank_similarity import RankSimilarity
-from psiz.trials import stack
 
 
 def test_init_0(c_2rank1_a_4x1):
@@ -747,93 +746,3 @@ def test_export_wrong(c_2rank1_d_3x2):
 #         desired_n_select, sub.n_select
 #     )
 #     assert desired_max_outcome == sub.max_outcome
-
-
-# TODO delete or finish
-# def test_stack(c_2rank1_d_3x2, c_2rank1_e_2x3, c_2rank1_f_2x4):
-#     """Test stack."""
-#     desired_n_sequence = 10
-#     desired_sequence_length = 4
-#     desired_stimulus_set = np.array(
-#         [
-#             [
-#                 [1, 2, 3, 0],
-#                 [4, 5, 6, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [7, 8, 9, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [10, 11, 12, 13],
-#                 [14, 15, 16, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [1, 2, 3, 0],
-#                 [4, 5, 6, 0],
-#                 [7, 8, 9, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [10, 11, 12, 0],
-#                 [13, 14, 15, 0],
-#                 [16, 17, 18, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [1, 2, 3, 0],
-#                 [4, 5, 6, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [7, 8, 9, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [10, 11, 12, 13],
-#                 [14, 15, 16, 0],
-#                 [0, 0, 0, 0],
-#                 [0, 0, 0, 0],
-#             ],
-#             [
-#                 [1, 2, 3, 0],
-#                 [4, 5, 6, 0],
-#                 [7, 8, 9, 0],
-#                 [7, 8, 9, 0],
-#             ],
-#             [
-#                 [10, 11, 12, 0],
-#                 [13, 14, 15, 0],
-#                 [16, 17, 18, 0],
-#                 [16, 17, 18, 0],
-#             ],
-#         ], dtype=np.int32
-#     )
-#     desired_n_select = np.array(
-#         [
-#             [1, 1, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0], [1, 1, 1, 0],
-#             [1, 1, 1, 0], [1, 1, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0],
-#             [1, 1, 1, 1], [1, 1, 1, 1]
-#         ], dtype=np.int32
-#     )
-#     desired_max_n_referece = 3
-#     stacked = stack((c_2rank1_d_3x2, c_2rank1_e_2x3, c_2rank1_d_3x2, c_2rank1_f_2x4))
-
-#     assert desired_n_sequence == stacked.n_sequence
-#     assert desired_sequence_length == stacked.sequence_length
-#     assert desired_max_n_referece == stacked.max_n_reference
-#     np.testing.assert_array_equal(
-#         desired_stimulus_set, stacked.stimulus_set
-#     )
-#     np.testing.assert_array_equal(
-#         desired_n_select, stacked.n_select
-#     )

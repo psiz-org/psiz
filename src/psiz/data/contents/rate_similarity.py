@@ -62,47 +62,6 @@ class RateSimilarity(Content):
         """Return 2D Boolean array indicating trials with actual content."""
         return np.not_equal(self.stimulus_set[:, :, 0], self.mask_value)
 
-    def stack(self, component_list):
-        """Return new object with sequence-stacked data.
-
-        Args:
-            component_list: A tuple of TrialComponent objects to be
-                stacked. All objects must be the same class.
-
-        Returns:
-            A new object.
-
-        """
-        # Determine maximum number of timesteps.
-        sequence_length = 0
-        for i_component in component_list:
-            if i_component.sequence_length > sequence_length:
-                sequence_length = i_component.sequence_length
-
-        # Start by padding first entry in list.
-        timestep_pad = sequence_length - component_list[0].sequence_length
-        pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-        stimulus_set = np.pad(
-            component_list[0].stimulus_set,
-            pad_width, mode='constant', constant_values=0
-        )
-
-        # Loop over remaining list.
-        for i_component in component_list[1:]:
-
-            timestep_pad = sequence_length - i_component.sequence_length
-            pad_width = ((0, 0), (0, timestep_pad), (0, 0))
-            curr_stimulus_set = np.pad(
-                i_component.stimulus_set,
-                pad_width, mode='constant', constant_values=0
-            )
-
-            stimulus_set = np.concatenate(
-                (stimulus_set, curr_stimulus_set), axis=0
-            )
-
-        return RateSimilarity(stimulus_set)
-
     def subset(self, idx):
         """Return subset of data as a new object.
 

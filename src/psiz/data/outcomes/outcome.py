@@ -127,29 +127,3 @@ class Outcome(TrialComponent):
     def _subset_sample_weight(self, idx):
         """Subset of sample weight."""
         return self.sample_weight[idx]
-
-    # TODO delete stack
-    # def _stack_sample_weight(self, trials_list, sequence_length):
-    #     """Stack `sample_weight` data."""
-    #     # Start by padding first entry in list.
-    #     timestep_pad = sequence_length - trials_list[0].sequence_length
-    #     pad_width = ((0, 0), (0, timestep_pad))
-    #     sample_weight = np.pad(
-    #         trials_list[0].sample_weight,
-    #         pad_width, mode='constant', constant_values=0
-    #     )
-
-    #     # Loop over remaining list.
-    #     for i_trials in trials_list[1:]:
-    #         timestep_pad = sequence_length - i_trials.sequence_length
-    #         pad_width = ((0, 0), (0, timestep_pad))
-    #         curr_sample_weight = np.pad(
-    #             i_trials.sample_weight,
-    #             pad_width, mode='constant', constant_values=0
-    #         )
-
-    #         sample_weight = np.concatenate(
-    #             (sample_weight, curr_sample_weight), axis=0
-    #         )
-
-    #     return sample_weight

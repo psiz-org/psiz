@@ -21,7 +21,6 @@ import pytest
 import tensorflow as tf
 
 from psiz.data.contents.rate_similarity import RateSimilarity
-from psiz.trials import stack
 
 
 def test_init_0(c_rate2_a_4x1):
@@ -389,71 +388,4 @@ def test_subset_0(c_rate2_c_4x3):
     assert sub.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, sub.stimulus_set
-    )
-
-
-def test_stack_0(c_rate2_c_4x3, c_rate2_d_2x3):
-    """Test stack."""
-    desired_n_sequence = 10
-    desired_sequence_length = 3
-    desired_stimulus_set = np.array(
-        [
-            [
-                [3, 1],
-                [3, 1],
-                [0, 0]
-            ],
-            [
-                [9, 12],
-                [0, 0],
-                [0, 0]
-            ],
-            [
-                [3, 4],
-                [3, 4],
-                [0, 0]
-            ],
-            [
-                [3, 4],
-                [3, 4],
-                [0, 0]
-            ],
-            [
-                [5, 6],
-                [7, 8],
-                [9, 10]
-            ],
-            [
-                [1, 2],
-                [3, 4],
-                [0, 0]
-            ],
-            [
-                [3, 1],
-                [3, 1],
-                [0, 0]
-            ],
-            [
-                [9, 12],
-                [0, 0],
-                [0, 0]
-            ],
-            [
-                [3, 4],
-                [3, 4],
-                [0, 0]
-            ],
-            [
-                [3, 4],
-                [3, 4],
-                [0, 0]
-            ],
-        ], dtype=np.int32
-    )
-    stacked = stack((c_rate2_c_4x3, c_rate2_d_2x3, c_rate2_c_4x3))
-
-    assert desired_n_sequence == stacked.n_sequence
-    assert desired_sequence_length == stacked.sequence_length
-    np.testing.assert_array_equal(
-        desired_stimulus_set, stacked.stimulus_set
     )

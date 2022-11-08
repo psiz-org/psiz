@@ -27,6 +27,7 @@ mxn: n_sequence x sequence_length
 import numpy as np
 import pytest
 
+from psiz.data.contents.categorize import Categorize
 from psiz.data.contents.rank import Rank
 from psiz.data.contents.rate import Rate
 from psiz.data.groups.group import Group
@@ -455,6 +456,71 @@ def o_rate2_a_3x2():
     )
 
     return Continuous(ratings, name="rate_a")
+
+
+@pytest.fixture(scope="module")
+def c_categorize_a_4x10():
+    """Content.
+
+    n_sequence = 4
+    sequence_length = 10
+    n_stimuli = 20
+    n_output = 3
+
+    """
+    # NOTE: Last sequence has 2 placeholder trials.
+    stimulus_set = np.array(
+        [
+            [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]],
+            [[11], [12], [13], [14], [15], [16], [17], [18], [19], [20]],
+            [[1], [3], [5], [7], [9], [11], [13], [15], [17], [19]],
+            [[2], [4], [6], [8], [10], [12], [14], [16], [0], [0]],
+        ], dtype=np.int32
+    )
+    correct_label = np.array(
+        [
+            [[0], [0], [0], [0], [0], [0], [0], [0], [0], [0]],
+            [[1], [1], [1], [1], [1], [2], [2], [2], [2], [2]],
+            [[0], [0], [0], [0], [0], [1], [1], [1], [2], [2]],
+            [[0], [0], [0], [0], [0], [1], [1], [2], [0], [0]],
+        ], dtype=np.int32
+    )
+    content = Categorize(
+        stimulus_set=stimulus_set, correct_label=correct_label
+    )
+    return content
+
+
+@pytest.fixture(scope="module")
+def c_categorize_b_4x3():
+    """Content.
+
+    n_sequence = 4
+    sequence_length = 3
+    n_stimuli = 20
+    n_output = 3
+
+    """
+    stimulus_set = np.array(
+        [
+            [[1], [2], [3]],
+            [[11], [12], [13]],
+            [[1], [3], [5]],
+            [[2], [4], [6]],
+        ], dtype=np.int32
+    )
+    correct_label = np.array(
+        [
+            [[0], [0], [0]],
+            [[1], [1], [2]],
+            [[0], [1], [2]],
+            [[2], [2], [0]],
+        ], dtype=np.int32
+    )
+    content = Categorize(
+        stimulus_set=stimulus_set, correct_label=correct_label
+    )
+    return content
 
 
 @pytest.fixture(scope="module")

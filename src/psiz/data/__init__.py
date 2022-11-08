@@ -19,6 +19,7 @@
 from psiz.data.trial_component import TrialComponent
 from psiz.data.trial_dataset import TrialDataset
 from psiz.data.contents.content import Content
+from psiz.data.contents.categorize import Categorize
 from psiz.data.contents.rank import Rank
 from psiz.data.contents.rate import Rate
 from psiz.data.groups.group import Group
@@ -31,6 +32,7 @@ __all__ = [
     'TrialComponent',
     'TrialDataset',
     'Content',
+    'Categorize',
     'Rank',
     'Rate',
     'Group',

@@ -27,8 +27,8 @@ mxn: n_sequence x sequence_length
 import numpy as np
 import pytest
 
-from psiz.data.contents.rank_similarity import RankSimilarity
-from psiz.data.contents.rate_similarity import RateSimilarity
+from psiz.data.contents.rank import Rank
+from psiz.data.contents.rate import Rate
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.continuous import Continuous
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
@@ -46,12 +46,12 @@ def c_2rank1_a_4x1():
         ], dtype=np.int32
     )
     n_select = 1
-    return RankSimilarity(stimulus_set, n_select=n_select)
+    return Rank(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
 def c_2rank1_aa_4x1():
-    """Content RankSimilarity with rank-3 arguments.
+    """Content Rank with rank-3 arguments.
 
     Notes:
     The input arguments are full rank, but singleton on the
@@ -69,7 +69,7 @@ def c_2rank1_aa_4x1():
         ], dtype=np.int32
     )
     n_select = 1
-    return RankSimilarity(stimulus_set, n_select=n_select)
+    return Rank(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
@@ -115,7 +115,7 @@ def c_4rank2_b_4x2():
         ], dtype=np.int32
     )
     n_select = 2
-    return RankSimilarity(stimulus_set, n_select=n_select)
+    return Rank(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
@@ -151,7 +151,7 @@ def c_4rank2_c_4x3():
         ], dtype=np.int32
     )
     n_select = 2
-    return RankSimilarity(stimulus_set, n_select=n_select)
+    return Rank(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
@@ -192,7 +192,7 @@ def c_2rank1_d_3x2():
         ], dtype=np.int32
     )
     n_select = 1
-    return RankSimilarity(stimulus_set, n_select=n_select)
+    return Rank(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
@@ -248,7 +248,7 @@ def c_2rank1_e_3x2():
         ], dtype=np.int32
     )
     n_select = 1
-    return RankSimilarity(stimulus_set, n_select=n_select)
+    return Rank(stimulus_set, n_select=n_select)
 
 
 # TODO use or delete
@@ -276,12 +276,12 @@ def c_2rank1_f_2x4():
         ], dtype=np.int32
     )
     n_select = 1
-    return RankSimilarity(stimulus_set, n_select=n_select)
+    return Rank(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
 def c_rate2_a_4x1():
-    """Content RateSimilarity with minimal rank arguments."""
+    """Content Rate with minimal rank arguments."""
     stimulus_set = np.array(
         [
             [3, 1],
@@ -291,12 +291,12 @@ def c_rate2_a_4x1():
         ], dtype=np.int32
     )
 
-    return RateSimilarity(stimulus_set)
+    return Rate(stimulus_set)
 
 
 @pytest.fixture(scope="module")
 def c_rate2_aa_4x1():
-    """Content RateSimilarity with rank-3 arguments.
+    """Content Rate with rank-3 arguments.
 
     Notes:
     The input arguments are full rank, but singleton on the
@@ -314,12 +314,12 @@ def c_rate2_aa_4x1():
         ], dtype=np.int32
     )
 
-    return RateSimilarity(stimulus_set)
+    return Rate(stimulus_set)
 
 
 @pytest.fixture(scope="module")
 def c_rate2_b_4x2():
-    """Content RateSimilarity with rank-3 arguments.
+    """Content Rate with rank-3 arguments.
 
     Notes:
     There is intentionally an extra reference placeholder that should
@@ -347,12 +347,12 @@ def c_rate2_b_4x2():
         ], dtype=np.int32
     )
 
-    return RateSimilarity(stimulus_set)
+    return Rate(stimulus_set)
 
 
 @pytest.fixture(scope="module")
 def c_rate2_c_4x3():
-    """Content RateSimilarity with rank-3 arguments.
+    """Content Rate with rank-3 arguments.
 
     This instance also has an extra timestep and reference that should
     be trimmed at initialization.
@@ -383,12 +383,12 @@ def c_rate2_c_4x3():
         ], dtype=np.int32
     )
 
-    return RateSimilarity(stimulus_set)
+    return Rate(stimulus_set)
 
 
 @pytest.fixture(scope="module")
 def c_rate2_d_2x3():
-    """Content RateSimilarity with rank-3 arguments.
+    """Content Rate with rank-3 arguments.
 
     Used in test_stack.
 
@@ -408,12 +408,12 @@ def c_rate2_d_2x3():
         ], dtype=np.int32
     )
 
-    return RateSimilarity(stimulus_set)
+    return Rate(stimulus_set)
 
 
 @pytest.fixture(scope="module")
 def c_rate2_e_3x2():
-    """Content RateSimilarity with rank-3 arguments."""
+    """Content Rate with rank-3 arguments."""
     stimulus_set = np.array(
         [
             [
@@ -431,12 +431,12 @@ def c_rate2_e_3x2():
         ], dtype=np.int32
     )
 
-    return RateSimilarity(stimulus_set)
+    return Rate(stimulus_set)
 
 
 @pytest.fixture(scope="module")
 def o_rate2_a_3x2():
-    """Content RateSimilarity with rank-3 arguments."""
+    """Content Rate with rank-3 arguments."""
     ratings = np.array(
         [
             [

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.data.contents.rate_similarity import RateSimilarity
+from psiz.data.contents.rate import Rate
 
 
 def test_init_0(c_rate2_a_4x1):
@@ -158,7 +158,7 @@ def test_init_4():
             [2, 4]
         ]
     ])
-    RateSimilarity(stimulus_set)
+    Rate(stimulus_set)
 
 
 def test_invalid_stimulus_set():
@@ -171,7 +171,7 @@ def test_invalid_stimulus_set():
         (3, 4)
     ))
     with pytest.raises(Exception) as e_info:
-        RateSimilarity(stimulus_set)
+        Rate(stimulus_set)
     assert e_info.type == ValueError
 
     # Contains negative integers.
@@ -182,7 +182,7 @@ def test_invalid_stimulus_set():
         (3, 4)
     ))
     with pytest.raises(Exception) as e_info:
-        RateSimilarity(stimulus_set)
+        Rate(stimulus_set)
     assert e_info.type == ValueError
 
     # Incorrect shape.
@@ -209,7 +209,7 @@ def test_invalid_stimulus_set():
         ]
     ])
     with pytest.raises(Exception) as e_info:
-        RateSimilarity(stimulus_set)
+        Rate(stimulus_set)
     assert e_info.type == ValueError
 
     # Integer is too large.
@@ -222,7 +222,7 @@ def test_invalid_stimulus_set():
         (3, 4)
     ))
     with pytest.raises(Exception) as e_info:
-        RateSimilarity(stimulus_set)
+        Rate(stimulus_set)
     assert e_info.type == ValueError
 
 

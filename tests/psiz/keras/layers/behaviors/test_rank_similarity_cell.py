@@ -94,7 +94,7 @@ def ds_rank_v0():
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
 
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    content = psiz.data.Rank(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
@@ -102,7 +102,7 @@ def ds_rank_v0():
         outcome_idx, depth=content.max_outcome
     )
     ds = psiz.data.TrialDataset(content, outcome=outcome).export(
-        with_timestep_axis=False, export_format='tf'
+        with_timestep_axis=False, export_format='tfds'
     )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
@@ -126,7 +126,7 @@ def ds_rank_v1():
     ), dtype=np.int32)
 
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
@@ -137,7 +137,7 @@ def ds_rank_v1():
 
     # HACK using timestep axis for sample axis.
     ds = psiz.data.TrialDataset(content, outcome=outcome).export(
-        with_timestep_axis=True, export_format='tf'
+        with_timestep_axis=True, export_format='tfds'
     )
     ds = ds.batch(n_sequence, drop_remainder=False)
     return ds
@@ -163,7 +163,7 @@ def ds_rank_v1():
 #     ), dtype=np.int32)
 
 #     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-#     content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+#     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
 #     outcome_idx = np.zeros(
 #         [content.n_sequence, content.sequence_length], dtype=np.int32
@@ -185,7 +185,7 @@ def ds_rank_v1():
 #     # ds = tf.data.Dataset.from_tensor_slices((x, y, w))
 #     # TODO HACK using timestep axis for sample axis
 #     ds = psiz.data.TrialDataset(content, outcome=outcome).export(
-#         with_timestep_axis=True, export_format='tf'
+#         with_timestep_axis=True, export_format='tfds'
 #     )
 #     ds = ds.batch(n_sequence, drop_remainder=False)
 #     return ds

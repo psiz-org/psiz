@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ class Content(TrialComponent, metaclass=ABCMeta):
 
         NOTE: Subclass should overide this method if the content type
         has different configurations that need to be tracked. See
-        `RankSimilarity` for an example implementation.
+        `Rank` for an example implementation.
 
         Returns:
             An empty list.

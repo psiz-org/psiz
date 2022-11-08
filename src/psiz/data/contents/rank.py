@@ -1,6 +1,5 @@
-
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +17,7 @@
 
 
 Classes:
-    RankSimilarity: Trial content requiring ranked similarity judgments.
+    Rank: Trial content requiring ranked judgments.
 
 """
 
@@ -31,7 +30,7 @@ from psiz.data.contents.content import Content
 from psiz.data.unravel_timestep import unravel_timestep
 
 
-class RankSimilarity(Content):
+class Rank(Content):
     """Content for ranked similarity judgments."""
 
     def __init__(self, stimulus_set, n_select=None):
@@ -131,7 +130,7 @@ class RankSimilarity(Content):
         # TODO test that raises error
         if unique_n_reference != 1:
             raise ValueError(
-                "When creating a RankSimilarity TrialComponent, all non-"
+                "When creating a Rank TrialComponent, all non-"
                 "placeholder trials must have the same number of references. "
                 "Detected {0} different reference counts.".format(
                     unique_n_reference

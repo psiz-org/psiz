@@ -228,7 +228,7 @@ def convert2dataset(obs, batch_size, shuffle=False):
     No timestep.
 
     """
-    content = psiz.data.RankSimilarity(obs.stimulus_set, n_select=obs.n_select)
+    content = psiz.data.Rank(obs.stimulus_set, n_select=obs.n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )

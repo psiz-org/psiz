@@ -56,7 +56,7 @@ def ds_v0():
     n_select = np.array([1, 1, 1, 2], dtype=np.int32)
     groups = np.array([[0], [0], [1], [1]], dtype=np.int32)
 
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    content = psiz.data.Rank(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
@@ -87,7 +87,7 @@ def ds_v1():
         [[[0], [0]], [[0], [0]], [[1], [1]], [[1], [1]]], dtype=np.int32
     )
 
-    content = psiz.data.RankSimilarity(stimulus_set, n_select=n_select)
+    content = psiz.data.Rank(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )

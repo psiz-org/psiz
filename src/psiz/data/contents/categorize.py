@@ -13,29 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Data initialization."""
+"""Trials module.
 
 
-from psiz.data.trial_component import TrialComponent
-from psiz.data.trial_dataset import TrialDataset
+Classes:
+    Categorize: Trial content requiring categorization judgments.
+
+"""
+
+from itertools import permutations
+
+import numpy as np
+import tensorflow as tf
+
 from psiz.data.contents.content import Content
-from psiz.data.contents.rank import Rank
-from psiz.data.contents.rate import Rate
-from psiz.data.groups.group import Group
-from psiz.data.outcomes.outcome import Outcome
-from psiz.data.outcomes.continuous import Continuous
-from psiz.data.outcomes.sparse_categorical import SparseCategorical
 from psiz.data.unravel_timestep import unravel_timestep
-
-__all__ = [
-    'TrialComponent',
-    'TrialDataset',
-    'Content',
-    'Rank',
-    'Rate',
-    'Group',
-    'Outcome',
-    'Continuous',
-    'SparseCategorical',
-    'unravel_timestep'
-]

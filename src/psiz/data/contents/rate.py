@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # Copyright 2020 The PsiZ Authors. All Rights Reserved.
 #
@@ -18,7 +17,7 @@
 
 
 Classes:
-    RateSimilarity: Trial content requiring similarity ratings.
+    Rate: Trial content requiring ratings.
 
 """
 
@@ -29,7 +28,7 @@ from psiz.data.contents.content import Content
 from psiz.data.unravel_timestep import unravel_timestep
 
 
-class RateSimilarity(Content):
+class Rate(Content):
     """Trial content requiring similarity ratings."""
 
     def __init__(self, stimulus_set):

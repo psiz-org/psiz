@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2022 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.data.contents.rank_similarity import RankSimilarity
+from psiz.data.contents.rank import Rank
 
 
 def test_init_0(c_2rank1_a_4x1):
@@ -177,7 +177,7 @@ def test_init_4():
             ]
         ], dtype=np.int32
     )
-    content = RankSimilarity(stimulus_set)
+    content = Rank(stimulus_set)
 
     n_select_desired = 1
     n_select_arr_desired = np.array(
@@ -205,7 +205,7 @@ def test_invalid_stimulus_set():
         )
     )
     with pytest.raises(Exception) as e_info:
-        RankSimilarity(stimulus_set)
+        Rank(stimulus_set)
     assert e_info.type == ValueError
 
     # Contains negative integers.
@@ -218,7 +218,7 @@ def test_invalid_stimulus_set():
         )
     )
     with pytest.raises(Exception) as e_info:
-        RankSimilarity(stimulus_set)
+        Rank(stimulus_set)
     assert e_info.type == ValueError
 
     # Does not contain enough references for each trial.
@@ -231,7 +231,7 @@ def test_invalid_stimulus_set():
         )
     )
     with pytest.raises(Exception) as e_info:
-        RankSimilarity(stimulus_set)
+        Rank(stimulus_set)
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The argument `stimulus_set` must contain at least three positive int"
@@ -264,7 +264,7 @@ def test_invalid_stimulus_set():
         ]
     )
     with pytest.raises(Exception) as e_info:
-        RankSimilarity(stimulus_set)
+        Rank(stimulus_set)
     assert e_info.type == ValueError
 
     # TODO not sure whether to test this.
@@ -288,7 +288,7 @@ def test_invalid_stimulus_set():
     #     ]
     # )
     # with pytest.raises(Exception) as e_info:
-    #     RankSimilarity(stimulus_set)
+    #     Rank(stimulus_set)
     # assert e_info.type == ValueError
 
 
@@ -306,13 +306,13 @@ def test_invalid_n_select():
     # Below support.
     n_select = 0
     with pytest.raises(Exception) as e_info:
-        RankSimilarity(stimulus_set, n_select=n_select)
+        Rank(stimulus_set, n_select=n_select)
     assert e_info.type == ValueError
 
     # Above support.
     n_select = 5
     with pytest.raises(Exception) as e_info:
-        RankSimilarity(stimulus_set, n_select=n_select)
+        Rank(stimulus_set, n_select=n_select)
     assert e_info.type == ValueError
 
     # Not an integer
@@ -320,7 +320,7 @@ def test_invalid_n_select():
         [[2], [1]], [[1], [2]]
     ])
     with pytest.raises(Exception) as e_info:
-        RankSimilarity(stimulus_set, n_select=n_select)
+        Rank(stimulus_set, n_select=n_select)
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The argument `n_select` must be an integer."
@@ -343,14 +343,14 @@ def test_is_actual(c_4rank2_b_4x2):
 def test_config_attrs():
     """Test _config_attrs()"""
     desired_list = ['_n_reference', '_n_select']
-    assert desired_list == RankSimilarity._config_attrs()
+    assert desired_list == Rank._config_attrs()
 
 
 def test_possible_outcomes_2c1():
     """Test outcomes 2 choose 1 ranked trial."""
     n_reference = 2
     n_select = 1
-    outcomes = RankSimilarity.possible_outcomes(
+    outcomes = Rank.possible_outcomes(
         n_reference, n_select
     )
 
@@ -362,7 +362,7 @@ def test_possible_outcomes_3c2():
     """Test outcomes 3 choose 2 ranked trial."""
     n_reference = 3
     n_select = 2
-    outcomes = RankSimilarity.possible_outcomes(n_reference, n_select)
+    outcomes = Rank.possible_outcomes(n_reference, n_select)
 
     desired_outcomes = np.array((
         (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
@@ -374,7 +374,7 @@ def test_possible_outcomes_4c2():
     """Test outcomes 4 choose 2 ranked trial."""
     n_reference = 4
     n_select = 2
-    outcomes = RankSimilarity.possible_outcomes(n_reference, n_select)
+    outcomes = Rank.possible_outcomes(n_reference, n_select)
 
     desired_outcomes = np.array((
         (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
@@ -388,7 +388,7 @@ def test_possible_outcomes_8c1():
     """Test outcomes 8 choose 1 ranked trial."""
     n_reference = 8
     n_select = 1
-    outcomes = RankSimilarity.possible_outcomes(n_reference, n_select)
+    outcomes = Rank.possible_outcomes(n_reference, n_select)
 
     correct = np.array((
         (0, 1, 2, 3, 4, 5, 6, 7),

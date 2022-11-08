@@ -244,7 +244,7 @@ def test_export_0(o_sparsecat_a_4x1):
     )
     desired_name = 'sparsecat_a'
 
-    y, w = o_sparsecat_a_4x1.export(export_format='tf')
+    y, w = o_sparsecat_a_4x1.export(export_format='tfds')
     tf.debugging.assert_equal(desired_y, y[desired_name])
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
@@ -263,7 +263,7 @@ def test_export_1(o_sparsecat_aa_4x1):
     )
     desired_name = 'sparsecat_aa'
 
-    y, w = o_sparsecat_aa_4x1.export(export_format='tf')
+    y, w = o_sparsecat_aa_4x1.export(export_format='tfds')
     tf.debugging.assert_equal(desired_y, y[desired_name])
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
@@ -288,7 +288,7 @@ def test_export_2(o_sparsecat_aa_4x1):
     desired_name = 'sparsecat_aa'
 
     y, w = o_sparsecat_aa_4x1.export(
-        export_format='tf', with_timestep_axis=False
+        export_format='tfds', with_timestep_axis=False
     )
     tf.debugging.assert_equal(desired_y, y[desired_name])
     tf.debugging.assert_equal(desired_w, w[desired_name])
@@ -306,7 +306,7 @@ def test_export_3a(o_sparsecat_b_4x3):
     desired_w = tf.ones([4, 3], dtype=tf.float32)
     desired_name = 'sparsecat_b'
 
-    y, w = o_sparsecat_b_4x3.export(export_format='tf')
+    y, w = o_sparsecat_b_4x3.export(export_format='tfds')
     tf.debugging.assert_equal(desired_y, y[desired_name])
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
@@ -337,7 +337,7 @@ def test_export_3b(o_sparsecat_b_4x3):
     desired_name = 'sparsecat_b'
 
     y, w = o_sparsecat_b_4x3.export(
-        export_format='tf', with_timestep_axis=False
+        export_format='tfds', with_timestep_axis=False
     )
     tf.debugging.assert_equal(desired_y, y[desired_name])
     tf.debugging.assert_equal(desired_w, w[desired_name])
@@ -362,7 +362,7 @@ def test_export_4a(o_sparsecat_d_4x3):
     )
     desired_name = 'sparsecat_d'
 
-    y, w = o_sparsecat_d_4x3.export(export_format='tf')
+    y, w = o_sparsecat_d_4x3.export(export_format='tfds')
     tf.debugging.assert_equal(desired_y, y[desired_name])
     tf.debugging.assert_equal(desired_w, w[desired_name])
 

@@ -88,7 +88,7 @@ class SparseCategorical(Outcome):
 
         return index
 
-    def export(self, export_format='tf', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=True):
         """Return appropriately formatted data.
 
         Args:
@@ -108,7 +108,7 @@ class SparseCategorical(Outcome):
         if with_timestep_axis is False:
             index = unravel_timestep(index)
 
-        if export_format == 'tf':
+        if export_format == 'tfds':
             # Convert from sparse to one-hot-encoding (along new trailing
             # axis).
             # pylint: disable=unexpected-keyword-arg

@@ -37,7 +37,7 @@ class TrialComponent(metaclass=ABCMeta):
         return self._timestep_axis
 
     @abstractmethod
-    def export(self, export_format='tf', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=True):
         """Return appropriately formatted data.
 
         Args:

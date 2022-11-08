@@ -87,7 +87,7 @@ class Group(TrialComponent):
             )
         return group_weights
 
-    def export(self, export_format='tf', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=True):
         """Export.
 
         Args:
@@ -104,7 +104,7 @@ class Group(TrialComponent):
         else:
             group_weights = self.group_weights
 
-        if export_format == 'tf':
+        if export_format == 'tfds':
             group_weights = tf.constant(group_weights)
         else:
             raise ValueError(

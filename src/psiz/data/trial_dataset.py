@@ -126,7 +126,7 @@ class TrialDataset(object):
         return trial_components
 
     def export(
-        self, with_timestep_axis=True, export_format='tf', inputs_only=False
+        self, with_timestep_axis=True, export_format='tfds', inputs_only=False
     ):
         """Export trial data as model-consumable object.
 
@@ -172,7 +172,7 @@ class TrialDataset(object):
                 y.update(y_i)
                 w.update(w_i)
 
-        if export_format == 'tf':
+        if export_format == 'tfds':
             try:
                 y = self._prepare_for_tf_dataset(y)
                 w = self._prepare_for_tf_dataset(w)

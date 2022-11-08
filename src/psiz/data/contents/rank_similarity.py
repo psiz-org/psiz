@@ -267,7 +267,7 @@ class RankSimilarity(Content):
 
         return is_select
 
-    def export(self, export_format='tf', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=True):
         """Prepare trial content data for dataset.
 
         Args:
@@ -281,7 +281,7 @@ class RankSimilarity(Content):
         """
         name_prefix = '{0}rank{1}'.format(self.n_reference, self.n_select)
 
-        if export_format == 'tf':
+        if export_format == 'tfds':
             stimulus_set = self.stimulus_set
             is_select = self._is_select(compress=False)
 

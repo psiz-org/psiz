@@ -86,7 +86,7 @@ def test_export_0a(g_mix2_4x3):
     )
     desired_name = 'mix2'
 
-    x = g_mix2_4x3.export(export_format='tf')
+    x = g_mix2_4x3.export(export_format='tfds')
     tf.debugging.assert_equal(desired_group_weight, x[desired_name])
 
 
@@ -102,7 +102,7 @@ def test_export_0b(g_mix2_4x3):
     desired_name = 'mix2'
 
     x = g_mix2_4x3.export(
-        export_format='tf', with_timestep_axis=False
+        export_format='tfds', with_timestep_axis=False
     )
     tf.debugging.assert_equal(desired_group_weight, x[desired_name])
 

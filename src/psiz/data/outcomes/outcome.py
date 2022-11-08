@@ -104,7 +104,7 @@ class Outcome(TrialComponent):
         return self._sample_weight
 
     def export(
-        self, export_format='tf', with_timestep_axis=True
+        self, export_format='tfds', with_timestep_axis=True
     ):
         """Export sample_weight.
 
@@ -116,7 +116,7 @@ class Outcome(TrialComponent):
         if with_timestep_axis is False:
             sample_weight = unravel_timestep(sample_weight)
 
-        if export_format == 'tf':
+        if export_format == 'tfds':
             sample_weight = tf.constant(sample_weight, dtype=K.floatx())
         else:
             raise ValueError(

@@ -75,7 +75,7 @@ class Continuous(Outcome):
 
         return value
 
-    def export(self, export_format='tf', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=True):
         """Return appropriately formatted data.
 
         Args:
@@ -95,7 +95,7 @@ class Continuous(Outcome):
         if with_timestep_axis is False:
             value = unravel_timestep(value)
 
-        if export_format == 'tf':
+        if export_format == 'tfds':
             y = tf.constant(value, dtype=K.floatx())
         else:
             raise ValueError(

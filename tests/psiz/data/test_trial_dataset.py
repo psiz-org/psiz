@@ -568,8 +568,8 @@ def test_tf_ds_concatenate(c_2rank1_d_3x2, c_2rank1_e_3x2):
     td_0 = TrialDataset([c_2rank1_d_3x2])
     td_1 = TrialDataset([c_2rank1_e_3x2])
 
-    ds_0 = td_0.export(export_format='tf')
-    ds_1 = td_1.export(export_format='tf')
+    ds_0 = td_0.export(export_format='tfds')
+    ds_1 = td_1.export(export_format='tfds')
 
     ds = ds_0.concatenate(ds_1).batch(6)
     ds_list = list(ds)

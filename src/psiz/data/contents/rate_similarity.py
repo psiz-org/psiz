@@ -111,7 +111,7 @@ class RateSimilarity(Content):
             ))
         return stimulus_set.astype(np.int32)
 
-    def export(self, export_format='tf', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=True):
         """Prepare trial content data for dataset.
 
         Args:
@@ -123,7 +123,7 @@ class RateSimilarity(Content):
                 reshaped.
 
         """
-        if export_format == 'tf':
+        if export_format == 'tfds':
             stimulus_set = self.stimulus_set
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)

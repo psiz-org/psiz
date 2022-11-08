@@ -21,7 +21,6 @@ Classes:
 """
 
 import h5py
-from importlib.metadata import version
 import tensorflow as tf
 
 from psiz.data.trial_component import TrialComponent
@@ -215,31 +214,6 @@ class TrialDataset(object):
             )
 
         return TrialDataset(trial_components)
-
-    def save(self, filepath):
-        """Save the TrialDataset object as an HDF5 file.
-
-        Args:
-            filepath: String specifying the path to save the data.
-
-        """
-        f = h5py.File(filepath, "w")
-
-        # Add class name and versioning information.
-        ver = version("psiz")
-        ver = '.'.join(ver.split('.')[:3])
-        f.create_dataset("class_name", data="TrialDataset")
-        f.create_dataset("psiz_version", data=ver)
-
-        trial_components = self.trial_components
-        h5_grp = f.create_group("trial_components")
-        for component_idx, component in enumerate(trial_components):
-            h5_subgrp = h5_grp.create_group(
-                "component_{0}".format(component_idx)
-            )
-            component.save(h5_subgrp)
-
-        f.close()
 
     def _load_h5_component(f, h5_component_name):
         """Load H5 trial component (an H5 group)."""

@@ -15,7 +15,6 @@
 # ============================================================================
 """Test data module."""
 
-import h5py
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -644,43 +643,3 @@ def test_export_wrong(c_2rank1_d_3x2):
     assert (
         str(e_info.value) == "Unrecognized `export_format` 'garbage'."
     )
-
-
-# TODO delete or finish
-# def test_persistence(c_2rank1_d_3x2, tmpdir):
-#     """Test save and load."""
-#     group_name = "content"
-
-#     original = c_2rank1_d_3x2
-#     fn = tmpdir.join('content_test.hdf5')
-
-#     # Save group.
-#     f = h5py.File(fn, "w")
-#     grp_stimulus = f.create_group(group_name)
-#     original.save(grp_stimulus)
-#     f.close()
-
-#     # Load group.
-#     f = h5py.File(fn, "r")
-#     h5_grp = f[group_name]
-#     # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
-#     try:
-#         class_name = h5_grp["class_name"].asstr()[()]
-#     except AttributeError:
-#         class_name = h5_grp["class_name"][()]
-#     reconstructed = RankSimilarity.load(h5_grp)
-#     f.close()
-
-#     # Check for equivalency.
-#     assert class_name == "psiz.data.RankSimilarity"
-#     assert original.n_sequence == reconstructed.n_sequence
-#     assert original.sequence_length == reconstructed.sequence_length
-#     np.testing.assert_array_equal(
-#         original.stimulus_set, reconstructed.stimulus_set
-#     )
-#     np.testing.assert_array_equal(
-#         original.n_select, reconstructed.n_select
-#     )
-#     np.testing.assert_array_equal(
-#         original.n_reference, reconstructed.n_reference
-#     )

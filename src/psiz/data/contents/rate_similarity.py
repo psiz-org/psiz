@@ -138,16 +138,6 @@ class RateSimilarity(Content):
             )
         return x
 
-    def save(self, h5_grp):
-        """Add relevant data to H5 group.
-
-        Args:
-            h5_grp: H5 group for saving data.
-
-        """
-        h5_grp.create_dataset("class_name", data="psiz.data.RateSimilarity")
-        h5_grp.create_dataset("stimulus_set", data=self.stimulus_set)
-
     @classmethod
     def load(cls, h5_grp):
         """Retrieve relevant datasets from group.

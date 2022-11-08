@@ -103,18 +103,6 @@ class Continuous(Outcome):
             )
         return {self.name: y}, w
 
-    def save(self, h5_grp):
-        """Add relevant data to H5 group.
-
-        Args:
-            h5_grp: H5 group for saving data.
-
-        """
-        h5_grp.create_dataset("class_name", data="psiz.data.Continuous")
-        h5_grp.create_dataset("value", data=self.value)
-        h5_grp.create_dataset("name", data=self.name)
-        h5_grp.create_dataset("sample_weight", data=self.sample_weight)
-
     @classmethod
     def load(cls, h5_grp):
         """Retrieve relevant datasets from group.

@@ -15,13 +15,10 @@
 # ============================================================================
 """Test data module."""
 
-import h5py
-from importlib.metadata import version
 import numpy as np
 import pytest
 import tensorflow as tf
 
-from psiz.trials import load_trials
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
 from psiz.data.trial_dataset import TrialDataset
@@ -158,7 +155,9 @@ def test_init_5(c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2):
     * two outcomes
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2])
+    td = TrialDataset(
+        [c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2]
+    )
 
     assert td.n_sequence == 3
     assert td.sequence_length == 2
@@ -436,7 +435,9 @@ def test_export_1b(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
     tf.debugging.assert_equal(desired_w, w)
 
 
-def test_export_2a(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2, o_rt_a_3x2):
+def test_export_2a(
+    c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2, o_rt_a_3x2
+):
     """Test export.
 
     * Multi-output model, therefore keep dictionary keys for `y` and
@@ -560,55 +561,6 @@ def test_invalid_export_0(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
     assert (
         str(e_info.value) == "Unrecognized `export_format` 'garbage'."
     )
-
-
-# TODO delete
-# def test_persistence_0(c_2rank1_d_3x2, tmpdir):
-#     """Test persistence.
-
-#     * With content only.
-
-#     """
-#     fn = tmpdir.join('persistence_test.hdf5')
-
-#     original = TrialDataset([c_2rank1_d_3x2])
-#     original.save(fn)
-
-#     reconstructed = load_trials(fn)
-
-#     assert original.n_sequence == reconstructed.n_sequence
-#     assert original.sequence_length == reconstructed.sequence_length
-#     assert len(original.content_list) == len(reconstructed.content_list)
-#     assert len(original.group_list) == len(reconstructed.group_list)
-#     assert len(original.outcome_list) == len(reconstructed.outcome_list)
-
-#     ver = version("psiz")
-#     ver = '.'.join(ver.split('.')[:3])
-#     f = h5py.File(fn, "r")
-#     # pylint: disable=no-member
-#     reconstructed_version = f["psiz_version"].asstr()[()]
-#     assert ver == reconstructed_version
-
-
-# TODO delete
-# def test_persistence_1(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2, tmpdir):
-#     """Test persistence.
-
-#     * With content, group, and outcome.
-
-#     """
-#     fn = tmpdir.join('persistence_test.hdf5')
-
-#     original = TrialDataset([c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2])
-#     original.save(fn)
-
-#     reconstructed = load_trials(fn)
-
-#     assert original.n_sequence == reconstructed.n_sequence
-#     assert original.sequence_length == reconstructed.sequence_length
-#     assert len(original.content_list) == len(reconstructed.content_list)
-#     assert len(original.group_list) == len(reconstructed.group_list)
-#     assert len(original.outcome_list) == len(reconstructed.outcome_list)
 
 
 def test_tf_ds_concatenate(c_2rank1_d_3x2, c_2rank1_e_3x2):

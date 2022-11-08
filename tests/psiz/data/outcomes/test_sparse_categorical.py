@@ -15,7 +15,6 @@
 # ============================================================================
 """Test data module."""
 
-import h5py
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -379,42 +378,4 @@ def test_invalid_export_0(o_sparsecat_b_4x3):
     assert e_info.type == ValueError
     assert (
         str(e_info.value) == "Unrecognized `export_format` 'garbage'."
-    )
-
-
-def test_persistence(o_sparsecat_b_4x3, tmpdir):
-    """Test save and load."""
-    h5_grp_name = "sparsecat"
-
-    original = o_sparsecat_b_4x3
-    fn = tmpdir.join('persistence_test.hdf5')
-
-    # Save group.
-    f = h5py.File(fn, "w")
-    h5_grp = f.create_group(h5_grp_name)
-    original.save(h5_grp)
-    f.close()
-
-    # Load group.
-    f = h5py.File(fn, "r")
-    h5_grp = f[h5_grp_name]
-    # Encoding/read rules changed in h5py 3.0, requiring asstr() call.
-    try:
-        class_name = h5_grp["class_name"].asstr()[()]
-    except AttributeError:
-        class_name = h5_grp["class_name"][()]
-    reconstructed = SparseCategorical.load(h5_grp)
-    f.close()
-
-    # Check for equivalency.
-    assert class_name == "psiz.data.SparseCategorical"
-    assert original.name == reconstructed.name
-    assert original.n_sequence == reconstructed.n_sequence
-    assert original.sequence_length == reconstructed.sequence_length
-    assert original.depth == reconstructed.depth
-    np.testing.assert_array_equal(
-        original.index, reconstructed.index
-    )
-    np.testing.assert_array_equal(
-        original.sample_weight, reconstructed.sample_weight
     )

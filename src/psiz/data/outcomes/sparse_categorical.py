@@ -122,17 +122,3 @@ class SparseCategorical(Outcome):
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
         return {self.name: y}, w
-
-    @classmethod
-    def load(cls, h5_grp):
-        """Retrieve relevant datasets from group.
-
-        Args:
-            h5_grp: H5 group from which to load data.
-
-        """
-        index = h5_grp["index"][()]
-        depth = h5_grp["depth"][()]
-        name = h5_grp["name"].asstr()[()]
-        sample_weight = h5_grp["sample_weight"][()]
-        return cls(index, depth=depth, name=name, sample_weight=sample_weight)

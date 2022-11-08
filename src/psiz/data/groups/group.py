@@ -114,15 +114,3 @@ class Group(TrialComponent):
         return {
             self.name: group_weights
         }
-
-    @classmethod
-    def load(cls, h5_grp):
-        """Retrieve relevant datasets from group.
-
-        Args:
-            h5_grp: H5 group from which to load data.
-
-        """
-        group_weights = h5_grp["group_weights"][()]
-        name = h5_grp["name"].asstr()[()]
-        return cls(group_weights=group_weights, name=name)

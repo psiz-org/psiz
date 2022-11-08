@@ -137,14 +137,3 @@ class RateSimilarity(Content):
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
         return x
-
-    @classmethod
-    def load(cls, h5_grp):
-        """Retrieve relevant datasets from group.
-
-        Args:
-            h5_grp: H5 group from which to load data.
-
-        """
-        stimulus_set = h5_grp["stimulus_set"][()]
-        return cls(stimulus_set)

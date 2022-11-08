@@ -49,12 +49,3 @@ class TrialComponent(metaclass=ABCMeta):
                 data is reshaped.
 
         """
-
-    @abstractmethod
-    def load(self, h5_grp):
-        """Retrieve relevant datasets from group.
-
-        Args:
-            h5_grp: H5 group from which to load data.
-
-        """

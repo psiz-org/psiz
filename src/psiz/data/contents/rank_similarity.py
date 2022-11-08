@@ -303,17 +303,6 @@ class RankSimilarity(Content):
             )
         return x
 
-    def load(cls, h5_grp):
-        """Retrieve relevant datasets from group.
-
-        Args:
-            h5_grp: H5 group from which to load data.
-
-        """
-        stimulus_set = h5_grp['stimulus_set'][()]
-        n_select = h5_grp['n_select'][()]
-        return cls(stimulus_set, n_select=n_select)
-
     # TODO maybe move elsewhere
     @staticmethod
     def possible_outcomes(n_reference, n_select):

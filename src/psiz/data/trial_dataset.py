@@ -20,19 +20,12 @@ Classes:
 
 """
 
-import h5py
 import tensorflow as tf
 
 from psiz.data.trial_component import TrialComponent
 from psiz.data.contents.content import Content
-from psiz.data.contents.rank_similarity import RankSimilarity
-from psiz.data.contents.rate_similarity import RateSimilarity
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.outcome import Outcome
-from psiz.data.outcomes.continuous import Continuous
-from psiz.data.outcomes.sparse_categorical import (
-    SparseCategorical
-)
 
 
 class TrialDataset(object):
@@ -191,50 +184,6 @@ class TrialDataset(object):
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
         return ds
-
-    @classmethod
-    def load(cls, filepath):
-        """Load trials.
-
-        Args:
-            filepath: The location of the hdf5 file to load.
-
-        """
-        f = h5py.File(filepath, "r")
-
-        # Grab H5 group of all trial components.
-        h5_trial_components = f['trial_components']
-        component_keys = list(h5_trial_components.keys())
-
-        # Loop over components and load.
-        trial_components = []
-        for key in component_keys:
-            trial_components.append(
-                cls._load_h5_component(h5_trial_components, key)
-            )
-
-        return TrialDataset(trial_components)
-
-    def _load_h5_component(f, h5_component_name):
-        """Load H5 trial component (an H5 group)."""
-        h5_component = f[h5_component_name]
-
-        # NOTE: Encoding/read rules changed in h5py 3.0, requiring asstr()
-        # call. The minimum requirements are reflected in `setup.cfg`.
-        class_name = h5_component["class_name"].asstr()[()]
-        custom_objects = {
-            'psiz.data.RankSimilarity': RankSimilarity,
-            'psiz.data.RateSimilarity': RateSimilarity,
-            'psiz.data.Group': Group,
-            'psiz.data.SparseCategorical': SparseCategorical,
-            'psiz.data.Continuous': Continuous,
-        }
-        if class_name in custom_objects:
-            component_class = custom_objects[class_name]
-        else:
-            raise NotImplementedError
-
-        return component_class.load(h5_component)
 
     def _prepare_for_tf_dataset(self, d):
         """Prepare `y` and `w` for TensorFlow Dataset.

@@ -352,7 +352,7 @@ class RankModelA(StochasticModel):
             )
         )
         behavior = psiz.keras.layers.RankSimilarity(
-            percept=percept, kernel=kernel
+            n_reference=4, n_select=1, percept=percept, kernel=kernel
         )
         self.behavior = behavior
 
@@ -419,7 +419,7 @@ class RankModelB(StochasticModel):
             )
         )
         behavior = psiz.keras.layers.RankSimilarity(
-            percept=percept, kernel=kernel
+            n_reference=4, n_select=1, percept=percept, kernel=kernel
         )
         self.behavior = behavior
 
@@ -504,6 +504,8 @@ class RankModelC(StochasticModel):
             )
         )
         behavior = psiz.keras.layers.RankSimilarity(
+            n_reference=4,
+            n_select=1,
             percept=percept,
             kernel=kernel,
             percept_adapter=percept_adapter
@@ -574,7 +576,7 @@ class RankCellModelA(StochasticModel):
             )
         )
         rank_cell = psiz.keras.layers.RankSimilarityCell(
-            percept=percept, kernel=kernel
+            n_reference=8, n_select=2, percept=percept, kernel=kernel
         )
         rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
         self.behavior = rnn
@@ -1858,11 +1860,11 @@ class TestRankSimilarity:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_usage_subclass_a(self, ds_ranksim_v0, is_eager):
+    def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ranksim_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
@@ -1874,7 +1876,7 @@ class TestRankSimilarity:
         "save_traces", [True, False]
     )
     def test_save_load_subclass_a(
-        self, ds_ranksim_v0, is_eager, save_traces, tmpdir
+        self, ds_4rank1_v0, is_eager, save_traces, tmpdir
     ):
         """Test save/load.
 
@@ -1883,7 +1885,7 @@ class TestRankSimilarity:
         """
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ranksim_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
         model.build(ds.element_spec[0])
 
@@ -1942,11 +1944,11 @@ class TestRankSimilarity:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_usage_subclass_b(self, ds_ranksim_v0, is_eager):
+    def test_usage_subclass_b(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ranksim_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
@@ -1958,12 +1960,12 @@ class TestRankSimilarity:
         "save_traces", [True, False]
     )
     def test_save_load_subclass_b(
-        self, ds_ranksim_v0, is_eager, save_traces, tmpdir
+        self, ds_4rank1_v0, is_eager, save_traces, tmpdir
     ):
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ranksim_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
         model.build(ds.element_spec[0])
 
@@ -2022,11 +2024,11 @@ class TestRankSimilarity:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_usage_subclass_c(self, ds_ranksim_v2, is_eager):
+    def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ranksim_v2
+        ds = ds_4rank1_v2
         model = build_ranksim_subclass_c()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
@@ -2046,11 +2048,11 @@ class TestRankSimilarityCell:
             ),
         ]
     )
-    def test_usage_subclass_a(self, ds_ranksimcell_v0, is_eager):
+    def test_usage_subclass_a(self, ds_time_8rank2_v0, is_eager):
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ranksimcell_v0
+        ds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
@@ -2067,12 +2069,12 @@ class TestRankSimilarityCell:
         "save_traces", [True, False]
     )
     def test_save_load_subclass_a(
-        self, ds_ranksimcell_v0, is_eager, save_traces, tmpdir
+        self, ds_time_8rank2_v0, is_eager, save_traces, tmpdir
     ):
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ranksimcell_v0
+        ds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
         model.build(ds.element_spec[0])
 
@@ -2137,11 +2139,11 @@ class TestRateSimilarity:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_usage_subclass_a(self, ds_ratesim_v0, is_eager):
+    def test_usage_subclass_a(self, ds_rate2_v0, is_eager):
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ratesim_v0
+        ds = ds_rate2_v0
         model = build_ratesim_subclass_a()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
@@ -2149,11 +2151,11 @@ class TestRateSimilarity:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_save_load_subclass_a(self, ds_ratesim_v0, is_eager, tmpdir):
+    def test_save_load_subclass_a(self, ds_rate2_v0, is_eager, tmpdir):
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_ratesim_v0
+        ds = ds_rate2_v0
         model = build_ratesim_subclass_a()
         model.fit(ds, epochs=1)
 
@@ -2205,11 +2207,11 @@ class TestALCOVECell:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_usage_subclass_a(self, ds_categorize_v0, is_eager):
+    def test_usage_subclass_a(self, ds_time_categorize_v0, is_eager):
         """Test subclassed model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
@@ -2221,12 +2223,12 @@ class TestALCOVECell:
         "save_traces", [True, False]
     )
     def test_save_load_subclass_a(
-        self, ds_categorize_v0, is_eager, save_traces, tmpdir
+        self, ds_time_categorize_v0, is_eager, save_traces, tmpdir
     ):
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
         model.fit(ds, epochs=1)
 
@@ -2282,11 +2284,11 @@ class TestALCOVECell:
             ),
         ]
     )
-    def test_usage_subclass_b(self, ds_categorize_v0, is_eager):
+    def test_usage_subclass_b(self, ds_time_categorize_v0, is_eager):
         """Test subclassed model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_subclass_b()
         call_fit_evaluate_predict(model, ds)
         tf.keras.backend.clear_session()
@@ -2301,12 +2303,12 @@ class TestALCOVECell:
         "save_traces", [True, False]
     )
     def test_save_load_subclass_b(
-        self, ds_categorize_v0, is_eager, save_traces, tmpdir
+        self, ds_time_categorize_v0, is_eager, save_traces, tmpdir
     ):
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_subclass_b()
         model.fit(ds, epochs=1)
 

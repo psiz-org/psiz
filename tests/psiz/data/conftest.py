@@ -35,23 +35,22 @@ from psiz.data.outcomes.sparse_categorical import SparseCategorical
 
 
 @pytest.fixture(scope="module")
-def c_rank_a_4x1():
+def c_2rank1_a_4x1():
     """Content RankedSimilarity with rank-2 arguments."""
     stimulus_set = np.array(
         [
-            [3, 1, 2, 0, 0, 0, 0, 0, 0, 0],
-            [9, 12, 7, 0, 0, 0, 0, 0, 0, 0],
-            [3, 4, 5, 6, 7, 0, 0, 0, 0, 0],
-            [3, 4, 5, 6, 13, 14, 15, 16, 17, 0]
+            [3, 1, 2],
+            [9, 12, 7],
+            [5, 6, 7],
+            [13, 14, 15]
         ], dtype=np.int32
     )
-    n_select = np.array([1, 1, 1, 2], dtype=np.int32)
-
+    n_select = 1
     return RankSimilarity(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
-def c_rank_aa_4x1():
+def c_2rank1_aa_4x1():
     """Content RankSimilarity with rank-3 arguments.
 
     Notes:
@@ -63,22 +62,21 @@ def c_rank_aa_4x1():
     """
     stimulus_set = np.array(
         [
-            [[3, 1, 2, 0, 0, 0, 0, 0, 0, 0]],
-            [[9, 12, 7, 0, 0, 0, 0, 0, 0, 0]],
-            [[3, 4, 5, 6, 7, 0, 0, 0, 0, 0]],
-            [[3, 4, 5, 6, 13, 14, 15, 16, 17, 0]]
+            [[3, 1, 2]],
+            [[9, 12, 7]],
+            [[5, 6, 7]],
+            [[13, 14, 15]]
         ], dtype=np.int32
     )
-    n_select = np.array([[1], [1], [1], [2]], dtype=np.int32)
-
+    n_select = 1
     return RankSimilarity(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
-def o_rank_aa_4x1():
+def o_2rank1_aa_4x1():
     outcome_idx = np.zeros([4, 1], dtype=np.int32)
     sample_weight = .9 * np.ones([4, 1])
-    max_outcome = 56
+    max_outcome = 2
     rank_outcome = SparseCategorical(
         outcome_idx,
         depth=max_outcome,
@@ -89,43 +87,39 @@ def o_rank_aa_4x1():
 
 
 @pytest.fixture(scope="module")
-def c_rank_b_4x2():
+def c_4rank2_b_4x2():
     """Content RankedSimilarity with rank-3 arguments.
 
     Notes:
-    There is intentionally an extra reference placeholder that should
-        be trimmed during initalization.
+    There is intentionally a placeholder trial in one sequence.
 
     """
     stimulus_set = np.array(
         [
             [
-                [3, 1, 2, 0, 0, 0, 0, 0, 0, 0],
-                [3, 1, 2, 0, 0, 0, 0, 0, 0, 0]
+                [1, 2, 3, 4, 5],
+                [5, 4, 3, 2, 1]
             ],
             [
-                [9, 12, 7, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                [9, 12, 7, 13, 14],
+                [0, 0, 0, 0, 0]
             ],
             [
-                [3, 4, 5, 6, 7, 0, 0, 0, 0, 0],
-                [3, 4, 5, 0, 0, 0, 0, 0, 0, 0]
+                [3, 4, 5, 6, 7],
+                [7, 8, 9, 10, 11]
             ],
             [
-                [3, 4, 5, 6, 13, 14, 15, 16, 17, 0],
-                [3, 4, 5, 6, 13, 14, 15, 16, 17, 0]
+                [13, 14, 15, 16, 17],
+                [14, 15, 16, 17, 18]
             ]
         ], dtype=np.int32
     )
-    n_select = np.array(
-        [[1, 1], [1, 0], [1, 1], [2, 1]], dtype=np.int32
-    )
-
+    n_select = 2
     return RankSimilarity(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
-def c_rank_c_4x3():
+def c_4rank2_c_4x3():
     """Content RankedSimilarity with rank-3 arguments.
 
     * An extra sequence that should not be trimmed.
@@ -135,39 +129,36 @@ def c_rank_c_4x3():
     stimulus_set = np.array(
         [
             [
-                [3, 1, 2, 0, 0, 0, 0, 0, 0, 0],
-                [3, 1, 2, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                [3, 1, 2, 4, 5],
+                [3, 1, 2, 6, 7],
+                [0, 0, 0, 0, 0]
             ],
             [
-                [9, 12, 7, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                [9, 12, 7, 14, 5],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0]
             ],
             [
-                [3, 4, 5, 6, 7, 0, 0, 0, 0, 0],
-                [3, 4, 5, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                [3, 4, 5, 6, 7],
+                [8, 9, 10, 11, 12],
+                [0, 0, 0, 0, 0]
             ],
             [
-                [3, 4, 5, 6, 13, 14, 15, 16, 17, 0],
-                [3, 4, 5, 6, 13, 14, 15, 16, 17, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                [1, 3, 5, 7, 9],
+                [11, 9, 7, 5, 3],
+                [0, 0, 0, 0, 0]
             ]
         ], dtype=np.int32
     )
-    n_select = np.array(
-        [[1, 1, 0], [1, 0, 0], [1, 1, 0], [2, 1, 0]], dtype=np.int32
-    )
-
+    n_select = 2
     return RankSimilarity(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
-def o_rank_c_4x3():
+def o_4rank2_c_4x3():
     outcome_idx = np.zeros([4, 3], dtype=np.int32)
     sample_weight = .9 * np.ones([4, 3])
-    max_outcome = 56
+    max_outcome = 12
     rank_outcome = SparseCategorical(
         outcome_idx,
         depth=max_outcome,
@@ -178,7 +169,7 @@ def o_rank_c_4x3():
 
 
 @pytest.fixture(scope="module")
-def c_rank_d_3x2():
+def c_2rank1_d_3x2():
     """Content RankedSimilarity with rank-3 arguments.
 
     A set of trials with relatively simple outcomes.
@@ -187,31 +178,28 @@ def c_rank_d_3x2():
     stimulus_set = np.array(
         [
             [
-                [1, 2, 3, 0],
-                [4, 5, 6, 0],
+                [1, 2, 3],
+                [4, 5, 6],
             ],
             [
-                [7, 8, 9, 0],
-                [0, 0, 0, 0],
+                [7, 8, 9],
+                [0, 0, 0],
             ],
             [
-                [10, 11, 12, 13],
-                [14, 15, 16, 0],
+                [10, 11, 12],
+                [14, 15, 16],
             ]
         ], dtype=np.int32
     )
-    n_select = np.array(
-        [[1, 1], [1, 0], [1, 1]], dtype=np.int32
-    )
-
+    n_select = 1
     return RankSimilarity(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
-def o_rank_d_3x2():
+def o_2rank1_d_3x2():
     outcome_idx = np.zeros([3, 2], dtype=np.int32)
     sample_weight = .9 * np.ones([3, 2])
-    max_outcome = 3
+    max_outcome = 2
     rank_outcome = SparseCategorical(
         outcome_idx,
         depth=max_outcome,
@@ -237,7 +225,35 @@ def o_rt_a_3x2():
 
 
 @pytest.fixture(scope="module")
-def c_rank_e_2x3():
+def c_2rank1_e_3x2():
+    """Content RankedSimilarity with rank-3 arguments.
+
+    A set of trials with relatively simple outcomes.
+
+    """
+    stimulus_set = np.array(
+        [
+            [
+                [1, 2, 3],
+                [4, 5, 6],
+            ],
+            [
+                [7, 8, 9],
+                [10, 11, 12],
+            ],
+            [
+                [13, 14, 15],
+                [16, 17, 18],
+            ],
+        ], dtype=np.int32
+    )
+    n_select = 1
+    return RankSimilarity(stimulus_set, n_select=n_select)
+
+
+# TODO use or delete
+@pytest.fixture(scope="module")
+def c_2rank1_f_2x4():
     """Content RankedSimilarity with rank-3 arguments.
 
     A set of trials with relatively simple outcomes.
@@ -249,34 +265,6 @@ def c_rank_e_2x3():
                 [1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9],
-            ],
-            [
-                [10, 11, 12],
-                [13, 14, 15],
-                [16, 17, 18],
-            ],
-        ], dtype=np.int32
-    )
-    n_select = np.array(
-        [[1, 1, 1], [1, 1, 1]], dtype=np.int32
-    )
-
-    return RankSimilarity(stimulus_set, n_select=n_select)
-
-
-@pytest.fixture(scope="module")
-def c_rank_f_2x4():
-    """Content RankedSimilarity with rank-3 arguments.
-
-    A set of trials with relatively simple outcomes.
-
-    """
-    stimulus_set = np.array(
-        [
-            [
-                [1, 2, 3],
-                [4, 5, 6],
-                [7, 8, 9],
                 [7, 8, 9],
             ],
             [
@@ -287,15 +275,12 @@ def c_rank_f_2x4():
             ],
         ], dtype=np.int32
     )
-    n_select = np.array(
-        [[1, 1, 1, 1], [1, 1, 1, 1]], dtype=np.int32
-    )
-
+    n_select = 1
     return RankSimilarity(stimulus_set, n_select=n_select)
 
 
 @pytest.fixture(scope="module")
-def c_rate_a_4x1():
+def c_rate2_a_4x1():
     """Content RateSimilarity with minimal rank arguments."""
     stimulus_set = np.array(
         [
@@ -310,7 +295,7 @@ def c_rate_a_4x1():
 
 
 @pytest.fixture(scope="module")
-def c_rate_aa_4x1():
+def c_rate2_aa_4x1():
     """Content RateSimilarity with rank-3 arguments.
 
     Notes:
@@ -333,7 +318,7 @@ def c_rate_aa_4x1():
 
 
 @pytest.fixture(scope="module")
-def c_rate_b_4x2():
+def c_rate2_b_4x2():
     """Content RateSimilarity with rank-3 arguments.
 
     Notes:
@@ -366,7 +351,7 @@ def c_rate_b_4x2():
 
 
 @pytest.fixture(scope="module")
-def c_rate_c_4x3():
+def c_rate2_c_4x3():
     """Content RateSimilarity with rank-3 arguments.
 
     This instance also has an extra timestep and reference that should
@@ -402,7 +387,7 @@ def c_rate_c_4x3():
 
 
 @pytest.fixture(scope="module")
-def c_rate_d_2x3():
+def c_rate2_d_2x3():
     """Content RateSimilarity with rank-3 arguments.
 
     Used in test_stack.
@@ -427,7 +412,7 @@ def c_rate_d_2x3():
 
 
 @pytest.fixture(scope="module")
-def c_rate_e_3x2():
+def c_rate2_e_3x2():
     """Content RateSimilarity with rank-3 arguments."""
     stimulus_set = np.array(
         [
@@ -450,7 +435,7 @@ def c_rate_e_3x2():
 
 
 @pytest.fixture(scope="module")
-def o_rate_a_3x2():
+def o_rate2_a_3x2():
     """Content RateSimilarity with rank-3 arguments."""
     ratings = np.array(
         [

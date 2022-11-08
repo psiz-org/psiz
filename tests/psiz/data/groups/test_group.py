@@ -185,7 +185,7 @@ def test_persistence_0(g_mix2_4x3, tmpdir):
 
 
 # TODO moved from test_trial_dataset
-# def test_invalid_init_0(c_rank_aa_4x1, o_rank_aa_4x1):
+# def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
 #     """Test invalid groups initialization.
 
 #     Bad group shapes:
@@ -194,8 +194,8 @@ def test_persistence_0(g_mix2_4x3, tmpdir):
 #     * mismatch in sequence_length
 
 #     """
-#     content = c_rank_aa_4x1
-#     outcome = o_rank_aa_4x1
+#     content = c_2rank1_aa_4x1
+#     outcome = o_2rank1_aa_4x1
 
 #     rng = default_rng()
 #     groups = {

@@ -53,18 +53,17 @@ def test_outcome_probability_v0():
         )
     )
     rank = psiz.keras.layers.RankSimilarity(
-        percept=percept, kernel=kernel
+        n_reference=2, n_select=1, percept=percept, kernel=kernel
     )
 
     stimulus_set = tf.constant(
         [
-            [[1, 2, 3], [1, 3, 2]],
-            [[2, 3, 4], [2, 4, 3]],
-            [[2, 1, 4], [2, 4, 1]],
-            [[4, 3, 1], [4, 1, 3]]
+            [1, 2, 3],
+            [2, 3, 4],
+            [2, 1, 4],
+            [4, 3, 1],
         ]
     )
-    stimulus_set = tf.transpose(stimulus_set, perm=[0, 2, 1])
     is_select = tf.constant(
         [
             [False, True, False],
@@ -73,11 +72,9 @@ def test_outcome_probability_v0():
             [False, True, False]
         ]
     )
-    is_select = tf.expand_dims(is_select, axis=2)
-
     x = {
-        'rank_similarity_stimulus_set': stimulus_set,
-        'rank_similarity_is_select': is_select,
+        '2ranksim1_stimulus_set': stimulus_set,
+        '2ranksim1_is_select': is_select,
     }
     outcome_prob = rank(x)
 
@@ -88,7 +85,6 @@ def test_outcome_probability_v0():
     d_qr = tf.abs(z_q - z_r)
     s_qr = tf.exp(-tf.constant(beta) * d_qr)
     total_s = tf.reduce_sum(s_qr, axis=1, keepdims=True)
-    prob = s_qr / total_s
-    outcome_prob_desired = prob[:, 0]  # Only one selection.
+    outcome_prob_desired = s_qr / total_s
 
     tf.debugging.assert_near(outcome_prob, outcome_prob_desired)

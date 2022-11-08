@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials module.
-
+"""Data module.
 
 Classes:
     Categorize: Trial content requiring categorization judgments.

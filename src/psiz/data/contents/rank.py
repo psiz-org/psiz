@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials module.
-
+"""Data module.
 
 Classes:
     Rank: Trial content requiring ranked judgments.

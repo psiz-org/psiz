@@ -127,19 +127,3 @@ class Continuous(Outcome):
         name = h5_grp["name"].asstr()[()]
         sample_weight = h5_grp["sample_weight"][()]
         return cls(value, name=name, sample_weight=sample_weight)
-
-    def subset(self, idx):
-        """Return subset of data as a new object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new object.
-
-        """
-        value_sub = self.value[idx]
-        sample_weight_sub = self._subset_sample_weight(idx)
-        return Continuous(
-            value_sub, sample_weight=sample_weight_sub, name=self.name
-        )

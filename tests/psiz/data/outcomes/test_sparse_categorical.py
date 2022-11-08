@@ -382,36 +382,6 @@ def test_invalid_export_0(o_sparsecat_b_4x3):
     )
 
 
-def test_subset_0(o_sparsecat_d_4x3):
-    """Test subset."""
-    desired_name = 'sparsecat_d'
-    desired_n_sequence = 2
-    desired_sequence_length = 3
-    desired_index = np.array(
-        [[2, 0, 0], [0, 1, 0]], dtype=np.int32
-    )
-    desired_depth = 3
-    desired_sample_weight = np.array(
-        [
-            [0.4, 0.5, 0.6],
-            [0.7, 0.8, 0.9],
-        ], dtype=np.float32
-    )
-
-    sub = o_sparsecat_d_4x3.subset(np.array([1, 2]))
-
-    assert sub.name == desired_name
-    assert sub.n_sequence == desired_n_sequence
-    assert sub.sequence_length == desired_sequence_length
-    np.testing.assert_array_equal(
-        desired_index, sub.index
-    )
-    assert desired_depth == sub.depth
-    np.testing.assert_array_equal(
-        desired_sample_weight, sub.sample_weight
-    )
-
-
 def test_persistence(o_sparsecat_b_4x3, tmpdir):
     """Test save and load."""
     h5_grp_name = "sparsecat"

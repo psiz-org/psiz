@@ -124,28 +124,6 @@ def test_export_wrong(g_mix2_4x3):
     )
 
 
-def test_subset_0(g_mix2_4x3):
-    """Test subset."""
-    desired_n_sequence = 2
-    desired_sequence_length = 3
-    desired_group_weights = np.array(
-        [
-            [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
-            [[0.8, 0.2], [0.8, 0.2], [0.8, 0.2]],
-        ], dtype=np.float32
-    )
-    desired_name = 'mix2'
-
-    sub = g_mix2_4x3.subset(np.array([1, 2]))
-
-    assert desired_name == sub.name
-    assert desired_n_sequence == sub.n_sequence
-    assert desired_sequence_length == sub.sequence_length
-    np.testing.assert_array_equal(
-        desired_group_weights, sub.group_weights
-    )
-
-
 def test_persistence_0(g_mix2_4x3, tmpdir):
     """Test save and load."""
     h5_grp_name = "sparsecat"
@@ -178,10 +156,6 @@ def test_persistence_0(g_mix2_4x3, tmpdir):
     np.testing.assert_array_equal(
         original.group_weights, reconstructed.group_weights
     )
-
-
-# TODO delete or finish
-# def test_stack_0
 
 
 # TODO moved from test_trial_dataset

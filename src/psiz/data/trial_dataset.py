@@ -193,23 +193,6 @@ class TrialDataset(object):
             )
         return ds
 
-    def subset(self, idx):
-        """Return subset of sequences as a new TrialDataset object.
-
-        Args:
-            idx: The indices corresponding to the subset.
-
-        Returns:
-            A new TrialDataset object.
-
-        """
-        trial_components_sub = []
-        for component in self.trial_components:
-            trial_components_sub.append(
-                component.subset(idx)
-            )
-        return TrialDataset(trial_components_sub)
-
     @classmethod
     def load(cls, filepath):
         """Load trials.

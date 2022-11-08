@@ -62,19 +62,6 @@ class RateSimilarity(Content):
         """Return 2D Boolean array indicating trials with actual content."""
         return np.not_equal(self.stimulus_set[:, :, 0], self.mask_value)
 
-    def subset(self, idx):
-        """Return subset of data as a new object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new object.
-
-        """
-        stimulus_set_sub = self.stimulus_set[idx]
-        return RateSimilarity(stimulus_set_sub)
-
     def _rectify_shape(self, stimulus_set):
         """Rectify shape of `stimulus_set`."""
         if stimulus_set.ndim == 2:

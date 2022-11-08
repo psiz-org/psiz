@@ -362,30 +362,3 @@ def test_persistence(c_rate2_c_4x3, tmpdir):
     np.testing.assert_array_equal(
         original.stimulus_set, reconstructed.stimulus_set
     )
-
-
-def test_subset_0(c_rate2_c_4x3):
-    """Test subset."""
-    desired_n_sequence = 2
-    desired_sequence_length = 3
-    desired_stimulus_set = np.array(
-        [
-            [
-                [9, 12],
-                [0, 0],
-                [0, 0],
-            ],
-            [
-                [3, 4],
-                [3, 4],
-                [0, 0],
-            ]
-        ], dtype=np.int32
-    )
-
-    sub = c_rate2_c_4x3.subset(np.array([1, 2]))
-    assert sub.n_sequence == desired_n_sequence
-    assert sub.sequence_length == desired_sequence_length
-    np.testing.assert_array_equal(
-        desired_stimulus_set, sub.stimulus_set
-    )

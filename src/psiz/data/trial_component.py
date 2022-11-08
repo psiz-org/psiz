@@ -37,18 +37,6 @@ class TrialComponent(metaclass=ABCMeta):
         return self._timestep_axis
 
     @abstractmethod
-    def subset(self, idx):
-        """Return subset of data as a new object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new object.
-
-        """
-
-    @abstractmethod
     def export(self, export_format='tf', with_timestep_axis=True):
         """Return appropriately formatted data.
 

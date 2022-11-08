@@ -99,19 +99,6 @@ class RankSimilarity(Content):
         """Return 2D Boolean array indicating trials with actual content."""
         return np.not_equal(self.stimulus_set[:, :, 0], self.mask_value)
 
-    def subset(self, idx):
-        """Return subset of data as a new object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new object.
-
-        """
-        stimulus_set_sub = self.stimulus_set[idx]
-        return RankSimilarity(stimulus_set_sub, n_select=self.n_select)
-
     def _validate_n_reference(self, stimulus_set):
         """Validate implied `n_reference` in `stimulus_set`.
 

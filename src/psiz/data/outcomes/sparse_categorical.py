@@ -149,22 +149,3 @@ class SparseCategorical(Outcome):
         name = h5_grp["name"].asstr()[()]
         sample_weight = h5_grp["sample_weight"][()]
         return cls(index, depth=depth, name=name, sample_weight=sample_weight)
-
-    def subset(self, idx):
-        """Return subset of data as a new object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new object.
-
-        """
-        index_sub = self.index[idx]
-        sample_weight_sub = self._subset_sample_weight(idx)
-        return SparseCategorical(
-            index_sub,
-            depth=self.depth,
-            sample_weight=sample_weight_sub,
-            name=self.name
-        )

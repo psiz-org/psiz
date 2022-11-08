@@ -342,34 +342,6 @@ def test_export_wrong(o_continuous_c_4x3):
     )
 
 
-def test_subset_0(o_continuous_c_4x3):
-    """Test subset."""
-    desired_n_sequence = 2
-    desired_sequence_length = 3
-    desired_value = np.array(
-        [
-            [[2.0, 0.4], [0.0, 0.5], [0.0, 0.6]],
-            [[-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9]],
-        ], dtype=np.float32
-    )
-    desired_n_unit = 2
-    desired_name = 'continuous_c'
-    desired_sample_weight = np.ones([2, 3], dtype=np.float32)
-
-    sub = o_continuous_c_4x3.subset(np.array([1, 2]))
-
-    assert desired_name == sub.name
-    assert desired_n_sequence == sub.n_sequence
-    assert desired_sequence_length == sub.sequence_length
-    assert desired_n_unit == sub.n_unit
-    np.testing.assert_array_equal(
-        desired_value, sub.value
-    )
-    np.testing.assert_array_equal(
-        desired_sample_weight, sub.sample_weight
-    )
-
-
 def test_persistence(o_continuous_b_4x3, tmpdir):
     """Test save and load."""
     h5_grp_name = "continuous"

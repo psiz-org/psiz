@@ -126,18 +126,6 @@ class Group(TrialComponent):
         h5_grp.create_dataset("group_weights", data=self.group_weights)
         h5_grp.create_dataset("name", data=self.name)
 
-    def subset(self, idx):
-        """Return subset of data as a new object.
-
-        Args:
-            index: The indices corresponding to the subset.
-
-        Returns:
-            A new object.
-
-        """
-        return Group(group_weights=self.group_weights[idx], name=self.name)
-
     @classmethod
     def load(cls, h5_grp):
         """Retrieve relevant datasets from group.

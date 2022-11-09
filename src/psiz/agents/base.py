@@ -38,7 +38,10 @@ class Agent():  # pylint: disable=too-few-public-methods
         """Subclassing initialization."""
         warnings.warn(
             (
-                f'{cls.__name__} is deprecated and will be removed; '
+                f'{cls.__name__} is deprecated and will be removed. '
+                'You can use `tensorflow.data.Dataset.map` function to '
+                'simulate agents. Please see `examples/rank/mle_1g.py` for '
+                'details; '
                 'version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
@@ -51,7 +54,11 @@ class Agent():  # pylint: disable=too-few-public-methods
         warnings.warn(
             (
                 f'{self.__class__.__name__} is deprecated and will be '
-                'removed; version_announced=0.8.0; version_scheduled=0.9.0'
+                'removed. '
+                'You can use `tensorflow.data.Dataset.map` function to '
+                'simulate agents. Please see `examples/rank/mle_1g.py` for '
+                'details; '
+                'version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
             stacklevel=2

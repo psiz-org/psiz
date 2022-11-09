@@ -50,7 +50,9 @@ class PsychologicalEmbedding(tf.keras.Model):
         """Subclassing initialization."""
         warnings.warn(
             (
-                f'{cls.__name__} is deprecated and will be removed; '
+                f'{cls.__name__} is deprecated and will be removed. '
+                'You should create a subclassed or functional Model instead. '
+                'Please see the models in the updated `examples/`; '
                 'version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
@@ -88,7 +90,10 @@ class PsychologicalEmbedding(tf.keras.Model):
         warnings.warn(
             (
                 f'{self.__class__.__name__} is deprecated and will be '
-                'removed; version_announced=0.8.0; version_scheduled=0.9.0'
+                'removed. '
+                'You should create a subclassed or functional Model instead. '
+                'Please see the models in the updated `examples/`; '
+                'version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
             stacklevel=2

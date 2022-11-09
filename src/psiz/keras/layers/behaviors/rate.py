@@ -51,7 +51,8 @@ class RateBehavior(tf.keras.layers.Layer):
         """Subclassing initialization."""
         warn(
             (
-                f'{cls.__name__} is deprecated and will be removed; '
+                f'{cls.__name__} is deprecated and will be removed. '
+                'Use `psiz.keras.layers.RateSimilarity` instead; '
                 'version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
@@ -85,7 +86,9 @@ class RateBehavior(tf.keras.layers.Layer):
         warn(
             (
                 f'{self.__class__.__name__} is deprecated and will be '
-                'removed; version_announced=0.8.0; version_scheduled=0.9.0'
+                'removed. '
+                'Use `psiz.keras.layers.RateSimilarity` instead; '
+                'version_announced=0.8.0; version_scheduled=0.9.0'
             ),
             DeprecationWarning,
             stacklevel=2

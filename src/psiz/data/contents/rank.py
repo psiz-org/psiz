@@ -174,7 +174,10 @@ class Rank(Content):
             )
 
         # Derive array which indicates `n_select` for every trial.
-        n_select_arr = self.is_actual.astype(np.int32) * n_select_scalar
+        # NOTE: Array creation uses same integer dtype as `stimulus_set`.
+        n_select_arr = (
+            self.is_actual.astype(self.stimulus_set.dtype) * n_select_scalar
+        )
         return n_select_scalar, n_select_arr
 
     def _rectify_shape(self, stimulus_set):
@@ -216,15 +219,16 @@ class Rank(Content):
                 "sequence_length, n_stimuli_per_trial)."
             )
 
-        # TODO is this really the right policy?
-        # Check values are in int32 range.
-        ii32 = np.iinfo(np.int32)
-        if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must only contain integers "
-                "in the int32 range."
-            ))
-        return stimulus_set.astype(np.int32)
+        # TODO enforce or delete
+        # # Check values are in int32 range.
+        # ii32 = np.iinfo(np.int32)
+        # if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
+        #     raise ValueError((
+        #         "The argument `stimulus_set` must only contain integers "
+        #         "in the int32 range."
+        #     ))
+        # return stimulus_set.astype(np.int32)
+        return stimulus_set
 
     @classmethod
     def _config_attrs(cls):
@@ -289,9 +293,7 @@ class Rank(Content):
 
             x = {
                 name_prefix + '/stimulus_set': tf.constant(
-                    stimulus_set,
-                    dtype=tf.int32,
-                    name=(name_prefix + '/stimulus_set')
+                    stimulus_set, name=(name_prefix + '/stimulus_set')
                 ),
                 name_prefix + '/is_select': tf.constant(
                     is_select,

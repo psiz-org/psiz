@@ -104,7 +104,7 @@ class Categorize(Content):
                 "sequence_length, n_stimuli_per_trial)."
             )
 
-        # TODO is this really the right policy?
+        # TODO enforce or delete
         # Check values are in int32 range.
         # ii32 = np.iinfo(np.int32)
         # if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
@@ -181,17 +181,12 @@ class Categorize(Content):
                 stimulus_set = unravel_timestep(stimulus_set)
                 correct_label = unravel_timestep(correct_label)
 
-            # TODO export should use dtype that caller users
             x = {
                 name_prefix + '/stimulus_set': tf.constant(
-                    stimulus_set,
-                    dtype=tf.int32,
-                    name=(name_prefix + '/stimulus_set')
+                    stimulus_set, name=(name_prefix + '/stimulus_set')
                 ),
                 name_prefix + '/correct_label': tf.constant(
-                    correct_label,
-                    dtype=tf.int32,
-                    name=(name_prefix + '/correct_label')
+                    correct_label, name=(name_prefix + '/correct_label')
                 ),
             }
         else:

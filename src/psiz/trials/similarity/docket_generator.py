@@ -22,6 +22,7 @@ Classes:
 """
 
 from abc import ABCMeta, abstractmethod
+import warnings
 
 
 class DocketGenerator(object):
@@ -34,8 +35,31 @@ class DocketGenerator(object):
 
     __metaclass__ = ABCMeta
 
+    def __init_subclass__(cls, **kwargs):
+        """Subclassing initialization."""
+        warnings.warn(
+            (
+                f'{cls.__name__} is deprecated and will be removed. '
+                'Please use the `psiz.data` module for creating datasets; '
+                'version_announced=0.8.0; version_scheduled=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init_subclass__(**kwargs)
+
     def __init__(self):
         """Initialize."""
+        warnings.warn(
+            (
+                f'{self.__class__.__name__} is deprecated and will be '
+                'removed. '
+                'Please use the `psiz.data` module for creating datasets; '
+                'version_announced=0.8.0; version_scheduled=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
 
     @abstractmethod
     def generate(self, *args, **kwargs):

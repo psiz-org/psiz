@@ -289,10 +289,14 @@ class Rank(Content):
 
             x = {
                 name_prefix + '/stimulus_set': tf.constant(
-                    stimulus_set, dtype=tf.int32
+                    stimulus_set,
+                    dtype=tf.int32,
+                    name=(name_prefix + '/stimulus_set')
                 ),
                 name_prefix + '/is_select': tf.constant(
-                    is_select, dtype=tf.bool
+                    is_select,
+                    dtype=tf.bool,
+                    name=(name_prefix + '/is_select')
                 ),
             }
         else:

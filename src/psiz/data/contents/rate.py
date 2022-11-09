@@ -121,13 +121,16 @@ class Rate(Content):
                 reshaped.
 
         """
+        name_prefix = 'rate2'
         if export_format == 'tfds':
             stimulus_set = self.stimulus_set
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
             x = {
-                'rate2/stimulus_set': tf.constant(
-                    stimulus_set, dtype=tf.int32
+                name_prefix + '/stimulus_set': tf.constant(
+                    stimulus_set,
+                    dtype=tf.int32,
+                    name=(name_prefix + '/stimulus_set')
                 )
             }
         else:

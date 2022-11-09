@@ -105,7 +105,9 @@ class Group(TrialComponent):
             group_weights = self.group_weights
 
         if export_format == 'tfds':
-            group_weights = tf.constant(group_weights)
+            group_weights = tf.constant(
+                group_weights, name=('group/' + self.name)
+            )
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)

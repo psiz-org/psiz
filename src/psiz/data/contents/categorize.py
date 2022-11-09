@@ -184,10 +184,14 @@ class Categorize(Content):
             # TODO export should use dtype that caller users
             x = {
                 name_prefix + '/stimulus_set': tf.constant(
-                    stimulus_set, dtype=tf.int32
+                    stimulus_set,
+                    dtype=tf.int32,
+                    name=(name_prefix + '/stimulus_set')
                 ),
                 name_prefix + '/correct_label': tf.constant(
-                    correct_label, dtype=tf.int32
+                    correct_label,
+                    dtype=tf.int32,
+                    name=(name_prefix + '/correct_label')
                 ),
             }
         else:

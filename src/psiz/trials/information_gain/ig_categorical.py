@@ -62,6 +62,8 @@ def ig_categorical(y_pred):
     term0 = term0 * tf.math.log(
         tf.math.maximum(term0, tf.keras.backend.epsilon())
     )
+    # TODO do I need to zero out place-holder outcomes here? I'm not
+    # sure because y_pred is not zero for placeholder elements any more.
     # NOTE: At this point we would need to zero out place-holder outcomes,
     # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.

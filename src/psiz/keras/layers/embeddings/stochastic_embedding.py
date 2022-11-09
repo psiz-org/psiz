@@ -24,10 +24,8 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 from tensorflow.python.ops import math_ops
 
-from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 
-
-class StochasticEmbedding(StochasticMixin, tf.keras.layers.Layer):
+class StochasticEmbedding(tf.keras.layers.Layer):
     """Abstract base class for stochastic embeddings.
 
     Intended to be a drop-in stochastic replacement for
@@ -71,13 +69,6 @@ class StochasticEmbedding(StochasticMixin, tf.keras.layers.Layer):
         dtype = K.dtype(inputs)
         if dtype != 'int32' and dtype != 'int64':
             inputs = math_ops.cast(inputs, 'int32')
-
-        # `StochasticMixin` strategy for sampling: fill existing sample axis.
-        if self._has_sample_axis:
-            inputs = tf.repeat(
-                inputs, self.n_sample, axis=self.sample_axis
-            )
-
         return inputs
 
     def get_config(self):

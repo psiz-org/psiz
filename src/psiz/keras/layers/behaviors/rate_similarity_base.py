@@ -24,14 +24,13 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
-from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RateSimilarityBase'
 )
-class RateSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
+class RateSimilarityBase(tf.keras.layers.Layer):
     """A base layer for rate similarity behavior.
 
     Similarities are converted to ratings using a parameterized

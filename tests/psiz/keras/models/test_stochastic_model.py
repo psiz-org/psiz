@@ -20,11 +20,10 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz.keras.layers
-from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 from psiz.keras.models.stochastic_model import StochasticModel
 
 
-class LayerA(StochasticMixin, tf.keras.layers.Layer):
+class LayerA(tf.keras.layers.Layer):
     def __init__(self, units, **kwargs):
         super(LayerA, self).__init__(**kwargs)
         self.units = units
@@ -43,9 +42,7 @@ class LayerA(StochasticMixin, tf.keras.layers.Layer):
         self.built = True
 
     def call(self, inputs, training=False):
-        x = tf.matmul(a=inputs[:, 0], b=self.kernel)
-        x = tf.expand_dims(x, axis=self.sample_axis)
-        x = tf.repeat(x, self.n_sample, axis=self.sample_axis)
+        x = tf.matmul(a=inputs, b=self.kernel)
         return x
 
     def get_config(self):
@@ -58,7 +55,7 @@ class LayerA(StochasticMixin, tf.keras.layers.Layer):
         return cls(**config)
 
 
-class LayerB(StochasticMixin, tf.keras.layers.Layer):
+class LayerB(tf.keras.layers.Layer):
     """A simple repeat layer."""
 
     def __init__(self, **kwargs):
@@ -79,10 +76,7 @@ class LayerB(StochasticMixin, tf.keras.layers.Layer):
 
     def call(self, inputs, training=None):
         """Call."""
-        # NOTE: Attributes `n_sample` and `sample_axis` provided by mixin.
-        return self.w0 * tf.repeat(
-            inputs, self.n_sample, axis=self.sample_axis
-        )
+        return self.w0 * inputs
 
     def get_config(self):
         return super(LayerB, self).get_config()
@@ -92,7 +86,7 @@ class LayerB(StochasticMixin, tf.keras.layers.Layer):
         return cls(**config)
 
 
-class CellA(StochasticMixin, tf.keras.layers.Layer):
+class CellA(tf.keras.layers.Layer):
     """A simple RNN cell."""
 
     def __init__(self, **kwargs):
@@ -115,7 +109,6 @@ class CellA(StochasticMixin, tf.keras.layers.Layer):
 
     def call(self, inputs, states, training=None):
         """Call."""
-        # NOTE: Attributes `n_sample` and `sample_axis` provided by mixin.
         outputs = self.layer_0(inputs)
         return outputs, states
 
@@ -162,9 +155,7 @@ class ModelA(StochasticModel):
         self.dense_layer = tf.keras.layers.Dense(3)
 
     def call(self, inputs):
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         x = self.dense_layer(inputs['x_a'])
-        x = tf.repeat(x, self.n_sample, axis=self.sample_axis)
         return x
 
     def get_config(self):
@@ -186,7 +177,6 @@ class ModelB(StochasticModel):
         self.custom_layer = LayerA(3)
 
     def call(self, inputs):
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         x = self.custom_layer(inputs['x_a'])
         return x
 
@@ -209,14 +199,7 @@ class ModelB2(StochasticModel):
         super(ModelB2, self).__init__(**kwargs)
         self.custom_layer = LayerA(3)
 
-    def expand_inputs_with_sample_axis(self, inputs):
-        inputs_with_sample_axis = tf.expand_dims(
-            inputs, axis=self._sample_axis_outermost
-        )
-        return inputs_with_sample_axis
-
     def call(self, inputs):
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         x = self.custom_layer(inputs)
         return x
 
@@ -257,10 +240,8 @@ class ModelC(StochasticModel):
             inputs: A dictionary of inputs.
 
         """
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         x_a = inputs['x_a']
         x_b = inputs['x_b']
-        # Execute two branches using custom layers with `StochasticMixin`.
         x_a = self.branch_0(x_a)
         x_b = self.branch_1(x_b)
         return self.add_layer([x_a, x_b])
@@ -303,7 +284,6 @@ class ModelD(StochasticModel):
             inputs: A dictionary of inputs.
 
         """
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         x_a = inputs['x_a']
         x_b = inputs['x_b']
         x_a = self.rnn_layer(x_a)
@@ -358,7 +338,6 @@ class RankModelA(StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.behavior(inputs)
 
     def get_config(self):
@@ -425,7 +404,6 @@ class RankModelB(StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.behavior(inputs)
 
     def get_config(self):
@@ -514,7 +492,6 @@ class RankModelC(StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.behavior(inputs)
 
     def get_config(self):
@@ -583,7 +560,6 @@ class RankCellModelA(StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.behavior(inputs)
 
     def get_config(self):
@@ -650,7 +626,6 @@ class RateModelA(StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.behavior(inputs)
 
     def get_config(self):
@@ -702,7 +677,6 @@ class ALCOVEModelA(StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.behavior(inputs)
 
     def get_config(self):
@@ -772,7 +746,6 @@ class ALCOVEModelB(StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.behavior(inputs)
 
     def get_config(self):
@@ -785,7 +758,7 @@ def build_ranksim_subclass_a():
     RankSimilarity, one group, stochastic (non VI).
 
     """
-    model = RankModelA(sample_axis=1, n_sample=3)
+    model = RankModelA(n_sample=3)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -803,7 +776,7 @@ def build_ranksim_subclass_b():
     RankSimilarity, one group, stochastic (non VI).
 
     """
-    model = RankModelB(sample_axis=1, n_sample=3)
+    model = RankModelB(n_sample=3)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -821,7 +794,7 @@ def build_ranksim_subclass_c():
     RankSimilarity, gated VI percept.
 
     """
-    model = RankModelC(sample_axis=1, n_sample=3)
+    model = RankModelC(n_sample=3)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -839,7 +812,7 @@ def build_ranksimcell_subclass_a():
     RankSimilarityCell, one group, stochastic (non VI).
 
     """
-    model = RankCellModelA(sample_axis=2, n_sample=3)
+    model = RankCellModelA(n_sample=3)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -853,7 +826,7 @@ def build_ranksimcell_subclass_a():
 
 def build_ratesim_subclass_a():
     """Build subclassed `Model`."""
-    model = RateModelA(sample_axis=1, n_sample=11)
+    model = RateModelA(n_sample=11)
     compile_kwargs = {
         'loss': tf.keras.losses.MeanSquaredError(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -871,7 +844,7 @@ def build_alcove_subclass_a():
     ALCOVECell, one group, stochastic (non VI).
 
     """
-    model = ALCOVEModelA(sample_axis=2, n_sample=2)
+    model = ALCOVEModelA(n_sample=2)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -889,7 +862,7 @@ def build_alcove_subclass_b():
     ALCOVECell, one group, VI percept layer.
 
     """
-    model = ALCOVEModelB(sample_axis=2, n_sample=2)
+    model = ALCOVEModelB(n_sample=2)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -1150,14 +1123,13 @@ class TestModelA:
         tf.config.run_functions_eagerly(is_eager)
         ds = ds_x2['ds']
 
-        model = ModelA(sample_axis=1, n_sample=2)
+        model = ModelA(n_sample=2)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
         model.fit(ds, epochs=2)
-        assert model.sample_axis == 1
         assert model.n_sample == 2
         results_0 = model.evaluate(ds, return_dict=True)
         fp_model = tmpdir.join('test_model')
@@ -1170,9 +1142,7 @@ class TestModelA:
         results_1 = loaded.evaluate(ds, return_dict=True)
 
         # Test for model equality.
-        assert loaded.sample_axis == 1
         assert loaded.n_sample == 2
-        assert len(loaded.preserved_inputs) == 0
         assert results_0['loss'] == results_1['loss']
 
 
@@ -1190,17 +1160,14 @@ class TestModelB:
         tf.config.run_functions_eagerly(is_eager)
         ds = ds_x2['ds']
 
-        model = ModelB(sample_axis=1, n_sample=2)
+        model = ModelB(n_sample=2)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
         model.fit(ds, epochs=2)
-        assert model.sample_axis == 1
         assert model.n_sample == 2
-        assert model.custom_layer.sample_axis == 1
-        assert model.custom_layer.n_sample == 2
         results_0 = model.evaluate(ds, return_dict=True)
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
@@ -1212,11 +1179,7 @@ class TestModelB:
         results_1 = loaded.evaluate(ds, return_dict=True)
 
         # Test for model equality.
-        assert loaded.sample_axis == 1
         assert loaded.n_sample == 2
-        assert loaded.custom_layer.sample_axis == 1
-        assert loaded.custom_layer.n_sample == 2
-        assert len(loaded.preserved_inputs) == 0
         assert results_0['loss'] == results_1['loss']
 
     @pytest.mark.parametrize(
@@ -1232,17 +1195,14 @@ class TestModelB:
         tf.config.run_functions_eagerly(is_eager)
         ds = ds_x2_as_tensor['ds']
 
-        model = ModelB2(sample_axis=1, n_sample=2)
+        model = ModelB2(n_sample=2)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
         model.fit(ds, epochs=2)
-        assert model.sample_axis == 1
         assert model.n_sample == 2
-        assert model.custom_layer.sample_axis == 1
-        assert model.custom_layer.n_sample == 2
         results_0 = model.evaluate(ds, return_dict=True)
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
@@ -1254,11 +1214,7 @@ class TestModelB:
         results_1 = loaded.evaluate(ds, return_dict=True)
 
         # Test for model equality.
-        assert loaded.sample_axis == 1
         assert loaded.n_sample == 2
-        assert loaded.custom_layer.sample_axis == 1
-        assert loaded.custom_layer.n_sample == 2
-        assert len(loaded.preserved_inputs) == 0
         assert results_0['loss'] == results_1['loss']
 
 
@@ -1268,52 +1224,32 @@ class TestModelC:
     @pytest.mark.parametrize(
         "is_eager", [True, False]
     )
-    def test_usage_sample_ax1(self, ds_x2_x2_x2, is_eager):
-        """Test with sample_axis=1."""
+    def test_usage(self, ds_x2_x2_x2, is_eager):
+        """Test usage."""
         tf.config.run_functions_eagerly(is_eager)
+
         ds = ds_x2_x2_x2['ds']
         input_shape = ds_x2_x2_x2['input_shape']
-
-        model = ModelC(sample_axis=1, n_sample=2)
+        model = ModelC(n_sample=2)
         model.build(input_shape)
 
-        # Explicilty check that `sample_axis` and `n_sample` attributes of
-        # children Layers were set correctly.
-        assert model.sample_axis == 1
         assert model.n_sample == 2
-        assert model.branch_0.sample_axis == 1
-        assert model.branch_0.n_sample == 2
-        assert not model.branch_0.is_inside_rnn
-        assert model.branch_1.sample_axis == 1
-        assert model.branch_1.n_sample == 2
-        assert not model.branch_1.is_inside_rnn
 
         x0_desired = tf.constant([
-            [[0.1, 1.1, 2.1]],
-            [[0.2, 1.2, 2.2]],
-            [[0.3, 1.3, 2.3]],
-            [[0.4, 1.4, 2.4]],
-            [[0.5, 1.5, 2.5]],
-            [[0.6, 1.6, 2.6]]
+            [0.1, 1.1, 2.1],
+            [0.1, 1.1, 2.1],
+            [0.2, 1.2, 2.2],
+            [0.2, 1.2, 2.2],
+            [0.3, 1.3, 2.3],
+            [0.3, 1.3, 2.3],
+            [0.4, 1.4, 2.4],
+            [0.4, 1.4, 2.4],
+            [0.5, 1.5, 2.5],
+            [0.5, 1.5, 2.5],
+            [0.6, 1.6, 2.6],
+            [0.6, 1.6, 2.6],
         ], dtype=tf.float32)
         x1_desired = tf.constant([
-            [[10.1, 11.1, 12.1]],
-            [[10.2, 11.2, 12.2]],
-            [[10.3, 11.3, 12.3]],
-            [[10.4, 11.4, 12.4]],
-            [[10.5, 11.5, 12.5]],
-            [[10.6, 11.6, 12.6]]
-        ], dtype=tf.float32)
-        x2_desired = tf.constant([
-            [[20.1, 21.1, 22.1]],
-            [[20.2, 21.2, 22.2]],
-            [[20.3, 21.3, 22.3]],
-            [[20.4, 21.4, 22.4]],
-            [[20.5, 21.5, 22.5]],
-            [[20.6, 21.6, 22.6]]
-        ], dtype=tf.float32)
-
-        y_desired = tf.constant([
             [10.1, 11.1, 12.1],
             [10.1, 11.1, 12.1],
             [10.2, 11.2, 12.2],
@@ -1325,210 +1261,21 @@ class TestModelC:
             [10.5, 11.5, 12.5],
             [10.5, 11.5, 12.5],
             [10.6, 11.6, 12.6],
-            [10.6, 11.6, 12.6]
-        ], dtype=tf.float32)
-
-        sample_weight_desired = tf.constant(
-            [1., 1., 1., 1., 0.2, 0.2, 1., 1., 1., 1., 0.8, 0.8],
-            dtype=tf.float32
-        )
-
-        y_pred_desired = tf.constant([
-            [10.2, 12.2, 14.2],
-            [10.2, 12.2, 14.2],
-            [10.4, 12.4, 14.4],
-            [10.4, 12.4, 14.4],
-            [10.6, 12.6, 14.6],
-            [10.6, 12.6, 14.6],
-            [10.8, 12.8, 14.8],
-            [10.8, 12.8, 14.8],
-            [11., 13., 15.],
-            [11., 13., 15.],
-            [11.2, 13.2, 15.2],
-            [11.2, 13.2, 15.2]
-        ], dtype=tf.float32)
-
-        # Check "sample axis" added correctly to inputs.
-        for data in ds:
-            x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-            x = model.expand_inputs_with_sample_axis(x)
-            tf.debugging.assert_equal(x['x_a'], x0_desired)
-            tf.debugging.assert_equal(x['x_b'], x1_desired)
-            tf.debugging.assert_equal(x['x_c'], x2_desired)
-
-        # Perform a `test_step`.
-        for data in ds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-            # NOTE: Inputs `x` are adjusted in `call` method.
-            # Adjust `y` and `sample_weight` batch axis to reflect multiple
-            # samples since `y_pred` has samples.
-            y = model._repeat_samples_in_batch_axis(y)
-            sample_weight = model._repeat_samples_in_batch_axis(sample_weight)
-            # Assert `y` and `sample_weight` handled correctly.
-            tf.debugging.assert_equal(y, y_desired)
-            tf.debugging.assert_equal(sample_weight, sample_weight_desired)
-
-            y_pred = model(x, training=False)
-            # Reshape `y_pred` samples axis into batch axis.
-            y_pred = model._reshape_samples_into_batch(y_pred)
-            # Assert `y_pred` handled correctly.
-            tf.debugging.assert_near(y_pred, y_pred_desired)
-
-    @pytest.mark.parametrize(
-        "is_eager", [True, False]
-    )
-    def test_usage_sample_ax2(self, ds_x2_x2_x2, is_eager):
-        """Test MSE model with sample_axis=2."""
-        tf.config.run_functions_eagerly(is_eager)
-
-        ds = ds_x2_x2_x2['ds']
-        input_shape = ds_x2_x2_x2['input_shape']
-        model = ModelC(sample_axis=2, n_sample=2)
-        model.build(input_shape)
-
-        # Explicilty check that `sample_axis` and `n_sample` attributes of
-        # children Layers were set correctly.
-        assert model.sample_axis == 2
-        assert model.n_sample == 2
-        assert model.branch_0.sample_axis == 2
-        assert model.branch_0.n_sample == 2
-        assert not model.branch_0.is_inside_rnn
-        assert model.branch_1.sample_axis == 2
-        assert model.branch_1.n_sample == 2
-        assert not model.branch_1.is_inside_rnn
-
-        x0_desired = tf.constant([
-            [[0.1], [1.1], [2.1]],
-            [[0.2], [1.2], [2.2]],
-            [[0.3], [1.3], [2.3]],
-            [[0.4], [1.4], [2.4]],
-            [[0.5], [1.5], [2.5]],
-            [[0.6], [1.6], [2.6]]
-        ], dtype=tf.float32)
-        x1_desired = tf.constant([
-            [[10.1], [11.1], [12.1]],
-            [[10.2], [11.2], [12.2]],
-            [[10.3], [11.3], [12.3]],
-            [[10.4], [11.4], [12.4]],
-            [[10.5], [11.5], [12.5]],
-            [[10.6], [11.6], [12.6]]
-        ], dtype=tf.float32)
-        x2_desired = tf.constant([
-            [[20.1], [21.1], [22.1]],
-            [[20.2], [21.2], [22.2]],
-            [[20.3], [21.3], [22.3]],
-            [[20.4], [21.4], [22.4]],
-            [[20.5], [21.5], [22.5]],
-            [[20.6], [21.6], [22.6]]
-        ], dtype=tf.float32)
-
-        y_desired = tf.constant([
-            [10.1, 11.1, 12.1],
-            [10.1, 11.1, 12.1],
-            [10.2, 11.2, 12.2],
-            [10.2, 11.2, 12.2],
-            [10.3, 11.3, 12.3],
-            [10.3, 11.3, 12.3],
-            [10.4, 11.4, 12.4],
-            [10.4, 11.4, 12.4],
-            [10.5, 11.5, 12.5],
-            [10.5, 11.5, 12.5],
             [10.6, 11.6, 12.6],
-            [10.6, 11.6, 12.6]
-        ], dtype=tf.float32)
-
-        sample_weight_desired = tf.constant(
-            [1., 1., 1., 1., 0.2, 0.2, 1., 1., 1., 1., 0.8, 0.8],
-            dtype=tf.float32
-        )
-
-        y_pred_desired = tf.constant([
-            [10.2, 12.2, 14.2],
-            [10.2, 12.2, 14.2],
-            [10.4, 12.4, 14.4],
-            [10.4, 12.4, 14.4],
-            [10.6, 12.6, 14.6],
-            [10.6, 12.6, 14.6],
-            [10.8, 12.8, 14.8],
-            [10.8, 12.8, 14.8],
-            [11., 13., 15.],
-            [11., 13., 15.],
-            [11.2, 13.2, 15.2],
-            [11.2, 13.2, 15.2]
-        ], dtype=tf.float32)
-
-        # Check "sample axis" added correctly to inputs.
-        for data in ds:
-            x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-            x = model.expand_inputs_with_sample_axis(x)
-            tf.debugging.assert_equal(x['x_a'], x0_desired)
-            tf.debugging.assert_equal(x['x_b'], x1_desired)
-            tf.debugging.assert_equal(x['x_c'], x2_desired)
-
-        # Perform a `test_step`.
-        for data in ds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-            # NOTE: Inputs `x` are adjusted in `call` method.
-            # Adjust `y` and `sample_weight` batch axis to reflect multiple
-            # samples since `y_pred` has samples.
-            y = model._repeat_samples_in_batch_axis(y)
-            sample_weight = model._repeat_samples_in_batch_axis(sample_weight)
-            # Assert `y` and `sample_weight` handled correctly.
-            tf.debugging.assert_equal(y, y_desired)
-            tf.debugging.assert_equal(sample_weight, sample_weight_desired)
-
-            y_pred = model(x, training=False)
-            # Reshape `y_pred` samples axis into batch axis.
-            y_pred = model._reshape_samples_into_batch(y_pred)
-            # Assert `y_pred` handled correctly.
-            tf.debugging.assert_near(y_pred, y_pred_desired)
-
-    @pytest.mark.parametrize(
-        "is_eager", [True, False]
-    )
-    def test_usage_sample_ax2_preserved_inputs(self, ds_x2_x2_x2, is_eager):
-        """Test MSE model with sample_axis=2."""
-        tf.config.run_functions_eagerly(is_eager)
-
-        ds = ds_x2_x2_x2['ds']
-        input_shape = ds_x2_x2_x2['input_shape']
-        model = ModelC(sample_axis=2, n_sample=2, preserved_inputs=['x_c'])
-        model.build(input_shape)
-
-        # Explicilty check that `sample_axis` and `n_sample` attributes of
-        # children Layers were set correctly.
-        assert model.sample_axis == 2
-        assert model.n_sample == 2
-        assert model.branch_0.sample_axis == 2
-        assert model.branch_0.n_sample == 2
-        assert not model.branch_0.is_inside_rnn
-        assert model.branch_1.sample_axis == 2
-        assert model.branch_1.n_sample == 2
-        assert not model.branch_1.is_inside_rnn
-
-        x0_desired = tf.constant([
-            [[0.1], [1.1], [2.1]],
-            [[0.2], [1.2], [2.2]],
-            [[0.3], [1.3], [2.3]],
-            [[0.4], [1.4], [2.4]],
-            [[0.5], [1.5], [2.5]],
-            [[0.6], [1.6], [2.6]]
-        ], dtype=tf.float32)
-        x1_desired = tf.constant([
-            [[10.1], [11.1], [12.1]],
-            [[10.2], [11.2], [12.2]],
-            [[10.3], [11.3], [12.3]],
-            [[10.4], [11.4], [12.4]],
-            [[10.5], [11.5], [12.5]],
-            [[10.6], [11.6], [12.6]]
         ], dtype=tf.float32)
         x2_desired = tf.constant([
             [20.1, 21.1, 22.1],
+            [20.1, 21.1, 22.1],
+            [20.2, 21.2, 22.2],
             [20.2, 21.2, 22.2],
             [20.3, 21.3, 22.3],
+            [20.3, 21.3, 22.3],
+            [20.4, 21.4, 22.4],
             [20.4, 21.4, 22.4],
             [20.5, 21.5, 22.5],
-            [20.6, 21.6, 22.6]
+            [20.5, 21.5, 22.5],
+            [20.6, 21.6, 22.6],
+            [20.6, 21.6, 22.6],
         ], dtype=tf.float32)
 
         y_desired = tf.constant([
@@ -1566,29 +1313,25 @@ class TestModelC:
             [11.2, 13.2, 15.2]
         ], dtype=tf.float32)
 
-        # Check "sample axis" added correctly to inputs.
-        for data in ds:
-            x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-            x = model.expand_inputs_with_sample_axis(x)
-            tf.debugging.assert_equal(x['x_a'], x0_desired)
-            tf.debugging.assert_equal(x['x_b'], x1_desired)
-            tf.debugging.assert_equal(x['x_c'], x2_desired)
-
         # Perform a `test_step`.
         for data in ds:
             x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-            # NOTE: Inputs `x` are adjusted in `call` method.
-            # Adjust `y` and `sample_weight` batch axis to reflect multiple
-            # samples since `y_pred` has samples.
-            y = model._repeat_samples_in_batch_axis(y)
-            sample_weight = model._repeat_samples_in_batch_axis(sample_weight)
-            # Assert `y` and `sample_weight` handled correctly.
+            # Adjust `x`, `y` and `sample_weight` batch axis to reflect
+            # multiple samples.
+            x = model.repeat_samples_in_batch_axis(x, model.n_sample)
+            y = model.repeat_samples_in_batch_axis(y, model.n_sample)
+            sample_weight = model.repeat_samples_in_batch_axis(
+                sample_weight, model.n_sample
+            )
+
+            # Assert `x`, `y` and `sample_weight` handled correctly.
+            tf.debugging.assert_equal(x['x_a'], x0_desired)
+            tf.debugging.assert_equal(x['x_b'], x1_desired)
+            tf.debugging.assert_equal(x['x_c'], x2_desired)
             tf.debugging.assert_equal(y, y_desired)
             tf.debugging.assert_equal(sample_weight, sample_weight_desired)
 
             y_pred = model(x, training=False)
-            # Reshape `y_pred` samples axis into batch axis.
-            y_pred = model._reshape_samples_into_batch(y_pred)
             # Assert `y_pred` handled correctly.
             tf.debugging.assert_near(y_pred, y_pred_desired)
 
@@ -1600,16 +1343,13 @@ class TestModelC:
         tf.config.run_functions_eagerly(is_eager)
 
         ds = ds_x2_x2_x2['ds']
-        model = ModelC(sample_axis=2, n_sample=2)
+        model = ModelC(n_sample=2)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
-
         model.fit(ds)
-        assert model.branch_0.sample_axis == 2
-        assert model.branch_0.n_sample == 2
 
         # Change model's `n_sample` attribute.
         model.n_sample = 5
@@ -1662,19 +1402,19 @@ class TestModelC:
         # Perform a `test_step` to verify `n_sample` took effect.
         for data in ds:
             x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-            # NOTE: Inputs `x` are adjusted in `call` method.
-            # Adjust `y` and `sample_weight` batch axis to reflect multiple
-            # samples since `y_pred` has samples.
-            y = model._repeat_samples_in_batch_axis(y)
-            sample_weight = model._repeat_samples_in_batch_axis(sample_weight)
+            # Adjust `x`, `y` and `sample_weight` batch axis to reflect
+            # multiple samples.
+            x = model.repeat_samples_in_batch_axis(x, model.n_sample)
+            y = model.repeat_samples_in_batch_axis(y, model.n_sample)
+            sample_weight = model.repeat_samples_in_batch_axis(
+                sample_weight, model.n_sample
+            )
             # Assert `y` and `sample_weight` handled correctly.
             # Assert `y` and `sample_weight` handled correctly.
             tf.debugging.assert_equal(y, y_desired)
             tf.debugging.assert_equal(sample_weight, sample_weight_desired)
 
             y_pred = model(x, training=False)
-            # Reshape `y_pred` samples axis into batch axis.
-            y_pred = model._reshape_samples_into_batch(y_pred)
             # Assert `y_pred` handled correctly.
             tf.debugging.assert_equal(tf.shape(y_pred), y_pred_shape_desired)
 
@@ -1689,7 +1429,7 @@ class TestModelC:
         tf.config.run_functions_eagerly(is_eager)
 
         ds = ds_x2_x2_x2['ds']
-        model = ModelC(sample_axis=2, n_sample=7, preserved_inputs=['x_c'])
+        model = ModelC(n_sample=7)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -1697,12 +1437,7 @@ class TestModelC:
         model.compile(**compile_kwargs)
 
         model.fit(ds, epochs=2)
-        assert model.sample_axis == 2
         assert model.n_sample == 7
-        assert model.branch_0.sample_axis == 2
-        assert model.branch_0.n_sample == 7
-        assert model.branch_1.sample_axis == 2
-        assert model.branch_1.n_sample == 7
         results_0 = model.evaluate(ds, return_dict=True)
 
         # Save the model.
@@ -1717,14 +1452,7 @@ class TestModelC:
         results_1 = loaded.evaluate(ds, return_dict=True)
 
         # Test for model equality.
-        assert loaded.sample_axis == 2
         assert loaded.n_sample == 7
-        assert loaded.branch_0.sample_axis == 2
-        assert loaded.branch_0.n_sample == 7
-        assert loaded.branch_1.sample_axis == 2
-        assert loaded.branch_1.n_sample == 7
-        assert len(loaded.preserved_inputs) == 1
-        assert loaded.preserved_inputs[0] == 'x_c'
         assert results_0['loss'] == results_1['loss']
 
 
@@ -1740,54 +1468,35 @@ class TestModelD:
 
         ds = ds_x3_x3['ds']
         input_shape = ds_x3_x3['input_shape']
-        model = ModelD(sample_axis=2, n_sample=10)
+        model = ModelD(n_sample=10)
         model.build(input_shape)
 
-        # Explicilty check that `sample_axis` and `n_sample` attributes of
-        # children Layers were set correctly.
-        assert model.sample_axis == 2
         assert model.n_sample == 10
-        assert not hasattr(model.rnn_layer, 'sample_axis')
-        assert not hasattr(model.rnn_layer, 'n_sample')
-        assert not hasattr(model.rnn_layer, 'is_inside_rnn')
-        # NOTE: The attribute 'sample_axis` is context-sensitive, returning a
-        # value dependendent on whether it is inside an RNN.
-        assert model.rnn_layer.cell.sample_axis == 1
-        assert model.rnn_layer.cell.n_sample == 10
-        assert model.rnn_layer.cell.is_inside_rnn
-        assert model.rnn_layer.cell.layer_0.sample_axis == 1
-        assert model.rnn_layer.cell.layer_0.n_sample == 10
-        assert model.rnn_layer.cell.layer_0.is_inside_rnn
 
         # Do a quick test of the Tensor shapes.
-        x0_shape_desired = tf.TensorShape([6, 2, 1, 3])
-        x1_shape_desired = tf.TensorShape([6, 2, 1, 3])
+        x0_shape_desired = tf.TensorShape([60, 2, 3])
+        x1_shape_desired = tf.TensorShape([60, 2, 3])
         y_shape_desired = tf.TensorShape([60, 2, 3])
         w_shape_desired = tf.TensorShape([60, 2])
         y_pred_shape_desired = tf.TensorShape([60, 2, 3])
 
-        # Check "sample axis" added correctly to inputs.
-        for data in ds:
-            x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-            x = model.expand_inputs_with_sample_axis(x)
-            tf.debugging.assert_equal(x['x_a'].shape, x0_shape_desired)
-            tf.debugging.assert_equal(x['x_b'].shape, x1_shape_desired)
-
         # Perform a `test_step`.
         for data in ds:
             x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
-            # NOTE: Inputs `x` are adjusted in `call` method.
-            # Adjust `y` and `sample_weight` batch axis to reflect multiple
-            # samples since `y_pred` has samples.
-            y = model._repeat_samples_in_batch_axis(y)
-            sample_weight = model._repeat_samples_in_batch_axis(sample_weight)
-            # Assert `y` and `sample_weight` handled correctly.
+            # Adjust `x`, `y` and `sample_weight` batch axis to reflect
+            # multiple samples.
+            x = model.repeat_samples_in_batch_axis(x, model.n_sample)
+            y = model.repeat_samples_in_batch_axis(y, model.n_sample)
+            sample_weight = model.repeat_samples_in_batch_axis(
+                sample_weight, model.n_sample
+            )
+            # Assert `x`, `y` and `sample_weight` handled correctly.
+            tf.debugging.assert_equal(x['x_a'].shape, x0_shape_desired)
+            tf.debugging.assert_equal(x['x_b'].shape, x1_shape_desired)
             tf.debugging.assert_equal(y.shape, y_shape_desired)
             tf.debugging.assert_equal(sample_weight.shape, w_shape_desired)
 
             y_pred = model(x, training=False)
-            # Reshape `y_pred` samples axis into batch axis.
-            y_pred = model._reshape_samples_into_batch(y_pred)
             # Assert `y_pred` handled correctly.
             tf.debugging.assert_equal(y_pred.shape, y_pred_shape_desired)
 
@@ -1802,7 +1511,7 @@ class TestModelD:
         tf.config.run_functions_eagerly(is_eager)
 
         ds = ds_x3_x3['ds']
-        model = ModelD(sample_axis=2, n_sample=11)
+        model = ModelD(n_sample=11)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -1810,19 +1519,7 @@ class TestModelD:
         model.compile(**compile_kwargs)
 
         model.fit(ds, epochs=2)
-        assert model.sample_axis == 2
         assert model.n_sample == 11
-        assert not hasattr(model.rnn_layer, 'sample_axis')
-        assert not hasattr(model.rnn_layer, 'n_sample')
-        assert not hasattr(model.rnn_layer, 'is_inside_rnn')
-        # NOTE: The attribute 'sample_axis` is context-sensitive, returning a
-        # value dependendent on whether it is inside an RNN.
-        assert model.rnn_layer.cell.sample_axis == 1
-        assert model.rnn_layer.cell.n_sample == 11
-        assert model.rnn_layer.cell.is_inside_rnn
-        assert model.rnn_layer.cell.layer_0.sample_axis == 1
-        assert model.rnn_layer.cell.layer_0.n_sample == 11
-        assert model.rnn_layer.cell.layer_0.is_inside_rnn
         results_0 = model.evaluate(ds, return_dict=True)
 
         # Save the model.
@@ -1837,20 +1534,7 @@ class TestModelD:
         results_1 = loaded.evaluate(ds, return_dict=True)
 
         # Test for model equality.
-        assert loaded.sample_axis == 2
         assert loaded.n_sample == 11
-        assert not hasattr(loaded.rnn_layer, 'sample_axis')
-        assert not hasattr(loaded.rnn_layer, 'n_sample')
-        assert not hasattr(loaded.rnn_layer, 'is_inside_rnn')
-        # NOTE: The attribute 'sample_axis` is context-sensitive, returning a
-        # value dependendent on whether it is inside an RNN.
-        assert loaded.rnn_layer.cell.sample_axis == 1
-        assert loaded.rnn_layer.cell.n_sample == 11
-        assert loaded.rnn_layer.cell.is_inside_rnn
-        assert loaded.rnn_layer.cell.layer_0.sample_axis == 1
-        assert loaded.rnn_layer.cell.layer_0.n_sample == 11
-        assert loaded.rnn_layer.cell.layer_0.is_inside_rnn
-
         assert results_0['loss'] == results_1['loss']
 
 
@@ -1887,28 +1571,15 @@ class TestRankSimilarity:
 
         ds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
-        model.build(ds.element_spec[0])
+        input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
+        model.build(input_shape)
 
         # Test initialization settings.
-        assert model.sample_axis == 1
         assert model.n_sample == 3
-        assert model.behavior.sample_axis_outermost == 1
-        assert model.behavior.sample_axis == 1
-        assert model.behavior.n_sample == 3
-        assert model.behavior.percept.sample_axis_outermost == 1
-        assert model.behavior.percept.sample_axis == 1
-        assert model.behavior.percept.n_sample == 3
 
         # Test propogation of setting `n_sample`.
         model.n_sample = 21
-        assert model.sample_axis == 1
         assert model.n_sample == 21
-        assert model.behavior.sample_axis_outermost == 1
-        assert model.behavior.sample_axis == 1
-        assert model.behavior.n_sample == 21
-        assert model.behavior.percept.sample_axis_outermost == 1
-        assert model.behavior.percept.sample_axis == 1
-        assert model.behavior.percept.n_sample == 21
 
         model.fit(ds, epochs=1)
         percept_mean = model.behavior.percept.embeddings.mean()
@@ -1927,14 +1598,7 @@ class TestRankSimilarity:
         loaded_percept_mean = loaded.behavior.percept.embeddings.mean()
 
         # Test for model equality.
-        assert loaded.sample_axis == 1
         assert loaded.n_sample == 21
-        assert loaded.behavior.sample_axis_outermost == 1
-        assert loaded.behavior.sample_axis == 1
-        assert loaded.behavior.n_sample == 21
-        assert loaded.behavior.percept.sample_axis_outermost == 1
-        assert loaded.behavior.percept.sample_axis == 1
-        assert loaded.behavior.percept.n_sample == 21
 
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
@@ -1967,28 +1631,15 @@ class TestRankSimilarity:
 
         ds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
-        model.build(ds.element_spec[0])
+        input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
+        model.build(input_shape)
 
         # Test initialization settings.
-        assert model.sample_axis == 1
         assert model.n_sample == 3
-        assert model.behavior.sample_axis_outermost == 1
-        assert model.behavior.sample_axis == 1
-        assert model.behavior.n_sample == 3
-        assert model.behavior.percept.posterior.sample_axis_outermost == 1
-        assert model.behavior.percept.posterior.sample_axis == 1
-        assert model.behavior.percept.posterior.n_sample == 3
 
         # Test propogation of setting `n_sample`.
         model.n_sample = 21
-        assert model.sample_axis == 1
         assert model.n_sample == 21
-        assert model.behavior.sample_axis_outermost == 1
-        assert model.behavior.sample_axis == 1
-        assert model.behavior.n_sample == 21
-        assert model.behavior.percept.posterior.sample_axis_outermost == 1
-        assert model.behavior.percept.posterior.sample_axis == 1
-        assert model.behavior.percept.posterior.n_sample == 21
 
         model.fit(ds, epochs=1)
         percept_mean = model.behavior.percept.embeddings.mean()
@@ -2007,14 +1658,7 @@ class TestRankSimilarity:
         _ = loaded.evaluate(ds)
 
         # Test for model equality.
-        assert loaded.sample_axis == 1
         assert loaded.n_sample == 21
-        assert loaded.behavior.sample_axis_outermost == 1
-        assert loaded.behavior.sample_axis == 1
-        assert loaded.behavior.n_sample == 21
-        assert loaded.behavior.percept.posterior.sample_axis_outermost == 1
-        assert loaded.behavior.percept.posterior.sample_axis == 1
-        assert loaded.behavior.percept.posterior.n_sample == 21
 
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
@@ -2031,6 +1675,35 @@ class TestRankSimilarity:
         ds = ds_4rank1_v2
         model = build_ranksim_subclass_c()
         call_fit_evaluate_predict(model, ds)
+        tf.keras.backend.clear_session()
+
+    @pytest.mark.parametrize(
+        "is_eager", [True, False]
+    )
+    def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
+        """Test usage in 'agent mode'."""
+        tf.config.run_functions_eagerly(is_eager)
+
+        ds = ds_4rank1_v0
+        model = build_ranksim_subclass_a()
+
+        def simulate_agent(x):
+            depth = 4  # TODO programmatic version?
+            n_sample = 3
+            x = model.repeat_samples_in_batch_axis(x, n_sample)
+            outcome_probs = model(x)
+            outcome_probs = model.average_repeated_samples(
+                outcome_probs, n_sample
+            )
+            outcome_distribution = tfp.distributions.Categorical(
+                probs=outcome_probs
+            )
+            outcome_idx = outcome_distribution.sample()
+            outcome_one_hot = tf.one_hot(outcome_idx, depth)
+            return outcome_one_hot
+
+        _ = ds.map(lambda x, y, w: (x, simulate_agent(x), w))
+
         tf.keras.backend.clear_session()
 
 
@@ -2076,28 +1749,15 @@ class TestRankSimilarityCell:
 
         ds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
-        model.build(ds.element_spec[0])
+        input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
+        model.build(input_shape)
 
         # Test initialization settings.
-        assert model.sample_axis == 2
         assert model.n_sample == 3
-        assert model.behavior.cell.sample_axis_outermost == 2
-        assert model.behavior.cell.sample_axis == 1
-        assert model.behavior.cell.n_sample == 3
-        assert model.behavior.cell.percept.posterior.sample_axis_outermost == 2
-        assert model.behavior.cell.percept.posterior.sample_axis == 1
-        assert model.behavior.cell.percept.posterior.n_sample == 3
 
         # Test propogation of setting `n_sample`.
         model.n_sample = 21
-        assert model.sample_axis == 2
         assert model.n_sample == 21
-        assert model.behavior.cell.sample_axis_outermost == 2
-        assert model.behavior.cell.sample_axis == 1
-        assert model.behavior.cell.n_sample == 21
-        assert model.behavior.cell.percept.posterior.sample_axis_outermost == 2
-        assert model.behavior.cell.percept.posterior.sample_axis == 1
-        assert model.behavior.cell.percept.posterior.n_sample == 21
 
         model.fit(ds, epochs=1)
         percept_mean = model.behavior.cell.percept.embeddings.mean()
@@ -2116,16 +1776,7 @@ class TestRankSimilarityCell:
         _ = loaded.evaluate(ds)
 
         # Test for model equality.
-        assert loaded.sample_axis == 2
         assert loaded.n_sample == 21
-        assert loaded.behavior.cell.sample_axis_outermost == 2
-        assert loaded.behavior.cell.sample_axis == 1
-        assert loaded.behavior.cell.n_sample == 21
-        assert (
-            loaded.behavior.cell.percept.posterior.sample_axis_outermost == 2
-        )
-        assert loaded.behavior.cell.percept.posterior.sample_axis == 1
-        assert loaded.behavior.cell.percept.posterior.n_sample == 21
 
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
@@ -2160,14 +1811,7 @@ class TestRateSimilarity:
         model.fit(ds, epochs=1)
 
         # Test stochastic attributes.
-        assert model.sample_axis == 1
         assert model.n_sample == 11
-        assert model.behavior.sample_axis_outermost == 1
-        assert model.behavior.sample_axis == 1
-        assert model.behavior.n_sample == 11
-        assert model.behavior.percept.posterior.sample_axis_outermost == 1
-        assert model.behavior.percept.posterior.sample_axis == 1
-        assert model.behavior.percept.posterior.n_sample == 11
 
         _ = model.evaluate(ds)
         percept_mean = model.behavior.percept.embeddings.mean()
@@ -2184,14 +1828,7 @@ class TestRateSimilarity:
         _ = loaded.evaluate(ds)
 
         # Test for model equality.
-        assert loaded.sample_axis == 1
         assert loaded.n_sample == 11
-        assert loaded.behavior.sample_axis_outermost == 1
-        assert loaded.behavior.sample_axis == 1
-        assert loaded.behavior.n_sample == 11
-        assert loaded.behavior.percept.posterior.sample_axis_outermost == 1
-        assert loaded.behavior.percept.posterior.sample_axis == 1
-        assert loaded.behavior.percept.posterior.n_sample == 11
 
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(
@@ -2234,13 +1871,6 @@ class TestALCOVECell:
 
         # Test initialization settings.
         assert model.n_sample == 2
-        assert model.sample_axis == 2
-        assert model.behavior.cell.n_sample == 2
-        assert model.behavior.cell.sample_axis_outermost == 2
-        assert model.behavior.cell.sample_axis == 1
-        assert model.behavior.cell.percept.n_sample == 2
-        assert model.behavior.cell.percept.sample_axis_outermost == 2
-        assert model.behavior.cell.percept.sample_axis == 1
 
         # Update `n_sample`.
         model.n_sample = 11
@@ -2260,13 +1890,6 @@ class TestALCOVECell:
         # Test for model equality.
         loaded_percept_mean = loaded.behavior.cell.percept.embeddings.mean()
         assert loaded.n_sample == 11
-        assert loaded.sample_axis == 2
-        assert loaded.behavior.cell.n_sample == 11
-        assert loaded.behavior.cell.sample_axis_outermost == 2
-        assert loaded.behavior.cell.sample_axis == 1
-        assert loaded.behavior.cell.percept.n_sample == 11
-        assert loaded.behavior.cell.percept.sample_axis_outermost == 2
-        assert loaded.behavior.cell.percept.sample_axis == 1
 
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
@@ -2314,13 +1937,6 @@ class TestALCOVECell:
 
         # Test initialization settings.
         assert model.n_sample == 2
-        assert model.sample_axis == 2
-        assert model.behavior.cell.n_sample == 2
-        assert model.behavior.cell.sample_axis_outermost == 2
-        assert model.behavior.cell.sample_axis == 1
-        assert model.behavior.cell.percept.posterior.n_sample == 2
-        assert model.behavior.cell.percept.posterior.sample_axis_outermost == 2
-        assert model.behavior.cell.percept.posterior.sample_axis == 1
 
         # Increase `n_sample` to get more consistent evaluations
         model.n_sample = 11
@@ -2339,15 +1955,6 @@ class TestALCOVECell:
 
         # Test for model equality.
         assert loaded.n_sample == 11
-        assert loaded.sample_axis == 2
-        assert loaded.behavior.cell.n_sample == 11
-        assert loaded.behavior.cell.sample_axis_outermost == 2
-        assert loaded.behavior.cell.sample_axis == 1
-        assert loaded.behavior.cell.percept.posterior.n_sample == 11
-        assert (
-            loaded.behavior.cell.percept.posterior.sample_axis_outermost == 2
-        )
-        assert loaded.behavior.cell.percept.posterior.sample_axis == 1
 
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(

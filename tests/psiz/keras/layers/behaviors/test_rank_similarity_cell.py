@@ -80,7 +80,6 @@ def ds_rank_v0():
     """Dataset.
 
     No timestep axis.
-    No sample axis.
     No groups.
 
     """
@@ -205,7 +204,7 @@ def test_call_v0(ds_rank_v0):
 def test_call_v1(ds_rank_v1):
     """Test call.
 
-    With additional (unused) sample axis.
+    With additional (unused) axis.
 
     """
     percept = percept_static_v0()
@@ -217,37 +216,11 @@ def test_call_v1(ds_rank_v1):
     tf.debugging.assert_equal(tf.shape(outputs), tf.TensorShape([4, 1, 56]))
 
 
-def test_call_v2(ds_rank_v1):
-    """Test call.
-
-    With additional (used) sample axis.
-
-    """
-    # Imitate being insdie RNN.
-    sample_axis_outermost = 2
-    is_inside_rnn = True
-
-    percept = percept_stochastic_v0()
-    n_sample = 10
-    percept.set_stochastic_mixin(
-        sample_axis_outermost, n_sample, is_inside_rnn
-    )
-
-    kernel = kernel_v0()
-    rank_cell = psiz.keras.layers.RankSimilarityCell(
-        percept=percept, kernel=kernel
-    )
-    outputs, states_t1 = rank_similarity_cell_call(ds_rank_v1, rank_cell)
-    tf.debugging.assert_equal(
-        tf.shape(outputs), tf.TensorShape([4, 10, 56])
-    )
-
-
 # TODO used when ds_rank_v2 is ready.
 # def test_call_v3(ds_rank_v2):
 #     """Test call.
 
-#     With additional (unused) sample axis and (unused) unnamed axis.
+#     With two additional unused axes.
 
 #     """
 #     percept = percept_static_v0()

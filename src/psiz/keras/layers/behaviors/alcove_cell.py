@@ -28,14 +28,13 @@ from tensorflow.python.ops import math_ops
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
-from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 from psiz.tf.ops.wpnorm import wpnorm
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras', name='ALCOVECell'
 )
-class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
+class ALCOVECell(tf.keras.layers.Layer):
     """An RNN-compatible cell implementing ALCOVE."""
 
     def __init__(
@@ -332,14 +331,6 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         with state_tape:
             state_tape.watch(state_variables)
 
-            # Add sample axis (if necessary) to attention and association
-            # Tensors.
-            if self._has_sample_axis:
-                attention = tf.expand_dims(attention, axis=self.sample_axis)
-                association = tf.expand_dims(
-                    association, axis=self.sample_axis
-                )
-
             # Compute similarity.
             d_qr = self.distance([z_in, z_alcove, attention])
             s_qr = self.similarity(d_qr)
@@ -362,13 +353,6 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         grad_attention = state_tape.gradient(loss, attention)
         grad_association = state_tape.gradient(loss, association)
         del state_tape
-
-        # Undo extra attention dimensions.
-        if self._has_sample_axis:
-            attention = tf.squeeze(attention, [self.sample_axis])
-            grad_attention = tf.squeeze(grad_attention, [self.sample_axis])
-            association = tf.squeeze(association, [self.sample_axis])
-            grad_association = tf.squeeze(grad_association, [self.sample_axis])
 
         # Response rule.
         x_out_scaled = tf.multiply(x_out, self.temperature)
@@ -506,10 +490,5 @@ class ALCOVECell(StochasticMixin, tf.keras.layers.Layer):
         # is `None`.
         alcove_idx = tf.expand_dims(alcove_idx, axis=0)
         # shape=(1, n_ref)
-
-        # Add "sample" axis (if necessary).
-        if self._has_sample_axis:
-            alcove_idx = tf.expand_dims(alcove_idx, axis=self.sample_axis)
-            # shape=(1, 1, n_ref)
 
         return alcove_idx

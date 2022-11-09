@@ -26,14 +26,13 @@ import numpy as np  # TODO remove reliance
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from psiz.keras.mixins.stochastic_mixin import StochasticMixin
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 
 
 @tf.keras.utils.register_keras_serializable(
     package='psiz.keras.layers', name='RankSimilarityBase'
 )
-class RankSimilarityBase(StochasticMixin, tf.keras.layers.Layer):
+class RankSimilarityBase(tf.keras.layers.Layer):
     """A base layer for rank similarity behavior."""
     def __init__(
         self,

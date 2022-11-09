@@ -15,6 +15,8 @@
 # ============================================================================
 """Test EmbeddingVariational layer."""
 
+import copy
+
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -138,7 +140,7 @@ class TempNoRNN(psiz.keras.models.StochasticModel):
             training (optional): Boolean indicating if training mode.
 
         """
-        inputs = self.expand_inputs_with_sample_axis(inputs)
+        inputs = copy.copy(inputs)
         # Initialize states placeholder since not using RNN functionality
         states = tf.constant([0.])
 
@@ -193,7 +195,6 @@ class TempRNN(psiz.keras.models.StochasticModel):
             training (optional): Boolean indicating if training mode.
 
         """
-        inputs = self.expand_inputs_with_sample_axis(inputs)
         return self.net(inputs, training=training)
 
 
@@ -415,7 +416,7 @@ def test_fit_no_rnn(ds_v0, is_eager):
         percept=embedding_variational, kernel=kernel
     )
 
-    model = TempNoRNN(net=rank_cell, sample_axis=2, n_sample=1)
+    model = TempNoRNN(net=rank_cell, n_sample=1)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -492,7 +493,7 @@ def test_fit_with_rnn(ds_v1, is_eager):
         percept=embedding_variational, kernel=kernel
     )
 
-    model = TempRNN(net=rank_cell, sample_axis=2, n_sample=1)
+    model = TempRNN(net=rank_cell, n_sample=1)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),

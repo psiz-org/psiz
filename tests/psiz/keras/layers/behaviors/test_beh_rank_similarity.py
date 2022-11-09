@@ -73,8 +73,8 @@ def test_outcome_probability_v0():
         ]
     )
     x = {
-        '2ranksim1_stimulus_set': stimulus_set,
-        '2ranksim1_is_select': is_select,
+        '2rank1/stimulus_set': stimulus_set,
+        '2rank1/is_select': is_select,
     }
     outcome_prob = rank(x)
 

@@ -34,16 +34,17 @@ class OuterPassesTuple(tf.keras.layers.Layer):
     def __init__(self, inner=None, inner_gating_keys=None, **kwargs):
         """Initialize."""
         super(OuterPassesTuple, self).__init__(**kwargs)
-        self._inner_layer_socket = GateAdapter(
-            subnet=inner,
-            input_keys=['x0', 'x1'],
+        self.inner_layer = inner
+        self.gate_adapter = GateAdapter(
             gating_keys=inner_gating_keys,
             format_inputs_as_tuple=True
         )
+        self.gate_adapter.input_keys = ['x0', 'x1']
 
     def call(self, inputs):
         """Call."""
-        outputs = self._inner_layer_socket(inputs)
+        inputs = self.gate_adapter(inputs)
+        outputs = self.inner_layer(inputs)
         return outputs
 
 
@@ -53,16 +54,17 @@ class OuterPassesDict(tf.keras.layers.Layer):
     def __init__(self, inner=None, inner_gating_keys=None, **kwargs):
         """Initialize."""
         super(OuterPassesDict, self).__init__(**kwargs)
-        self._inner_layer_socket = GateAdapter(
-            subnet=inner,
-            input_keys=['x0', 'x1'],
+        self.inner_layer = inner
+        self.gate_adapter = GateAdapter(
             gating_keys=inner_gating_keys,
             format_inputs_as_tuple=False
         )
+        self.gate_adapter.input_keys = ['x0', 'x1']
 
     def call(self, inputs):
         """Call."""
-        outputs = self._inner_layer_socket(inputs)
+        inputs = self.gate_adapter(inputs)
+        outputs = self.inner_layer(inputs)
         return outputs
 
 

@@ -16,7 +16,7 @@
 """Module for a TensorFlow layers.
 
 Classes:
-    GateAdapter: A layer that regulates the pass-through of inputs.
+    GateAdapter: A layer that adapts inputs for networks with `Gates`.
 
 """
 
@@ -27,7 +27,7 @@ import tensorflow as tf
     package='psiz.keras', name='GateAdapter'
 )
 class GateAdapter(tf.keras.layers.Layer):
-    """An inputs adapter for networks with `Gates`.
+    """A layer that adapts inputs for networks with `Gates`.
 
     Attributes:
         input_keys: List of strings indicating required dictionary

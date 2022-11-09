@@ -64,7 +64,7 @@ def test_outcome_probability_v0():
         ]
     )
     x = {
-        'rate_similarity_stimulus_set': stimulus_set,
+        'rate2/stimulus_set': stimulus_set,
     }
     rating = rate(x)
 

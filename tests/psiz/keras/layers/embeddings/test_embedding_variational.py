@@ -45,60 +45,65 @@ def emb_inputs_v1():
 
 
 @pytest.fixture(scope="module")
-def ds_v0():
+def ds_3rank1_4x1():
     """Rank observations dataset."""
     n_sequence = 4
-    stimulus_set = np.array([
-        [1, 2, 3, 0, 0, 0, 0, 0, 0],
-        [10, 13, 8, 0, 0, 0, 0, 0, 0],
-        [4, 5, 6, 7, 8, 0, 0, 0, 0],
-        [4, 5, 6, 7, 14, 15, 16, 17, 18]
-    ], dtype=np.int32)
-
-    n_select = np.array([1, 1, 1, 2], dtype=np.int32)
-    groups = np.array([[0], [0], [1], [1]], dtype=np.int32)
-
+    stimulus_set = np.array(
+        [
+            [1, 2, 3, 4],
+            [10, 13, 16, 19],
+            [4, 5, 6, 7],
+            [14, 15, 16, 17]
+        ], dtype=np.int32
+    )
+    n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
+
+    condition_id = psiz.data.Group(
+        np.array([[0], [0], [1], [1]], dtype=np.int32),
+        name='condition_id'
+    )
+
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome
     )
-    ds = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export()
+
+    ds = psiz.data.TrialDataset([content, outcome, condition_id]).export()
     ds = ds.batch(n_sequence, drop_remainder=False)
 
     return ds
 
 
 @pytest.fixture(scope="module")
-def ds_v1():
+def ds_3rank1_4x2():
     """Rank observations dataset."""
     n_sequence = 4
     stimulus_set = np.array([
-        [[1, 2, 3, 0, 0, 0, 0, 0, 0], [2, 3, 4, 0, 0, 0, 0, 0, 0]],
-        [[10, 13, 8, 0, 0, 0, 0, 0, 0], [2, 13, 8, 0, 0, 0, 0, 0, 0]],
-        [[4, 5, 6, 7, 8, 0, 0, 0, 0], [2, 5, 6, 7, 8, 0, 0, 0, 0]],
-        [[4, 5, 6, 7, 14, 15, 16, 17, 18], [2, 5, 6, 7, 14, 15, 16, 17, 18]],
+        [[1, 2, 3, 4], [5, 6, 7, 8]],
+        [[10, 13, 16, 19], [3, 6, 9, 12]],
+        [[4, 5, 6, 7], [8, 9, 10, 11]],
+        [[14, 15, 16, 17], [13, 12, 11, 10]],
     ], dtype=np.int32)
+    n_select = 1
+    content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    n_select = np.array([[1, 1], [1, 1], [1, 1], [2, 2]], dtype=np.int32)
-    groups = np.array(
-        [[[0], [0]], [[0], [0]], [[1], [1]], [[1], [1]]], dtype=np.int32
+    condition_id = psiz.data.Group(
+        np.array(
+            [[[0], [0]], [[0], [0]], [[1], [1]], [[1], [1]]], dtype=np.int32
+        ),
+        name='condition_id'
     )
 
-    content = psiz.data.Rank(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome
     )
-    ds = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=groups
-    ).export()
+    ds = psiz.data.TrialDataset([content, outcome, condition_id]).export()
     ds = ds.batch(n_sequence, drop_remainder=False)
 
     return ds
@@ -145,11 +150,11 @@ class TempNoRNN(psiz.keras.models.StochasticModel):
         states = tf.constant([0.])
 
         #  Drop sequence axis.
-        inputs['rank_similarity_stimulus_set'] = (
-            inputs['rank_similarity_stimulus_set'][:, 0]
+        inputs['3rank1/stimulus_set'] = (
+            inputs['3rank1/stimulus_set'][:, 0]
         )
-        inputs['rank_similarity_is_select'] = (
-            inputs['rank_similarity_is_select'][:, 0]
+        inputs['3rank1/is_select'] = (
+            inputs['3rank1/is_select'][:, 0]
         )
 
         output, states = self.net(inputs, states, training=training)
@@ -363,11 +368,11 @@ def test_properties():
 @pytest.mark.parametrize(
     "is_eager", [True, False]
 )
-def test_fit_no_rnn(ds_v0, is_eager):
+def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
     """Test fit method (triggering backprop)."""
     tf.config.run_functions_eagerly(is_eager)
 
-    ds = ds_v0
+    ds = ds_3rank1_4x1
 
     kl_weight = .1
     n_stimuli = 20
@@ -413,7 +418,7 @@ def test_fit_no_rnn(ds_v0, is_eager):
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCell(
-        percept=embedding_variational, kernel=kernel
+        n_reference=3, n_select=1, percept=embedding_variational, kernel=kernel
     )
 
     model = TempNoRNN(net=rank_cell, n_sample=1)
@@ -440,11 +445,11 @@ def test_fit_no_rnn(ds_v0, is_eager):
         )
     ]
 )
-def test_fit_with_rnn(ds_v1, is_eager):
+def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
     """Test fit method (triggering backprop)."""
     tf.config.run_functions_eagerly(is_eager)
 
-    ds = ds_v1
+    ds = ds_3rank1_4x2
 
     kl_weight = .1
     n_stimuli = 20
@@ -490,7 +495,7 @@ def test_fit_with_rnn(ds_v1, is_eager):
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCell(
-        percept=embedding_variational, kernel=kernel
+        n_reference=3, n_select=1, percept=embedding_variational, kernel=kernel
     )
 
     model = TempRNN(net=rank_cell, n_sample=1)

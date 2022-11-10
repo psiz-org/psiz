@@ -693,6 +693,21 @@ def g_condition_id_4x1():
 
 
 @pytest.fixture(scope="module")
+def g_condition_label_4x1():
+    group_weights = np.array(
+        [
+            [['block']],
+            [['interleave']],
+            [['block']],
+            [['block']],
+        ]
+    )
+    return Group(
+        group_weights=group_weights, name='condition_label'
+    )
+
+
+@pytest.fixture(scope="module")
 def g_condition_id_4x3():
     group_weights = np.array(
         [

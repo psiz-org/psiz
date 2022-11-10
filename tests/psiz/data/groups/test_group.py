@@ -75,6 +75,24 @@ def test_init_2(g_mix2_4x3):
     )
 
 
+def test_init_3(g_condition_label_4x1):
+    """Test initalization."""
+    desired_group_weights = np.array(
+        [
+            [['block']],
+            [['interleave']],
+            [['block']],
+            [['block']],
+        ]
+    )
+    assert g_condition_label_4x1.name == 'condition_label'
+    assert g_condition_label_4x1.n_sequence == 4
+    assert g_condition_label_4x1.sequence_length == 1
+    np.testing.assert_array_equal(
+        g_condition_label_4x1.group_weights, desired_group_weights
+    )
+
+
 def test_export_0a(g_mix2_4x3):
     desired_group_weight = tf.constant(
         [
@@ -105,6 +123,22 @@ def test_export_0b(g_mix2_4x3):
         export_format='tfds', with_timestep_axis=False
     )
     tf.debugging.assert_equal(desired_group_weight, x[desired_name])
+
+
+def test_export_3a(g_condition_label_4x1):
+    """Test export."""
+    desired_group_weights = tf.constant(
+        [
+            [['block']],
+            [['interleave']],
+            [['block']],
+            [['block']],
+        ]
+    )
+    desired_name = 'condition_label'
+
+    x = g_condition_label_4x1.export(export_format='tfds')
+    tf.debugging.assert_equal(desired_group_weights, x[desired_name])
 
 
 def test_export_wrong(g_mix2_4x3):

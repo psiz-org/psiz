@@ -75,16 +75,6 @@ class Group(TrialComponent):
                     "have an integer dtype.".format(group_key)
                 )
 
-        # Check lowerbound support limit.
-        bad_locs = group_weights < 0
-        n_bad = np.sum(bad_locs)
-        if n_bad != 0:
-            raise ValueError(
-                "The group weights for '{0}' contain values less than 0. "
-                "Found {1} bad trial(s).".format(
-                    group_key, n_bad
-                )
-            )
         return group_weights
 
     def export(self, export_format='tfds', with_timestep_axis=True):

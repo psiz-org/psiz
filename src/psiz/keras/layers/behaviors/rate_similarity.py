@@ -48,7 +48,7 @@ class RateSimilarity(RateSimilarityBase):
             inputs: A dictionary containing the following information:
                 rate_similarity_stimulus_set: A tensor containing
                     indices that define the stimuli used in each trial.
-                    shape=(batch_size, [n_sample,] n_stimuli_per_trial)
+                    shape=(batch_size, n_stimuli_per_trial)
                 gate_weights (optional): Tensor(s) containing gate
                     weights. The actual key value(s) will depend on how
                     the user initialized the layer.

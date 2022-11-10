@@ -270,10 +270,10 @@ class ALCOVECell(tf.keras.layers.Layer):
         Args:
             inputs: A dictionary containting the following information:
                 stimulus_set: The indices of the stimuli.
-                    shape=(batch_size, [n_sample,], 1)
+                    shape=(batch_size, 1)
                 correct_label: Correct label index of
                     stimulus.
-                    shape=(batch_size, [n_sample], 1)
+                    shape=(batch_size, 1)
                 gate_weights (optional): Tensor(s) containing gate
                     weights. The actual key value(s) will depend on how
                     the user initialized the layer.
@@ -315,13 +315,13 @@ class ALCOVECell(tf.keras.layers.Layer):
         })
         inputs_percept = self.percept_adapter(inputs_copied)
         z_in = self.percept(inputs_percept)
-        # TensorShape=(batch_size, [n_sample,] 1, n_dim])
+        # TensorShape=(batch_size, 1, n_dim])
 
         # To compute RBF activations (i.e., similarity), start by retrieving
         # the ALCOVE RBF embeddings.
         inputs_alcove = self._alcove_adapter(inputs_copied)
         z_alcove = self.percept(inputs_alcove)
-        # shape=(batch_size, [n_sample,] n_ref, n_dim)
+        # shape=(batch_size, n_ref, n_dim)
 
         # Use TensorFlow gradients to update model state.
         state_variables = [association, attention]
@@ -336,12 +336,12 @@ class ALCOVECell(tf.keras.layers.Layer):
             s_qr = self.similarity(d_qr)
             # Add trailing singleton axis for `units` broadcast compatability.
             s_qr = tf.expand_dims(s_qr, axis=-1)
-            # shape=(batch_size, [n_sample,] n_rbf, 1)
+            # shape=(batch_size, n_rbf, 1)
 
             # Compute output activations via association weights.
             x_out = tf.multiply(s_qr, association)
             x_out = tf.reduce_sum(x_out, axis=self._stimuli_axis)
-            # shape=(batch_size, [n_sample,] units)
+            # shape=(batch_size, units)
 
             # Compute loss.
             correct_label_onehot = tf.one_hot(
@@ -394,9 +394,9 @@ class ALCOVECell(tf.keras.layers.Layer):
 
         Args:
             y:
-                shape=(batch_size, [n_sample,] units)
+                shape=(batch_size, units)
             y_pred:
-                shape=(batch_size, [n_sample,] units)
+                shape=(batch_size, units)
 
         Returns:
             Humble teacher loss.

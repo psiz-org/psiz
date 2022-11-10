@@ -176,17 +176,17 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         Args:
             z: A tensor of embeddings.
                 shape=TensorShape(
-                    [batch_size, [n_sample,] 2, n_dim]
+                    [batch_size, 2, n_dim]
                 )
 
         Returns:
             z_0: A tensor of embeddings for one part of the pair.
                 shape=TensorShape(
-                    [batch_size, [n_sample,] 1, n_dim]
+                    [batch_size, 1, n_dim]
                 )
             z_1: A tensor of embeddings for the other part of the pair.
                 shape=TensorShape(
-                    [batch_size, [n_sample,] 1, n_dim]
+                    [batch_size, 1, n_dim]
                 )
 
         """
@@ -202,7 +202,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         """Compute pairwise similarity."""
         inputs_percept = self.percept_adapter(inputs_copied)
         z = self.percept(inputs_percept)
-        # TensorShape=(batch_size, [n_sample,] 2, n_dim])
+        # TensorShape=(batch_size, 2, n_dim])
 
         # Prepare retrieved embeddings point for kernel and then compute
         # similarity.

@@ -63,9 +63,9 @@ class StochasticModel(tf.keras.Model):
 
         Args:
             n_sample (optional): A positive integer indicating the
-                number of samples that will populate the "sample axis".
-                Only useful if using stochastic layers (e.g.,
-                variational models).
+                number of repeated samples in the batch axis. Only
+                useful if using stochastic layers (e.g., variational
+                models).
             kwargs:  Additional key-word arguments.
 
         Raises:

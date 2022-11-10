@@ -185,17 +185,17 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         Args:
             z: A tensor of embeddings.
                 shape=TensorShape(
-                    [batch_size, [n_sample,] n_ref + 1, n_dim]
+                    [batch_size, n_ref + 1, n_dim]
                 )
 
         Returns:
             z_q: A tensor of embeddings for the query.
                 shape=TensorShape(
-                    [batch_size, [n_sample,] 1, n_dim]
+                    [batch_size, 1, n_dim]
                 )
             z_r: A tensor of embeddings for the references.
                 shape=TensorShape(
-                    [batch_size, [n_sample,] n_ref, n_dim]
+                    [batch_size, n_ref, n_dim]
                 )
 
         """
@@ -220,8 +220,8 @@ class RankSimilarityBase(tf.keras.layers.Layer):
             Boolean Tensor indicating if reference is present.
 
         """
-        # NOTE: When sample axis is present, equivalent to:
-        #     is_reference_present = stimulus_set[:, :, 1:]
+        # NOTE: Equivalent to:
+        #     is_reference_present = stimulus_set[:, 1:]
         reference_stimulus_set = tf.gather(
             stimulus_set,
             indices=self._reference_indices,
@@ -235,7 +235,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # Embed stimuli indices in n-dimensional space.
         inputs_percept = self.percept_adapter(inputs_copied)
         z = self.percept(inputs_percept)
-        # TensorShape=(batch_size, [n_sample,] n, [m, ...] n_dim])
+        # TensorShape=(batch_size, n, [m, ...] n_dim])
 
         # Prepare retrieved embeddings points for kernel and then compute
         # similarity.
@@ -255,11 +255,11 @@ class RankSimilarityBase(tf.keras.layers.Layer):
 
         Args:
             is_reference_present:
-                shape=(batch_size, [n_sample,] n_reference)
+                shape=(batch_size, n_reference)
             is_select:
-                shape=(batch_size, [n_sample,] n_reference)
+                shape=(batch_size, n_reference)
             sim_qr:
-                shape=(batch_size, [n_sample,] n_reference)
+                shape=(batch_size, n_reference)
 
         NOTE: This computation takes advantage of log-probability
             space, exploiting the fact that log(prob=1)=1 to make
@@ -292,8 +292,8 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # reference is present. This is important because not all trials have
         # the same number of possible outcomes and we need to infer the
         # "zero-padding" of the outcome axis.
-        # NOTE: When sample axis present, equivalent to:
-        #     is_outcome = is_reference_present[:, :, 0]
+        # NOTE: Equivalent to:
+        #     is_outcome = is_reference_present[:, 0]
         is_outcome = tf.gather(
             is_reference_present,
             indices=tf.constant(0),

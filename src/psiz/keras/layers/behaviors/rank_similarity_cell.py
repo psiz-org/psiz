@@ -85,8 +85,8 @@ class RankSimilarityCell(RankSimilarityBase):
 
         stimulus_set = inputs_copied[self.input_prefix + '/stimulus_set']
         # NOTE: We drop the "query" position in `is_select`.
-        # NOTE: When a sample axis is present, equivalent to:
-        #     is_select = inputs['is_select'][:, :, 1:]
+        # NOTE: Equivalent to:
+        #     is_select = inputs['is_select'][:, 1:]
         is_select = tf.gather(
             inputs_copied[self.input_prefix + '/is_select'],
             indices=self._reference_indices,

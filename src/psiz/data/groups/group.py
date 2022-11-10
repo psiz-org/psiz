@@ -26,56 +26,57 @@ from psiz.data.unravel_timestep import unravel_timestep
 class Group(TrialComponent):
     """Base class for group membership data."""
 
-    def __init__(self, group_weights=None, name=None):
+    def __init__(self, group_values, name=None):
         """Initialize.
 
         Args:
-            groups_weights: An np.ndarray that must be rank-2 or
+            group_values: An np.ndarray that must be rank-2 or
                 rank-3.
                 shape=(samples, [sequence_length], n_col)
             name: A string indicating the variable name of the group.
 
         """
         TrialComponent.__init__(self)
-        group_weights = self._rectify_shape(group_weights)
-        group_weights = self._validate_group_weights(
-            name, group_weights
+        group_values = self._rectify_shape(group_values)
+        group_values = self._validate_group_values(
+            name, group_values
         )
-        self.n_sequence = group_weights.shape[0]
-        self.sequence_length = group_weights.shape[1]
+        self.n_sequence = group_values.shape[0]
+        self.sequence_length = group_values.shape[1]
         self.name = name
-        self.group_weights = group_weights
+        self.group_values = group_values
 
-    def _rectify_shape(self, group_weights):
+    def _rectify_shape(self, group_values):
         """Rectify shape of group weights."""
-        if group_weights.ndim == 2:
+        if group_values.ndim == 2:
             # Assume independent trials and add singleton timestep axis.
-            group_weights = np.expand_dims(
-                group_weights, axis=self.timestep_axis
+            group_values = np.expand_dims(
+                group_values, axis=self.timestep_axis
             )
-        return group_weights
+        return group_values
 
-    def _validate_group_weights(self, group_key, group_weights):
+    def _validate_group_values(self, group_key, group_values):
         """Validate group weights."""
-        # Check rank of `group_weights`.
-        if not (group_weights.ndim == 3):
+        # Check rank of `group_values`.
+        if not (group_values.ndim == 3):
             raise ValueError(
-                "The group weights for '{0}' must be a rank-2 or rank-3 ND "
+                "The values for '{0}' must be a rank-2 or rank-3 ND "
                 "array. If using a sparse coding format, make sure you have "
                 "a trailing singleton dimension to meet this "
                 "requirement.".format(group_key)
             )
 
-        # If `group_weights` looks like sparse coding format, check data type.
-        if group_weights.shape[-1] == 1:
-            if not isinstance(group_weights[0, 0, 0], (int, np.integer)):
+        # If `group_values` looks like sparse coding format, check data type.
+        if group_values.shape[-1] == 1:
+            if not isinstance(group_values[0, 0, 0], (int, np.integer)):
+                # TODO more careful handling
                 warnings.warn(
-                    "The group weights for '{0}' appear to use a sparse "
+                    "The values for '{0}' appear to use a sparse "
                     "coding. To improve efficiency, these weights should "
                     "have an integer dtype.".format(group_key)
                 )
 
-        return group_weights
+        return group_values
 
     def export(self, export_format='tfds', with_timestep_axis=True):
         """Export.
@@ -89,19 +90,18 @@ class Group(TrialComponent):
                 reshaped.
 
         """
+        group_values = self.group_values
         if with_timestep_axis is False:
-            group_weights = unravel_timestep(self.group_weights)
-        else:
-            group_weights = self.group_weights
+            group_values = unravel_timestep(group_values)
 
         if export_format == 'tfds':
-            group_weights = tf.constant(
-                group_weights, name=('group/' + self.name)
+            group_values = tf.constant(
+                group_values, name=('group/' + self.name)
             )
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
         return {
-            self.name: group_weights
+            self.name: group_values
         }

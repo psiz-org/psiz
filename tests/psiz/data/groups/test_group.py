@@ -23,7 +23,7 @@ import tensorflow as tf
 
 def test_init_0(g_condition_id_4x1):
     """Test initalization."""
-    desired_group_weights = np.array(
+    desired_group_values = np.array(
         [
             [[0]],
             [[1]],
@@ -35,13 +35,13 @@ def test_init_0(g_condition_id_4x1):
     assert g_condition_id_4x1.n_sequence == 4
     assert g_condition_id_4x1.sequence_length == 1
     np.testing.assert_array_equal(
-        g_condition_id_4x1.group_weights, desired_group_weights
+        g_condition_id_4x1.group_values, desired_group_values
     )
 
 
 def test_init_1(g_condition_id_4x3):
     """Test initalization."""
-    desired_group_weights = np.array(
+    desired_group_values = np.array(
         [
             [[0], [0], [0]],
             [[1], [1], [1]],
@@ -53,13 +53,13 @@ def test_init_1(g_condition_id_4x3):
     assert g_condition_id_4x3.n_sequence == 4
     assert g_condition_id_4x3.sequence_length == 3
     np.testing.assert_array_equal(
-        g_condition_id_4x3.group_weights, desired_group_weights
+        g_condition_id_4x3.group_values, desired_group_values
     )
 
 
 def test_init_2(g_mix2_4x3):
     """Test initalization."""
-    desired_group_weights = np.array(
+    desired_group_values = np.array(
        [
             [[0.5, 0.5], [0.6, 0.4], [0.7, 0.3]],
             [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
@@ -71,13 +71,13 @@ def test_init_2(g_mix2_4x3):
     assert g_mix2_4x3.n_sequence == 4
     assert g_mix2_4x3.sequence_length == 3
     np.testing.assert_array_equal(
-        g_mix2_4x3.group_weights, desired_group_weights
+        g_mix2_4x3.group_values, desired_group_values
     )
 
 
 def test_init_3(g_condition_label_4x1):
     """Test initalization."""
-    desired_group_weights = np.array(
+    desired_group_values = np.array(
         [
             [['block']],
             [['interleave']],
@@ -89,7 +89,7 @@ def test_init_3(g_condition_label_4x1):
     assert g_condition_label_4x1.n_sequence == 4
     assert g_condition_label_4x1.sequence_length == 1
     np.testing.assert_array_equal(
-        g_condition_label_4x1.group_weights, desired_group_weights
+        g_condition_label_4x1.group_values, desired_group_values
     )
 
 
@@ -127,7 +127,7 @@ def test_export_0b(g_mix2_4x3):
 
 def test_export_3a(g_condition_label_4x1):
     """Test export."""
-    desired_group_weights = tf.constant(
+    desired_group_values = tf.constant(
         [
             [['block']],
             [['interleave']],
@@ -138,7 +138,7 @@ def test_export_3a(g_condition_label_4x1):
     desired_name = 'condition_label'
 
     x = g_condition_label_4x1.export(export_format='tfds')
-    tf.debugging.assert_equal(desired_group_weights, x[desired_name])
+    tf.debugging.assert_equal(desired_group_values, x[desired_name])
 
 
 def test_export_wrong(g_mix2_4x3):

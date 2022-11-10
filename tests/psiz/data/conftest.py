@@ -679,7 +679,7 @@ def o_sparsecat_d_4x3():
 
 @pytest.fixture(scope="module")
 def g_condition_id_4x1():
-    group_weights = np.array(
+    group_values = np.array(
         [
             [[0]],
             [[1]],
@@ -688,13 +688,13 @@ def g_condition_id_4x1():
         ]
     )
     return Group(
-        group_weights=group_weights, name='condition_id'
+        group_values, name='condition_id'
     )
 
 
 @pytest.fixture(scope="module")
 def g_condition_label_4x1():
-    group_weights = np.array(
+    group_values = np.array(
         [
             [['block']],
             [['interleave']],
@@ -703,13 +703,13 @@ def g_condition_label_4x1():
         ]
     )
     return Group(
-        group_weights=group_weights, name='condition_label'
+        group_values, name='condition_label'
     )
 
 
 @pytest.fixture(scope="module")
 def g_condition_id_4x3():
-    group_weights = np.array(
+    group_values = np.array(
         [
             [[0], [0], [0]],
             [[1], [1], [1]],
@@ -718,13 +718,13 @@ def g_condition_id_4x3():
         ]
     )
     return Group(
-        group_weights=group_weights, name='condition_id'
+        group_values, name='condition_id'
     )
 
 
 @pytest.fixture(scope="module")
 def g_condition_id_3x2():
-    group_weights = np.array(
+    group_values = np.array(
         [
             [[0], [0]],
             [[1], [1]],
@@ -732,13 +732,13 @@ def g_condition_id_3x2():
         ], dtype=np.int32
     )
     return Group(
-        group_weights=group_weights, name='condition_id'
+        group_values, name='condition_id'
     )
 
 
 @pytest.fixture(scope="module")
 def g_mix2_4x3():
-    group_weights = np.array(
+    group_values = np.array(
         [
             [[0.5, 0.5], [0.6, 0.4], [0.7, 0.3]],
             [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
@@ -747,5 +747,5 @@ def g_mix2_4x3():
         ], dtype=np.float32
     )
     return Group(
-        group_weights=group_weights, name='mix2'
+        group_values, name='mix2'
     )

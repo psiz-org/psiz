@@ -207,6 +207,9 @@ def test_invalid_stimulus_set():
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set)
     assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `stimulus_set` must be an np.ndarray of integers."
+    )
 
     # Contains negative integers.
     stimulus_set = np.array(
@@ -220,6 +223,28 @@ def test_invalid_stimulus_set():
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set)
     assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `stimulus_set` must contain integers greater than or "
+        "equal to 0."
+    )
+
+    # Trials have different number of references.
+    stimulus_set = np.array(
+        (
+            (3, 1, 2, 4),
+            (9, 12, 7, 0),
+            (3, 4, 5, 0),
+            (3, 4, 5, 6)
+        )
+    )
+    with pytest.raises(Exception) as e_info:
+        Rank(stimulus_set)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "When creating a `psiz.data.Rank` object, all non-placeholder trials "
+        "must have the same number of references. Detected 2 different "
+        "reference counts."
+    )
 
     # Does not contain enough references for each trial.
     stimulus_set = np.array(
@@ -267,29 +292,40 @@ def test_invalid_stimulus_set():
         Rank(stimulus_set)
     assert e_info.type == ValueError
 
-    # TODO not sure whether to test this.
-    # # Integer is too large.
-    # ii32 = np.iinfo(np.int32)
-    # too_large = ii32.max + 1
-    # stimulus_set = np.array(
-    #     [
-    #         [
-    #             [3, 1, 2, 0],
-    #             [9, too_large, 7, 0],
-    #             [3, 1, 2, 0],
-    #             [9, 12, 7, 0]
-    #         ],
-    #         [
-    #             [13, 14, 15, 2],
-    #             [16, 17, 0, 0],
-    #             [3, 4, 5, 6],
-    #             [3, 4, 5, 6]
-    #         ]
-    #     ]
-    # )
-    # with pytest.raises(Exception) as e_info:
-    #     Rank(stimulus_set)
-    # assert e_info.type == ValueError
+
+def test_invalid_n_reference():
+    """Test handling of invalid 'n_select' argument."""
+    stimulus_set = np.array(
+        (
+            (3, 1, 2, 4, 5),
+            (9, 12, 7, 8, 9),
+            (3, 4, 5, 6, 7),
+            (13, 14, 15, 16, 17)
+        )
+    )
+
+    # Below support.
+    n_select = 0
+    with pytest.raises(Exception) as e_info:
+        Rank(stimulus_set, n_select=n_select)
+    assert e_info.type == ValueError
+
+    # Above support.
+    n_select = 5
+    with pytest.raises(Exception) as e_info:
+        Rank(stimulus_set, n_select=n_select)
+    assert e_info.type == ValueError
+
+    # Not an integer
+    n_select = np.array([
+        [[2], [1]], [[1], [2]]
+    ])
+    with pytest.raises(Exception) as e_info:
+        Rank(stimulus_set, n_select=n_select)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `n_select` must be an integer."
+    )
 
 
 def test_invalid_n_select():

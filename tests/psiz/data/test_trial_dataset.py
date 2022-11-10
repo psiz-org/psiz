@@ -22,6 +22,28 @@ import tensorflow as tf
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
 from psiz.data.trial_dataset import TrialDataset
+from psiz.data.trial_component import TrialComponent
+
+
+class BadTrialComponent(TrialComponent):
+    """Abstract class for trial content data."""
+
+    def __init__(self):
+        """Initialize."""
+        TrialComponent.__init__(self)
+        self.x = np.array(
+            [
+                [1.0, 2.0, 3.0],
+                [1.0, 2.0, 3.0],
+                [1.0, 2.0, 3.0],
+                [1.0, 2.0, 3.0],
+            ]
+        )
+        self.n_sequence = 4
+        self.sequence_length = 1
+
+    def export(self):
+        return tf.constant(self.x)
 
 
 def test_init_0(c_2rank1_aa_4x1):
@@ -189,6 +211,16 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
         "All user-provided 'TrialComponent' objects must have the same "
         "`sequence_length`. The 'TrialComponent' in position 1 does not "
         "match the previous components."
+    )
+
+    bad_component_4x1 = BadTrialComponent()
+    with pytest.raises(Exception) as e_info:
+        TrialDataset([c_2rank1_aa_4x1, bad_component_4x1])
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The `TrialComponent` in position 1 must be an  instance of "
+        "`psiz.data.Content`, `psiz.data.Outcome`, or `psiz.data.Group` to "
+        "use `TrialDataset`."
     )
 
 
@@ -560,6 +592,25 @@ def test_invalid_export_0(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
     assert e_info.type == ValueError
     assert (
         str(e_info.value) == "Unrecognized `export_format` 'garbage'."
+    )
+
+
+def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
+    """Test export.
+
+    Using incorrect `export_format`.
+
+    """
+    td = TrialDataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname])
+
+    with pytest.raises(Exception) as e_info:
+        td.export(export_format='tfds')
+    assert e_info.type == ValueError
+    assert (
+        str(e_info.value) == (
+            "When a `TrialDataset` has multiple outputs, all "
+            "outputs must be created with the `name` argument."
+        )
     )
 
 

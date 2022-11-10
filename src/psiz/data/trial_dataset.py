@@ -102,11 +102,10 @@ class TrialDataset(object):
             elif isinstance(trial_component, Group):
                 group_list.append(trial_component)
             else:
-                # TODO write test that raises this error
                 raise ValueError(
-                    "The 'TrialComponent' in position {0} must be an  "
-                    "instance of psiz.data.Content, psiz.data.Outcome, or "
-                    "psiz.data.Group to use TrialDataset.".format(
+                    "The `TrialComponent` in position {0} must be an  "
+                    "instance of `psiz.data.Content`, `psiz.data.Outcome`, or "
+                    "`psiz.data.Group` to use `TrialDataset`.".format(
                         component_idx
                     )
                 )
@@ -202,4 +201,11 @@ class TrialDataset(object):
             key, tensor = d.popitem()
             return tensor
         else:
+            # Make sure all keys are defined.
+            for k in d.keys():
+                if k is None:
+                    raise ValueError(
+                        "When a `TrialDataset` has multiple outputs, all "
+                        "outputs must be created with the `name` argument."
+                    )
             return d

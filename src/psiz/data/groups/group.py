@@ -68,12 +68,14 @@ class Group(TrialComponent):
 
         # If `group_values` looks like sparse coding format, check data type.
         if group_values.shape[-1] == 1:
-            if not isinstance(group_values[0, 0, 0], (int, np.integer)):
-                # TODO more careful handling
+            if not isinstance(group_values[0, 0, 0], (float, np.float)):
+                # NOTE: We check if float, because integer or string is ok.
                 warnings.warn(
                     "The values for '{0}' appear to use a sparse "
                     "coding. To improve efficiency, these weights should "
-                    "have an integer dtype.".format(group_key)
+                    "have an integer dtype, not a float dtyle.".format(
+                        group_key
+                    )
                 )
 
         return group_values

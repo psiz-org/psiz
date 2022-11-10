@@ -99,15 +99,6 @@ class Rate(Content):
                 "sequence_length, n_stimuli_per_trial)."
             )
 
-        # TODO enforce or delete
-        # # Check values are in int32 range.
-        # ii32 = np.iinfo(np.int32)
-        # if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
-        #     raise ValueError((
-        #         "The argument `stimulus_set` must only contain integers "
-        #         "in the int32 range."
-        #     ))
-        # return stimulus_set.astype(np.int32)
         return stimulus_set
 
     def export(self, export_format='tfds', with_timestep_axis=True):

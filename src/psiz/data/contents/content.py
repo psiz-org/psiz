@@ -35,7 +35,6 @@ class Content(TrialComponent, metaclass=ABCMeta):
         """Initialize."""
         TrialComponent.__init__(self)
 
-        # TODO should these be universal for all content?
         # Immutable attributes.
         self._mask_zero = True
         self._mask_value = 0

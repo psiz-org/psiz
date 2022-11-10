@@ -126,12 +126,11 @@ class Rank(Content):
 
         # Check how many unique (non-placeholder) referenes there are.
         unique_n_reference = len(np.unique(n_reference_not_empty))
-        # TODO test that raises error
         if unique_n_reference != 1:
             raise ValueError(
-                "When creating a Rank TrialComponent, all non-"
-                "placeholder trials must have the same number of references. "
-                "Detected {0} different reference counts.".format(
+                "When creating a `psiz.data.Rank` object, all non-placeholder "
+                "trials must have the same number of references. Detected "
+                "{0} different reference counts.".format(
                     unique_n_reference
                 )
             )
@@ -219,15 +218,6 @@ class Rank(Content):
                 "sequence_length, n_stimuli_per_trial)."
             )
 
-        # TODO enforce or delete
-        # # Check values are in int32 range.
-        # ii32 = np.iinfo(np.int32)
-        # if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
-        #     raise ValueError((
-        #         "The argument `stimulus_set` must only contain integers "
-        #         "in the int32 range."
-        #     ))
-        # return stimulus_set.astype(np.int32)
         return stimulus_set
 
     @classmethod
@@ -307,7 +297,6 @@ class Rank(Content):
             )
         return x
 
-    # TODO maybe move elsewhere
     @staticmethod
     def possible_outcomes(n_reference, n_select):
         """Return the possible outcomes of a ranked trial.

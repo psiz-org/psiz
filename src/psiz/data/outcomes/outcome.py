@@ -42,9 +42,6 @@ class Outcome(TrialComponent):
         """
         TrialComponent.__init__(self)
 
-        # TODO raise error at export if name unavailable?
-        # if name is None:
-        #     raise ValueError('')
         self.name = name
         self._sample_weight = sample_weight
 

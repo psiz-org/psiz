@@ -226,6 +226,19 @@ def o_rt_a_3x2():
 
 
 @pytest.fixture(scope="module")
+def o_rt_a_3x2_noname():
+    rt = np.array(
+        [
+            [[4.1], [4.2]],
+            [[5.1], [5.2]],
+            [[6.1], [6.2]],
+        ]
+    )
+    sample_weight = .8 * np.ones([3, 2])
+    return Continuous(rt, sample_weight=sample_weight)
+
+
+@pytest.fixture(scope="module")
 def c_2rank1_e_3x2():
     """Content RankedSimilarity with rank-3 arguments.
 

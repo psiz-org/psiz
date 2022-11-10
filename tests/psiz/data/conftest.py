@@ -77,10 +77,10 @@ def c_2rank1_aa_4x1():
 def o_2rank1_aa_4x1():
     outcome_idx = np.zeros([4, 1], dtype=np.int32)
     sample_weight = .9 * np.ones([4, 1])
-    max_outcome = 2
+    n_outcome = 2
     rank_outcome = SparseCategorical(
         outcome_idx,
-        depth=max_outcome,
+        depth=n_outcome,
         sample_weight=sample_weight,
         name='rank_prob'
     )
@@ -159,10 +159,10 @@ def c_4rank2_c_4x3():
 def o_4rank2_c_4x3():
     outcome_idx = np.zeros([4, 3], dtype=np.int32)
     sample_weight = .9 * np.ones([4, 3])
-    max_outcome = 12
+    n_outcome = 12
     rank_outcome = SparseCategorical(
         outcome_idx,
-        depth=max_outcome,
+        depth=n_outcome,
         sample_weight=sample_weight,
         name='rank_prob'
     )
@@ -200,10 +200,10 @@ def c_2rank1_d_3x2():
 def o_2rank1_d_3x2():
     outcome_idx = np.zeros([3, 2], dtype=np.int32)
     sample_weight = .9 * np.ones([3, 2])
-    max_outcome = 2
+    n_outcome = 2
     rank_outcome = SparseCategorical(
         outcome_idx,
-        depth=max_outcome,
+        depth=n_outcome,
         sample_weight=sample_weight,
         name='rank_prob'
     )

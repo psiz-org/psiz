@@ -46,7 +46,7 @@ def ds_2rank1_v0():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset([content, outcome]).export(
@@ -79,7 +79,7 @@ def ds_4rank1_v0():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset([content, outcome]).export(
@@ -117,7 +117,7 @@ def ds_4rank1_v1():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset([content, groups, outcome]).export(
@@ -159,7 +159,7 @@ def ds_4rank1_v2():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset(
@@ -203,7 +203,7 @@ def ds_4rank1_v3():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset(
@@ -238,7 +238,7 @@ def ds_8rank2_v0():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset([content, outcome]).export(
@@ -280,7 +280,7 @@ def ds_2rank1_8rank2_v0():
     )
     outcome_2rank1 = psiz.data.SparseCategorical(
         outcome_idx,
-        depth=content_2rank1.max_outcome,
+        depth=content_2rank1.n_outcome,
         name='2rank1',
         sample_weight=sample_weight
     )
@@ -307,7 +307,7 @@ def ds_2rank1_8rank2_v0():
     )
     outcome_8rank2 = psiz.data.SparseCategorical(
         outcome_idx,
-        depth=content_8rank2.max_outcome,
+        depth=content_8rank2.n_outcome,
         name='8rank2',
         sample_weight=sample_weight
     )
@@ -356,7 +356,7 @@ def ds_time_8rank2_v0():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset([content, outcome]).export(
@@ -528,7 +528,7 @@ def ds_4rank2_rate2_v0():
         [content_rank.n_sequence, content_rank.sequence_length], dtype=np.int32
     )
     outcome_rank = psiz.data.SparseCategorical(
-        outcome_idx, depth=content_rank.max_outcome, name='rank_branch'
+        outcome_idx, depth=content_rank.n_outcome, name='rank_branch'
     )
 
     gate_weights = psiz.data.Group(
@@ -588,7 +588,7 @@ def ds_4rank1_rt_v0():
         [content_rank.n_sequence, content_rank.sequence_length], dtype=np.int32
     )
     outcome_rank = psiz.data.SparseCategorical(
-        outcome_idx, depth=content_rank.max_outcome, name='rank_choice_branch'
+        outcome_idx, depth=content_rank.n_outcome, name='rank_choice_branch'
     )
     outcome_rt = psiz.data.Continuous(
         np.array([[4.0], [6.0], [7.0], [11.0]]),

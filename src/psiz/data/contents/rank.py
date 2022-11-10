@@ -64,33 +64,25 @@ class Rank(Content):
         self.n_reference, self._n_reference = self._validate_n_reference(
             stimulus_set
         )
+        # TODO `self._n_reference` not used elsewhere, don't make attribute?
 
         # Trim any excess placeholder padding off of reference axis before
         # setting public attribute.
         stimulus_set = stimulus_set[:, :, 0:self.n_reference + 1]
         self.stimulus_set = stimulus_set
 
-        self.n_select, self._n_select = self._validate_n_select(n_select)
+        self.n_select, self._n_select_arr = self._validate_n_select(n_select)
 
     @property
-    def max_outcome(self):
-        """Getter method for `max_outcome`.
+    def n_outcome(self):
+        """Getter method for `n_outcome`.
 
         Returns:
-            The maximum number of outcomes for a trial.
+            The number of outcomes for a trial.
 
         """
-        _, df_config = self.unique_configurations
-
-        max_n_outcome = 0
-        for _, row in df_config.iterrows():
-            outcome_idx = self.possible_outcomes(
-                row['_n_reference'], row['_n_select']
-            )
-            n_outcome = outcome_idx.shape[0]
-            if n_outcome > max_n_outcome:
-                max_n_outcome = n_outcome
-        return max_n_outcome
+        outcomes = self.possible_outcomes(self.n_reference, self.n_select)
+        return outcomes.shape[0]
 
     @property
     def is_actual(self):
@@ -223,7 +215,7 @@ class Rank(Content):
     @classmethod
     def _config_attrs(cls):
         """Return attributes that govern trial configurations."""
-        return ['_n_reference', '_n_select']
+        return ['_n_reference', '_n_select_arr']
 
     def _is_select(self, compress=False):
         """Indicate if a stimulus was selected.
@@ -249,9 +241,9 @@ class Rank(Content):
 
         """
         is_select = np.zeros(self.stimulus_set.shape, dtype=bool)
-        max_n_select = np.max(self._n_select)
+        max_n_select = np.max(self._n_select_arr)
         for n_select in range(1, max_n_select + 1):
-            locs = np.less_equal(n_select, self._n_select)
+            locs = np.less_equal(n_select, self._n_select_arr)
             is_select[locs, n_select] = True
 
         if compress:

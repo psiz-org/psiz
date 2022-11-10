@@ -43,7 +43,7 @@ def test_init_0(c_2rank1_a_4x1):
     )
     assert desired_n_reference == c_2rank1_a_4x1.n_reference
     assert desired_n_select == c_2rank1_a_4x1.n_select
-    assert desired_max_outcome == c_2rank1_a_4x1.max_outcome
+    assert desired_max_outcome == c_2rank1_a_4x1.n_outcome
 
 
 def test_init_1(c_2rank1_aa_4x1):
@@ -67,7 +67,7 @@ def test_init_1(c_2rank1_aa_4x1):
     )
     assert desired_n_reference == c_2rank1_aa_4x1.n_reference
     assert desired_n_select == c_2rank1_aa_4x1.n_select
-    assert desired_max_outcome == c_2rank1_aa_4x1.max_outcome
+    assert desired_max_outcome == c_2rank1_aa_4x1.n_outcome
 
 
 def test_init_2(c_4rank2_b_4x2):
@@ -105,7 +105,7 @@ def test_init_2(c_4rank2_b_4x2):
     )
     assert desired_n_reference == c_4rank2_b_4x2.n_reference
     assert desired_n_select == c_4rank2_b_4x2.n_select
-    assert desired_max_outcome == c_4rank2_b_4x2.max_outcome
+    assert desired_max_outcome == c_4rank2_b_4x2.n_outcome
 
 
 def test_init_3(c_4rank2_c_4x3):
@@ -151,7 +151,7 @@ def test_init_3(c_4rank2_c_4x3):
     )
     assert desired_n_reference == c_4rank2_c_4x3.n_reference
     assert desired_n_select == c_4rank2_c_4x3.n_select
-    assert desired_max_outcome == c_4rank2_c_4x3.max_outcome
+    assert desired_max_outcome == c_4rank2_c_4x3.n_outcome
 
 
 def test_init_4():
@@ -189,7 +189,7 @@ def test_init_4():
     )
     assert content.n_select == n_select_desired
     np.testing.assert_array_equal(
-        content._n_select, n_select_arr_desired
+        content._n_select_arr, n_select_arr_desired
     )
 
 
@@ -378,7 +378,7 @@ def test_is_actual(c_4rank2_b_4x2):
 
 def test_config_attrs():
     """Test _config_attrs()"""
-    desired_list = ['_n_reference', '_n_select']
+    desired_list = ['_n_reference', '_n_select_arr']
     assert desired_list == Rank._config_attrs()
 
 

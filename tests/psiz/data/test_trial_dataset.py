@@ -72,7 +72,7 @@ def test_init_1(c_2rank1_aa_4x1):
         dtype=np.int32
     )
     rank_outcome = SparseCategorical(
-        outcome_idx, depth=c_2rank1_aa_4x1.max_outcome, name='rank_outcome'
+        outcome_idx, depth=c_2rank1_aa_4x1.n_outcome, name='rank_outcome'
     )
 
     td = TrialDataset([c_2rank1_aa_4x1, rank_outcome])
@@ -129,7 +129,7 @@ def test_init_3(c_2rank1_aa_4x1):
     )
     rank_outcome = SparseCategorical(
         outcome_idx,
-        depth=c_2rank1_aa_4x1.max_outcome,
+        depth=c_2rank1_aa_4x1.n_outcome,
         sample_weight=sample_weight,
         name='rank_outcome'
     )

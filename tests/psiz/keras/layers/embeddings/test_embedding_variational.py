@@ -68,7 +68,7 @@ def ds_3rank1_4x1():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.TrialDataset([content, outcome, condition_idx]).export()
@@ -101,7 +101,7 @@ def ds_3rank1_4x2():
         [content.n_sequence, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
+        outcome_idx, depth=content.n_outcome
     )
     ds = psiz.data.TrialDataset([content, outcome, condition_idx]).export()
     ds = ds.batch(n_sequence, drop_remainder=False)

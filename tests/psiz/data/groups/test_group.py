@@ -21,7 +21,7 @@ import numpy as np
 import tensorflow as tf
 
 
-def test_init_0(g_condition_id_4x1):
+def test_init_0(g_condition_idx_4x1):
     """Test initalization."""
     desired_group_values = np.array(
         [
@@ -31,15 +31,15 @@ def test_init_0(g_condition_id_4x1):
             [[0]],
         ]
     )
-    assert g_condition_id_4x1.name == 'condition_id'
-    assert g_condition_id_4x1.n_sequence == 4
-    assert g_condition_id_4x1.sequence_length == 1
+    assert g_condition_idx_4x1.name == 'condition_idx'
+    assert g_condition_idx_4x1.n_sequence == 4
+    assert g_condition_idx_4x1.sequence_length == 1
     np.testing.assert_array_equal(
-        g_condition_id_4x1.group_values, desired_group_values
+        g_condition_idx_4x1.group_values, desired_group_values
     )
 
 
-def test_init_1(g_condition_id_4x3):
+def test_init_1(g_condition_idx_4x3):
     """Test initalization."""
     desired_group_values = np.array(
         [
@@ -49,11 +49,11 @@ def test_init_1(g_condition_id_4x3):
             [[0], [0], [0]],
         ]
     )
-    assert g_condition_id_4x3.name == 'condition_id'
-    assert g_condition_id_4x3.n_sequence == 4
-    assert g_condition_id_4x3.sequence_length == 3
+    assert g_condition_idx_4x3.name == 'condition_idx'
+    assert g_condition_idx_4x3.n_sequence == 4
+    assert g_condition_idx_4x3.sequence_length == 3
     np.testing.assert_array_equal(
-        g_condition_id_4x3.group_values, desired_group_values
+        g_condition_idx_4x3.group_values, desired_group_values
     )
 
 

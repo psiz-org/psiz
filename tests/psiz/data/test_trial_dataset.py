@@ -143,7 +143,7 @@ def test_init_3(c_2rank1_aa_4x1):
         ]
     )
     group_0 = Group(
-        group_values, name='condition_id'
+        group_values, name='condition_idx'
     )
 
     td = TrialDataset([c_2rank1_aa_4x1, group_0, rank_outcome])
@@ -224,13 +224,13 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
     )
 
 
-def test_export_0(c_2rank1_d_3x2, g_condition_id_3x2):
+def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
     """Test export.
 
     * Include content and group only.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_id_3x2])
+    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -284,11 +284,11 @@ def test_export_0(c_2rank1_d_3x2, g_condition_id_3x2):
         desired_x_is_select, x['2rank1/is_select']
     )
     tf.debugging.assert_equal(
-        desired_condition_id, x['condition_id']
+        desired_condition_id, x['condition_idx']
     )
 
 
-def test_export_1a(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
+def test_export_1a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     """Test as_dataset.
 
     * Include content, group, and outcome.
@@ -296,7 +296,7 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
         `w`.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2])
+    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -376,11 +376,11 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
         desired_x_is_select, x['2rank1/is_select']
     )
     tf.debugging.assert_equal(
-        desired_condition_id, x['condition_id']
+        desired_condition_id, x['condition_idx']
     )
     tf.debugging.assert_equal(desired_y, y)
     tf.debugging.assert_equal(desired_w, w)
-    tf.debugging.assert_equal(desired_condition_id, x['condition_id'])
+    tf.debugging.assert_equal(desired_condition_id, x['condition_idx'])
 
     # Export inputs only.
     ds = td.export(inputs_only=True).batch(4, drop_remainder=False)
@@ -394,17 +394,17 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
         desired_x_is_select, x['2rank1/is_select']
     )
     tf.debugging.assert_equal(
-        desired_condition_id, x['condition_id']
+        desired_condition_id, x['condition_idx']
     )
 
 
-def test_export_1b(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
+def test_export_1b(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     """Test export.
 
     Return dataset using `with_timestep_axis=False`.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2])
+    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -461,14 +461,14 @@ def test_export_1b(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
         desired_x_is_select, x['2rank1/is_select']
     )
     tf.debugging.assert_equal(
-        desired_condition_id, x['condition_id']
+        desired_condition_id, x['condition_idx']
     )
     tf.debugging.assert_equal(desired_y, y)
     tf.debugging.assert_equal(desired_w, w)
 
 
 def test_export_2a(
-    c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2, o_rt_a_3x2
+    c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2
 ):
     """Test export.
 
@@ -477,7 +477,7 @@ def test_export_2a(
 
     """
     td = TrialDataset(
-        [c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2, o_rt_a_3x2]
+        [c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2]
     )
 
     desired_x_stimulus_set = tf.constant(
@@ -571,7 +571,7 @@ def test_export_2a(
         desired_x_is_select, x['2rank1/is_select']
     )
     tf.debugging.assert_equal(
-        desired_condition_id, x['condition_id']
+        desired_condition_id, x['condition_idx']
     )
     tf.debugging.assert_equal(desired_y_prob, y['rank_prob'])
     tf.debugging.assert_equal(desired_w_prob, w['rank_prob'])
@@ -614,14 +614,13 @@ def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     )
 
 
-# TODO g_condition_id_4x1 -> idx
-def test_invalid_export_0(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
+def test_invalid_export_0(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     """Test export.
 
     Using incorrect `export_format`.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2])
+    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     with pytest.raises(Exception) as e_info:
         td.export(export_format='garbage')

@@ -59,9 +59,9 @@ def ds_3rank1_4x1():
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    condition_id = psiz.data.Group(
+    condition_idx = psiz.data.Group(
         np.array([[0], [0], [1], [1]], dtype=np.int32),
-        name='condition_id'
+        name='condition_idx'
     )
 
     outcome_idx = np.zeros(
@@ -71,7 +71,7 @@ def ds_3rank1_4x1():
         outcome_idx, depth=content.max_outcome
     )
 
-    ds = psiz.data.TrialDataset([content, outcome, condition_id]).export()
+    ds = psiz.data.TrialDataset([content, outcome, condition_idx]).export()
     ds = ds.batch(n_sequence, drop_remainder=False)
 
     return ds
@@ -90,11 +90,11 @@ def ds_3rank1_4x2():
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    condition_id = psiz.data.Group(
+    condition_idx = psiz.data.Group(
         np.array(
             [[[0], [0]], [[0], [0]], [[1], [1]], [[1], [1]]], dtype=np.int32
         ),
-        name='condition_id'
+        name='condition_idx'
     )
 
     outcome_idx = np.zeros(
@@ -103,7 +103,7 @@ def ds_3rank1_4x2():
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.max_outcome
     )
-    ds = psiz.data.TrialDataset([content, outcome, condition_id]).export()
+    ds = psiz.data.TrialDataset([content, outcome, condition_idx]).export()
     ds = ds.batch(n_sequence, drop_remainder=False)
 
     return ds

@@ -691,7 +691,7 @@ def o_sparsecat_d_4x3():
 
 
 @pytest.fixture(scope="module")
-def g_condition_id_4x1():
+def g_condition_idx_4x1():
     group_values = np.array(
         [
             [[0]],
@@ -701,7 +701,7 @@ def g_condition_id_4x1():
         ]
     )
     return Group(
-        group_values, name='condition_id'
+        group_values, name='condition_idx'
     )
 
 
@@ -721,7 +721,7 @@ def g_condition_label_4x1():
 
 
 @pytest.fixture(scope="module")
-def g_condition_id_4x3():
+def g_condition_idx_4x3():
     group_values = np.array(
         [
             [[0], [0], [0]],
@@ -731,12 +731,12 @@ def g_condition_id_4x3():
         ]
     )
     return Group(
-        group_values, name='condition_id'
+        group_values, name='condition_idx'
     )
 
 
 @pytest.fixture(scope="module")
-def g_condition_id_3x2():
+def g_condition_idx_3x2():
     group_values = np.array(
         [
             [[0], [0]],
@@ -745,7 +745,7 @@ def g_condition_id_3x2():
         ], dtype=np.int32
     )
     return Group(
-        group_values, name='condition_id'
+        group_values, name='condition_idx'
     )
 
 

@@ -579,6 +579,42 @@ def test_export_2a(
     tf.debugging.assert_equal(desired_w_rt, w['rt'])
 
 
+def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
+    """Test export with `StringLookup`."""
+    td = TrialDataset(
+        [c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1]
+    )
+    ds = td.export(export_format='tfds')
+
+    # Map strings to indices.
+    condition_lookup_layer = tf.keras.layers.StringLookup(
+        vocabulary=['block', 'interleave'], num_oov_indices=0
+    )
+
+    def parse_inputs(x):
+        condition_label = x.pop('condition_label')
+        condition_idx = condition_lookup_layer(condition_label)
+        x['condition_idx'] = condition_idx
+        return x
+
+    ds2 = ds.map(lambda x, y, w: (parse_inputs(x), y, w))
+    ds2 = ds2.batch(4)
+    ds2_list = list(ds2)
+
+    desired_condition_idx = tf.constant(
+        [
+            [[0]],
+            [[1]],
+            [[0]],
+            [[0]],
+        ], dtype=tf.int64
+    )
+    tf.debugging.assert_equal(
+        ds2_list[0][0]['condition_idx'], desired_condition_idx
+    )
+
+
+# TODO g_condition_id_4x1 -> idx
 def test_invalid_export_0(c_2rank1_d_3x2, g_condition_id_3x2, o_2rank1_d_3x2):
     """Test export.
 

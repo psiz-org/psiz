@@ -19,12 +19,14 @@ import numpy as np
 import pytest
 from scipy.stats import pearsonr
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 import psiz
+from psiz.utils import choice_wo_replace
 
 
-class RankModel(tf.keras.Model):
-    """A `RankSimilarity` model.
+class BehaviorModel(tf.keras.Model):
+    """A behavior model.
 
     No Gates.
 
@@ -32,70 +34,12 @@ class RankModel(tf.keras.Model):
 
     def __init__(self, behavior=None, **kwargs):
         """Initialize."""
-        super(RankModel, self).__init__(**kwargs)
+        super(BehaviorModel, self).__init__(**kwargs)
         self.behavior = behavior
 
-    def call(self, inputs, training=None):
+    def call(self, inputs):
         """Call."""
         return self.behavior(inputs)
-
-
-# TODO factor out
-def build_grouth_truth_old(n_stimuli, n_dim, similarity_func, mask_zero):
-    """Return a ground truth embedding."""
-    if mask_zero:
-        stimuli = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=.17, seed=4
-            )
-        )
-    else:
-        stimuli = tf.keras.layers.Embedding(
-            n_stimuli, n_dim,
-            embeddings_initializer=tf.keras.initializers.RandomNormal(
-                stddev=.17, seed=4
-            )
-        )
-
-    # Set similarity function.
-    if similarity_func == 'Exponential':
-        similarity = psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=False,
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
-        )
-    elif similarity_func == 'StudentsT':
-        similarity = psiz.keras.layers.StudentsTSimilarity(
-            fit_tau=False, fit_alpha=False,
-            tau_initializer=tf.keras.initializers.Constant(2.),
-            alpha_initializer=tf.keras.initializers.Constant(1.),
-        )
-    elif similarity_func == 'HeavyTailed':
-        similarity = psiz.keras.layers.HeavyTailedSimilarity(
-            fit_tau=False, fit_kappa=False, fit_alpha=False,
-            tau_initializer=tf.keras.initializers.Constant(2.),
-            kappa_initializer=tf.keras.initializers.Constant(2.),
-            alpha_initializer=tf.keras.initializers.Constant(10.),
-        )
-    elif similarity_func == "Inverse":
-        similarity = psiz.keras.layers.InverseSimilarity(
-            fit_tau=False, fit_mu=False,
-            tau_initializer=tf.keras.initializers.Constant(2.),
-            mu_initializer=tf.keras.initializers.Constant(0.000001)
-        )
-
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
-            trainable=False
-        ),
-        similarity=similarity
-    )
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
-
-    return model
 
 
 def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
@@ -149,10 +93,10 @@ def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
     )
 
     rank = psiz.keras.layers.RankSimilarity(
-        percept=percept, kernel=kernel
+        n_reference=8, n_select=2, percept=percept, kernel=kernel
     )
 
-    model = RankModel(behavior=rank)
+    model = BehaviorModel(behavior=rank)
 
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
@@ -207,10 +151,10 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
         similarity=similarity
     )
     rank = psiz.keras.layers.RankSimilarity(
-        percept=percept, kernel=kernel
+        n_reference=8, n_select=2, percept=percept, kernel=kernel
     )
 
-    model = RankModel(behavior=rank)
+    model = BehaviorModel(behavior=rank)
     compile_kwargs = {
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
@@ -222,33 +166,9 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     return model
 
 
-def convert2dataset(obs, batch_size, shuffle=False):
-    """Convert to TF Dataset.
-
-    No timestep.
-
-    """
-    content = psiz.data.Rank(obs.stimulus_set, n_select=obs.n_select)
-    outcome_idx = np.zeros(
-        [content.n_sequence, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.max_outcome
-    )
-    ds = psiz.data.TrialDataset(
-        content, outcome=outcome, groups=obs.groups
-    ).export(with_timestep_axis=False)
-    if shuffle:
-        ds = ds.shuffle(
-            buffer_size=obs.n_trial, reshuffle_each_iteration=True
-        ).batch(batch_size, drop_remainder=False)
-    else:
-        ds = ds.batch(batch_size, drop_remainder=False)
-    return ds
-
-
 # TODO The coordinate space may need to be scaled so that it is
 # "learnable" by the other similarity functions.
+# TODO ideally use `tf.keras.utils.split_dataset`, but it's brittle.
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "similarity_func", ["Exponential"]
@@ -267,8 +187,9 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     n_stimuli = 30
     n_dim = 3
     epochs = 1000
-    n_trial = 2000
     batch_size = 128
+    n_trial_train = batch_size * 10
+    n_trial = batch_size * 12
     n_frame = 2
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
@@ -281,47 +202,58 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
             n_stimuli, elements='upper'
         )
 
-    model_true = build_grouth_truth_old(
+    model_true = build_ground_truth_model(
         n_stimuli, n_dim, similarity_func, mask_zero
     )
 
     # Generate a random docket of trials.
+    rng = np.random.default_rng()
     if mask_zero:
-        generator = psiz.trials.RandomRank(
-            np.arange(n_stimuli) + 1, n_reference=8, n_select=2,
-            mask_zero=True
-        )
+        eligibile_indices = np.arange(n_stimuli) + 1
     else:
-        generator = psiz.trials.RandomRank(
-            n_stimuli, n_reference=8, n_select=2
-        )
-    docket = generator.generate(n_trial)
-    docket = docket.subset(np.random.permutation(docket.n_trial))
+        eligibile_indices = np.arange(n_stimuli)
+    p = np.ones_like(eligibile_indices) / len(eligibile_indices)
+    stimulus_set = choice_wo_replace(
+        eligibile_indices, (n_trial, 9), p, rng=rng
+    )
+    content = psiz.data.Rank(stimulus_set, n_select=2)
+    td = psiz.data.TrialDataset([content])
+    ds_content = td.export(export_format='tfds', with_timestep_axis=False)
 
     # Simulate similarity judgments.
-    agent = psiz.agents.RankAgent(model_true)
-    obs = agent.simulate(docket)
+    def simulate_agent(x):
+        depth = content.n_outcome
+        outcome_probs = model_true(x)
+        outcome_distribution = tfp.distributions.Categorical(
+            probs=outcome_probs
+        )
+        outcome_idx = outcome_distribution.sample()
+        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        return outcome_one_hot
+
+    ds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
 
     simmat_true = np.squeeze(
         psiz.utils.pairwise_similarity(
-            model_true.stimuli, model_true.kernel, ds_pairs
+            model_true.behavior.percept, model_true.behavior.kernel, ds_pairs
         ).numpy()
     )
 
-    # Partition observations into 80% train, 10% validation and 10% test set.
-    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
-
-    # Convert to dataset.
-    ds_obs_val = convert2dataset(obs_val, batch_size)
-
-    # # Convert validation and test to TF Dataset. Convert train dataset
-    # # inside frame loop.
-    # ds_obs_val = obs_val.as_dataset().batch(
-    #     batch_size, drop_remainder=False
+    # Partition observations into train and validation/test set.
+    # ds_content_train, ds_content_val = tf.keras.utils.split_dataset(
+    #     ds_content, left_size=n_trial_train, shuffle=False
     # )
-    # # ds_obs_test = obs_test.as_dataset().batch(
-    # #     batch_size, drop_remainder=False
-    # # )
+    # ds_outcome_train, ds_outcome_val = tf.keras.utils.split_dataset(
+    #     ds_outcome, left_size=n_trial_train, shuffle=False
+    # )
+
+    # Combine and batch val, since there are no more transformations.
+    # ds_val = tf.data.Dataset.zip((ds_content_val, ds_outcome_val))
+    # ds_val = ds_val.batch(batch_size, drop_remainder=False)
+    ds_train = ds.take(n_trial_train)
+    ds_val = ds.skip(n_trial_train).cache().batch(
+        batch_size, drop_remainder=False
+    )
 
     # Use early stopping.
     early_stop = tf.keras.callbacks.EarlyStopping(
@@ -335,20 +267,32 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:
-        n_obs = np.array([obs_train.n_trial], dtype=int)
+        n_obs = np.array([n_trial_train], dtype=int)
     else:
         n_obs = np.round(
-            np.linspace(15, obs_train.n_trial, n_frame)
+            np.linspace(15, n_trial_train, n_frame)
         ).astype(np.int64)
 
     r2 = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        include_idx = np.arange(0, n_obs[i_frame])
-        obs_round_train = obs_train.subset(include_idx)
-
-        # Convert obs to dataset.
-        ds_obs_train = convert2dataset(
-            obs_round_train, batch_size, shuffle=True
+        # Prepare `ds_train_sub` for training.
+        # ds_content_train_sub, _ = tf.keras.utils.split_dataset(
+        #     ds_content_train, left_size=int(n_obs[i_frame])
+        # )
+        # ds_outcome_train_sub, _ = tf.keras.utils.split_dataset(
+        #     ds_outcome_train, left_size=int(n_obs[i_frame])
+        # )
+        # ds_train_sub = tf.data.Dataset.zip(
+        #     (ds_content_train_sub, ds_outcome_train_sub)
+        # ).cache().shuffle(
+        #     buffer_size=n_obs[i_frame], reshuffle_each_iteration=True
+        # ).batch(
+        #     batch_size, drop_remainder=False
+        # )
+        ds_train_sub = ds_train.take(int(n_obs[i_frame])).cache().shuffle(
+            buffer_size=n_obs[i_frame], reshuffle_each_iteration=True
+        ).batch(
+            batch_size, drop_remainder=False
         )
 
         # Use Tensorboard callback.
@@ -361,7 +305,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         # Infer embedding.
         # MAYBE keras-tuner 3 restarts, monitor='val_loss'
         model_inferred.fit(
-            x=ds_obs_train, validation_data=ds_obs_val, epochs=epochs,
+            x=ds_train_sub, validation_data=ds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
 

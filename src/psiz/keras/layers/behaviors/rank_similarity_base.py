@@ -266,11 +266,12 @@ class RankSimilarityBase(tf.keras.layers.Layer):
             vectorization cleaner.
 
         """
-        # TODO should this block occur later?
         # Zero out similarities involving placeholder/mask IDs using a
         # mask based on reference indices.
         # NOTE: Using presence of references only, since query indices have
         # effectively been "consumed" by the similarity operation.
+        # NOTE: `is_reference_present` only relevant for placeholder trials
+        # since all trials will have the same number of references.
         is_reference_present = tf.cast(is_reference_present, K.floatx())
         # Zero out non-present similarities.
         sim_qr = tf.math.multiply(
@@ -288,6 +289,8 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         )
         is_select = tf.expand_dims(is_select, self._outcome_axis)
 
+        # TODO is `is_outcome` necessary since number of outcomes the same for
+        # all trials now?
         # Determine if outcome is legitimate by checking if at least one
         # reference is present. This is important because not all trials have
         # the same number of possible outcomes and we need to infer the
@@ -312,7 +315,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         denom = tf.maximum(denom, tf.keras.backend.epsilon())
         event_logprob = tf.math.log(sim_qr) - tf.math.log(denom)
 
-        # Mask non-existent events (i.e, reference selections).
+        # Mask non-existent events (i.e, non-existent reference selections).
         is_select = tf.cast(is_select, K.floatx())
         event_logprob = is_select * event_logprob
 

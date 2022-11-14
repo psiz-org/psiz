@@ -24,7 +24,6 @@ import copy
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
-from tensorflow.python.ops import math_ops
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
@@ -259,7 +258,6 @@ class ALCOVECell(tf.keras.layers.Layer):
         # Convert from *relative* axis index to *absolute* axis index.
         n_axis = len(input_shape['categorize/stimulus_set'])
         self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
-        # TODO MAYBE issue warning if `stimuli_axis = 0`.
 
         # Precompute indices for all ALCOVE RBFs.
         self._alcove_idx = self._precompue_alcove_indices()
@@ -271,9 +269,9 @@ class ALCOVECell(tf.keras.layers.Layer):
             inputs: A dictionary containting the following information:
                 stimulus_set: The indices of the stimuli.
                     shape=(batch_size, 1)
-                correct_label: Correct label index of
-                    stimulus.
-                    shape=(batch_size, 1)
+                objective_query_label: One-hot encoding of (objectively
+                    correct) query label.
+                    shape=(batch_size, n_output)
                 gate_weights (optional): Tensor(s) containing gate
                     weights. The actual key value(s) will depend on how
                     the user initialized the layer.
@@ -294,16 +292,9 @@ class ALCOVECell(tf.keras.layers.Layer):
         batch_size = tf.shape(inputs_copied['categorize/stimulus_set'])[0]
 
         stimulus_set = inputs_copied['categorize/stimulus_set']
-        correct_label_idx = inputs_copied['categorize/correct_label']
-        # Drop RNN required axis.
-        correct_label_idx = tf.gather(
-            correct_label_idx, indices=0, axis=self._stimuli_axis
+        objective_query_label_idx = (
+            inputs_copied['categorize/objective_query_label']
         )
-
-        # Make sure `correct_label_idx` dtype is not altered during save.
-        dtype = K.dtype(correct_label_idx)
-        if dtype != 'int32' and dtype != 'int64':
-            correct_label_idx = math_ops.cast(correct_label_idx, 'int32')
 
         attention = states[0]  # Previous attention weights state.
         association = states[1]  # Previous association weights state.
@@ -344,10 +335,9 @@ class ALCOVECell(tf.keras.layers.Layer):
             # shape=(batch_size, units)
 
             # Compute loss.
-            correct_label_onehot = tf.one_hot(
-                correct_label_idx, self.units, on_value=1.0, off_value=0.0
+            loss = self.humble_teacher_loss(
+                objective_query_label_idx, x_out
             )
-            loss = self.humble_teacher_loss(correct_label_onehot, x_out)
             # shape=(batch_size, [n_sample])
         # Compute derivatives
         grad_attention = state_tape.gradient(loss, attention)

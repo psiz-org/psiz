@@ -467,30 +467,24 @@ def ds_time_categorize_v0():
     # n_stimuli = 20
     n_output = 3
 
-    stimulus_set = tf.constant(
+    stimulus_set = np.array(
         [
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-            [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
-            [2, 4, 6, 8, 10, 12, 14, 16, 0, 0],  # NOTE: 2 masked trials
-        ], dtype=tf.int32
+            [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]],
+            [[11], [12], [13], [14], [15], [16], [17], [18], [19], [20]],
+            [[1], [3], [5], [7], [9], [11], [13], [15], [17], [19]],
+            # NOTE: 2 masked trials
+            [[2], [4], [6], [8], [10], [12], [14], [16], [0], [0]],
+        ], dtype=np.int32
     )
-    y = tf.constant(
+    objective_query_label = np.array(
         [
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
             [0, 0, 0, 0, 0, 1, 1, 1, 2, 2],
             [0, 0, 0, 0, 0, 1, 1, 2, 0, 0],
-        ], dtype=tf.int32
+        ], dtype=np.int32
     )
-    y_onehot = tf.one_hot(y, n_output, on_value=1.0, off_value=0.0)
-    # NOTE: We add a trailing axis to represent "stimuli axis" and because
-    # RNN layer complains if tensor rank is less than 3.
-    x = {
-        'categorize/stimulus_set': tf.expand_dims(stimulus_set, axis=2),
-        'categorize/correct_label': tf.expand_dims(y, axis=2),
-    }
-    w = tf.constant(
+    sample_weight = np.array(
         [
             [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
             [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
@@ -498,7 +492,17 @@ def ds_time_categorize_v0():
             [1., 1., 1., 1., 1., 1., 1., 1., 0., 0.]
         ]
     )
-    ds = tf.data.Dataset.from_tensor_slices((x, y_onehot, w)).batch(
+    outcome = psiz.data.SparseCategorical(
+        objective_query_label, depth=n_output, sample_weight=sample_weight
+    )
+    objective_query_label = tf.keras.utils.to_categorical(
+        objective_query_label, num_classes=3
+    )
+    content = psiz.data.Categorize(
+        stimulus_set=stimulus_set, objective_query_label=objective_query_label
+    )
+    td = psiz.data.TrialDataset([content, outcome])
+    ds = td.export(export_format='tfds').batch(
         n_sequence, drop_remainder=False
     )
     return ds
@@ -514,7 +518,6 @@ def ds_4rank2_rate2_v0():
     """
     n_sequence = 4
 
-    # TODO refactor to use psiz.data objects
     # Rank data for dataset.
     stimulus_set = np.array((
         (1, 2, 3, 4, 5),
@@ -574,7 +577,6 @@ def ds_4rank1_rt_v0():
     """
     n_trial = 8
 
-    # TODO refactor to use psiz.data objects
     # Rank data for dataset.
     stimulus_set = np.array((
         (1, 2, 3, 4, 5),

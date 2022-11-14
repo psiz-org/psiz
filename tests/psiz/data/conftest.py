@@ -26,6 +26,7 @@ mxn: n_sequence x sequence_length
 
 import numpy as np
 import pytest
+from tensorflow.keras.utils import to_categorical
 
 from psiz.data.contents.categorize import Categorize
 from psiz.data.contents.rank import Rank
@@ -490,7 +491,7 @@ def c_categorize_a_4x10():
             [[2], [4], [6], [8], [10], [12], [14], [16], [0], [0]],
         ], dtype=np.int32
     )
-    correct_label = np.array(
+    objective_query_label = np.array(
         [
             [[0], [0], [0], [0], [0], [0], [0], [0], [0], [0]],
             [[1], [1], [1], [1], [1], [2], [2], [2], [2], [2]],
@@ -498,8 +499,11 @@ def c_categorize_a_4x10():
             [[0], [0], [0], [0], [0], [1], [1], [2], [0], [0]],
         ], dtype=np.int32
     )
+    objective_query_label = to_categorical(
+        objective_query_label, num_classes=3
+    )
     content = Categorize(
-        stimulus_set=stimulus_set, correct_label=correct_label
+        stimulus_set=stimulus_set, objective_query_label=objective_query_label
     )
     return content
 
@@ -522,7 +526,7 @@ def c_categorize_b_4x3():
             [[2], [4], [6]],
         ], dtype=np.int32
     )
-    correct_label = np.array(
+    objective_query_label = np.array(
         [
             [[0], [0], [0]],
             [[1], [1], [2]],
@@ -530,8 +534,11 @@ def c_categorize_b_4x3():
             [[2], [2], [0]],
         ], dtype=np.int32
     )
+    objective_query_label = to_categorical(
+        objective_query_label, num_classes=3
+    )
     content = Categorize(
-        stimulus_set=stimulus_set, correct_label=correct_label
+        stimulus_set=stimulus_set, objective_query_label=objective_query_label
     )
     return content
 

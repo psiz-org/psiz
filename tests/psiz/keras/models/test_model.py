@@ -1391,12 +1391,12 @@ def build_alcove_functional_v0():
     inp_stimulus_set = tf.keras.Input(
         shape=(None, 1), name='categorize/stimulus_set'
     )
-    inp_correct_label = tf.keras.Input(
-        shape=(None, 1,), name='categorize/correct_label'
+    inp_objective_query_label = tf.keras.Input(
+        shape=(None, n_output), name='categorize/objective_query_label'
     )
     inputs = {
         'categorize/stimulus_set': inp_stimulus_set,
-        'categorize/correct_label': inp_correct_label,
+        'categorize/objective_query_label': inp_objective_query_label,
     }
     outputs = rnn(inputs)
     model = tf.keras.Model(
@@ -1697,7 +1697,7 @@ class TestRankSimilarity:
         model = build_ranksim_subclass_a()
 
         def simulate_agent(x):
-            depth = 4  # TODO programmatic version?
+            depth = 4
             outcome_probs = model(x)
             outcome_distribution = tfp.distributions.Categorical(
                 probs=outcome_probs

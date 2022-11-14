@@ -22,6 +22,7 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.keras import backend as K
 
 from psiz.data.contents.content import Content
 from psiz.data.unravel_timestep import unravel_timestep
@@ -30,7 +31,9 @@ from psiz.data.unravel_timestep import unravel_timestep
 class Categorize(Content):
     """Content for categorization judgments."""
 
-    def __init__(self, stimulus_set=None, correct_label=None):
+    def __init__(
+        self, stimulus_set=None, objective_query_label=None, num_classes=None
+    ):
         """Initialize.
 
         Args:
@@ -41,27 +44,24 @@ class Categorize(Content):
                 timestep axis is added.
                 shape=
                     (samples, [sequence_length,] 1)
-            correct_label: An np.ndarray of non-negative integers
-                indicating the correct label. Must be rank-2 or rank-3.
-                If rank-2, it is assumed that sequence_length=1 and a
-                singleton timestep axis is added.Can use sparse or
-                one-hot encoding.
-                shape=
-                    (samples, [sequence_length,] 1)
-                    OR
-                    (samples, [sequence_length,] n_class)
-
+            objective_query_label: An np.ndarray one-hot encoding
+                indicating the objectively correct label of the query.
+                Must be rank-2 or rank-3. If rank-2, it is assumed that
+                sequence_length=1 and a singleton timestep axis is added.
+                shape=(samples, [sequence_length,] n_class)
         Raises:
             ValueError if improper arguments are provided.
 
         """
         Content.__init__(self)
         stimulus_set = self._rectify_shape(stimulus_set)
-        correct_label = self._rectify_shape(correct_label)
+        objective_query_label = self._rectify_shape(objective_query_label)
         self.n_sequence = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
         self.stimulus_set = self._validate_stimulus_set(stimulus_set)
-        self.correct_label = self._validate_correct_label(correct_label)
+        self.objective_query_label = self._validate_objective_query_label(
+            objective_query_label
+        )
 
     @property
     def is_actual(self):
@@ -106,49 +106,35 @@ class Categorize(Content):
 
         return stimulus_set
 
-    def _validate_correct_label(self, correct_label):
-        """Validate `correct_label`.
+    def _validate_objective_query_label(self, objective_query_label):
+        """Validate `objective_query_label`.
 
         Raises:
             ValueError
 
         """
-        # Check that provided values are integers.
-        if not issubclass(correct_label.dtype.type, np.integer):
-            raise ValueError(
-                "The argument `correct_label` must be an np.ndarray of "
-                "integers."
-            )
-
-        # Check that all values are greater than or equal to placeholder.
-        if np.sum(np.less(correct_label, self.mask_value)) > 0:
-            raise ValueError(
-                "The argument `correct_label` must contain integers "
-                "greater than or equal to 0."
-            )
-
         # Check shape.
-        if not correct_label.ndim == 3:
+        if not objective_query_label.ndim == 3:
             raise ValueError(
-                "The argument `correct_label` must be a rank-2 or rank-3 "
-                "ndarray with a shape corresponding to (samples, "
+                "The argument `objective_query_label` must be a rank-2 or "
+                "rank-3 ndarray with a shape corresponding to (samples, "
                 "sequence_length, n_stimuli_per_trial)."
             )
-        if correct_label.shape[0] != self.n_sequence:
+        if objective_query_label.shape[0] != self.n_sequence:
             raise ValueError(
-                "The argument `correct_label` must be a rank-2 or rank-3 "
-                "ndarray with a shape corresponding to (samples, "
+                "The argument `objective_query_label` must be a rank-2 or "
+                "rank-3 ndarray with a shape corresponding to (samples, "
                 "sequence_length, n_stimuli_per_trial). Provided value has "
                 "incorrect `samples`."
             )
-        if correct_label.shape[1] != self.sequence_length:
+        if objective_query_label.shape[1] != self.sequence_length:
             raise ValueError(
-                "The argument `correct_label` must be a rank-2 or rank-3 "
-                "ndarray with a shape corresponding to (samples, "
+                "The argument `objective_query_label` must be a rank-2 or "
+                "rank-3 ndarray with a shape corresponding to (samples, "
                 "sequence_length, n_stimuli_per_trial). Provided value has "
                 "incorrect `sequence_length`."
             )
-        return correct_label
+        return objective_query_label
 
     def export(self, export_format='tfds', with_timestep_axis=True):
         """Prepare trial content data for dataset.
@@ -166,18 +152,20 @@ class Categorize(Content):
 
         if export_format == 'tfds':
             stimulus_set = self.stimulus_set
-            correct_label = self.correct_label
+            objective_query_label = self.objective_query_label
 
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
-                correct_label = unravel_timestep(correct_label)
+                objective_query_label = unravel_timestep(objective_query_label)
 
             x = {
                 name_prefix + '/stimulus_set': tf.constant(
                     stimulus_set, name=(name_prefix + '/stimulus_set')
                 ),
-                name_prefix + '/correct_label': tf.constant(
-                    correct_label, name=(name_prefix + '/correct_label')
+                name_prefix + '/objective_query_label': tf.constant(
+                    objective_query_label,
+                    name=(name_prefix + '/objective_query_label'),
+                    dtype=K.floatx()
                 ),
             }
         else:

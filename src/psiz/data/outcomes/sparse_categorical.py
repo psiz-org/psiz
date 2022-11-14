@@ -100,7 +100,7 @@ class SparseCategorical(Outcome):
                 data is reshaped.
 
         """
-        w = super(SparseCategorical, self).export(
+        w_dict = super(SparseCategorical, self).export(
             export_format=export_format, with_timestep_axis=with_timestep_axis
         )
 
@@ -109,8 +109,8 @@ class SparseCategorical(Outcome):
             index = unravel_timestep(index)
 
         if export_format == 'tfds':
-            # Convert from sparse to one-hot-encoding (along new trailing
-            # axis).
+            # Convert from sparse to one-hot-encoding, creating new trailing
+            # axis.
             # pylint: disable=unexpected-keyword-arg
             # NOTE: A float for loss computation.
             y = tf.one_hot(
@@ -121,4 +121,4 @@ class SparseCategorical(Outcome):
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
-        return {self.name: y}, w
+        return {self.name: y}, w_dict

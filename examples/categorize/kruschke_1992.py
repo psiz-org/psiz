@@ -82,7 +82,7 @@ class ALCOVEModel(tf.keras.Model):
 
     def call(self, inputs, training=None):
         """Call."""
-        mask = tf.not_equal(inputs['categorize_stimulus_set'], 0)[:, :, 0]
+        mask = tf.not_equal(inputs['categorize/stimulus_set'], 0)[:, :, 0]
         return self.behavior(inputs, mask=mask)
 
 
@@ -98,14 +98,22 @@ def main():
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
 
-    simulation_fig5(fp_fig5)
-    simulation_fig14(fp_fig14)
+    fig5_simulation(fp_fig5)
+    fig14_simulation(fp_fig14)
 
 
 def build_model(
-        n_stimuli=None, n_dim=None, n_output=None, rho=None, tau=None,
-        beta=None, lr_attention=None, lr_association=None, temperature=None,
-        feature_matrix=None):
+    n_stimuli=None,
+    n_dim=None,
+    n_output=None,
+    rho=None,
+    tau=None,
+    beta=None,
+    lr_attention=None,
+    lr_association=None,
+    temperature=None,
+    feature_matrix=None
+):
     """Build model for Kruschke simulation experiments."""
     similarity = psiz.keras.layers.ExponentialSimilarity(
         beta_initializer=tf.keras.initializers.Constant(beta),
@@ -136,10 +144,6 @@ def build_model(
 
     # Compile model.
     compile_kwargs = {
-        # TODO it appears `SparseCategoricalCrossentropy` is necessary to
-        # prevent shape complaints at compile.
-        # TODO now that I changed `.output_size`, does non-sparse loss work?
-        # 'loss': tf.keras.losses.SparseCategoricalCrossentropy(),
         'loss': tf.keras.losses.CategoricalCrossentropy(),
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'weighted_metrics': [
@@ -151,7 +155,7 @@ def build_model(
     return model
 
 
-def simulation_fig5(fp_fig5):
+def fig5_simulation(fp_fig5):
     """Create figure 5."""
     n_sequence = 10
     n_epoch = 50
@@ -172,8 +176,7 @@ def simulation_fig5(fp_fig5):
     n_stimuli = feature_matrix.shape[0] - 1
     n_dim = feature_matrix.shape[1]
 
-    # Define tasks.
-    # TODO taken from psixy.task.shepard_hovland_jenkins_1961()
+    # Define tasks (from Shepard, Hovland, and Jenkins 1961).
     task_name_list = ['I', 'II', 'III', 'IV', 'V', 'VI']
     class_id = np.array([
         [0, 0, 0, 0, 1, 1, 1, 1],
@@ -186,48 +189,96 @@ def simulation_fig5(fp_fig5):
     n_task = len(task_name_list)
     n_output = 2
 
-    accuracy_epoch_0 = np.zeros([n_task, n_epoch])
-    accuracy_epoch_attn = np.zeros([n_task, n_epoch])
+    epoch_accuracy_null = np.zeros([n_task, n_epoch])
+    epoch_accuracy_attn = np.zeros([n_task, n_epoch])
     for i_task in range(n_task):
-        ds, y = generate_fig5_stimulus_sequences(
+        ds, objective_label = generate_fig5_dataset(
             n_output, class_id[i_task], n_sequence, n_epoch
         )
 
         # Model without attention.
-        model_0 = build_model(
-            n_stimuli=n_stimuli, n_dim=n_dim, n_output=n_output, rho=1.0,
-            tau=1.0, beta=6.5, lr_attention=0.0, lr_association=0.03,
-            temperature=2.0, feature_matrix=feature_matrix
+        model_null = build_model(
+            n_stimuli=n_stimuli,
+            n_dim=n_dim,
+            n_output=n_output,
+            rho=1.0,
+            tau=1.0,
+            beta=6.5,
+            lr_attention=0.0,
+            lr_association=0.03,
+            temperature=2.0,
+            feature_matrix=feature_matrix
         )
         # Model with attention.
         model_attn = build_model(
-            n_stimuli=n_stimuli, n_dim=n_dim, n_output=n_output, rho=1.0,
-            tau=1.0, beta=6.5, lr_attention=0.0033, lr_association=0.03,
-            temperature=2.0, feature_matrix=feature_matrix
+            n_stimuli=n_stimuli,
+            n_dim=n_dim,
+            n_output=n_output,
+            rho=1.0,
+            tau=1.0,
+            beta=6.5,
+            lr_attention=0.0033,
+            lr_association=0.03,
+            temperature=2.0,
+            feature_matrix=feature_matrix
         )
 
         # Predict behavior.
-        behav_predict_0 = model_0.predict(ds)
-        behav_predict_attn = model_attn.predict(ds)
+        predictions_null = model_null.predict(ds)
+        predictions_attn = model_attn.predict(ds)
 
         # Process predictions into per-epoch accuracy (i.e., probability
         # correct).
-        accuracy_0 = np.sum(behav_predict_0 * y, axis=2)
-        accuracy_epoch_0[i_task, :] = epoch_analysis_correct(
-            accuracy_0, n_trial_per_epoch
+        accuracy_null = np.sum(predictions_null * objective_label, axis=2)
+        epoch_accuracy_null[i_task, :] = epoch_accuracy(
+            accuracy_null, n_trial_per_epoch
         )
-        accuracy_attn = np.sum(behav_predict_attn * y, axis=2)
-        accuracy_epoch_attn[i_task, :] = epoch_analysis_correct(
+        accuracy_attn = np.sum(predictions_attn * objective_label, axis=2)
+        epoch_accuracy_attn[i_task, :] = epoch_accuracy(
             accuracy_attn, n_trial_per_epoch
         )
 
-    plot_fig5(task_name_list, accuracy_epoch_0, accuracy_epoch_attn)
+    plot_fig5(task_name_list, epoch_accuracy_null, epoch_accuracy_attn)
     plt.savefig(
         os.fspath(fp_fig5), format='pdf', bbox_inches='tight', dpi=400
     )
 
 
-def plot_fig5(task_name_list, accuracy_epoch_0, accuracy_epoch_attn):
+def generate_fig5_dataset(
+    n_output, class_id_in, n_sequence, n_epoch
+):
+    """Generate stimulus sequences."""
+    n_stimuli = len(class_id_in)
+    cat_idx = np.arange(n_stimuli, dtype=int)
+
+    # Create sequences based on description in paper.
+    # NOTE: sequence_length = n_epoch * n_stimuli
+    cat_idx_all = np.zeros([n_sequence, n_epoch * n_stimuli], dtype=int)
+    for i_seq in range(n_sequence):
+        curr_cat_idx = np.array([], dtype=int)
+        for _ in range(n_epoch):
+            curr_cat_idx = np.hstack(
+                [curr_cat_idx, np.random.permutation(cat_idx)]
+            )
+        cat_idx_all[i_seq, :] = curr_cat_idx
+    cat_idx_all = np.expand_dims(cat_idx_all, axis=2)
+    objective_label = tf.keras.utils.to_categorical(
+        class_id_in[cat_idx_all], num_classes=n_output
+    )
+    cat_idx_all = cat_idx_all + 1  # Add one for zero masking.
+
+    content = psiz.data.Categorize(
+        stimulus_set=cat_idx_all, objective_query_label=objective_label
+    )
+    ds = psiz.data.TrialDataset([content]).export().batch(
+        n_sequence, drop_remainder=False
+    )
+    # Return onehot representation of feedback labels for post-analysis of
+    # prediction results.
+    return ds, objective_label
+
+
+def plot_fig5(task_name_list, epoch_accuracy_null, epoch_accuracy_attn):
     """Create Figure 5."""
     n_task = len(task_name_list)
 
@@ -246,7 +297,7 @@ def plot_fig5(task_name_list, accuracy_epoch_0, accuracy_epoch_attn):
     ax = plt.subplot(1, 2, 1)
     for i_task in range(n_task):
         ax.plot(
-            accuracy_epoch_0[i_task, :],
+            epoch_accuracy_null[i_task, :],
             marker='o', markersize=3,
             c=color_array[i_task, :],
             label='{0}'.format(task_name_list[i_task])
@@ -259,7 +310,7 @@ def plot_fig5(task_name_list, accuracy_epoch_0, accuracy_epoch_attn):
     ax = plt.subplot(1, 2, 2)
     for i_task in range(n_task):
         ax.plot(
-            accuracy_epoch_attn[i_task, :],
+            epoch_accuracy_attn[i_task, :],
             marker='o', markersize=3,
             c=color_array[i_task, :],
             label='{0}'.format(task_name_list[i_task])
@@ -272,7 +323,7 @@ def plot_fig5(task_name_list, accuracy_epoch_0, accuracy_epoch_attn):
     plt.tight_layout()
 
 
-def simulation_fig14(fp_fig14):
+def fig14_simulation(fp_fig14):
     """Create figure 14."""
     n_sequence = 50
     n_epoch = 50
@@ -308,7 +359,7 @@ def simulation_fig14(fp_fig14):
     class_id = np.array([0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1])
     n_output = 2
 
-    ds, x_stimulus, y_onehot = generate_fig14_stimulus_sequences(
+    ds, x_stimulus, objective_label = generate_fig14_dataset(
         n_output, class_id, n_sequence, n_epoch
     )
 
@@ -320,21 +371,65 @@ def simulation_fig14(fp_fig14):
     )
 
     # Predict behavior.
-    behav_predict_attn = model_attn.predict(ds)
+    predictions_attn = model_attn.predict(ds)
 
     # Process predictions into stimulus-level epoch accuracy.
-    accuracy_attn = np.sum(behav_predict_attn * y_onehot, axis=2)
-    accuracy_epoch_attn = epoch_analysis_stimulus(
+    accuracy_attn = np.sum(predictions_attn * objective_label, axis=2)
+    epoch_accuracy_attn = epoch_accuracy_per_stimulus(
         x_stimulus, accuracy_attn, stimulus_id, n_trial_per_epoch
     )
 
-    plot_fig14(accuracy_epoch_attn, stimulus_label, n_stimuli)
+    plot_fig14(epoch_accuracy_attn, stimulus_label, n_stimuli)
     plt.savefig(
         os.fspath(fp_fig14), format='pdf', bbox_inches='tight', dpi=400
     )
 
 
-def plot_fig14(accuracy_epoch_attn, stimulus_label, n_stimuli):
+def generate_fig14_dataset(
+    n_output, class_id_in, n_sequence, n_epoch
+):
+    """Generate stimulus sequences."""
+    n_stimuli = len(class_id_in)
+
+    epoch_cat_idx = np.hstack([
+        np.arange(n_stimuli, dtype=int),
+        np.array([6, 6, 6, 7, 7, 7], dtype=int)
+    ])
+
+    n_trial_per_epoch = len(epoch_cat_idx)
+
+    cat_idx_all = np.zeros(
+        [n_sequence, n_epoch * n_trial_per_epoch], dtype=int
+    )
+    for i_seq in range(n_sequence):
+        curr_cat_idx = np.array([], dtype=int)
+        for _ in range(n_epoch):
+            curr_cat_idx = np.hstack(
+                [curr_cat_idx, np.random.permutation(epoch_cat_idx)]
+            )
+        cat_idx_all[i_seq, :] = curr_cat_idx
+
+    class_id = class_id_in[cat_idx_all]
+    # Add singleton axis.
+    cat_idx_all = np.expand_dims(cat_idx_all, axis=2)
+    # sequence_length = class_id.shape[1]
+
+    objective_label = tf.keras.utils.to_categorical(
+        class_id, num_classes=n_output
+    )
+
+    # Add one for zero masking
+    content = psiz.data.Categorize(
+        stimulus_set=cat_idx_all + 1, objective_query_label=objective_label
+    )
+    ds = psiz.data.TrialDataset([content]).export().batch(
+        n_sequence, drop_remainder=False
+    )
+
+    return ds, cat_idx_all, objective_label
+
+
+def plot_fig14(epoch_accuracy_attn, stimulus_label, n_stimuli):
     """Plot Figure 14."""
     # Plot figure.
     marker_list = [
@@ -355,7 +450,7 @@ def plot_fig14(accuracy_epoch_attn, stimulus_label, n_stimuli):
     ax = plt.subplot(1, 1, 1)
     for i_stim in range(n_stimuli):
         ax.plot(
-            accuracy_epoch_attn[i_stim, :],
+            epoch_accuracy_attn[i_stim, :],
             marker=marker_list[i_stim], markersize=3,
             c=color_array[i_stim, :],
             label='{0}'.format(stimulus_label[i_stim])
@@ -367,8 +462,8 @@ def plot_fig14(accuracy_epoch_attn, stimulus_label, n_stimuli):
     plt.tight_layout()
 
 
-def epoch_analysis_correct(prob_correct, n_trial_per_epoch):
-    """Epoch analysis."""
+def epoch_accuracy(prob_correct, n_trial_per_epoch):
+    """Compute per-epoch accuracy."""
     n_sequence = prob_correct.shape[0]
     n_epoch = int(prob_correct.shape[1] / n_trial_per_epoch)
 
@@ -383,9 +478,10 @@ def epoch_analysis_correct(prob_correct, n_trial_per_epoch):
     return epoch_avg
 
 
-def epoch_analysis_stimulus(
-        x_stimulus, prob_response, stim_id_list, n_trial_per_epoch):
-    """Epoch analysis."""
+def epoch_accuracy_per_stimulus(
+    x_stimulus, prob_response, stim_id_list, n_trial_per_epoch
+):
+    """Compute per-epoch accuracy for each unique stimulus."""
     n_sequence = prob_response.shape[0]
     n_epoch = int(prob_response.shape[1] / n_trial_per_epoch)
     n_stimuli = len(stim_id_list)
@@ -409,87 +505,6 @@ def epoch_analysis_stimulus(
             epoch_avg[i_stim, i_epoch] = np.mean(prob_response_2_epoch[locs])
 
     return epoch_avg
-
-
-def generate_fig5_stimulus_sequences(
-        n_output, class_id_in, n_sequence, n_epoch):
-    """Generate stimulus sequences."""
-    n_stimuli = len(class_id_in)
-    cat_idx = np.arange(n_stimuli, dtype=int)
-
-    cat_idx_all = np.zeros([n_sequence, n_epoch * n_stimuli], dtype=int)
-    for i_seq in range(n_sequence):
-        curr_cat_idx = np.array([], dtype=int)
-        for _ in range(n_epoch):
-            curr_cat_idx = np.hstack(
-                [curr_cat_idx, np.random.permutation(cat_idx)]
-            )
-        cat_idx_all[i_seq, :] = curr_cat_idx
-
-    y = class_id_in[cat_idx_all]
-
-    # sequence_length = n_epoch * n_stimuli
-
-    # Must be at least rank 3 for RNN cell.
-    y_onehot = tf.one_hot(y, n_output, on_value=1.0, off_value=0.0)
-    x = {
-        'categorize_stimulus_set': tf.constant(
-            np.expand_dims(cat_idx_all + 1, axis=2)
-        ),
-        'categorize_correct_label': tf.constant(
-            np.expand_dims(y, axis=2)
-        ),
-    }
-    w = tf.constant(np.ones_like(y))
-    ds = tf.data.Dataset.from_tensor_slices((x, y_onehot, w)).batch(
-        n_sequence, drop_remainder=False
-    )
-    return ds, y_onehot.numpy()
-
-
-def generate_fig14_stimulus_sequences(
-        n_output, class_id_in, n_sequence, n_epoch):
-    """Generate stimulus sequences."""
-    n_stimuli = len(class_id_in)
-    epoch_cat_idx = np.hstack([
-        np.arange(n_stimuli, dtype=int),
-        np.array([6, 6, 6, 7, 7, 7], dtype=int)
-    ])
-
-    n_trial_per_epoch = len(epoch_cat_idx)
-
-    cat_idx_all = np.zeros(
-        [n_sequence, n_epoch * n_trial_per_epoch], dtype=int
-    )
-    for i_seq in range(n_sequence):
-        curr_cat_idx = np.array([], dtype=int)
-        for _ in range(n_epoch):
-            curr_cat_idx = np.hstack(
-                [curr_cat_idx, np.random.permutation(epoch_cat_idx)]
-            )
-        cat_idx_all[i_seq, :] = curr_cat_idx
-
-    class_id = class_id_in[cat_idx_all]
-
-    # sequence_length = class_id.shape[1]
-
-    y = tf.constant(np.expand_dims(class_id, axis=2))
-    y_onehot = tf.one_hot(
-        class_id, n_output, on_value=1.0, off_value=0.0
-    ).numpy()
-    x = {
-        'categorize_stimulus_set': tf.constant(
-            np.expand_dims(cat_idx_all + 1, axis=2)
-        ),
-        'categorize_correct_label': tf.constant(
-            np.expand_dims(class_id, axis=2)
-        ),
-    }
-    w = tf.constant(np.ones_like(class_id))
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
-        n_sequence, drop_remainder=False
-    )
-    return ds, cat_idx_all, y_onehot
 
 
 if __name__ == "__main__":

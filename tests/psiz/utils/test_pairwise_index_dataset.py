@@ -28,7 +28,7 @@ def test_scalar_defaults():
 
     """
     n_stimuli = 5
-    ds_pairs, ds_info = pairwise_index_dataset(n_stimuli)
+    ds_pairs, ds_info = pairwise_index_dataset(n_stimuli, batch_size=10)
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
     pairs_1 = pairs[0][1]
@@ -55,7 +55,9 @@ def test_array_defaults():
 
     """
     n_stimuli = 5
-    ds_pairs, ds_info = pairwise_index_dataset(np.arange(n_stimuli))
+    ds_pairs, ds_info = pairwise_index_dataset(
+        np.arange(n_stimuli), batch_size=10
+    )
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
     pairs_1 = pairs[0][1]
@@ -82,7 +84,7 @@ def test_list_defaults():
 
     """
     indices = [0, 1, 2, 3, 4]
-    ds_pairs, ds_info = pairwise_index_dataset(indices)
+    ds_pairs, ds_info = pairwise_index_dataset(indices, batch_size=10)
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
     pairs_1 = pairs[0][1]
@@ -105,7 +107,9 @@ def test_list_defaults():
 def test_all():
     """Test default optional arguments."""
     n_stimuli = 5
-    ds_pairs, ds_info = pairwise_index_dataset(n_stimuli, elements='all')
+    ds_pairs, ds_info = pairwise_index_dataset(
+        n_stimuli, elements='all', batch_size=25
+    )
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
     pairs_1 = pairs[0][1]
@@ -135,7 +139,7 @@ def test_lower():
     """Test default optional arguments."""
     n_stimuli = 5
     ds_pairs, ds_info = pairwise_index_dataset(
-        n_stimuli, elements='lower'
+        n_stimuli, elements='lower', batch_size=10
     )
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
@@ -159,7 +163,9 @@ def test_lower():
 def test_off():
     """Test default optional arguments."""
     n_stimuli = 5
-    ds_pairs, ds_info = pairwise_index_dataset(n_stimuli, elements='off')
+    ds_pairs, ds_info = pairwise_index_dataset(
+        n_stimuli, elements='off', batch_size=20
+    )
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
     pairs_1 = pairs[0][1]
@@ -201,7 +207,7 @@ def test_subsample_0():
     """Test subsample."""
     n_stimuli = 10
     ds_pairs, ds_info = pairwise_index_dataset(
-        n_stimuli, elements='all', subsample=.1
+        n_stimuli, elements='all', subsample=.1, batch_size=10
     )
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
@@ -227,7 +233,7 @@ def test_subsample_1():
     n_stimuli = 5
     # Test correct, but edge case.
     ds_pairs, ds_info = pairwise_index_dataset(
-        n_stimuli, elements='upper', subsample=1
+        n_stimuli, elements='upper', subsample=1, batch_size=10
     )
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]
@@ -302,7 +308,7 @@ def test_groups():
     """Test non-default group arguments."""
     n_stimuli = 5
     ds_pairs, ds_info = pairwise_index_dataset(
-        n_stimuli, groups=[0]
+        n_stimuli, groups=[0], batch_size=10
     )
     pairs = list(ds_pairs.as_numpy_iterator())
     pairs_0 = pairs[0][0]

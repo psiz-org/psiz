@@ -20,6 +20,8 @@ Functions:
 
 """
 
+import warnings
+
 import numpy as np
 import tensorflow as tf
 
@@ -27,32 +29,44 @@ from psiz.utils.generate_group_matrix import generate_group_matrix
 
 
 def pairwise_index_dataset(
-        indices, batch_size=None, elements='upper', groups=None,
-        subsample=None, seed=252):
+    indices, elements='upper', subsample=None, seed=252, batch_size=None,
+    groups=None
+):
     """Assemble pairwise combinations.
 
     Args:
         indices: An scalar integer or an array-like of integers
             indicating indices. If a scalar, indices are
             `np.arange(n)`.
-        batch_size (optional): Determines the batch size. By default,
-            the batch size will be set to the number of combinations.
         elements (optional): Determines which combinations in the pairwise
             matrix will be used. Can be one of 'all', 'upper', 'lower',
             or 'off'.
-        groups (optional): Array-like integers indicating group
-            membership information. For example, `[4, 3]`
-            indicates that the first optional column has a value of 4
-            and the second optional column has a value of 3.
         subsample: A float ]0,1] indicating the proportion of all pairs
             that should be retained. By default all pairs are retained.
         seed: Integer controlling which pairs are subsampled.
+        batch_size (optional): Determines the batch size. By default,
+            the batch size will be set to the number of combinations.
+        groups (optional): DEPRECATED Array-like integers indicating
+            group membership information. For example, `[4, 3]`
+            indicates that the first optional column has a value of 4
+            and the second optional column has a value of 3.
 
     Returns:
         ds: A Tensorflow Dataset.
         ds_info: A convenience dictionary.
 
     """
+    if groups is not None:
+        warnings.warn(
+            (
+                'Key-word argument `groups` will be deprecated. Use '
+                'TensorFlow Dataset manipulation instead; '
+                'version_announced=0.8.0; version_scheduled=0.9.0'
+            ),
+            DeprecationWarning,
+            stacklevel=2
+        )
+
     # Check if scalar or array-lie.
     indices = np.array(indices, copy=False)
     if indices.ndim == 0:
@@ -107,29 +121,32 @@ def pairwise_index_dataset(
     idx_0 = tf.constant(idx_0, dtype=tf.int32)
     idx_1 = tf.constant(idx_1, dtype=tf.int32)
 
-    if batch_size is None:
-        batch_size = np.minimum(10000, n_pair)
-
-    ds_info = {
-        'n_pair': n_pair,
-        'batch_size': batch_size,
-        'n_batch': np.ceil(n_pair / batch_size),
-        'elements': elements
-    }
-
     if groups is not None:
         group_matrix = generate_group_matrix(n_pair, groups=groups)
         group_matrix = tf.constant(group_matrix, dtype=np.int32)
 
         ds = tf.data.Dataset.from_tensor_slices(
             ((idx_0, idx_1, group_matrix))
-        ).batch(
-            batch_size, drop_remainder=False
         )
     else:
         ds = tf.data.Dataset.from_tensor_slices(
             ((idx_0, idx_1))
-        ).batch(
+        )
+
+    if batch_size is not None:
+        ds = ds.batch(
             batch_size, drop_remainder=False
         )
+        n_batch = np.ceil(n_pair / batch_size)
+        # TODO defautl batch behavior has changed
+        # batch_size = np.minimum(10000, n_pair)
+    else:
+        n_batch = None
+
+    ds_info = {
+        'n_pair': n_pair,
+        'batch_size': batch_size,
+        'n_batch': n_batch,
+        'elements': elements
+    }
     return ds, ds_info

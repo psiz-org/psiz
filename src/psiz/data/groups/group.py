@@ -26,39 +26,36 @@ from psiz.data.unravel_timestep import unravel_timestep
 class Group(TrialComponent):
     """Base class for group membership data."""
 
-    def __init__(self, group_values, name=None):
+    def __init__(self, value, name=None):
         """Initialize.
 
         Args:
-            group_values: An np.ndarray that must be rank-2 or
-                rank-3.
+            value: An np.ndarray that must be rank-2 or rank-3.
                 shape=(samples, [sequence_length], n_col)
             name: A string indicating the variable name of the group.
 
         """
         TrialComponent.__init__(self)
-        group_values = self._rectify_shape(group_values)
-        group_values = self._validate_group_values(
-            name, group_values
-        )
-        self.n_sequence = group_values.shape[0]
-        self.sequence_length = group_values.shape[1]
+        value = self._rectify_shape(value)
+        value = self._validate_value(name, value)
+        self.n_sequence = value.shape[0]
+        self.sequence_length = value.shape[1]
         self.name = name
-        self.group_values = group_values
+        self.value = value
 
-    def _rectify_shape(self, group_values):
+    def _rectify_shape(self, value):
         """Rectify shape of group weights."""
-        if group_values.ndim == 2:
+        if value.ndim == 2:
             # Assume independent trials and add singleton timestep axis.
-            group_values = np.expand_dims(
-                group_values, axis=self.timestep_axis
+            value = np.expand_dims(
+                value, axis=self.timestep_axis
             )
-        return group_values
+        return value
 
-    def _validate_group_values(self, group_key, group_values):
+    def _validate_value(self, group_key, value):
         """Validate group weights."""
-        # Check rank of `group_values`.
-        if not (group_values.ndim == 3):
+        # Check rank of `value`.
+        if not (value.ndim == 3):
             raise ValueError(
                 "The values for '{0}' must be a rank-2 or rank-3 ND "
                 "array. If using a sparse coding format, make sure you have "
@@ -66,9 +63,9 @@ class Group(TrialComponent):
                 "requirement.".format(group_key)
             )
 
-        # If `group_values` looks like sparse coding format, check data type.
-        if group_values.shape[-1] == 1:
-            if not isinstance(group_values[0, 0, 0], (float, np.float)):
+        # If `value` looks like sparse coding format, check data type.
+        if value.shape[-1] == 1:
+            if not isinstance(value[0, 0, 0], (float, np.float)):
                 # NOTE: We check if float, because integer or string is ok.
                 warnings.warn(
                     "The values for '{0}' appear to use a sparse "
@@ -78,7 +75,7 @@ class Group(TrialComponent):
                     )
                 )
 
-        return group_values
+        return value
 
     def export(self, export_format='tfds', with_timestep_axis=True):
         """Export.
@@ -92,18 +89,18 @@ class Group(TrialComponent):
                 reshaped.
 
         """
-        group_values = self.group_values
+        value = self.value
         if with_timestep_axis is False:
-            group_values = unravel_timestep(group_values)
+            value = unravel_timestep(value)
 
         if export_format == 'tfds':
-            group_values = tf.constant(
-                group_values, name=('group/' + self.name)
+            value = tf.constant(
+                value, name=('group/' + self.name)
             )
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
         return {
-            self.name: group_values
+            self.name: value
         }

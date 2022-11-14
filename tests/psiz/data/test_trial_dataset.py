@@ -91,7 +91,7 @@ def test_init_2(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
     With group, mixture format.
 
     """
-    group_values = np.array(
+    value = np.array(
         [
             [[.1, .9]],
             [[.5, .5]],
@@ -100,7 +100,7 @@ def test_init_2(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
         ]
     )
     group_0 = Group(
-        group_values, name='group_id'
+        value, name='group_id'
     )
 
     td = TrialDataset([c_2rank1_aa_4x1, group_0, o_2rank1_aa_4x1])
@@ -134,7 +134,7 @@ def test_init_3(c_2rank1_aa_4x1):
         name='rank_outcome'
     )
 
-    group_values = np.array(
+    value = np.array(
         [
             [[0]],
             [[1]],
@@ -143,7 +143,7 @@ def test_init_3(c_2rank1_aa_4x1):
         ]
     )
     group_0 = Group(
-        group_values, name='condition_idx'
+        value, name='condition_idx'
     )
 
     td = TrialDataset([c_2rank1_aa_4x1, group_0, rank_outcome])

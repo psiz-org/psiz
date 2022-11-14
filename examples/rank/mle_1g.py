@@ -64,6 +64,22 @@ class BehaviorModel(tf.keras.Model):
         return self.behavior(inputs)
 
 
+class SimilarityModel(tf.keras.Model):
+    """A similarity model."""
+
+    def __init__(self, percept=None, kernel=None, **kwargs):
+        """Initialize."""
+        super(SimilarityModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.kernel = kernel
+
+    def call(self, inputs):
+        """Call."""
+        z0 = self.percept(inputs[0])
+        z1 = self.percept(inputs[1])
+        return self.kernel([z0, z1])
+
+
 def main():
     """Run script."""
     # Settings.
@@ -71,7 +87,7 @@ def main():
     fp_board = fp_project / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 3
-    epochs = 3000
+    epochs = 100
     batch_size = 128
     n_trial = 30 * batch_size
     n_trial_train = 24 * batch_size
@@ -88,12 +104,18 @@ def main():
     ds_pairs, _ = psiz.utils.pairwise_index_dataset(
         np.arange(n_stimuli) + 1, elements='upper'
     )
+    # NOTE: We include an empty "target" component in dataset tuple to satisfy
+    # `predict` assumptions.
+    ds_pairs = ds_pairs.map(
+        lambda x0, x1: ((x0, x1), ())
+    ).cache().batch(batch_size, drop_remainder=False)
 
     model_true = build_ground_truth_model(n_stimuli, n_dim)
-
-    simmat_true = psiz.utils.pairwise_similarity(
-        model_true.behavior.percept, model_true.behavior.kernel, ds_pairs
-    ).numpy()
+    model_similarity_true = SimilarityModel(
+        percept=model_true.behavior.percept,
+        kernel=model_true.behavior.kernel
+    )
+    simmat_true = model_similarity_true.predict(ds_pairs)
 
     # Generate a random docket of trials.
     rng = np.random.default_rng()
@@ -183,9 +205,12 @@ def main():
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = psiz.utils.pairwise_similarity(
-            model.behavior.percept, model.behavior.kernel, ds_pairs
-        ).numpy()
+        model_similarity = SimilarityModel(
+            percept=model.behavior.percept,
+            kernel=model.behavior.kernel
+        )
+        simmat_infer = model_similarity.predict(ds_pairs)
+
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2
 

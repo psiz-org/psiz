@@ -73,7 +73,7 @@ class Group(TrialComponent):
                 warnings.warn(
                     "The values for '{0}' appear to use a sparse "
                     "coding. To improve efficiency, these weights should "
-                    "have an integer dtype, not a float dtyle.".format(
+                    "have an integer dtype, not a float dtype.".format(
                         group_key
                     )
                 )

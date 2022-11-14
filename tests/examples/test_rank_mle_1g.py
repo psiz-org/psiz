@@ -267,9 +267,9 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:
-        n_obs = np.array([n_trial_train], dtype=int)
+        n_trial_train_frame = np.array([n_trial_train], dtype=int)
     else:
-        n_obs = np.round(
+        n_trial_train_frame = np.round(
             np.linspace(15, n_trial_train, n_frame)
         ).astype(np.int64)
 
@@ -277,20 +277,20 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     for i_frame in range(n_frame):
         # Prepare `ds_train_sub` for training.
         # ds_content_train_sub, _ = tf.keras.utils.split_dataset(
-        #     ds_content_train, left_size=int(n_obs[i_frame])
+        #     ds_content_train, left_size=int(n_trial_train_frame[i_frame])
         # )
         # ds_outcome_train_sub, _ = tf.keras.utils.split_dataset(
-        #     ds_outcome_train, left_size=int(n_obs[i_frame])
+        #     ds_outcome_train, left_size=int(n_trial_train_frame[i_frame])
         # )
         # ds_train_sub = tf.data.Dataset.zip(
         #     (ds_content_train_sub, ds_outcome_train_sub)
         # ).cache().shuffle(
-        #     buffer_size=n_obs[i_frame], reshuffle_each_iteration=True
+        #     buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
         # ).batch(
         #     batch_size, drop_remainder=False
         # )
-        ds_train_sub = ds_train.take(int(n_obs[i_frame])).cache().shuffle(
-            buffer_size=n_obs[i_frame], reshuffle_each_iteration=True
+        ds_train_sub = ds_train.take(int(n_trial_train_frame[i_frame])).cache().shuffle(
+            buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
         ).batch(
             batch_size, drop_remainder=False
         )

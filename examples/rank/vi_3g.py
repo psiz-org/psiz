@@ -551,7 +551,7 @@ def model_similarity(model, groups=[], n_sample=None):
         n_sample:
 
     """
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
+    ds_pairs, ds_info = psiz.data.pairwise_index_dataset(
         model.n_stimuli, groups=groups
     )
     simmat = psiz.utils.pairwise_similarity(

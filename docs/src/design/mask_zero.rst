@@ -31,7 +31,7 @@ Details
 #. The `mask_zero` argument has the simplist interaction with other arguments. Some functions and classes allow users to specify how many stimuli are present (i.e., `n_stimuli`). If `mask_zero` is True, then the `n_stimuli` provided by the user must take into account that there is an additional "mask stimulus".
 #. When stacking trials, check to make sure the objects have compatible `mask_zero` attributes. If not, throw error to make user explicitly aware of issue.
 #. User is responsible inspecting indices of PsiZ `Catalog` object and incrementing indices if their model uses zero masking.
-#. The `mask_zero` argument is added only when strictly necessary. Where possible, PsiZ functions require users to provide a list of eligible indices instead of providing a `mask_zero` argument. This makes the functions more general (e.g., `psiz.utils.pairwise_index_dataset`). The `Catalog` class does not include a `mask_zero` argument since it is not necessary.
+#. The `mask_zero` argument is added only when strictly necessary. Where possible, PsiZ functions require users to provide a list of eligible indices instead of providing a `mask_zero` argument. This makes the functions more general (e.g., `psiz.data.pairwise_index_dataset`). The `Catalog` class does not include a `mask_zero` argument since it is not necessary.
 
 Rejected Solutions
 ==================

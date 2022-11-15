@@ -26,6 +26,7 @@ from psiz.data.groups.group import Group
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.outcomes.continuous import Continuous
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
+from psiz.data.pairwise_index_dataset import pairwise_index_dataset
 from psiz.data.unravel_timestep import unravel_timestep
 
 __all__ = [
@@ -39,5 +40,6 @@ __all__ = [
     'Outcome',
     'Continuous',
     'SparseCategorical',
-    'unravel_timestep'
+    'pairwise_index_dataset',
+    'unravel_timestep',
 ]

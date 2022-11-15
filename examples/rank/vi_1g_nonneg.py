@@ -79,7 +79,7 @@ def main():
     plt.rc('figure', titlesize=large_size)
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.utils.pairwise_index_dataset(n_stimuli)
+    ds_pairs, _ = psiz.data.pairwise_index_dataset(n_stimuli)
 
     model_true = ground_truth(n_stimuli, n_dim)
 

@@ -17,7 +17,7 @@
 
 import numpy as np
 
-from psiz.utils import pairwise_index_dataset
+from psiz.data import pairwise_index_dataset
 from psiz.utils import pairwise_similarity
 
 

@@ -166,7 +166,7 @@ def main():
     color_array = cmap(norm(range(n_stimuli)))
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+    ds_pairs, _ = psiz.data.pairwise_index_dataset(
         np.arange(n_stimuli) + 1, elements='upper'
     )
     # Create pair datasets with additional group-specific info.

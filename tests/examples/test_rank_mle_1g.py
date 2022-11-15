@@ -194,11 +194,11 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
     if mask_zero:
-        ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+        ds_pairs, _ = psiz.data.pairwise_index_dataset(
             np.arange(n_stimuli) + 1, elements='upper'
         )
     else:
-        ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+        ds_pairs, _ = psiz.data.pairwise_index_dataset(
             n_stimuli, elements='upper'
         )
 

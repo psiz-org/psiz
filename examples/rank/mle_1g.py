@@ -101,7 +101,7 @@ def main():
         shutil.rmtree(fp_board)
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+    ds_pairs, _ = psiz.data.pairwise_index_dataset(
         np.arange(n_stimuli) + 1, elements='upper'
     )
     # NOTE: We include an empty "target" component in dataset tuple to satisfy

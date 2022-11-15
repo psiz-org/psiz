@@ -139,6 +139,7 @@ def main():
         outcome_one_hot = tf.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
+    # Add outcomes to dataset.
     ds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
 
     # Partition data into 80% train, 10% validation and 10% test set.
@@ -205,11 +206,11 @@ def main():
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        model_similarity = SimilarityModel(
+        model_inferred_similarity = SimilarityModel(
             percept=model.behavior.percept,
             kernel=model.behavior.kernel
         )
-        simmat_infer = model_similarity.predict(ds_pairs)
+        simmat_infer = model_inferred_similarity.predict(ds_pairs)
 
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2

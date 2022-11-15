@@ -110,9 +110,10 @@ class StochasticModel(tf.keras.Model):
         # samples.
         x = self.repeat_samples_in_batch_axis(x, self._n_sample)
         y = self.repeat_samples_in_batch_axis(y, self._n_sample)
-        sample_weight = self.repeat_samples_in_batch_axis(
-            sample_weight, self._n_sample
-        )
+        if sample_weight is not None:
+            sample_weight = self.repeat_samples_in_batch_axis(
+                sample_weight, self._n_sample
+            )
 
         # NOTE: During computation of gradients, IndexedSlices are
         # created which generates a TensorFlow warning. I cannot
@@ -177,9 +178,10 @@ class StochasticModel(tf.keras.Model):
         # samples.
         x = self.repeat_samples_in_batch_axis(x, self._n_sample)
         y = self.repeat_samples_in_batch_axis(y, self._n_sample)
-        sample_weight = self.repeat_samples_in_batch_axis(
-            sample_weight, self._n_sample
-        )
+        if sample_weight is not None:
+            sample_weight = self.repeat_samples_in_batch_axis(
+                sample_weight, self._n_sample
+            )
 
         y_pred = self(x, training=False)
 
@@ -238,8 +240,9 @@ class StochasticModel(tf.keras.Model):
         used.
 
         Args:
-            data: A data structure of Tensors. Can be a single Tensor or
-                a single-level dictionary of Tensors.
+            data: A data structure of Tensors. Can be a single Tensor,
+                tuple of Tensors, or a single-level dictionary of
+                Tensors.
             n_sample: Integer indicating the number of times to repeat.
 
         Returns:
@@ -248,11 +251,17 @@ class StochasticModel(tf.keras.Model):
 
         """
         if isinstance(data, dict):
+            new_data = {}
             for key in data:
-                data[key] = tf.repeat(data[key], repeats=n_sample, axis=0)
+                new_data[key] = tf.repeat(data[key], repeats=n_sample, axis=0)
+        elif isinstance(data, tuple):
+            new_data = []
+            for i_data in data:
+                new_data.append(tf.repeat(i_data, repeats=n_sample, axis=0))
+            new_data = tuple(new_data)
         else:
-            data = tf.repeat(data, repeats=n_sample, axis=0)
-        return data
+            new_data = tf.repeat(data, repeats=n_sample, axis=0)
+        return new_data
 
     def average_repeated_samples(self, data, n_sample):
         """Average over repeated samples.

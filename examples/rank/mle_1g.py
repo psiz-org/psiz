@@ -92,7 +92,7 @@ def main():
     n_trial = 30 * batch_size
     n_trial_train = 24 * batch_size
     n_trial_val = 3 * batch_size
-    n_frame = 3  # Set to 8 to observe convergence behavior.
+    n_frame = 1  # Set to 8 to observe convergence behavior.
 
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
@@ -168,7 +168,7 @@ def main():
     val_cce = np.empty((n_frame))
     test_cce = np.empty((n_frame))
     for i_frame in range(n_frame):
-        ds_train_sub = ds_train.take(
+        ds_train_frame = ds_train.take(
             int(n_trial_train_frame[i_frame])
         ).cache().shuffle(
             buffer_size=n_trial_train_frame[i_frame],
@@ -195,7 +195,7 @@ def main():
 
         # Infer embedding.
         history = model.fit(
-            x=ds_train_sub, validation_data=ds_val, epochs=epochs,
+            x=ds_train_frame, validation_data=ds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
         train_cce[i_frame] = history.history['cce'][-1]
@@ -271,15 +271,13 @@ def build_ground_truth_model(n_stimuli, n_dim):
         n_reference=8, n_select=2, percept=percept, kernel=kernel
     )
     model = BehaviorModel(behavior=rank)
-
-    compile_kwargs = {
-        'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-        'weighted_metrics': [
+    model.compile(
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
+        weighted_metrics=[
             tf.keras.metrics.CategoricalCrossentropy(name='cce')
         ]
-    }
-    model.compile(**compile_kwargs)
+    )
 
     return model
 

@@ -49,6 +49,72 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
+class BehaviorModel(tf.keras.Model):
+    """A behavior model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(BehaviorModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
+
+
+class SimilarityModel(tf.keras.Model):
+    """A similarity model."""
+
+    def __init__(self, percept=None, kernel=None, **kwargs):
+        """Initialize."""
+        super(SimilarityModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.kernel = kernel
+
+    def call(self, inputs):
+        """Call."""
+        z0 = self.percept(inputs[0])
+        z1 = self.percept(inputs[1])
+        return self.kernel([z0, z1])
+
+
+class StochasticBehaviorModel(psiz.keras.StochasticModel):
+    """A behavior model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(StochasticBehaviorModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
+
+
+class StochasticSimilarityModel(psiz.keras.StochasticModel):
+    """A similarity model."""
+
+    def __init__(self, percept=None, kernel=None, **kwargs):
+        """Initialize."""
+        super(StochasticSimilarityModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.kernel = kernel
+
+    def call(self, inputs):
+        """Call."""
+        z0 = self.percept(inputs[0])
+        z1 = self.percept(inputs[1])
+        return self.kernel([z0, z1])
+
+
 def main():
     """Run script."""
     # Settings.
@@ -56,10 +122,11 @@ def main():
     fp_board = fp_project / Path('logs', 'fit')
     n_stimuli = 30
     n_dim = 2
-    n_group = 1
-    n_trial = 2000
     epochs = 1000
     batch_size = 128
+    n_trial = 30 * batch_size
+    n_trial_train = 24 * batch_size
+    n_trial_val = 3 * batch_size
     n_frame = 1  # Set to 7 to observe convergence behavior.
 
     # Directory preparation.
@@ -90,60 +157,80 @@ def main():
     color_array = np.vstack([gray_array, color_array])
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.utils.pairwise_index_dataset(n_stimuli)
+    ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+        np.arange(n_stimuli) + 1, elements='upper'
+    )
+    # NOTE: We include an empty "target" component in dataset tuple to satisfy
+    # `predict` assumptions.
+    ds_pairs = ds_pairs.map(
+        lambda x0, x1: ((x0, x1), ())
+    ).cache().batch(batch_size, drop_remainder=False)
 
-    model_true = ground_truth(n_stimuli, n_dim)
-
-    simmat_true = psiz.utils.pairwise_similarity(
-        model_true.stimuli, model_true.kernel, ds_pairs
-    ).numpy()
+    model_true = build_ground_truth_model(n_stimuli, n_dim)
+    model_similarity_true = SimilarityModel(
+        percept=model_true.behavior.percept,
+        kernel=model_true.behavior.kernel
+    )
+    simmat_true = model_similarity_true.predict(ds_pairs)
 
     # Generate a random docket of trials.
-    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
-    docket = generator.generate(n_trial)
+    rng = np.random.default_rng()
+    eligibile_indices = np.arange(n_stimuli) + 1
+    p = np.ones_like(eligibile_indices) / len(eligibile_indices)
+    stimulus_set = psiz.utils.choice_wo_replace(
+        eligibile_indices, (n_trial, 9), p, rng=rng
+    )
+    content = psiz.data.Rank(stimulus_set, n_select=2)
+    td = psiz.data.TrialDataset([content])
+    ds_content = td.export(export_format='tfds', with_timestep_axis=False)
 
     # Simulate similarity judgments.
-    agent = psiz.agents.RankAgent(model_true)
-    obs = agent.simulate(docket)
+    def simulate_agent(x):
+        depth = content.n_outcome
+        outcome_probs = model_true(x)
+        outcome_distribution = tfp.distributions.Categorical(
+            probs=outcome_probs
+        )
+        outcome_idx = outcome_distribution.sample()
+        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        return outcome_one_hot
 
-    # Partition observations into 80% train, 10% validation and 10% test set.
-    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
+    ds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
 
-    # Convert observations to TF dataset.
-    ds_obs_val = obs_val.as_dataset().batch(
+    # Partition data into 80% train, 10% validation and 10% test set.
+    ds_train = ds.take(n_trial_train)
+    ds_valtest = ds.skip(n_trial_train)
+    ds_val = ds_valtest.take(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
-    ds_obs_test = obs_test.as_dataset().batch(
+    ds_test = ds_valtest.skip(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
-
-    compile_kwargs = {
-        'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-        'weighted_metrics': [
-            tf.keras.metrics.CategoricalCrossentropy(name='cce')
-        ]
-    }
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:
-        n_obs = np.array([obs_train.n_trial], dtype=int)
+        n_trial_train_frame = np.array([n_trial_train], dtype=int)
     else:
-        n_obs = np.round(
-            np.linspace(15, obs_train.n_trial, n_frame)
+        n_trial_train_frame = np.round(
+            np.linspace(15, n_trial_train, n_frame)
         ).astype(np.int64)
     r2 = np.empty((n_frame)) * np.nan
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        include_idx = np.arange(0, n_obs[i_frame])
-        obs_round_train = obs_train.subset(include_idx)
-        ds_obs_round_train = obs_round_train.as_dataset().shuffle(
-            buffer_size=obs_round_train.n_trial, reshuffle_each_iteration=True
-        ).batch(batch_size, drop_remainder=False)
+        ds_train_frame = ds_train.take(
+            int(n_trial_train_frame[i_frame])
+        ).cache().shuffle(
+            buffer_size=n_trial_train_frame[i_frame],
+            reshuffle_each_iteration=True
+        ).batch(
+            batch_size, drop_remainder=False
+        )
         print(
-            '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
+            '\n  Frame {0} ({1} samples)'.format(
+                i_frame, n_trial_train_frame[i_frame]
+            )
         )
 
         # Use Tensorboard callback.
@@ -154,24 +241,23 @@ def main():
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
         cb_early = tf.keras.callbacks.EarlyStopping(
-            'loss', patience=100, mode='min', restore_best_weights=False,
+            'loss', patience=15, mode='min', restore_best_weights=False,
             verbose=1
         )
         callbacks = [cb_board, cb_early]
 
         # Define model.
         model_inferred = build_model(
-            n_stimuli, n_dim, n_group, obs_round_train.n_trial
+            n_stimuli, n_dim, n_trial_train_frame[i_frame]
         )
 
         # Infer embedding.
-        model_inferred.compile(**compile_kwargs)
         history = model_inferred.fit(
-            x=ds_obs_round_train, validation_data=ds_obs_val, epochs=epochs,
+            x=ds_train_frame, validation_data=ds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
 
-        dist = model_inferred.stimuli.prior.embeddings.distribution
+        dist = model_inferred.behavior.percept.prior.embeddings.distribution
         print('    Inferred prior scale: {0:.4f}'.format(
             dist.distribution.distribution.scale[0, 0]
         ))
@@ -184,20 +270,19 @@ def main():
 
         tf.keras.backend.clear_session()
         model_inferred.n_sample = 100
-        model_inferred.compile(**compile_kwargs)
         test_metrics = model_inferred.evaluate(
-            ds_obs_test, verbose=0, return_dict=True
+            ds_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = tf.reduce_mean(
-            psiz.utils.pairwise_similarity(
-                model_inferred.stimuli, model_inferred.kernel, ds_pairs,
-                n_sample=100
-            ), axis=1
-        ).numpy()
+        model_similarity = StochasticSimilarityModel(
+            percept=model_inferred.behavior.percept,
+            kernel=model_inferred.behavior.kernel,
+            n_sample=100
+        )
+        simmat_infer = model_similarity.predict(ds_pairs)
 
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2
@@ -206,7 +291,7 @@ def main():
             '    n_obs: {0:4d} | train_loss: {1:.2f} | '
             'val_loss: {2:.2f} | test_loss: {3:.2f} | '
             'Correlation (R^2): {4:.2f}'.format(
-                n_obs[i_frame], train_loss[i_frame],
+                n_trial_train_frame[i_frame], train_loss[i_frame],
                 val_loss[i_frame], test_loss[i_frame], r2[i_frame]
             )
         )
@@ -214,8 +299,15 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(6.5, 4), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
-            model_inferred, color_array
+            fig0,
+            n_trial_train_frame,
+            train_loss,
+            val_loss,
+            test_loss,
+            r2,
+            model_true,
+            model_inferred,
+            color_array
         )
         fname = fp_project / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -232,14 +324,22 @@ def main():
 
 
 def plot_frame(
-        fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
-        model_inferred, color_array):
+    fig0,
+    n_obs,
+    train_loss,
+    val_loss,
+    test_loss,
+    r2,
+    model_true,
+    model_inferred,
+    color_array
+):
     """Plot frame."""
     # Settings.
     s = 10
 
-    z_true = model_true.stimuli.embeddings.numpy()
-    if model_true.stimuli.mask_zero:
+    z_true = model_true.behavior.percept.embeddings.numpy()
+    if model_true.behavior.percept.mask_zero:
         z_true = z_true[1:]
 
     gs = fig0.add_gridspec(2, 2)
@@ -257,9 +357,9 @@ def plot_frame(
     z_limits = [-z_max, z_max]
 
     # Apply and plot Procrustes affine transformation of posterior.
-    dist = model_inferred.stimuli.embeddings
+    dist = model_inferred.behavior.percept.embeddings
     loc, cov = unpack_mvn(dist)
-    if model_inferred.stimuli.mask_zero:
+    if model_inferred.behavior.percept.mask_zero:
         # Drop placeholder stimulus.
         loc = loc[1:]
         cov = cov[1:]
@@ -318,7 +418,7 @@ def plot_convergence(ax, n_obs, r2):
     ms = 2
 
     ax.plot(n_obs, r2, 'ro-', ms=ms)
-    ax.set_title('Convergence')
+    ax.set_title('Model Convergence')
 
     ax.set_xlabel('Trials')
     limits = [0, np.max(n_obs) + 10]
@@ -353,18 +453,18 @@ def unpack_mvn(dist):
     return loc, cov
 
 
-def ground_truth(n_stimuli, n_dim):
+def build_ground_truth_model(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     # Settings.
     scale_request = .17
 
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli, n_dim,
+    percept = tf.keras.layers.Embedding(
+        (n_stimuli + 1), n_dim,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=scale_request, seed=58
-        )
+        ),
+        mask_zero=True
     )
-
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -378,20 +478,27 @@ def ground_truth(n_stimuli, n_dim):
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
-
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel)
-
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=8, n_select=2, percept=percept, kernel=kernel
+    )
+    model = BehaviorModel(behavior=rank)
+    model.compile(
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
+        weighted_metrics=[
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    )
     return model
 
 
-def build_model(n_stimuli, n_dim, n_group, n_obs_train):
+def build_model(n_stimuli, n_dim, n_obs_train):
     """Build model.
 
     Args:
         n_stimuli: Integer indicating the number of stimuli in the
             embedding.
         n_dim: Integer indicating the dimensionality of the embedding.
-        n_group: Integer indicating the number of groups.
         n_obs_train: Integer indicating the number of training
             observations. Used to determine KL weight for variational
             inference.
@@ -410,13 +517,14 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
 
     # Create variational stimuli layer.
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim,
+        (n_stimuli + 1), n_dim,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
+        mask_zero=True
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim,
+        (n_stimuli + 1), n_dim,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),
@@ -424,13 +532,13 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
-        )
+        ),
+        mask_zero=True
     )
-    stimuli = psiz.keras.layers.EmbeddingVariational(
+    percept = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30
     )
-
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -444,8 +552,17 @@ def build_model(n_stimuli, n_dim, n_group, n_obs_train):
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
-
-    model = psiz.keras.models.Rank(stimuli=stimuli, kernel=kernel, n_sample=1)
+    behavior = psiz.keras.layers.RankSimilarity(
+        n_reference=8, n_select=2, percept=percept, kernel=kernel
+    )
+    model = StochasticBehaviorModel(behavior=behavior, n_sample=30)
+    model.compile(
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
+        weighted_metrics=[
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
+    )
     return model
 
 

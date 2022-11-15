@@ -85,9 +85,10 @@ class SimilarityModel(tf.keras.Model):
 
     def call(self, inputs):
         """Call."""
+        expertise_group = inputs[2]
         z0 = self.percept(inputs[0])
         z1 = self.percept(inputs[1])
-        return self.kernel([z0, z1, inputs[2]])
+        return self.kernel([z0, z1, expertise_group])
 
 
 def main():
@@ -155,6 +156,7 @@ def main():
         outcome_one_hot = tf.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
+    # Add simulated outcomes to dataset.
     ds = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
     # Compute similarity matrix.

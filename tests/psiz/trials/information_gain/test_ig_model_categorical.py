@@ -24,15 +24,29 @@ import psiz
 from psiz.trials.information_gain import ig_model_categorical
 
 
+class BehaviorModel(psiz.keras.StochasticModel):
+    """A behavior model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(BehaviorModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
+
+
 def base_circular_model():
     """Build base model.
 
     Circular arrangement with equal variance.
 
     """
-    # Settings.
-    n_sample = 10000
-
     # Create embedding points arranged in a circle.
     center_point = np.array([[0.25, 0.25]])
     # Determine polar coordiantes.
@@ -55,7 +69,7 @@ def base_circular_model():
 
     # Create model.
     prior_scale = .17
-    stimuli = psiz.keras.layers.EmbeddingNormalDiag(
+    percept = psiz.keras.layers.EmbeddingNormalDiag(
         n_stimuli + 1, n_dim, mask_zero=True,
         loc_initializer=tf.keras.initializers.Constant(loc),
         scale_initializer=tf.keras.initializers.Constant(
@@ -77,11 +91,12 @@ def base_circular_model():
         )
     )
 
-    model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel, n_sample=n_sample
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=2, n_select=1, percept=percept, kernel=kernel
     )
+    model = BehaviorModel(behavior=rank)
     # Call build to force initializers to execute.
-    model.stimuli.build([None, None, None])
+    model.behavior.percept.build([None, None, None])
     return model, loc
 
 
@@ -95,8 +110,8 @@ def model_0():
     scale[4, :] = .03
 
     # Assign `loc` and `scale` to model.
-    model.stimuli.loc.assign(loc)
-    model.stimuli.untransformed_scale.assign(
+    model.behavior.percept.loc.assign(loc)
+    model.behavior.percept.untransformed_scale.assign(
         tfp.math.softplus_inverse(scale)
     )
     return model
@@ -113,49 +128,55 @@ def model_1():
     scale[4, :] = .03
 
     # Assign `loc` and `scale` to model.
-    model.stimuli.loc.assign(loc)
-    model.stimuli.untransformed_scale.assign(
+    model.behavior.percept.loc.assign(loc)
+    model.behavior.percept.untransformed_scale.assign(
         tfp.math.softplus_inverse(scale)
     )
     return model
 
 
 @pytest.fixture
-def ds_rank_docket():
+def ds_2rank1():
     """Rank docket dataset."""
     stimulus_set = np.array(
         [
-            [4, 3, 5],
-            [4, 2, 5],
-            [4, 3, 6],
-            [4, 2, 6],
-            [4, 5, 6],
-            [7, 1, 3]
+            [[4, 3, 5]],
+            [[4, 2, 5]],
+            [[4, 3, 6]],
+            [[4, 2, 6]],
+            [[4, 5, 6]],
+            [[7, 1, 3]]
         ], dtype=np.int32
     )
-
-    n_trial = 6
-    n_select = np.ones([n_trial], dtype=np.int32)
-    docket = psiz.trials.RankDocket(
-        stimulus_set, n_select=n_select, mask_zero=True
+    content = psiz.data.Rank(stimulus_set, n_select=1)
+    ds = psiz.data.TrialDataset([content]).export(
+        export_format='tfds', with_timestep_axis=False
     )
-    groups = np.zeros([n_trial, 1])
-    ds_docket = docket.as_dataset(groups).batch(n_trial, drop_remainder=False)
-    return ds_docket
+    ds = ds.batch(stimulus_set.shape[0], drop_remainder=False)
+    return ds
 
 
-def test_1_model(model_0, ds_rank_docket):
+def test_1_model(model_0, ds_2rank1):
     """Test IG computation using one model."""
+    n_sample = 10000
+
     ig = []
-    for x in ds_rank_docket:
-        ig.append(ig_model_categorical([model_0], x))
+    for x in ds_2rank1:
+        ig.append(ig_model_categorical([model_0], x, n_sample))
     ig = tf.concat(ig, 0)
 
     # Assert IG values are in the right ballpark.
+    # Old target.
+    # ig_desired = tf.constant(
+    #     [
+    #         0.01855242, 0.01478302, 0.01481092, 0.01253963, 0.0020327,
+    #         0.00101262
+    #     ], dtype=tf.float32
+    # )
     ig_desired = tf.constant(
         [
-            0.01855242, 0.01478302, 0.01481092, 0.01253963, 0.0020327,
-            0.00101262
+            0.03496134, 0.02489483, 0.02482754, 0.02341402, 0.003456,
+            0.00146809
         ], dtype=tf.float32
     )
     tf.debugging.assert_near(ig, ig_desired, rtol=.1)
@@ -164,23 +185,32 @@ def test_1_model(model_0, ds_rank_docket):
     tf.debugging.assert_greater(ig[0], ig[-1])
 
 
-def test_2_models(model_0, model_1, ds_rank_docket):
+def test_2_models(model_0, model_1, ds_2rank1):
     """Test IG computation using twp models.
 
     The second model is merely a translation of the first, so basic IG
     tests remain unchanged.
 
     """
+    n_sample = 10000
+
     ig = []
-    for x in ds_rank_docket:
-        ig.append(ig_model_categorical([model_0, model_1], x))
+    for x in ds_2rank1:
+        ig.append(ig_model_categorical([model_0, model_1], x, n_sample))
     ig = tf.concat(ig, 0)
 
     # Assert IG values are in the right ballpark.
+    # Old target.
+    # ig_desired = tf.constant(
+    #     [
+    #         0.01855242, 0.01478302, 0.01481092, 0.01253963, 0.0020327,
+    #         0.00101262
+    #     ], dtype=tf.float32
+    # )
     ig_desired = tf.constant(
         [
-            0.01855242, 0.01478302, 0.01481092, 0.01253963, 0.0020327,
-            0.00101262
+            0.03436345, 0.02473378, 0.02513063, 0.02297509, 0.00344968,
+            0.00151819
         ], dtype=tf.float32
     )
     tf.debugging.assert_near(ig, ig_desired, rtol=.1)

@@ -43,6 +43,23 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
+class BehaviorModel(psiz.keras.StochasticModel):
+    """A behavior model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(BehaviorModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
+
+
 def main():
     """Run script."""
     # Settings.
@@ -52,6 +69,8 @@ def main():
     n_reference = 2
     n_select = 1
     n_col = 7
+    batch_size = 512
+    n_sample = 10
 
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
@@ -71,29 +90,27 @@ def main():
     n_case = 5
     case_list = []
     for i_case in range(n_case):
-        model = build_model(case=i_case)
+        model = build_model(n_reference, n_select, i_case)
         model.compile(
             loss=tf.keras.losses.CategoricalCrossentropy(),
             optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
         )
 
         # Create exhaustive list of candidate trials.
-        eligable_list = np.arange(model.n_stimuli, dtype=np.int32)
+        n_stimuli = model.behavior.percept.input_dim
+        eligable_list = np.arange(1, n_stimuli, dtype=np.int32)
         stimulus_set = candidate_list(eligable_list, n_reference)
-        n_candidate = stimulus_set.shape[0]
-        group = np.zeros([n_candidate, 1])
-        docket = psiz.trials.RankDocket(
-            stimulus_set, n_select * np.ones(n_candidate, dtype=np.int32)
+        content = psiz.data.Rank(stimulus_set, n_select=n_select)
+        ds = psiz.data.TrialDataset([content]).export(
+            export_format='tfds', with_timestep_axis=False
         )
-        ds_docket = docket.as_dataset(group).batch(
-            docket.n_trial, drop_remainder=False
-        )
+        ds = ds.batch(batch_size, drop_remainder=False)
 
         # Compute expected information gain for candidate trials in mini
         # batches.
         expected_ig = []
-        for docket_batch in ds_docket:
-            expected_ig.append(ig_model_categorical([model], docket_batch))
+        for data in ds:
+            expected_ig.append(ig_model_categorical([model], data, n_sample))
         expected_ig = tf.concat(expected_ig, 0).numpy()
 
         # Select data to represent case in visualization.
@@ -138,21 +155,24 @@ def draw_scenario(fig, gs, row, case_data):
     n_trial = stimulus_set.shape[0]
 
     # Define one color per class for plots.
+    n_stimuli = model.behavior.percept.input_dim
     cmap = matplotlib.cm.get_cmap('jet')
-    norm = matplotlib.colors.Normalize(vmin=0., vmax=model.n_stimuli)
-    color_arr = cmap(norm(range(model.n_stimuli)))
+    norm = matplotlib.colors.Normalize(vmin=0., vmax=n_stimuli)
+    color_arr = cmap(norm(range(n_stimuli)))
 
     ax = fig.add_subplot(gs[row, 0])
     # Draw model state.
-    dist = model.stimuli.embeddings
+    dist = model.behavior.percept.embeddings
     loc, cov = unpack_mvn(dist)
-    if model.stimuli.mask_zero:
+    if model.behavior.percept.mask_zero:
         # Drop placeholder stimulus.
-        loc = loc[1:]
-        cov = cov[1:]
-    plot_bivariate_normal(
-        ax, loc, cov, c=color_arr, r=1.96, lw=lw
-    )
+        plot_bivariate_normal(
+            ax, loc[1:], cov[1:], c=color_arr, r=1.96, lw=lw
+        )
+    else:
+        plot_bivariate_normal(
+            ax, loc, cov, c=color_arr, r=1.96, lw=lw
+        )
 
     ax.set_title('Posterior')
     ax.set_aspect('equal')
@@ -196,7 +216,7 @@ def candidate_subplot(
     ax.add_patch(rect_val)
 
 
-def build_model(case=0):
+def build_model(n_reference, n_select, case):
     """Return a ground truth embedding.
 
     Args:
@@ -239,13 +259,12 @@ def build_model(case=0):
         z_circle = np.vstack((np.ones([1, 2]), z_circle))
 
     prior_scale = .17
-    stimuli = psiz.keras.layers.EmbeddingNormalDiag(
+    percept = psiz.keras.layers.EmbeddingNormalDiag(
         n_stimuli + 1, n_dim, mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         )
     )
-
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -259,11 +278,14 @@ def build_model(case=0):
             gamma_initializer=tf.keras.initializers.Constant(0.),
         )
     )
-
-    model = psiz.keras.models.Rank(
-        stimuli=stimuli, kernel=kernel, n_sample=n_sample
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=n_reference,
+        n_select=n_select,
+        percept=percept,
+        kernel=kernel
     )
-    model.stimuli.build([None, None, None])
+    model = BehaviorModel(behavior=rank, n_sample=n_sample)
+    model.behavior.percept.build([None, None, None])
 
     if case == 0:
         # One stimulus with relatively high uncertainty.
@@ -291,8 +313,8 @@ def build_model(case=0):
         scale[4, :] = .03
 
     # Assign scenario variables.
-    model.stimuli.loc.assign(loc)
-    model.stimuli.untransformed_scale.assign(
+    model.behavior.percept.loc.assign(loc)
+    model.behavior.percept.untransformed_scale.assign(
         tfp.math.softplus_inverse(scale)
     )
     return model
@@ -336,9 +358,8 @@ def package_case_data(model, stimulus_set, expected_ig):
 
 def candidate_list(eligable_list, n_reference):
     """Determine all possible trials."""
-    n_stimuli = len(eligable_list)
     stimulus_set = np.empty([0, n_reference + 1], dtype=np.int32)
-    for i_stim in range(n_stimuli):
+    for i_stim in eligable_list:
         locs = np.not_equal(eligable_list, i_stim)
         sub_list = itertools.combinations(eligable_list[locs], n_reference)
         for item in sub_list:

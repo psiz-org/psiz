@@ -21,12 +21,14 @@ Functions:
 
 """
 
+import copy
+
 import tensorflow as tf
 
 from psiz.trials.information_gain import ig_categorical
 
 
-def ig_model_categorical(model_list, inputs):
+def ig_model_categorical(model_list, inputs, n_sample):
     """Ensemble information gain.
 
     Args:
@@ -36,50 +38,43 @@ def ig_model_categorical(model_list, inputs):
             depends on the model being used, however it is assumed that
             the first dimension of all inputs has `batch_size`
             semantics.
+        n_sample: Integer indicating number of samples.
 
     Returns:
         Information gain for each input in the batch.
             shape=(batch_size,)
 
     NOTE: Information gain is computed by concatenating samples from
-    all models and then computing expected information gain.
+    all models and then computing expected information gain. Since
+    embedding algorithms exhibit sensitivity to intial conditions
+    and decent stickiness, the posterior from a single model does not
+    completely capture their uncertainty. Combining samples from
+    different models is a better estimate of the "total" uncertainty.
 
     """
+    sample_axis = 1
+    inputs_copied = copy.copy(inputs)
+    inputs_copied = model_list[0].repeat_samples_in_batch_axis(
+        inputs_copied, n_sample
+    )
+
     output_predictions = []
     for model in model_list:
-        output_predictions.append(model(inputs, training=False))
+        outputs = model(inputs_copied, training=False)
+        outputs = model.disentangle_repeated_samples(outputs, n_sample)
+        output_predictions.append(outputs)
     # Concatenate different ensemble predictions along samples axis.
-    output_predictions = tf.concat(output_predictions, 1)
+    output_predictions = tf.concat(output_predictions, sample_axis)
     return ig_categorical(output_predictions)
 
-
-# TODO
-# def ig_ensemble_categorical(model_list, ds_docket, verbose=0):
-#     """Ensemble information gain."""
-#     if verbose > 0:
-#         n_batch = 0
-#         for _ in ds_docket:
-#             n_batch += 1
-#         progbar = ProgressBarRe(
-#             np.ceil(n_batch), prefix='expected IG:', length=50
-#         )
-#         progbar.update(0)
-
-#     expected_ig = []
-#     batch_counter = 0
-#     for x in ds_docket:
-#         # IG computed on ensemble samples collectively.
-#         batch_pred = []
-#         for model in model_list:
-#             batch_pred.append(model(x, training=False))
-#         # Concatenate different ensemble predictions along samples axis.
-#         batch_pred = tf.concat(batch_pred, 1)
-#         # NOTE: Information gain is computed by concatenating samples from all
-#         # models and then computing expected information gain.
-#         batch_expected_ig = ig_categorical(batch_pred)
-#         expected_ig.append(batch_expected_ig)
-#         if verbose > 0:
-#             progbar.update(batch_counter + 1)
-#         batch_counter += 1
-#     expected_ig = tf.concat(expected_ig, 0)
-#     return expected_ig
+    # For comparision, here is an alternative computation where IG is computed
+    # for each model separately and then averaged.
+    # ig = []
+    # for model in model_list:
+    #     outputs = model(inputs_copied, training=False)
+    #     outputs = model.disentangle_repeated_samples(outputs, n_sample)
+    #     ig.append(ig_categorical(outputs))
+    # # Concatenate different ensemble predictions along samples axis.
+    # ig = tf.stack(ig, 0)
+    # ig = tf.reduce_mean(ig, 0)
+    # return ig

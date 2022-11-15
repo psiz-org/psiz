@@ -27,7 +27,7 @@ from time import time
 
 import numpy as np
 
-from psiz.trials import sample_qr_sets
+from psiz.data import sample_qr_sets
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rank.rank_docket import RankDocket
 

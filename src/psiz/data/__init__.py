@@ -27,6 +27,7 @@ from psiz.data.outcomes.outcome import Outcome
 from psiz.data.outcomes.continuous import Continuous
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
 from psiz.data.pairwise_index_dataset import pairwise_index_dataset
+from psiz.data.sample_qr_sets import sample_qr_sets
 from psiz.data.unravel_timestep import unravel_timestep
 
 __all__ = [
@@ -41,5 +42,6 @@ __all__ = [
     'Continuous',
     'SparseCategorical',
     'pairwise_index_dataset',
+    'sample_qr_sets',
     'unravel_timestep',
 ]

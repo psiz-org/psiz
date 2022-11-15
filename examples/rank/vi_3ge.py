@@ -59,6 +59,74 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
+class BehaviorModel(tf.keras.Model):
+    """A behavior model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(BehaviorModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
+
+
+class SimilarityModel(tf.keras.Model):
+    """A similarity model."""
+
+    def __init__(self, percept=None, kernel=None, **kwargs):
+        """Initialize."""
+        super(SimilarityModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.kernel = kernel
+
+    def call(self, inputs):
+        """Call."""
+        expertise_group = inputs[2]
+        z0 = self.percept([inputs[0], expertise_group])
+        z1 = self.percept([inputs[1], expertise_group])
+        return self.kernel([z0, z1])
+
+
+class StochasticBehaviorModel(psiz.keras.StochasticModel):
+    """A behavior model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, behavior=None, **kwargs):
+        """Initialize."""
+        super(StochasticBehaviorModel, self).__init__(**kwargs)
+        self.behavior = behavior
+
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
+
+
+class StochasticSimilarityModel(psiz.keras.StochasticModel):
+    """A similarity model."""
+
+    def __init__(self, percept=None, kernel=None, **kwargs):
+        """Initialize."""
+        super(StochasticSimilarityModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.kernel = kernel
+
+    def call(self, inputs):
+        """Call."""
+        expertise_group = inputs[2]
+        z0 = self.percept([inputs[0], expertise_group])
+        z1 = self.percept([inputs[1], expertise_group])
+        return self.kernel([z0, z1])
+
+
 def main():
     """Run script."""
     # Settings.
@@ -67,10 +135,12 @@ def main():
     n_stimuli = 30
     n_dim_inferred = 2
     n_group = 3
-    n_trial = 2000
-    epochs = 1000
+    epochs = 3000
     batch_size = 128
-    n_frame = 1
+    n_trial = 30 * batch_size
+    n_trial_train = 24 * batch_size
+    n_trial_val = 3 * batch_size
+    n_frame = 1  # Set n_frame > 1 to observe convergence behavior.
 
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
@@ -95,75 +165,119 @@ def main():
     norm = matplotlib.colors.Normalize(vmin=0., vmax=n_stimuli)
     color_array = cmap(norm(range(n_stimuli)))
 
-    model_true = ground_truth(n_stimuli, n_group)
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    ds_pairs, _ = psiz.utils.pairwise_index_dataset(
+        np.arange(n_stimuli) + 1, elements='upper'
+    )
+    # Create pair datasets with additional group-specific info.
+    # NOTE: We include an empty "target" component in dataset tuple to satisfy
+    # `predict` assumptions.
+    ds_pairs_group0 = ds_pairs.map(
+        lambda x0, x1: (
+            (x0, x1, tf.constant([1.0, 0.0, 0.0], dtype=tf.float32)), ()
+        )
+    ).cache().batch(batch_size, drop_remainder=False)
+    ds_pairs_group1 = ds_pairs.map(
+        lambda x0, x1: (
+            (x0, x1, tf.constant([0.0, 1.0, 0.0], dtype=tf.float32)), ()
+        )
+    ).cache().batch(batch_size, drop_remainder=False)
+    ds_pairs_group2 = ds_pairs.map(
+        lambda x0, x1: (
+            (x0, x1, tf.constant([0.0, 0.0, 1.0], dtype=tf.float32)), ()
+        )
+    ).cache().batch(batch_size, drop_remainder=False)
 
-    # Compute ground truth similarity matrices.
+    model_true = build_ground_truth_model()
+
+    # Compute similarity matrix.
+    model_similarity_true = SimilarityModel(
+        percept=model_true.behavior.percept,
+        kernel=model_true.behavior.kernel
+    )
     simmat_truth = (
-        model_similarity(model_true, groups=[0], use_group_stimuli=True),
-        model_similarity(model_true, groups=[1], use_group_stimuli=True),
-        model_similarity(model_true, groups=[2], use_group_stimuli=True)
+        model_similarity_true.predict(ds_pairs_group0),
+        model_similarity_true.predict(ds_pairs_group1),
+        model_similarity_true.predict(ds_pairs_group2),
     )
 
-    # Generate a random docket of trials to show each group.
-    generator = psiz.trials.RandomRank(n_stimuli, n_reference=8, n_select=2)
-    docket = generator.generate(n_trial)
+    # Generate a random set of trials. Replicate for each group.
+    rng = np.random.default_rng()
+    eligibile_indices = np.arange(n_stimuli) + 1
+    p = np.ones_like(eligibile_indices) / len(eligibile_indices)
+    stimulus_set = psiz.utils.choice_wo_replace(
+        eligibile_indices, (n_trial, 9), p, rng=rng
+    )
+    stimulus_set = np.repeat(stimulus_set, n_group, axis=0)
+    content = psiz.data.Rank(stimulus_set, n_select=2)
+    expertise = psiz.data.Group(
+        np.tile(
+            np.array(
+                [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+                dtype=np.float32
+            ),
+            [n_trial, 1]
+        ),
+        name='expertise'
+    )
+    td = psiz.data.TrialDataset([content, expertise])
+    ds_content = td.export(export_format='tfds', with_timestep_axis=False)
+    ds_content = ds_content.batch(batch_size, drop_remainder=False)
 
-    # Create virtual agents for each group.
-    agent_novice = psiz.agents.RankAgent(model_true, groups=[0])
-    agent_interm = psiz.agents.RankAgent(model_true, groups=[1])
-    agent_expert = psiz.agents.RankAgent(model_true, groups=[2])
+    # Simulate similarity judgments.
+    depth = content.n_outcome
 
-    # Simulate similarity judgments for each group.
-    obs_novice = agent_novice.simulate(docket)
-    obs_interm = agent_interm.simulate(docket)
-    obs_expert = agent_expert.simulate(docket)
-    obs = psiz.trials.stack((obs_novice, obs_interm, obs_expert))
+    def simulate_agent(x):
+        outcome_probs = model_true(x)
+        outcome_distribution = tfp.distributions.Categorical(
+            probs=outcome_probs
+        )
+        outcome_idx = outcome_distribution.sample()
+        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        return outcome_one_hot
 
-    # Partition observations into 80% train, 10% validation and 10% test set.
-    obs_train, obs_val, obs_test = psiz.utils.standard_split(obs)
+    # Add simulated outcomes to dataset.
+    ds = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
-    # Convert observations to TF dataset.
-    ds_obs_val = obs_val.as_dataset().batch(
+    # Partition data into 80% train, 10% validation and 10% test set.
+    ds_train = ds.take(n_trial_train)
+    ds_valtest = ds.skip(n_trial_train)
+    ds_val = ds_valtest.take(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
-    ds_obs_test = obs_test.as_dataset().batch(
+    ds_test = ds_valtest.skip(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
-
-    compile_kwargs = {
-        'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-        'weighted_metrics': [
-            tf.keras.metrics.CategoricalCrossentropy(name='cce')
-        ]
-    }
 
     # Infer independent models with increasing amounts of data.
     if n_frame == 1:
-        n_obs = np.array([obs_train.n_trial], dtype=int)
+        n_trial_train_frame = np.array([n_trial_train], dtype=int)
     else:
-        n_obs = np.round(
-            np.linspace(15, obs_train.n_trial, n_frame)
+        n_trial_train_frame = np.round(
+            np.linspace(15, n_trial_train, n_frame)
         ).astype(np.int64)
     r2 = np.empty([n_frame, n_group, n_group]) * np.nan
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        include_idx = np.arange(0, n_obs[i_frame])
-        obs_round_train = obs_train.subset(include_idx)
-        ds_obs_round_train = obs_round_train.as_dataset().shuffle(
-            buffer_size=obs_round_train.n_trial, reshuffle_each_iteration=True
-        ).batch(batch_size, drop_remainder=False)
+        ds_train_frame = ds_train.take(
+            int(n_trial_train_frame[i_frame])
+        ).cache().shuffle(
+            buffer_size=n_trial_train_frame[i_frame],
+            reshuffle_each_iteration=True
+        ).batch(
+            batch_size, drop_remainder=False
+        )
         print(
-            '\n  Frame {0} ({1} obs)'.format(i_frame, obs_round_train.n_trial)
+            '\n  Frame {0} ({1} samples)'.format(
+                i_frame, n_trial_train_frame[i_frame]
+            )
         )
 
         # Define model.
-        kl_weight = 1. / obs_round_train.n_trial
-        model_inferred = build_model(
-            n_stimuli, n_dim_inferred, n_group, kl_weight
-        )
+        kl_weight = 1. / n_trial_train_frame[i_frame]
+        model_inferred = build_model(n_stimuli, n_dim_inferred, kl_weight)
 
         # Define callbacks.
         fp_board_frame = fp_board / Path('frame_{0}'.format(i_frame))
@@ -173,19 +287,18 @@ def main():
             profile_batch=0, embeddings_freq=0, embeddings_metadata=None
         )
         cb_early = tf.keras.callbacks.EarlyStopping(
-            'loss', patience=100, mode='min', restore_best_weights=False,
+            'loss', patience=15, mode='min', restore_best_weights=False,
             verbose=1
         )
         callbacks = [cb_board, cb_early]
 
         # Infer model.
-        model_inferred.compile(**compile_kwargs)
         history = model_inferred.fit(
-            ds_obs_round_train, validation_data=ds_obs_val, epochs=epochs,
+            ds_train_frame, validation_data=ds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
 
-        subnet_0 = model_inferred.stimuli.subnets[0]
+        subnet_0 = model_inferred.behavior.percept.subnets[0]
         print(
             'avg scale posterior: {0:.4f}'.format(
                 tf.reduce_mean(
@@ -211,27 +324,22 @@ def main():
 
         tf.keras.backend.clear_session()
         model_inferred.n_sample = 100
-        model_inferred.compile(**compile_kwargs)
         test_metrics = model_inferred.evaluate(
-            ds_obs_test, verbose=0, return_dict=True
+            ds_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
+        model_similarity_inferred = StochasticSimilarityModel(
+            percept=model_inferred.behavior.percept,
+            kernel=model_inferred.behavior.kernel,
+            n_sample=100
+        )
         simmat_inferred = (
-            model_similarity(
-                model_inferred, groups=[0], n_sample=100,
-                use_group_stimuli=True
-            ),
-            model_similarity(
-                model_inferred, groups=[1], n_sample=100,
-                use_group_stimuli=True
-            ),
-            model_similarity(
-                model_inferred, groups=[2], n_sample=100,
-                use_group_stimuli=True
-            )
+            model_similarity_inferred.predict(ds_pairs_group0),
+            model_similarity_inferred.predict(ds_pairs_group1),
+            model_similarity_inferred.predict(ds_pairs_group2),
         )
 
         for i_truth in range(n_group):
@@ -260,8 +368,16 @@ def main():
         # Create and save visual frame.
         fig0 = plt.figure(figsize=(12, 5), dpi=200)
         plot_frame(
-            fig0, n_obs, train_loss, val_loss, test_loss, r2, model_true,
-            model_inferred, i_frame, color_array
+            fig0,
+            n_trial_train_frame,
+            train_loss,
+            val_loss,
+            test_loss,
+            r2,
+            model_true,
+            model_inferred,
+            i_frame,
+            color_array
         )
         fname = fp_project / Path('frame_{0}.tiff'.format(i_frame))
         plt.savefig(
@@ -277,12 +393,14 @@ def main():
         imageio.mimwrite(fp_project / Path('evolution.gif'), frames, fps=1)
 
 
-def ground_truth(n_stimuli, n_group):
+def build_ground_truth_model():
     """Return a ground truth embedding."""
     # Mimicking a category learning task.
     n_class = 5
     n_exemplar_per_class = 6
     n_dim = 2
+    # As task is learned, within-class exemplars become less similar via the
+    # `exemplar_scale` variable.
     exemplar_scale = [0.1, .5, 1.0]
 
     # Draw class means.
@@ -312,20 +430,23 @@ def ground_truth(n_stimuli, n_group):
     # Truncate exemplar draws.
     exemplar_locs_centered = np.minimum(exemplar_locs_centered, .05)
 
-    stim_0 = build_ground_truth_stimuli(
+    percept_0 = build_ground_truth_percept(
         class_mean_full, exemplar_locs_centered, exemplar_scale[0]
     )
-    stim_1 = build_ground_truth_stimuli(
+    percept_1 = build_ground_truth_percept(
         class_mean_full, exemplar_locs_centered, exemplar_scale[1]
     )
-    stim_2 = build_ground_truth_stimuli(
+    percept_2 = build_ground_truth_percept(
         class_mean_full, exemplar_locs_centered, exemplar_scale[2]
     )
-    stim_group = psiz.keras.layers.BraidGate(
-        subnets=[stim_0, stim_1, stim_2], groups_subset=0
+    percept = psiz.keras.layers.BraidGate(
+        subnets=[percept_0, percept_1, percept_2], gating_index=-1
+    )
+    percept_adapter = psiz.keras.layers.GateAdapter(
+        gating_keys='expertise', format_inputs_as_tuple=True
     )
 
-    # Define group-specific kernels.
+    # Define shared kernel.
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             trainable=False,
@@ -340,32 +461,45 @@ def ground_truth(n_stimuli, n_group):
         )
     )
 
-    model = psiz.keras.models.Rank(
-        stimuli=stim_group, kernel=kernel, use_group_stimuli=True
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=8,
+        n_select=2,
+        percept=percept,
+        kernel=kernel,
+        percept_adapter=percept_adapter
+    )
+    model = BehaviorModel(behavior=rank)
+    model.compile(
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
+        weighted_metrics=[
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
     )
     return model
 
 
-def build_ground_truth_stimuli(class_mean_full, exemplar_locs_centered, scale):
+def build_ground_truth_percept(class_mean_full, exemplar_locs_centered, scale):
     """Build a group-specific embedding."""
     n_stimuli, n_dim = np.shape(class_mean_full)
-    # NOTE: n_stimuli includes placeholder already so do not increment by 1.
     exemplar_locs = class_mean_full + (scale * exemplar_locs_centered)
+    # Add placeholder.
+    exemplar_locs = np.vstack([np.array([0.0, 0.0]), exemplar_locs])
     stim = tf.keras.layers.Embedding(
-        n_stimuli, n_dim,
-        embeddings_initializer=tf.keras.initializers.Constant(exemplar_locs)
+        n_stimuli + 1, n_dim,
+        embeddings_initializer=tf.keras.initializers.Constant(exemplar_locs),
+        mask_zero=True
     )
     return stim
 
 
-def build_model(n_stimuli, n_dim, n_group, kl_weight):
+def build_model(n_stimuli, n_dim, kl_weight):
     """Build model.
 
     Args:
         n_stimuli: Integer indicating the number of stimuli in the
             embedding.
         n_dim: Integer indicating the dimensionality of the embedding.
-        n_group: Integer indicating the number of groups.
         kl_weight: Float indicating the KL weight for variational
             inference.
 
@@ -378,20 +512,23 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
 
     # Define group-specific stimuli embeddings using the population-level
     # embedding as a shared prior.
-    stim_0 = build_vi_group_stimuli(
-        n_stimuli, n_dim, shared_prior, kl_weight, 'vi_stim_group_0'
+    percept_0 = build_vi_percept(
+        n_stimuli, n_dim, shared_prior, kl_weight, 'vi_percept_group_0'
     )
-    stim_1 = build_vi_group_stimuli(
-        n_stimuli, n_dim, shared_prior, kl_weight, 'vi_stim_group_1'
+    percept_1 = build_vi_percept(
+        n_stimuli, n_dim, shared_prior, kl_weight, 'vi_percept_group_1'
     )
-    stim_2 = build_vi_group_stimuli(
-        n_stimuli, n_dim, shared_prior, kl_weight, 'vi_stim_group_2'
+    percept_2 = build_vi_percept(
+        n_stimuli, n_dim, shared_prior, kl_weight, 'vi_percept_group_2'
     )
-    stim_group = psiz.keras.layers.BraidGate(
-        subnets=[stim_0, stim_1, stim_2], groups_subset=0,
+    percept = psiz.keras.layers.BraidGate(
+        subnets=[percept_0, percept_1, percept_2], gating_index=-1,
+    )
+    percept_adapter = psiz.keras.layers.GateAdapter(
+        gating_keys='expertise', format_inputs_as_tuple=True
     )
 
-    # Define a simple (non-trainable) kernel.
+    # Define a simple, shared, non-trainable kernel.
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
             rho_initializer=tf.keras.initializers.Constant(2.),
@@ -406,8 +543,20 @@ def build_model(n_stimuli, n_dim, n_group, kl_weight):
         )
     )
 
-    model = psiz.keras.models.Rank(
-        stimuli=stim_group, kernel=kernel, use_group_stimuli=True
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=8,
+        n_select=2,
+        percept=percept,
+        kernel=kernel,
+        percept_adapter=percept_adapter
+    )
+    model = StochasticBehaviorModel(behavior=rank, n_sample=30)
+    model.compile(
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
+        weighted_metrics=[
+            tf.keras.metrics.CategoricalCrossentropy(name='cce')
+        ]
     )
     return model
 
@@ -418,13 +567,14 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
     posterior_scale = .0001
     prior_scale = .2
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim,
+        n_stimuli + 1, n_dim,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(posterior_scale).numpy()
-        )
+        ),
+        mask_zero=True
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim,
+        n_stimuli+1, n_dim,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1, 1,
             loc_initializer=tf.keras.initializers.Constant(0.),
@@ -432,25 +582,31 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False
-        )
+        ),
+        mask_zero=True
     )
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=embedding_prior,
         kl_weight=kl_weight, kl_n_sample=30,
-        name='vi_stim_shared'
+        name='vi_percept_shared'
     )
     return embedding_variational
 
 
-def build_vi_group_stimuli(n_stimuli, n_dim, shared_prior, kl_weight, name):
+def build_vi_percept(n_stimuli, n_dim, shared_prior, kl_weight, name):
     """Build VI group-specific stimuli embedding."""
     prior_scale = .0001  # Set to match posterior of shared prior.
 
+    # NOTE: We initialize the locations to match the underlying prior.
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim,
+        n_stimuli+1, n_dim,
+        loc_initializer=tf.keras.initializers.Constant(
+            shared_prior.posterior.loc
+        ),
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
+        mask_zero=True
     )
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior, prior=shared_prior,
@@ -490,6 +646,7 @@ def plot_loss(ax, n_obs, train_loss, val_loss, test_loss):
     ax.plot(n_obs, val_loss, 'go-', ms=ms, label='Val. Loss')
     ax.plot(n_obs, test_loss, 'ro-', ms=ms, label='Test Loss')
     ax.set_title('Optimization Objective')
+    ax.set_yscale('log')
 
     ax.set_xlabel('Trials')
     limits = [0, np.max(n_obs) + 10]
@@ -528,8 +685,8 @@ def plot_embeddings_true(fig, ax, model_true, color_array):
     loc_list = []
     z_max = 0
     for i_group in range(n_group):
-        loc = model_true.stimuli.subnets[i_group].embeddings
-        if model_true.stimuli.subnets[i_group].mask_zero:
+        loc = model_true.behavior.percept.subnets[i_group].embeddings
+        if model_true.behavior.percept.subnets[i_group].mask_zero:
             # Drop placeholder stimulus.
             loc = loc[1:]
         # Center coordinates.
@@ -563,18 +720,17 @@ def plot_embeddings(fig, ax, model_true, model_inferred, color_array):
     marker_list = ['o', '<', 's']
     markersize = 15
 
-    loc_true_2 = model_true.stimuli.subnets[2].embeddings.numpy()
-    if model_true.stimuli.subnets[2].mask_zero:
+    loc_true_2 = model_true.behavior.percept.subnets[2].embeddings.numpy()
+    if model_true.behavior.percept.subnets[2].mask_zero:
         loc_true_2 = loc_true_2[1:]
 
     # Apply and plot Procrustes affine transformation of posterior.
     loc_list = []
     cov_list = []
-    z_max = 0
     for i_group in range(n_group):
-        dist = model_inferred.stimuli.subnets[i_group].embeddings
+        dist = model_inferred.behavior.percept.subnets[i_group].embeddings
         loc, cov = unpack_mvn(dist)
-        if model_inferred.stimuli.subnets[i_group].mask_zero:
+        if model_inferred.behavior.percept.subnets[i_group].mask_zero:
             # Drop placeholder stimulus.
             loc = loc[1:]
             cov = cov[1:]
@@ -582,12 +738,6 @@ def plot_embeddings(fig, ax, model_true, model_inferred, color_array):
         # loc = loc - np.mean(loc, axis=0, keepdims=True)
         loc_list.append(loc)
         cov_list.append(cov)
-
-        # Determine limits.
-        z_max_curr = 1.1 * np.max(np.abs(loc))
-        if z_max_curr > z_max:
-            z_max = z_max_curr
-    z_limits = [-z_max, z_max]
 
     # Determine rotations into truth based on third group.
     rot = psiz.utils.procrustes_rotation(
@@ -600,48 +750,25 @@ def plot_embeddings(fig, ax, model_true, model_inferred, color_array):
     loc_list[2], cov_list[2] = apply_affine(loc_list[2], cov_list[2], rot)
 
     # Plot inferred embeddings.
+    z_max = 0
     for i_group in range(n_group):
         ax.scatter(
             loc_list[i_group][:, 0], loc_list[i_group][:, 1],
             s=markersize, c=color_array, marker=marker_list[i_group],
             edgecolors='none', zorder=100
         )
+        # Determine limits.
+        z_max_curr = 1.1 * np.max(np.abs(loc_list[i_group]))
+        if z_max_curr > z_max:
+            z_max = z_max_curr
+    z_limits = [-z_max, z_max]
+
     ax.set_xlim(z_limits)
     ax.set_ylim(z_limits)
     ax.set_aspect('equal')
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Inferred')
-
-
-def model_similarity(
-        model, groups=[], n_sample=None, use_group_stimuli=False,
-        use_group_kernel=False):
-    """Compute model similarity.
-
-    In the deterministic case, there is one one sample and mean is
-    equivalent to squeeze. In the probabilistic case, mean takes an
-    average across samples.
-
-    Args:
-        model:
-        groups:
-
-    """
-    n_stimuli = model.n_stimuli
-
-    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(
-        n_stimuli, groups=groups
-    )
-    simmat = psiz.utils.pairwise_similarity(
-        model.stimuli, model.kernel, ds_pairs, n_sample=n_sample,
-        use_group_stimuli=use_group_stimuli, use_group_kernel=use_group_kernel
-    )
-
-    if n_sample is not None:
-        simmat = tf.reduce_mean(simmat, axis=1)
-
-    return simmat.numpy()
 
 
 def unpack_mvn(dist):

@@ -22,6 +22,8 @@ Functions:
 
 """
 
+import warnings
+
 import numpy as np
 import tensorflow as tf
 
@@ -57,6 +59,15 @@ def pairwise_similarity(
             shape=(n_pair, [n_sample])
 
     """
+    warnings.warn(
+        (
+            'This function is deprecated. Users should instead create a new '
+            'model using the functional or subclass API; '
+            'version_announced=0.8.0; version_scheduled=0.9.0'
+        ),
+        DeprecationWarning,
+        stacklevel=2
+    )
     if verbose > 0:
         n_batch = 0
         for _ in ds_pairs:

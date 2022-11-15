@@ -21,7 +21,7 @@ from psiz.utils.expand_dim_repeat import expand_dim_repeat
 from psiz.utils.generate_group_matrix import generate_group_matrix
 from psiz.utils.pairwise_index_dataset import pairwise_index_dataset
 from psiz.utils.pairwise_similarity import pairwise_similarity
-from psiz.utils.procrustes import procrustes_rotation
+from psiz.utils.procrustes_rotation import procrustes_rotation
 from psiz.utils.progress_bar_re import ProgressBarRe
 from psiz.utils.random_combinations import random_combinations
 from psiz.utils.rotation_matrix import rotation_matrix

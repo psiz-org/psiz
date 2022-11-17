@@ -154,7 +154,7 @@ def main():
     # Simulate noise-free similarity judgments and add outcomes to dataset.
     ds = ds_content.map(lambda x: (x, model_true(x)))
 
-    n_trial_train = pds.n_sequence
+    n_trial_train = pds.n_sample
     ds_train = ds.cache().shuffle(
         buffer_size=n_trial_train, reshuffle_each_iteration=True
     ).batch(

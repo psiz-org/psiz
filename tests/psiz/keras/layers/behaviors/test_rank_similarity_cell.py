@@ -83,7 +83,7 @@ def ds_3rank1_v0():
     No groups.
 
     """
-    n_sequence = 4
+    n_sample = 4
     stimulus_set = np.array((
         (1, 2, 3, 4),
         (10, 13, 16, 19),
@@ -93,7 +93,7 @@ def ds_3rank1_v0():
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
-        [content.n_sequence, content.sequence_length], dtype=np.int32
+        [content.n_sample, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
@@ -101,7 +101,7 @@ def ds_3rank1_v0():
     ds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=False, export_format='tfds'
     )
-    ds = ds.batch(n_sequence, drop_remainder=False)
+    ds = ds.batch(n_sample, drop_remainder=False)
     return ds
 
 
@@ -113,7 +113,7 @@ def ds_3rank1_v1():
     * No groups
 
     """
-    n_sequence = 4
+    n_sample = 4
     stimulus_set = np.array((
         (1, 2, 3, 4),
         (10, 13, 16, 19),
@@ -124,7 +124,7 @@ def ds_3rank1_v1():
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     outcome_idx = np.zeros(
-        [content.n_sequence, content.sequence_length], dtype=np.int32
+        [content.n_sample, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
@@ -133,7 +133,7 @@ def ds_3rank1_v1():
     ds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=True, export_format='tfds'
     )
-    ds = ds.batch(n_sequence, drop_remainder=False)
+    ds = ds.batch(n_sample, drop_remainder=False)
     return ds
 
 

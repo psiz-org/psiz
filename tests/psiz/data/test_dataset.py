@@ -39,7 +39,7 @@ class BadTrialComponent(DatasetComponent):
                 [1.0, 2.0, 3.0],
             ]
         )
-        self.n_sequence = 4
+        self.n_sample = 4
         self.sequence_length = 1
 
     def export(self):
@@ -54,7 +54,7 @@ def test_init_0(c_2rank1_aa_4x1):
     """
     td = Dataset([c_2rank1_aa_4x1])
 
-    assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
+    assert td.n_sample == c_2rank1_aa_4x1.n_sample
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
     assert len(td.content_list) == 1
     assert len(td.group_list) == 0
@@ -68,7 +68,7 @@ def test_init_1(c_2rank1_aa_4x1):
 
     """
     outcome_idx = np.zeros(
-        [c_2rank1_aa_4x1.n_sequence, c_2rank1_aa_4x1.sequence_length],
+        [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length],
         dtype=np.int32
     )
     rank_outcome = SparseCategorical(
@@ -77,7 +77,7 @@ def test_init_1(c_2rank1_aa_4x1):
 
     td = Dataset([c_2rank1_aa_4x1, rank_outcome])
 
-    assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
+    assert td.n_sample == c_2rank1_aa_4x1.n_sample
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
     assert len(td.content_list) == 1
     assert len(td.group_list) == 0
@@ -105,7 +105,7 @@ def test_init_2(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
 
     td = Dataset([c_2rank1_aa_4x1, group_0, o_2rank1_aa_4x1])
 
-    assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
+    assert td.n_sample == c_2rank1_aa_4x1.n_sample
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
     assert len(td.content_list) == 1
     assert len(td.group_list) == 1
@@ -121,11 +121,11 @@ def test_init_3(c_2rank1_aa_4x1):
     """
     # Create rank outcome.
     outcome_idx = np.zeros(
-        [c_2rank1_aa_4x1.n_sequence, c_2rank1_aa_4x1.sequence_length],
+        [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length],
         dtype=np.int32
     )
     sample_weight = .9 * np.ones(
-        [c_2rank1_aa_4x1.n_sequence, c_2rank1_aa_4x1.sequence_length]
+        [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length]
     )
     rank_outcome = SparseCategorical(
         outcome_idx,
@@ -148,7 +148,7 @@ def test_init_3(c_2rank1_aa_4x1):
 
     td = Dataset([c_2rank1_aa_4x1, group_0, rank_outcome])
 
-    assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
+    assert td.n_sample == c_2rank1_aa_4x1.n_sample
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
     assert len(td.content_list) == 1
     assert len(td.group_list) == 1
@@ -163,7 +163,7 @@ def test_init_4(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2):
     """
     td = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2])
 
-    assert td.n_sequence == 3
+    assert td.n_sample == 3
     assert td.sequence_length == 2
     assert len(td.content_list) == 1
     assert len(td.group_list) == 0
@@ -181,7 +181,7 @@ def test_init_5(c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2):
         [c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2]
     )
 
-    assert td.n_sequence == 3
+    assert td.n_sample == 3
     assert td.sequence_length == 2
     assert len(td.content_list) == 2
     assert len(td.group_list) == 0
@@ -200,7 +200,7 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "All user-provided 'DatasetComponent' objects must have the same "
-        "`n_sequence`. The 'DatasetComponent' in position 1 does not match "
+        "`n_sample`. The 'DatasetComponent' in position 1 does not match "
         "the previous components."
     )
 

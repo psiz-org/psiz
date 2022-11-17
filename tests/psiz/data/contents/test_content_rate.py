@@ -33,7 +33,7 @@ def test_init_0(c_rate2_a_4x1):
         [[3, 4]]
     ], dtype=np.int32)
 
-    assert c_rate2_a_4x1.n_sequence == desired_n_sequence
+    assert c_rate2_a_4x1.n_sample == desired_n_sequence
     assert c_rate2_a_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_rate2_a_4x1.stimulus_set
@@ -52,7 +52,7 @@ def test_init_1(c_rate2_aa_4x1):
         [[3, 4]]
     ], dtype=np.int32)
 
-    assert c_rate2_aa_4x1.n_sequence == desired_n_sequence
+    assert c_rate2_aa_4x1.n_sample == desired_n_sequence
     assert c_rate2_aa_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_rate2_aa_4x1.stimulus_set
@@ -85,7 +85,7 @@ def test_init_2(c_rate2_b_4x2):
         ], dtype=np.int32
     )
 
-    assert c_rate2_b_4x2.n_sequence == desired_n_sequence
+    assert c_rate2_b_4x2.n_sample == desired_n_sequence
     assert c_rate2_b_4x2.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_rate2_b_4x2.stimulus_set
@@ -126,7 +126,7 @@ def test_init_3(c_rate2_c_4x3):
         ], dtype=np.int32
     )
 
-    assert c_rate2_c_4x3.n_sequence == desired_n_sequence
+    assert c_rate2_c_4x3.n_sample == desired_n_sequence
     assert c_rate2_c_4x3.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_rate2_c_4x3.stimulus_set

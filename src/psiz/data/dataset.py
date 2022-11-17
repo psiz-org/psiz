@@ -41,10 +41,10 @@ class Dataset(object):
                 and `psiz.data.Group` objects.
 
         """
-        n_sequence, sequence_length = self._validate_trial_components(
+        n_sample, sequence_length = self._validate_trial_components(
             components
         )
-        self.n_sequence = n_sequence
+        self.n_sample = n_sample
         self.sequence_length = sequence_length
 
         content_list, group_list, outcome_list = self._sort_trial_components(
@@ -57,7 +57,7 @@ class Dataset(object):
     def _validate_trial_components(self, components):
         """Validate all trial components."""
         # Anchor on first DatasetComponent.
-        n_sequence = components[0].n_sequence
+        n_sample = components[0].n_sample
         sequence_length = components[0].sequence_length
 
         for component_idx, component in enumerate(components[1:]):
@@ -68,10 +68,10 @@ class Dataset(object):
                 )
 
             # Check shape of DatasetComponent.
-            if component.n_sequence != n_sequence:
+            if component.n_sample != n_sample:
                 raise ValueError(
                     "All user-provided 'DatasetComponent' objects must have "
-                    "the same `n_sequence`. The 'DatasetComponent' in "
+                    "the same `n_sample`. The 'DatasetComponent' in "
                     "position {0} does not match the previous "
                     "components.".format(
                         component_idx + 1
@@ -88,7 +88,7 @@ class Dataset(object):
                     )
                 )
 
-        return n_sequence, sequence_length
+        return n_sample, sequence_length
 
     def _sort_trial_components(self, components):
         """Sort trial components."""

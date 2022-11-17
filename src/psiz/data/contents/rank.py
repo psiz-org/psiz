@@ -55,7 +55,7 @@ class Rank(Content):
         Content.__init__(self)
         self._reference_axis = 2
         stimulus_set = self._rectify_shape(stimulus_set)
-        self.n_sequence = stimulus_set.shape[0]
+        self.n_sample = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
         stimulus_set = self._validate_stimulus_set(stimulus_set)
 

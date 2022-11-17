@@ -48,7 +48,7 @@ class Continuous(Outcome):
         """
         Outcome.__init__(self, **kwargs)
         value = self._rectify_shape(value)
-        self.n_sequence = value.shape[0]
+        self.n_sample = value.shape[0]
         self.sequence_length = value.shape[1]
         value = self._validate_value(value)
         self.value = value

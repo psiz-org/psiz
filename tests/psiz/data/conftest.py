@@ -20,7 +20,7 @@ x_y_z_mxn
 x: trial component type (c: content, o: outcome, g: group)
 y: helpful name (rank, rate, rt, continous, catsparse)
 z: variant identifier
-mxn: n_sequence x sequence_length
+mxn: n_sample x sequence_length
 
 """
 
@@ -476,7 +476,7 @@ def o_rate2_a_3x2():
 def c_categorize_a_4x10():
     """Content.
 
-    n_sequence = 4
+    n_sample = 4
     sequence_length = 10
     n_stimuli = 20
     n_output = 3
@@ -512,7 +512,7 @@ def c_categorize_a_4x10():
 def c_categorize_b_4x3():
     """Content.
 
-    n_sequence = 4
+    n_sample = 4
     sequence_length = 3
     n_stimuli = 20
     n_output = 3

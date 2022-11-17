@@ -52,7 +52,7 @@ def test_init_0(c_categorize_a_4x10):
         ], dtype=bool
     )
 
-    assert c_categorize_a_4x10.n_sequence == desired_n_sequence
+    assert c_categorize_a_4x10.n_sample == desired_n_sequence
     assert c_categorize_a_4x10.sequence_length == desired_sequence_length
     assert c_categorize_a_4x10.mask_zero
     np.testing.assert_array_equal(

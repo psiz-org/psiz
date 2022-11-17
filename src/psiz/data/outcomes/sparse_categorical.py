@@ -48,7 +48,7 @@ class SparseCategorical(Outcome):
         """
         Outcome.__init__(self, **kwargs)
         index = self._rectify_shape(index)
-        self.n_sequence = index.shape[0]
+        self.n_sample = index.shape[0]
         self.sequence_length = index.shape[1]
         index = self._validate_index(index)
         self.index = index

@@ -49,7 +49,7 @@ class Outcome(DatasetComponent):
         """Process `sample_weight`.
 
         NOTE: Objects that subclass `Outcome` must call this method in
-        the __init__ method after setting `n_sequence` and
+        the __init__ method after setting `n_sample` and
         `sequence_length`.
 
         """
@@ -58,7 +58,7 @@ class Outcome(DatasetComponent):
         sample_weight = self._sample_weight
         if sample_weight is None:
             sample_weight = np.ones(
-                [self.n_sequence, self.sequence_length], dtype=np.float32
+                [self.n_sample, self.sequence_length], dtype=np.float32
             )
         else:
             if sample_weight.ndim == 1:
@@ -81,7 +81,7 @@ class Outcome(DatasetComponent):
             )
 
         # Check shape agreement.
-        if not (sample_weight.shape[0] == self.n_sequence):
+        if not (sample_weight.shape[0] == self.n_sample):
             raise ValueError(
                 "The argument 'sample_weight' must have "
                 "shape=(samples, sequence_length) that agrees with the rest "

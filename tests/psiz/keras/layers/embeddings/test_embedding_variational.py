@@ -47,7 +47,7 @@ def emb_inputs_v1():
 @pytest.fixture(scope="module")
 def ds_3rank1_4x1():
     """Rank observations dataset."""
-    n_sequence = 4
+    n_sample = 4
     stimulus_set = np.array(
         [
             [1, 2, 3, 4],
@@ -65,14 +65,14 @@ def ds_3rank1_4x1():
     )
 
     outcome_idx = np.zeros(
-        [content.n_sequence, content.sequence_length], dtype=np.int32
+        [content.n_sample, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
     )
 
     ds = psiz.data.Dataset([content, outcome, condition_idx]).export()
-    ds = ds.batch(n_sequence, drop_remainder=False)
+    ds = ds.batch(n_sample, drop_remainder=False)
 
     return ds
 
@@ -80,7 +80,7 @@ def ds_3rank1_4x1():
 @pytest.fixture(scope="module")
 def ds_3rank1_4x2():
     """Rank observations dataset."""
-    n_sequence = 4
+    n_sample = 4
     stimulus_set = np.array([
         [[1, 2, 3, 4], [5, 6, 7, 8]],
         [[10, 13, 16, 19], [3, 6, 9, 12]],
@@ -98,13 +98,13 @@ def ds_3rank1_4x2():
     )
 
     outcome_idx = np.zeros(
-        [content.n_sequence, content.sequence_length], dtype=np.int32
+        [content.n_sample, content.sequence_length], dtype=np.int32
     )
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
     )
     ds = psiz.data.Dataset([content, outcome, condition_idx]).export()
-    ds = ds.batch(n_sequence, drop_remainder=False)
+    ds = ds.batch(n_sample, drop_remainder=False)
 
     return ds
 

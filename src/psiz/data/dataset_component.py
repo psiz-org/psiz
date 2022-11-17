@@ -28,7 +28,7 @@ class DatasetComponent(metaclass=ABCMeta):
 
     def __init__(self):
         """Initialize."""
-        self.n_sequence = None
+        self.n_sample = None
         self.sequence_length = None
         self._timestep_axis = 1
 

@@ -38,7 +38,7 @@ def test_init_0(o_sparsecat_a_4x1):
     desired_sample_weight = np.ones([4, 1], dtype=np.float32)
 
     assert desired_name == o_sparsecat_a_4x1.name
-    assert o_sparsecat_a_4x1.n_sequence == desired_n_sequence
+    assert o_sparsecat_a_4x1.n_sample == desired_n_sequence
     assert o_sparsecat_a_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_index, o_sparsecat_a_4x1.index
@@ -61,7 +61,7 @@ def test_init_1(o_sparsecat_aa_4x1):
     desired_sample_weight = np.ones([4, 1], dtype=np.float32)
 
     assert o_sparsecat_aa_4x1.name == desired_name
-    assert o_sparsecat_aa_4x1.n_sequence == desired_n_sequence
+    assert o_sparsecat_aa_4x1.n_sample == desired_n_sequence
     assert o_sparsecat_aa_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_index, o_sparsecat_aa_4x1.index
@@ -84,7 +84,7 @@ def test_init_2(o_sparsecat_b_4x3):
     desired_sample_weight = np.ones([4, 3], dtype=np.float32)
 
     assert o_sparsecat_b_4x3.name == desired_name
-    assert o_sparsecat_b_4x3.n_sequence == desired_n_sequence
+    assert o_sparsecat_b_4x3.n_sample == desired_n_sequence
     assert o_sparsecat_b_4x3.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_index, o_sparsecat_b_4x3.index
@@ -114,7 +114,7 @@ def test_init_3(o_sparsecat_d_4x3):
     )
 
     assert o_sparsecat_d_4x3.name == desired_name
-    assert o_sparsecat_d_4x3.n_sequence == desired_n_sequence
+    assert o_sparsecat_d_4x3.n_sample == desired_n_sequence
     assert o_sparsecat_d_4x3.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_index, o_sparsecat_d_4x3.index
@@ -184,13 +184,13 @@ def test_invalid_init_2():
 
 def test_invalid_init_3():
     """Test invalid sample_weight initialization."""
-    n_sequence = 4
+    n_sample = 4
     sequence_length = 1
     depth = 4
-    outcome_idx = np.zeros([n_sequence, sequence_length], dtype=np.int32)
+    outcome_idx = np.zeros([n_sample, sequence_length], dtype=np.int32)
 
     sample_weight = .9 * np.ones(
-        [n_sequence, sequence_length, 2]
+        [n_sample, sequence_length, 2]
     )
     with pytest.raises(Exception) as e_info:
         SparseCategorical(
@@ -202,7 +202,7 @@ def test_invalid_init_3():
     )
 
     sample_weight = .9 * np.ones(
-        [n_sequence + 1, sequence_length]
+        [n_sample + 1, sequence_length]
     )
     with pytest.raises(Exception) as e_info:
         SparseCategorical(
@@ -216,7 +216,7 @@ def test_invalid_init_3():
     )
 
     sample_weight = .9 * np.ones(
-        [n_sequence, sequence_length + 1]
+        [n_sample, sequence_length + 1]
     )
     with pytest.raises(Exception) as e_info:
         SparseCategorical(

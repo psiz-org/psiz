@@ -38,7 +38,7 @@ class Group(DatasetComponent):
         DatasetComponent.__init__(self)
         value = self._rectify_shape(value)
         value = self._validate_value(name, value)
-        self.n_sequence = value.shape[0]
+        self.n_sample = value.shape[0]
         self.sequence_length = value.shape[1]
         self.name = name
         self.value = value

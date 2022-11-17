@@ -36,7 +36,7 @@ def test_init_0(c_2rank1_a_4x1):
     desired_n_select = 1
     desired_max_outcome = 2
 
-    assert c_2rank1_a_4x1.n_sequence == desired_n_sequence
+    assert c_2rank1_a_4x1.n_sample == desired_n_sequence
     assert c_2rank1_a_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_2rank1_a_4x1.stimulus_set
@@ -60,7 +60,7 @@ def test_init_1(c_2rank1_aa_4x1):
     desired_n_select = 1
     desired_max_outcome = 2
 
-    assert c_2rank1_aa_4x1.n_sequence == desired_n_sequence
+    assert c_2rank1_aa_4x1.n_sample == desired_n_sequence
     assert c_2rank1_aa_4x1.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_2rank1_aa_4x1.stimulus_set
@@ -98,7 +98,7 @@ def test_init_2(c_4rank2_b_4x2):
     desired_n_select = 2
     desired_max_outcome = 12
 
-    assert c_4rank2_b_4x2.n_sequence == desired_n_sequence
+    assert c_4rank2_b_4x2.n_sample == desired_n_sequence
     assert c_4rank2_b_4x2.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_4rank2_b_4x2.stimulus_set
@@ -144,7 +144,7 @@ def test_init_3(c_4rank2_c_4x3):
     desired_n_select = 2
     desired_max_outcome = 12
 
-    assert c_4rank2_c_4x3.n_sequence == desired_n_sequence
+    assert c_4rank2_c_4x3.n_sample == desired_n_sequence
     assert c_4rank2_c_4x3.sequence_length == desired_sequence_length
     np.testing.assert_array_equal(
         desired_stimulus_set, c_4rank2_c_4x3.stimulus_set

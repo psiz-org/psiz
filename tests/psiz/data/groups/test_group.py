@@ -32,7 +32,7 @@ def test_init_0(g_condition_idx_4x1):
         ]
     )
     assert g_condition_idx_4x1.name == 'condition_idx'
-    assert g_condition_idx_4x1.n_sequence == 4
+    assert g_condition_idx_4x1.n_sample == 4
     assert g_condition_idx_4x1.sequence_length == 1
     np.testing.assert_array_equal(
         g_condition_idx_4x1.value, desired_value
@@ -50,7 +50,7 @@ def test_init_1(g_condition_idx_4x3):
         ]
     )
     assert g_condition_idx_4x3.name == 'condition_idx'
-    assert g_condition_idx_4x3.n_sequence == 4
+    assert g_condition_idx_4x3.n_sample == 4
     assert g_condition_idx_4x3.sequence_length == 3
     np.testing.assert_array_equal(
         g_condition_idx_4x3.value, desired_value
@@ -68,7 +68,7 @@ def test_init_2(g_mix2_4x3):
         ], dtype=np.float32
     )
     assert g_mix2_4x3.name == 'mix2'
-    assert g_mix2_4x3.n_sequence == 4
+    assert g_mix2_4x3.n_sample == 4
     assert g_mix2_4x3.sequence_length == 3
     np.testing.assert_array_equal(
         g_mix2_4x3.value, desired_value
@@ -86,7 +86,7 @@ def test_init_3(g_condition_label_4x1):
         ]
     )
     assert g_condition_label_4x1.name == 'condition_label'
-    assert g_condition_label_4x1.n_sequence == 4
+    assert g_condition_label_4x1.n_sample == 4
     assert g_condition_label_4x1.sequence_length == 1
     np.testing.assert_array_equal(
         g_condition_label_4x1.value, desired_value

@@ -38,7 +38,7 @@ def test_init_0(o_continuous_a_4x1):
     desired_sample_weight = np.ones([4, 1], dtype=np.float32)
 
     assert desired_name == o_continuous_a_4x1.name
-    assert desired_n_sequence == o_continuous_a_4x1.n_sequence
+    assert desired_n_sequence == o_continuous_a_4x1.n_sample
     assert desired_sequence_length == o_continuous_a_4x1.sequence_length
     assert desired_n_unit == o_continuous_a_4x1.n_unit
     np.testing.assert_array_equal(
@@ -61,7 +61,7 @@ def test_init_1(o_continuous_aa_4x1):
     desired_sample_weight = np.ones([4, 1], dtype=np.float32)
 
     assert desired_name == o_continuous_aa_4x1.name
-    assert desired_n_sequence == o_continuous_aa_4x1.n_sequence
+    assert desired_n_sequence == o_continuous_aa_4x1.n_sample
     assert desired_sequence_length == o_continuous_aa_4x1.sequence_length
     assert desired_n_unit == o_continuous_aa_4x1.n_unit
     np.testing.assert_array_equal(
@@ -89,7 +89,7 @@ def test_init_2(o_continuous_b_4x3):
     desired_sample_weight = np.ones([4, 3], dtype=np.float32)
 
     assert desired_name == o_continuous_b_4x3.name
-    assert desired_n_sequence == o_continuous_b_4x3.n_sequence
+    assert desired_n_sequence == o_continuous_b_4x3.n_sample
     assert desired_sequence_length == o_continuous_b_4x3.sequence_length
     assert desired_n_unit == o_continuous_b_4x3.n_unit
     np.testing.assert_array_equal(
@@ -117,7 +117,7 @@ def test_init_3(o_continuous_c_4x3):
     desired_sample_weight = np.ones([4, 3], dtype=np.float32)
 
     assert desired_name == o_continuous_c_4x3.name
-    assert desired_n_sequence == o_continuous_c_4x3.n_sequence
+    assert desired_n_sequence == o_continuous_c_4x3.n_sample
     assert desired_sequence_length == o_continuous_c_4x3.sequence_length
     assert desired_n_unit == o_continuous_c_4x3.n_unit
     np.testing.assert_array_equal(
@@ -152,7 +152,7 @@ def test_init_4(o_continuous_e_4x3):
     )
 
     assert desired_name == o_continuous_e_4x3.name
-    assert desired_n_sequence == o_continuous_e_4x3.n_sequence
+    assert desired_n_sequence == o_continuous_e_4x3.n_sample
     assert desired_sequence_length == o_continuous_e_4x3.sequence_length
     assert desired_n_unit == o_continuous_e_4x3.n_unit
     np.testing.assert_array_equal(

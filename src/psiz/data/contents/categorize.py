@@ -56,7 +56,7 @@ class Categorize(Content):
         Content.__init__(self)
         stimulus_set = self._rectify_shape(stimulus_set)
         objective_query_label = self._rectify_shape(objective_query_label)
-        self.n_sequence = stimulus_set.shape[0]
+        self.n_sample = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
         self.stimulus_set = self._validate_stimulus_set(stimulus_set)
         self.objective_query_label = self._validate_objective_query_label(
@@ -120,7 +120,7 @@ class Categorize(Content):
                 "rank-3 ndarray with a shape corresponding to (samples, "
                 "sequence_length, n_stimuli_per_trial)."
             )
-        if objective_query_label.shape[0] != self.n_sequence:
+        if objective_query_label.shape[0] != self.n_sample:
             raise ValueError(
                 "The argument `objective_query_label` must be a rank-2 or "
                 "rank-3 ndarray with a shape corresponding to (samples, "

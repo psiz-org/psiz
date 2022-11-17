@@ -217,7 +217,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         eligibile_indices, (n_trial, 9), p, rng=rng
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
-    td = psiz.data.TrialDataset([content])
+    td = psiz.data.Dataset([content])
     ds_content = td.export(export_format='tfds', with_timestep_axis=False)
 
     # Simulate similarity judgments.

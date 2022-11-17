@@ -71,7 +71,7 @@ def ds_3rank1_4x1():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.TrialDataset([content, outcome, condition_idx]).export()
+    ds = psiz.data.Dataset([content, outcome, condition_idx]).export()
     ds = ds.batch(n_sequence, drop_remainder=False)
 
     return ds
@@ -103,7 +103,7 @@ def ds_3rank1_4x2():
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
     )
-    ds = psiz.data.TrialDataset([content, outcome, condition_idx]).export()
+    ds = psiz.data.Dataset([content, outcome, condition_idx]).export()
     ds = ds.batch(n_sequence, drop_remainder=False)
 
     return ds

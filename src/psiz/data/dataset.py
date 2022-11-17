@@ -16,7 +16,7 @@
 """Module for data.
 
 Classes:
-    TrialDataset: Generic composite class for trial data.
+    Dataset: Generic composite class for data.
 
 """
 
@@ -28,8 +28,8 @@ from psiz.data.groups.group import Group
 from psiz.data.outcomes.outcome import Outcome
 
 
-class TrialDataset(object):
-    """Generic composite class for trial data."""
+class Dataset(object):
+    """Generic composite class for data."""
 
     def __init__(self, trial_components):
         """Initialize.
@@ -105,7 +105,7 @@ class TrialDataset(object):
                 raise ValueError(
                     "The `TrialComponent` in position {0} must be an  "
                     "instance of `psiz.data.Content`, `psiz.data.Outcome`, or "
-                    "`psiz.data.Group` to use `TrialDataset`.".format(
+                    "`psiz.data.Group` to use `Dataset`.".format(
                         component_idx
                     )
                 )
@@ -205,7 +205,7 @@ class TrialDataset(object):
             for k in d.keys():
                 if k is None:
                     raise ValueError(
-                        "When a `TrialDataset` has multiple outputs, all "
+                        "When a `Dataset` has multiple outputs, all "
                         "outputs must be created with the `name` argument."
                     )
             return d

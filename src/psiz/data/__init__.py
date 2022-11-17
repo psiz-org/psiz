@@ -17,7 +17,7 @@
 
 
 from psiz.data.trial_component import TrialComponent
-from psiz.data.trial_dataset import TrialDataset
+from psiz.data.dataset import Dataset
 from psiz.data.contents.content import Content
 from psiz.data.contents.categorize import Categorize
 from psiz.data.contents.rank import Rank
@@ -32,7 +32,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 
 __all__ = [
     'TrialComponent',
-    'TrialDataset',
+    'Dataset',
     'Content',
     'Categorize',
     'Rank',

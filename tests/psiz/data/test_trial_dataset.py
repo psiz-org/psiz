@@ -21,7 +21,7 @@ import tensorflow as tf
 
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
-from psiz.data.trial_dataset import TrialDataset
+from psiz.data.dataset import Dataset
 from psiz.data.trial_component import TrialComponent
 
 
@@ -52,7 +52,7 @@ def test_init_0(c_2rank1_aa_4x1):
     Bare minimum arguments.
 
     """
-    td = TrialDataset([c_2rank1_aa_4x1])
+    td = Dataset([c_2rank1_aa_4x1])
 
     assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
@@ -75,7 +75,7 @@ def test_init_1(c_2rank1_aa_4x1):
         outcome_idx, depth=c_2rank1_aa_4x1.n_outcome, name='rank_outcome'
     )
 
-    td = TrialDataset([c_2rank1_aa_4x1, rank_outcome])
+    td = Dataset([c_2rank1_aa_4x1, rank_outcome])
 
     assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
@@ -103,7 +103,7 @@ def test_init_2(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
         value, name='group_id'
     )
 
-    td = TrialDataset([c_2rank1_aa_4x1, group_0, o_2rank1_aa_4x1])
+    td = Dataset([c_2rank1_aa_4x1, group_0, o_2rank1_aa_4x1])
 
     assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
@@ -146,7 +146,7 @@ def test_init_3(c_2rank1_aa_4x1):
         value, name='condition_idx'
     )
 
-    td = TrialDataset([c_2rank1_aa_4x1, group_0, rank_outcome])
+    td = Dataset([c_2rank1_aa_4x1, group_0, rank_outcome])
 
     assert td.n_sequence == c_2rank1_aa_4x1.n_sequence
     assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
@@ -161,7 +161,7 @@ def test_init_4(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2):
     One content, two outcomes.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2])
+    td = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2])
 
     assert td.n_sequence == 3
     assert td.sequence_length == 2
@@ -177,7 +177,7 @@ def test_init_5(c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2):
     * two outcomes
 
     """
-    td = TrialDataset(
+    td = Dataset(
         [c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2]
     )
 
@@ -196,7 +196,7 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
 
     """
     with pytest.raises(Exception) as e_info:
-        TrialDataset([c_2rank1_aa_4x1, o_2rank1_d_3x2])
+        Dataset([c_2rank1_aa_4x1, o_2rank1_d_3x2])
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "All user-provided 'TrialComponent' objects must have the same "
@@ -205,7 +205,7 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
     )
 
     with pytest.raises(Exception) as e_info:
-        TrialDataset([c_2rank1_aa_4x1, o_4rank2_c_4x3])
+        Dataset([c_2rank1_aa_4x1, o_4rank2_c_4x3])
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "All user-provided 'TrialComponent' objects must have the same "
@@ -215,12 +215,12 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
 
     bad_component_4x1 = BadTrialComponent()
     with pytest.raises(Exception) as e_info:
-        TrialDataset([c_2rank1_aa_4x1, bad_component_4x1])
+        Dataset([c_2rank1_aa_4x1, bad_component_4x1])
     assert e_info.type == ValueError
     assert str(e_info.value) == (
         "The `TrialComponent` in position 1 must be an  instance of "
         "`psiz.data.Content`, `psiz.data.Outcome`, or `psiz.data.Group` to "
-        "use `TrialDataset`."
+        "use `Dataset`."
     )
 
 
@@ -230,7 +230,7 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
     * Include content and group only.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2])
+    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -296,7 +296,7 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
         `w`.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
+    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -404,7 +404,7 @@ def test_export_1b(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     Return dataset using `with_timestep_axis=False`.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
+    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -476,7 +476,7 @@ def test_export_2a(
     `w`.
 
     """
-    td = TrialDataset(
+    td = Dataset(
         [c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2]
     )
 
@@ -581,7 +581,7 @@ def test_export_2a(
 
 def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     """Test export with `StringLookup`."""
-    td = TrialDataset(
+    td = Dataset(
         [c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1]
     )
     ds = td.export(export_format='tfds')
@@ -620,7 +620,7 @@ def test_invalid_export_0(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     Using incorrect `export_format`.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
+    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     with pytest.raises(Exception) as e_info:
         td.export(export_format='garbage')
@@ -636,14 +636,14 @@ def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
     Using incorrect `export_format`.
 
     """
-    td = TrialDataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname])
+    td = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname])
 
     with pytest.raises(Exception) as e_info:
         td.export(export_format='tfds')
     assert e_info.type == ValueError
     assert (
         str(e_info.value) == (
-            "When a `TrialDataset` has multiple outputs, all "
+            "When a `Dataset` has multiple outputs, all "
             "outputs must be created with the `name` argument."
         )
     )
@@ -651,8 +651,8 @@ def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
 
 def test_tf_ds_concatenate(c_2rank1_d_3x2, c_2rank1_e_3x2):
     """Test concatenating two datasets"""
-    td_0 = TrialDataset([c_2rank1_d_3x2])
-    td_1 = TrialDataset([c_2rank1_e_3x2])
+    td_0 = Dataset([c_2rank1_d_3x2])
+    td_1 = Dataset([c_2rank1_e_3x2])
 
     ds_0 = td_0.export(export_format='tfds')
     ds_1 = td_1.export(export_format='tfds')

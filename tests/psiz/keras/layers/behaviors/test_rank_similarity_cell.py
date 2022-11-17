@@ -98,7 +98,7 @@ def ds_3rank1_v0():
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
     )
-    ds = psiz.data.TrialDataset([content, outcome]).export(
+    ds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=False, export_format='tfds'
     )
     ds = ds.batch(n_sequence, drop_remainder=False)
@@ -130,7 +130,7 @@ def ds_3rank1_v1():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.TrialDataset([content, outcome]).export(
+    ds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=True, export_format='tfds'
     )
     ds = ds.batch(n_sequence, drop_remainder=False)

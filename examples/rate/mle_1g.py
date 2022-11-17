@@ -148,7 +148,7 @@ def main():
     eligible_indices = np.arange(n_stimuli) + 1
     stimulus_set = exhaustive_pairs(eligible_indices)
     content = psiz.data.Rate(stimulus_set)
-    td = psiz.data.TrialDataset([content])
+    td = psiz.data.Dataset([content])
     ds_content = td.export(export_format='tfds', with_timestep_axis=False)
 
     # Simulate noise-free similarity judgments and add outcomes to dataset.

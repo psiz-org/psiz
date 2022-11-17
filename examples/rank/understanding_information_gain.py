@@ -101,7 +101,7 @@ def main():
         eligable_list = np.arange(1, n_stimuli, dtype=np.int32)
         stimulus_set = candidate_list(eligable_list, n_reference)
         content = psiz.data.Rank(stimulus_set, n_select=n_select)
-        ds = psiz.data.TrialDataset([content]).export(
+        ds = psiz.data.Dataset([content]).export(
             export_format='tfds', with_timestep_axis=False
         )
         ds = ds.batch(batch_size, drop_remainder=False)

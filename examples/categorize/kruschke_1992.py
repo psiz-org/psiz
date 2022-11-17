@@ -270,7 +270,7 @@ def generate_fig5_dataset(
     content = psiz.data.Categorize(
         stimulus_set=cat_idx_all, objective_query_label=objective_label
     )
-    ds = psiz.data.TrialDataset([content]).export().batch(
+    ds = psiz.data.Dataset([content]).export().batch(
         n_sequence, drop_remainder=False
     )
     # Return onehot representation of feedback labels for post-analysis of
@@ -422,7 +422,7 @@ def generate_fig14_dataset(
     content = psiz.data.Categorize(
         stimulus_set=cat_idx_all + 1, objective_query_label=objective_label
     )
-    ds = psiz.data.TrialDataset([content]).export().batch(
+    ds = psiz.data.Dataset([content]).export().batch(
         n_sequence, drop_remainder=False
     )
 

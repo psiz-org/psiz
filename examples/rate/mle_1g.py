@@ -148,13 +148,13 @@ def main():
     eligible_indices = np.arange(n_stimuli) + 1
     stimulus_set = exhaustive_pairs(eligible_indices)
     content = psiz.data.Rate(stimulus_set)
-    td = psiz.data.Dataset([content])
-    ds_content = td.export(export_format='tfds', with_timestep_axis=False)
+    pds = psiz.data.Dataset([content])
+    ds_content = pds.export(export_format='tfds', with_timestep_axis=False)
 
     # Simulate noise-free similarity judgments and add outcomes to dataset.
     ds = ds_content.map(lambda x: (x, model_true(x)))
 
-    n_trial_train = td.n_sequence
+    n_trial_train = pds.n_sequence
     ds_train = ds.cache().shuffle(
         buffer_size=n_trial_train, reshuffle_each_iteration=True
     ).batch(

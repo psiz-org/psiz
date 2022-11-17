@@ -501,8 +501,8 @@ def ds_time_categorize_v0():
     content = psiz.data.Categorize(
         stimulus_set=stimulus_set, objective_query_label=objective_query_label
     )
-    td = psiz.data.Dataset([content, outcome])
-    ds = td.export(export_format='tfds').batch(
+    pds = psiz.data.Dataset([content, outcome])
+    ds = pds.export(export_format='tfds').batch(
         n_sample, drop_remainder=False
     )
     return ds
@@ -557,11 +557,11 @@ def ds_4rank2_rate2_v0():
         name='rate_branch'
     )
 
-    td = psiz.data.Dataset(
+    pds = psiz.data.Dataset(
         [content_rank, outcome_rank, content_rate, outcome_rate, gate_weights]
     )
 
-    ds = td.export(export_format='tfds', with_timestep_axis=False).batch(
+    ds = pds.export(export_format='tfds', with_timestep_axis=False).batch(
         n_sample, drop_remainder=False
     )
     return ds
@@ -596,8 +596,8 @@ def ds_4rank1_rt_v0():
         np.array([[4.0], [6.0], [7.0], [11.0]]),
         name='rank_rt_branch'
     )
-    td = psiz.data.Dataset([content_rank, outcome_rank, outcome_rt])
-    ds = td.export(with_timestep_axis=False).batch(
+    pds = psiz.data.Dataset([content_rank, outcome_rank, outcome_rt])
+    ds = pds.export(with_timestep_axis=False).batch(
         n_trial, drop_remainder=False
     )
     return ds

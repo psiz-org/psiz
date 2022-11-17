@@ -125,8 +125,8 @@ def main():
         eligibile_indices, (n_trial, 9), p, rng=rng
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
-    td = psiz.data.Dataset([content])
-    ds_content = td.export(export_format='tfds', with_timestep_axis=False)
+    pds = psiz.data.Dataset([content])
+    ds_content = pds.export(export_format='tfds', with_timestep_axis=False)
 
     # Simulate similarity judgments.
     def simulate_agent(x):

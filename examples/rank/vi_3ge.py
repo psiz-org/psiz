@@ -220,8 +220,8 @@ def main():
         ),
         name='expertise'
     )
-    td = psiz.data.Dataset([content, expertise])
-    ds_content = td.export(export_format='tfds', with_timestep_axis=False)
+    pds = psiz.data.Dataset([content, expertise])
+    ds_content = pds.export(export_format='tfds', with_timestep_axis=False)
     ds_content = ds_content.batch(batch_size, drop_remainder=False)
 
     # Simulate similarity judgments.

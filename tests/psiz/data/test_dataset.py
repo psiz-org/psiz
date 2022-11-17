@@ -52,13 +52,13 @@ def test_init_0(c_2rank1_aa_4x1):
     Bare minimum arguments.
 
     """
-    td = Dataset([c_2rank1_aa_4x1])
+    pds = Dataset([c_2rank1_aa_4x1])
 
-    assert td.n_sample == c_2rank1_aa_4x1.n_sample
-    assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
-    assert len(td.content_list) == 1
-    assert len(td.group_list) == 0
-    assert len(td.outcome_list) == 0
+    assert pds.n_sample == c_2rank1_aa_4x1.n_sample
+    assert pds.sequence_length == c_2rank1_aa_4x1.sequence_length
+    assert len(pds.content_list) == 1
+    assert len(pds.group_list) == 0
+    assert len(pds.outcome_list) == 0
 
 
 def test_init_1(c_2rank1_aa_4x1):
@@ -75,13 +75,13 @@ def test_init_1(c_2rank1_aa_4x1):
         outcome_idx, depth=c_2rank1_aa_4x1.n_outcome, name='rank_outcome'
     )
 
-    td = Dataset([c_2rank1_aa_4x1, rank_outcome])
+    pds = Dataset([c_2rank1_aa_4x1, rank_outcome])
 
-    assert td.n_sample == c_2rank1_aa_4x1.n_sample
-    assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
-    assert len(td.content_list) == 1
-    assert len(td.group_list) == 0
-    assert len(td.outcome_list) == 1
+    assert pds.n_sample == c_2rank1_aa_4x1.n_sample
+    assert pds.sequence_length == c_2rank1_aa_4x1.sequence_length
+    assert len(pds.content_list) == 1
+    assert len(pds.group_list) == 0
+    assert len(pds.outcome_list) == 1
 
 
 def test_init_2(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
@@ -103,13 +103,13 @@ def test_init_2(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
         value, name='group_id'
     )
 
-    td = Dataset([c_2rank1_aa_4x1, group_0, o_2rank1_aa_4x1])
+    pds = Dataset([c_2rank1_aa_4x1, group_0, o_2rank1_aa_4x1])
 
-    assert td.n_sample == c_2rank1_aa_4x1.n_sample
-    assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
-    assert len(td.content_list) == 1
-    assert len(td.group_list) == 1
-    assert len(td.outcome_list) == 1
+    assert pds.n_sample == c_2rank1_aa_4x1.n_sample
+    assert pds.sequence_length == c_2rank1_aa_4x1.sequence_length
+    assert len(pds.content_list) == 1
+    assert len(pds.group_list) == 1
+    assert len(pds.outcome_list) == 1
 
 
 def test_init_3(c_2rank1_aa_4x1):
@@ -146,13 +146,13 @@ def test_init_3(c_2rank1_aa_4x1):
         value, name='condition_idx'
     )
 
-    td = Dataset([c_2rank1_aa_4x1, group_0, rank_outcome])
+    pds = Dataset([c_2rank1_aa_4x1, group_0, rank_outcome])
 
-    assert td.n_sample == c_2rank1_aa_4x1.n_sample
-    assert td.sequence_length == c_2rank1_aa_4x1.sequence_length
-    assert len(td.content_list) == 1
-    assert len(td.group_list) == 1
-    assert len(td.outcome_list) == 1
+    assert pds.n_sample == c_2rank1_aa_4x1.n_sample
+    assert pds.sequence_length == c_2rank1_aa_4x1.sequence_length
+    assert len(pds.content_list) == 1
+    assert len(pds.group_list) == 1
+    assert len(pds.outcome_list) == 1
 
 
 def test_init_4(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2):
@@ -161,13 +161,13 @@ def test_init_4(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2):
     One content, two outcomes.
 
     """
-    td = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2])
+    pds = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2])
 
-    assert td.n_sample == 3
-    assert td.sequence_length == 2
-    assert len(td.content_list) == 1
-    assert len(td.group_list) == 0
-    assert len(td.outcome_list) == 2
+    assert pds.n_sample == 3
+    assert pds.sequence_length == 2
+    assert len(pds.content_list) == 1
+    assert len(pds.group_list) == 0
+    assert len(pds.outcome_list) == 2
 
 
 def test_init_5(c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2):
@@ -177,15 +177,15 @@ def test_init_5(c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2):
     * two outcomes
 
     """
-    td = Dataset(
+    pds = Dataset(
         [c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2]
     )
 
-    assert td.n_sample == 3
-    assert td.sequence_length == 2
-    assert len(td.content_list) == 2
-    assert len(td.group_list) == 0
-    assert len(td.outcome_list) == 2
+    assert pds.n_sample == 3
+    assert pds.sequence_length == 2
+    assert len(pds.content_list) == 2
+    assert len(pds.group_list) == 0
+    assert len(pds.outcome_list) == 2
 
 
 def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
@@ -230,7 +230,7 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
     * Include content and group only.
 
     """
-    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2])
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -272,7 +272,7 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
         ], dtype=tf.int32
     )
 
-    ds = td.export().batch(4, drop_remainder=False)
+    ds = pds.export().batch(4, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0]
 
@@ -296,7 +296,7 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
         `w`.
 
     """
-    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -362,7 +362,7 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
         ], dtype=tf.float32
     )
 
-    ds = td.export().batch(4, drop_remainder=False)
+    ds = pds.export().batch(4, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0][0]
     y = ds_list[0][1]
@@ -383,7 +383,7 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     tf.debugging.assert_equal(desired_condition_id, x['condition_idx'])
 
     # Export inputs only.
-    ds = td.export(inputs_only=True).batch(4, drop_remainder=False)
+    ds = pds.export(inputs_only=True).batch(4, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0]
     assert len(ds_list) == 1
@@ -404,7 +404,7 @@ def test_export_1b(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     Return dataset using `with_timestep_axis=False`.
 
     """
-    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -447,7 +447,7 @@ def test_export_1b(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
         [0.9, 0.9, 0.9, 0.9, 0.9, 0.9], dtype=tf.float32
     )
 
-    ds = td.export(with_timestep_axis=False).batch(6, drop_remainder=False)
+    ds = pds.export(with_timestep_axis=False).batch(6, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0][0]
     y = ds_list[0][1]
@@ -476,7 +476,7 @@ def test_export_2a(
     `w`.
 
     """
-    td = Dataset(
+    pds = Dataset(
         [c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2]
     )
 
@@ -557,7 +557,7 @@ def test_export_2a(
         ], dtype=tf.float32
     )
 
-    ds = td.export().batch(4, drop_remainder=False)
+    ds = pds.export().batch(4, drop_remainder=False)
     ds_list = list(ds)
     x = ds_list[0][0]
     y = ds_list[0][1]
@@ -581,10 +581,10 @@ def test_export_2a(
 
 def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     """Test export with `StringLookup`."""
-    td = Dataset(
+    pds = Dataset(
         [c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1]
     )
-    ds = td.export(export_format='tfds')
+    ds = pds.export(export_format='tfds')
 
     # Map strings to indices.
     condition_lookup_layer = tf.keras.layers.StringLookup(
@@ -620,10 +620,10 @@ def test_invalid_export_0(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     Using incorrect `export_format`.
 
     """
-    td = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     with pytest.raises(Exception) as e_info:
-        td.export(export_format='garbage')
+        pds.export(export_format='garbage')
     assert e_info.type == ValueError
     assert (
         str(e_info.value) == "Unrecognized `export_format` 'garbage'."
@@ -636,10 +636,10 @@ def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
     Using incorrect `export_format`.
 
     """
-    td = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname])
+    pds = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname])
 
     with pytest.raises(Exception) as e_info:
-        td.export(export_format='tfds')
+        pds.export(export_format='tfds')
     assert e_info.type == ValueError
     assert (
         str(e_info.value) == (

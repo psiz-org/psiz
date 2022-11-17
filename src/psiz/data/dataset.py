@@ -31,44 +31,44 @@ from psiz.data.outcomes.outcome import Outcome
 class Dataset(object):
     """Generic composite class for data."""
 
-    def __init__(self, trial_components):
+    def __init__(self, components):
         """Initialize.
 
         Args:
-            trial_components: List of DatasetComponent objects. List
+            components: List of DatasetComponent objects. List
                 should include at least one `psiz.data.Content` object.
                 Other valid objects include `psiz.data.Outcome` objects
                 and `psiz.data.Group` objects.
 
         """
         n_sequence, sequence_length = self._validate_trial_components(
-            trial_components
+            components
         )
         self.n_sequence = n_sequence
         self.sequence_length = sequence_length
 
         content_list, group_list, outcome_list = self._sort_trial_components(
-            trial_components
+            components
         )
         self.content_list = content_list
         self.group_list = group_list
         self.outcome_list = outcome_list
 
-    def _validate_trial_components(self, trial_components):
+    def _validate_trial_components(self, components):
         """Validate all trial components."""
         # Anchor on first DatasetComponent.
-        n_sequence = trial_components[0].n_sequence
-        sequence_length = trial_components[0].sequence_length
+        n_sequence = components[0].n_sequence
+        sequence_length = components[0].sequence_length
 
-        for component_idx, trial_component in enumerate(trial_components[1:]):
-            if not isinstance(trial_component, DatasetComponent):
+        for component_idx, component in enumerate(components[1:]):
+            if not isinstance(component, DatasetComponent):
                 raise ValueError(
                     "The object in position {0} is not a "
                     "`DatasetComponent`.".format(component_idx + 1)
                 )
 
             # Check shape of DatasetComponent.
-            if trial_component.n_sequence != n_sequence:
+            if component.n_sequence != n_sequence:
                 raise ValueError(
                     "All user-provided 'DatasetComponent' objects must have "
                     "the same `n_sequence`. The 'DatasetComponent' in "
@@ -78,7 +78,7 @@ class Dataset(object):
                     )
                 )
 
-            if trial_component.sequence_length != sequence_length:
+            if component.sequence_length != sequence_length:
                 raise ValueError(
                     "All user-provided 'DatasetComponent' objects must have "
                     "the same `sequence_length`. The 'DatasetComponent' in "
@@ -90,19 +90,19 @@ class Dataset(object):
 
         return n_sequence, sequence_length
 
-    def _sort_trial_components(self, trial_components):
+    def _sort_trial_components(self, components):
         """Sort trial components."""
         content_list = []
         group_list = []
         outcome_list = []
 
-        for component_idx, trial_component in enumerate(trial_components):
-            if isinstance(trial_component, Content):
-                content_list.append(trial_component)
-            elif isinstance(trial_component, Outcome):
-                outcome_list.append(trial_component)
-            elif isinstance(trial_component, Group):
-                group_list.append(trial_component)
+        for component_idx, component in enumerate(components):
+            if isinstance(component, Content):
+                content_list.append(component)
+            elif isinstance(component, Outcome):
+                outcome_list.append(component)
+            elif isinstance(component, Group):
+                group_list.append(component)
             else:
                 raise ValueError(
                     "The `DatasetComponent` in position {0} must be an  "
@@ -115,16 +115,16 @@ class Dataset(object):
         return content_list, group_list, outcome_list
 
     @property
-    def trial_components(self):
+    def components(self):
         """Return all trial components."""
-        trial_components = []
+        components = []
         for content in self.content_list:
-            trial_components.append(content)
+            components.append(content)
         for group in self.group_list:
-            trial_components.append(group)
+            components.append(group)
         for outcome in self.outcome_list:
-            trial_components.append(outcome)
-        return trial_components
+            components.append(outcome)
+        return components
 
     def export(
         self, with_timestep_axis=True, export_format='tfds', inputs_only=False

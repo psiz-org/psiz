@@ -22,7 +22,7 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.data.trial_component import TrialComponent
+from psiz.data.dataset_component import DatasetComponent
 from psiz.data.contents.content import Content
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.outcome import Outcome
@@ -35,7 +35,7 @@ class Dataset(object):
         """Initialize.
 
         Args:
-            trial_components: List of TrialComponent objects. List
+            trial_components: List of DatasetComponent objects. List
                 should include at least one `psiz.data.Content` object.
                 Other valid objects include `psiz.data.Outcome` objects
                 and `psiz.data.Group` objects.
@@ -56,32 +56,34 @@ class Dataset(object):
 
     def _validate_trial_components(self, trial_components):
         """Validate all trial components."""
-        # Anchor on first TrialComponent.
+        # Anchor on first DatasetComponent.
         n_sequence = trial_components[0].n_sequence
         sequence_length = trial_components[0].sequence_length
 
         for component_idx, trial_component in enumerate(trial_components[1:]):
-            if not isinstance(trial_component, TrialComponent):
+            if not isinstance(trial_component, DatasetComponent):
                 raise ValueError(
                     "The object in position {0} is not a "
-                    "`TrialComponent`.".format(component_idx + 1)
+                    "`DatasetComponent`.".format(component_idx + 1)
                 )
 
-            # Check shape of TrialComponent.
+            # Check shape of DatasetComponent.
             if trial_component.n_sequence != n_sequence:
                 raise ValueError(
-                    "All user-provided 'TrialComponent' objects must have the "
-                    "same `n_sequence`. The 'TrialComponent' in position {0} "
-                    "does not match the previous components.".format(
+                    "All user-provided 'DatasetComponent' objects must have "
+                    "the same `n_sequence`. The 'DatasetComponent' in "
+                    "position {0} does not match the previous "
+                    "components.".format(
                         component_idx + 1
                     )
                 )
 
             if trial_component.sequence_length != sequence_length:
                 raise ValueError(
-                    "All user-provided 'TrialComponent' objects must have the "
-                    "same `sequence_length`. The 'TrialComponent' in position "
-                    "{0} does not match the previous components.".format(
+                    "All user-provided 'DatasetComponent' objects must have "
+                    "the same `sequence_length`. The 'DatasetComponent' in "
+                    "position {0} does not match the previous "
+                    "components.".format(
                         component_idx + 1
                     )
                 )
@@ -103,7 +105,7 @@ class Dataset(object):
                 group_list.append(trial_component)
             else:
                 raise ValueError(
-                    "The `TrialComponent` in position {0} must be an  "
+                    "The `DatasetComponent` in position {0} must be an  "
                     "instance of `psiz.data.Content`, `psiz.data.Outcome`, or "
                     "`psiz.data.Group` to use `Dataset`.".format(
                         component_idx

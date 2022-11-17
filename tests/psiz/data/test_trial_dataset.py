@@ -22,15 +22,15 @@ import tensorflow as tf
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
 from psiz.data.dataset import Dataset
-from psiz.data.trial_component import TrialComponent
+from psiz.data.dataset_component import DatasetComponent
 
 
-class BadTrialComponent(TrialComponent):
+class BadTrialComponent(DatasetComponent):
     """Abstract class for trial content data."""
 
     def __init__(self):
         """Initialize."""
-        TrialComponent.__init__(self)
+        DatasetComponent.__init__(self)
         self.x = np.array(
             [
                 [1.0, 2.0, 3.0],
@@ -199,8 +199,8 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
         Dataset([c_2rank1_aa_4x1, o_2rank1_d_3x2])
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "All user-provided 'TrialComponent' objects must have the same "
-        "`n_sequence`. The 'TrialComponent' in position 1 does not match "
+        "All user-provided 'DatasetComponent' objects must have the same "
+        "`n_sequence`. The 'DatasetComponent' in position 1 does not match "
         "the previous components."
     )
 
@@ -208,8 +208,8 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
         Dataset([c_2rank1_aa_4x1, o_4rank2_c_4x3])
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "All user-provided 'TrialComponent' objects must have the same "
-        "`sequence_length`. The 'TrialComponent' in position 1 does not "
+        "All user-provided 'DatasetComponent' objects must have the same "
+        "`sequence_length`. The 'DatasetComponent' in position 1 does not "
         "match the previous components."
     )
 
@@ -218,7 +218,7 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
         Dataset([c_2rank1_aa_4x1, bad_component_4x1])
     assert e_info.type == ValueError
     assert str(e_info.value) == (
-        "The `TrialComponent` in position 1 must be an  instance of "
+        "The `DatasetComponent` in position 1 must be an  instance of "
         "`psiz.data.Content`, `psiz.data.Outcome`, or `psiz.data.Group` to "
         "use `Dataset`."
     )

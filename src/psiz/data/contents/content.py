@@ -25,15 +25,15 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import pandas as pd
 
-from psiz.data.trial_component import TrialComponent
+from psiz.data.dataset_component import DatasetComponent
 
 
-class Content(TrialComponent, metaclass=ABCMeta):
+class Content(DatasetComponent, metaclass=ABCMeta):
     """Abstract class for trial content data."""
 
     def __init__(self):
         """Initialize."""
-        TrialComponent.__init__(self)
+        DatasetComponent.__init__(self)
 
         # Immutable attributes.
         self._mask_zero = True

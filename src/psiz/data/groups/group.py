@@ -19,11 +19,11 @@ import warnings
 import numpy as np
 import tensorflow as tf
 
-from psiz.data.trial_component import TrialComponent
+from psiz.data.dataset_component import DatasetComponent
 from psiz.data.unravel_timestep import unravel_timestep
 
 
-class Group(TrialComponent):
+class Group(DatasetComponent):
     """Base class for group membership data."""
 
     def __init__(self, value, name=None):
@@ -35,7 +35,7 @@ class Group(TrialComponent):
             name: A string indicating the variable name of the group.
 
         """
-        TrialComponent.__init__(self)
+        DatasetComponent.__init__(self)
         value = self._rectify_shape(value)
         value = self._validate_value(name, value)
         self.n_sequence = value.shape[0]

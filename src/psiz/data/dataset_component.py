@@ -16,15 +16,15 @@
 """Module for data.
 
 Classes:
-    TrialComponent: Abstract class for trial component.
+    DatasetComponent: Abstract class for dataset component.
 
 """
 
 from abc import ABCMeta, abstractmethod
 
 
-class TrialComponent(metaclass=ABCMeta):
-    """Abstract class for trial component."""
+class DatasetComponent(metaclass=ABCMeta):
+    """Abstract class for dataset component."""
 
     def __init__(self):
         """Initialize."""

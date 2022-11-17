@@ -24,11 +24,11 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from psiz.data.trial_component import TrialComponent
+from psiz.data.dataset_component import DatasetComponent
 from psiz.data.unravel_timestep import unravel_timestep
 
 
-class Outcome(TrialComponent):
+class Outcome(DatasetComponent):
     """Base class for outcome data."""
 
     def __init__(self, name=None, sample_weight=None):
@@ -40,7 +40,7 @@ class Outcome(TrialComponent):
                 shape=(samples, [sequence_length])
 
         """
-        TrialComponent.__init__(self)
+        DatasetComponent.__init__(self)
 
         self.name = name
         self._sample_weight = sample_weight

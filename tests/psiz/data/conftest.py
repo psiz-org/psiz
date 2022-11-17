@@ -15,7 +15,7 @@
 # ============================================================================
 """Test data module.
 
-TrialComponent pytest fixtures follow the naming convention:
+DatasetComponent pytest fixtures follow the naming convention:
 x_y_z_mxn
 x: trial component type (c: content, o: outcome, g: group)
 y: helpful name (rank, rate, rt, continous, catsparse)

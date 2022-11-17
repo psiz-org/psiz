@@ -16,7 +16,7 @@
 """Data initialization."""
 
 
-from psiz.data.trial_component import TrialComponent
+from psiz.data.dataset_component import DatasetComponent
 from psiz.data.dataset import Dataset
 from psiz.data.contents.content import Content
 from psiz.data.contents.categorize import Categorize
@@ -31,7 +31,7 @@ from psiz.data.sample_qr_sets import sample_qr_sets
 from psiz.data.unravel_timestep import unravel_timestep
 
 __all__ = [
-    'TrialComponent',
+    'DatasetComponent',
     'Dataset',
     'Content',
     'Categorize',

@@ -233,14 +233,14 @@ def test_invalid_init_3():
 def test_export_0(o_sparsecat_a_4x1):
     desired_y = tf.constant(
         [
-            [[1., 0., 0.]],
-            [[0., 0., 1.]],
-            [[1., 0., 0.]],
-            [[0., 1., 0.]],
+            [1., 0., 0.],
+            [0., 0., 1.],
+            [1., 0., 0.],
+            [0., 1., 0.],
         ], dtype=tf.float32
     )
     desired_w = tf.constant(
-        [[1.0], [1.0], [1.0], [1.0]]
+        [1.0, 1.0, 1.0, 1.0]
     )
     desired_name = 'sparsecat_a'
 
@@ -271,7 +271,7 @@ def test_export_1(o_sparsecat_aa_4x1):
 def test_export_2(o_sparsecat_aa_4x1):
     """Test export.
 
-    Use with_timestep_axis=False
+    Use override `with_timestep_axis=False`
 
     """
     desired_y = tf.constant(
@@ -314,7 +314,7 @@ def test_export_3a(o_sparsecat_b_4x3):
 def test_export_3b(o_sparsecat_b_4x3):
     """Test export.
 
-    Use with_timestep_axis=False
+    Use override `with_timestep_axis=False`
 
     """
     desired_y = tf.constant(

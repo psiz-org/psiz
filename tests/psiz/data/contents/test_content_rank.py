@@ -633,7 +633,7 @@ def test_export_0(c_2rank1_d_3x2):
 def test_export_1(c_2rank1_d_3x2):
     """Test export.
 
-    Use with_timestep_axis=False.
+    Use override `with_timestep_axis=False`.
 
     """
     x = c_2rank1_d_3x2.export(with_timestep_axis=False)

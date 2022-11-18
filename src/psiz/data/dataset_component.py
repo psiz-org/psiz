@@ -22,6 +22,8 @@ Classes:
 
 from abc import ABCMeta, abstractmethod
 
+import numpy as np
+
 
 class DatasetComponent(metaclass=ABCMeta):
     """Abstract class for dataset component."""
@@ -31,13 +33,35 @@ class DatasetComponent(metaclass=ABCMeta):
         self.n_sample = None
         self.sequence_length = None
         self._timestep_axis = 1
+        self._export_with_timestep_axis = None
 
     @property
     def timestep_axis(self):
         return self._timestep_axis
 
+    def _standardize_shape(self, x):
+        """Standardize shape of `x`.
+
+        The attribute `_export_with_timestep_axis` is set based on the
+        shape.
+
+        Args:
+            x: A numpy.ndarray object with rank-2 or rank-3 shape.
+
+        Returns:
+            x: a numpy.ndarray object with rank-3 shape.
+
+        """
+        if x.ndim == 2:
+            # Add singleton dimension for timestep axis.
+            x = np.expand_dims(x, axis=self.timestep_axis)
+            self._export_with_timestep_axis = False
+        else:
+            self._export_with_timestep_axis = True
+        return x
+
     @abstractmethod
-    def export(self, export_format='tfds', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Return appropriately formatted data.
 
         Args:
@@ -45,7 +69,9 @@ class DatasetComponent(metaclass=ABCMeta):
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
             with_timestep_axis (optional): Boolean indicating if data
-                should be returned with a timestep axis. If `False`,
-                data is reshaped.
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
 
         """

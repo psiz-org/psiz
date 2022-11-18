@@ -126,7 +126,7 @@ def main():
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
     pds = psiz.data.Dataset([content])
-    ds_content = pds.export(export_format='tfds', with_timestep_axis=False)
+    ds_content = pds.export(export_format='tfds')
 
     # Simulate similarity judgments.
     def simulate_agent(x):

@@ -127,23 +127,35 @@ class Dataset(object):
         return components
 
     def export(
-        self, with_timestep_axis=True, export_format='tfds', inputs_only=False
+        self, export_format='tfds', with_timestep_axis=None, inputs_only=False
     ):
         """Export trial data as model-consumable object.
 
         Args:
-            with_timestep_axis (optional): Boolean indicating if data
-                should be returned with a timestep axis. If `False`,
-                data is reshaped.
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. By default,
+                dataset is exported with a timestep axis if any of the
+                provided `DataComponents` were initialized with a
+                timestep axis. Callers can overide default behavior
+                by setting this argument.
             inputs_only (optional): Boolean indicating if only the input
                 should be returned.
+
         Returns:
             ds: A dataset that can be consumed by a model.
 
         """
+        if with_timestep_axis is None:
+            with_timestep_axis = False
+            for component in self.components:
+                with_timestep_axis = (
+                    with_timestep_axis or
+                    component._export_with_timestep_axis
+                )
+
         # Assemble model input.
         x = {}
         for content in self.content_list:

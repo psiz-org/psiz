@@ -100,7 +100,7 @@ def test_export_0(c_categorize_b_4x3):
 def test_export_1(c_categorize_b_4x3):
     """Test export.
 
-    Use with_timestep_axis=False.
+    Use override `with_timestep_axis=False`.
 
     """
     x = c_categorize_b_4x3.export(with_timestep_axis=False)

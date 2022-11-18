@@ -20,7 +20,6 @@ Classes:
 
 """
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
@@ -47,21 +46,13 @@ class Continuous(Outcome):
 
         """
         Outcome.__init__(self, **kwargs)
-        value = self._rectify_shape(value)
+        value = self._standardize_shape(value)
         self.n_sample = value.shape[0]
         self.sequence_length = value.shape[1]
         value = self._validate_value(value)
         self.value = value
         self.n_unit = self.value.shape[2]
         self.process_sample_weight()
-
-    def _rectify_shape(self, value):
-        """Rectify shape of value."""
-        if value.ndim == 2:
-            # Assume trials are independent and add singleton dimension for
-            # timestep axis.
-            value = np.expand_dims(value, axis=self.timestep_axis)
-        return value
 
     def _validate_value(self, value):
         """Validate `value`."""
@@ -75,7 +66,7 @@ class Continuous(Outcome):
 
         return value
 
-    def export(self, export_format='tfds', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Return appropriately formatted data.
 
         Args:
@@ -83,10 +74,15 @@ class Continuous(Outcome):
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
             with_timestep_axis (optional): Boolean indicating if data
-                should be returned with a timestep axis. If `False`,
-                data is reshaped.
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
 
         """
+        if with_timestep_axis is None:
+            with_timestep_axis = self._export_with_timestep_axis
+
         w = super(Continuous, self).export(
             export_format=export_format, with_timestep_axis=with_timestep_axis
         )

@@ -54,7 +54,7 @@ class Rank(Content):
         """
         Content.__init__(self)
         self._reference_axis = 2
-        stimulus_set = self._rectify_shape(stimulus_set)
+        stimulus_set = self._standardize_shape(stimulus_set)
         self.n_sample = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
         stimulus_set = self._validate_stimulus_set(stimulus_set)
@@ -64,7 +64,6 @@ class Rank(Content):
         self.n_reference, self._n_reference = self._validate_n_reference(
             stimulus_set
         )
-        # TODO `self._n_reference` not used elsewhere, don't make attribute?
 
         # Trim any excess placeholder padding off of reference axis before
         # setting public attribute.
@@ -171,16 +170,6 @@ class Rank(Content):
         )
         return n_select_scalar, n_select_arr
 
-    def _rectify_shape(self, stimulus_set):
-        """Rectify shape of `stimulus_set`."""
-        if stimulus_set.ndim == 2:
-            # Assume trials are independent and add singleton dimension for
-            # timestep axis.
-            stimulus_set = np.expand_dims(
-                stimulus_set, axis=self.timestep_axis
-            )
-        return stimulus_set
-
     def _validate_stimulus_set(self, stimulus_set):
         """Validate `stimulus_set`.
 
@@ -251,18 +240,23 @@ class Rank(Content):
 
         return is_select
 
-    def export(self, export_format='tfds', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Prepare trial content data for dataset.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-            with_timestep_axis (optional): Boolean indicating if data should be
-                returned with a timestep axis. If `False`, data is
-                reshaped.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
 
         """
+        if with_timestep_axis is None:
+            with_timestep_axis = self._export_with_timestep_axis
+
         name_prefix = '{0}rank{1}'.format(self.n_reference, self.n_select)
 
         if export_format == 'tfds':

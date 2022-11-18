@@ -47,7 +47,7 @@ class SparseCategorical(Outcome):
 
         """
         Outcome.__init__(self, **kwargs)
-        index = self._rectify_shape(index)
+        index = self._standardize_shape(index)
         self.n_sample = index.shape[0]
         self.sequence_length = index.shape[1]
         index = self._validate_index(index)
@@ -55,13 +55,27 @@ class SparseCategorical(Outcome):
         self.depth = depth
         self.process_sample_weight()
 
-    def _rectify_shape(self, index):
-        """Rectify shape of index."""
-        if index.ndim == 1:
+    def _standardize_shape(self, x):
+        """Standardize shape of `x`.
+
+        The attribute `_export_with_timestep_axis` is set based on the
+        shape.
+
+        Args:
+            x: A numpy.ndarray object with rank-2 or rank-3 shape.
+
+        Returns:
+            x: a numpy.ndarray object with rank-3 shape.
+
+        """
+        if x.ndim == 1:
             # Assume trials are independent and add singleton dimension for
             # timestep axis.
-            index = np.expand_dims(index, axis=self.timestep_axis)
-        return index
+            x = np.expand_dims(x, axis=self.timestep_axis)
+            self._export_with_timestep_axis = False
+        else:
+            self._export_with_timestep_axis = True
+        return x
 
     def _validate_index(self, index):
         """Validate `index`."""
@@ -88,7 +102,7 @@ class SparseCategorical(Outcome):
 
         return index
 
-    def export(self, export_format='tfds', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Return appropriately formatted data.
 
         Args:
@@ -96,10 +110,15 @@ class SparseCategorical(Outcome):
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
             with_timestep_axis (optional): Boolean indicating if data
-                should be returned with a timestep axis. If `False`,
-                data is reshaped.
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
 
         """
+        if with_timestep_axis is None:
+            with_timestep_axis = self._export_with_timestep_axis
+
         w_dict = super(SparseCategorical, self).export(
             export_format=export_format, with_timestep_axis=with_timestep_axis
         )

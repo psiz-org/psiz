@@ -149,7 +149,7 @@ def main():
     stimulus_set = exhaustive_pairs(eligible_indices)
     content = psiz.data.Rate(stimulus_set)
     pds = psiz.data.Dataset([content])
-    ds_content = pds.export(export_format='tfds', with_timestep_axis=False)
+    ds_content = pds.export(export_format='tfds')
 
     # Simulate noise-free similarity judgments and add outcomes to dataset.
     ds = ds_content.map(lambda x: (x, model_true(x)))

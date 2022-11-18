@@ -109,6 +109,11 @@ def test_export_0a(g_mix2_4x3):
 
 
 def test_export_0b(g_mix2_4x3):
+    """Test export.
+
+    Use override `with_timestep_axis=False`.
+
+    """
     desired_group_weight = tf.constant(
         [
             [0.5, 0.5], [0.6, 0.4], [0.7, 0.3],

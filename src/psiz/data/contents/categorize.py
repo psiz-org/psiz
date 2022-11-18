@@ -54,8 +54,8 @@ class Categorize(Content):
 
         """
         Content.__init__(self)
-        stimulus_set = self._rectify_shape(stimulus_set)
-        objective_query_label = self._rectify_shape(objective_query_label)
+        stimulus_set = self._standardize_shape(stimulus_set)
+        objective_query_label = self._standardize_shape(objective_query_label)
         self.n_sample = stimulus_set.shape[0]
         self.sequence_length = stimulus_set.shape[1]
         self.stimulus_set = self._validate_stimulus_set(stimulus_set)
@@ -67,13 +67,6 @@ class Categorize(Content):
     def is_actual(self):
         """Return 2D Boolean array indicating trials with actual content."""
         return np.not_equal(self.stimulus_set[:, :, 0], self.mask_value)
-
-    def _rectify_shape(self, x):
-        """Rectify shape of `stimulus_set`."""
-        if x.ndim == 2:
-            # Add singleton dimension for timestep axis.
-            x = np.expand_dims(x, axis=self.timestep_axis)
-        return x
 
     def _validate_stimulus_set(self, stimulus_set):
         """Validate `stimulus_set`.
@@ -136,18 +129,23 @@ class Categorize(Content):
             )
         return objective_query_label
 
-    def export(self, export_format='tfds', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Prepare trial content data for dataset.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-            with_timestep_axis (optional): Boolean indicating if data should be
-                returned with a timestep axis. If `False`, data is
-                reshaped.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
 
         """
+        if with_timestep_axis is None:
+            with_timestep_axis = self._export_with_timestep_axis
+
         name_prefix = 'categorize'
 
         if export_format == 'tfds':

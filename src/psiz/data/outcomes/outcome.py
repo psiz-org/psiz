@@ -100,15 +100,26 @@ class Outcome(DatasetComponent):
         """Return sample weight."""
         return self._sample_weight
 
-    def export(
-        self, export_format='tfds', with_timestep_axis=True
-    ):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Export sample_weight.
 
         Subclasses of Outcome must call super().export(...) in order
         to obtain sample weights.
 
+        Args:
+            export_format (optional): The output format of the dataset.
+                By default the dataset is formatted as a
+                    tf.data.Dataset object.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
+
         """
+        if with_timestep_axis is None:
+            with_timestep_axis = self._export_with_timestep_axis
+
         sample_weight = self.sample_weight
         if with_timestep_axis is False:
             sample_weight = unravel_timestep(sample_weight)

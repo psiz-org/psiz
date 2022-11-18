@@ -36,21 +36,12 @@ class Group(DatasetComponent):
 
         """
         DatasetComponent.__init__(self)
-        value = self._rectify_shape(value)
+        value = self._standardize_shape(value)
         value = self._validate_value(name, value)
         self.n_sample = value.shape[0]
         self.sequence_length = value.shape[1]
         self.name = name
         self.value = value
-
-    def _rectify_shape(self, value):
-        """Rectify shape of group weights."""
-        if value.ndim == 2:
-            # Assume independent trials and add singleton timestep axis.
-            value = np.expand_dims(
-                value, axis=self.timestep_axis
-            )
-        return value
 
     def _validate_value(self, group_key, value):
         """Validate group weights."""
@@ -77,18 +68,23 @@ class Group(DatasetComponent):
 
         return value
 
-    def export(self, export_format='tfds', with_timestep_axis=True):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Export.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
                     tf.data.Dataset object.
-            with_timestep_axis (optional): Boolean indicating if data should be
-                returned with a timestep axis. If `False`, data is
-                reshaped.
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
 
         """
+        if with_timestep_axis is None:
+            with_timestep_axis = self._export_with_timestep_axis
+
         value = self.value
         if with_timestep_axis is False:
             value = unravel_timestep(value)

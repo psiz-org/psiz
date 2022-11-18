@@ -46,7 +46,22 @@ class BadTrialComponent(DatasetComponent):
         return tf.constant(self.x)
 
 
-def test_init_0(c_2rank1_aa_4x1):
+def test_init_0a(c_2rank1_a_4x1):
+    """Test initialization.
+
+    Bare minimum arguments.
+
+    """
+    pds = Dataset([c_2rank1_a_4x1])
+
+    assert pds.n_sample == c_2rank1_a_4x1.n_sample
+    assert pds.sequence_length == c_2rank1_a_4x1.sequence_length
+    assert len(pds.content_list) == 1
+    assert len(pds.group_list) == 0
+    assert len(pds.outcome_list) == 0
+
+
+def test_init_0b(c_2rank1_aa_4x1):
     """Test initialization.
 
     Bare minimum arguments.
@@ -67,6 +82,7 @@ def test_init_1(c_2rank1_aa_4x1):
     With outcome, no sample weights.
 
     """
+    # TODO move rank_outcome to conftest to promote readability
     outcome_idx = np.zeros(
         [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length],
         dtype=np.int32
@@ -401,7 +417,7 @@ def test_export_1a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
 def test_export_1b(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     """Test export.
 
-    Return dataset using `with_timestep_axis=False`.
+    Return dataset using override `with_timestep_axis=False`.
 
     """
     pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
@@ -611,6 +627,74 @@ def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     )
     tf.debugging.assert_equal(
         ds2_list[0][0]['condition_idx'], desired_condition_idx
+    )
+
+
+def test_export_4(c_2rank1_a_4x1):
+    """Test export."""
+    pds = Dataset([c_2rank1_a_4x1])
+
+    desired_x_stimulus_set = tf.constant(
+        [
+            [3, 1, 2],
+            [9, 12, 7],
+            [5, 6, 7],
+            [13, 14, 15]
+        ], dtype=np.int32
+    )
+    desired_x_is_select = tf.constant(
+        [
+            [False, True, False],
+            [False, True, False],
+            [False, True, False],
+            [False, True, False]
+        ], dtype=tf.bool
+    )
+
+    ds = pds.export().batch(4, drop_remainder=False)
+    ds_list = list(ds)
+    x = ds_list[0]
+
+    assert len(ds_list) == 1
+    tf.debugging.assert_equal(
+        desired_x_stimulus_set, x['2rank1/stimulus_set']
+    )
+    tf.debugging.assert_equal(
+        desired_x_is_select, x['2rank1/is_select']
+    )
+
+
+def test_export_5(c_2rank1_aa_4x1):
+    """Test export."""
+    pds = Dataset([c_2rank1_aa_4x1])
+
+    desired_x_stimulus_set = tf.constant(
+        [
+            [[3, 1, 2]],
+            [[9, 12, 7]],
+            [[5, 6, 7]],
+            [[13, 14, 15]]
+        ], dtype=np.int32
+    )
+    desired_x_is_select = tf.constant(
+        [
+            [[False, True, False]],
+            [[False, True, False]],
+            [[False, True, False]],
+            [[False, True, False]]
+        ], dtype=tf.bool
+    )
+
+    ds = pds.export().batch(4, drop_remainder=False)
+    ds_list = list(ds)
+    x = ds_list[0]
+
+    assert len(ds_list) == 1
+    tf.debugging.assert_equal(
+        desired_x_stimulus_set, x['2rank1/stimulus_set']
+    )
+    tf.debugging.assert_equal(
+        desired_x_is_select, x['2rank1/is_select']
     )
 
 

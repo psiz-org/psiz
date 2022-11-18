@@ -126,9 +126,7 @@ class Dataset(object):
             components.append(outcome)
         return components
 
-    def export(
-        self, export_format='tfds', with_timestep_axis=None, inputs_only=False
-    ):
+    def export(self, export_format='tfds', with_timestep_axis=None):
         """Export trial data as model-consumable object.
 
         Args:
@@ -141,8 +139,6 @@ class Dataset(object):
                 provided `DataComponents` were initialized with a
                 timestep axis. Callers can overide default behavior
                 by setting this argument.
-            inputs_only (optional): Boolean indicating if only the input
-                should be returned.
 
         Returns:
             ds: A dataset that can be consumed by a model.
@@ -174,7 +170,7 @@ class Dataset(object):
                 x.update(x_i)
 
         # Assemble outcomes (if present and not suppressed).
-        if len(self.outcome_list) > 0 and not inputs_only:
+        if len(self.outcome_list) > 0:
             y = {}
             w = {}
             for outcome in self.outcome_list:

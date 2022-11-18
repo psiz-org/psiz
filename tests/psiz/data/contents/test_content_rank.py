@@ -34,7 +34,7 @@ def test_init_0(c_2rank1_a_4x1):
     ], dtype=np.int32)
     desired_n_reference = 2
     desired_n_select = 1
-    desired_max_outcome = 2
+    desired_n_outcome = 2
 
     assert c_2rank1_a_4x1.n_sample == desired_n_sequence
     assert c_2rank1_a_4x1.sequence_length == desired_sequence_length
@@ -43,7 +43,7 @@ def test_init_0(c_2rank1_a_4x1):
     )
     assert desired_n_reference == c_2rank1_a_4x1.n_reference
     assert desired_n_select == c_2rank1_a_4x1.n_select
-    assert desired_max_outcome == c_2rank1_a_4x1.n_outcome
+    assert desired_n_outcome == c_2rank1_a_4x1.n_outcome
 
 
 def test_init_1(c_2rank1_aa_4x1):
@@ -58,7 +58,7 @@ def test_init_1(c_2rank1_aa_4x1):
     ], dtype=np.int32)
     desired_n_reference = 2
     desired_n_select = 1
-    desired_max_outcome = 2
+    desired_n_outcome = 2
 
     assert c_2rank1_aa_4x1.n_sample == desired_n_sequence
     assert c_2rank1_aa_4x1.sequence_length == desired_sequence_length
@@ -67,7 +67,7 @@ def test_init_1(c_2rank1_aa_4x1):
     )
     assert desired_n_reference == c_2rank1_aa_4x1.n_reference
     assert desired_n_select == c_2rank1_aa_4x1.n_select
-    assert desired_max_outcome == c_2rank1_aa_4x1.n_outcome
+    assert desired_n_outcome == c_2rank1_aa_4x1.n_outcome
 
 
 def test_init_2(c_4rank2_b_4x2):
@@ -96,7 +96,7 @@ def test_init_2(c_4rank2_b_4x2):
     )
     desired_n_reference = 4
     desired_n_select = 2
-    desired_max_outcome = 12
+    desired_n_outcome = 12
 
     assert c_4rank2_b_4x2.n_sample == desired_n_sequence
     assert c_4rank2_b_4x2.sequence_length == desired_sequence_length
@@ -105,7 +105,7 @@ def test_init_2(c_4rank2_b_4x2):
     )
     assert desired_n_reference == c_4rank2_b_4x2.n_reference
     assert desired_n_select == c_4rank2_b_4x2.n_select
-    assert desired_max_outcome == c_4rank2_b_4x2.n_outcome
+    assert desired_n_outcome == c_4rank2_b_4x2.n_outcome
 
 
 def test_init_3(c_4rank2_c_4x3):
@@ -142,7 +142,7 @@ def test_init_3(c_4rank2_c_4x3):
     )
     desired_n_reference = 4
     desired_n_select = 2
-    desired_max_outcome = 12
+    desired_n_outcome = 12
 
     assert c_4rank2_c_4x3.n_sample == desired_n_sequence
     assert c_4rank2_c_4x3.sequence_length == desired_sequence_length
@@ -151,7 +151,7 @@ def test_init_3(c_4rank2_c_4x3):
     )
     assert desired_n_reference == c_4rank2_c_4x3.n_reference
     assert desired_n_select == c_4rank2_c_4x3.n_select
-    assert desired_max_outcome == c_4rank2_c_4x3.n_outcome
+    assert desired_n_outcome == c_4rank2_c_4x3.n_outcome
 
 
 def test_init_4():

@@ -71,10 +71,10 @@ def ds_3rank1_4x1():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset([content, outcome, condition_idx]).export()
-    ds = ds.batch(n_sample, drop_remainder=False)
+    tfds = psiz.data.Dataset([content, outcome, condition_idx]).export()
+    tfds = tfds.batch(n_sample, drop_remainder=False)
 
-    return ds
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -103,10 +103,10 @@ def ds_3rank1_4x2():
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
     )
-    ds = psiz.data.Dataset([content, outcome, condition_idx]).export()
-    ds = ds.batch(n_sample, drop_remainder=False)
+    tfds = psiz.data.Dataset([content, outcome, condition_idx]).export()
+    tfds = tfds.batch(n_sample, drop_remainder=False)
 
-    return ds
+    return tfds
 
 
 class TempNoRNN(psiz.keras.models.StochasticModel):
@@ -372,7 +372,7 @@ def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
     """Test fit method (triggering backprop)."""
     tf.config.run_functions_eagerly(is_eager)
 
-    ds = ds_3rank1_4x1
+    tfds = ds_3rank1_4x1
 
     kl_weight = .1
     n_stimuli = 20
@@ -431,7 +431,7 @@ def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
     }
     model.compile(**compile_kwargs)
 
-    model.fit(ds, epochs=3)
+    model.fit(tfds, epochs=3)
 
 
 @pytest.mark.parametrize(
@@ -449,7 +449,7 @@ def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
     """Test fit method (triggering backprop)."""
     tf.config.run_functions_eagerly(is_eager)
 
-    ds = ds_3rank1_4x2
+    tfds = ds_3rank1_4x2
 
     kl_weight = .1
     n_stimuli = 20
@@ -508,4 +508,4 @@ def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
     }
     model.compile(**compile_kwargs)
 
-    model.fit(ds, epochs=3)
+    model.fit(tfds, epochs=3)

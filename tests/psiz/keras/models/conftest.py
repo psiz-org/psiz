@@ -49,11 +49,11 @@ def ds_2rank1_v0():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -82,11 +82,11 @@ def ds_4rank1_v0():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -120,11 +120,11 @@ def ds_4rank1_v1():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset([content, groups, outcome]).export(
+    tfds = psiz.data.Dataset([content, groups, outcome]).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -162,13 +162,13 @@ def ds_4rank1_v2():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset(
+    tfds = psiz.data.Dataset(
         [content, kernel_groups, percept_groups, outcome]
     ).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -206,13 +206,13 @@ def ds_4rank1_v3():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset(
+    tfds = psiz.data.Dataset(
         [content, percept_groups_0, percept_groups_1, outcome]
     ).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -241,11 +241,11 @@ def ds_8rank2_v0():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -318,7 +318,7 @@ def ds_2rank1_8rank2_v0():
     rank_config = psiz.data.Group(
         rank_config_val, name='rank_config'
     )
-    ds = psiz.data.Dataset(
+    tfds = psiz.data.Dataset(
         [
             content_2rank1,
             outcome_2rank1,
@@ -329,8 +329,8 @@ def ds_2rank1_8rank2_v0():
     ).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -359,11 +359,11 @@ def ds_time_8rank2_v0():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=True, export_format='tfds'
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -387,11 +387,11 @@ def ds_rate2_v0():
 
     outcome = psiz.data.Continuous(rating)
 
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=False, export_format='tfds'
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -415,11 +415,11 @@ def ds_time_rate2_v0():
     rating = np.array([[0.1], [.4], [.8], [.9]])
     outcome = psiz.data.Continuous(rating)
 
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=True, export_format='tfds'
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -448,11 +448,11 @@ def ds_rate2_v1():
     rating = np.array([[0.1], [.4], [.8], [.9]])
     outcome = psiz.data.Continuous(rating)
 
-    ds = psiz.data.Dataset([content, outcome, groups]).export(
+    tfds = psiz.data.Dataset([content, outcome, groups]).export(
         with_timestep_axis=False, export_format='tfds'
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -502,10 +502,10 @@ def ds_time_categorize_v0():
         stimulus_set=stimulus_set, objective_query_label=objective_query_label
     )
     pds = psiz.data.Dataset([content, outcome])
-    ds = pds.export(export_format='tfds').batch(
+    tfds = pds.export(export_format='tfds').batch(
         n_sample, drop_remainder=False
     )
-    return ds
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -561,10 +561,10 @@ def ds_4rank2_rate2_v0():
         [content_rank, outcome_rank, content_rate, outcome_rate, gate_weights]
     )
 
-    ds = pds.export(export_format='tfds', with_timestep_axis=False).batch(
+    tfds = pds.export(export_format='tfds', with_timestep_axis=False).batch(
         n_sample, drop_remainder=False
     )
-    return ds
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -597,10 +597,10 @@ def ds_4rank1_rt_v0():
         name='rank_rt_branch'
     )
     pds = psiz.data.Dataset([content_rank, outcome_rank, outcome_rt])
-    ds = pds.export(with_timestep_axis=False).batch(
+    tfds = pds.export(with_timestep_axis=False).batch(
         n_trial, drop_remainder=False
     )
-    return ds
+    return tfds
 
 
 @pytest.fixture(scope="module")

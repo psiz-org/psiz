@@ -250,8 +250,8 @@ def test_nornn_fit_with_add_loss(is_eager):
             [4],
         ], dtype=tf.float32
     )
-    ds = tf.data.Dataset.from_tensor_slices((x, y))
-    ds = ds.batch(n_example, drop_remainder=False)
+    tfds = tf.data.Dataset.from_tensor_slices((x, y))
+    tfds = tfds.batch(n_example, drop_remainder=False)
 
     # A minimum model to reproduce the issue.
     bar_cell = BarCell()
@@ -264,7 +264,7 @@ def test_nornn_fit_with_add_loss(is_eager):
 
     # Call fit which will trigger gradient computations and raise an error
     # during graph execution.
-    model.fit(ds, epochs=1)
+    model.fit(tfds, epochs=1)
 
 
 @pytest.mark.parametrize(
@@ -309,8 +309,8 @@ def test_withrnn_fit_with_add_loss(is_eager, unroll):
             [1., 1., 1., 0.],
         ], dtype=tf.float32
     )
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    ds = ds.batch(3, drop_remainder=False)
+    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
+    tfds = tfds.batch(3, drop_remainder=False)
 
     # A minimum model to reproduce the issue.
     cell = BarCell()
@@ -327,4 +327,4 @@ def test_withrnn_fit_with_add_loss(is_eager, unroll):
 
     # Call fit which will trigger gradient computations and raise an error
     # during graph execution.
-    model.fit(ds, epochs=1)
+    model.fit(tfds, epochs=1)

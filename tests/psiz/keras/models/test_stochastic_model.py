@@ -901,12 +901,12 @@ def ds_x2():
     ], dtype=tf.float32)
 
     w = tf.constant([1., 1., 0.2, 1., 1., 0.8], dtype=tf.float32)
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    ds = ds.batch(n_example, drop_remainder=False)
+    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
+    tfds = tfds.batch(n_example, drop_remainder=False)
 
     input_shape = {'x_a': tf.TensorShape(x_a.shape)}
 
-    return {'ds': ds, 'input_shape': input_shape}
+    return {'tfds': tfds, 'input_shape': input_shape}
 
 
 @pytest.fixture(scope="module")
@@ -935,12 +935,12 @@ def ds_x2_as_tensor():
     ], dtype=tf.float32)
 
     w = tf.constant([1., 1., 0.2, 1., 1., 0.8], dtype=tf.float32)
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    ds = ds.batch(n_example, drop_remainder=False)
+    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
+    tfds = tfds.batch(n_example, drop_remainder=False)
 
     input_shape = tf.TensorShape(x.shape)
 
-    return {'ds': ds, 'input_shape': input_shape}
+    return {'tfds': tfds, 'input_shape': input_shape}
 
 
 @pytest.fixture(scope="module")
@@ -991,8 +991,8 @@ def ds_x2_x2_x2():
     ], dtype=tf.float32)
 
     w = tf.constant([1., 1., 0.2, 1., 1., 0.8], dtype=tf.float32)
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    ds = ds.batch(n_example, drop_remainder=False)
+    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
+    tfds = tfds.batch(n_example, drop_remainder=False)
 
     input_shape = {
         'x_a': tf.TensorShape(x_a.shape),
@@ -1000,7 +1000,7 @@ def ds_x2_x2_x2():
         'x_c': tf.TensorShape(x_c.shape),
     }
 
-    return {'ds': ds, 'input_shape': input_shape}
+    return {'tfds': tfds, 'input_shape': input_shape}
 
 
 @pytest.fixture(scope="module")
@@ -1049,32 +1049,32 @@ def ds_x3_x3():
         [1.0, 1.0],
         [0.8, 0.8]
     ], dtype=tf.float32)
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    ds = ds.batch(n_example, drop_remainder=False)
+    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
+    tfds = tfds.batch(n_example, drop_remainder=False)
 
     input_shape = {
         'x_a': tf.TensorShape(x_a.shape),
         'x_b': tf.TensorShape(x_b.shape),
     }
 
-    return {'ds': ds, 'input_shape': input_shape}
+    return {'tfds': tfds, 'input_shape': input_shape}
 
 
-def call_fit_evaluate_predict(model, ds):
+def call_fit_evaluate_predict(model, tfds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
-    for data in ds:
+    for data in tfds:
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         _ = model(x, training=False)
 
     # Test fit.
-    model.fit(ds, epochs=3)
+    model.fit(tfds, epochs=3)
 
     # Test evaluate.
-    model.evaluate(ds)
+    model.evaluate(tfds)
 
     # Test predict.
-    model.predict(ds)
+    model.predict(tfds)
 
 
 class TestControl:
@@ -1086,7 +1086,7 @@ class TestControl:
     def test_save_load(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
-        ds = ds_x2['ds']
+        tfds = ds_x2['tfds']
 
         model = ModelControl()
         compile_kwargs = {
@@ -1094,8 +1094,8 @@ class TestControl:
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
-        model.fit(ds, epochs=2)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=2)
+        result0 = model.evaluate(tfds)
         fp_model = tmpdir.join('test_model')
         model.save(fp_model)
         del model
@@ -1103,7 +1103,7 @@ class TestControl:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ModelControl": ModelControl}
         )
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0 == result1
@@ -1121,7 +1121,7 @@ class TestModelA:
     def test_save_load(self, ds_x2, is_eager, save_traces, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
-        ds = ds_x2['ds']
+        tfds = ds_x2['tfds']
 
         model = ModelA(n_sample=2)
         compile_kwargs = {
@@ -1129,9 +1129,9 @@ class TestModelA:
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
-        model.fit(ds, epochs=2)
+        model.fit(tfds, epochs=2)
         assert model.n_sample == 2
-        results_0 = model.evaluate(ds, return_dict=True)
+        results_0 = model.evaluate(tfds, return_dict=True)
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
         del model
@@ -1139,7 +1139,7 @@ class TestModelA:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ModelA": ModelA}
         )
-        results_1 = loaded.evaluate(ds, return_dict=True)
+        results_1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
         assert loaded.n_sample == 2
@@ -1158,7 +1158,7 @@ class TestModelB:
     def test_save_load_b1(self, ds_x2, is_eager, save_traces, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
-        ds = ds_x2['ds']
+        tfds = ds_x2['tfds']
 
         model = ModelB(n_sample=2)
         compile_kwargs = {
@@ -1166,9 +1166,9 @@ class TestModelB:
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
-        model.fit(ds, epochs=2)
+        model.fit(tfds, epochs=2)
         assert model.n_sample == 2
-        results_0 = model.evaluate(ds, return_dict=True)
+        results_0 = model.evaluate(tfds, return_dict=True)
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
         del model
@@ -1176,7 +1176,7 @@ class TestModelB:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ModelB": ModelB}
         )
-        results_1 = loaded.evaluate(ds, return_dict=True)
+        results_1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
         assert loaded.n_sample == 2
@@ -1193,7 +1193,7 @@ class TestModelB:
     ):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
-        ds = ds_x2_as_tensor['ds']
+        tfds = ds_x2_as_tensor['tfds']
 
         model = ModelB2(n_sample=2)
         compile_kwargs = {
@@ -1201,9 +1201,9 @@ class TestModelB:
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
-        model.fit(ds, epochs=2)
+        model.fit(tfds, epochs=2)
         assert model.n_sample == 2
-        results_0 = model.evaluate(ds, return_dict=True)
+        results_0 = model.evaluate(tfds, return_dict=True)
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
         del model
@@ -1211,7 +1211,7 @@ class TestModelB:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ModelB2": ModelB2}
         )
-        results_1 = loaded.evaluate(ds, return_dict=True)
+        results_1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
         assert loaded.n_sample == 2
@@ -1228,7 +1228,7 @@ class TestModelC:
         """Test usage."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_x2_x2_x2['ds']
+        tfds = ds_x2_x2_x2['tfds']
         input_shape = ds_x2_x2_x2['input_shape']
         model = ModelC(n_sample=2)
         model.build(input_shape)
@@ -1314,7 +1314,7 @@ class TestModelC:
         ], dtype=tf.float32)
 
         # Perform a `test_step`.
-        for data in ds:
+        for data in tfds:
             x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
@@ -1342,14 +1342,14 @@ class TestModelC:
         """Test model where number of samples changes between use."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_x2_x2_x2['ds']
+        tfds = ds_x2_x2_x2['tfds']
         model = ModelC(n_sample=2)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
             'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         }
         model.compile(**compile_kwargs)
-        model.fit(ds)
+        model.fit(tfds)
 
         # Change model's `n_sample` attribute.
         model.n_sample = 5
@@ -1400,7 +1400,7 @@ class TestModelC:
         y_pred_shape_desired = tf.TensorShape([30, 3])
 
         # Perform a `test_step` to verify `n_sample` took effect.
-        for data in ds:
+        for data in tfds:
             x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
@@ -1428,7 +1428,7 @@ class TestModelC:
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_x2_x2_x2['ds']
+        tfds = ds_x2_x2_x2['tfds']
         model = ModelC(n_sample=7)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
@@ -1436,9 +1436,9 @@ class TestModelC:
         }
         model.compile(**compile_kwargs)
 
-        model.fit(ds, epochs=2)
+        model.fit(tfds, epochs=2)
         assert model.n_sample == 7
-        results_0 = model.evaluate(ds, return_dict=True)
+        results_0 = model.evaluate(tfds, return_dict=True)
 
         # Save the model.
         fp_model = tmpdir.join('test_model')
@@ -1449,7 +1449,7 @@ class TestModelC:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ModelC": ModelC}
         )
-        results_1 = loaded.evaluate(ds, return_dict=True)
+        results_1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
         assert loaded.n_sample == 7
@@ -1466,7 +1466,7 @@ class TestModelD:
         """Test with RNN layer."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_x3_x3['ds']
+        tfds = ds_x3_x3['tfds']
         input_shape = ds_x3_x3['input_shape']
         model = ModelD(n_sample=10)
         model.build(input_shape)
@@ -1481,7 +1481,7 @@ class TestModelD:
         y_pred_shape_desired = tf.TensorShape([60, 2, 3])
 
         # Perform a `test_step`.
-        for data in ds:
+        for data in tfds:
             x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
@@ -1510,7 +1510,7 @@ class TestModelD:
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_x3_x3['ds']
+        tfds = ds_x3_x3['tfds']
         model = ModelD(n_sample=11)
         compile_kwargs = {
             'loss': tf.keras.losses.MeanSquaredError(),
@@ -1518,9 +1518,9 @@ class TestModelD:
         }
         model.compile(**compile_kwargs)
 
-        model.fit(ds, epochs=2)
+        model.fit(tfds, epochs=2)
         assert model.n_sample == 11
-        results_0 = model.evaluate(ds, return_dict=True)
+        results_0 = model.evaluate(tfds, return_dict=True)
 
         # Save the model.
         fp_model = tmpdir.join('test_model')
@@ -1531,7 +1531,7 @@ class TestModelD:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ModelD": ModelD}
         )
-        results_1 = loaded.evaluate(ds, return_dict=True)
+        results_1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
         assert loaded.n_sample == 11
@@ -1548,9 +1548,9 @@ class TestRankSimilarity:
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1569,9 +1569,9 @@ class TestRankSimilarity:
         """
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
-        input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
+        input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
         model.build(input_shape)
 
         # Test initialization settings.
@@ -1581,9 +1581,9 @@ class TestRankSimilarity:
         model.n_sample = 21
         assert model.n_sample == 21
 
-        model.fit(ds, epochs=1)
+        model.fit(tfds, epochs=1)
         percept_mean = model.behavior.percept.embeddings.mean()
-        _ = model.evaluate(ds)
+        _ = model.evaluate(tfds)
 
         # Test storage serialization.
         fp_model = tmpdir.join('test_model')
@@ -1594,7 +1594,7 @@ class TestRankSimilarity:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RankModelA": RankModelA}
         )
-        _ = loaded.evaluate(ds)
+        _ = loaded.evaluate(tfds)
         loaded_percept_mean = loaded.behavior.percept.embeddings.mean()
 
         # Test for model equality.
@@ -1612,9 +1612,9 @@ class TestRankSimilarity:
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1629,9 +1629,9 @@ class TestRankSimilarity:
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
-        input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
+        input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
         model.build(input_shape)
 
         # Test initialization settings.
@@ -1641,9 +1641,9 @@ class TestRankSimilarity:
         model.n_sample = 21
         assert model.n_sample == 21
 
-        model.fit(ds, epochs=1)
+        model.fit(tfds, epochs=1)
         percept_mean = model.behavior.percept.embeddings.mean()
-        _ = model.evaluate(ds)
+        _ = model.evaluate(tfds)
 
         # Test storage serialization.
         fp_model = tmpdir.join('test_model')
@@ -1655,7 +1655,7 @@ class TestRankSimilarity:
             fp_model, custom_objects={"RankModelB": RankModelB}
         )
         loaded_percept_mean = loaded.behavior.percept.embeddings.mean()
-        _ = loaded.evaluate(ds)
+        _ = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert loaded.n_sample == 21
@@ -1672,9 +1672,9 @@ class TestRankSimilarity:
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v2
+        tfds = ds_4rank1_v2
         model = build_ranksim_subclass_c()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1684,7 +1684,7 @@ class TestRankSimilarity:
         """Test usage in 'agent mode'."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
 
         def simulate_agent(x):
@@ -1702,7 +1702,7 @@ class TestRankSimilarity:
             outcome_one_hot = tf.one_hot(outcome_idx, depth)
             return outcome_one_hot
 
-        _ = ds.map(lambda x, y, w: (x, simulate_agent(x), w))
+        _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
 
         tf.keras.backend.clear_session()
 
@@ -1725,9 +1725,9 @@ class TestRankSimilarityCell:
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_8rank2_v0
+        tfds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.xfail(
@@ -1747,9 +1747,9 @@ class TestRankSimilarityCell:
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_8rank2_v0
+        tfds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
-        input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
+        input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
         model.build(input_shape)
 
         # Test initialization settings.
@@ -1759,9 +1759,9 @@ class TestRankSimilarityCell:
         model.n_sample = 21
         assert model.n_sample == 21
 
-        model.fit(ds, epochs=1)
+        model.fit(tfds, epochs=1)
         percept_mean = model.behavior.cell.percept.embeddings.mean()
-        _ = model.evaluate(ds)
+        _ = model.evaluate(tfds)
 
         # Test storage serialization.
         fp_model = tmpdir.join('test_model')
@@ -1773,7 +1773,7 @@ class TestRankSimilarityCell:
             fp_model, custom_objects={"RankModelB": RankModelB}
         )
         loaded_percept_mean = loaded.behavior.cell.percept.embeddings.mean()
-        _ = loaded.evaluate(ds)
+        _ = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert loaded.n_sample == 21
@@ -1794,9 +1794,9 @@ class TestRateSimilarity:
         """Test subclassed `StochasticModel`."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_rate2_v0
+        tfds = ds_rate2_v0
         model = build_ratesim_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1806,14 +1806,14 @@ class TestRateSimilarity:
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_rate2_v0
+        tfds = ds_rate2_v0
         model = build_ratesim_subclass_a()
-        model.fit(ds, epochs=1)
+        model.fit(tfds, epochs=1)
 
         # Test stochastic attributes.
         assert model.n_sample == 11
 
-        _ = model.evaluate(ds)
+        _ = model.evaluate(tfds)
         percept_mean = model.behavior.percept.embeddings.mean()
 
         # Test storage serialization.
@@ -1825,7 +1825,7 @@ class TestRateSimilarity:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RateModelA": RateModelA}
         )
-        _ = loaded.evaluate(ds)
+        _ = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert loaded.n_sample == 11
@@ -1848,9 +1848,9 @@ class TestALCOVECell:
         """Test subclassed model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1865,16 +1865,16 @@ class TestALCOVECell:
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
-        model.fit(ds, epochs=1)
+        model.fit(tfds, epochs=1)
 
         # Test initialization settings.
         assert model.n_sample == 2
 
         # Update `n_sample`.
         model.n_sample = 11
-        _ = model.evaluate(ds)
+        _ = model.evaluate(tfds)
         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
         # Test storage.
@@ -1885,7 +1885,7 @@ class TestALCOVECell:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
         )
-        _ = loaded.evaluate(ds)
+        _ = loaded.evaluate(tfds)
 
         # Test for model equality.
         loaded_percept_mean = loaded.behavior.cell.percept.embeddings.mean()
@@ -1911,9 +1911,9 @@ class TestALCOVECell:
         """Test subclassed model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_subclass_b()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.xfail(
@@ -1931,16 +1931,16 @@ class TestALCOVECell:
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_subclass_b()
-        model.fit(ds, epochs=1)
+        model.fit(tfds, epochs=1)
 
         # Test initialization settings.
         assert model.n_sample == 2
 
         # Increase `n_sample` to get more consistent evaluations
         model.n_sample = 11
-        _ = model.evaluate(ds)
+        _ = model.evaluate(tfds)
         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
         # Test storage.
@@ -1951,7 +1951,7 @@ class TestALCOVECell:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
         )
-        _ = loaded.evaluate(ds)
+        _ = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert loaded.n_sample == 11

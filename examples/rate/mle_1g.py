@@ -152,10 +152,10 @@ def main():
     ds_content = pds.export(export_format='tfds')
 
     # Simulate noise-free similarity judgments and add outcomes to dataset.
-    ds = ds_content.map(lambda x: (x, model_true(x)))
+    tfds = ds_content.map(lambda x: (x, model_true(x)))
 
     n_trial_train = pds.n_sample
-    ds_train = ds.cache().shuffle(
+    tfds_train = tfds.cache().shuffle(
         buffer_size=n_trial_train, reshuffle_each_iteration=True
     ).batch(
         batch_size=batch_size, drop_remainder=False
@@ -176,12 +176,12 @@ def main():
     # Infer embedding.
     model_inferred = build_model(n_stimuli, n_dim, lr)
     model_inferred.fit(
-        ds_train, epochs=epochs, callbacks=callbacks, verbose=0
+        tfds_train, epochs=epochs, callbacks=callbacks, verbose=0
     )
 
     # train_mse = history.history['mse'][0]
     train_metrics = model_inferred.evaluate(
-        ds_train, verbose=0, return_dict=True
+        tfds_train, verbose=0, return_dict=True
     )
     train_mse = train_metrics['mse']
 

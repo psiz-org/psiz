@@ -581,10 +581,10 @@ def test_fit_5x3_functional(
     w = {name_branch_0: w_0, name_branch_1: w_1}
 
     # Wrap it all together as a Dataset and fit for two epochs.
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
+    tfds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
         n_data, drop_remainder=False
     )
-    history = model.fit(ds, epochs=2, verbose=1)
+    history = model.fit(tfds, epochs=2, verbose=1)
 
     # NOTE: There are no trainable parameters, so the loss is predictable and
     # does not change across epochs.
@@ -673,10 +673,10 @@ def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2, is_eager):
     w = {name_branch_0: w_0, name_branch_1: w_1}
 
     # Wrap it all together as a Dataset and fit for two epochs.
-    ds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
+    tfds = tf.data.Dataset.from_tensor_slices((x, y, w)).batch(
         n_data, drop_remainder=False
     )
-    history = model.fit(ds, epochs=2, verbose=1)
+    history = model.fit(tfds, epochs=2, verbose=1)
 
     # NOTE: There are no trainable parameters, so the loss is predictable and
     # does not change across epochs.

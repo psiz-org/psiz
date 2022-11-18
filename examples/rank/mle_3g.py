@@ -157,7 +157,7 @@ def main():
         return outcome_one_hot
 
     # Add simulated outcomes to dataset.
-    ds = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
+    tfds = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
     # Compute similarity matrix.
     model_similarity_true = SimilarityModel(
@@ -171,13 +171,13 @@ def main():
     )
 
     # Partition data into 80% train and 20% validation.
-    ds_train = ds.take(n_trial_train * 3).cache().shuffle(
+    tfds_train = tfds.take(n_trial_train * 3).cache().shuffle(
         buffer_size=n_trial_train * 3,
         reshuffle_each_iteration=True
     ).batch(
         batch_size, drop_remainder=False
     )
-    ds_val = ds.skip(n_trial_train * 3).cache().batch(
+    tfds_val = tfds.skip(n_trial_train * 3).cache().batch(
         batch_size, drop_remainder=False
     )
 
@@ -191,7 +191,7 @@ def main():
 
     # Infer embedding.
     model_inferred.fit(
-        x=ds_train, validation_data=ds_val, epochs=epochs,
+        x=tfds_train, validation_data=tfds_val, epochs=epochs,
         callbacks=callbacks, verbose=0
     )
 

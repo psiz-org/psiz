@@ -1527,21 +1527,21 @@ def buld_ranksim_rt_subclass_a():
     return model
 
 
-def call_fit_evaluate_predict(model, ds):
+def call_fit_evaluate_predict(model, tfds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
-    for data in ds:
+    for data in tfds:
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         _ = model(x, training=False)
 
     # Test fit.
-    model.fit(ds, epochs=3)
+    model.fit(tfds, epochs=3)
 
     # Test evaluate.
-    _ = model.evaluate(ds)
+    _ = model.evaluate(tfds)
 
     # Test predict.
-    _ = model.predict(ds)
+    _ = model.predict(tfds)
 
 
 class TestRankSimilarity:
@@ -1554,9 +1554,9 @@ class TestRankSimilarity:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1571,10 +1571,10 @@ class TestRankSimilarity:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1584,7 +1584,7 @@ class TestRankSimilarity:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RankModelA": RankModelA}
         )
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1597,9 +1597,9 @@ class TestRankSimilarity:
         """Test model using functional API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_functional_v0()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1609,10 +1609,10 @@ class TestRankSimilarity:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_functional_v0()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1620,7 +1620,7 @@ class TestRankSimilarity:
         del model
         # Load the saved model.
         loaded = tf.keras.models.load_model(fp_model)
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1633,9 +1633,9 @@ class TestRankSimilarity:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v1
+        tfds = ds_4rank1_v1
         model = build_ranksim_subclass_b()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1645,9 +1645,9 @@ class TestRankSimilarity:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v2
+        tfds = ds_4rank1_v2
         model = build_ranksim_subclass_c()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1657,9 +1657,9 @@ class TestRankSimilarity:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v3
+        tfds = ds_4rank1_v3
         model = build_ranksim_subclass_d()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1669,9 +1669,9 @@ class TestRankSimilarity:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_2rank1_v0
+        tfds = ds_2rank1_v0
         model = build_ranksim_subclass_e()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1681,9 +1681,9 @@ class TestRankSimilarity:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_8rank2_v0
+        tfds = ds_8rank2_v0
         model = build_ranksim_subclass_f()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1693,7 +1693,7 @@ class TestRankSimilarity:
         """Test usage in 'agent mode'."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_v0
+        tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
 
         def simulate_agent(x):
@@ -1706,7 +1706,7 @@ class TestRankSimilarity:
             outcome_one_hot = tf.one_hot(outcome_idx, depth)
             return outcome_one_hot
 
-        _ = ds.map(lambda x, y, w: (x, simulate_agent(x), w))
+        _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
 
         tf.keras.backend.clear_session()
 
@@ -1721,9 +1721,9 @@ class TestMultiRankSimilarity:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_2rank1_8rank2_v0
+        tfds = ds_2rank1_8rank2_v0
         model = build_multirank_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1738,10 +1738,10 @@ class TestMultiRankSimilarity:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_2rank1_8rank2_v0
+        tfds = ds_2rank1_8rank2_v0
         model = build_multirank_subclass_a()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1751,7 +1751,7 @@ class TestMultiRankSimilarity:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"MultiRankModelA": MultiRankModelA}
         )
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1768,9 +1768,9 @@ class TestRankSimilarityCell:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_8rank2_v0
+        tfds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1785,10 +1785,10 @@ class TestRankSimilarityCell:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_8rank2_v0
+        tfds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1798,7 +1798,7 @@ class TestRankSimilarityCell:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RankCellModelA": RankCellModelA}
         )
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1811,9 +1811,9 @@ class TestRankSimilarityCell:
         """Test model using functional API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_8rank2_v0
+        tfds = ds_time_8rank2_v0
         model = build_ranksimcell_functional_v0()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1825,10 +1825,10 @@ class TestRankSimilarityCell:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_8rank2_v0
+        tfds = ds_time_8rank2_v0
         model = build_ranksimcell_functional_v0()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1836,7 +1836,7 @@ class TestRankSimilarityCell:
         del model
         # Load the saved model.
         loaded = tf.keras.models.load_model(fp_model)
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1853,9 +1853,9 @@ class TestRateSimilarity:
         """Test subclass model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_rate2_v0
+        tfds = ds_rate2_v0
         model = build_ratesim_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1870,10 +1870,10 @@ class TestRateSimilarity:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_rate2_v0
+        tfds = ds_rate2_v0
         model = build_ratesim_subclass_a()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1883,7 +1883,7 @@ class TestRateSimilarity:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RateModelA": RateModelA}
         )
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1896,9 +1896,9 @@ class TestRateSimilarity:
         """Test model using functional API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_rate2_v0
+        tfds = ds_rate2_v0
         model = build_ratesim_functional_v0()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1908,10 +1908,10 @@ class TestRateSimilarity:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_rate2_v0
+        tfds = ds_rate2_v0
         model = build_ratesim_functional_v0()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1919,7 +1919,7 @@ class TestRateSimilarity:
         del model
         # Load the saved model.
         loaded = tf.keras.models.load_model(fp_model)
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1932,9 +1932,9 @@ class TestRateSimilarity:
         """Test subclass model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_rate2_v1
+        tfds = ds_rate2_v1
         model = build_ratesim_subclass_b()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
 
@@ -1948,9 +1948,9 @@ class TestRateSimilarityCell:
         """Test subclass model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_rate2_v0
+        tfds = ds_time_rate2_v0
         model = build_ratesimcell_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -1965,10 +1965,10 @@ class TestRateSimilarityCell:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_rate2_v0
+        tfds = ds_time_rate2_v0
         model = build_ratesimcell_subclass_a()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -1978,7 +1978,7 @@ class TestRateSimilarityCell:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RateCellModelA": RateCellModelA}
         )
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -1991,9 +1991,9 @@ class TestRateSimilarityCell:
         """Test model using functional API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_rate2_v0
+        tfds = ds_time_rate2_v0
         model = build_ratesimcell_functional_v0()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -2005,10 +2005,10 @@ class TestRateSimilarityCell:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_rate2_v0
+        tfds = ds_time_rate2_v0
         model = build_ratesimcell_functional_v0()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -2016,7 +2016,7 @@ class TestRateSimilarityCell:
         del model
         # Load the saved model.
         loaded = tf.keras.models.load_model(fp_model)
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -2033,9 +2033,9 @@ class TestALCOVECell:
         """Test subclassed model, one group."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -2050,10 +2050,10 @@ class TestALCOVECell:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -2063,7 +2063,7 @@ class TestALCOVECell:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
         )
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -2076,9 +2076,9 @@ class TestALCOVECell:
         """Test model using functional API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_functional_v0()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -2090,10 +2090,10 @@ class TestALCOVECell:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_time_categorize_v0
+        tfds = ds_time_categorize_v0
         model = build_alcove_functional_v0()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -2101,7 +2101,7 @@ class TestALCOVECell:
         del model
         # Load the saved model.
         loaded = tf.keras.models.load_model(fp_model)
-        result1 = loaded.evaluate(ds)
+        result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
         assert result0[0] == result1[0]
@@ -2118,9 +2118,9 @@ class TestJointRankRate:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank2_rate2_v0
+        tfds = ds_4rank2_rate2_v0
         model = buld_ranksim_ratesim_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -2135,10 +2135,10 @@ class TestJointRankRate:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank2_rate2_v0
+        tfds = ds_4rank2_rate2_v0
         model = buld_ranksim_ratesim_subclass_a()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds, return_dict=True)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds, return_dict=True)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -2148,7 +2148,7 @@ class TestJointRankRate:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RankRateModelA": RankRateModelA}
         )
-        result1 = loaded.evaluate(ds, return_dict=True)
+        result1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
         # TODO placeholder trials generating nan's when rank similarity loss
@@ -2163,9 +2163,9 @@ class TestJointRankRate:
         """Test model using functional API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank2_rate2_v0
+        tfds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_functional_v0()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
     @pytest.mark.parametrize(
@@ -2180,10 +2180,10 @@ class TestJointRankRate:
         """Test serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank2_rate2_v0
+        tfds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_functional_v0()
-        model.fit(ds, epochs=1)
-        result0 = model.evaluate(ds, return_dict=True)
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds, return_dict=True)
 
         # Test storage.
         fp_model = tmpdir.join('test_model')
@@ -2191,7 +2191,7 @@ class TestJointRankRate:
         del model
         # Load the saved model.
         loaded = tf.keras.models.load_model(fp_model)
-        result1 = loaded.evaluate(ds, return_dict=True)
+        result1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
         # TODO placeholder trials generating nan's when rank similarity loss
@@ -2210,7 +2210,7 @@ class TestRankRT:
         """Test model using subclass API."""
         tf.config.run_functions_eagerly(is_eager)
 
-        ds = ds_4rank1_rt_v0
+        tfds = ds_4rank1_rt_v0
         model = buld_ranksim_rt_subclass_a()
-        call_fit_evaluate_predict(model, ds)
+        call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()

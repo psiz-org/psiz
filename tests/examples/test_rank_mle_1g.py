@@ -231,7 +231,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         outcome_one_hot = tf.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    ds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
+    tfds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
 
     simmat_true = np.squeeze(
         psiz.utils.pairwise_similarity(
@@ -248,10 +248,10 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     # )
 
     # Combine and batch val, since there are no more transformations.
-    # ds_val = tf.data.Dataset.zip((ds_content_val, ds_outcome_val))
-    # ds_val = ds_val.batch(batch_size, drop_remainder=False)
-    ds_train = ds.take(n_trial_train)
-    ds_val = ds.skip(n_trial_train).cache().batch(
+    # tfds_val = tf.data.Dataset.zip((ds_content_val, ds_outcome_val))
+    # tfds_val = tfds_val.batch(batch_size, drop_remainder=False)
+    tfds_train = tfds.take(n_trial_train)
+    tfds_val = tfds.skip(n_trial_train).cache().batch(
         batch_size, drop_remainder=False
     )
 
@@ -289,7 +289,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         # ).batch(
         #     batch_size, drop_remainder=False
         # )
-        ds_train_sub = ds_train.take(int(n_trial_train_frame[i_frame])).cache().shuffle(
+        ds_train_sub = tfds_train.take(int(n_trial_train_frame[i_frame])).cache().shuffle(
             buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
         ).batch(
             batch_size, drop_remainder=False
@@ -305,7 +305,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         # Infer embedding.
         # MAYBE keras-tuner 3 restarts, monitor='val_loss'
         model_inferred.fit(
-            x=ds_train_sub, validation_data=ds_val, epochs=epochs,
+            x=ds_train_sub, validation_data=tfds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
 

@@ -149,11 +149,11 @@ def ds_2rank1():
         ], dtype=np.int32
     )
     content = psiz.data.Rank(stimulus_set, n_select=1)
-    ds = psiz.data.Dataset([content]).export(
+    tfds = psiz.data.Dataset([content]).export(
         export_format='tfds', with_timestep_axis=False
     )
-    ds = ds.batch(stimulus_set.shape[0], drop_remainder=False)
-    return ds
+    tfds = tfds.batch(stimulus_set.shape[0], drop_remainder=False)
+    return tfds
 
 
 def test_1_model(model_0, ds_2rank1):

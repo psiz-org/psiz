@@ -65,9 +65,9 @@ def kernel_v0():
     return kernel
 
 
-def rank_similarity_cell_call(ds, rank_cell):
+def rank_similarity_cell_call(tfds, rank_cell):
     """A rank similarity cell call."""
-    for data in ds:
+    for data in tfds:
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
         batch_size = x['3rank1/stimulus_set'].shape[0]
         states_t0 = rank_cell.get_initial_state(batch_size=batch_size)
@@ -98,11 +98,11 @@ def ds_3rank1_v0():
     outcome = psiz.data.SparseCategorical(
         outcome_idx, depth=content.n_outcome
     )
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=False, export_format='tfds'
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 @pytest.fixture(scope="module")
@@ -130,11 +130,11 @@ def ds_3rank1_v1():
         outcome_idx, depth=content.n_outcome
     )
 
-    ds = psiz.data.Dataset([content, outcome]).export(
+    tfds = psiz.data.Dataset([content, outcome]).export(
         with_timestep_axis=True, export_format='tfds'
     )
-    ds = ds.batch(n_sample, drop_remainder=False)
-    return ds
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
 
 
 def test_call_v0(ds_3rank1_v0):

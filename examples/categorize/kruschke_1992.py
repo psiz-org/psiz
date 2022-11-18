@@ -192,7 +192,7 @@ def fig5_simulation(fp_fig5):
     epoch_accuracy_null = np.zeros([n_task, n_epoch])
     epoch_accuracy_attn = np.zeros([n_task, n_epoch])
     for i_task in range(n_task):
-        ds, objective_label = generate_fig5_dataset(
+        tfds, objective_label = generate_fig5_dataset(
             n_output, class_id[i_task], n_sequence, n_epoch
         )
 
@@ -224,8 +224,8 @@ def fig5_simulation(fp_fig5):
         )
 
         # Predict behavior.
-        predictions_null = model_null.predict(ds)
-        predictions_attn = model_attn.predict(ds)
+        predictions_null = model_null.predict(tfds)
+        predictions_attn = model_attn.predict(tfds)
 
         # Process predictions into per-epoch accuracy (i.e., probability
         # correct).
@@ -270,12 +270,12 @@ def generate_fig5_dataset(
     content = psiz.data.Categorize(
         stimulus_set=cat_idx_all, objective_query_label=objective_label
     )
-    ds = psiz.data.Dataset([content]).export().batch(
+    tfds = psiz.data.Dataset([content]).export().batch(
         n_sequence, drop_remainder=False
     )
     # Return onehot representation of feedback labels for post-analysis of
     # prediction results.
-    return ds, objective_label
+    return tfds, objective_label
 
 
 def plot_fig5(task_name_list, epoch_accuracy_null, epoch_accuracy_attn):
@@ -359,7 +359,7 @@ def fig14_simulation(fp_fig14):
     class_id = np.array([0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1])
     n_output = 2
 
-    ds, x_stimulus, objective_label = generate_fig14_dataset(
+    tfds, x_stimulus, objective_label = generate_fig14_dataset(
         n_output, class_id, n_sequence, n_epoch
     )
 
@@ -371,7 +371,7 @@ def fig14_simulation(fp_fig14):
     )
 
     # Predict behavior.
-    predictions_attn = model_attn.predict(ds)
+    predictions_attn = model_attn.predict(tfds)
 
     # Process predictions into stimulus-level epoch accuracy.
     accuracy_attn = np.sum(predictions_attn * objective_label, axis=2)
@@ -422,11 +422,11 @@ def generate_fig14_dataset(
     content = psiz.data.Categorize(
         stimulus_set=cat_idx_all + 1, objective_query_label=objective_label
     )
-    ds = psiz.data.Dataset([content]).export().batch(
+    tfds = psiz.data.Dataset([content]).export().batch(
         n_sequence, drop_remainder=False
     )
 
-    return ds, cat_idx_all, objective_label
+    return tfds, cat_idx_all, objective_label
 
 
 def plot_fig14(epoch_accuracy_attn, stimulus_label, n_stimuli):

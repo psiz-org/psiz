@@ -140,15 +140,15 @@ def main():
         return outcome_one_hot
 
     # Add outcomes to dataset.
-    ds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
+    tfds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
 
     # Partition data into 80% train, 10% validation and 10% test set.
-    ds_train = ds.take(n_trial_train)
-    ds_valtest = ds.skip(n_trial_train)
-    ds_val = ds_valtest.take(n_trial_val).cache().batch(
+    tfds_train = tfds.take(n_trial_train)
+    tfds_valtest = tfds.skip(n_trial_train)
+    tfds_val = tfds_valtest.take(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
-    ds_test = ds_valtest.skip(n_trial_val).cache().batch(
+    tfds_test = tfds_valtest.skip(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
 
@@ -169,7 +169,7 @@ def main():
     val_cce = np.empty((n_frame))
     test_cce = np.empty((n_frame))
     for i_frame in range(n_frame):
-        ds_train_frame = ds_train.take(
+        tfds_train_frame = tfds_train.take(
             int(n_trial_train_frame[i_frame])
         ).cache().shuffle(
             buffer_size=n_trial_train_frame[i_frame],
@@ -196,12 +196,12 @@ def main():
 
         # Infer embedding.
         history = model.fit(
-            x=ds_train_frame, validation_data=ds_val, epochs=epochs,
+            x=tfds_train_frame, validation_data=tfds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
         train_cce[i_frame] = history.history['cce'][-1]
         val_cce[i_frame] = history.history['val_cce'][-1]
-        test_metrics = model.evaluate(ds_test, verbose=0, return_dict=True)
+        test_metrics = model.evaluate(tfds_test, verbose=0, return_dict=True)
         test_cce[i_frame] = test_metrics['cce']
 
         # Compare the inferred model with ground truth by comparing the

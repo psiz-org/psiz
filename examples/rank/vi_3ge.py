@@ -237,15 +237,15 @@ def main():
         return outcome_one_hot
 
     # Add simulated outcomes to dataset.
-    ds = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
+    tfds = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
     # Partition data into 80% train, 10% validation and 10% test set.
-    ds_train = ds.take(n_trial_train)
-    ds_valtest = ds.skip(n_trial_train)
-    ds_val = ds_valtest.take(n_trial_val).cache().batch(
+    tfds_train = tfds.take(n_trial_train)
+    tfds_valtest = tfds.skip(n_trial_train)
+    tfds_val = tfds_valtest.take(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
-    ds_test = ds_valtest.skip(n_trial_val).cache().batch(
+    tfds_test = tfds_valtest.skip(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
 
@@ -261,7 +261,7 @@ def main():
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        ds_train_frame = ds_train.take(
+        tfds_train_frame = tfds_train.take(
             int(n_trial_train_frame[i_frame])
         ).cache().shuffle(
             buffer_size=n_trial_train_frame[i_frame],
@@ -294,7 +294,7 @@ def main():
 
         # Infer model.
         history = model_inferred.fit(
-            ds_train_frame, validation_data=ds_val, epochs=epochs,
+            tfds_train_frame, validation_data=tfds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
 
@@ -325,7 +325,7 @@ def main():
         tf.keras.backend.clear_session()
         model_inferred.n_sample = 100
         test_metrics = model_inferred.evaluate(
-            ds_test, verbose=0, return_dict=True
+            tfds_test, verbose=0, return_dict=True
         )
         test_loss[i_frame] = test_metrics['loss']
 

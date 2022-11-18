@@ -288,8 +288,8 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
         ], dtype=tf.int32
     )
 
-    ds = pds.export().batch(4, drop_remainder=False)
-    ds_list = list(ds)
+    tfds = pds.export().batch(4, drop_remainder=False)
+    ds_list = list(tfds)
     x = ds_list[0]
 
     assert len(ds_list) == 1
@@ -353,8 +353,8 @@ def test_export_1(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
         [0.9, 0.9, 0.9, 0.9, 0.9, 0.9], dtype=tf.float32
     )
 
-    ds = pds.export(with_timestep_axis=False).batch(6, drop_remainder=False)
-    ds_list = list(ds)
+    tfds = pds.export(with_timestep_axis=False).batch(6, drop_remainder=False)
+    ds_list = list(tfds)
     x = ds_list[0][0]
     y = ds_list[0][1]
     w = ds_list[0][2]
@@ -463,8 +463,8 @@ def test_export_2a(
         ], dtype=tf.float32
     )
 
-    ds = pds.export().batch(4, drop_remainder=False)
-    ds_list = list(ds)
+    tfds = pds.export().batch(4, drop_remainder=False)
+    ds_list = list(tfds)
     x = ds_list[0][0]
     y = ds_list[0][1]
     w = ds_list[0][2]
@@ -490,7 +490,7 @@ def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     pds = Dataset(
         [c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1]
     )
-    ds = pds.export(export_format='tfds')
+    tfds = pds.export(export_format='tfds')
 
     # Map strings to indices.
     condition_lookup_layer = tf.keras.layers.StringLookup(
@@ -503,7 +503,7 @@ def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
         x['condition_idx'] = condition_idx
         return x
 
-    ds2 = ds.map(lambda x, y, w: (parse_inputs(x), y, w))
+    ds2 = tfds.map(lambda x, y, w: (parse_inputs(x), y, w))
     ds2 = ds2.batch(4)
     ds2_list = list(ds2)
 
@@ -541,8 +541,8 @@ def test_export_4(c_2rank1_a_4x1):
         ], dtype=tf.bool
     )
 
-    ds = pds.export().batch(4, drop_remainder=False)
-    ds_list = list(ds)
+    tfds = pds.export().batch(4, drop_remainder=False)
+    ds_list = list(tfds)
     x = ds_list[0]
 
     assert len(ds_list) == 1
@@ -575,8 +575,8 @@ def test_export_5(c_2rank1_aa_4x1):
         ], dtype=tf.bool
     )
 
-    ds = pds.export().batch(4, drop_remainder=False)
-    ds_list = list(ds)
+    tfds = pds.export().batch(4, drop_remainder=False)
+    ds_list = list(tfds)
     x = ds_list[0]
 
     assert len(ds_list) == 1
@@ -631,6 +631,6 @@ def test_tf_ds_concatenate(c_2rank1_d_3x2, c_2rank1_e_3x2):
     ds_0 = td_0.export(export_format='tfds')
     ds_1 = td_1.export(export_format='tfds')
 
-    ds = ds_0.concatenate(ds_1).batch(6)
-    ds_list = list(ds)
+    tfds = ds_0.concatenate(ds_1).batch(6)
+    ds_list = list(tfds)
     _ = ds_list[0]

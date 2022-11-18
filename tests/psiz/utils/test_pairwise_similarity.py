@@ -15,12 +15,17 @@
 # ============================================================================
 """Module for testing utils.py."""
 
+import pytest
+
 import numpy as np
 
 from psiz.data import pairwise_index_dataset
 from psiz.utils import pairwise_similarity
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_1g_all_defaults(rank_1g_mle_determ):
     """Test similarity matrix.
 
@@ -44,6 +49,9 @@ def test_1g_all_defaults(rank_1g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat0, computed_simmat0)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_verbose(rank_1g_mle_determ, capsys):
     """Test similarity matrix.
 
@@ -71,6 +79,9 @@ def test_verbose(rank_1g_mle_determ, capsys):
     assert captured.out == out_desired
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_verbose_v1(rank_1g_mle_random, capsys):
     """Test similarity matrix.
 
@@ -92,6 +103,9 @@ def test_verbose_v1(rank_1g_mle_random, capsys):
     assert len(captured.out) == 5508
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_all_nosample(rank_2g_mle_determ):
     """Test similarity matrix.
 
@@ -135,6 +149,9 @@ def test_all_nosample(rank_2g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_all_1sample(rank_2g_mle_determ):
     """Test similarity matrix.
 
@@ -175,6 +192,9 @@ def test_all_1sample(rank_2g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_all_3sample(rank_2g_mle_determ):
     """Test similarity matrix."""
     n_stimuli = 3
@@ -225,6 +245,9 @@ def test_all_3sample(rank_2g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_upper_3sample(rank_2g_mle_determ):
     """Test similarity matrix."""
     n_stimuli = 3
@@ -263,6 +286,9 @@ def test_upper_3sample(rank_2g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_upper_3sample_avg(rank_2g_mle_determ):
     """Test similarity matrix."""
     n_stimuli = 3
@@ -297,6 +323,9 @@ def test_upper_3sample_avg(rank_2g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_lower_3sample(rank_2g_mle_determ):
     """Test similarity matrix."""
     n_stimuli = 3
@@ -335,6 +364,9 @@ def test_lower_3sample(rank_2g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_off_3sample(rank_2g_mle_determ):
     """Test similarity matrix."""
     n_stimuli = 3
@@ -379,6 +411,9 @@ def test_off_3sample(rank_2g_mle_determ):
     np.testing.assert_array_almost_equal(desired_simmat1, computed_simmat1)
 
 
+@pytest.mark.xfail(
+    reason="pairwise_similarity deprecated."
+)
 def test_group_stimuli_and_kernel(rank_2stim_2kern_determ):
     """Test similarity matrix."""
     n_stimuli = 3

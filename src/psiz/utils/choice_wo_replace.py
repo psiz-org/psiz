@@ -39,7 +39,7 @@ def choice_wo_replace(a, size, p, rng=None):
             a particular element. User provided probabilities are
             already assumed to sum to one. Probability p[i] indicates
             the probability of drawing index a[i].
-        rng (optional): A numpy random number generator.
+        rng (optional): A `numpy.random.Generator` object.
 
     Returns:
         result: A 2D array containing the drawn elements.

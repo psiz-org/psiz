@@ -247,7 +247,7 @@ def exhaustive_pairs(eligible_indices):
         An NumPy array of index pairs.
 
     """
-    tfds_pairs, _ = psiz.data.pairwise_index_dataset(
+    tfds_pairs, _ = psiz.utils.pairwise_index_dataset(
         eligible_indices, elements='all'
     )
     stimulus_set = np.array(list(tfds_pairs.as_numpy_iterator()))

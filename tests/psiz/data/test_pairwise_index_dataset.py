@@ -18,7 +18,7 @@
 import numpy as np
 import pytest
 
-from psiz.data import pairwise_index_dataset
+from psiz.utils import pairwise_index_dataset
 
 
 def test_scalar_defaults():

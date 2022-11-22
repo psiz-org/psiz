@@ -56,16 +56,16 @@ def pairwise_index_dataset(
         ds_info: A convenience dictionary.
 
     """
-    if groups is not None:
-        warnings.warn(
-            (
-                'Key-word argument `groups` will be deprecated. Use '
-                'TensorFlow Dataset manipulation instead; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
-            ),
-            DeprecationWarning,
-            stacklevel=2
-        )
+    warnings.warn(
+        (
+            'This function is deprecated. Users should instead use new '
+            '`psiz.utils.pairwise_indices` with `psiz.data.Rate`. See '
+            '`psiz/examples`; '
+            'version_announced=0.8.0; version_scheduled=0.9.0'
+        ),
+        DeprecationWarning,
+        stacklevel=2
+    )
 
     # Check if scalar or array-lie.
     indices = np.array(indices, copy=False)

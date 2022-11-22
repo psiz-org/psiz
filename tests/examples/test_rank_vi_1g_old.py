@@ -152,7 +152,7 @@ def test_rank_1g_vi_execution(similarity_func, mask_zero, tmpdir):
     n_frame = 2
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.data.pairwise_index_dataset(
+    ds_pairs, _ = psiz.utils.pairwise_index_dataset(
         np.arange(n_stimuli) + 1, elements='upper'
     )
 

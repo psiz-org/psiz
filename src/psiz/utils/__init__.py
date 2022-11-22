@@ -20,6 +20,7 @@ from psiz.utils.choice_wo_replace import choice_wo_replace
 from psiz.utils.expand_dim_repeat import expand_dim_repeat
 from psiz.utils.generate_group_matrix import generate_group_matrix
 from psiz.utils.pairwise_indices import pairwise_indices
+from psiz.utils.pairwise_index_dataset import pairwise_index_dataset
 from psiz.utils.pairwise_similarity import pairwise_similarity
 from psiz.utils.procrustes_rotation import procrustes_rotation
 from psiz.utils.progress_bar_re import ProgressBarRe
@@ -34,6 +35,7 @@ __all__ = [
     'expand_dim_repeat',
     'generate_group_matrix',
     'pairwise_indices',
+    'pairwise_index_dataset',
     'pairwise_similarity',
     'procrustes_rotation',
     'ProgressBarRe',

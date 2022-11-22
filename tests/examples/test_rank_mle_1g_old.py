@@ -137,7 +137,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir):
     n_frame = 2
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, ds_info = psiz.data.pairwise_index_dataset(n_stimuli)
+    ds_pairs, ds_info = psiz.utils.pairwise_index_dataset(n_stimuli)
 
     model_true = ground_truth(n_stimuli, n_dim, similarity_func, mask_zero)
 

@@ -89,7 +89,7 @@ def pairwise_indices(indices, elements='upper', subsample=None, rng=None):
             rng = np.random.default_rng()
         idx_rand = rng.permutation(n_pair)
         n_pair = int(np.ceil(n_pair * subsample))
-        idx_rand = idx_rand[0:n_pair]
+        idx_rand = np.sort(idx_rand[0:n_pair])
         idx_0 = idx_0[idx_rand]
         idx_1 = idx_1[idx_rand]
 

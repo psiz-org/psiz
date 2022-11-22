@@ -42,6 +42,24 @@ class BehaviorModel(tf.keras.Model):
         return self.behavior(inputs)
 
 
+class SimilarityModel(tf.keras.Model):
+    """A similarity model."""
+
+    def __init__(self, percept=None, kernel=None, **kwargs):
+        """Initialize."""
+        super(SimilarityModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.kernel = kernel
+
+    def call(self, inputs):
+        """Call."""
+        stimuli_axis = 1
+        z = self.percept(inputs['rate2/stimulus_set'])
+        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
+        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        return self.kernel([z_0, z_1])
+
+
 def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
     """Return a ground truth embedding."""
     if mask_zero:
@@ -192,21 +210,37 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     n_trial = batch_size * 12
     n_frame = 2
 
-    # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    if mask_zero:
-        ds_pairs, _ = psiz.data.pairwise_index_dataset(
-            np.arange(n_stimuli) + 1, elements='upper'
-        )
-    else:
-        ds_pairs, _ = psiz.data.pairwise_index_dataset(
-            n_stimuli, elements='upper'
-        )
-
+    # Define ground truth models.
     model_true = build_ground_truth_model(
         n_stimuli, n_dim, similarity_func, mask_zero
     )
+    model_similarity_true = SimilarityModel(
+        percept=model_true.behavior.percept,
+        kernel=model_true.behavior.kernel
+    )
 
-    # Generate a random docket of trials.
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    # NOTE: We include an placeholder "target" component in dataset tuple to
+    # satisfy the assumptions of `predict` method.
+    if mask_zero:
+        content_pairs = psiz.data.Rate(
+            psiz.utils.pairwise_indices(
+                np.arange(n_stimuli) + 1, elements='upper'
+            )
+        )
+    else:
+        content_pairs = psiz.data.Rate(
+            psiz.utils.pairwise_indices(np.arange(n_stimuli), elements='upper')
+        )
+    dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
+    tfds_pairs = psiz.data.Dataset(
+        [content_pairs, dummy_outcome]
+    ).export().batch(batch_size, drop_remainder=False)
+
+    # Compute similarity matrix.
+    simmat_true = model_similarity_true.predict(tfds_pairs)
+
+    # Generate a random set of trials.
     rng = np.random.default_rng()
     if mask_zero:
         eligibile_indices = np.arange(n_stimuli) + 1
@@ -218,11 +252,12 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
     pds = psiz.data.Dataset([content])
-    ds_content = pds.export(export_format='tfds')
+    tfds_content = pds.export(export_format='tfds')
 
-    # Simulate similarity judgments.
+    # Simulate similarity judgments and append outcomes to dataset.
+    depth = content.n_outcome
+
     def simulate_agent(x):
-        depth = content.n_outcome
         outcome_probs = model_true(x)
         outcome_distribution = tfp.distributions.Categorical(
             probs=outcome_probs
@@ -231,27 +266,11 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         outcome_one_hot = tf.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    tfds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
+    tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).cache()
 
-    simmat_true = np.squeeze(
-        psiz.utils.pairwise_similarity(
-            model_true.behavior.percept, model_true.behavior.kernel, ds_pairs
-        ).numpy()
-    )
-
-    # Partition observations into train and validation/test set.
-    # ds_content_train, ds_content_val = tf.keras.utils.split_dataset(
-    #     ds_content, left_size=n_trial_train, shuffle=False
-    # )
-    # ds_outcome_train, ds_outcome_val = tf.keras.utils.split_dataset(
-    #     ds_outcome, left_size=n_trial_train, shuffle=False
-    # )
-
-    # Combine and batch val, since there are no more transformations.
-    # tfds_val = tf.data.Dataset.zip((ds_content_val, ds_outcome_val))
-    # tfds_val = tfds_val.batch(batch_size, drop_remainder=False)
-    tfds_train = tfds.take(n_trial_train)
-    tfds_val = tfds.skip(n_trial_train).cache().batch(
+    # Partition data into 80% train and 20% validation.
+    tfds_train = tfds_all.take(n_trial_train)
+    tfds_val = tfds_all.skip(n_trial_train).cache().batch(
         batch_size, drop_remainder=False
     )
 
@@ -275,22 +294,11 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     r2 = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        # Prepare `ds_train_sub` for training.
-        # ds_content_train_sub, _ = tf.keras.utils.split_dataset(
-        #     ds_content_train, left_size=int(n_trial_train_frame[i_frame])
-        # )
-        # ds_outcome_train_sub, _ = tf.keras.utils.split_dataset(
-        #     ds_outcome_train, left_size=int(n_trial_train_frame[i_frame])
-        # )
-        # ds_train_sub = tf.data.Dataset.zip(
-        #     (ds_content_train_sub, ds_outcome_train_sub)
-        # ).cache().shuffle(
-        #     buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
-        # ).batch(
-        #     batch_size, drop_remainder=False
-        # )
-        ds_train_sub = tfds_train.take(int(n_trial_train_frame[i_frame])).cache().shuffle(
-            buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
+        tfds_train_frame = tfds_train.take(
+            int(n_trial_train_frame[i_frame])
+        ).cache().shuffle(
+            buffer_size=n_trial_train_frame[i_frame],
+            reshuffle_each_iteration=True
         ).batch(
             batch_size, drop_remainder=False
         )
@@ -305,18 +313,19 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         # Infer embedding.
         # MAYBE keras-tuner 3 restarts, monitor='val_loss'
         model_inferred.fit(
-            x=ds_train_sub, validation_data=tfds_val, epochs=epochs,
+            x=tfds_train_frame, validation_data=tfds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
 
+        # Define model that outputs similarity based on inferred model.
+        model_inferred_similarity = SimilarityModel(
+            percept=model_inferred.behavior.percept,
+            kernel=model_inferred.behavior.kernel
+        )
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = np.squeeze(
-            psiz.utils.pairwise_similarity(
-                model_inferred.behavior.percept,
-                model_inferred.behavior.kernel, ds_pairs
-            ).numpy()
-        )
+        simmat_infer = model_inferred_similarity.predict(tfds_pairs)
+
         rho, _ = pearsonr(simmat_true, simmat_infer)
         if np.isnan(rho):
             rho = 0

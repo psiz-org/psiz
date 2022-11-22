@@ -87,10 +87,12 @@ class SimilarityModel(tf.keras.Model):
 
     def call(self, inputs):
         """Call."""
-        expertise_group = inputs[2]
-        z0 = self.percept([inputs[0], expertise_group])
-        z1 = self.percept([inputs[1], expertise_group])
-        return self.kernel([z0, z1])
+        stimuli_axis = 1
+        expertise_group = inputs['expertise']
+        z = self.percept([inputs['rate2/stimulus_set'], expertise_group])
+        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
+        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        return self.kernel([z_0, z_1])
 
 
 class StochasticBehaviorModel(psiz.keras.StochasticModel):
@@ -121,10 +123,12 @@ class StochasticSimilarityModel(psiz.keras.StochasticModel):
 
     def call(self, inputs):
         """Call."""
-        expertise_group = inputs[2]
-        z0 = self.percept([inputs[0], expertise_group])
-        z1 = self.percept([inputs[1], expertise_group])
-        return self.kernel([z0, z1])
+        stimuli_axis = 1
+        expertise_group = inputs['expertise']
+        z = self.percept([inputs['rate2/stimulus_set'], expertise_group])
+        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
+        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        return self.kernel([z_0, z_1])
 
 
 def main():
@@ -165,40 +169,47 @@ def main():
     norm = matplotlib.colors.Normalize(vmin=0., vmax=n_stimuli)
     color_array = cmap(norm(range(n_stimuli)))
 
-    # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.data.pairwise_index_dataset(
-        np.arange(n_stimuli) + 1, elements='upper'
-    )
-    # Create pair datasets with additional group-specific info.
-    # NOTE: We include an empty "target" component in dataset tuple to satisfy
-    # `predict` assumptions.
-    ds_pairs_group0 = ds_pairs.map(
-        lambda x0, x1: (
-            (x0, x1, tf.constant([1.0, 0.0, 0.0], dtype=tf.float32)), ()
-        )
-    ).cache().batch(batch_size, drop_remainder=False)
-    ds_pairs_group1 = ds_pairs.map(
-        lambda x0, x1: (
-            (x0, x1, tf.constant([0.0, 1.0, 0.0], dtype=tf.float32)), ()
-        )
-    ).cache().batch(batch_size, drop_remainder=False)
-    ds_pairs_group2 = ds_pairs.map(
-        lambda x0, x1: (
-            (x0, x1, tf.constant([0.0, 0.0, 1.0], dtype=tf.float32)), ()
-        )
-    ).cache().batch(batch_size, drop_remainder=False)
-
+    # Define ground truth models.
     model_true = build_ground_truth_model()
-
-    # Compute similarity matrix.
     model_similarity_true = SimilarityModel(
         percept=model_true.behavior.percept,
         kernel=model_true.behavior.kernel
     )
+
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    # NOTE: We include an placeholder "target" component in dataset tuple to
+    # satisfy the assumptions of `predict` method.
+    content_pairs = psiz.data.Rate(
+        psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements='upper')
+    )
+    group_0 = psiz.data.Group(
+        np.tile(np.array([1.0, 0.0, 0.0]), (content_pairs.n_sample, 1)),
+        name='expertise'
+    )
+    group_1 = psiz.data.Group(
+        np.tile(np.array([0.0, 1.0, 0.0]), (content_pairs.n_sample, 1)),
+        name='expertise'
+    )
+    group_2 = psiz.data.Group(
+        np.tile(np.array([0.0, 0.0, 1.0]), (content_pairs.n_sample, 1)),
+        name='expertise'
+    )
+    dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
+    tfds_pairs_group0 = psiz.data.Dataset(
+        [content_pairs, group_0, dummy_outcome]
+    ).export().batch(batch_size, drop_remainder=False)
+    tfds_pairs_group1 = psiz.data.Dataset(
+        [content_pairs, group_1, dummy_outcome]
+    ).export().batch(batch_size, drop_remainder=False)
+    tfds_pairs_group2 = psiz.data.Dataset(
+        [content_pairs, group_2, dummy_outcome]
+    ).export().batch(batch_size, drop_remainder=False)
+
+    # Compute similarity matrix.
     simmat_truth = (
-        model_similarity_true.predict(ds_pairs_group0),
-        model_similarity_true.predict(ds_pairs_group1),
-        model_similarity_true.predict(ds_pairs_group2),
+        model_similarity_true.predict(tfds_pairs_group0),
+        model_similarity_true.predict(tfds_pairs_group1),
+        model_similarity_true.predict(tfds_pairs_group2),
     )
 
     # Generate a random set of trials. Replicate for each group.
@@ -224,7 +235,7 @@ def main():
     ds_content = pds.export(export_format='tfds')
     ds_content = ds_content.batch(batch_size, drop_remainder=False)
 
-    # Simulate similarity judgments.
+    # Simulate ranked similarity judgments and append to dataset.
     depth = content.n_outcome
 
     def simulate_agent(x):
@@ -236,12 +247,11 @@ def main():
         outcome_one_hot = tf.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    # Add simulated outcomes to dataset.
-    tfds = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
+    tfds_all = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
     # Partition data into 80% train, 10% validation and 10% test set.
-    tfds_train = tfds.take(n_trial_train)
-    tfds_valtest = tfds.skip(n_trial_train)
+    tfds_train = tfds_all.take(n_trial_train)
+    tfds_valtest = tfds_all.skip(n_trial_train)
     tfds_val = tfds_valtest.take(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
@@ -337,9 +347,9 @@ def main():
             n_sample=100
         )
         simmat_inferred = (
-            model_similarity_inferred.predict(ds_pairs_group0),
-            model_similarity_inferred.predict(ds_pairs_group1),
-            model_similarity_inferred.predict(ds_pairs_group2),
+            model_similarity_inferred.predict(tfds_pairs_group0),
+            model_similarity_inferred.predict(tfds_pairs_group1),
+            model_similarity_inferred.predict(tfds_pairs_group2),
         )
 
         for i_truth in range(n_group):

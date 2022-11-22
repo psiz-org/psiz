@@ -75,9 +75,11 @@ class SimilarityModel(tf.keras.Model):
 
     def call(self, inputs):
         """Call."""
-        z0 = self.percept(inputs[0])
-        z1 = self.percept(inputs[1])
-        return self.kernel([z0, z1])
+        stimuli_axis = 1
+        z = self.percept(inputs['rate2/stimulus_set'])
+        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
+        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        return self.kernel([z_0, z_1])
 
 
 def main():
@@ -100,24 +102,28 @@ def main():
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
-    # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.data.pairwise_index_dataset(
-        np.arange(n_stimuli) + 1, elements='upper'
-    )
-    # NOTE: We include an empty "target" component in dataset tuple to satisfy
-    # `predict` assumptions.
-    ds_pairs = ds_pairs.map(
-        lambda x0, x1: ((x0, x1), ())
-    ).cache().batch(batch_size, drop_remainder=False)
-
+    # Define ground truth models.
     model_true = build_ground_truth_model(n_stimuli, n_dim)
     model_similarity_true = SimilarityModel(
         percept=model_true.behavior.percept,
         kernel=model_true.behavior.kernel
     )
-    simmat_true = model_similarity_true.predict(ds_pairs)
 
-    # Generate a random docket of trials.
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    # NOTE: We include an placeholder "target" component in dataset tuple to
+    # satisfy the assumptions of `predict` method.
+    content_pairs = psiz.data.Rate(
+        psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements='upper')
+    )
+    dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
+    tfds_pairs = psiz.data.Dataset(
+        [content_pairs, dummy_outcome]
+    ).export().batch(batch_size, drop_remainder=False)
+
+    # Compute similarity matrix.
+    simmat_true = model_similarity_true.predict(tfds_pairs)
+
+    # Generate a random set of trials.
     rng = np.random.default_rng()
     eligibile_indices = np.arange(n_stimuli) + 1
     p = np.ones_like(eligibile_indices) / len(eligibile_indices)
@@ -126,11 +132,12 @@ def main():
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
     pds = psiz.data.Dataset([content])
-    ds_content = pds.export(export_format='tfds')
+    tfds_content = pds.export(export_format='tfds')
 
-    # Simulate similarity judgments.
+    # Simulate similarity judgments and append outcomes to dataset.
+    depth = content.n_outcome
+
     def simulate_agent(x):
-        depth = content.n_outcome
         outcome_probs = model_true(x)
         outcome_distribution = tfp.distributions.Categorical(
             probs=outcome_probs
@@ -139,12 +146,11 @@ def main():
         outcome_one_hot = tf.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    # Add outcomes to dataset.
-    tfds = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
+    tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).cache()
 
     # Partition data into 80% train, 10% validation and 10% test set.
-    tfds_train = tfds.take(n_trial_train)
-    tfds_valtest = tfds.skip(n_trial_train)
+    tfds_train = tfds_all.take(n_trial_train)
+    tfds_valtest = tfds_all.skip(n_trial_train)
     tfds_val = tfds_valtest.take(n_trial_val).cache().batch(
         batch_size, drop_remainder=False
     )
@@ -192,25 +198,27 @@ def main():
         )
         callbacks = [early_stop, cb_board]
 
-        model = build_model(n_stimuli, n_dim)
-
         # Infer embedding.
-        history = model.fit(
+        model_inferred = build_model(n_stimuli, n_dim)
+        history = model_inferred.fit(
             x=tfds_train_frame, validation_data=tfds_val, epochs=epochs,
             callbacks=callbacks, verbose=0
         )
         train_cce[i_frame] = history.history['cce'][-1]
         val_cce[i_frame] = history.history['val_cce'][-1]
-        test_metrics = model.evaluate(tfds_test, verbose=0, return_dict=True)
+        test_metrics = model_inferred.evaluate(
+            tfds_test, verbose=0, return_dict=True
+        )
         test_cce[i_frame] = test_metrics['cce']
 
+        # Define model that outputs similarity based on inferred model.
+        model_inferred_similarity = SimilarityModel(
+            percept=model_inferred.behavior.percept,
+            kernel=model_inferred.behavior.kernel
+        )
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        model_inferred_similarity = SimilarityModel(
-            percept=model.behavior.percept,
-            kernel=model.behavior.kernel
-        )
-        simmat_infer = model_inferred_similarity.predict(ds_pairs)
+        simmat_infer = model_inferred_similarity.predict(tfds_pairs)
 
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2

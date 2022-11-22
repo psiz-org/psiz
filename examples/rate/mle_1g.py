@@ -79,9 +79,11 @@ class SimilarityModel(tf.keras.Model):
 
     def call(self, inputs):
         """Call."""
-        z0 = self.percept(inputs[0])
-        z1 = self.percept(inputs[1])
-        return self.kernel([z0, z1])
+        stimuli_axis = 1
+        z = self.percept(inputs['rate2/stimulus_set'])
+        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
+        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        return self.kernel([z_0, z_1])
 
 
 def main():
@@ -113,27 +115,28 @@ def main():
     if fp_board.exists():
         shutil.rmtree(fp_board)
 
-    # Assemble dataset of stimuli pairs for comparing similarity matrices.
-    ds_pairs, _ = psiz.data.pairwise_index_dataset(
-        np.arange(n_stimuli) + 1, elements='upper'
-    )
-    # NOTE: We include an empty "target" component in dataset tuple to satisfy
-    # `predict` assumptions.
-    ds_pairs = ds_pairs.map(
-        lambda x0, x1: ((x0, x1), ())
-    ).cache().batch(batch_size, drop_remainder=False)
-
-    # Create a ground truth model.
+    # Define ground truth models.
     # You can choose a grid arrangement of Gaussian arrangement by
     # commenting/uncommenting the following two lines.
     model_true = build_ground_truth_grid()
     # model_true = build_ground_truth_randn(n_stimuli, n_dim)
-
     model_similarity_true = SimilarityModel(
         percept=model_true.behavior.percept,
         kernel=model_true.behavior.kernel
     )
-    simmat_true = model_similarity_true.predict(ds_pairs)
+
+    # Assemble dataset of stimuli pairs for comparing similarity matrices.
+    # NOTE: We include an placeholder "target" component in dataset tuple to
+    # satisfy the assumptions of `predict` method.
+    content_pairs = psiz.data.Rate(
+        psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements='upper')
+    )
+    dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
+    tfds_pairs = psiz.data.Dataset(
+        [content_pairs, dummy_outcome]
+    ).export().batch(batch_size, drop_remainder=False)
+
+    simmat_true = model_similarity_true.predict(tfds_pairs)
 
     print(
         'Ground Truth Pairwise Similarity\n'
@@ -149,13 +152,13 @@ def main():
     stimulus_set = exhaustive_pairs(eligible_indices)
     content = psiz.data.Rate(stimulus_set)
     pds = psiz.data.Dataset([content])
-    ds_content = pds.export(export_format='tfds')
+    tfds_content = pds.export(export_format='tfds')
 
-    # Simulate noise-free similarity judgments and add outcomes to dataset.
-    tfds = ds_content.map(lambda x: (x, model_true(x)))
+    # Simulate noise-free similarity judgments and append outcomes to dataset.
+    tfds_all = tfds_content.map(lambda x: (x, model_true(x)))
 
     n_trial_train = pds.n_sample
-    tfds_train = tfds.cache().shuffle(
+    tfds_train = tfds_all.cache().shuffle(
         buffer_size=n_trial_train, reshuffle_each_iteration=True
     ).batch(
         batch_size=batch_size, drop_remainder=False
@@ -185,13 +188,14 @@ def main():
     )
     train_mse = train_metrics['mse']
 
-    # Compare the inferred model with ground truth by comparing the
-    # similarity matrices implied by each model.
+    # Create model that outputs similarity based on inferred model.
     model_inferred_similarity = SimilarityModel(
         percept=model_inferred.behavior.percept,
         kernel=model_inferred.behavior.kernel
     )
-    simmat_infer = model_inferred_similarity.predict(ds_pairs)
+    # Compare the inferred model with ground truth by comparing the
+    # similarity matrices implied by each model.
+    simmat_infer = model_inferred_similarity.predict(tfds_pairs)
 
     rho, _ = pearsonr(simmat_true, simmat_infer)
     r2 = rho**2
@@ -243,10 +247,10 @@ def exhaustive_pairs(eligible_indices):
         An NumPy array of index pairs.
 
     """
-    ds_pairs, _ = psiz.data.pairwise_index_dataset(
+    tfds_pairs, _ = psiz.data.pairwise_index_dataset(
         eligible_indices, elements='all'
     )
-    stimulus_set = np.array(list(ds_pairs.as_numpy_iterator()))
+    stimulus_set = np.array(list(tfds_pairs.as_numpy_iterator()))
     return stimulus_set
 
 
@@ -399,8 +403,7 @@ def plot_frame(fig, model_true, model_inferred, r2):
 
     # Plot true embedding.
     ax.scatter(
-        z_true[:, 0], z_true[:, 1],
-        s=15, c=color_array, marker='x', edgecolors='none'
+        z_true[:, 0], z_true[:, 1], s=15, c=color_array, marker='x'
     )
 
     # Plot inferred embedding.

@@ -101,13 +101,14 @@ def main():
         eligable_list = np.arange(1, n_stimuli, dtype=np.int32)
         stimulus_set = candidate_list(eligable_list, n_reference)
         content = psiz.data.Rank(stimulus_set, n_select=n_select)
-        tfds = psiz.data.Dataset([content]).export(export_format='tfds')
-        tfds = tfds.batch(batch_size, drop_remainder=False)
+        tfds_all = psiz.data.Dataset([content]).export(
+            export_format='tfds'
+        ).batch(batch_size, drop_remainder=False)
 
         # Compute expected information gain for candidate trials in mini
         # batches.
         expected_ig = []
-        for data in tfds:
+        for data in tfds_all:
             expected_ig.append(ig_model_categorical([model], data, n_sample))
         expected_ig = tf.concat(expected_ig, 0).numpy()
 

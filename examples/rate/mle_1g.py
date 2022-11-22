@@ -149,8 +149,9 @@ def main():
 
     # Assemble an exhaustive dataset of all possible pairwise combinations.
     eligible_indices = np.arange(n_stimuli) + 1
-    stimulus_set = exhaustive_pairs(eligible_indices)
-    content = psiz.data.Rate(stimulus_set)
+    content = psiz.data.Rate(
+        psiz.utils.pairwise_indices(eligible_indices, elements='all')
+    )
     pds = psiz.data.Dataset([content])
     tfds_content = pds.export(export_format='tfds')
 
@@ -235,23 +236,6 @@ def main():
     plt.savefig(
         os.fspath(fname), format='pdf', bbox_inches="tight", dpi=300
     )
-
-
-def exhaustive_pairs(eligible_indices):
-    """Assemble an exhausitive pairs of indices.
-
-    Args:
-        eligible_indices: The eligible stimulus indices.
-
-    Returns:
-        An NumPy array of index pairs.
-
-    """
-    tfds_pairs, _ = psiz.utils.pairwise_index_dataset(
-        eligible_indices, elements='all'
-    )
-    stimulus_set = np.array(list(tfds_pairs.as_numpy_iterator()))
-    return stimulus_set
 
 
 def build_ground_truth_randn(n_stimuli, n_dim):

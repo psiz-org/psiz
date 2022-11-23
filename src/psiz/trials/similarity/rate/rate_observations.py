@@ -431,19 +431,19 @@ class RateObservations(RateTrials):
         if "weight" in f:
             weight = f["weight"][()]
         else:
-            weight = np.ones((stimulus_set.shape[0]))
+            weight = np.ones((stimulus_set.shape[0]))  # pylint: disable=no-member
         if "rt_ms" in f:
             rt_ms = f["rt_ms"][()]
         else:
-            rt_ms = -np.ones((stimulus_set.shape[0]))
+            rt_ms = -np.ones((stimulus_set.shape[0]))  # pylint: disable=no-member
         if "agent_id" in f:
             agent_id = f["agent_id"][()]
         else:
-            agent_id = np.zeros((stimulus_set.shape[0]))
+            agent_id = np.zeros((stimulus_set.shape[0]))  # pylint: disable=no-member
         if "session_id" in f:
             session_id = f["session_id"][()]
         else:
-            session_id = np.zeros((stimulus_set.shape[0]))
+            session_id = np.zeros((stimulus_set.shape[0]))  # pylint: disable=no-member
         f.close()
 
         trials = RateObservations(

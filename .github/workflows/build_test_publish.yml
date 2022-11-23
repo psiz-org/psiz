@@ -47,7 +47,7 @@ jobs:
         python-version: '3.9'
     - name: Install dependencies
       run: pip install twine
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v3
       with:
         name: dist-py3
         path: dist/
@@ -62,7 +62,7 @@ jobs:
         python-version: ['3.9', '3.10']
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v3
       with:
         name: dist-py3
         path: dist/
@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/download-artifact@v2
+    - uses: actions/download-artifact@v3
       with:
         name: dist-py3
         path: dist/

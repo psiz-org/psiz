@@ -97,10 +97,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
 
         Expect:
         rank_similarity_stimulus_set:
-        shape=(batch_size, [1,] max_reference + 1, n_outcome)
-
-        rank_similarity_is_select:
-        shape = (batch_size, [1,] n_max_reference + 1, 1)
+            shape=(batch_size, max_reference + 1)
 
         """
         # We assume axes semantics based on relative position from last axis.
@@ -133,6 +130,20 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # Prebuild "outcome indices" that indicate all the possible
         # n-rank-m behavioral outcomes.
         self._outcome_idx, self._n_outcome = self._possible_outcomes()
+
+        # Prebuild a "selection mask" which will be used to mask probabilities
+        # associated with non-selection events.
+        selection_mask = np.zeros([self.n_reference])
+        for i_select in range(self.n_select):
+            selection_mask[i_select] = 1.0
+        selection_mask = tf.constant(selection_mask, dtype=K.floatx())
+        # Add any necessary leading axes before stimulus axis.
+        if self._stimuli_axis > 0:
+            for i_axis in range(self._stimuli_axis):
+                selection_mask = tf.expand_dims(selection_mask, 0)
+        # Add outcome axis.
+        selection_mask = tf.expand_dims(selection_mask, self._outcome_axis)
+        self._selection_mask = selection_mask
 
     def _possible_outcomes(self):
         """Return the possible outcomes of a rank similarity trial.
@@ -248,15 +259,11 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         sim_qr = self.kernel(inputs_kernel)
         return sim_qr
 
-    def _compute_outcome_probability(
-        self, is_reference_present, is_select, sim_qr
-    ):
+    def _compute_outcome_probability(self, is_reference_present, sim_qr):
         """Compute outcome probability.
 
         Args:
             is_reference_present:
-                shape=(batch_size, n_reference)
-            is_select:
                 shape=(batch_size, n_reference)
             sim_qr:
                 shape=(batch_size, n_reference)
@@ -283,18 +290,14 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         sim_qr = tf.gather(
             sim_qr, self._outcome_idx, axis=self._stimuli_axis_tensor
         )
-        # Add singleton outcome axis to `is_reference_present` and `is_select`.
+        # Add singleton outcome axis to `is_reference_present`.
         is_reference_present = tf.expand_dims(
             is_reference_present, self._outcome_axis
         )
-        is_select = tf.expand_dims(is_select, self._outcome_axis)
 
-        # TODO is `is_outcome` necessary since number of outcomes the same for
-        # all trials now?
         # Determine if outcome is legitimate by checking if at least one
-        # reference is present. This is important because not all trials have
-        # the same number of possible outcomes and we need to infer the
-        # "zero-padding" of the outcome axis.
+        # reference is present. This is important because some trials are
+        # placeholders.
         # NOTE: Equivalent to:
         #     is_outcome = is_reference_present[:, 0]
         is_outcome = tf.gather(
@@ -315,9 +318,9 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         denom = tf.maximum(denom, tf.keras.backend.epsilon())
         event_logprob = tf.math.log(sim_qr) - tf.math.log(denom)
 
-        # Mask non-existent events (i.e, non-existent reference selections).
-        is_select = tf.cast(is_select, K.floatx())
-        event_logprob = is_select * event_logprob
+        # Mask non-existent selection events (i.e, non-existent reference
+        # selections).
+        event_logprob = self._selection_mask * event_logprob
 
         # Compute log-probability of outcome (i.e., a sequence of events).
         outcome_logprob = tf.reduce_sum(event_logprob, axis=self._stimuli_axis)

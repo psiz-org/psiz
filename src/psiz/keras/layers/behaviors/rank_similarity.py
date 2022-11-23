@@ -50,12 +50,8 @@ class RankSimilarity(RankSimilarityBase):
                 initialized the layer.
 
                 stimulus_set: A tensor containing indices that define
-                the stimuli used in each trial.
-                    shape=(batch_size, [1,] max_reference + 1, n_outcome)
-                is_select: A float tensor indicating if a reference was
-                    selected, which corresponds to a "true"
-                    probabilistic event.
-                    shape = (batch_size, [1,] n_max_reference + 1, 1)
+                    the stimuli used in each trial.
+                    shape=(batch_size, max_reference + 1)
                 gate_weights (optional): Tensor(s) containing gate
                     weights.
 
@@ -70,21 +66,13 @@ class RankSimilarity(RankSimilarityBase):
         inputs_copied = copy.copy(inputs)
 
         stimulus_set = inputs_copied[self.input_prefix + '/stimulus_set']
-        # NOTE: We drop the "query" position in `is_select`.
-        # NOTE: Equivalent to:
-        #     is_select = inputs['rank_similarity_is_select'][:, 1:]
-        is_select = tf.gather(
-            inputs_copied[self.input_prefix + '/is_select'],
-            indices=self._reference_indices,
-            axis=self._stimuli_axis
-        )
         is_reference_present = self._is_reference_present(stimulus_set)
 
         # Compute pairwise similarity between query and references.
         sim_qr = self._pairwise_similarity(inputs_copied)
 
         outcome_prob = self._compute_outcome_probability(
-            is_reference_present, is_select, sim_qr
+            is_reference_present, sim_qr
         )
 
         return outcome_prob

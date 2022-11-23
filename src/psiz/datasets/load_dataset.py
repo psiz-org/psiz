@@ -34,6 +34,7 @@ import shutil
 import sys
 import tarfile
 import time
+import warnings
 import zipfile
 
 import numpy as np
@@ -64,6 +65,18 @@ def load_dataset(
         obs: An Observations object.
 
     """
+    warnings.warn(
+        (
+            'This function is deprecated. Users should instead use the '
+            'functionality of their preferred framework such as '
+            '`tf.data.Dataset` to save and load datasets. If you need '
+            'to load a previously hosted dataset, please see the '
+            'separate package `psiz-datasets`; '
+            'version_announced=0.8.0; version_scheduled=0.9.0'
+        ),
+        DeprecationWarning,
+        stacklevel=2
+    )
     obs = _fetch_obs(
         dataset_name, cache_subdir=cache_subdir, cache_dir=cache_dir
     )

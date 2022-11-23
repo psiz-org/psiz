@@ -153,9 +153,6 @@ class TempNoRNN(psiz.keras.models.StochasticModel):
         inputs['3rank1/stimulus_set'] = (
             inputs['3rank1/stimulus_set'][:, 0]
         )
-        inputs['3rank1/is_select'] = (
-            inputs['3rank1/is_select'][:, 0]
-        )
 
         output, states = self.net(inputs, states, training=training)
 

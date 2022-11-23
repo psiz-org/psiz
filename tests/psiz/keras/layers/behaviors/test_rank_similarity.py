@@ -64,17 +64,8 @@ def test_outcome_probability_v0():
             [4, 3, 1],
         ]
     )
-    is_select = tf.constant(
-        [
-            [False, True, False],
-            [False, True, False],
-            [False, True, False],
-            [False, True, False]
-        ]
-    )
     x = {
         '2rank1/stimulus_set': stimulus_set,
-        '2rank1/is_select': is_select,
     }
     outcome_prob = rank(x)
 

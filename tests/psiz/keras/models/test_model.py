@@ -1000,12 +1000,8 @@ def build_ranksim_functional_v0():
     inp_stimulus_set = tf.keras.Input(
         shape=(5,), name='4rank1/stimulus_set'
     )
-    inp_is_select = tf.keras.Input(
-        shape=(5,), name='4rank1/is_select'
-    )
     inputs = {
         '4rank1/stimulus_set': inp_stimulus_set,
-        '4rank1/is_select': inp_is_select
     }
     outputs = behavior(inputs)
     model = tf.keras.Model(
@@ -1177,12 +1173,8 @@ def build_ranksimcell_functional_v0():
     inp_stimulus_set = tf.keras.Input(
         shape=(None, 9), name='8rank2/stimulus_set'
     )
-    inp_is_select = tf.keras.Input(
-        shape=(None, 9), name='8rank2/is_select'
-    )
     inputs = {
         '8rank2/stimulus_set': inp_stimulus_set,
-        '8rank2/is_select': inp_is_select
     }
     outputs = rnn(inputs)
     model = tf.keras.Model(
@@ -1461,9 +1453,6 @@ def build_ranksim_ratesim_functional_v0():
     inp_rank_stimulus_set = tf.keras.Input(
         shape=(5,), name='4rank1/stimulus_set'
     )
-    inp_rank_is_select = tf.keras.Input(
-        shape=(5,), name='4rank1/is_select'
-    )
     inp_rate_stimulus_set = tf.keras.Input(
         shape=(2,), name='rate2/stimulus_set'
     )
@@ -1472,7 +1461,6 @@ def build_ranksim_ratesim_functional_v0():
     )
     inputs = {
         '4rank2/stimulus_set': inp_rank_stimulus_set,
-        '4rank2/is_select': inp_rank_is_select,
         'rate2/stimulus_set': inp_rate_stimulus_set,
         'gate_weights_behavior': inp_gate_weights
     }

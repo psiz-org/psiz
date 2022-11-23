@@ -261,20 +261,13 @@ class Rank(Content):
 
         if export_format == 'tfds':
             stimulus_set = self.stimulus_set
-            is_select = self._is_select(compress=False)
 
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
-                is_select = unravel_timestep(is_select)
 
             x = {
                 name_prefix + '/stimulus_set': tf.constant(
                     stimulus_set, name=(name_prefix + '/stimulus_set')
-                ),
-                name_prefix + '/is_select': tf.constant(
-                    is_select,
-                    dtype=tf.bool,
-                    name=(name_prefix + '/is_select')
                 ),
             }
         else:

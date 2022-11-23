@@ -606,27 +606,8 @@ def test_export_0(c_2rank1_d_3x2):
             ]
         ], dtype=tf.int32
     )
-    desired_is_select = tf.constant(
-        [
-            [
-                [False, True, False],
-                [False, True, False],
-            ],
-            [
-                [False, True, False],
-                [False, False, False],
-            ],
-            [
-                [False, True, False],
-                [False, True, False],
-            ]
-        ]
-    )
     tf.debugging.assert_equal(
             desired_stimulus_set, x['2rank1/stimulus_set']
-    )
-    tf.debugging.assert_equal(
-        desired_is_select, x['2rank1/is_select']
     )
 
 
@@ -647,23 +628,8 @@ def test_export_1(c_2rank1_d_3x2):
             [14, 15, 16],
         ], dtype=tf.int32
     )
-    desired_is_select = tf.constant(
-        [
-            [
-                [False, True, False],
-                [False, True, False],
-                [False, True, False],
-                [False, False, False],
-                [False, True, False],
-                [False, True, False],
-            ]
-        ]
-    )
     tf.debugging.assert_equal(
         desired_stimulus_set, x['2rank1/stimulus_set']
-    )
-    tf.debugging.assert_equal(
-        desired_is_select, x['2rank1/is_select']
     )
 
 

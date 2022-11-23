@@ -264,7 +264,7 @@ class SparseDispatcher():
             if self._has_timestep_axis:
                 # Combine batch and timestep axis via `reshape`.
                 inp2 = tf.reshape(
-                    inp, tf.concat([[-1], inp_shape[2:]], axis=0)
+                    inp, tf.concat([[-1], inp_shape[2:]], 0)
                 )
                 inp2_shape = tf.shape(inp2)
                 # Sort/replicate inputs for splitting.

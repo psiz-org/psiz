@@ -148,8 +148,8 @@ class Dataset(object):
             with_timestep_axis = False
             for component in self.components:
                 with_timestep_axis = (
-                    with_timestep_axis or
-                    component._export_with_timestep_axis
+                    with_timestep_axis
+                    or component._export_with_timestep_axis
                 )
 
         # Assemble model input.

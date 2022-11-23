@@ -442,14 +442,12 @@ class ALCOVECell(tf.keras.layers.Layer):
             'lr_attention_constraint':
                 tf.keras.constraints.serialize(self.lr_attention_constraint),
             'lr_attention_trainable': self.lr_attention_trainable,
-            'lr_association_initializer':
-                tf.keras.initializers.serialize(
-                    self.lr_association_initializer
-                ),
-            'lr_association_regularizer':
-                tf.keras.regularizers.serialize(
-                    self.lr_association_regularizer
-                ),
+            'lr_association_initializer': tf.keras.initializers.serialize(
+                self.lr_association_initializer
+            ),
+            'lr_association_regularizer': tf.keras.regularizers.serialize(
+                self.lr_association_regularizer
+            ),
             'lr_association_constraint':
                 tf.keras.constraints.serialize(self.lr_association_constraint),
             'lr_association_trainable': self.lr_association_trainable,

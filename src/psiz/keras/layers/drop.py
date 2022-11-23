@@ -64,8 +64,8 @@ class Drop(tf.keras.layers.Layer):
 
         # Drop requested tensor from `inputs`.
         input_shape_w_drop = (
-            input_shape[0:self._drop_index] +
-            input_shape[(self._drop_index + 1):]
+            input_shape[0:self._drop_index]
+            + input_shape[(self._drop_index + 1):]
         )
 
         # Determine how inputs should be pre-processed.
@@ -140,8 +140,8 @@ class Drop(tf.keras.layers.Layer):
 
         # Drop requested tensor from `input_shape`.
         input_shape_w_drop = (
-            input_shape[0:self._drop_index] +
-            input_shape[(self._drop_index + 1):]
+            input_shape[0:self._drop_index]
+            + input_shape[(self._drop_index + 1):]
         )
 
         # Determine how inputs should be pre-processed.

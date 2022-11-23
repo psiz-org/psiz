@@ -54,7 +54,7 @@ __all__ = [
     'RankSimilarity',
     'RankSimilarityCell',
     'RateSimilarityBase',
-    'RateSimilarity'
+    'RateSimilarity',
     'RateSimilarityCell',
     'ALCOVECell',
     'RankBehavior',

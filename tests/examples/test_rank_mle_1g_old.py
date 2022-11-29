@@ -119,6 +119,9 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     return model
 
 
+@pytest.mark.xfail(
+    reason="Uses deprecated functionality."
+)
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "similarity_func", ["Exponential"]

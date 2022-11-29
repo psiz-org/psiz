@@ -17,7 +17,6 @@
 
 import copy
 
-import numpy as np
 import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -155,29 +154,15 @@ class RankModelC(tf.keras.Model):
         """Initialize."""
         super(RankModelC, self).__init__(**kwargs)
 
-        n_stimuli = 3
+        n_stimuli = 30
         n_dim = 2
 
         # Define group-specific percept layers.
         percept_0 = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array(
-                    [
-                        [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
-                    ], dtype=np.float32
-                )
-            )
+            n_stimuli + 1, n_dim, mask_zero=True
         )
         percept_1 = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array(
-                    [
-                        [0.0, 0.0], [.15, .2], [.4, .5], [.1, .1]
-                    ], dtype=np.float32
-                )
-            )
+            n_stimuli + 1, n_dim, mask_zero=True
         )
         percept = psiz.keras.layers.BraidGate(
             subnets=[percept_0, percept_1], gating_index=-1
@@ -259,53 +244,25 @@ class RankModelD(tf.keras.Model):
         """Initialize."""
         super(RankModelD, self).__init__(**kwargs)
 
-        n_stimuli = 3
+        n_stimuli = 30
         n_dim = 2
 
         # Define heirarchical percept layers.
         percept_0 = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array(
-                    [
-                        [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
-                    ], dtype=np.float32
-                )
-            )
+            n_stimuli + 1, n_dim, mask_zero=True
         )
         percept_1 = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array(
-                    [
-                        [0.0, 0.0], [.15, .2], [.4, .5], [.1, .1]
-                    ], dtype=np.float32
-                )
-            )
+            n_stimuli + 1, n_dim, mask_zero=True
         )
         percept_01 = psiz.keras.layers.BraidGate(
             subnets=[percept_0, percept_1], gating_index=-1, name='percept_01'
         )
 
         percept_2 = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array(
-                    [
-                        [0.0, 0.0], [.1, .1], [.15, .2], [.4, .5]
-                    ], dtype=np.float32
-                )
-            )
+            n_stimuli + 1, n_dim, mask_zero=True
         )
         percept_3 = tf.keras.layers.Embedding(
-            n_stimuli + 1, n_dim, mask_zero=True,
-            embeddings_initializer=tf.keras.initializers.Constant(
-                np.array(
-                    [
-                        [0.0, 0.0], [.15, .2], [.4, .5], [.1, .1]
-                    ], dtype=np.float32
-                )
-            )
+            n_stimuli + 1, n_dim, mask_zero=True
         )
         percept_23 = psiz.keras.layers.BraidGate(
             subnets=[percept_2, percept_3], gating_index=-1, name='percept_23'

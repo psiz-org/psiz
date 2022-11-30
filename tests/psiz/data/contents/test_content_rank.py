@@ -401,8 +401,13 @@ def test_possible_outcomes_3c2():
     outcomes = Rank.possible_outcomes(n_reference, n_select)
 
     desired_outcomes = np.array((
-        (0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0),
-        (2, 0, 1), (2, 1, 0)))
+        (0, 1, 2),
+        (0, 2, 1),
+        (1, 0, 2),
+        (1, 2, 0),
+        (2, 0, 1),
+        (2, 1, 0)
+    ))
     np.testing.assert_array_equal(outcomes, desired_outcomes)
 
 
@@ -436,6 +441,66 @@ def test_possible_outcomes_8c1():
         (6, 0, 1, 2, 3, 4, 5, 7),
         (7, 0, 1, 2, 3, 4, 5, 6)))
     np.testing.assert_array_equal(outcomes, correct)
+
+
+def test_as_sparse_outcome_2c1_a():
+    """Test as_sparse_outcome."""
+    n_reference = 2
+    selection_indices = [0]
+    outcome_idx = Rank.as_sparse_outcome(n_reference, selection_indices)
+
+    desired_outcome_idx = 0
+    assert outcome_idx == desired_outcome_idx
+
+
+def test_as_sparse_outcome_2c1_b():
+    """Test as_sparse_outcome."""
+    n_reference = 2
+    selection_indices = [1]
+    outcome_idx = Rank.as_sparse_outcome(n_reference, selection_indices)
+
+    desired_outcome_idx = 1
+    assert outcome_idx == desired_outcome_idx
+
+
+def test_as_sparse_outcome_3c2_a():
+    """Test as_sparse_outcome."""
+    n_reference = 3
+    selection_indices = [0, 1]
+    outcome_idx = Rank.as_sparse_outcome(n_reference, selection_indices)
+
+    desired_outcome_idx = 0
+    assert outcome_idx == desired_outcome_idx
+
+
+def test_as_sparse_outcome_3c2_b():
+    """Test as_sparse_outcome."""
+    n_reference = 3
+    selection_indices = [0, 2]
+    outcome_idx = Rank.as_sparse_outcome(n_reference, selection_indices)
+
+    desired_outcome_idx = 1
+    assert outcome_idx == desired_outcome_idx
+
+
+def test_as_sparse_outcome_3c2_c():
+    """Test as_sparse_outcome."""
+    n_reference = 3
+    selection_indices = [2, 1]
+    outcome_idx = Rank.as_sparse_outcome(n_reference, selection_indices)
+
+    desired_outcome_idx = 5
+    assert outcome_idx == desired_outcome_idx
+
+
+def test_as_sparse_outcome_4c2_a():
+    """Test as_sparse_outcome."""
+    n_reference = 4
+    selection_indices = [2, 1]
+    outcome_idx = Rank.as_sparse_outcome(n_reference, selection_indices)
+
+    desired_outcome_idx = 7
+    assert outcome_idx == desired_outcome_idx
 
 
 # TODO delete or move elsewhere

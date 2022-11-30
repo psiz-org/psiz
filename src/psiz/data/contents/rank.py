@@ -293,3 +293,36 @@ class Rank(Content):
 
         """
         return m_prefer_n(n_reference, n_select)
+
+    @staticmethod
+    def as_sparse_outcome(n_reference, selection_indices):
+        """Convert from selection indices to an outcome index.
+
+        Args:
+            n_reference: Integer indicating the number of references.
+            selection_indices: Array-like of integers indicating the
+                stimulus indices that were selected. The order of
+                indices is assumed to correspond to the order that the
+                selections were made.
+
+        Returns:
+            An integer representing a sparse encoding of the outcome.
+
+        """
+        # Cast as array.
+        selection_indices = np.array(selection_indices)
+        # Add axis for broadcasting.
+        selection_indices = np.expand_dims(selection_indices, 0)
+
+        n_select = selection_indices.shape[1]
+        outcomes = m_prefer_n(n_reference, n_select)
+        n_outcome = outcomes.shape[0]
+        dmy_idx = np.arange(n_outcome)
+        # Drop non-selected references.
+        outcomes = outcomes[:, 0:n_select]
+        # Find outcome idx by finding a match.
+        is_equal = np.equal(outcomes, selection_indices)
+        is_equal = np.product(is_equal, 1).astype(bool)
+        # There should only be one True location.
+        outcome_idx = dmy_idx[is_equal][0]
+        return outcome_idx

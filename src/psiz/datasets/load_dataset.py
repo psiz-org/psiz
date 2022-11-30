@@ -67,7 +67,8 @@ def load_dataset(
     """
     warnings.warn(
         (
-            'This function is deprecated. Users should instead use the '
+            'This function is deprecated and will be removed. Users '
+            'should instead use the '
             'functionality of their preferred framework such as '
             '`tf.data.Dataset` to save and load datasets. If you need '
             'to load a previously hosted dataset, please see the '

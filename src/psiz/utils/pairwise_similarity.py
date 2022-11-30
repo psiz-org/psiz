@@ -61,7 +61,8 @@ def pairwise_similarity(
     """
     warnings.warn(
         (
-            'This function is deprecated. Users should instead create a new '
+            'This function is deprecated and will be removed. Users should '
+            'instead create a new '
             'model using the functional or subclass API; '
             'version_announced=0.8.0; version_scheduled=0.9.0'
         ),

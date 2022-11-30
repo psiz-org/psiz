@@ -58,7 +58,8 @@ def pairwise_index_dataset(
     """
     warnings.warn(
         (
-            'This function is deprecated. Users should instead use new '
+            'This function is deprecated and will be removed. Users '
+            'should instead use the new '
             '`psiz.utils.pairwise_indices` with `psiz.data.Rate`. See '
             '`psiz/examples`; '
             'version_announced=0.8.0; version_scheduled=0.9.0'

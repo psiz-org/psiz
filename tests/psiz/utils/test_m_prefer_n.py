@@ -29,7 +29,7 @@ def test_2prefer1():
     np.testing.assert_array_equal(outcomes, desired_outcomes)
 
 
-def test_possible_outcomes_3c2():
+def test_3prefer2():
     """Test outcomes 3 choose 2 ranked trial."""
     m_option = 3
     n_select = 2

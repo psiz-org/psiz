@@ -20,13 +20,12 @@ Classes:
 
 """
 
-from itertools import permutations
-
 import numpy as np
 import tensorflow as tf
 
 from psiz.data.contents.content import Content
 from psiz.data.unravel_timestep import unravel_timestep
+from psiz.utils.m_prefer_n import m_prefer_n
 
 
 class Rank(Content):
@@ -281,40 +280,16 @@ class Rank(Content):
         """Return the possible outcomes of a ranked trial.
 
         Args:
-            n_reference: Integer
-            n_select: Integer
+            n_reference: Integer indicating number of references
+            n_select: Integer indicating number of ranked selections.
 
         Returns:
             An 2D array indicating all possible outcomes where the
-                values indicate indices of the reference stimuli. Each
-                row corresponds to one outcome. Note the indices refer
-                to references only and does not include an index for
-                the query. Also note that the unpermuted index is
-                returned first.
+            values indicate indices of the reference stimuli. Each row
+            corresponds to one outcome. Note the indices refer to
+            references only and does not include an index for the
+            query. Also note that the unpermuted index is returned
+            first.
 
         """
-        # Cast if necessary.
-        n_reference = int(n_reference)
-        n_select = int(n_select)
-
-        reference_list = range(n_reference)
-
-        # Get all permutations of length n_select.
-        perm = permutations(reference_list, n_select)
-
-        selection = list(perm)
-        n_outcome = len(selection)
-
-        outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
-        for i_outcome in range(n_outcome):
-            # Fill in selections.
-            outcomes[i_outcome, 0:n_select] = selection[i_outcome]
-            # Fill in unselected.
-            dummy_idx = np.arange(n_reference)
-            for i_selected in range(n_select):
-                loc = dummy_idx != outcomes[i_outcome, i_selected]
-                dummy_idx = dummy_idx[loc]
-
-            outcomes[i_outcome, n_select:] = dummy_idx
-
-        return outcomes
+        return m_prefer_n(n_reference, n_select)

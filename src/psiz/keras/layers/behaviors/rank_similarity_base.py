@@ -20,13 +20,12 @@ Classes:
 
 """
 
-from itertools import permutations
-
-import numpy as np  # TODO remove reliance
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
+from psiz.utils.m_prefer_n import m_prefer_n
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -165,28 +164,11 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # order is the same.
         n_reference = self.n_reference
         n_select = self.n_select
-
-        reference_list = range(n_reference)
-
-        # Get all permutations of length n_select.
-        perm = permutations(reference_list, n_select)
-
-        selection = list(perm)
-        n_outcome = len(selection)
-
-        outcomes = np.empty((n_outcome, n_reference), dtype=np.int32)
-        for i_outcome in range(n_outcome):
-            # Fill in selections.
-            outcomes[i_outcome, 0:n_select] = selection[i_outcome]
-            # Fill in unselected.
-            dummy_idx = np.arange(n_reference)
-            for i_selected in range(n_select):
-                loc = dummy_idx != outcomes[i_outcome, i_selected]
-                dummy_idx = dummy_idx[loc]
-
-            outcomes[i_outcome, n_select:] = dummy_idx
-
-        outcome_idx = tf.transpose(tf.constant(outcomes))
+        outcome_idx = m_prefer_n(n_reference, n_select)
+        n_outcome = outcome_idx.shape[0]
+        # Transpose `outcome_idx` to make more efficient when used inside
+        # `call` method.
+        outcome_idx = tf.transpose(tf.constant(outcome_idx))
         n_outcome = tf.constant(n_outcome, dtype=K.floatx())
         return outcome_idx, n_outcome
 

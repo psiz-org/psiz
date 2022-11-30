@@ -19,6 +19,7 @@ from psiz.utils.affine_mvn import affine_mvn
 from psiz.utils.choice_wo_replace import choice_wo_replace
 from psiz.utils.expand_dim_repeat import expand_dim_repeat
 from psiz.utils.generate_group_matrix import generate_group_matrix
+from psiz.utils.m_prefer_n import m_prefer_n
 from psiz.utils.pairwise_indices import pairwise_indices
 from psiz.utils.pairwise_index_dataset import pairwise_index_dataset
 from psiz.utils.pairwise_similarity import pairwise_similarity
@@ -34,6 +35,7 @@ __all__ = [
     'choice_wo_replace',
     'expand_dim_repeat',
     'generate_group_matrix',
+    'm_prefer_n',
     'pairwise_indices',
     'pairwise_index_dataset',
     'pairwise_similarity',

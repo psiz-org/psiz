@@ -20,6 +20,8 @@ Functions:
 
 """
 
+import warnings
+
 import numpy as np
 
 
@@ -40,6 +42,15 @@ def generate_group_matrix(n_row, groups=None):
             shape=(n_row, len(groups))
 
     """
+    warnings.warn(
+        (
+            'This function is deprecated and will be removed; '
+            'version_announced=0.8.0; version_scheduled=0.9.0'
+        ),
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     if groups is None:
         groups = [0]
 

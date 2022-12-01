@@ -17,7 +17,7 @@
 
 Functions:
     ig_categorical: A sample-based function for computing expected
-        information gain of categorical output trials.
+        information gain of events with categorical outcomes.
 
 """
 
@@ -25,15 +25,12 @@ import tensorflow as tf
 
 
 def ig_categorical(y_pred):
-    """Return expected information gain of categorical outcome trials.
+    """Return information gain of events with categorical outcomes.
 
     A sample-based approximation of information gain is determined by
-    computing the mutual information between the candidate trial(s)
-    and the existing set of observations (implied by the current model
-    state).
-
-    This sample-based approximation is intended for trials that have
-    multiple discrete outcomes (i.e., categorical).
+    computing the mutual information between the candidate event(s)
+    and an existing set of observed events (implied by the current
+    model state).
 
     This function is designed to be agnostic to the manner in which
     `y_pred` samples are drawn. For example, these could be dervied
@@ -44,21 +41,21 @@ def ig_categorical(y_pred):
     `y_pred` is zero for those elements.
 
     Args:
-        y_pred: A tf.Tensor of model predictions.
-            shape=(n_trial, n_sample, n_outcome)
+        y_pred: A tf.Tensor of model's categorical outcome predictions.
+            shape=(n_event, n_sample, n_outcome)
 
     Returns:
         A tf.Tensor object representing the expected information gain
-            of the candidate trial(s).
-            shape=(n_trial,)
+            of the candidate event(s).
+            shape=(n_event,)
 
     """
     # First term of mutual information.
     # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c),
-    # where `c` indicates a candidate trial that we want to compute the
+    # where `c` indicates a candidate event that we want to compute the
     # expected information gain for.
     # Take mean over samples to approximate p(y_i | obs, c).
-    term0 = tf.reduce_mean(y_pred, axis=1)  # shape=(n_trial, n_outcome)
+    term0 = tf.reduce_mean(y_pred, axis=1)  # shape=(n_event, n_outcome)
     term0 = term0 * tf.math.log(
         tf.math.maximum(term0, tf.keras.backend.epsilon())
     )
@@ -68,7 +65,7 @@ def ig_categorical(y_pred):
     # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.
     # Sum over possible outcomes.
-    term0 = -tf.reduce_sum(term0, axis=1)  # shape=(n_trial,)
+    term0 = -tf.reduce_sum(term0, axis=1)  # shape=(n_event,)
 
     # Second term of mutual information.
     # E[H(Y | Z, D, x)]
@@ -79,8 +76,8 @@ def ig_categorical(y_pred):
     # NOTE: At this point we would need to zero out place-holder outcomes,
     # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.
-    term1 = tf.reduce_sum(term1, axis=2)  # shape=(n_trial, n_sample)
+    term1 = tf.reduce_sum(term1, axis=2)  # shape=(n_event, n_sample)
     # Take the mean over all samples.
-    term1 = tf.reduce_mean(term1, axis=1)  # shape=(n_trial,)
+    term1 = tf.reduce_mean(term1, axis=1)  # shape=(n_event,)
 
     return term0 + term1

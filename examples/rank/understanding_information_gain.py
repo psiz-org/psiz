@@ -32,7 +32,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
-from psiz.trials.information_gain import ig_model_categorical
+from psiz.tf.information_theory import ig_model_categorical
 
 
 # Uncomment the following line to force eager execution.

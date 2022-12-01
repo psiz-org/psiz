@@ -16,7 +16,6 @@
 """Trials initialization."""
 
 
-import psiz.trials.information_gain
 from psiz.trials.stack import stack
 from psiz.trials.load_trials import load_trials
 from psiz.trials.similarity.docket_generator import DocketGenerator

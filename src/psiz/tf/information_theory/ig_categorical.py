@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials module.
+"""Tensorflow module.
 
 Functions:
     ig_categorical: A sample-based function for computing expected

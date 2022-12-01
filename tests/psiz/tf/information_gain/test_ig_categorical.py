@@ -17,7 +17,7 @@
 
 import tensorflow as tf
 
-from psiz.trials.information_gain import ig_categorical
+from psiz.tf.information_theory import ig_categorical
 
 
 def test_0():

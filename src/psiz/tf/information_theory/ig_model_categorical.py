@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Information gain.
+"""Tensorflow module.
 
 Functions:
     ig_model_categorical: Compute expected information gain for an
@@ -25,7 +25,7 @@ import copy
 
 import tensorflow as tf
 
-from psiz.trials.information_gain import ig_categorical
+from psiz.tf.information_theory import ig_categorical
 
 
 def ig_model_categorical(model_list, inputs, n_sample):

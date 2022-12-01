@@ -26,7 +26,7 @@ import tensorflow as tf
 
 from psiz.trials.similarity.docket_generator import DocketGenerator
 from psiz.trials.similarity.rank.rank_docket import RankDocket
-from psiz.trials.information_gain.ig_categorical import ig_categorical
+from psiz.tf.information_theory.ig_categorical import ig_categorical
 from psiz.trials.stack import stack
 from psiz.utils import ProgressBarRe, choice_wo_replace
 

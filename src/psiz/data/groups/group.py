@@ -40,6 +40,8 @@ class Group(DatasetComponent):
         value = self._validate_value(name, value)
         self.n_sample = value.shape[0]
         self.sequence_length = value.shape[1]
+        if name is None:
+            raise ValueError('Argument `name` must be provided.')
         self.name = name
         self.value = value
 

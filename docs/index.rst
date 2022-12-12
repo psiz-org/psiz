@@ -33,10 +33,13 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    :maxdepth: 1
    :caption: Features
 
-   src/features/overview
    src/features/data
-   src/features/hosted
-   src/features/faq
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Datasets
+
+   src/datasets/datasets
 
 .. toctree::
    :maxdepth: 1

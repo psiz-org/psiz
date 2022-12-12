@@ -1,13 +1,12 @@
-#############################
-Data: Trials and Observations
-#############################
+################################
+Data: Content, Group, & Behavior
+################################
 
 :Author: Brett D. Roads
 
-Inference is performed by fitting a model to a set of observed behavioral
-outcomes. Two types of behavioral outcomes are currently supported:
-*rank* similarity judgments and *rate* similarity judgments.
+For the purpose of modeling human behavior, data can be conceptualized as having three pieces: the *content* of the trial, the *group* membership of the participant, and the participant's observed *behavior*. The content and observed behavior depends on the trial type.
 
+The `psiz.data` module provides lightweight classes that act as an optional on-ramp for users. The module provides the *content* classes `psiz.data.Rate` and `psiz.data.Rank`.
 
 Rank
 ====
@@ -17,24 +16,22 @@ three stimuli: a *query* stimulus (:math:`q`) and two *reference* stimuli
 (:math:`a` and :math:`b`). An agent selects the reference stimulus that they
 believe is more similar to the query stimulus. For this simple trial, there
 are only two possible outcomes: either reference :math:`a` or :math:`b` is
-selected. If the agent selected reference :math:`a`, then the observation for
-trial :math:`i` would be recorded as the vector: 
+selected.
 
-.. math::
-    D_{i} = [q, a, b]
+Rank trials composed of one query and two reference stimuli, are sometimes referred to as *triplet* trials. In addition to simple triplet trials, PsiZ can handle a number of different rank trial configurations.
 
-Alternatively, if the agent had selected reference :math:`b`, the observation
-would be recorded as:
+Some common rank trial configurations:
 
-.. math::
-    D_{i} = [q, b, a]
+**2-rank-1**: Participant saw three images where one image was a 
+*query* and the other two images were *references*. Participants selected 
+the reference they considered most similarity to the query. There are two
+possible outcomes.
 
-Rank trials composed of one query and two reference stimuli, are sometimes
-referred to as *triplet* trials. In addition to simple triplet trials, PsiZ
-can handle a number of different rank trial configurations. A trial may have
-2-8 reference stimuli and an agent may be required to select and rank more
-than one reference stimulus. An Open Access article detailing rank trials is
-available at https://link.springer.com/article/10.3758/s13428-019-01285-3.
+**8-rank-2**: Participant saw nine images where one image was a 
+*query* and the other eight images were *references*. Participants selected 
+the two reference they considered most similarity to the query and also
+indicated the order (rank) of their selections. There are 56 possible 
+outcomes.
 
 
 Rate
@@ -44,17 +41,8 @@ In the simplest case, an observation is obtained from a trial consisting of
 two stimuli. An agent provides a numerical rating regarding the similarity
 between the stimuli.
 
-.. note::
-    This trial type is relatively new with many features still being developed
-    and tested.
-
 
 Other trial types
 =================
 
-While rankings and ratings include a large body of research, other types of
-observations are possible. For example, a *sort* trial which requires
-participants to sort a set of stimuli into an artbitrary number of different
-piles. Other trials are constantly under consideration but constitute a sizable
-time investment. Discussions and pull requests are strongly encouraged for new
-trial types.
+While rankings and ratings include a large body of research, many other trial types are possible.

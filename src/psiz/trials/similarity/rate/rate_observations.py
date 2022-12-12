@@ -320,7 +320,7 @@ class RateObservations(RateTrials):
         f.close()
 
     def as_dataset(self):
-        """Format necessary data as Tensorflow.data.Dataset object.
+        """Format necessary data as tensorflow.data.Dataset object.
 
         Returns:
             ds_obs: The data necessary for inference, formatted as a

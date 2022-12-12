@@ -52,7 +52,7 @@ def pairwise_index_dataset(
             and the second optional column has a value of 3.
 
     Returns:
-        ds: A Tensorflow Dataset.
+        ds: A tensorflow.data.Dataset object.
         ds_info: A convenience dictionary.
 
     """

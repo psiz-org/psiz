@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Tensorflow module.
+"""TensorFlow module.
 
 Functions:
     ig_model_categorical: Compute expected information gain for an

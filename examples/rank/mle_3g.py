@@ -273,7 +273,7 @@ def main():
 def build_ground_truth_model(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     percept = tf.keras.layers.Embedding(
-        n_stimuli, n_dim,
+        n_stimuli + 1, n_dim,
         embeddings_initializer=tf.keras.initializers.RandomNormal(
             stddev=.17
         ),
@@ -363,7 +363,7 @@ def build_model(n_stimuli, n_dim):
 
     """
     percept = tf.keras.layers.Embedding(
-        n_stimuli, n_dim, mask_zero=True
+        n_stimuli + 1, n_dim, mask_zero=True
     )
     # Define group-specific kernels.
     shared_similarity = psiz.keras.layers.ExponentialSimilarity(

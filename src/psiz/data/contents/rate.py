@@ -30,7 +30,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 class Rate(Content):
     """Trial content requiring similarity ratings."""
 
-    def __init__(self, stimulus_set):
+    def __init__(self, stimulus_set, name=None):
         """Initialize.
 
         Args:
@@ -43,6 +43,8 @@ class Rate(Content):
                     (samples, 2)
                     OR
                     (samples, sequence_length, 2)
+            name (optional): A string indicating a name that can be
+                used to identify the content when exported.
 
         Raises:
             ValueError if improper arguments are provided.
@@ -54,6 +56,10 @@ class Rate(Content):
         self.sequence_length = stimulus_set.shape[1]
         stimulus_set = self._validate_stimulus_set(stimulus_set)
         self.stimulus_set = stimulus_set
+
+        if name is None:
+            name = 'rate2'
+        self.name = name
 
     @property
     def is_actual(self):
@@ -108,15 +114,14 @@ class Rate(Content):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        name_prefix = 'rate2'
         if export_format == 'tfds':
             stimulus_set = self.stimulus_set
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
 
             x = {
-                name_prefix + '/stimulus_set': tf.constant(
-                    stimulus_set, name=(name_prefix + '/stimulus_set')
+                self.name + '/stimulus_set': tf.constant(
+                    stimulus_set, name=(self.name + '/stimulus_set')
                 )
             }
         else:

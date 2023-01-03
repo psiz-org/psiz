@@ -32,7 +32,7 @@ class Categorize(Content):
     """Content for categorization judgments."""
 
     def __init__(
-        self, stimulus_set=None, objective_query_label=None, num_classes=None
+        self, stimulus_set=None, objective_query_label=None, name=None
     ):
         """Initialize.
 
@@ -49,6 +49,9 @@ class Categorize(Content):
                 Must be rank-2 or rank-3. If rank-2, it is assumed that
                 sequence_length=1 and a singleton timestep axis is added.
                 shape=(samples, [sequence_length,] n_class)
+            name (optional): A string indicating a name that can be
+                used to identify the content when exported.
+
         Raises:
             ValueError if improper arguments are provided.
 
@@ -62,6 +65,9 @@ class Categorize(Content):
         self.objective_query_label = self._validate_objective_query_label(
             objective_query_label
         )
+        if name is None:
+            name = 'categorize'
+        self.name = name
 
     @property
     def is_actual(self):
@@ -146,8 +152,6 @@ class Categorize(Content):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        name_prefix = 'categorize'
-
         if export_format == 'tfds':
             stimulus_set = self.stimulus_set
             objective_query_label = self.objective_query_label
@@ -157,12 +161,12 @@ class Categorize(Content):
                 objective_query_label = unravel_timestep(objective_query_label)
 
             x = {
-                name_prefix + '/stimulus_set': tf.constant(
-                    stimulus_set, name=(name_prefix + '/stimulus_set')
+                self.name + '/stimulus_set': tf.constant(
+                    stimulus_set, name=(self.name + '/stimulus_set')
                 ),
-                name_prefix + '/objective_query_label': tf.constant(
+                self.name + '/objective_query_label': tf.constant(
                     objective_query_label,
-                    name=(name_prefix + '/objective_query_label'),
+                    name=(self.name + '/objective_query_label'),
                     dtype=K.floatx()
                 ),
             }

@@ -31,7 +31,7 @@ from psiz.utils.m_prefer_n import m_prefer_n
 class Rank(Content):
     """Content for ranked similarity judgments."""
 
-    def __init__(self, stimulus_set, n_select=None):
+    def __init__(self, stimulus_set, n_select=None, name=None):
         """Initialize.
 
         Args:
@@ -46,6 +46,9 @@ class Rank(Content):
                     (samples, sequence_length, max(n_reference) + 1)
             n_select (optional): An integer indicating how many
                 references are selected on non-placeholder trials.
+                Defaults to `1`.
+            name (optional): A string indicating a name that can be
+                used to identify the content when exported.
 
         Raises:
             ValueError if improper arguments are provided.
@@ -70,6 +73,10 @@ class Rank(Content):
         self.stimulus_set = stimulus_set
 
         self.n_select, self._n_select_arr = self._validate_n_select(n_select)
+
+        if name is None:
+            name = '{0}rank{1}'.format(self.n_reference, self.n_select)
+        self.name = name
 
     @property
     def n_outcome(self):
@@ -256,8 +263,6 @@ class Rank(Content):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        name_prefix = '{0}rank{1}'.format(self.n_reference, self.n_select)
-
         if export_format == 'tfds':
             stimulus_set = self.stimulus_set
 
@@ -265,8 +270,8 @@ class Rank(Content):
                 stimulus_set = unravel_timestep(stimulus_set)
 
             x = {
-                name_prefix + '/stimulus_set': tf.constant(
-                    stimulus_set, name=(name_prefix + '/stimulus_set')
+                self.name + '/stimulus_set': tf.constant(
+                    stimulus_set, name=(self.name + '/stimulus_set')
                 ),
             }
         else:

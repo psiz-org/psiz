@@ -58,6 +58,7 @@ class ALCOVECell(tf.keras.layers.Layer):
         lr_association_initializer=None,
         lr_association_regularizer=None,
         lr_association_constraint=None,
+        data_scope=None,
         **kwargs
     ):
         """Initialize.
@@ -86,12 +87,18 @@ class ALCOVECell(tf.keras.layers.Layer):
             lr_association_initializer (optional):
             lr_association_regularizer (optional):
             lr_association_constraint (optional):
+            data_scope (optional): String indicating the behavioral
+                data that should be used for the layer.
 
         """
         super(ALCOVECell, self).__init__(**kwargs)
 
         self.percept = percept
         self.similarity = similarity
+
+        if data_scope is None:
+            data_scope = 'categorize'
+        self.data_scope = data_scope
 
         # Configure percept adapter.
         if percept_adapter is None:
@@ -256,7 +263,7 @@ class ALCOVECell(tf.keras.layers.Layer):
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape['categorize/stimulus_set'])
+        n_axis = len(input_shape[self.data_scope + '/stimulus_set'])
         self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
 
         # Precompute indices for all ALCOVE RBFs.
@@ -289,11 +296,13 @@ class ALCOVECell(tf.keras.layers.Layer):
         # a model.
         inputs_copied = copy.copy(inputs)
 
-        batch_size = tf.shape(inputs_copied['categorize/stimulus_set'])[0]
+        batch_size = tf.shape(
+            inputs_copied[self.data_scope + '/stimulus_set']
+        )[0]
 
-        stimulus_set = inputs_copied['categorize/stimulus_set']
+        stimulus_set = inputs_copied[self.data_scope + '/stimulus_set']
         objective_query_label_idx = (
-            inputs_copied['categorize/objective_query_label']
+            inputs_copied[self.data_scope + '/objective_query_label']
         )
 
         attention = states[0]  # Previous attention weights state.

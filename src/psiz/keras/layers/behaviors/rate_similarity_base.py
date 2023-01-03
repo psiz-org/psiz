@@ -60,6 +60,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         upper_trainable=False,
         midpoint_trainable=True,
         rate_trainable=True,
+        data_scope=None,
         **kwargs
     ):
         """Initialize.
@@ -85,6 +86,8 @@ class RateSimilarityBase(tf.keras.layers.Layer):
                 trainable.
             rate_trainable (optional): Boolean indicating if variable
                 is trainable.
+            data_scope (optional): String indicating the behavioral
+                data that should be used for the layer.
             kwargs (optional): Additional keyword arguments.
 
         """
@@ -94,8 +97,9 @@ class RateSimilarityBase(tf.keras.layers.Layer):
 
         # Derive prefix from configuration.
         n_stimuli = 2  # TODO Make an argument for layer.
-        input_prefix = 'rate{0}'.format(n_stimuli)
-        self.input_prefix = input_prefix
+        if data_scope is None:
+            data_scope = 'rate{0}'.format(n_stimuli)
+        self.data_scope = data_scope
 
         # Configure percept adapter.
         if percept_adapter is None:
@@ -106,7 +110,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         self.percept_adapter = percept_adapter
         # Set required input keys.
         self.percept_adapter.input_keys = [
-            self.input_prefix + '/stimulus_set'
+            self.data_scope + '/stimulus_set'
         ]
 
         # Configure kernel adapter.
@@ -117,7 +121,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
             )
         self.kernel_adapter = kernel_adapter
         self.kernel_adapter.input_keys = [
-            self.input_prefix + '/z_q', self.input_prefix + '/z_r'
+            self.data_scope + '/z_q', self.data_scope + '/z_r'
         ]
 
         self.lower_trainable = lower_trainable
@@ -167,7 +171,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1  # i.e., stimuli indices.
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape[self.input_prefix + '/stimulus_set'])
+        n_axis = len(input_shape[self.data_scope + '/stimulus_set'])
         self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
 
     def _split_stimulus_set(self, z):
@@ -208,8 +212,8 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         # similarity.
         z_q, z_r = self._split_stimulus_set(z)
         inputs_copied.update({
-            self.input_prefix + '/z_q': z_q,
-            self.input_prefix + '/z_r': z_r
+            self.data_scope + '/z_q': z_q,
+            self.data_scope + '/z_r': z_r
         })
         inputs_kernel = self.kernel_adapter(inputs_copied)
         sim_qr = self.kernel(inputs_kernel)

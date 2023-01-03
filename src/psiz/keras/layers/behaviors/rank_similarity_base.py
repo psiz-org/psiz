@@ -41,6 +41,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         kernel=None,
         percept_adapter=None,
         kernel_adapter=None,
+        data_scope=None,
         **kwargs
     ):
         """Initialize.
@@ -58,6 +59,8 @@ class RankSimilarityBase(tf.keras.layers.Layer):
             kernel_adapter (optional): A layer for adapting inputs
                 to match the assumptions of the provided `kernel`
                 layer.
+            data_scope (optional): String indicating the behavioral
+                data that should be used for the layer.
 
         """
         super(RankSimilarityBase, self).__init__(**kwargs)
@@ -66,9 +69,10 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         self.percept = percept
         self.kernel = kernel
 
-        # Derive prefix from configuration.
-        input_prefix = '{0}rank{1}'.format(n_reference, n_select)
-        self.input_prefix = input_prefix
+        # Derive data scope from configuration.
+        if data_scope is None:
+            data_scope = '{0}rank{1}'.format(n_reference, n_select)
+        self.data_scope = data_scope
 
         # Configure percept adapter.
         if percept_adapter is None:
@@ -78,7 +82,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
             )
         self.percept_adapter = percept_adapter
         # Set required input keys.
-        self.percept_adapter.input_keys = [input_prefix + '/stimulus_set']
+        self.percept_adapter.input_keys = [data_scope + '/stimulus_set']
 
         # Configure kernel adapter.
         if kernel_adapter is None:
@@ -88,7 +92,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
             )
         self.kernel_adapter = kernel_adapter
         self.kernel_adapter.input_keys = [
-            input_prefix + '/z_q', input_prefix + '/z_r'
+            data_scope + '/z_q', data_scope + '/z_r'
         ]
 
     def build(self, input_shape):
@@ -103,7 +107,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         stimuli_axis = -1  # i.e., query and reference indices.
         outcome_axis = 0  # i.e., the different judgment outcomes.
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape[self.input_prefix + '/stimulus_set'])
+        n_axis = len(input_shape[self.data_scope + '/stimulus_set'])
         self._stimuli_axis = n_axis + stimuli_axis
         self._stimuli_axis_tensor = tf.constant(self._stimuli_axis)
         self._outcome_axis = n_axis + outcome_axis
@@ -234,8 +238,8 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # similarity.
         z_q, z_r = self._split_stimulus_set(z)
         inputs_copied.update({
-            self.input_prefix + '/z_q': z_q,
-            self.input_prefix + '/z_r': z_r
+            self.data_scope + '/z_q': z_q,
+            self.data_scope + '/z_r': z_r
         })
         inputs_kernel = self.kernel_adapter(inputs_copied)
         sim_qr = self.kernel(inputs_kernel)

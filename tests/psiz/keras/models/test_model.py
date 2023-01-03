@@ -837,7 +837,7 @@ class RankSimilarityRT(psiz.keras.layers.RankSimilarityBase):
         # a model.
         inputs_copied = copy.copy(inputs)
 
-        stimulus_set = inputs_copied[self.input_prefix + '/stimulus_set']
+        stimulus_set = inputs_copied[self.data_scope + '/stimulus_set']
         is_reference_present = self._is_reference_present(stimulus_set)
 
         # Compute pairwise similarity between query and references.

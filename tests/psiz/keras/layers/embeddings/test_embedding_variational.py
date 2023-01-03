@@ -150,8 +150,8 @@ class TempNoRNN(psiz.keras.models.StochasticModel):
         states = tf.constant([0.])
 
         #  Drop sequence axis.
-        inputs['3rank1/stimulus_set'] = (
-            inputs['3rank1/stimulus_set'][:, 0]
+        inputs['given3rank1_stimulus_set'] = (
+            inputs['given3rank1_stimulus_set'][:, 0]
         )
 
         output, states = self.net(inputs, states, training=training)

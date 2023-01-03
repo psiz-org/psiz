@@ -161,12 +161,12 @@ class Categorize(Content):
                 objective_query_label = unravel_timestep(objective_query_label)
 
             x = {
-                self.name + '/stimulus_set': tf.constant(
-                    stimulus_set, name=(self.name + '/stimulus_set')
+                self.name + '_stimulus_set': tf.constant(
+                    stimulus_set, name=(self.name + '_stimulus_set')
                 ),
-                self.name + '/objective_query_label': tf.constant(
+                self.name + '_objective_query_label': tf.constant(
                     objective_query_label,
-                    name=(self.name + '/objective_query_label'),
+                    name=(self.name + '_objective_query_label'),
                     dtype=K.floatx()
                 ),
             }

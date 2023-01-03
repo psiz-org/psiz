@@ -93,7 +93,7 @@ class Group(DatasetComponent):
 
         if export_format == 'tfds':
             value = tf.constant(
-                value, name=('group/' + self.name)
+                value, name=('group_' + self.name)
             )
         else:
             raise ValueError(

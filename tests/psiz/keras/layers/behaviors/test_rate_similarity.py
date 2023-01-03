@@ -64,11 +64,10 @@ def test_outcome_probability_v0():
         ]
     )
     x = {
-        'rate2/stimulus_set': stimulus_set,
+        'rate2_stimulus_set': stimulus_set,
     }
     rating = rate(x)
 
-    # TODO
     # Desired outcome.
     coords_x = .1 * tf.cast(stimulus_set, tf.float32)
     z_q = tf.gather(coords_x, indices=tf.constant([0]), axis=1)

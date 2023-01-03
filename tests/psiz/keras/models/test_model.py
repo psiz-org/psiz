@@ -448,7 +448,7 @@ class MultiRankModelA(tf.keras.Model):
         behavior_branch = psiz.keras.layers.BranchGate(
             subnets=[behavior_2rank1, behavior_8rank2],
             gating_key='rank_config',
-            output_names=['2rank1', '8rank2'],
+            output_names=['given2rank1', 'given8rank2'],
             name="behav_branch",
         )
         self.behavior = behavior_branch
@@ -837,7 +837,7 @@ class RankSimilarityRT(psiz.keras.layers.RankSimilarityBase):
         # a model.
         inputs_copied = copy.copy(inputs)
 
-        stimulus_set = inputs_copied[self.data_scope + '/stimulus_set']
+        stimulus_set = inputs_copied[self.data_scope + '_stimulus_set']
         is_reference_present = self._is_reference_present(stimulus_set)
 
         # Compute pairwise similarity between query and references.
@@ -955,10 +955,10 @@ def build_ranksim_functional_v0():
     )
 
     inp_stimulus_set = tf.keras.Input(
-        shape=(5,), name='4rank1/stimulus_set'
+        shape=(5,), name='given4rank1_stimulus_set'
     )
     inputs = {
-        '4rank1/stimulus_set': inp_stimulus_set,
+        'given4rank1_stimulus_set': inp_stimulus_set,
     }
     outputs = behavior(inputs)
     model = tf.keras.Model(
@@ -1070,14 +1070,14 @@ def build_multirank_subclass_a():
     compile_kwargs = {
         'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
         'loss': {
-            '2rank1': tf.keras.losses.CategoricalCrossentropy(
-                name='2rank1_loss'
+            'given2rank1': tf.keras.losses.CategoricalCrossentropy(
+                name='given2rank1_loss'
             ),
-            '8rank2': tf.keras.losses.CategoricalCrossentropy(
-                name='8rank2_loss'
+            'given8rank2': tf.keras.losses.CategoricalCrossentropy(
+                name='given8rank2_loss'
             ),
         },
-        'loss_weights': {'2rank1': 1.0, '8rank2': 1.0},
+        'loss_weights': {'given2rank1': 1.0, 'given8rank2': 1.0},
     }
     model.compile(**compile_kwargs)
     return model
@@ -1128,10 +1128,10 @@ def build_ranksimcell_functional_v0():
     rnn = tf.keras.layers.RNN(cell, return_sequences=True)
 
     inp_stimulus_set = tf.keras.Input(
-        shape=(None, 9), name='8rank2/stimulus_set'
+        shape=(None, 9), name='given8rank2_stimulus_set'
     )
     inputs = {
-        '8rank2/stimulus_set': inp_stimulus_set,
+        'given8rank2_stimulus_set': inp_stimulus_set,
     }
     outputs = rnn(inputs)
     model = tf.keras.Model(
@@ -1188,10 +1188,10 @@ def build_ratesim_functional_v0():
     )
 
     inp_stimulus_set = tf.keras.Input(
-        shape=(2,), name='rate2/stimulus_set'
+        shape=(2,), name='rate2_stimulus_set'
     )
     inputs = {
-        'rate2/stimulus_set': inp_stimulus_set,
+        'rate2_stimulus_set': inp_stimulus_set,
     }
     outputs = behavior(inputs)
     model = tf.keras.Model(
@@ -1263,10 +1263,10 @@ def build_ratesimcell_functional_v0():
     rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
 
     inp_stimulus_set = tf.keras.Input(
-        shape=(None, 2,), name='rate2/stimulus_set'
+        shape=(None, 2,), name='rate2_stimulus_set'
     )
     inputs = {
-        'rate2/stimulus_set': inp_stimulus_set,
+        'rate2_stimulus_set': inp_stimulus_set,
     }
     outputs = rnn(inputs)
     model = tf.keras.Model(
@@ -1326,14 +1326,14 @@ def build_alcove_functional_v0():
     rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
 
     inp_stimulus_set = tf.keras.Input(
-        shape=(None, 1), name='categorize/stimulus_set'
+        shape=(None, 1), name='categorize_stimulus_set'
     )
     inp_objective_query_label = tf.keras.Input(
-        shape=(None, n_output), name='categorize/objective_query_label'
+        shape=(None, n_output), name='categorize_objective_query_label'
     )
     inputs = {
-        'categorize/stimulus_set': inp_stimulus_set,
-        'categorize/objective_query_label': inp_objective_query_label,
+        'categorize_stimulus_set': inp_stimulus_set,
+        'categorize_objective_query_label': inp_objective_query_label,
     }
     outputs = rnn(inputs)
     model = tf.keras.Model(
@@ -1408,17 +1408,17 @@ def build_ranksim_ratesim_functional_v0():
     )
 
     inp_rank_stimulus_set = tf.keras.Input(
-        shape=(5,), name='4rank1/stimulus_set'
+        shape=(5,), name='given4rank1_stimulus_set'
     )
     inp_rate_stimulus_set = tf.keras.Input(
-        shape=(2,), name='rate2/stimulus_set'
+        shape=(2,), name='rate2_stimulus_set'
     )
     inp_gate_weights = tf.keras.Input(
         shape=(1,), name='gate_weights_behavior'
     )
     inputs = {
-        '4rank2/stimulus_set': inp_rank_stimulus_set,
-        'rate2/stimulus_set': inp_rate_stimulus_set,
+        'given4rank2_stimulus_set': inp_rank_stimulus_set,
+        'rate2_stimulus_set': inp_rate_stimulus_set,
         'gate_weights_behavior': inp_gate_weights
     }
     outputs = behavior_branch(inputs)

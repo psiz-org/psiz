@@ -672,7 +672,7 @@ def test_export_0(c_2rank1_d_3x2):
         ], dtype=tf.int32
     )
     tf.debugging.assert_equal(
-            desired_stimulus_set, x['2rank1/stimulus_set']
+            desired_stimulus_set, x['given2rank1_stimulus_set']
     )
 
 
@@ -694,7 +694,7 @@ def test_export_1(c_2rank1_d_3x2):
         ], dtype=tf.int32
     )
     tf.debugging.assert_equal(
-        desired_stimulus_set, x['2rank1/stimulus_set']
+        desired_stimulus_set, x['given2rank1_stimulus_set']
     )
 
 

@@ -65,7 +65,7 @@ def test_outcome_probability_v0():
         ]
     )
     x = {
-        '2rank1/stimulus_set': stimulus_set,
+        'given2rank1_stimulus_set': stimulus_set,
     }
     outcome_prob = rank(x)
 

@@ -75,7 +75,7 @@ class Rank(Content):
         self.n_select, self._n_select_arr = self._validate_n_select(n_select)
 
         if name is None:
-            name = '{0}rank{1}'.format(self.n_reference, self.n_select)
+            name = 'given{0}rank{1}'.format(self.n_reference, self.n_select)
         self.name = name
 
     @property
@@ -270,8 +270,8 @@ class Rank(Content):
                 stimulus_set = unravel_timestep(stimulus_set)
 
             x = {
-                self.name + '/stimulus_set': tf.constant(
-                    stimulus_set, name=(self.name + '/stimulus_set')
+                self.name + '_stimulus_set': tf.constant(
+                    stimulus_set, name=(self.name + '_stimulus_set')
                 ),
             }
         else:

@@ -120,8 +120,8 @@ class Rate(Content):
                 stimulus_set = unravel_timestep(stimulus_set)
 
             x = {
-                self.name + '/stimulus_set': tf.constant(
-                    stimulus_set, name=(self.name + '/stimulus_set')
+                self.name + '_stimulus_set': tf.constant(
+                    stimulus_set, name=(self.name + '_stimulus_set')
                 )
             }
         else:

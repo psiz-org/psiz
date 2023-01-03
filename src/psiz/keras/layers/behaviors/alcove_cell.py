@@ -115,8 +115,10 @@ class ALCOVECell(tf.keras.layers.Layer):
         self._alcove_adapter = alcove_adapter
 
         # Set required input keys.
-        self.percept_adapter.input_keys = ['alcove_stimset_samples']
-        self._alcove_adapter.input_keys = ['alcove_idx']
+        self.percept_adapter.input_keys = [
+            data_scope + '_alcove_stimset_samples'
+        ]
+        self._alcove_adapter.input_keys = [data_scope + '_alcove_idx']
 
         # Misc. attributes.
         self.units = units
@@ -256,14 +258,14 @@ class ALCOVECell(tf.keras.layers.Layer):
         """Build.
 
         Expect:
-        "categorize/stimulus_set":
+        "categorize_stimulus_set":
             shape =(batch_size, [1,])
 
         """
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape[self.data_scope + '/stimulus_set'])
+        n_axis = len(input_shape[self.data_scope + '_stimulus_set'])
         self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
 
         # Precompute indices for all ALCOVE RBFs.
@@ -297,12 +299,12 @@ class ALCOVECell(tf.keras.layers.Layer):
         inputs_copied = copy.copy(inputs)
 
         batch_size = tf.shape(
-            inputs_copied[self.data_scope + '/stimulus_set']
+            inputs_copied[self.data_scope + '_stimulus_set']
         )[0]
 
-        stimulus_set = inputs_copied[self.data_scope + '/stimulus_set']
+        stimulus_set = inputs_copied[self.data_scope + '_stimulus_set']
         objective_query_label_idx = (
-            inputs_copied[self.data_scope + '/objective_query_label']
+            inputs_copied[self.data_scope + '_objective_query_label']
         )
 
         attention = states[0]  # Previous attention weights state.
@@ -310,8 +312,10 @@ class ALCOVECell(tf.keras.layers.Layer):
 
         # Embed stimuli indices in n-dimensional space.
         inputs_copied.update({
-            'alcove_stimset_samples': stimulus_set,
-            'alcove_idx': tf.repeat(self._alcove_idx, batch_size, axis=0),
+            self.data_scope + '_alcove_stimset_samples': stimulus_set,
+            self.data_scope + '_alcove_idx': tf.repeat(
+                self._alcove_idx, batch_size, axis=0
+            ),
         })
         inputs_percept = self.percept_adapter(inputs_copied)
         z_in = self.percept(inputs_percept)

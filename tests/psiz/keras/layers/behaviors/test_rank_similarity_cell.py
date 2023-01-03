@@ -69,7 +69,7 @@ def rank_similarity_cell_call(tfds, rank_cell):
     """A rank similarity cell call."""
     for data in tfds:
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        batch_size = x['3rank1/stimulus_set'].shape[0]
+        batch_size = x['given3rank1_stimulus_set'].shape[0]
         states_t0 = rank_cell.get_initial_state(batch_size=batch_size)
         outputs, states_t1 = rank_cell(x, states_t0)
     return outputs, states_t1

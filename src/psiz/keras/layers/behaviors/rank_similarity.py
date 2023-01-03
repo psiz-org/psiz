@@ -65,7 +65,7 @@ class RankSimilarity(RankSimilarityBase):
         # TODO move into _pairwise_similarity
         inputs_copied = copy.copy(inputs)
 
-        stimulus_set = inputs_copied[self.data_scope + '/stimulus_set']
+        stimulus_set = inputs_copied[self.data_scope + '_stimulus_set']
         is_reference_present = self._is_reference_present(stimulus_set)
 
         # Compute pairwise similarity between query and references.

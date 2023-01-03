@@ -80,7 +80,7 @@ class SimilarityModel(tf.keras.Model):
     def call(self, inputs):
         """Call."""
         stimuli_axis = 1
-        z = self.percept(inputs['rate2/stimulus_set'])
+        z = self.percept(inputs['rate2_stimulus_set'])
         z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
         z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
         return self.kernel([z_0, z_1])

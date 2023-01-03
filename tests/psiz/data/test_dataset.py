@@ -278,7 +278,7 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
 
     assert len(ds_list) == 1
     tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['2rank1/stimulus_set']
+        desired_x_stimulus_set, x['given2rank1_stimulus_set']
     )
     tf.debugging.assert_equal(
         desired_condition_id, x['condition_idx']
@@ -330,7 +330,7 @@ def test_export_1(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
 
     assert len(ds_list[0]) == 3
     tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['2rank1/stimulus_set']
+        desired_x_stimulus_set, x['given2rank1_stimulus_set']
     )
     tf.debugging.assert_equal(
         desired_condition_id, x['condition_idx']
@@ -421,7 +421,7 @@ def test_export_2a(
 
     assert len(ds_list[0]) == 3
     tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['2rank1/stimulus_set']
+        desired_x_stimulus_set, x['given2rank1_stimulus_set']
     )
     tf.debugging.assert_equal(
         desired_condition_id, x['condition_idx']
@@ -486,7 +486,7 @@ def test_export_4(c_2rank1_a_4x1):
 
     assert len(ds_list) == 1
     tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['2rank1/stimulus_set']
+        desired_x_stimulus_set, x['given2rank1_stimulus_set']
     )
 
 
@@ -509,7 +509,7 @@ def test_export_5(c_2rank1_aa_4x1):
 
     assert len(ds_list) == 1
     tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['2rank1/stimulus_set']
+        desired_x_stimulus_set, x['given2rank1_stimulus_set']
     )
 
 

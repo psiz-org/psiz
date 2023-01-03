@@ -90,10 +90,10 @@ def test_export_0(c_categorize_b_4x3):
         desired_objective_query_label, num_classes=3
     )
     tf.debugging.assert_equal(
-        desired_stimulus_set, x['categorize/stimulus_set']
+        desired_stimulus_set, x['categorize_stimulus_set']
     )
     tf.debugging.assert_equal(
-        desired_objective_query_label, x['categorize/objective_query_label']
+        desired_objective_query_label, x['categorize_objective_query_label']
     )
 
 
@@ -118,10 +118,10 @@ def test_export_1(c_categorize_b_4x3):
         desired_objective_query_label, num_classes=3
     )
     tf.debugging.assert_equal(
-        desired_stimulus_set, x['categorize/stimulus_set']
+        desired_stimulus_set, x['categorize_stimulus_set']
     )
     tf.debugging.assert_equal(
-        desired_objective_query_label, x['categorize/objective_query_label']
+        desired_objective_query_label, x['categorize_objective_query_label']
     )
 
 

@@ -285,7 +285,7 @@ def test_export_0(c_rate2_c_4x3):
         ], dtype=np.int32
     )
     tf.debugging.assert_equal(
-        desired_stimulus_set, x['rate2/stimulus_set']
+        desired_stimulus_set, x['rate2_stimulus_set']
     )
 
 
@@ -313,7 +313,7 @@ def test_export_1(c_rate2_c_4x3):
         ], dtype=np.int32
     )
     tf.debugging.assert_equal(
-        desired_stimulus_set, x['rate2/stimulus_set']
+        desired_stimulus_set, x['rate2_stimulus_set']
     )
 
 

@@ -281,7 +281,7 @@ def ds_2rank1_8rank2_v0():
     outcome_2rank1 = psiz.data.SparseCategorical(
         outcome_idx,
         depth=content_2rank1.n_outcome,
-        name='2rank1',
+        name='given2rank1',
         sample_weight=sample_weight
     )
 
@@ -308,7 +308,7 @@ def ds_2rank1_8rank2_v0():
     outcome_8rank2 = psiz.data.SparseCategorical(
         outcome_idx,
         depth=content_8rank2.n_outcome,
-        name='8rank2',
+        name='given8rank2',
         sample_weight=sample_weight
     )
 

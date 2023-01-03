@@ -82,7 +82,7 @@ class ALCOVEModel(tf.keras.Model):
 
     def call(self, inputs, training=None):
         """Call."""
-        mask = tf.not_equal(inputs['categorize/stimulus_set'], 0)[:, :, 0]
+        mask = tf.not_equal(inputs['categorize_stimulus_set'], 0)[:, :, 0]
         return self.behavior(inputs, mask=mask)
 
 

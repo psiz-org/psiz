@@ -89,7 +89,7 @@ class SimilarityModel(tf.keras.Model):
         """Call."""
         stimuli_axis = 1
         expertise_group = inputs['expertise']
-        z = self.percept([inputs['rate2/stimulus_set'], expertise_group])
+        z = self.percept([inputs['rate2_stimulus_set'], expertise_group])
         z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
         z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
         return self.kernel([z_0, z_1])
@@ -125,7 +125,7 @@ class StochasticSimilarityModel(psiz.keras.StochasticModel):
         """Call."""
         stimuli_axis = 1
         expertise_group = inputs['expertise']
-        z = self.percept([inputs['rate2/stimulus_set'], expertise_group])
+        z = self.percept([inputs['rate2_stimulus_set'], expertise_group])
         z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
         z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
         return self.kernel([z_0, z_1])

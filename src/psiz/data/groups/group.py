@@ -58,7 +58,9 @@ class Group(DatasetComponent):
 
         # If `value` looks like sparse coding format, check data type.
         if value.shape[-1] == 1:
-            if not isinstance(value[0, 0, 0], (float, np.float)):
+            if not isinstance(
+                value[0, 0, 0], (float, np.float32, np.float64, np.float128)
+            ):
                 # NOTE: We check if float, because integer or string is ok.
                 warnings.warn(
                     "The values for '{0}' appear to use a sparse "

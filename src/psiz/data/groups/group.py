@@ -14,9 +14,9 @@
 # limitations under the License.
 # ============================================================================
 
-import warnings
+# import warnings
 
-import numpy as np
+# import numpy as np
 import tensorflow as tf
 
 from psiz.data.dataset_component import DatasetComponent
@@ -56,17 +56,19 @@ class Group(DatasetComponent):
                 "requirement.".format(group_key)
             )
 
-        # If `value` looks like sparse coding format, check data type.
-        if value.shape[-1] == 1:
-            if not isinstance(value[0, 0, 0], (float, np.float)):
-                # NOTE: We check if float, because integer or string is ok.
-                warnings.warn(
-                    "The values for '{0}' appear to use a sparse "
-                    "coding. To improve efficiency, these weights should "
-                    "have an integer dtype, not a float dtype.".format(
-                        group_key
-                    )
-                )
+        # If `value` looks like sparse coding format, check data type. TODO
+        # if value.shape[-1] == 1:
+        #     if not isinstance(
+        #         value[0, 0, 0], (float, np.float32, np.float64, np.float128)
+        #     ):
+        #         # NOTE: We check if float, because integer or string is ok.
+        #         warnings.warn(
+        #             "The values for '{0}' appear to use a sparse "
+        #             "coding. To improve efficiency, these weights should "
+        #             "have an integer dtype, not a float dtype.".format(
+        #                 group_key
+        #             )
+        #         )
 
         return value
 

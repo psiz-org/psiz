@@ -1096,6 +1096,8 @@ class TestControl:
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
         result0 = model.evaluate(tfds)
+        kernel0 = model.dense_layer.kernel
+        bias0 = model.dense_layer.bias
         fp_model = tmpdir.join('test_model')
         model.save(fp_model)
         del model
@@ -1104,9 +1106,13 @@ class TestControl:
             fp_model, custom_objects={"ModelControl": ModelControl}
         )
         result1 = loaded.evaluate(tfds)
+        kernel1 = loaded.dense_layer.kernel
+        bias1 = loaded.dense_layer.bias
 
         # Test for model equality.
         assert result0 == result1
+        tf.debugging.assert_equal(kernel0, kernel1)
+        tf.debugging.assert_equal(bias0, bias1)
 
 
 class TestModelA:
@@ -1132,6 +1138,8 @@ class TestModelA:
         model.fit(tfds, epochs=2)
         assert model.n_sample == 2
         results_0 = model.evaluate(tfds, return_dict=True)
+        kernel0 = model.dense_layer.kernel
+        bias0 = model.dense_layer.bias
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
         del model
@@ -1140,10 +1148,14 @@ class TestModelA:
             fp_model, custom_objects={"ModelA": ModelA}
         )
         results_1 = loaded.evaluate(tfds, return_dict=True)
+        kernel1 = loaded.dense_layer.kernel
+        bias1 = loaded.dense_layer.bias
 
         # Test for model equality.
         assert loaded.n_sample == 2
         assert results_0['loss'] == results_1['loss']
+        tf.debugging.assert_equal(kernel0, kernel1)
+        tf.debugging.assert_equal(bias0, bias1)
 
 
 class TestModelB:
@@ -1169,6 +1181,7 @@ class TestModelB:
         model.fit(tfds, epochs=2)
         assert model.n_sample == 2
         results_0 = model.evaluate(tfds, return_dict=True)
+        kernel0 = model.custom_layer.kernel
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
         del model
@@ -1177,10 +1190,12 @@ class TestModelB:
             fp_model, custom_objects={"ModelB": ModelB}
         )
         results_1 = loaded.evaluate(tfds, return_dict=True)
+        kernel1 = loaded.custom_layer.kernel
 
         # Test for model equality.
         assert loaded.n_sample == 2
         assert results_0['loss'] == results_1['loss']
+        tf.debugging.assert_equal(kernel0, kernel1)
 
     @pytest.mark.parametrize(
         "is_eager", [True, False]
@@ -1204,6 +1219,7 @@ class TestModelB:
         model.fit(tfds, epochs=2)
         assert model.n_sample == 2
         results_0 = model.evaluate(tfds, return_dict=True)
+        kernel0 = model.custom_layer.kernel
         fp_model = tmpdir.join('test_model')
         model.save(fp_model, save_traces=save_traces)
         del model
@@ -1212,10 +1228,12 @@ class TestModelB:
             fp_model, custom_objects={"ModelB2": ModelB2}
         )
         results_1 = loaded.evaluate(tfds, return_dict=True)
+        kernel1 = loaded.custom_layer.kernel
 
         # Test for model equality.
         assert loaded.n_sample == 2
         assert results_0['loss'] == results_1['loss']
+        tf.debugging.assert_equal(kernel0, kernel1)
 
 
 class TestModelC:
@@ -1439,6 +1457,8 @@ class TestModelC:
         model.fit(tfds, epochs=2)
         assert model.n_sample == 7
         results_0 = model.evaluate(tfds, return_dict=True)
+        branch_0_w0_0 = model.branch_0.w0
+        branch_1_w0_0 = model.branch_1.w0
 
         # Save the model.
         fp_model = tmpdir.join('test_model')
@@ -1450,10 +1470,14 @@ class TestModelC:
             fp_model, custom_objects={"ModelC": ModelC}
         )
         results_1 = loaded.evaluate(tfds, return_dict=True)
+        branch_0_w0_1 = loaded.branch_0.w0
+        branch_1_w0_1 = loaded.branch_1.w0
 
         # Test for model equality.
         assert loaded.n_sample == 7
         assert results_0['loss'] == results_1['loss']
+        tf.debugging.assert_equal(branch_0_w0_0, branch_0_w0_1)
+        tf.debugging.assert_equal(branch_1_w0_0, branch_1_w0_1)
 
 
 class TestModelD:
@@ -1521,6 +1545,7 @@ class TestModelD:
         model.fit(tfds, epochs=2)
         assert model.n_sample == 11
         results_0 = model.evaluate(tfds, return_dict=True)
+        kernel_0 = model.rnn_layer.cell.layer_0.kernel
 
         # Save the model.
         fp_model = tmpdir.join('test_model')
@@ -1532,10 +1557,12 @@ class TestModelD:
             fp_model, custom_objects={"ModelD": ModelD}
         )
         results_1 = loaded.evaluate(tfds, return_dict=True)
+        kernel_1 = loaded.rnn_layer.cell.layer_0.kernel
 
         # Test for model equality.
         assert loaded.n_sample == 11
         assert results_0['loss'] == results_1['loss']
+        tf.debugging.assert_equal(kernel_0, kernel_1)
 
 
 class TestRankSimilarity:
@@ -1582,8 +1609,9 @@ class TestRankSimilarity:
         assert model.n_sample == 21
 
         model.fit(tfds, epochs=1)
-        percept_mean = model.behavior.percept.embeddings.mean()
         _ = model.evaluate(tfds)
+        percept_mean = model.behavior.percept.embeddings.mean()
+        percept_variance = model.behavior.percept.embeddings.variance()
 
         # Test storage serialization.
         fp_model = tmpdir.join('test_model')
@@ -1596,12 +1624,16 @@ class TestRankSimilarity:
         )
         _ = loaded.evaluate(tfds)
         loaded_percept_mean = loaded.behavior.percept.embeddings.mean()
+        loaded_percept_variance = loaded.behavior.percept.embeddings.variance()
 
         # Test for model equality.
+        # NOTE: Don't check loss for equivalence because of
+        # stochasticity.
         assert loaded.n_sample == 21
-
-        # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
+        tf.debugging.assert_equal(
+            percept_variance, loaded_percept_variance
+        )
 
         tf.keras.backend.clear_session()
 
@@ -1642,8 +1674,9 @@ class TestRankSimilarity:
         assert model.n_sample == 21
 
         model.fit(tfds, epochs=1)
-        percept_mean = model.behavior.percept.embeddings.mean()
         _ = model.evaluate(tfds)
+        percept_mean = model.behavior.percept.embeddings.mean()
+        percept_variance = model.behavior.percept.embeddings.variance()
 
         # Test storage serialization.
         fp_model = tmpdir.join('test_model')
@@ -1654,14 +1687,16 @@ class TestRankSimilarity:
         loaded = tf.keras.models.load_model(
             fp_model, custom_objects={"RankModelB": RankModelB}
         )
-        loaded_percept_mean = loaded.behavior.percept.embeddings.mean()
         _ = loaded.evaluate(tfds)
+        loaded_percept_mean = loaded.behavior.percept.embeddings.mean()
+        loaded_percept_variance = loaded.behavior.percept.embeddings.variance()
 
         # Test for model equality.
         assert loaded.n_sample == 21
-
-        # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
+        tf.debugging.assert_equal(
+            percept_variance, loaded_percept_variance
+        )
 
         tf.keras.backend.clear_session()
 

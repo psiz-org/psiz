@@ -74,6 +74,11 @@ html_theme_options = {
 }
 numfig = True
 
+myst_enable_extensions = [
+    "amsmath",
+    "dollarmath",
+]
+
 # bibtex settings.
 bibtex_bibfiles = ['src/refs.bib']
 bibtex_reference_style = 'author_year'

@@ -28,6 +28,7 @@ birds16_rank2019
 To load the pre-formatted TensorFlow Dataset:
 
 .. code-block:: python
+
     import psiz_datasets.birds16_rank2019
     ds, info = tfds.load('birds16_rank2019', split="train", with_info=True)
 
@@ -37,6 +38,7 @@ ilsvrc2012_val_hsj
 To load the pre-formatted TensorFlow Dataset:
 
 .. code-block:: python
+
     import psiz_datasets.ilsvrc2012_val_hsj
     ds, info = tfds.load('ilsvrc2012_val_hsj', split="train", with_info=True)
 
@@ -46,6 +48,7 @@ skin_lesions2018_rank2018
 To load the pre-formatted TensorFlow Dataset:
 
 .. code-block:: python
+
     import psiz_datasets.ilsvrc2012_val_hsj
     ds, info = tfds.load(
         'skin_lesions2018_rank2018', split="train", with_info=True

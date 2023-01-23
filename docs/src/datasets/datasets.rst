@@ -11,7 +11,7 @@ A small number of PsiZ-compatible datasets are hosted at the OSF repository `psi
 
 Pre-formatted Datasets
 ----------------------
-Datasets can be loaded as pre-formatted TensorFlow Datasets using the `psiz-datasets Python package <https://github.com/psiz-org/psiz-datasets>`_, which can be installed via `pip install psiz-datasets`.  See the `psiz-datasets README <https://github.com/psiz-org/psiz/blob/main/README.md>`_ for additional package information. See the sections below for instructions on loading specific datasets.
+Datasets can be loaded as pre-formatted TensorFlow Datasets using the `psiz-datasets Python package <https://github.com/psiz-org/psiz-datasets>`_, which can be installed via :code:`pip install psiz-datasets`.  See the `psiz-datasets README <https://github.com/psiz-org/psiz/blob/main/README.md>`_ for additional package information. See the sections below for instructions on loading specific datasets.
 
 Naming Convention
 -----------------
@@ -20,11 +20,11 @@ Datasets follow a two part naming convention. The first part refers to the name 
 Stimuli Pointers
 ----------------
 Rather than passing around filenames; the data refers to specific
-stimuli using indices. If using the raw data files (zipped directory from OSF), the index mappings can be found in :file:`stimuli.txt`. If using the the pre-formatted TensorFlow Datasets, the index mappings are accessible by using `with_info=True` to return an additional `info` object when loading the dataset. The index mapping dictionary is located at `info.metadata['stimuli']`.
+stimuli using indices. If using the raw data files (zipped directory from OSF), the index mappings can be found in :file:`stimuli.txt`. If using the the pre-formatted TensorFlow Datasets, the index mappings are accessible by using :code:`with_info=True` to return an additional :code:`info` object when loading the dataset. The index mapping dictionary is located at :code:`info.metadata['stimuli']`.
 
 Data Timesteps
 --------------
-The TensorFlow Datasets can be loaded *with* or *without* a timestep axis by appending `/with_timestep` or `/without_timestep` to the dataset name when using `tfds.load` (see below). By default, the dataset is loaded with a timestep axis. If loaded without a timestep axis, the timestep axis is simply unrolled into the batch axis.
+The TensorFlow Datasets can be loaded *with* or *without* a timestep axis by appending :code:`/with_timestep` or :code:`/without_timestep` to the dataset name when using :code:`tfds.load` (see examples below). By default, the dataset is loaded with a timestep axis. If loaded without a timestep axis, the timestep axis is simply unrolled into the batch axis.
 
 birds16_rank2019
 ================

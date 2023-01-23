@@ -54,13 +54,9 @@ What next?
 
 If deciding what to read next, you have a few of options.
 
-Quick Start
------------
-If you would like to get a sense of how the major pieces fit together, check out the minimal working example in the Quick Start.
-
 Beginner Tutorial
 ------------------
-A thorough and gentle walk-through of Psiz's basic use case.
+A gentle walk-through of Psiz's basic use case.
 
 Tutorials
 ------------------

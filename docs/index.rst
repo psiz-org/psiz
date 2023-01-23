@@ -13,7 +13,6 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    :caption: Getting Started
 
    src/first_steps/intro
-   src/first_steps/quick_start
 
 .. toctree::
    :maxdepth: 2

@@ -7,49 +7,71 @@ Datasets
 Overview
 ========
 
-A small number of PsiZ-compatible datasets can be obtained from the OSF repository `psiz-datasets <https://osf.io/cn2s3/>`_. Each trial sequence is stored as a separate JSON file.
+A small number of PsiZ-compatible datasets are hosted at the OSF repository `psiz-datasets <https://osf.io/cn2s3/>`_. These datasets can be obtained in raw form---where each trial sequence is stored as a separate JSON file inside a zipped directory---or as pre-formatted TensorFlow Datasets.
 
 Pre-formatted Datasets
 ----------------------
-Datasets can be loaded as pre-formatted TensorFlow Datasets using the `psiz-datasets Python package <https://github.com/psiz-org/psiz-datasets>.` See the `psiz-datasets README <https://github.com/psiz-org/psiz/blob/main/README.md>` for install instructions. See the sections below for instructions on loading specific datasets.
-
-Stimuli Pointers
-----------------
-Rather than passing around filenames; the data refers to specific
-stimuli using indices. The mapping from indices to filenames is determined by a separate file :file:`stimuli.txt`.
+Datasets can be loaded as pre-formatted TensorFlow Datasets using the `psiz-datasets Python package <https://github.com/psiz-org/psiz-datasets>`_, which can be installed via `pip install psiz-datasets`.  See the `psiz-datasets README <https://github.com/psiz-org/psiz/blob/main/README.md>`_ for additional package information. See the sections below for instructions on loading specific datasets.
 
 Naming Convention
 -----------------
 Datasets follow a two part naming convention. The first part refers to the name of the stimulus dataset. The second part refers to the human behavior collected while using the stimulus dataset. For example, :file:`birds16_rank2019` refers to the stimulus dataset `birds16` and a set of collected behavior refered to as `rank2019`.
 
+Stimuli Pointers
+----------------
+Rather than passing around filenames; the data refers to specific
+stimuli using indices. If using the raw data files (zipped directory from OSF), the index mappings can be found in :file:`stimuli.txt`. If using the the pre-formatted TensorFlow Datasets, the index mappings are accessible by using `with_info=True` to return an additional `info` object when loading the dataset. The index mapping dictionary is located at `info.metadata['stimuli']`.
+
+Data Timesteps
+--------------
+The TensorFlow Datasets can be loaded *with* or *without* a timestep axis by appending `/with_timestep` or `/without_timestep` to the dataset name when using `tfds.load` (see below). By default, the dataset is loaded with a timestep axis. If loaded without a timestep axis, the timestep axis is simply unrolled into the batch axis.
+
 birds16_rank2019
 ================
+`Raw Data Files <https://osf.io/ujv4h/>`_
 
 To load the pre-formatted TensorFlow Dataset:
 
 .. code-block:: python
 
+    import tensorflow_datasets as tfds
     import psiz_datasets.birds16_rank2019
-    ds, info = tfds.load('birds16_rank2019', split="train", with_info=True)
+    ds, info = tfds.load(
+        'birds16_rank2019/with_timestep',
+        split="train",
+        with_info=True
+    )
 
 ilsvrc2012_val_hsj
 ==================
 
+`Raw Data Files <https://osf.io/7f96y/>`_
+
 To load the pre-formatted TensorFlow Dataset:
 
 .. code-block:: python
 
+    import tensorflow_datasets as tfds
     import psiz_datasets.ilsvrc2012_val_hsj
-    ds, info = tfds.load('ilsvrc2012_val_hsj', split="train", with_info=True)
+    ds, info = tfds.load(
+        'ilsvrc2012_val_hsj/with_timestep',
+        split="train",
+        with_info=True
+    )
 
 skin_lesions2018_rank2018
 =========================
 
+`Raw Data Files <https://osf.io/mw75h/>`_
+
 To load the pre-formatted TensorFlow Dataset:
 
 .. code-block:: python
 
+    import tensorflow_datasets as tfds
     import psiz_datasets.ilsvrc2012_val_hsj
     ds, info = tfds.load(
-        'skin_lesions2018_rank2018', split="train", with_info=True
+        'skin_lesions2018_rank2018/with_timestep',
+        split="train",
+        with_info=True
     )

@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.unravel_timestep import unravel_timestep

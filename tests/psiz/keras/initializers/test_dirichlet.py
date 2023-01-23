@@ -17,7 +17,7 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 
 from psiz.keras.initializers import Dirichlet
 

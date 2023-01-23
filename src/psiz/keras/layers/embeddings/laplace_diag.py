@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale

@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 from tensorflow.python.ops import math_ops
 
 

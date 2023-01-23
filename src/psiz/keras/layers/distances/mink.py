@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 from psiz.tf.ops.wpnorm import wpnorm

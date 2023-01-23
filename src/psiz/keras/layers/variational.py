@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 from tensorflow_probability.python.distributions import kullback_leibler as kl_lib
 
 

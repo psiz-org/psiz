@@ -22,9 +22,9 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 from tensorflow.python.eager import context
-# from tensorflow.python.keras.utils import tf_utils
+# from tensorflow.keras.utils import tf_utils
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import embedding_ops
 import tensorflow_probability as tfp

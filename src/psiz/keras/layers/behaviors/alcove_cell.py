@@ -23,7 +23,7 @@ Classes:
 import copy
 
 import tensorflow as tf
-from tensorflow.python.keras import backend as K
+from tensorflow.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter

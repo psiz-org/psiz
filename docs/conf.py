@@ -16,7 +16,7 @@
 
 # Need to import as get_version since version is a reserved variable name in
 # sphinx.
-from importlib.metadata import version as get_version
+# from importlib.metadata import version as get_version
 import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
@@ -25,11 +25,12 @@ project = 'psiz'
 copyright = '2021, The PsiZ Authors'
 author = 'Brett D. Roads'
 
+# TODO remove release/version stuff?
 # The full version, including alpha/beta/rc tags
-# release = '0.7.0'
-# version = '0.7'
-release = get_version("psiz")
-version = '.'.join(release.split('.')[:3])
+release = '0.8.1'
+version = '0.8'
+# release = get_version("psiz")
+# version = '.'.join(release.split('.')[:3])
 
 # -- General configuration ---------------------------------------------------
 

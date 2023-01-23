@@ -16,7 +16,7 @@
 
 # Need to import as get_version since version is a reserved variable name in
 # sphinx.
-# from importlib.metadata import version as get_version
+from importlib.metadata import version as get_version
 import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
@@ -26,11 +26,10 @@ copyright = '2021, The PsiZ Authors'
 author = 'Brett D. Roads'
 
 # The full version, including alpha/beta/rc tags
-release = '0.7.0'
-version = '0.7'
-# release = get_version("psiz")
-# ver = '.'.join(release.split('.')[:3])  # TODO(roads): why is ver necessary?
-# version = ver
+# release = '0.7.0'
+# version = '0.7'
+release = get_version("psiz")
+version = '.'.join(release.split('.')[:3])
 
 # -- General configuration ---------------------------------------------------
 
@@ -79,7 +78,7 @@ bibtex_bibfiles = ['src/refs.bib']
 bibtex_reference_style = 'author_year'
 
 # Notebook execution settings.
-jupyter_execute_notebooks = "off"  # Do not execute cells.
-# jupyter_execute_notebooks = "cache"  # Cache outputs.
+nb_execution_mode = "off"  # Do not execute cells.
+# nb_execution_mode = "cache"  # Cache outputs.
 # execution_timeout = -1  # No timeout option for myst-nb.
 # nbsphinx_timeout = -1  # No timeout option for nb-sphinx.

@@ -16,14 +16,9 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
 
 .. toctree::
    :maxdepth: 2
-   :caption: Beginner Tutorial
-   
-   src/beginner_tutorial/beginner_tutorial
-
-.. toctree::
-   :maxdepth: 2
    :caption: Tutorials
 
+   src/tutorials/beginner_tutorial
    src/tutorials/vi
    src/tutorials/tuning
    src/tutorials/active_learning

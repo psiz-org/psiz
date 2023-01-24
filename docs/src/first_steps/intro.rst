@@ -19,12 +19,12 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 Installation
 ============
 
-PsiZ is hosted on PyPI and is easily installed using `pip`. Alternatively, you can insall using `git`.
+PsiZ is hosted on PyPI and is easily installed using `pip`. Alternatively, you can install using `git`.
 
 System Requirements
 -------------------
 * Python 3.9, 3.10
-* cuDNN & CUDA: Please see the `TF compatibility matrix <https://www.tensorflow.org/install/source#gpu>`_ for compatible versions. If using a conda virtual environment, you may want to install CUDA librarires using `conda install -c anaconda cudatoolkit=11.2` (replace 11.2 with the version appropriate for your TensorFlow version).
+* cuDNN & CUDA: If using a conda virtual environment, you probably want to install cuDNN and CUDA libraries using :code:`conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0`. Replace the specified versions with those appropriate for your setup based on the `TF compatibility matrix <https://www.tensorflow.org/install/source#gpu>`_.   See the `TF Install Guide <https://www.tensorflow.org/install/pip>`_ for the latest recommendation.
 
 Install using PyPI
 ------------------
@@ -46,22 +46,22 @@ You can also install PsiZ via `git`. You first clone the PsiZ repository from Gi
 Design Philosophy
 =================
 
-PsiZ is built using the TensorFlow ecosystem and strives to closely follow  TensorFlow and Keras idioms, therefore inheriting all of the powerful functionality of TensorFlow and Keras. PsiZ aims to provide useful top-level and mid-level objects for use in cognitive models. Package-defined models (top-level) are implemented by subclassing :py:class:`tf.keras.Model`. Model components (mid-level) are implemented by subclassing :py:class:`tf.keras.layers.Layer`.
+PsiZ is built using the TensorFlow ecosystem and strives to closely follow  TensorFlow and Keras idioms, therefore inheriting all of the powerful functionality of TensorFlow and Keras. PsiZ focuses on providing mid-level objects that subclass :py:class:`tf.keras.layers.Layer`. PsiZ aims to follow the principle of *progressive disclosure of complexity* to enable low-friction startup and opt-in flexibility.
 
 
 What next?
 ==========
 
-If deciding what to read next, you have a few of options.
-
-Beginner Tutorial
-------------------
-A gentle walk-through of Psiz's basic use case.
+If deciding where to go next, you have a few options.
 
 Tutorials
-------------------
-Explore PsiZ's most powerful applications.
+---------
+We recommend starting with the "Beginner Tutorial - Part 1", which provides gentle walk-through of Psiz's core use case. After that, check out "Beginner Tutorial - Part 2".
 
 Code Examples
 -------------
-Dive into pure code `examples <https://github.com/psiz-org/psiz/tree/main/examples>`_ that demonstrate different applications of PsiZ.
+If you are comfortable with PsiZ, you can dive into some script-based `examples <https://github.com/psiz-org/psiz/tree/main/examples>`_. The examples forgo the verbose explanations used in the tutorials in order to provide useful starting points for creating your own scripts.
+
+Source Code
+-----------
+If you feel like diving into the deep end, you can explore the source code on GitHub, which contains detailed docstrings and comments.

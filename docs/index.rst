@@ -18,7 +18,7 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    :maxdepth: 2
    :caption: Tutorials
 
-   src/tutorials/beginner_tutorial
+   src/tutorials/beginner_tutorial_part1
    src/tutorials/beginner_tutorial_part2
    src/tutorials/vi
    src/tutorials/tuning

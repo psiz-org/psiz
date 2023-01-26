@@ -23,25 +23,26 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    src/tutorials/vi
    src/tutorials/tuning
    src/tutorials/active_learning
-   
-.. toctree::
-   :maxdepth: 1
-   :caption: Features
-
-   src/features/data
 
 .. toctree::
    :maxdepth: 2
-   :caption: Datasets
+   :caption: PsiZ Datasets
 
    src/datasets/datasets
 
 .. toctree::
    :maxdepth: 1
-   :caption: Design Choices
+   :caption: Features & Design
 
+   src/features/data
    src/design/mask_zero
    src/design/model_restarts
+
+.. toctree::
+   :maxdepth: 1
+   :caption: References
+
+   src/bibliography
 
 Indices and tables
 ==================

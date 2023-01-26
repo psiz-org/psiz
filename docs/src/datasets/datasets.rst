@@ -28,7 +28,7 @@ The TensorFlow Datasets can be loaded *with* or *without* a timestep axis by app
 
 birds16_rank2019
 ================
-`Raw Data Files <https://osf.io/ujv4h/>`_
+`Raw Data Files <https://osf.io/ujv4h/>`__
 
 To load the pre-formatted TensorFlow Dataset:
 
@@ -45,7 +45,7 @@ To load the pre-formatted TensorFlow Dataset:
 ilsvrc2012_val_hsj
 ==================
 
-`Raw Data Files <https://osf.io/7f96y/>`_
+`Raw Data Files <https://osf.io/7f96y/>`__
 
 To load the pre-formatted TensorFlow Dataset:
 
@@ -62,7 +62,7 @@ To load the pre-formatted TensorFlow Dataset:
 skin_lesions2018_rank2018
 =========================
 
-`Raw Data Files <https://osf.io/mw75h/>`_
+`Raw Data Files <https://osf.io/mw75h/>`__
 
 To load the pre-formatted TensorFlow Dataset:
 

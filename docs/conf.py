@@ -13,6 +13,9 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
 
 # Need to import as get_version since version is a reserved variable name in
 # sphinx.
@@ -39,7 +42,8 @@ version = '0.8'
 # ones.
 extensions = [
     'sphinx_rtd_theme',
-    'sphinx.ext.napoleon',  # autdoc parsing of Google style docstrings
+    'sphinx.ext.autodoc',  # automatic documentation from docstrings
+    'sphinx.ext.napoleon',  # autodoc parsing of Google style docstrings
     'sphinx.ext.imgmath',  # Render math equations.
     'sphinx_last_updated_by_git',  # Infer last updated date via git.
     'myst_nb',  # Parsing Jupyter notebooks.

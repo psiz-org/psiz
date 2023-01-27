@@ -1,8 +1,3 @@
-.. psiz documentation master file, created by
-   sphinx-quickstart on Fri Mar  5 15:13:42 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 PsiZ: Psychological Embeddings
 ==============================
 
@@ -38,7 +33,18 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
    src/design/model_restarts
 
 .. toctree::
+   :maxdepth: 2
+   :caption: API Reference
+   
+   src/api_reference/psiz_data
+   src/api_reference/psiz_keras
+   src/api_reference/psiz_mplot
+   src/api_reference/psiz_tf
+   src/api_reference/psiz_utils
+
+.. toctree::
    :maxdepth: 1
+   :caption: Everything Else
 
    src/bibliography
 

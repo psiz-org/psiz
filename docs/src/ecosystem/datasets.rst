@@ -26,6 +26,10 @@ Data Timesteps
 --------------
 The TensorFlow Datasets can be loaded *with* or *without* a timestep axis by appending :code:`/with_timestep` or :code:`/without_timestep` to the dataset name when using :code:`tfds.load` (see examples below). By default, the dataset is loaded with a timestep axis. If loaded without a timestep axis, the timestep axis is simply unrolled into the batch axis.
 
+Structuring for Training
+------------------------
+Your application will likely require that the loaded datasets be structured into inputs, targets, and sample weights for training. This is easily achieved using :code:`tf.data.Dataset.map` function. See `birds16_rank2019` below for an example.
+
 birds16_rank2019
 ================
 `Raw Data Files <https://osf.io/ujv4h/>`__
@@ -40,6 +44,30 @@ To load the pre-formatted TensorFlow Dataset:
         'birds16_rank2019/with_timestep',
         split="train",
         with_info=True
+    )
+
+Example of dataset formatting:
+
+.. code-block:: python
+
+    def format_data_for_training(sample):
+        """Format sample as (x, y, w) tuple."""
+        x = {
+            'given2rank1_stimulus_set': sample['given2rank1_stimulus_set'],
+            'given8rank2_stimulus_set': sample['given8rank2_stimulus_set'],
+        }
+        y = {
+            'given2rank1_outcome': sample['given2rank1_outcome'],
+            'given8rank2_outcome': sample['given8rank2_outcome'],
+        }
+        w = {
+            'given2rank1_outcome': sample['given2rank1_sample_weight'],
+            'given8rank2_outcome': sample['given8rank2_sample_weight'],
+        }
+        return (x, y, w)
+
+    tfds_all = tfds_all.map(
+        lambda sample: format_data_for_training(sample)
     )
 
 ilsvrc2012_val_hsj

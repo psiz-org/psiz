@@ -1,6 +1,6 @@
-############
-Introduction
-############
+###############
+Getting Started
+###############
 
 :Author: Brett D. Roads
 
@@ -19,7 +19,7 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 Installation
 ============
 
-PsiZ is hosted on PyPI and is easily installed using `pip`. Alternatively, you can install using `git`.
+PsiZ is hosted on PyPI and is easily installed using :code:`pip`. Alternatively, you can install using :code:`git`.
 
 System Requirements
 -------------------

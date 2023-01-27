@@ -10,9 +10,8 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started
 
-   src/first_steps/intro
+   src/first_steps/getting_started
 
 .. toctree::
    :maxdepth: 2
@@ -26,9 +25,9 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
 
 .. toctree::
    :maxdepth: 2
-   :caption: PsiZ Datasets
+   :caption: Ecosystem
 
-   src/datasets/datasets
+   src/ecosystem/datasets
 
 .. toctree::
    :maxdepth: 1
@@ -40,7 +39,6 @@ Welcome to PsiZ! If this is your first visit, we suggest reading the Introductio
 
 .. toctree::
    :maxdepth: 1
-   :caption: References
 
    src/bibliography
 

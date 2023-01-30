@@ -18,11 +18,9 @@
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
-from psiz.keras.layers.behaviors.rank import RankBehavior
 from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
 from psiz.keras.layers.behaviors.rank_similarity_cell import RankSimilarityCell
-from psiz.keras.layers.behaviors.rate import RateBehavior
 from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 from psiz.keras.layers.behaviors.rate_similarity import RateSimilarity
 from psiz.keras.layers.behaviors.rate_similarity_cell import RateSimilarityCell
@@ -57,8 +55,6 @@ __all__ = [
     "RateSimilarity",
     "RateSimilarityCell",
     "ALCOVECell",
-    "RankBehavior",
-    "RateBehavior",
     "Minkowski",
     "MinkowskiStochastic",
     "MinkowskiVariational",

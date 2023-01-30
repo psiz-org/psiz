@@ -15,14 +15,8 @@
 # ============================================================================
 """Module of Keras models."""
 
-from psiz.keras.models.psych_embedding import PsychologicalEmbedding
-from psiz.keras.models.rank import Rank
-from psiz.keras.models.rate import Rate
 from psiz.keras.models.stochastic_model import StochasticModel
 
 __all__ = [
-    "PsychologicalEmbedding",
-    "Rank",
-    "Rate",
     "StochasticModel",
 ]

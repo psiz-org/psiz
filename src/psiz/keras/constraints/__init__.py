@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras constraints initialization file."""
+"""Module of Keras constraints."""
 
 from psiz.keras.constraints.center import Center
 from psiz.keras.constraints.greater_equal_than import GreaterEqualThan

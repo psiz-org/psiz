@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Data initialization."""
+"""Module of convenience data classes."""
 
 
 from psiz.data.dataset_component import DatasetComponent

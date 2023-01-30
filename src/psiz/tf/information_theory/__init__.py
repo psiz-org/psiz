@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Trials initialization."""
+"""Module of information theory functionality."""
 
 
 from psiz.tf.information_theory.ig_categorical import ig_categorical

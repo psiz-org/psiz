@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras regularizers initialization file."""
+"""Module of Keras regularizers."""
 
 from psiz.keras.regularizers.attention_entropy import AttentionEntropy
 from psiz.keras.regularizers.squeeze import Squeeze

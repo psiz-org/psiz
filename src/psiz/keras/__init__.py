@@ -13,17 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras specific initialization file.
-
-Modules:
-    callbacks
-    constraints
-    initializers
-    layers
-    losses
-    regularizers
-
-"""
+"""Module of Keras classes."""
 
 import psiz.keras.constraints
 import psiz.keras.initializers

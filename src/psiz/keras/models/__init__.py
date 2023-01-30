@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras models initialization file."""
+"""Module of Keras models."""
 
 from psiz.keras.models.psych_embedding import PsychologicalEmbedding
 from psiz.keras.models.rank import Rank

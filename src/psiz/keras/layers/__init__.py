@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras layers initialization file."""
+"""Module of Keras layers."""
 
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational

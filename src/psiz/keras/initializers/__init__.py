@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Keras initializers initialization file."""
+"""Module of Keras initializers."""
 
 from psiz.keras.initializers.dirichlet import Dirichlet
 from psiz.keras.initializers.softplus_uniform import SoftplusUniform

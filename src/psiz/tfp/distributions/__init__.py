@@ -13,12 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""TensorFlow probability distributions specific initialization file.
-
-Classes:
-    InvSoftplusNormal
-
-"""
+"""Module of TensorFlow probability distributions."""
 
 from psiz.tfp.distributions.inv_softplus_normal import InvSoftplusNormal
 

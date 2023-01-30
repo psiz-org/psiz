@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Initialization of `mplot` module."""
+"""Module of plotting functionality based on matplotlib."""
 
 from psiz.mplot.bvn_ellipse import bvn_ellipse
 from psiz.mplot.hdi_bvn import hdi_bvn

@@ -2,5 +2,5 @@
 psiz.tf
 #########
 
-.. automodule:: src.psiz.tf
+.. automodule:: psiz.tf
     :members:

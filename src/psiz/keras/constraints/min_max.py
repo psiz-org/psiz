@@ -25,7 +25,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import constraints
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
 class MinMax(constraints.Constraint):
     """Constrains the weights to be between/equal values."""
 
@@ -43,15 +43,15 @@ class MinMax(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         w = w - self.min_value
-        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
+        w = w * tf.cast(tf.math.greater_equal(w, 0.0), K.floatx())
         w = w + self.min_value
 
         w = w - self.max_value
-        w = w * tf.cast(tf.math.greater_equal(0., w), K.floatx())
+        w = w * tf.cast(tf.math.greater_equal(0.0, w), K.floatx())
         w = w + self.max_value
 
         return w
 
     def get_config(self):
         """Return configuration."""
-        return {'min_value': self.min_value, 'max_value': self.max_value}
+        return {"min_value": self.min_value, "max_value": self.max_value}

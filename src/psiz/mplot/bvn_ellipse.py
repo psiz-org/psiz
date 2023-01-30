@@ -46,6 +46,7 @@ def bvn_ellipse(loc, cov, r=1.96, **kwargs):
         ellipse: A `matplotlib.patches.Ellipse` artist object.
 
     """
+
     def eig_sorted(cov):
         """Sort eigenvalues."""
         vals, vecs = np.linalg.eigh(cov)
@@ -55,7 +56,5 @@ def bvn_ellipse(loc, cov, r=1.96, **kwargs):
     vals, vecs = eig_sorted(cov)
     theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
     w, h = 2 * r * np.sqrt(vals)
-    ellipse = Ellipse(
-        xy=(loc[0], loc[1]), width=w, height=h, angle=theta, **kwargs
-    )
+    ellipse = Ellipse(xy=(loc[0], loc[1]), width=w, height=h, angle=theta, **kwargs)
     return ellipse

@@ -27,7 +27,7 @@ from tensorflow.keras import backend as K
 import tensorflow_probability as tfp
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.initializers")
 class Dirichlet(initializers.Initializer):
     """Initializer based on a Dirichlet distribution."""
 
@@ -52,12 +52,8 @@ class Dirichlet(initializers.Initializer):
         """Call."""
         if dtype is None:
             dtype = K.floatx()
-        dist = tfp.distributions.Dirichlet(
-            tf.cast(self.concentration, dtype)
-        )
-        sample = tf.cast(self.scale, dtype) * dist.sample(
-            shape, seed=self.seed
-        )
+        dist = tfp.distributions.Dirichlet(tf.cast(self.concentration, dtype))
+        sample = tf.cast(self.scale, dtype) * dist.sample(shape, seed=self.seed)
         return sample
 
     def get_config(self):
@@ -65,5 +61,5 @@ class Dirichlet(initializers.Initializer):
         return {
             "concentration": self.concentration.tolist(),
             "scale": self.scale,
-            "seed": self.seed
+            "seed": self.seed,
         }

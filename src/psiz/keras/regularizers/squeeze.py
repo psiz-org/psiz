@@ -23,7 +23,7 @@ Classes:
 import tensorflow as tf
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.regularizers")
 class Squeeze(tf.keras.regularizers.Regularizer):
     """Squeeze representation into a low number of dimensions.
 
@@ -34,7 +34,7 @@ class Squeeze(tf.keras.regularizers.Regularizer):
 
     """
 
-    def __init__(self, rate=0.):
+    def __init__(self, rate=0.0):
         """Initialize.
 
         Args:
@@ -58,4 +58,4 @@ class Squeeze(tf.keras.regularizers.Regularizer):
 
     def get_config(self):
         """Return config."""
-        return {'rate': float(self.rate)}
+        return {"rate": float(self.rate)}

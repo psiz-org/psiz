@@ -28,10 +28,11 @@ from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RankSimilarity'
+    package="psiz.keras.layers", name="RankSimilarity"
 )
 class RankSimilarity(RankSimilarityBase):
     """A rank similarity behavior layer."""
+
     def __init__(self, **kwargs):
         """Initialize.
 
@@ -65,14 +66,12 @@ class RankSimilarity(RankSimilarityBase):
         # TODO move into _pairwise_similarity
         inputs_copied = copy.copy(inputs)
 
-        stimulus_set = inputs_copied[self.data_scope + '_stimulus_set']
+        stimulus_set = inputs_copied[self.data_scope + "_stimulus_set"]
         is_reference_present = self._is_reference_present(stimulus_set)
 
         # Compute pairwise similarity between query and references.
         sim_qr = self._pairwise_similarity(inputs_copied)
 
-        outcome_prob = self._compute_outcome_probability(
-            is_reference_present, sim_qr
-        )
+        outcome_prob = self._compute_outcome_probability(is_reference_present, sim_qr)
 
         return outcome_prob

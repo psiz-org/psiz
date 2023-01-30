@@ -27,7 +27,7 @@ from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='DistanceBased'
+    package="psiz.keras.layers", name="DistanceBased"
 )
 class DistanceBased(tf.keras.layers.Layer):
     """A distance-based kernel layer."""
@@ -86,26 +86,22 @@ class DistanceBased(tf.keras.layers.Layer):
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({
-            'distance': tf.keras.utils.serialize_keras_object(self.distance),
-            'similarity': tf.keras.utils.serialize_keras_object(
-                self.similarity
-            ),
-        })
+        config.update(
+            {
+                "distance": tf.keras.utils.serialize_keras_object(self.distance),
+                "similarity": tf.keras.utils.serialize_keras_object(self.similarity),
+            }
+        )
         return config
 
     @classmethod
     def from_config(cls, config):
         """Create from configuration."""
-        config['distance'] = tf.keras.layers.deserialize(config['distance'])
-        config['similarity'] = tf.keras.layers.deserialize(
-            config['similarity']
-        )
+        config["distance"] = tf.keras.layers.deserialize(config["distance"])
+        config["similarity"] = tf.keras.layers.deserialize(config["similarity"])
         return cls(**config)
 
     def compute_output_shape(self, input_shape):
         dist_output_shape = self.distance.compute_output_shape(input_shape)
-        kernel_output_shape = self.similarity.compute_output_shape(
-            dist_output_shape
-        )
+        kernel_output_shape = self.similarity.compute_output_shape(dist_output_shape)
         return kernel_output_shape

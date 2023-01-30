@@ -82,15 +82,13 @@ class SparseCategorical(Outcome):
         # Check that provided values are integers.
         if not issubclass(index.dtype.type, np.integer):
             raise ValueError(
-                "The argument `index` must be an np.ndarray of "
-                "integers."
+                "The argument `index` must be an np.ndarray of " "integers."
             )
 
         # Check that all values are greater than or equal to placeholder.
         if np.sum(np.less(index, 0)) > 0:
             raise ValueError(
-                "The argument `index` must contain non-negative "
-                "integers."
+                "The argument `index` must contain non-negative " "integers."
             )
 
         # Check shape.
@@ -102,13 +100,13 @@ class SparseCategorical(Outcome):
 
         return index
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Return appropriately formatted data.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -127,14 +125,13 @@ class SparseCategorical(Outcome):
         if with_timestep_axis is False:
             index = unravel_timestep(index)
 
-        if export_format == 'tfds':
+        if export_format == "tfds":
             # Convert from sparse to one-hot-encoding, creating new trailing
             # axis.
             # pylint: disable=unexpected-keyword-arg
             # NOTE: A float for loss computation.
             y = tf.one_hot(
-                index, self.depth, on_value=1.0, off_value=0.0,
-                dtype=K.floatx()
+                index, self.depth, on_value=1.0, off_value=0.0, dtype=K.floatx()
             )
         else:
             raise ValueError(

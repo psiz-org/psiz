@@ -29,7 +29,7 @@ from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='EmbeddingTruncatedNormalDiag'
+    package="psiz.keras.layers", name="EmbeddingTruncatedNormalDiag"
 )
 class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
     """A distribution-based embedding.
@@ -38,15 +38,16 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
     distribution with a diagonal scale matrix.
 
     """
-    def __init__(self, input_dim, output_dim, low=0., high=1000000., **kwargs):
+
+    def __init__(self, input_dim, output_dim, low=0.0, high=1000000.0, **kwargs):
         """Initialize."""
         self.low = low
         self.high = high
         # Intercept constraints.
-        loc_constraint = kwargs.pop('loc_constraint', None)
+        loc_constraint = kwargs.pop("loc_constraint", None)
         if loc_constraint is None:
             loc_constraint = tf.keras.constraints.NonNeg()
-        kwargs.update({'loc_constraint': loc_constraint})
+        kwargs.update({"loc_constraint": loc_constraint})
         self.loc = None
         self.untransformed_scale = None
         super(EmbeddingTruncatedNormalDiag, self).__init__(
@@ -57,27 +58,30 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
         """Build embeddings distribution."""
         # Handle location variables.
         self.loc = self.add_weight(
-            name='loc', shape=[self.input_dim, self.output_dim], dtype=dtype,
-            initializer=self.loc_initializer, regularizer=self.loc_regularizer,
-            trainable=self.loc_trainable, constraint=self.loc_constraint
+            name="loc",
+            shape=[self.input_dim, self.output_dim],
+            dtype=dtype,
+            initializer=self.loc_initializer,
+            regularizer=self.loc_regularizer,
+            trainable=self.loc_trainable,
+            constraint=self.loc_constraint,
         )
 
         # Handle scale variables.
         self.untransformed_scale = self.add_weight(
-            name='untransformed_scale',
-            shape=[self.input_dim, self.output_dim], dtype=dtype,
+            name="untransformed_scale",
+            shape=[self.input_dim, self.output_dim],
+            dtype=dtype,
             initializer=self.scale_initializer,
-            regularizer=self.scale_regularizer, trainable=self.scale_trainable,
-            constraint=self.scale_constraint
+            regularizer=self.scale_regularizer,
+            trainable=self.scale_trainable,
+            constraint=self.scale_constraint,
         )
         scale = tfp.util.DeferredTensor(
-            self.untransformed_scale,
-            lambda x: (K.epsilon() + tf.nn.softplus(x))
+            self.untransformed_scale, lambda x: (K.epsilon() + tf.nn.softplus(x))
         )
 
-        dist = tfp.distributions.TruncatedNormal(
-            self.loc, scale, self.low, self.high
-        )
+        dist = tfp.distributions.TruncatedNormal(self.loc, scale, self.low, self.high)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -96,8 +100,10 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({
-            'low': float(self.low),
-            'high': float(self.high),
-        })
+        config.update(
+            {
+                "low": float(self.low),
+                "high": float(self.high),
+            }
+        )
         return config

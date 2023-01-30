@@ -69,18 +69,19 @@ class SimilarityTrials(metaclass=ABCMeta):
         is_present: Indicate if a stimulus is present.
 
     """
+
     _mask_value = 0
 
     def __init_subclass__(cls, **kwargs):
         """Subclassing initialization."""
         warnings.warn(
             (
-                f'{cls.__name__} is deprecated and will be removed; '
-                'Please use the `psiz.data` module for creating datasets; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{cls.__name__} is deprecated and will be removed; "
+                "Please use the `psiz.data` module for creating datasets; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super().__init_subclass__(**kwargs)
 
@@ -101,13 +102,13 @@ class SimilarityTrials(metaclass=ABCMeta):
         """
         warnings.warn(
             (
-                f'{self.__class__.__name__} is deprecated and will be '
-                'removed. '
-                'Please use the `psiz.data` module for creating datasets; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{self.__class__.__name__} is deprecated and will be "
+                "removed. "
+                "Please use the `psiz.data` module for creating datasets; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         self.mask_zero = mask_zero
 
@@ -132,10 +133,9 @@ class SimilarityTrials(metaclass=ABCMeta):
         """
         # Check that provided values are integers.
         if not issubclass(stimulus_set.dtype.type, np.integer):
-            raise ValueError((
-                "The argument `stimulus_set` must be a 2D array of "
-                "integers."
-            ))
+            raise ValueError(
+                ("The argument `stimulus_set` must be a 2D array of " "integers.")
+            )
 
         # Check that all values are greater than or equal to 0.
         if np.sum(np.less(stimulus_set, 0)) > 0:
@@ -150,36 +150,43 @@ class SimilarityTrials(metaclass=ABCMeta):
                 "greater than or equal to 0. This might be caused by using "
                 "an older dataset that uses '-1' values as placeholders. To "
                 "fix, convert `stimulus_set` to use '0' as a placeholder",
-                Warning
+                Warning,
             )
 
         # Check that all values are less than maximum for int32.
         ii32 = np.iinfo(np.int32)
         if np.sum(np.greater(stimulus_set, ii32.max)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must only contain integers "
-                "in the int32 range."
-            ))
+            raise ValueError(
+                (
+                    "The argument `stimulus_set` must only contain integers "
+                    "in the int32 range."
+                )
+            )
         return stimulus_set.astype(np.int32)
 
     def _check_groups(self, groups):
         """Check the argument groups."""
         groups = groups.astype(np.int32)
         if not (groups.ndim == 2):
-            raise ValueError((
-                "The argument 'groups' must be a rank 2 ND array."))
+            raise ValueError(("The argument 'groups' must be a rank 2 ND array."))
         # Check n_trial shape agreement.
         if not (groups.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument 'groups' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+            raise ValueError(
+                (
+                    "The argument 'groups' must have the same length as the "
+                    "number of rows in the argument 'stimulus_set'."
+                )
+            )
         # Check lowerbound support limit.
         bad_locs = groups < 0
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
-            raise ValueError((
-                "The parameter 'groups' contains integers less than 0. "
-                "Found {0} bad trial(s).").format(n_bad))
+            raise ValueError(
+                (
+                    "The parameter 'groups' contains integers less than 0. "
+                    "Found {0} bad trial(s)."
+                ).format(n_bad)
+            )
         return groups
 
     @abstractmethod
@@ -247,7 +254,7 @@ class SimilarityTrials(metaclass=ABCMeta):
         d = {}
         n_col = groups.shape[1]
         for i_col in range(n_col):
-            dkey = 'groups_{0}'.format(i_col)
+            dkey = "groups_{0}".format(i_col)
             d[dkey] = groups[:, i_col]
         return d
 
@@ -261,9 +268,9 @@ class SimilarityTrials(metaclass=ABCMeta):
         """
         bidx = np.ones([self.n_trial], dtype=bool)
         for index, value in row.items():
-            if 'groups' in index:
+            if "groups" in index:
                 # Must handle groups separately.
-                parts = index.split('_')
+                parts = index.split("_")
                 groups_subset = int(parts[-1])
                 bidx_key = np.equal(self.groups[:, groups_subset], value)
             else:
@@ -295,16 +302,16 @@ class SimilarityTrials(metaclass=ABCMeta):
                 else:
                     is_stackable = False
                     raise ValueError(
-                        'Objects with different number of stimuli in each ',
-                        'trial are only stackable if all objects have '
-                        '`mask_zero=True`.'
+                        "Objects with different number of stimuli in each ",
+                        "trial are only stackable if all objects have "
+                        "`mask_zero=True`.",
                     )
         else:
             # Not all trial sets have the same `mask_zero` setting.
             is_stackable = False
             raise ValueError(
-                'All objects must have the same `mask_zero` setting in order'
-                'to be stacked.'
+                "All objects must have the same `mask_zero` setting in order"
+                "to be stacked."
             )
 
         max_n_present = np.max(max_present_unique)

@@ -31,9 +31,7 @@ from psiz.data.unravel_timestep import unravel_timestep
 class Categorize(Content):
     """Content for categorization judgments."""
 
-    def __init__(
-        self, stimulus_set=None, objective_query_label=None, name=None
-    ):
+    def __init__(self, stimulus_set=None, objective_query_label=None, name=None):
         """Initialize.
 
         Args:
@@ -66,7 +64,7 @@ class Categorize(Content):
             objective_query_label
         )
         if name is None:
-            name = 'categorize'
+            name = "categorize"
         self.name = name
 
     @property
@@ -84,8 +82,7 @@ class Categorize(Content):
         # Check that provided values are integers.
         if not issubclass(stimulus_set.dtype.type, np.integer):
             raise ValueError(
-                "The argument `stimulus_set` must be an np.ndarray of "
-                "integers."
+                "The argument `stimulus_set` must be an np.ndarray of " "integers."
             )
 
         # Check that all values are greater than or equal to placeholder.
@@ -135,13 +132,13 @@ class Categorize(Content):
             )
         return objective_query_label
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Prepare trial content data for dataset.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -152,7 +149,7 @@ class Categorize(Content):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        if export_format == 'tfds':
+        if export_format == "tfds":
             stimulus_set = self.stimulus_set
             objective_query_label = self.objective_query_label
 
@@ -161,13 +158,15 @@ class Categorize(Content):
                 objective_query_label = unravel_timestep(objective_query_label)
 
             x = {
-                self.name + '_stimulus_set': tf.constant(
-                    stimulus_set, name=(self.name + '_stimulus_set')
+                self.name
+                + "_stimulus_set": tf.constant(
+                    stimulus_set, name=(self.name + "_stimulus_set")
                 ),
-                self.name + '_objective_query_label': tf.constant(
+                self.name
+                + "_objective_query_label": tf.constant(
                     objective_query_label,
-                    name=(self.name + '_objective_query_label'),
-                    dtype=K.floatx()
+                    name=(self.name + "_objective_query_label"),
+                    dtype=K.floatx(),
                 ),
             }
         else:

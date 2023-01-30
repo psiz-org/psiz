@@ -65,18 +65,16 @@ def load_trials(filepath):
 
     # Route to appropriate class.
     custom_objects = {
-        'RankDocket': RankDocket,
-        'RankObservations': RankObservations,
-        'RateDocket': RateDocket,
-        'RateObservations': RateObservations,
+        "RankDocket": RankDocket,
+        "RankObservations": RankObservations,
+        "RateDocket": RateDocket,
+        "RateObservations": RateObservations,
     }
     if class_name in custom_objects:
         trial_class = custom_objects[class_name]
     else:  # pragma: no cover
         print(
-            'NotImplementedError: class_name={0} is not implemented.'.format(
-                class_name
-            )
+            "NotImplementedError: class_name={0} is not implemented.".format(class_name)
         )
         raise NotImplementedError
 

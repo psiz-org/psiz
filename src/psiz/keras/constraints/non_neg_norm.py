@@ -25,7 +25,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import constraints
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
 class NonNegNorm(constraints.Constraint):
     """Non-negative norm weight constraint.
 
@@ -51,18 +51,20 @@ class NonNegNorm(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         # Enforce nonnegative.
-        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
+        w = w * tf.cast(tf.math.greater_equal(w, 0.0), K.floatx())
 
         # Enforce norm.
         return self.scale * (
-            w / (
-                K.epsilon() + tf.pow(
+            w
+            / (
+                K.epsilon()
+                + tf.pow(
                     tf.reduce_sum(w**self.p, axis=self.axis, keepdims=True),
-                    tf.divide(1.0, self.p)
+                    tf.divide(1.0, self.p),
                 )
             )
         )
 
     def get_config(self):
         """Return configuration."""
-        return {'scale': self.scale, 'p': self.p, 'axis': self.axis}
+        return {"scale": self.scale, "p": self.p, "axis": self.axis}

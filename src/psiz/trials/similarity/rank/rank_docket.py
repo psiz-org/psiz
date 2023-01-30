@@ -85,9 +85,7 @@ class RankDocket(RankTrials):
 
     """
 
-    def __init__(
-            self, stimulus_set, n_select=None, is_ranked=None,
-            mask_zero=False):
+    def __init__(self, stimulus_set, n_select=None, is_ranked=None, mask_zero=False):
         """Initialize.
 
         Args:
@@ -99,14 +97,15 @@ class RankDocket(RankTrials):
 
         """
         RankTrials.__init__(
-            self, stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            mask_zero=mask_zero
+            self,
+            stimulus_set,
+            n_select=n_select,
+            is_ranked=is_ranked,
+            mask_zero=mask_zero,
         )
 
         # Determine unique display configurations.
-        self._set_configuration_data(
-            self.n_reference, self.n_select, self.is_ranked
-        )
+        self._set_configuration_data(self.n_reference, self.n_select, self.is_ranked)
 
     def subset(self, index):
         """Return subset of trials as a new RankDocket object.
@@ -119,8 +118,10 @@ class RankDocket(RankTrials):
 
         """
         return RankDocket(
-            self.stimulus_set[index, :], n_select=self.n_select[index],
-            is_ranked=self.is_ranked[index], mask_zero=self.mask_zero
+            self.stimulus_set[index, :],
+            n_select=self.n_select[index],
+            is_ranked=self.is_ranked[index],
+            mask_zero=self.mask_zero,
         )
 
     def _set_configuration_data(self, n_reference, n_select, is_ranked):
@@ -155,8 +156,10 @@ class RankDocket(RankTrials):
         # Determine unique display configurations.
         n_outcome_placeholder = np.zeros(n_select.shape[0], dtype=np.int32)
         d = {
-            'n_reference': n_reference, 'n_select': n_select,
-            'is_ranked': is_ranked, 'n_outcome': n_outcome_placeholder
+            "n_reference": n_reference,
+            "n_select": n_select,
+            "is_ranked": is_ranked,
+            "n_outcome": n_outcome_placeholder,
         }
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
@@ -168,16 +171,14 @@ class RankDocket(RankTrials):
         outcome_idx_list = []
         for i_config in range(n_config):
             # Determine number of possible outcomes for configuration.
-            outcome_idx = self._possible_rank_outcomes(
-                df_config.iloc[i_config]
-            )
+            outcome_idx = self._possible_rank_outcomes(df_config.iloc[i_config])
             outcome_idx_list.append(outcome_idx)
             n_outcome = outcome_idx.shape[0]
             df_config.iloc[i_config, n_out_idx] = n_outcome
             # Find trials matching configuration.
-            a = (n_reference == df_config['n_reference'].iloc[i_config])
-            b = (n_select == df_config['n_select'].iloc[i_config])
-            c = (is_ranked == df_config['is_ranked'].iloc[i_config])
+            a = n_reference == df_config["n_reference"].iloc[i_config]
+            b = n_select == df_config["n_select"].iloc[i_config]
+            c = is_ranked == df_config["is_ranked"].iloc[i_config]
             f = np.array((a, b, c))
             display_type_locs = np.all(f, axis=0)
             config_idx[display_type_locs] = i_config
@@ -220,12 +221,11 @@ class RankDocket(RankTrials):
         # Return tensorflow dataset.
         stimulus_set = self.all_outcomes()
         x = {
-            'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
-            'is_select': tf.constant(
-                np.expand_dims(self.is_select(compress=False), axis=2),
-                dtype=tf.bool
+            "stimulus_set": tf.constant(stimulus_set, dtype=tf.int32),
+            "is_select": tf.constant(
+                np.expand_dims(self.is_select(compress=False), axis=2), dtype=tf.bool
             ),
-            'groups': tf.constant(groups, dtype=tf.int32)
+            "groups": tf.constant(groups, dtype=tf.int32),
         }
         return tf.data.Dataset.from_tensor_slices((x))
 
@@ -248,8 +248,7 @@ class RankDocket(RankTrials):
 
         f.close()
         trials = RankDocket(
-            stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            mask_zero=mask_zero
+            stimulus_set, n_select=n_select, is_ranked=is_ranked, mask_zero=mask_zero
         )
         return trials
 
@@ -267,16 +266,16 @@ class RankDocket(RankTrials):
             A new RankTrials object.
 
         """
-        _, max_n_present, mask_zero = cls._stack_precheck(
-            trials_list
-        )
+        _, max_n_present, mask_zero = cls._stack_precheck(trials_list)
 
         # Grab relevant information from first entry in list.
         n_pad = max_n_present - trials_list[0].max_n_present
         pad_width = ((0, 0), (0, n_pad))
         stimulus_set = np.pad(
-            trials_list[0].stimulus_set, pad_width, mode='constant',
-            constant_values=cls._mask_value
+            trials_list[0].stimulus_set,
+            pad_width,
+            mode="constant",
+            constant_values=cls._mask_value,
         )
 
         n_select = trials_list[0].n_select
@@ -286,15 +285,16 @@ class RankDocket(RankTrials):
             n_pad = max_n_present - i_trials.max_n_present
             pad_width = ((0, 0), (0, n_pad))
             curr_stimulus_set = np.pad(
-                i_trials.stimulus_set, pad_width, mode='constant',
-                constant_values=cls._mask_value
+                i_trials.stimulus_set,
+                pad_width,
+                mode="constant",
+                constant_values=cls._mask_value,
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
             n_select = np.hstack((n_select, i_trials.n_select))
             is_ranked = np.hstack((is_ranked, i_trials.is_ranked))
 
         trials_stacked = RankDocket(
-            stimulus_set, n_select=n_select, is_ranked=is_ranked,
-            mask_zero=mask_zero
+            stimulus_set, n_select=n_select, is_ranked=is_ranked, mask_zero=mask_zero
         )
         return trials_stacked

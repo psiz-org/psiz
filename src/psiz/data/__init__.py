@@ -30,16 +30,16 @@ from psiz.data.sample_qr_sets import sample_qr_sets
 from psiz.data.unravel_timestep import unravel_timestep
 
 __all__ = [
-    'DatasetComponent',
-    'Dataset',
-    'Content',
-    'Categorize',
-    'Rank',
-    'Rate',
-    'Group',
-    'Outcome',
-    'Continuous',
-    'SparseCategorical',
-    'sample_qr_sets',
-    'unravel_timestep',
+    "DatasetComponent",
+    "Dataset",
+    "Content",
+    "Categorize",
+    "Rank",
+    "Rate",
+    "Group",
+    "Outcome",
+    "Continuous",
+    "SparseCategorical",
+    "sample_qr_sets",
+    "unravel_timestep",
 ]

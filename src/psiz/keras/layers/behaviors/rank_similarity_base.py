@@ -29,10 +29,11 @@ from psiz.utils.m_prefer_n import m_prefer_n
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RankSimilarityBase'
+    package="psiz.keras.layers", name="RankSimilarityBase"
 )
 class RankSimilarityBase(tf.keras.layers.Layer):
     """A base layer for rank similarity behavior."""
+
     def __init__(
         self,
         n_reference=None,
@@ -71,43 +72,38 @@ class RankSimilarityBase(tf.keras.layers.Layer):
 
         # Derive data scope from configuration.
         if data_scope is None:
-            data_scope = 'given{0}rank{1}'.format(n_reference, n_select)
+            data_scope = "given{0}rank{1}".format(n_reference, n_select)
         self.data_scope = data_scope
 
         # Configure percept adapter.
         if percept_adapter is None:
             # Default adapter has no gating keys.
-            percept_adapter = GateAdapter(
-                format_inputs_as_tuple=True
-            )
+            percept_adapter = GateAdapter(format_inputs_as_tuple=True)
         self.percept_adapter = percept_adapter
         # Set required input keys.
-        self.percept_adapter.input_keys = [data_scope + '_stimulus_set']
+        self.percept_adapter.input_keys = [data_scope + "_stimulus_set"]
 
         # Configure kernel adapter.
         if kernel_adapter is None:
             # Default adapter has not gating keys.
-            kernel_adapter = GateAdapter(
-                format_inputs_as_tuple=True
-            )
+            kernel_adapter = GateAdapter(format_inputs_as_tuple=True)
         self.kernel_adapter = kernel_adapter
-        self.kernel_adapter.input_keys = [
-            data_scope + '_z_q', data_scope + '_z_r'
-        ]
+        self.kernel_adapter.input_keys = [data_scope + "_z_q", data_scope + "_z_r"]
 
     def build(self, input_shape):
         """Build.
 
-        Expect:
-        rank_similarity_stimulus_set:
-            shape=(batch_size, max_reference + 1)
+        Args:
+            input_shape: Dictionary that should include a key like
+                `*_stimulus_set` with
+                shape=(batch_size, max_reference + 1).
 
         """
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1  # i.e., query and reference indices.
         outcome_axis = 0  # i.e., the different judgment outcomes.
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape[self.data_scope + '_stimulus_set'])
+        n_axis = len(input_shape[self.data_scope + "_stimulus_set"])
         self._stimuli_axis = n_axis + stimuli_axis
         self._stimuli_axis_tensor = tf.constant(self._stimuli_axis)
         self._outcome_axis = n_axis + outcome_axis
@@ -222,7 +218,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         reference_stimulus_set = tf.gather(
             stimulus_set,
             indices=self._reference_indices,
-            axis=self._stimuli_axis_tensor
+            axis=self._stimuli_axis_tensor,
         )
         # NOTE: Assumes `mask_zero=True`.
         return tf.math.not_equal(reference_stimulus_set, 0)
@@ -237,10 +233,9 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # Prepare retrieved embeddings points for kernel and then compute
         # similarity.
         z_q, z_r = self._split_stimulus_set(z)
-        inputs_copied.update({
-            self.data_scope + '_z_q': z_q,
-            self.data_scope + '_z_r': z_r
-        })
+        inputs_copied.update(
+            {self.data_scope + "_z_q": z_q, self.data_scope + "_z_r": z_r}
+        )
         inputs_kernel = self.kernel_adapter(inputs_copied)
         sim_qr = self.kernel(inputs_kernel)
         return sim_qr
@@ -268,18 +263,14 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         is_reference_present = tf.cast(is_reference_present, K.floatx())
         # Zero out non-present similarities.
         sim_qr = tf.math.multiply(
-            sim_qr, is_reference_present, name='rank_sim_zero_out_nonpresent'
+            sim_qr, is_reference_present, name="rank_sim_zero_out_nonpresent"
         )
 
         # Add trialing outcome axis to `sim_qr` that reflects all possible
         # outcomes.
-        sim_qr = tf.gather(
-            sim_qr, self._outcome_idx, axis=self._stimuli_axis_tensor
-        )
+        sim_qr = tf.gather(sim_qr, self._outcome_idx, axis=self._stimuli_axis_tensor)
         # Add singleton outcome axis to `is_reference_present`.
-        is_reference_present = tf.expand_dims(
-            is_reference_present, self._outcome_axis
-        )
+        is_reference_present = tf.expand_dims(is_reference_present, self._outcome_axis)
 
         # Determine if outcome is legitimate by checking if at least one
         # reference is present. This is important because some trials are
@@ -287,9 +278,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # NOTE: Equivalent to:
         #     is_outcome = is_reference_present[:, 0]
         is_outcome = tf.gather(
-            is_reference_present,
-            indices=tf.constant(0),
-            axis=self._stimuli_axis_tensor
+            is_reference_present, indices=tf.constant(0), axis=self._stimuli_axis_tensor
         )
 
         # Compute denominator based on formulation of Luce's choice rule by
@@ -323,47 +312,41 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # NOTE: Some trials will be placeholders, so we adjust the output
         # probability to be uniform so that downstream loss computation
         # doesn't generate nan's.
-        prob_placeholder = tf.cast(
-            tf.math.equal(total_outcome_prob, 0.0), K.floatx()
-        )
+        prob_placeholder = tf.cast(tf.math.equal(total_outcome_prob, 0.0), K.floatx())
         outcome_prob = outcome_prob + (prob_placeholder / self._n_outcome)
         total_outcome_prob = total_outcome_prob + prob_placeholder
 
         # Smooth out any numerical erros in probabilities.
-        outcome_prob = tf.math.divide(
-            outcome_prob, total_outcome_prob
-        )
+        outcome_prob = tf.math.divide(outcome_prob, total_outcome_prob)
         return outcome_prob
 
     def get_config(self):
         """Return layer configuration."""
         config = super(RankSimilarityBase, self).get_config()
-        config.update({
-            'n_reference': self.n_reference,
-            'n_select': self.n_select,
-            'percept': tf.keras.utils.serialize_keras_object(self.percept),
-            'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
-            'percept_adapter': tf.keras.utils.serialize_keras_object(
-                self.percept_adapter
-            ),
-            'kernel_adapter': tf.keras.utils.serialize_keras_object(
-                self.kernel_adapter
-            ),
-        })
+        config.update(
+            {
+                "n_reference": self.n_reference,
+                "n_select": self.n_select,
+                "percept": tf.keras.utils.serialize_keras_object(self.percept),
+                "kernel": tf.keras.utils.serialize_keras_object(self.kernel),
+                "percept_adapter": tf.keras.utils.serialize_keras_object(
+                    self.percept_adapter
+                ),
+                "kernel_adapter": tf.keras.utils.serialize_keras_object(
+                    self.kernel_adapter
+                ),
+            }
+        )
         return config
 
     @classmethod
     def from_config(cls, config):
-        percept_serial = config['percept']
-        kernel_serial = config['kernel']
-        percept_adapter_serial = config['percept_adapter']
-        kernel_adapter_serial = config['kernel_adapter']
-        config['percept'] = tf.keras.layers.deserialize(percept_serial)
-        config['kernel'] = tf.keras.layers.deserialize(kernel_serial)
-        config['percept_adapter'] = tf.keras.layers.deserialize(
-            percept_adapter_serial
-        )
-        config['kernel_adapter'] = tf.keras.layers.deserialize(
-            kernel_adapter_serial
-        )
+        percept_serial = config["percept"]
+        kernel_serial = config["kernel"]
+        percept_adapter_serial = config["percept_adapter"]
+        kernel_adapter_serial = config["kernel_adapter"]
+        config["percept"] = tf.keras.layers.deserialize(percept_serial)
+        config["kernel"] = tf.keras.layers.deserialize(kernel_serial)
+        config["percept_adapter"] = tf.keras.layers.deserialize(percept_adapter_serial)
+        config["kernel_adapter"] = tf.keras.layers.deserialize(kernel_adapter_serial)
         return super().from_config(config)

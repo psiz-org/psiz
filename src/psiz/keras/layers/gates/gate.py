@@ -27,11 +27,10 @@ from tensorflow.keras import backend as K
 from psiz.keras.layers.drop import Drop
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='Gate'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="Gate")
 class Gate(tf.keras.layers.Layer):
     """Abstract layer that routes inputs to subnetworks."""
+
     def __init__(self, gating_index=None, gating_key=None, **kwargs):
         """Initialize.
 
@@ -84,16 +83,16 @@ class Gate(tf.keras.layers.Layer):
         if are_inputs_dict:
             if self.gating_key is None:
                 raise ValueError(
-                    'When `inputs` to layer is a dictionary, user must '
-                    'instantiate `Gate` layer with `gating_key` '
-                    'argument.'
+                    "When `inputs` to layer is a dictionary, user must "
+                    "instantiate `Gate` layer with `gating_key` "
+                    "argument."
                 )
         else:
             if self.gating_index is None:
                 raise ValueError(
-                    'When `inputs` to layer is a tuple, user must '
-                    'instantiate `Gate` layer with `gating_index` '
-                    'argument.'
+                    "When `inputs` to layer is a tuple, user must "
+                    "instantiate `Gate` layer with `gating_index` "
+                    "argument."
                 )
 
         # Get `gate_weights` shape.
@@ -139,8 +138,7 @@ class Gate(tf.keras.layers.Layer):
             return subnet
         else:
             return Drop(
-                subnet=subnet, drop_index=self.gating_index,
-                strip_inputs=strip_inputs
+                subnet=subnet, drop_index=self.gating_index, strip_inputs=strip_inputs
             )
 
     def _unprocess_subnet(self, subnet):
@@ -176,13 +174,10 @@ class Gate(tf.keras.layers.Layer):
                 gate_weights = gate_weights[:, 0]
             # Make sure `gate_weights` are integer type before using `one_hot`.
             dtype = K.dtype(gate_weights)
-            if dtype != 'int32' and dtype != 'int64':
-                gate_weights = tf.cast(gate_weights, 'int32')
+            if dtype != "int32" and dtype != "int64":
+                gate_weights = tf.cast(gate_weights, "int32")
             gate_weights = tf.one_hot(
-                gate_weights,
-                self.n_subnet,
-                on_value=1.0,
-                off_value=0.0
+                gate_weights, self.n_subnet, on_value=1.0, off_value=0.0
             )
         return gate_weights
 
@@ -190,9 +185,9 @@ class Gate(tf.keras.layers.Layer):
         """Return layer configuration."""
         config = super(Gate, self).get_config()
         if self.gating_index is not None:
-            config.update({'gating_index': int(self.gating_index)})
+            config.update({"gating_index": int(self.gating_index)})
         if self.gating_key is not None:
-            config.update({'gating_key': self.gating_key})
+            config.update({"gating_key": self.gating_key})
         return config
 
     @classmethod

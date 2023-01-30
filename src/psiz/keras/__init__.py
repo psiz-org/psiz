@@ -25,7 +25,6 @@ Modules:
 
 """
 
-import psiz.keras.callbacks
 import psiz.keras.constraints
 import psiz.keras.initializers
 import psiz.keras.layers
@@ -37,5 +36,5 @@ import psiz.keras.regularizers
 from psiz.keras.models.stochastic_model import StochasticModel
 
 __all__ = [
-    'StochasticModel',
+    "StochasticModel",
 ]

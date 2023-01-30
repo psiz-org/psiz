@@ -30,7 +30,9 @@ def rotation_matrix(theta):
         theta: Scalar value indicating radians of rotation.
 
     """
-    return np.array((
-        (np.cos(theta), -np.sin(theta)),
-        (np.sin(theta), np.cos(theta)),
-    ))
+    return np.array(
+        (
+            (np.cos(theta), -np.sin(theta)),
+            (np.sin(theta), np.cos(theta)),
+        )
+    )

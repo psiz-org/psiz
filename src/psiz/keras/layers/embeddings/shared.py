@@ -26,13 +26,12 @@ import tensorflow_probability as tfp
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='EmbeddingShared'
+    package="psiz.keras.layers", name="EmbeddingShared"
 )
 class EmbeddingShared(tf.keras.layers.Layer):
     """A class for wrapping a shared Embedding."""
-    def __init__(
-            self, input_dim, output_dim, embedding, mask_zero=False,
-            **kwargs):
+
+    def __init__(self, input_dim, output_dim, embedding, mask_zero=False, **kwargs):
         """Initialize.
 
         Args:
@@ -64,14 +63,14 @@ class EmbeddingShared(tf.keras.layers.Layer):
     def get_config(self):
         """Return configuration."""
         config = super(EmbeddingShared, self).get_config()
-        config.update({
-            'input_dim': int(self.input_dim),
-            'output_dim': int(self.output_dim),
-            'embedding': tf.keras.utils.serialize_keras_object(
-                self._embedding
-            ),
-            'mask_zero': self.mask_zero,
-        })
+        config.update(
+            {
+                "input_dim": int(self.input_dim),
+                "output_dim": int(self.output_dim),
+                "embedding": tf.keras.utils.serialize_keras_object(self._embedding),
+                "mask_zero": self.mask_zero,
+            }
+        )
         return config
 
     @classmethod
@@ -89,9 +88,7 @@ class EmbeddingShared(tf.keras.layers.Layer):
             layer: A layer instance.
 
         """
-        config['embedding'] = tf.keras.layers.deserialize(
-            config['embedding']
-        )
+        config["embedding"] = tf.keras.layers.deserialize(config["embedding"])
         return cls(**config)
 
     @property
@@ -110,8 +107,7 @@ class EmbeddingShared(tf.keras.layers.Layer):
         """
         # First, reshape event_shape from [1, 1] to [].
         b = tfp.bijectors.Reshape(
-            event_shape_out=tf.TensorShape([]),
-            event_shape_in=tf.TensorShape([1, 1])
+            event_shape_out=tf.TensorShape([]), event_shape_in=tf.TensorShape([1, 1])
         )
 
         # Second, use Sample to expand event_shape to,
@@ -119,7 +115,8 @@ class EmbeddingShared(tf.keras.layers.Layer):
         dist = tfp.distributions.TransformedDistribution(
             distribution=tfp.distributions.Sample(
                 self._embedding.embeddings,
-                sample_shape=[self.input_dim, self.output_dim]
-            ), bijector=b,
+                sample_shape=[self.input_dim, self.output_dim],
+            ),
+            bijector=b,
         )
         return dist

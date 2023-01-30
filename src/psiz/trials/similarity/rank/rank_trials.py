@@ -34,9 +34,7 @@ from psiz.trials.similarity.similarity_trials import SimilarityTrials
 class RankTrials(SimilarityTrials, metaclass=ABCMeta):
     """Abstract base class for rank-type trials."""
 
-    def __init__(
-            self, stimulus_set, n_select=None, is_ranked=None,
-            mask_zero=False):
+    def __init__(self, stimulus_set, n_select=None, is_ranked=None, mask_zero=False):
         """Initialize.
 
         Args:
@@ -64,7 +62,7 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         # Format stimulus set.
         self.n_reference = self.n_present - 1
         self.max_n_reference = np.amax(self.n_reference)
-        self.stimulus_set = self.stimulus_set[:, 0:self.max_n_reference + 1]
+        self.stimulus_set = self.stimulus_set[:, 0 : self.max_n_reference + 1]
 
         if n_select is None:
             n_select = np.ones((self.n_trial), dtype=np.int32)
@@ -94,10 +92,13 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
 
         """
         if np.sum(np.less(n_present, 3)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must contain at least three "
-                "non-negative integers per a row, i.e. one query and at least "
-                "two reference stimuli per trial."))
+            raise ValueError(
+                (
+                    "The argument `stimulus_set` must contain at least three "
+                    "non-negative integers per a row, i.e. one query and at least "
+                    "two reference stimuli per trial."
+                )
+            )
         return n_present
 
     def _check_n_select(self, n_select):
@@ -110,24 +111,33 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         n_select = n_select.astype(np.int32)
         # Check shape agreement.
         if not (n_select.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument `n_select` must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+            raise ValueError(
+                (
+                    "The argument `n_select` must have the same length as the "
+                    "number of rows in the argument 'stimulus_set'."
+                )
+            )
         # Check lowerbound support limit.
         bad_locs = n_select < 1
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
-            raise ValueError((
-                "The argument `n_select` contains integers less than 1. "
-                "Found {0} bad trial(s).").format(n_bad))
+            raise ValueError(
+                (
+                    "The argument `n_select` contains integers less than 1. "
+                    "Found {0} bad trial(s)."
+                ).format(n_bad)
+            )
         # Check upperbound support limit.
         bad_locs = np.greater_equal(n_select, self.n_reference)
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
-            raise ValueError((
-                "The argument `n_select` contains integers greater than "
-                "or equal to the corresponding 'n_reference'. Found {0} bad "
-                "trial(s).").format(n_bad))
+            raise ValueError(
+                (
+                    "The argument `n_select` contains integers greater than "
+                    "or equal to the corresponding 'n_reference'. Found {0} bad "
+                    "trial(s)."
+                ).format(n_bad)
+            )
         return n_select
 
     def _check_is_ranked(self, is_ranked):
@@ -138,15 +148,21 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
 
         """
         if not (is_ranked.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument `n_select` must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+            raise ValueError(
+                (
+                    "The argument `n_select` must have the same length as the "
+                    "number of rows in the argument 'stimulus_set'."
+                )
+            )
         bad_locs = np.not_equal(is_ranked, True)
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
-            raise ValueError((
-                "The unranked version is not implemented, Found {0} bad "
-                "trial(s).").format(n_bad))
+            raise ValueError(
+                (
+                    "The unranked version is not implemented, Found {0} bad "
+                    "trial(s)."
+                ).format(n_bad)
+            )
         return is_ranked
 
     def is_select(self, compress=False):
@@ -186,14 +202,14 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             is_select[locs, n_select] = True
 
         if compress:
-            is_select = is_select[:, 1:max_n_select + 1]
+            is_select = is_select[:, 1 : max_n_select + 1]
 
         return is_select
 
     def all_outcomes(self):
         """Inflate stimulus set for all possible outcomes."""
         outcome_idx_list = self.outcome_idx_list
-        n_outcome_list = self.config_list['n_outcome'].values
+        n_outcome_list = self.config_list["n_outcome"].values
         max_n_outcome = np.max(n_outcome_list)
         n_config = self.config_list.shape[0]
 
@@ -201,7 +217,8 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
         # not True, all cells will be updated.
         stimulus_set_expand = np.full(
             [self.n_trial, self.max_n_reference + 1, max_n_outcome],
-            self._mask_value, dtype=np.int32
+            self._mask_value,
+            dtype=np.int32,
         )
         for i_config in range(n_config):
             # Identify relevant trials.
@@ -226,22 +243,24 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
             # Initialize array taking into account max outcome configuration.
             curr_stimulus_set_expand = np.full(
                 [n_trial_config, self.max_n_reference + 1, max_n_outcome],
-                self._mask_value, dtype=int
+                self._mask_value,
+                dtype=int,
             )
             for i_outcome in range(n_outcome):
                 curr_stimulus_set_idx = stimulus_set_rel_idx[i_outcome, :]
                 # Append placeholder indices.
-                curr_idx = np.hstack([
-                    curr_stimulus_set_idx,
-                    np.arange(
-                        np.max(curr_stimulus_set_idx) + 1,
-                        self.max_n_reference + 1
-                    )
-                ])
-                # Convert relative indices to absolute indices.
-                curr_stimulus_set_expand[:, :, i_outcome] = (
-                    curr_stimulus_set_copy[:, curr_idx]
+                curr_idx = np.hstack(
+                    [
+                        curr_stimulus_set_idx,
+                        np.arange(
+                            np.max(curr_stimulus_set_idx) + 1, self.max_n_reference + 1
+                        ),
+                    ]
                 )
+                # Convert relative indices to absolute indices.
+                curr_stimulus_set_expand[:, :, i_outcome] = curr_stimulus_set_copy[
+                    :, curr_idx
+                ]
             stimulus_set_expand[trial_locs] = curr_stimulus_set_expand
         return stimulus_set_expand
 
@@ -261,8 +280,8 @@ class RankTrials(SimilarityTrials, metaclass=ABCMeta):
                 returned first.
 
         """
-        n_reference = int(trial_configuration['n_reference'])
-        n_select = int(trial_configuration['n_select'])
+        n_reference = int(trial_configuration["n_reference"])
+        n_select = int(trial_configuration["n_select"])
 
         reference_list = range(n_reference)
 

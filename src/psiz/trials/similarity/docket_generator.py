@@ -39,12 +39,12 @@ class DocketGenerator(object):
         """Subclassing initialization."""
         warnings.warn(
             (
-                f'{cls.__name__} is deprecated and will be removed. '
-                'Please use the `psiz.data` module for creating datasets; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{cls.__name__} is deprecated and will be removed. "
+                "Please use the `psiz.data` module for creating datasets; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super().__init_subclass__(**kwargs)
 
@@ -52,13 +52,13 @@ class DocketGenerator(object):
         """Initialize."""
         warnings.warn(
             (
-                f'{self.__class__.__name__} is deprecated and will be '
-                'removed. '
-                'Please use the `psiz.data` module for creating datasets; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{self.__class__.__name__} is deprecated and will be "
+                "removed. "
+                "Please use the `psiz.data` module for creating datasets; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 
     @abstractmethod

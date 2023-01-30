@@ -32,9 +32,16 @@ class StochasticEmbedding(tf.keras.layers.Layer):
     `tf.keras.layers.Embedding`.
 
     """
+
     def __init__(
-            self, input_dim, output_dim, mask_zero=False, input_length=1,
-            sample_shape=(), **kwargs):
+        self,
+        input_dim,
+        output_dim,
+        mask_zero=False,
+        input_length=1,
+        sample_shape=(),
+        **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -46,14 +53,14 @@ class StochasticEmbedding(tf.keras.layers.Layer):
             kwargs: Additional key-word arguments.
 
         """
-        if 'input_shape' not in kwargs:
-            kwargs['input_shape'] = (input_length,)
-        dtype = kwargs.pop('dtype', K.floatx())
+        if "input_shape" not in kwargs:
+            kwargs["input_shape"] = (input_length,)
+        dtype = kwargs.pop("dtype", K.floatx())
         # We set autocast to False, as we do not want to cast floating-
         # point inputs to self.dtype. In call(), we cast to int32, and
         # casting to self.dtype before casting to int32 might cause the
         # int32 values to be different due to a loss of precision.
-        kwargs['autocast'] = False
+        kwargs["autocast"] = False
         super().__init__(dtype=dtype, **kwargs)
 
         self.input_dim = input_dim
@@ -67,18 +74,20 @@ class StochasticEmbedding(tf.keras.layers.Layer):
     def call(self, inputs):
         """Call."""
         dtype = K.dtype(inputs)
-        if dtype != 'int32' and dtype != 'int64':
-            inputs = math_ops.cast(inputs, 'int32')
+        if dtype != "int32" and dtype != "int64":
+            inputs = math_ops.cast(inputs, "int32")
         return inputs
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({
-            'input_dim': int(self.input_dim),
-            'output_dim': int(self.output_dim),
-            'mask_zero': self.mask_zero,
-            'input_length': int(self.input_length),
-            'sample_shape': self.sample_shape
-        })
+        config.update(
+            {
+                "input_dim": int(self.input_dim),
+                "output_dim": int(self.output_dim),
+                "mask_zero": self.mask_zero,
+                "input_length": int(self.input_length),
+                "sample_shape": self.sample_shape,
+            }
+        )
         return config

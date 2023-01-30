@@ -58,7 +58,7 @@ class Rate(Content):
         self.stimulus_set = stimulus_set
 
         if name is None:
-            name = 'rate2'
+            name = "rate2"
         self.name = name
 
     @property
@@ -76,8 +76,7 @@ class Rate(Content):
         # Check that provided values are integers.
         if not issubclass(stimulus_set.dtype.type, np.integer):
             raise ValueError(
-                "The argument `stimulus_set` must be an np.ndarray of "
-                "integers."
+                "The argument `stimulus_set` must be an np.ndarray of " "integers."
             )
 
         # Check that all values are greater than or equal to placeholder.
@@ -97,13 +96,13 @@ class Rate(Content):
 
         return stimulus_set
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Prepare trial content data for dataset.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -114,14 +113,15 @@ class Rate(Content):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        if export_format == 'tfds':
+        if export_format == "tfds":
             stimulus_set = self.stimulus_set
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
 
             x = {
-                self.name + '_stimulus_set': tf.constant(
-                    stimulus_set, name=(self.name + '_stimulus_set')
+                self.name
+                + "_stimulus_set": tf.constant(
+                    stimulus_set, name=(self.name + "_stimulus_set")
                 )
             }
         else:

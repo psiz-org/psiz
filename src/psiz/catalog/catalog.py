@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 
 
-class Catalog():
+class Catalog:
     """Class to keep track of stimuli information.
 
     Attributes:
@@ -47,9 +47,7 @@ class Catalog():
 
     """
 
-    def __init__(
-            self, stimulus_id, stimulus_filepath, class_id=None,
-            class_label=None):
+    def __init__(self, stimulus_id, stimulus_filepath, class_id=None, class_label=None):
         """Initialize.
 
         Args:
@@ -74,16 +72,16 @@ class Catalog():
 
         stimuli = pd.DataFrame(
             data={
-                'id': stimulus_id,
-                'filepath': stimulus_filepath,
-                'class_id': class_id
+                "id": stimulus_id,
+                "filepath": stimulus_filepath,
+                "class_id": class_id,
             }
         )
-        stimuli = stimuli.sort_values('id')
+        stimuli = stimuli.sort_values("id")
         self.stimuli = stimuli
 
         # Optional information.
-        self.common_path = ''
+        self.common_path = ""
         self.class_label = class_label
         # Optional class information. MAYBE
         # self.leaf_class_id
@@ -101,14 +99,14 @@ class Catalog():
 
         """
         if len(stimulus_id.shape) != 1:
-            raise ValueError((
-                "The argument `stimulus_id` must be a 1D array of "
-                "integers."))
+            raise ValueError(
+                ("The argument `stimulus_id` must be a 1D array of " "integers.")
+            )
 
         if not issubclass(stimulus_id.dtype.type, np.integer):
-            raise ValueError((
-                "The argument `stimulus_id` must be a 1D array of "
-                "integers."))
+            raise ValueError(
+                ("The argument `stimulus_id` must be a 1D array of " "integers.")
+            )
 
         return stimulus_id
 
@@ -125,14 +123,20 @@ class Catalog():
         stimulus_filepath = np.asarray(stimulus_filepath, dtype=object)
 
         if len(stimulus_filepath.shape) != 1:
-            raise ValueError((
-                'The argument `stimulus_filepath` must have the same shape as '
-                '`stimulus_id`.'))
+            raise ValueError(
+                (
+                    "The argument `stimulus_filepath` must have the same shape as "
+                    "`stimulus_id`."
+                )
+            )
 
         if stimulus_filepath.shape[0] != self.n_stimuli:
-            raise ValueError((
-                'The argument `stimulus_filepath` must have the same shape as '
-                '`stimulus_id`.'))
+            raise ValueError(
+                (
+                    "The argument `stimulus_filepath` must have the same shape as "
+                    "`stimulus_id`."
+                )
+            )
 
         return stimulus_filepath
 
@@ -171,7 +175,7 @@ class Catalog():
             "stimulus_filepath",
             data=self.stimuli.filepath.values.astype(
                 dtype="S{0}".format(max_filepath_length)
-            )
+            ),
         )
         h5_file.create_dataset("class_id", data=self.stimuli.class_id.values)
 
@@ -180,23 +184,15 @@ class Catalog():
 
             n_class = len(self.class_label)
             class_map_class_id = np.empty(n_class, dtype=int)
-            class_map_label = np.empty(n_class, dtype="S{0}".format(
-                max_label_length
-            ))
+            class_map_label = np.empty(n_class, dtype="S{0}".format(max_label_length))
             idx = 0
             for key, value in self.class_label.items():
                 class_map_class_id[idx] = key
                 class_map_label[idx] = value
                 idx = idx + 1
 
-            h5_file.create_dataset(
-                "class_map_class_id",
-                data=class_map_class_id
-            )
-            h5_file.create_dataset(
-                "class_map_label",
-                data=class_map_label
-            )
+            h5_file.create_dataset("class_map_class_id", data=class_map_class_id)
+            h5_file.create_dataset("class_map_label", data=class_map_label)
 
         h5_file.close()
 

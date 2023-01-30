@@ -28,7 +28,7 @@ from psiz.keras.layers.gates.gate_adapter import GateAdapter
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RateSimilarityBase'
+    package="psiz.keras.layers", name="RateSimilarityBase"
 )
 class RateSimilarityBase(tf.keras.layers.Layer):
     """A base layer for rate similarity behavior.
@@ -42,10 +42,11 @@ class RateSimilarityBase(tf.keras.layers.Layer):
     `lower`: The lower asymptote of the function's range.
     `upper`: The upper asymptote of the function's range.
     `midpoint`: The midpoint of the function's domain and point of
-        maximum growth.
+    maximum growth.
     `rate`: The growth rate of the logistic function.
 
     """
+
     def __init__(
         self,
         percept=None,
@@ -98,72 +99,76 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         # Derive prefix from configuration.
         n_stimuli = 2  # TODO Make an argument for layer.
         if data_scope is None:
-            data_scope = 'rate{0}'.format(n_stimuli)
+            data_scope = "rate{0}".format(n_stimuli)
         self.data_scope = data_scope
 
         # Configure percept adapter.
         if percept_adapter is None:
             # Default adapter has no gating keys.
-            percept_adapter = GateAdapter(
-                format_inputs_as_tuple=True
-            )
+            percept_adapter = GateAdapter(format_inputs_as_tuple=True)
         self.percept_adapter = percept_adapter
         # Set required input keys.
-        self.percept_adapter.input_keys = [
-            self.data_scope + '_stimulus_set'
-        ]
+        self.percept_adapter.input_keys = [self.data_scope + "_stimulus_set"]
 
         # Configure kernel adapter.
         if kernel_adapter is None:
             # Default adapter has not gating keys.
-            kernel_adapter = GateAdapter(
-                format_inputs_as_tuple=True
-            )
+            kernel_adapter = GateAdapter(format_inputs_as_tuple=True)
         self.kernel_adapter = kernel_adapter
         self.kernel_adapter.input_keys = [
-            self.data_scope + '_z_q', self.data_scope + '_z_r'
+            self.data_scope + "_z_q",
+            self.data_scope + "_z_r",
         ]
 
         self.lower_trainable = lower_trainable
         if lower_initializer is None:
-            lower_initializer = tf.keras.initializers.Constant(0.)
+            lower_initializer = tf.keras.initializers.Constant(0.0)
         self.lower_initializer = tf.keras.initializers.get(lower_initializer)
         self.lower = self.add_weight(
-            shape=[], initializer=self.lower_initializer,
-            trainable=self.lower_trainable, name="lower", dtype=K.floatx(),
-            constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+            shape=[],
+            initializer=self.lower_initializer,
+            trainable=self.lower_trainable,
+            name="lower",
+            dtype=K.floatx(),
+            constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
         )
 
         self.upper_trainable = upper_trainable
         if upper_initializer is None:
-            upper_initializer = tf.keras.initializers.Constant(1.)
+            upper_initializer = tf.keras.initializers.Constant(1.0)
         self.upper_initializer = tf.keras.initializers.get(upper_initializer)
         self.upper = self.add_weight(
-            shape=[], initializer=self.upper_initializer,
-            trainable=self.upper_trainable, name="upper", dtype=K.floatx(),
-            constraint=pk_constraints.LessEqualThan(max_value=1.0)
+            shape=[],
+            initializer=self.upper_initializer,
+            trainable=self.upper_trainable,
+            name="upper",
+            dtype=K.floatx(),
+            constraint=pk_constraints.LessEqualThan(max_value=1.0),
         )
 
         self.midpoint_trainable = midpoint_trainable
         if midpoint_initializer is None:
-            midpoint_initializer = tf.keras.initializers.Constant(.5)
-        self.midpoint_initializer = tf.keras.initializers.get(
-            midpoint_initializer
-        )
+            midpoint_initializer = tf.keras.initializers.Constant(0.5)
+        self.midpoint_initializer = tf.keras.initializers.get(midpoint_initializer)
         self.midpoint = self.add_weight(
-            shape=[], initializer=self.midpoint_initializer,
-            trainable=self.midpoint_trainable, name="midpoint",
+            shape=[],
+            initializer=self.midpoint_initializer,
+            trainable=self.midpoint_trainable,
+            name="midpoint",
             dtype=K.floatx(),
-            constraint=pk_constraints.MinMax(0.0, 1.0)
+            constraint=pk_constraints.MinMax(0.0, 1.0),
         )
 
         self.rate_trainable = rate_trainable
         if rate_initializer is None:
-            rate_initializer = tf.keras.initializers.Constant(5.)
+            rate_initializer = tf.keras.initializers.Constant(5.0)
         self.rate_initializer = tf.keras.initializers.get(rate_initializer)
         self.rate = self.add_weight(
-            shape=[], initializer=self.rate_initializer,
-            trainable=self.rate_trainable, name="rate", dtype=K.floatx(),
+            shape=[],
+            initializer=self.rate_initializer,
+            trainable=self.rate_trainable,
+            name="rate",
+            dtype=K.floatx(),
         )
 
     def build(self, input_shape):
@@ -171,7 +176,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1  # i.e., stimuli indices.
         # Convert from *relative* axis index to *absolute* axis index.
-        n_axis = len(input_shape[self.data_scope + '_stimulus_set'])
+        n_axis = len(input_shape[self.data_scope + "_stimulus_set"])
         self._stimuli_axis = tf.constant(n_axis + stimuli_axis)
 
     def _split_stimulus_set(self, z):
@@ -211,10 +216,9 @@ class RateSimilarityBase(tf.keras.layers.Layer):
         # Prepare retrieved embeddings point for kernel and then compute
         # similarity.
         z_q, z_r = self._split_stimulus_set(z)
-        inputs_copied.update({
-            self.data_scope + '_z_q': z_q,
-            self.data_scope + '_z_r': z_r
-        })
+        inputs_copied.update(
+            {self.data_scope + "_z_q": z_q, self.data_scope + "_z_r": z_r}
+        )
         inputs_kernel = self.kernel_adapter(inputs_copied)
         sim_qr = self.kernel(inputs_kernel)
         return sim_qr
@@ -222,46 +226,44 @@ class RateSimilarityBase(tf.keras.layers.Layer):
     def get_config(self):
         """Return layer configuration."""
         config = super(RateSimilarityBase, self).get_config()
-        config.update({
-            'percept': tf.keras.utils.serialize_keras_object(self.percept),
-            'kernel': tf.keras.utils.serialize_keras_object(self.kernel),
-            'percept_adapter': tf.keras.utils.serialize_keras_object(
-                self.percept_adapter
-            ),
-            'kernel_adapter': tf.keras.utils.serialize_keras_object(
-                self.kernel_adapter
-            ),
-            'lower_trainable': self.lower_trainable,
-            'upper_trainable': self.upper_trainable,
-            'midpoint_trainable': self.midpoint_trainable,
-            'rate_trainable': self.rate_trainable,
-            'lower_initializer': tf.keras.initializers.serialize(
-                self.lower_initializer
-            ),
-            'upper_initializer': tf.keras.initializers.serialize(
-                self.upper_initializer
-            ),
-            'midpoint_initializer': tf.keras.initializers.serialize(
-                self.midpoint_initializer
-            ),
-            'rate_initializer': tf.keras.initializers.serialize(
-                self.rate_initializer
-            ),
-        })
+        config.update(
+            {
+                "percept": tf.keras.utils.serialize_keras_object(self.percept),
+                "kernel": tf.keras.utils.serialize_keras_object(self.kernel),
+                "percept_adapter": tf.keras.utils.serialize_keras_object(
+                    self.percept_adapter
+                ),
+                "kernel_adapter": tf.keras.utils.serialize_keras_object(
+                    self.kernel_adapter
+                ),
+                "lower_trainable": self.lower_trainable,
+                "upper_trainable": self.upper_trainable,
+                "midpoint_trainable": self.midpoint_trainable,
+                "rate_trainable": self.rate_trainable,
+                "lower_initializer": tf.keras.initializers.serialize(
+                    self.lower_initializer
+                ),
+                "upper_initializer": tf.keras.initializers.serialize(
+                    self.upper_initializer
+                ),
+                "midpoint_initializer": tf.keras.initializers.serialize(
+                    self.midpoint_initializer
+                ),
+                "rate_initializer": tf.keras.initializers.serialize(
+                    self.rate_initializer
+                ),
+            }
+        )
         return config
 
     @classmethod
     def from_config(cls, config):
-        percept_serial = config['percept']
-        kernel_serial = config['kernel']
-        percept_adapter_serial = config['percept_adapter']
-        kernel_adapter_serial = config['kernel_adapter']
-        config['percept'] = tf.keras.layers.deserialize(percept_serial)
-        config['kernel'] = tf.keras.layers.deserialize(kernel_serial)
-        config['percept_adapter'] = tf.keras.layers.deserialize(
-            percept_adapter_serial
-        )
-        config['kernel_adapter'] = tf.keras.layers.deserialize(
-            kernel_adapter_serial
-        )
+        percept_serial = config["percept"]
+        kernel_serial = config["kernel"]
+        percept_adapter_serial = config["percept_adapter"]
+        kernel_adapter_serial = config["kernel_adapter"]
+        config["percept"] = tf.keras.layers.deserialize(percept_serial)
+        config["kernel"] = tf.keras.layers.deserialize(kernel_serial)
+        config["percept_adapter"] = tf.keras.layers.deserialize(percept_adapter_serial)
+        config["kernel_adapter"] = tf.keras.layers.deserialize(kernel_adapter_serial)
         return super().from_config(config)

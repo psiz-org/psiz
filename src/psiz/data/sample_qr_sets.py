@@ -26,8 +26,8 @@ from psiz.utils import random_combinations
 
 
 def sample_qr_sets(
-        query_idx, n_reference, n_sample, reference_probability,
-        replace=True, rng=None):
+    query_idx, n_reference, n_sample, reference_probability, replace=True, rng=None
+):
     """Sample query-reference sets for a specific query.
 
     For problems involving more than a few stimuli, it is infeasible to
@@ -85,18 +85,17 @@ def sample_qr_sets(
 
     # Sample references using eligible references only.
     ref_samples = random_combinations(
-        ref_idx_eligable, n_reference, n_sample, p=ref_probability,
-        replace=replace, rng=rng
+        ref_idx_eligable,
+        n_reference,
+        n_sample,
+        p=ref_probability,
+        replace=replace,
+        rng=rng,
     )
 
     # Add refernces to query index being careful that number of obtained
     # samples may not match the number of requested samples.
     n_samples_obtained = ref_samples.shape[0]
-    stimulus_set = np.hstack(
-        [
-            np.full([n_samples_obtained, 1], query_idx),
-            ref_samples
-        ]
-    )
+    stimulus_set = np.hstack([np.full([n_samples_obtained, 1], query_idx), ref_samples])
 
     return stimulus_set

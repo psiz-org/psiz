@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
 [![Documentation Status](https://readthedocs.org/projects/psiz/badge/?version=latest)](https://psiz.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/roads/psiz/branch/main/graph/badge.svg?token=UIK748KI5I)](https://codecov.io/gh/roads/psiz)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ---
 **WARNING:** This package is pre-release and the API is not stable. All APIs are subject to change and all releases are alpha.

@@ -28,10 +28,11 @@ from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RateSimilarity'
+    package="psiz.keras.layers", name="RateSimilarity"
 )
 class RateSimilarity(RateSimilarityBase):
     """A rate similarity behavior layer."""
+
     def __init__(self, **kwargs):
         """Initialize.
 
@@ -45,13 +46,9 @@ class RateSimilarity(RateSimilarityBase):
         """Return predicted rating of a trial.
 
         Args:
-            inputs: A dictionary containing the following information:
-                rate_similarity_stimulus_set: A tensor containing
-                    indices that define the stimuli used in each trial.
-                    shape=(batch_size, n_stimuli_per_trial)
-                gate_weights (optional): Tensor(s) containing gate
-                    weights. The actual key value(s) will depend on how
-                    the user initialized the layer.
+            inputs["<data_scope>_stimulus_set"]: A tensor containing
+                indices that define the stimuli used in each trial.
+                shape=(batch_size, n_stimuli_per_trial)
 
         Returns:
             rating: The ratings (on a 0-1 scale) as determined by a
@@ -67,7 +64,7 @@ class RateSimilarity(RateSimilarityBase):
 
         rating = self.lower + tf.math.divide(
             self.upper - self.lower,
-            1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint))
+            1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint)),
         )
 
         return rating

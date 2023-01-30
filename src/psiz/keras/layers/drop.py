@@ -23,9 +23,7 @@ Classes:
 import tensorflow as tf
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='Drop'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="Drop")
 class Drop(tf.keras.layers.Layer):
     """A wrapper layer that drops part of the inputs.
 
@@ -33,9 +31,7 @@ class Drop(tf.keras.layers.Layer):
 
     """
 
-    def __init__(
-            self, subnet=None, drop_index=-1, strip_inputs=True,
-            **kwargs):
+    def __init__(self, subnet=None, drop_index=-1, strip_inputs=True, **kwargs):
         """Initialize.
 
         Args:
@@ -64,8 +60,7 @@ class Drop(tf.keras.layers.Layer):
 
         # Drop requested tensor from `inputs`.
         input_shape_w_drop = (
-            input_shape[0:self._drop_index]
-            + input_shape[(self._drop_index + 1):]
+            input_shape[0 : self._drop_index] + input_shape[(self._drop_index + 1) :]
         )
 
         # Determine how inputs should be pre-processed.
@@ -90,7 +85,7 @@ class Drop(tf.keras.layers.Layer):
         """
         # Drop requested tensor from `inputs`.
         inputs_less_drop = (
-            inputs[0:self._drop_index] + inputs[(self._drop_index + 1):]
+            inputs[0 : self._drop_index] + inputs[(self._drop_index + 1) :]
         )
 
         if self._strip_inputs:
@@ -104,17 +99,19 @@ class Drop(tf.keras.layers.Layer):
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({
-            'subnet': tf.keras.utils.serialize_keras_object(self.subnet),
-            'drop_index': int(self.drop_index),
-            'strip_inputs': bool(self.strip_inputs),
-        })
+        config.update(
+            {
+                "subnet": tf.keras.utils.serialize_keras_object(self.subnet),
+                "drop_index": int(self.drop_index),
+                "strip_inputs": bool(self.strip_inputs),
+            }
+        )
         return config
 
     @classmethod
     def from_config(cls, config):
-        subnet_serial = config['subnet']
-        config['subnet'] = tf.keras.layers.deserialize(subnet_serial)
+        subnet_serial = config["subnet"]
+        config["subnet"] = tf.keras.layers.deserialize(subnet_serial)
         return super().from_config(config)
 
     def compute_output_shape(self, input_shape):
@@ -140,8 +137,7 @@ class Drop(tf.keras.layers.Layer):
 
         # Drop requested tensor from `input_shape`.
         input_shape_w_drop = (
-            input_shape[0:self._drop_index]
-            + input_shape[(self._drop_index + 1):]
+            input_shape[0 : self._drop_index] + input_shape[(self._drop_index + 1) :]
         )
 
         # Determine how inputs should be pre-processed.

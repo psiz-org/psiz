@@ -26,14 +26,13 @@ import tensorflow as tf
 from psiz.keras.layers.gates.gate import Gate
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='SplitGate'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="SplitGate")
 class SplitGate(Gate):
     """Abstract layer that routes inputs to subnetworks."""
+
     def __init__(
-            self, subnets=None, pass_gate_weights=None, strip_inputs=None,
-            **kwargs):
+        self, subnets=None, pass_gate_weights=None, strip_inputs=None, **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -86,8 +85,7 @@ class SplitGate(Gate):
         for idx, subnet in enumerate(self._subnets):
             processed_subnets.append(
                 self._process_subnet(
-                    subnet, self.pass_gate_weights[idx],
-                    self.strip_inputs[idx]
+                    subnet, self.pass_gate_weights[idx], self.strip_inputs[idx]
                 )
             )
         self._processed_subnets = processed_subnets
@@ -107,20 +105,20 @@ class SplitGate(Gate):
                     self._unprocess_subnet(self._processed_subnets[i])
                 )
             )
-        config.update({
-            'subnets': subnets_serial,
-            'pass_gate_weights': list(self.pass_gate_weights),
-            'strip_inputs': list(self.strip_inputs),
-        })
+        config.update(
+            {
+                "subnets": subnets_serial,
+                "pass_gate_weights": list(self.pass_gate_weights),
+                "strip_inputs": list(self.strip_inputs),
+            }
+        )
         return config
 
     @classmethod
     def from_config(cls, config):
-        subnets_serial = config['subnets']
+        subnets_serial = config["subnets"]
         subnets = []
         for subnet_serial in subnets_serial:
-            subnets.append(
-                tf.keras.layers.deserialize(subnet_serial)
-            )
-        config['subnets'] = subnets
+            subnets.append(tf.keras.layers.deserialize(subnet_serial))
+        config["subnets"] = subnets
         return cls(**config)

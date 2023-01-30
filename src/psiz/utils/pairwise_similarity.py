@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # Copyright 2020 The PsiZ Authors. All Rights Reserved.
 #
@@ -32,9 +31,15 @@ from psiz.utils.progress_bar_re import ProgressBarRe
 
 
 def pairwise_similarity(
-        stimuli, kernel, ds_pairs, use_group_stimuli=False,
-        use_group_kernel=False, n_sample=None, compute_average=False,
-        verbose=0):
+    stimuli,
+    kernel,
+    ds_pairs,
+    use_group_stimuli=False,
+    use_group_kernel=False,
+    n_sample=None,
+    compute_average=False,
+    verbose=0,
+):
     """Return the similarity between stimulus pairs.
 
     Args:
@@ -61,19 +66,19 @@ def pairwise_similarity(
     """
     warnings.warn(
         (
-            'This function is deprecated and will be removed. Users should '
-            'instead create a new '
-            'model using the functional or subclass API; '
-            'version_announced=0.8.0; version_scheduled=0.9.0'
+            "This function is deprecated and will be removed. Users should "
+            "instead create a new "
+            "model using the functional or subclass API; "
+            "version_announced=0.8.0; version_scheduled=0.9.0"
         ),
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
     if verbose > 0:
         n_batch = 0
         for _ in ds_pairs:
             n_batch += 1
-        progbar = ProgressBarRe(n_batch, prefix='Similarity:', length=50)
+        progbar = ProgressBarRe(n_batch, prefix="Similarity:", length=50)
         progbar.update(0)
         progbar_counter = 0
         # Determine how often progbar should update (we use 50 since that is
@@ -88,12 +93,8 @@ def pairwise_similarity(
             group = x_batch[2]
 
         if n_sample is not None:
-            idx_0 = expand_dim_repeat(
-                idx_0, n_sample, axis=1
-            )
-            idx_1 = expand_dim_repeat(
-                idx_1, n_sample, axis=1
-            )
+            idx_0 = expand_dim_repeat(idx_0, n_sample, axis=1)
+            idx_1 = expand_dim_repeat(idx_1, n_sample, axis=1)
 
         if use_group_stimuli:
             z_0 = stimuli([idx_0, group])
@@ -113,7 +114,7 @@ def pairwise_similarity(
         s.append(s_batch)
 
         if verbose > 0:
-            if (np.mod(progbar_counter, progbar_update) == 0):
+            if np.mod(progbar_counter, progbar_update) == 0:
                 progbar.update(progbar_counter + 1)
             progbar_counter += 1
 

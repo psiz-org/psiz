@@ -48,14 +48,14 @@ class RandomRate(DocketGenerator):
 
         eligible_indices = np.array(eligible_indices, copy=False)
         if eligible_indices.ndim == 0:
-            raise ValueError('Argument `eligible_indices` must be 1D.')
+            raise ValueError("Argument `eligible_indices` must be 1D.")
         elif eligible_indices.ndim != 1:
-            raise ValueError('Argument `eligible_indices` must be 1D.')
+            raise ValueError("Argument `eligible_indices` must be 1D.")
         self.eligible_indices = eligible_indices
         self.n_stimuli = len(eligible_indices)
 
         if n_present > self.n_stimuli:
-            raise ValueError('`n_present` must be less than `n_stimuli`')
+            raise ValueError("`n_present` must be less than `n_stimuli`")
 
         self.n_present = n_present
         self.mask_zero = mask_zero

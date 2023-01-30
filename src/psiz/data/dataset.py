@@ -41,15 +41,11 @@ class Dataset(object):
                 and `psiz.data.Group` objects.
 
         """
-        n_sample, sequence_length = self._validate_trial_components(
-            components
-        )
+        n_sample, sequence_length = self._validate_trial_components(components)
         self.n_sample = n_sample
         self.sequence_length = sequence_length
 
-        content_list, group_list, outcome_list = self._sort_trial_components(
-            components
-        )
+        content_list, group_list, outcome_list = self._sort_trial_components(components)
         self.content_list = content_list
         self.group_list = group_list
         self.outcome_list = outcome_list
@@ -73,9 +69,7 @@ class Dataset(object):
                     "All user-provided 'DatasetComponent' objects must have "
                     "the same `n_sample`. The 'DatasetComponent' in "
                     "position {0} does not match the previous "
-                    "components.".format(
-                        component_idx + 1
-                    )
+                    "components.".format(component_idx + 1)
                 )
 
             if component.sequence_length != sequence_length:
@@ -83,9 +77,7 @@ class Dataset(object):
                     "All user-provided 'DatasetComponent' objects must have "
                     "the same `sequence_length`. The 'DatasetComponent' in "
                     "position {0} does not match the previous "
-                    "components.".format(
-                        component_idx + 1
-                    )
+                    "components.".format(component_idx + 1)
                 )
 
         return n_sample, sequence_length
@@ -107,9 +99,7 @@ class Dataset(object):
                 raise ValueError(
                     "The `DatasetComponent` in position {0} must be an  "
                     "instance of `psiz.data.Content`, `psiz.data.Outcome`, or "
-                    "`psiz.data.Group` to use `Dataset`.".format(
-                        component_idx
-                    )
+                    "`psiz.data.Group` to use `Dataset`.".format(component_idx)
                 )
 
         return content_list, group_list, outcome_list
@@ -126,13 +116,13 @@ class Dataset(object):
             components.append(outcome)
         return components
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Export trial data as model-consumable object.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 dataset is exported with a timestep axis if any of the
@@ -148,24 +138,21 @@ class Dataset(object):
             with_timestep_axis = False
             for component in self.components:
                 with_timestep_axis = (
-                    with_timestep_axis
-                    or component._export_with_timestep_axis
+                    with_timestep_axis or component._export_with_timestep_axis
                 )
 
         # Assemble model input.
         x = {}
         for content in self.content_list:
             x_i = content.export(
-                export_format=export_format,
-                with_timestep_axis=with_timestep_axis
+                export_format=export_format, with_timestep_axis=with_timestep_axis
             )
             x.update(x_i)
         # Add groups (if present).
         if len(self.group_list) > 0:
             for group in self.group_list:
                 x_i = group.export(
-                    export_format=export_format,
-                    with_timestep_axis=with_timestep_axis
+                    export_format=export_format, with_timestep_axis=with_timestep_axis
                 )
                 x.update(x_i)
 
@@ -175,13 +162,12 @@ class Dataset(object):
             w = {}
             for outcome in self.outcome_list:
                 y_i, w_i = outcome.export(
-                    export_format=export_format,
-                    with_timestep_axis=with_timestep_axis
+                    export_format=export_format, with_timestep_axis=with_timestep_axis
                 )
                 y.update(y_i)
                 w.update(w_i)
 
-        if export_format == 'tfds':
+        if export_format == "tfds":
             try:
                 y = self._prepare_for_tf_dataset(y)
                 w = self._prepare_for_tf_dataset(w)

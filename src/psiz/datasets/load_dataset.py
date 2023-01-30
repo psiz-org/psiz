@@ -47,9 +47,7 @@ import psiz.catalog
 import psiz.trials
 
 
-def load_dataset(
-        dataset_name, cache_subdir='datasets', cache_dir=None,
-        verbose=0):
+def load_dataset(dataset_name, cache_subdir="datasets", cache_dir=None, verbose=0):
     """Download observations and catalog for the requested hosted dataset.
 
     Args:
@@ -67,34 +65,31 @@ def load_dataset(
     """
     warnings.warn(
         (
-            'This function is deprecated and will be removed. Users '
-            'should instead use the '
-            'functionality of their preferred framework such as '
-            '`tf.data.Dataset` to save and load datasets. If you need '
-            'to load a previously hosted dataset, please see the '
-            'separate package `psiz-datasets`; '
-            'version_announced=0.8.0; version_scheduled=0.9.0'
+            "This function is deprecated and will be removed. Users "
+            "should instead use the "
+            "functionality of their preferred framework such as "
+            "`tf.data.Dataset` to save and load datasets. If you need "
+            "to load a previously hosted dataset, please see the "
+            "separate package `psiz-datasets`; "
+            "version_announced=0.8.0; version_scheduled=0.9.0"
         ),
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
-    obs = _fetch_obs(
-        dataset_name, cache_subdir=cache_subdir, cache_dir=cache_dir
-    )
+    obs = _fetch_obs(dataset_name, cache_subdir=cache_subdir, cache_dir=cache_dir)
     catalog = _fetch_catalog(
         dataset_name, cache_subdir=cache_subdir, cache_dir=cache_dir
     )
 
     if verbose > 0:
         print("Dataset Summary")
-        print('  n_stimuli: {0}'.format(catalog.n_stimuli))
-        print('  n_trial: {0}'.format(obs.n_trial))
+        print("  n_stimuli: {0}".format(catalog.n_stimuli))
+        print("  n_trial: {0}".format(obs.n_trial))
 
     return (obs, catalog)
 
 
-def _fetch_catalog(
-        dataset_name, cache_subdir='datasets', cache_dir=None):
+def _fetch_catalog(dataset_name, cache_subdir="datasets", cache_dir=None):
     """Download catalog for the requested dataset.
 
     Args:
@@ -111,7 +106,7 @@ def _fetch_catalog(
 
     # Load from download cache.
     if cache_dir is None:
-        cache_dir = Path.home() / Path('.psiz')
+        cache_dir = Path.home() / Path(".psiz")
     else:
         cache_dir = Path(cache_dir)
     dataset_path = cache_dir / Path(cache_subdir, dataset_name)
@@ -136,23 +131,24 @@ def _fetch_catalog(
 
     if dataset_exists:
         path = _get_file(
-            os.path.join(dataset_name, fname), origin,
-            cache_subdir=cache_subdir, extract=True,
-            cache_dir=cache_dir
+            os.path.join(dataset_name, fname),
+            origin,
+            cache_subdir=cache_subdir,
+            extract=True,
+            cache_dir=cache_dir,
         )
         catalog = psiz.catalog.load_catalog(path)
     else:
         raise ValueError(
-            'The requested dataset `{0}` may not exist since the '
-            'corresponding catalog.hdf5 file does not '
-            'exist.'.format(dataset_name)
+            "The requested dataset `{0}` may not exist since the "
+            "corresponding catalog.hdf5 file does not "
+            "exist.".format(dataset_name)
         )
 
     return catalog
 
 
-def _fetch_obs(
-        dataset_name, cache_subdir='datasets', cache_dir=None):
+def _fetch_obs(dataset_name, cache_subdir="datasets", cache_dir=None):
     """Download observations for the requested dataset.
 
     Args:
@@ -165,11 +161,11 @@ def _fetch_obs(
         obs: An Observations object.
 
     """
-    fname = 'obs_v0.6.0.hdf5'
+    fname = "obs_v0.6.0.hdf5"
 
     # Load from download cache.
     if cache_dir is None:
-        cache_dir = Path.home() / Path('.psiz')
+        cache_dir = Path.home() / Path(".psiz")
     else:
         cache_dir = Path(cache_dir)
     dataset_path = cache_dir / Path(cache_subdir, dataset_name)
@@ -194,21 +190,24 @@ def _fetch_obs(
 
     if dataset_exists:
         path = _get_file(
-            os.path.join(dataset_name, fname), origin,
-            cache_subdir=cache_subdir, extract=True, cache_dir=cache_dir
+            os.path.join(dataset_name, fname),
+            origin,
+            cache_subdir=cache_subdir,
+            extract=True,
+            cache_dir=cache_dir,
         )
         obs = psiz.trials.load_trials(path)
     else:
         raise ValueError(
-            'The requested dataset `{0}` may not exist since the '
-            'corresponding obs.hdf5 file does not '
-            'exist.'.format(dataset_name)
+            "The requested dataset `{0}` may not exist since the "
+            "corresponding obs.hdf5 file does not "
+            "exist.".format(dataset_name)
         )
 
     return obs
 
 
-def _extract_archive(file_path, path='.', archive_format='auto'):
+def _extract_archive(file_path, path=".", archive_format="auto"):
     """Extract an archive if it matches tar, tar.gz, tar.bz, or zip formats.
 
     Args:
@@ -227,16 +226,16 @@ def _extract_archive(file_path, path='.', archive_format='auto'):
     """
     if archive_format is None:
         return False
-    if archive_format == 'auto':
-        archive_format = ['tar', 'zip']
+    if archive_format == "auto":
+        archive_format = ["tar", "zip"]
     if isinstance(archive_format, six.string_types):
         archive_format = [archive_format]
 
     for archive_type in archive_format:
-        if archive_type == 'tar':
+        if archive_type == "tar":
             open_fn = tarfile.open
             is_match_fn = tarfile.is_tarfile
-        if archive_type == 'zip':
+        if archive_type == "zip":
             open_fn = zipfile.ZipFile
             is_match_fn = zipfile.is_zipfile
 
@@ -244,8 +243,7 @@ def _extract_archive(file_path, path='.', archive_format='auto'):
             with open_fn(file_path) as archive:
                 try:
                     archive.extractall(path)
-                except (tarfile.TarError, RuntimeError,
-                        KeyboardInterrupt):
+                except (tarfile.TarError, RuntimeError, KeyboardInterrupt):
                     if os.path.exists(path):
                         if os.path.isfile(path):
                             os.remove(path)
@@ -257,22 +255,28 @@ def _extract_archive(file_path, path='.', archive_format='auto'):
 
 
 def _get_file(
-        fname, origin, untar=False, cache_subdir='datasets', extract=False,
-        archive_format='auto', cache_dir=None):
+    fname,
+    origin,
+    untar=False,
+    cache_subdir="datasets",
+    extract=False,
+    archive_format="auto",
+    cache_dir=None,
+):
     """Download a file from a URL if it not already in the cache."""
     if cache_dir is None:
-        cache_dir = os.path.join(os.path.expanduser('~'), '.psiz')
+        cache_dir = os.path.join(os.path.expanduser("~"), ".psiz")
 
     datadir_base = os.path.expanduser(cache_dir)
     if not os.access(datadir_base, os.W_OK):
-        datadir_base = os.path.join('/tmp', '.psiz')
+        datadir_base = os.path.join("/tmp", ".psiz")
     datadir = os.path.join(datadir_base, cache_subdir)
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
     if untar:
         untar_fpath = os.path.join(datadir, fname)
-        fpath = untar_fpath + '.tar.gz'
+        fpath = untar_fpath + ".tar.gz"
     else:
         fpath = os.path.join(datadir, fname)
 
@@ -283,10 +287,11 @@ def _get_file(
         download = True
 
     if download:
-        print('Downloading data from', origin)
+        print("Downloading data from", origin)
 
-        class ProgressTracker():
+        class ProgressTracker:
             """Download progress bar."""
+
             # Maintain progbar for the lifetime of download.
             # This design was chosen for Python 2.7 compatibility.
             progbar = None
@@ -299,16 +304,14 @@ def _get_file(
             else:
                 ProgressTracker.progbar.update(count * block_size)
 
-        error_msg = 'URL fetch failure on {}: {} -- {}'
+        error_msg = "URL fetch failure on {}: {} -- {}"
         try:
             try:
                 urlretrieve(origin, fpath, dl_progress)
             except HTTPError as e:
                 raise Exception(error_msg.format(origin, e.code, e.msg)) from e
             except URLError as e:
-                raise Exception(
-                    error_msg.format(origin, e.errno, e.reason)
-                ) from e
+                raise Exception(error_msg.format(origin, e.errno, e.reason)) from e
         except (Exception, KeyboardInterrupt):
             if os.path.exists(fpath):
                 os.remove(fpath)
@@ -316,7 +319,7 @@ def _get_file(
 
     if untar:
         if not os.path.exists(untar_fpath):
-            _extract_archive(fpath, datadir, archive_format='tar')
+            _extract_archive(fpath, datadir, archive_format="tar")
         return untar_fpath
 
     if extract:
@@ -325,12 +328,12 @@ def _get_file(
     return fpath
 
 
-class Progbar():
+class Progbar:
     """Displays a progress bar."""
 
     def __init__(
-            self, target, width=30, verbose=1, interval=0.05,
-            stateful_metrics=None):
+        self, target, width=30, verbose=1, interval=0.05, stateful_metrics=None
+    ):
         """Initialize.
 
         Args:
@@ -355,9 +358,8 @@ class Progbar():
             self.stateful_metrics = set()
 
         self._dynamic_display = (
-            (hasattr(sys.stdout, 'isatty') and sys.stdout.isatty())
-            or 'ipykernel' in sys.modules
-        )
+            hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+        ) or "ipykernel" in sys.modules
         self._total_width = 0
         self._seen_so_far = 0
         self._values = collections.OrderedDict()
@@ -380,11 +382,13 @@ class Progbar():
         for k, v in values:
             if k not in self.stateful_metrics:
                 if k not in self._values:
-                    self._values[k] = [v * (current - self._seen_so_far),
-                                       current - self._seen_so_far]
+                    self._values[k] = [
+                        v * (current - self._seen_so_far),
+                        current - self._seen_so_far,
+                    ]
                 else:
                     self._values[k][0] += v * (current - self._seen_so_far)
-                    self._values[k][1] += (current - self._seen_so_far)
+                    self._values[k][1] += current - self._seen_so_far
             else:
                 # Stateful metrics output a numeric value.  This representation
                 # means "take an average from a single value" but keeps the
@@ -393,7 +397,7 @@ class Progbar():
         self._seen_so_far = current
 
         now = time.time()
-        info = ' - %.0fs' % (now - self._start)
+        info = " - %.0fs" % (now - self._start)
         if self.verbose == 1:
             if (
                 (now - self._last_update < self.interval)
@@ -404,27 +408,27 @@ class Progbar():
 
             prev_total_width = self._total_width
             if self._dynamic_display:
-                sys.stdout.write('\b' * prev_total_width)
-                sys.stdout.write('\r')
+                sys.stdout.write("\b" * prev_total_width)
+                sys.stdout.write("\r")
             else:
-                sys.stdout.write('\n')
+                sys.stdout.write("\n")
 
             if self.target is not None:
                 numdigits = int(np.floor(np.log10(self.target))) + 1
-                barstr = '%%%dd/%d [' % (numdigits, self.target)
+                barstr = "%%%dd/%d [" % (numdigits, self.target)
                 displayed_bar = barstr % current
                 prog = float(current) / self.target
                 prog_width = int(self.width * prog)
                 if prog_width > 0:
-                    displayed_bar += ('=' * (prog_width - 1))
+                    displayed_bar += "=" * (prog_width - 1)
                     if current < self.target:
-                        displayed_bar += '>'
+                        displayed_bar += ">"
                     else:
-                        displayed_bar += '='
-                displayed_bar += ('.' * (self.width - prog_width))
-                displayed_bar += ']'
+                        displayed_bar += "="
+                displayed_bar += "." * (self.width - prog_width)
+                displayed_bar += "]"
             else:
-                displayed_bar = '%7d/Unknown' % current
+                displayed_bar = "%7d/Unknown" % current
 
             self._total_width = len(displayed_bar)
             sys.stdout.write(displayed_bar)
@@ -436,40 +440,42 @@ class Progbar():
             if self.target is not None and current < self.target:
                 eta = time_per_unit * (self.target - current)
                 if eta > 3600:
-                    eta_format = ('%d:%02d:%02d' %
-                                  (eta // 3600, (eta % 3600) // 60, eta % 60))
+                    eta_format = "%d:%02d:%02d" % (
+                        eta // 3600,
+                        (eta % 3600) // 60,
+                        eta % 60,
+                    )
                 elif eta > 60:
-                    eta_format = '%d:%02d' % (eta // 60, eta % 60)
+                    eta_format = "%d:%02d" % (eta // 60, eta % 60)
                 else:
-                    eta_format = '%ds' % eta
+                    eta_format = "%ds" % eta
 
-                info = ' - ETA: %s' % eta_format
+                info = " - ETA: %s" % eta_format
             else:
                 if time_per_unit >= 1:
-                    info += ' %.0fs/step' % time_per_unit
+                    info += " %.0fs/step" % time_per_unit
                 elif time_per_unit >= 1e-3:
-                    info += ' %.0fms/step' % (time_per_unit * 1e3)
+                    info += " %.0fms/step" % (time_per_unit * 1e3)
                 else:
-                    info += ' %.0fus/step' % (time_per_unit * 1e6)
+                    info += " %.0fus/step" % (time_per_unit * 1e6)
 
             for k in self._values:
-                info += ' - %s:' % k
+                info += " - %s:" % k
                 if isinstance(self._values[k], list):
-                    avg = np.mean(
-                        self._values[k][0] / max(1, self._values[k][1]))
+                    avg = np.mean(self._values[k][0] / max(1, self._values[k][1]))
                     if abs(avg) > 1e-3:
-                        info += ' %.4f' % avg
+                        info += " %.4f" % avg
                     else:
-                        info += ' %.4e' % avg
+                        info += " %.4e" % avg
                 else:
-                    info += ' %s' % self._values[k]
+                    info += " %s" % self._values[k]
 
             self._total_width += len(info)
             if prev_total_width > self._total_width:
-                info += (' ' * (prev_total_width - self._total_width))
+                info += " " * (prev_total_width - self._total_width)
 
             if self.target is not None and current >= self.target:
-                info += '\n'
+                info += "\n"
 
             sys.stdout.write(info)
             sys.stdout.flush()
@@ -477,14 +483,13 @@ class Progbar():
         elif self.verbose == 2:
             if self.target is None or current >= self.target:
                 for k in self._values:
-                    info += ' - %s:' % k
-                    avg = np.mean(
-                        self._values[k][0] / max(1, self._values[k][1]))
+                    info += " - %s:" % k
+                    avg = np.mean(self._values[k][0] / max(1, self._values[k][1]))
                     if avg > 1e-3:
-                        info += ' %.4f' % avg
+                        info += " %.4f" % avg
                     else:
-                        info += ' %.4e' % avg
-                info += '\n'
+                        info += " %.4e" % avg
+                info += "\n"
 
                 sys.stdout.write(info)
                 sys.stdout.flush()

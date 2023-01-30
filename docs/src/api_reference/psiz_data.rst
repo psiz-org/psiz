@@ -2,5 +2,5 @@
 psiz.data
 #########
 
-.. automodule:: src.psiz.data
+.. automodule:: psiz.data
     :members:

@@ -28,13 +28,13 @@ import psiz.keras.constraints as pk_constraints
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='ExponentialSimilarity'
+    package="psiz.keras.layers", name="ExponentialSimilarity"
 )
 class ExponentialSimilarity(tf.keras.layers.Layer):
     """Exponential family similarity function.
 
     This exponential-family similarity function is parameterized as:
-        s(x,y) = exp(-beta .* d(x,y).^tau) + gamma,
+    s(x,y) = exp(-beta .* d(x,y).^tau) + gamma,
     where x and y are n-dimensional vectors. The exponential family
     function is obtained by integrating across various psychological
     theories [1,2,3,4].
@@ -63,9 +63,15 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, fit_tau=True, fit_gamma=True, fit_beta=True,
-            tau_initializer=None, gamma_initializer=None,
-            beta_initializer=None, **kwargs):
+        self,
+        fit_tau=True,
+        fit_gamma=True,
+        fit_beta=True,
+        tau_initializer=None,
+        gamma_initializer=None,
+        beta_initializer=None,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -84,41 +90,50 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
 
         self.fit_tau = fit_tau
         if tau_initializer is None:
-            tau_initializer = tf.random_uniform_initializer(1., 2.)
+            tau_initializer = tf.random_uniform_initializer(1.0, 2.0)
         self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         tau_trainable = self.trainable and self.fit_tau
         with tf.name_scope(self.name):
             self.tau = self.add_weight(
-                shape=[], initializer=self.tau_initializer,
-                trainable=tau_trainable, name="tau", dtype=K.floatx(),
-                constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+                shape=[],
+                initializer=self.tau_initializer,
+                trainable=tau_trainable,
+                name="tau",
+                dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
 
         self.fit_gamma = fit_gamma
         if gamma_initializer is None:
-            gamma_initializer = tf.random_uniform_initializer(0., .001)
+            gamma_initializer = tf.random_uniform_initializer(0.0, 0.001)
         self.gamma_initializer = tf.keras.initializers.get(gamma_initializer)
         gamma_trainable = self.trainable and self.fit_gamma
         with tf.name_scope(self.name):
             self.gamma = self.add_weight(
-                shape=[], initializer=self.gamma_initializer,
-                trainable=gamma_trainable, name="gamma", dtype=K.floatx(),
-                constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+                shape=[],
+                initializer=self.gamma_initializer,
+                trainable=gamma_trainable,
+                name="gamma",
+                dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
 
         self.fit_beta = fit_beta
         if beta_initializer is None:
             if fit_beta:
-                beta_initializer = tf.random_uniform_initializer(1., 30.)
+                beta_initializer = tf.random_uniform_initializer(1.0, 30.0)
             else:
-                beta_initializer = tf.keras.initializers.Constant(value=10.)
+                beta_initializer = tf.keras.initializers.Constant(value=10.0)
         self.beta_initializer = tf.keras.initializers.get(beta_initializer)
         beta_trainable = self.trainable and self.fit_beta
         with tf.name_scope(self.name):
             self.beta = self.add_weight(
-                shape=[], initializer=self.beta_initializer,
-                trainable=beta_trainable, name="beta", dtype=K.floatx(),
-                constraint=pk_constraints.GreaterThan(min_value=0.0)
+                shape=[],
+                initializer=self.beta_initializer,
+                trainable=beta_trainable,
+                name="beta",
+                dtype=K.floatx(),
+                constraint=pk_constraints.GreaterThan(min_value=0.0),
             )
 
     def call(self, inputs):
@@ -131,25 +146,25 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        return tf.exp(
-            tf.negative(self.beta) * tf.pow(inputs, self.tau)
-        ) + self.gamma
+        return tf.exp(tf.negative(self.beta) * tf.pow(inputs, self.tau)) + self.gamma
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({
-            'fit_tau': self.fit_tau,
-            'fit_gamma': self.fit_gamma,
-            'fit_beta': self.fit_beta,
-            'tau_initializer': tf.keras.initializers.serialize(
-                self.tau_initializer
-            ),
-            'gamma_initializer': tf.keras.initializers.serialize(
-                self.gamma_initializer
-            ),
-            'beta_initializer': tf.keras.initializers.serialize(
-                self.beta_initializer
-            ),
-        })
+        config.update(
+            {
+                "fit_tau": self.fit_tau,
+                "fit_gamma": self.fit_gamma,
+                "fit_beta": self.fit_beta,
+                "tau_initializer": tf.keras.initializers.serialize(
+                    self.tau_initializer
+                ),
+                "gamma_initializer": tf.keras.initializers.serialize(
+                    self.gamma_initializer
+                ),
+                "beta_initializer": tf.keras.initializers.serialize(
+                    self.beta_initializer
+                ),
+            }
+        )
         return config

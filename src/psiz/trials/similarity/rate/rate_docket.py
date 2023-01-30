@@ -84,9 +84,7 @@ class RateDocket(RateTrials):
             A new RateDocket object.
 
         """
-        return RateDocket(
-            self.stimulus_set[index, :], mask_zero=self.mask_zero
-        )
+        return RateDocket(self.stimulus_set[index, :], mask_zero=self.mask_zero)
 
     def _set_configuration_data(self, n_present):
         """Generate a unique ID for each trial configuration.
@@ -110,7 +108,7 @@ class RateDocket(RateTrials):
         n_trial = len(n_present)
 
         # Determine unique display configurations.
-        d = {'n_present': n_present}
+        d = {"n_present": n_present}
         df_config = pd.DataFrame(d)
         df_config = df_config.drop_duplicates()
         n_config = len(df_config)
@@ -119,7 +117,7 @@ class RateDocket(RateTrials):
         config_idx = np.empty(n_trial, dtype=np.int32)
         for i_config in range(n_config):
             # Find trials matching configuration.
-            a = (n_present == df_config['n_present'].iloc[i_config])
+            a = n_present == df_config["n_present"].iloc[i_config]
             # f = np.array((a, b, c))
             # display_type_locs = np.all(f, axis=0)
             config_idx[a] = i_config
@@ -159,8 +157,8 @@ class RateDocket(RateTrials):
         # Return tensorflow dataset.
         stimulus_set = self.stimulus_set
         x = {
-            'stimulus_set': tf.constant(stimulus_set, dtype=tf.int32),
-            'groups': tf.constant(groups, dtype=tf.int32)
+            "stimulus_set": tf.constant(stimulus_set, dtype=tf.int32),
+            "groups": tf.constant(groups, dtype=tf.int32),
         }
         return tf.data.Dataset.from_tensor_slices((x))
 
@@ -179,24 +177,26 @@ class RateDocket(RateTrials):
             A new RateTrials object.
 
         """
-        _, max_n_present, mask_zero = cls._stack_precheck(
-            trials_list
-        )
+        _, max_n_present, mask_zero = cls._stack_precheck(trials_list)
 
         # Grab relevant information from first entry in list.
         n_pad = max_n_present - trials_list[0].max_n_present
         pad_width = ((0, 0), (0, n_pad))
         stimulus_set = np.pad(
-            trials_list[0].stimulus_set, pad_width, mode='constant',
-            constant_values=cls._mask_value
+            trials_list[0].stimulus_set,
+            pad_width,
+            mode="constant",
+            constant_values=cls._mask_value,
         )
 
         for i_trials in trials_list[1:]:
             n_pad = max_n_present - i_trials.max_n_present
             pad_width = ((0, 0), (0, n_pad))
             curr_stimulus_set = np.pad(
-                i_trials.stimulus_set, pad_width, mode='constant',
-                constant_values=cls._mask_value
+                i_trials.stimulus_set,
+                pad_width,
+                mode="constant",
+                constant_values=cls._mask_value,
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
 

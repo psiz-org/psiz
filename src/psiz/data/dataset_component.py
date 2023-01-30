@@ -61,13 +61,13 @@ class DatasetComponent(metaclass=ABCMeta):
         return x
 
     @abstractmethod
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Return appropriately formatted data.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was

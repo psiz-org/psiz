@@ -54,9 +54,7 @@ def ig_model_categorical(model_list, inputs, n_sample):
     """
     sample_axis = 1
     inputs_copied = copy.copy(inputs)
-    inputs_copied = model_list[0].repeat_samples_in_batch_axis(
-        inputs_copied, n_sample
-    )
+    inputs_copied = model_list[0].repeat_samples_in_batch_axis(inputs_copied, n_sample)
 
     output_predictions = []
     for model in model_list:

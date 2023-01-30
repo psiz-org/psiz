@@ -41,7 +41,7 @@ class Group(DatasetComponent):
         self.n_sample = value.shape[0]
         self.sequence_length = value.shape[1]
         if name is None:
-            raise ValueError('Argument `name` must be provided.')
+            raise ValueError("Argument `name` must be provided.")
         self.name = name
         self.value = value
 
@@ -72,13 +72,13 @@ class Group(DatasetComponent):
 
         return value
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Export.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -93,14 +93,10 @@ class Group(DatasetComponent):
         if with_timestep_axis is False:
             value = unravel_timestep(value)
 
-        if export_format == 'tfds':
-            value = tf.constant(
-                value, name=('group_' + self.name)
-            )
+        if export_format == "tfds":
+            value = tf.constant(value, name=("group_" + self.name))
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)
             )
-        return {
-            self.name: value
-        }
+        return {self.name: value}

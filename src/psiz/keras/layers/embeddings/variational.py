@@ -26,7 +26,7 @@ from psiz.keras.layers.variational import Variational
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='EmbeddingVariational'
+    package="psiz.keras.layers", name="EmbeddingVariational"
 )
 class EmbeddingVariational(Variational):
     """Variational analog of Embedding layer."""

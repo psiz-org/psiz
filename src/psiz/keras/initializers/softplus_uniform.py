@@ -26,12 +26,11 @@ from tensorflow.keras import backend as K
 import tensorflow_probability as tfp
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.initializers')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.initializers")
 class SoftplusUniform(initializers.Initializer):
     """Initializer using an inverse-softplus-uniform distribution."""
 
-    def __init__(
-            self, minval=-0.05, maxval=0.05, hinge_softness=1., seed=None):
+    def __init__(self, minval=-0.05, maxval=0.05, hinge_softness=1.0, seed=None):
         """Initialize.
 
         Args:
@@ -54,8 +53,12 @@ class SoftplusUniform(initializers.Initializer):
             dtype = K.floatx()
 
         w = tf.random.uniform(
-            shape, minval=self.minval, maxval=self.maxval, dtype=dtype,
-            seed=self.seed, name=None
+            shape,
+            minval=self.minval,
+            maxval=self.maxval,
+            dtype=dtype,
+            seed=self.seed,
+            name=None,
         )
 
         def generalized_softplus_inverse(x, c):
@@ -70,6 +73,6 @@ class SoftplusUniform(initializers.Initializer):
             "minval": self.minval,
             "maxval": self.maxval,
             "hinge_softness": self.hinge_softness,
-            "seed": self.seed
+            "seed": self.seed,
         }
         return config

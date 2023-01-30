@@ -56,9 +56,7 @@ def ig_categorical(y_pred):
     # expected information gain for.
     # Take mean over samples to approximate p(y_i | obs, c).
     term0 = tf.reduce_mean(y_pred, axis=1)  # shape=(n_event, n_outcome)
-    term0 = term0 * tf.math.log(
-        tf.math.maximum(term0, tf.keras.backend.epsilon())
-    )
+    term0 = term0 * tf.math.log(tf.math.maximum(term0, tf.keras.backend.epsilon()))
     # TODO do I need to zero out place-holder outcomes here? I'm not
     # sure because y_pred is not zero for placeholder elements any more.
     # NOTE: At this point we would need to zero out place-holder outcomes,
@@ -69,9 +67,7 @@ def ig_categorical(y_pred):
 
     # Second term of mutual information.
     # E[H(Y | Z, D, x)]
-    term1 = y_pred * tf.math.log(
-        tf.math.maximum(y_pred, tf.keras.backend.epsilon())
-    )
+    term1 = y_pred * tf.math.log(tf.math.maximum(y_pred, tf.keras.backend.epsilon()))
     # Take the sum over the possible outcomes.
     # NOTE: At this point we would need to zero out place-holder outcomes,
     # but placeholder elements will always have a value of zero since

@@ -28,9 +28,7 @@ from psiz.keras.models.psych_embedding import PsychologicalEmbedding
 import psiz.keras.layers
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.models', name='Rank'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.models", name="Rank")
 class Rank(PsychologicalEmbedding):
     """Psychological embedding inferred from ranked similarity judgments.
 
@@ -52,7 +50,7 @@ class Rank(PsychologicalEmbedding):
         # Initialize behavioral component.
         if behavior is None:
             behavior = psiz.keras.layers.RankBehavior()
-        kwargs.update({'behavior': behavior})
+        kwargs.update({"behavior": behavior})
         super().__init__(**kwargs)
 
     def call(self, inputs):
@@ -72,9 +70,9 @@ class Rank(PsychologicalEmbedding):
 
         """
         # Grab inputs.
-        stimulus_set = inputs['stimulus_set']
-        is_select = inputs['is_select'][:, 1:, :]
-        groups = inputs['groups']
+        stimulus_set = inputs["stimulus_set"]
+        is_select = inputs["is_select"][:, 1:, :]
+        groups = inputs["groups"]
 
         # Define some useful variables before manipulating inputs.
         max_n_reference = tf.shape(stimulus_set)[-2] - 1
@@ -82,13 +80,11 @@ class Rank(PsychologicalEmbedding):
         # Repeat `stimulus_set` `n_sample` times in a newly inserted
         # axis (axis=1).
         # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome])
-        stimulus_set = psiz.utils.expand_dim_repeat(
-            stimulus_set, self.n_sample, axis=1
-        )
+        stimulus_set = psiz.utils.expand_dim_repeat(stimulus_set, self.n_sample, axis=1)
 
         # Enbed stimuli indices in n-dimensional space:
         # TensorShape([batch_size, n_sample, n_ref + 1, n_outcome, n_dim])
-        if self._use_group['stimuli']:
+        if self._use_group["stimuli"]:
             z = self.stimuli([stimulus_set, groups])
         else:
             z = self.stimuli(stimulus_set)
@@ -104,7 +100,7 @@ class Rank(PsychologicalEmbedding):
 
         # Pass through similarity kernel.
         # TensorShape([batch_size, sample_size, n_ref, n_outcome])
-        if self._use_group['kernel']:
+        if self._use_group["kernel"]:
             sim_qr = self.kernel([z_q, z_r, groups])
         else:
             sim_qr = self.kernel([z_q, z_r])
@@ -113,16 +109,12 @@ class Rank(PsychologicalEmbedding):
         # a mask based on reference indices. We drop the query indices
         # because they have effectively been "consumed" by the similarity
         # operation.
-        is_present = tf.cast(
-            tf.math.not_equal(stimulus_set[:, :, 1:], 0), K.floatx()
-        )
+        is_present = tf.cast(tf.math.not_equal(stimulus_set[:, :, 1:], 0), K.floatx())
         sim_qr = sim_qr * is_present
 
         # Prepare for efficient probability computation by adding
         # singleton dimension for `n_sample`.
-        is_select = tf.expand_dims(
-            tf.cast(is_select, K.floatx()), axis=1
-        )
+        is_select = tf.expand_dims(tf.cast(is_select, K.floatx()), axis=1)
         # Determine if outcome is legitamate by checking if at least one
         # reference is present. This is important because not all trials have
         # the same number of possible outcomes and we need to infer the
@@ -130,7 +122,7 @@ class Rank(PsychologicalEmbedding):
         is_outcome = is_present[:, :, 0, :]
 
         # Compute probability of different behavioral outcomes.
-        if self._use_group['behavior']:
+        if self._use_group["behavior"]:
             probs = self.behavior([sim_qr, is_select, is_outcome, groups])
         else:
             probs = self.behavior([sim_qr, is_select, is_outcome])

@@ -64,21 +64,17 @@ class Outcome(DatasetComponent):
             if sample_weight.ndim == 1:
                 # Assume trials are independent and add singleton dimension for
                 # timestep axis.
-                sample_weight = np.expand_dims(
-                    sample_weight, axis=self.timestep_axis
-                )
+                sample_weight = np.expand_dims(sample_weight, axis=self.timestep_axis)
         self._sample_weight = self._validate_sample_weight(sample_weight)
 
     def _validate_sample_weight(self, sample_weight):
-        """Validite `sample_weight`."""
+        """Validate `sample_weight`."""
         # Cast `sample_weight` to float if necessary.
         sample_weight = sample_weight.astype(float)
 
         # Check rank of `sample_weight`.
         if not (sample_weight.ndim == 2):
-            raise ValueError(
-                "The argument 'sample_weight' must be a rank-2 ND array."
-            )
+            raise ValueError("The argument 'sample_weight' must be a rank-2 ND array.")
 
         # Check shape agreement.
         if not (sample_weight.shape[0] == self.n_sample):
@@ -100,7 +96,7 @@ class Outcome(DatasetComponent):
         """Return sample weight."""
         return self._sample_weight
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Export sample_weight.
 
         Subclasses of Outcome must call super().export(...) in order
@@ -109,7 +105,7 @@ class Outcome(DatasetComponent):
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -124,7 +120,7 @@ class Outcome(DatasetComponent):
         if with_timestep_axis is False:
             sample_weight = unravel_timestep(sample_weight)
 
-        if export_format == 'tfds':
+        if export_format == "tfds":
             sample_weight = tf.constant(sample_weight, dtype=K.floatx())
         else:
             raise ValueError(

@@ -44,22 +44,6 @@ class StratifiedGroupKFold(_BaseKFold):
     StratifiedGroupKFold attempts to create folds which preserve the
     percentage of samples for each class.
 
-    Args:
-        n_splits : int, default=5
-            Number of folds. Must be at least 2.
-
-        shuffle : bool, default=False
-            Whether to shuffle each class's samples before splitting
-            into batches. Note that the samples within each split will
-            not be shuffled.
-
-        random_state : int or RandomState instance, default=None
-            When `shuffle` is True, `random_state` affects the ordering
-            of the indices, which controls the randomness of each fold
-            for each class. Otherwise, leave `random_state` as `None`.
-            Pass an int for reproducible output across multiple
-            function calls.
-
     Example:
     ```
     >>> import numpy as np
@@ -103,10 +87,24 @@ class StratifiedGroupKFold(_BaseKFold):
     """
 
     def __init__(self, n_splits=5, shuffle=False, random_state=None):
-        """Initialize."""
-        super().__init__(
-            n_splits=n_splits, shuffle=shuffle, random_state=random_state
-        )
+        """Initialize.
+
+        Args:
+        n_splits (optional): int, default=5
+            Number of folds. Must be at least 2.
+        shuffle (optional): bool, default=False
+            Whether to shuffle each class's samples before splitting
+            into batches. Note that the samples within each split will
+            not be shuffled.
+        random_state (optional): int or RandomState object, default=None
+            When `shuffle` is True, `random_state` affects the ordering
+            of the indices, which controls the randomness of each fold
+            for each class. Otherwise, leave `random_state` as `None`.
+            Pass an int for reproducible output across multiple
+            function calls.
+
+        """
+        super().__init__(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
 
     def _iter_test_indices(self, X, y, groups):
         # pylint: disable=signature-differs
@@ -125,17 +123,21 @@ class StratifiedGroupKFold(_BaseKFold):
         if self.shuffle:
             rng.shuffle(groups_and_y_counts)
 
-        for group, y_counts in sorted(groups_and_y_counts,
-                                      key=lambda x: -np.std(x[1])):
+        for group, y_counts in sorted(groups_and_y_counts, key=lambda x: -np.std(x[1])):
             best_fold = None
             min_eval = None
             for i in range(self.n_splits):
                 y_counts_per_fold[i] += y_counts
                 std_per_label = []
                 for label in range(labels_num):
-                    std_per_label.append(np.std(
-                        [y_counts_per_fold[j][label] / y_distr[label]
-                         for j in range(self.n_splits)]))
+                    std_per_label.append(
+                        np.std(
+                            [
+                                y_counts_per_fold[j][label] / y_distr[label]
+                                for j in range(self.n_splits)
+                            ]
+                        )
+                    )
                 y_counts_per_fold[i] -= y_counts
                 fold_eval = np.mean(std_per_label)
                 if min_eval is None or fold_eval < min_eval:
@@ -145,6 +147,7 @@ class StratifiedGroupKFold(_BaseKFold):
             groups_per_fold[best_fold].add(group)
 
         for i in range(self.n_splits):
-            test_indices = [idx for idx, group in enumerate(groups)
-                            if group in groups_per_fold[i]]
+            test_indices = [
+                idx for idx, group in enumerate(groups) if group in groups_per_fold[i]
+            ]
             yield test_indices

@@ -39,7 +39,5 @@ def unravel_timestep(x):
     x_shape = x.shape
     n_sample = x_shape[0]
     sequence_length = x_shape[1]
-    new_shape = np.hstack(
-        ([n_sample * sequence_length], x_shape[2:])
-    ).astype(dtype=int)
+    new_shape = np.hstack(([n_sample * sequence_length], x_shape[2:])).astype(dtype=int)
     return np.reshape(x, new_shape)

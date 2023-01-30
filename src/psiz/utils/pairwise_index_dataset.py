@@ -29,8 +29,7 @@ from psiz.utils.generate_group_matrix import generate_group_matrix
 
 
 def pairwise_index_dataset(
-    indices, elements='upper', subsample=None, seed=252, batch_size=None,
-    groups=None
+    indices, elements="upper", subsample=None, seed=252, batch_size=None, groups=None
 ):
     """Assemble pairwise combinations.
 
@@ -58,14 +57,14 @@ def pairwise_index_dataset(
     """
     warnings.warn(
         (
-            'This function is deprecated and will be removed. Users '
-            'should instead use the new '
-            '`psiz.utils.pairwise_indices` with `psiz.data.Rate`. See '
-            '`psiz/examples`; '
-            'version_announced=0.8.0; version_scheduled=0.9.0'
+            "This function is deprecated and will be removed. Users "
+            "should instead use the new "
+            "`psiz.utils.pairwise_indices` with `psiz.data.Rate`. See "
+            "`psiz/examples`; "
+            "version_announced=0.8.0; version_scheduled=0.9.0"
         ),
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     # Check if scalar or array-lie.
@@ -73,23 +72,23 @@ def pairwise_index_dataset(
     if indices.ndim == 0:
         indices = np.arange(indices)
     elif indices.ndim != 1:
-        raise ValueError('Argument `indices` must be scalar or 1D.')
+        raise ValueError("Argument `indices` must be scalar or 1D.")
     n_idx = len(indices)
 
     # Start by determine pairs of indices using relative indices.
-    if elements == 'all':
+    if elements == "all":
         idx = np.meshgrid(np.arange(n_idx), np.arange(n_idx))
         idx_0 = idx[0].flatten()
         idx_1 = idx[1].flatten()
-    elif elements == 'upper':
+    elif elements == "upper":
         idx = np.triu_indices(n_idx, 1)
         idx_0 = idx[0]
         idx_1 = idx[1]
-    elif elements == 'lower':
+    elif elements == "lower":
         idx = np.tril_indices(n_idx, -1)
         idx_0 = idx[0]
         idx_1 = idx[1]
-    elif elements == 'off':
+    elif elements == "off":
         idx_upper = np.triu_indices(n_idx, 1)
         idx_lower = np.tril_indices(n_idx, -1)
         idx = (
@@ -105,8 +104,8 @@ def pairwise_index_dataset(
     n_pair = len(idx_0)
     if subsample is not None:
         # Make sure subsample is valid subsample value.
-        if subsample <= 0 or subsample > 1.:
-            raise ValueError('Argument `subsample` must be in ]0,1]')
+        if subsample <= 0 or subsample > 1.0:
+            raise ValueError("Argument `subsample` must be in ]0,1]")
 
         np.random.seed(seed)
         idx_rand = np.random.permutation(n_pair)
@@ -126,18 +125,12 @@ def pairwise_index_dataset(
         group_matrix = generate_group_matrix(n_pair, groups=groups)
         group_matrix = tf.constant(group_matrix, dtype=np.int32)
 
-        ds = tf.data.Dataset.from_tensor_slices(
-            ((idx_0, idx_1, group_matrix))
-        )
+        ds = tf.data.Dataset.from_tensor_slices(((idx_0, idx_1, group_matrix)))
     else:
-        ds = tf.data.Dataset.from_tensor_slices(
-            ((idx_0, idx_1))
-        )
+        ds = tf.data.Dataset.from_tensor_slices(((idx_0, idx_1)))
 
     if batch_size is not None:
-        ds = ds.batch(
-            batch_size, drop_remainder=False
-        )
+        ds = ds.batch(batch_size, drop_remainder=False)
         n_batch = np.ceil(n_pair / batch_size)
         # TODO defautl batch behavior has changed
         # batch_size = np.minimum(10000, n_pair)
@@ -145,9 +138,9 @@ def pairwise_index_dataset(
         n_batch = None
 
     ds_info = {
-        'n_pair': n_pair,
-        'batch_size': batch_size,
-        'n_batch': n_batch,
-        'elements': elements
+        "n_pair": n_pair,
+        "batch_size": batch_size,
+        "n_batch": n_batch,
+        "elements": elements,
     }
     return ds, ds_info

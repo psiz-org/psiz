@@ -23,7 +23,7 @@ Functions:
 import numpy as np
 
 
-def pairwise_indices(indices, elements='upper', subsample=None, rng=None):
+def pairwise_indices(indices, elements="upper", subsample=None, rng=None):
     """Generate an array of pairwise indices.
 
     Args:
@@ -51,23 +51,23 @@ def pairwise_indices(indices, elements='upper', subsample=None, rng=None):
     if indices.ndim == 0:
         indices = np.arange(indices)
     elif indices.ndim != 1:
-        raise ValueError('Argument `indices` must be scalar or 1D.')
+        raise ValueError("Argument `indices` must be scalar or 1D.")
     n_idx = len(indices)
 
     # Start by determine pairs of indices using relative indices.
-    if elements == 'all':
+    if elements == "all":
         idx = np.meshgrid(np.arange(n_idx), np.arange(n_idx))
         idx_0 = idx[0].flatten()
         idx_1 = idx[1].flatten()
-    elif elements == 'upper':
+    elif elements == "upper":
         idx = np.triu_indices(n_idx, 1)
         idx_0 = idx[0]
         idx_1 = idx[1]
-    elif elements == 'lower':
+    elif elements == "lower":
         idx = np.tril_indices(n_idx, -1)
         idx_0 = idx[0]
         idx_1 = idx[1]
-    elif elements == 'off':
+    elif elements == "off":
         idx_upper = np.triu_indices(n_idx, 1)
         idx_lower = np.tril_indices(n_idx, -1)
         idx = (
@@ -83,8 +83,8 @@ def pairwise_indices(indices, elements='upper', subsample=None, rng=None):
     n_pair = len(idx_0)
     if subsample is not None:
         # Make sure subsample is valid subsample value.
-        if subsample <= 0 or subsample > 1.:
-            raise ValueError('Argument `subsample` must be in ]0,1]')
+        if subsample <= 0 or subsample > 1.0:
+            raise ValueError("Argument `subsample` must be in ]0,1]")
         if rng is None:
             rng = np.random.default_rng()
         idx_rand = rng.permutation(n_pair)

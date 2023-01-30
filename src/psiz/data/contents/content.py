@@ -81,18 +81,14 @@ class Content(DatasetComponent, metaclass=ABCMeta):
         """
         attr_list = self._config_attrs()
         if len(attr_list) == 0:
-            config_idx = np.zeros(
-                [self.n_sample, self.sequence_length], dtype=np.int32
-            )
+            config_idx = np.zeros([self.n_sample, self.sequence_length], dtype=np.int32)
             df_config = None
         else:
             # Assemble dictionary of relevant attributes (as flattened array).
             n_trial = self.n_sample * self.sequence_length
             d = {}
             for attr in attr_list:
-                d.update({
-                    attr: np.reshape(getattr(self, attr), [n_trial])
-                })
+                d.update({attr: np.reshape(getattr(self, attr), [n_trial])})
             # Determine unique content configurations by leveraging pandas
             # DataFrame.
             df_config = pd.DataFrame(d)
@@ -102,9 +98,7 @@ class Content(DatasetComponent, metaclass=ABCMeta):
 
             # Loop over distinct configurations in order to determine
             # configuration index for all trials.
-            config_idx = np.zeros(
-                [self.n_sample, self.sequence_length], dtype=np.int32
-            )
+            config_idx = np.zeros([self.n_sample, self.sequence_length], dtype=np.int32)
             for index, row in df_config.iterrows():
                 bidx = self._find_trials_matching_config(row)
                 config_idx[bidx] = index

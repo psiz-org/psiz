@@ -35,8 +35,14 @@ class ActiveRank(DocketGenerator):
     """A trial generator that uses approximate information gain."""
 
     def __init__(
-            self, n_stimuli, n_reference=2, n_select=1, max_unique_query=None,
-            n_candidate=1000, batch_size=128):
+        self,
+        n_stimuli,
+        n_reference=2,
+        n_select=1,
+        max_unique_query=None,
+        n_candidate=1000,
+        batch_size=128,
+    ):
         """Initialize.
 
         Args:
@@ -80,8 +86,14 @@ class ActiveRank(DocketGenerator):
         self.batch_size = batch_size
 
     def generate(
-            self, n_trial, model_list, q_priority=None, r_priority=None,
-            groups=None, verbose=0):
+        self,
+        n_trial,
+        model_list,
+        q_priority=None,
+        r_priority=None,
+        groups=None,
+        verbose=0,
+    ):
         """Return a docket of trials based on provided arguments.
 
         Trials are selected in order to maximize expected information
@@ -141,8 +153,7 @@ class ActiveRank(DocketGenerator):
         # Check that `q_priority` is non-negative.
         if np.sum(np.less(q_priority, 0)) > 0:
             raise ValueError(
-                "The `q_priority` argument must only contain non-negative"
-                " values."
+                "The `q_priority` argument must only contain non-negative" " values."
             )
 
         # Handle r_priority.
@@ -150,9 +161,9 @@ class ActiveRank(DocketGenerator):
             # Uniform sampling probability.
             # NOTE: We divide by `n_stimuli - 1` because we will set the
             # diagonal element in each row to zero.
-            r_priority = np.ones(
-                [self.n_stimuli, self.n_stimuli], dtype=np.float32
-            ) / (self.n_stimuli - 1)
+            r_priority = np.ones([self.n_stimuli, self.n_stimuli], dtype=np.float32) / (
+                self.n_stimuli - 1
+            )
         else:
             r_priority = r_priority.astype(np.float32)
 
@@ -162,8 +173,7 @@ class ActiveRank(DocketGenerator):
         # Check that `r_priority` is non-negative.
         if np.sum(np.less(r_priority, 0)) > 0:
             raise ValueError(
-                "The `r_priority` argument must only contain non-negative"
-                " values."
+                "The `r_priority` argument must only contain non-negative" " values."
             )
 
         # Determine number of unique query stimuli to use in the docket.
@@ -174,13 +184,15 @@ class ActiveRank(DocketGenerator):
             n_trial, q_priority, n_unique_query
         )
         (docket, expected_ig) = self._select_references(
-            model_list, groups, query_idx_arr, query_idx_count_arr,
-            q_priority, r_priority, verbose
+            model_list,
+            groups,
+            query_idx_arr,
+            query_idx_count_arr,
+            q_priority,
+            r_priority,
+            verbose,
         )
-        data = {
-            'docket': {'expected_ig': expected_ig},
-            'meta': {}
-        }
+        data = {"docket": {"expected_ig": expected_ig}, "meta": {}}
 
         return docket, data
 
@@ -222,15 +234,20 @@ class ActiveRank(DocketGenerator):
         return query_idx_arr, query_idx_count_arr
 
     def _select_references(
-            self, model_list, groups, query_idx_arr, query_idx_count_arr,
-            q_priority, r_priority, verbose):
+        self,
+        model_list,
+        groups,
+        query_idx_arr,
+        query_idx_count_arr,
+        q_priority,
+        r_priority,
+        verbose,
+    ):
         """Determine references for all requested query stimuli."""
         n_query = query_idx_arr.shape[0]
 
         if verbose > 0:
-            progbar = ProgressBarRe(
-                n_query, prefix='Active Trials:', length=50
-            )
+            progbar = ProgressBarRe(n_query, prefix="Active Trials:", length=50)
             progbar.update(0)
 
         docket = None
@@ -238,10 +255,16 @@ class ActiveRank(DocketGenerator):
         for i_query in range(n_query):
             r_priority_q = r_priority[query_idx_arr[i_query]]
             docket_q, expected_ig_q = _select_query_references(
-                i_query, model_list, groups, query_idx_arr,
+                i_query,
+                model_list,
+                groups,
+                query_idx_arr,
                 query_idx_count_arr,
-                self.n_reference, self.n_select, self.n_candidate,
-                r_priority_q, self.batch_size
+                self.n_reference,
+                self.n_select,
+                self.n_candidate,
+                r_priority_q,
+                self.batch_size,
             )
 
             if verbose > 0:
@@ -262,8 +285,17 @@ class ActiveRank(DocketGenerator):
 
 
 def _select_query_references(
-        i_query, model_list, groups, query_idx_arr, query_idx_count_arr,
-        n_reference, n_select, n_candidate, r_priority_q, batch_size):
+    i_query,
+    model_list,
+    groups,
+    query_idx_arr,
+    query_idx_count_arr,
+    n_reference,
+    n_select,
+    n_candidate,
+    r_priority_q,
+    batch_size,
+):
     """Determine query references."""
     query_idx = query_idx_arr[i_query]
     n_trial_q = query_idx_count_arr[i_query]
@@ -276,9 +308,7 @@ def _select_query_references(
 
     # Create a docket full of candidate trials.
     n_select = np.repeat(n_select, n_candidate)
-    stimulus_set = np.empty(
-        (n_candidate, n_reference + 1), dtype=np.int32
-    )
+    stimulus_set = np.empty((n_candidate, n_reference + 1), dtype=np.int32)
     stimulus_set[:, 0] = query_idx
     stimulus_set[:, 1:] = choice_wo_replace(
         ref_idx_eligable, (n_candidate, n_reference), ref_prob
@@ -288,9 +318,7 @@ def _select_query_references(
     group_matrix = np.expand_dims(groups, axis=0)
     group_matrix = np.repeat(group_matrix, n_candidate, axis=0)
 
-    ds_docket = docket.as_dataset(group_matrix).batch(
-        batch_size, drop_remainder=False
-    )
+    ds_docket = docket.as_dataset(group_matrix).batch(batch_size, drop_remainder=False)
 
     expected_ig = []
     for x in ds_docket:
@@ -298,9 +326,7 @@ def _select_query_references(
         # Compute average of ensemble of models.
         for model in model_list:
             # Compute expected information gain from prediction samples.
-            batch_expected_ig.append(
-                ig_categorical(model(x, training=False))
-            )
+            batch_expected_ig.append(ig_categorical(model(x, training=False)))
         # TODO Should IG be computed on ensemble samples collectively?
         # for model in model_list:
         #     batch_pred.append(model(x, training=False))
@@ -314,9 +340,7 @@ def _select_query_references(
 
     # Grab the top trials as requested.
     top_indices = np.argsort(-expected_ig)
-    docket = docket.subset(
-        top_indices[0:n_trial_q]
-    )
+    docket = docket.subset(top_indices[0:n_trial_q])
     expected_ig = expected_ig[top_indices[0:n_trial_q]]
 
     return docket, expected_ig

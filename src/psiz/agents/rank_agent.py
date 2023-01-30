@@ -96,8 +96,8 @@ class RankAgent(Agent):  # pylint: disable=too-few-public-methods
             dict_x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
 
             batch_stimulus_set = _rank_sample(
-                dict_x['stimulus_set'],
-                tf.reduce_mean(self.model(dict_x, training=False), axis=1)
+                dict_x["stimulus_set"],
+                tf.reduce_mean(self.model(dict_x, training=False), axis=1),
             )
             if stimulus_set is None:
                 stimulus_set = [batch_stimulus_set]
@@ -110,7 +110,7 @@ class RankAgent(Agent):  # pylint: disable=too-few-public-methods
             n_select=docket.n_select,
             is_ranked=docket.is_ranked,
             mask_zero=docket.mask_zero,
-            groups=group_matrix
+            groups=group_matrix,
         )
         return obs
 
@@ -129,9 +129,7 @@ def _rank_sample(stimulus_set, probs):
             shape=(batch_size, n_reference + 1)
 
     """
-    outcome_distribution = tfp.distributions.Categorical(
-        probs=probs
-    )
+    outcome_distribution = tfp.distributions.Categorical(probs=probs)
     idx_sample = outcome_distribution.sample()
     idx_batch = tf.range(tf.shape(idx_sample)[0])
     idx_batch_sample = tf.stack([idx_batch, idx_sample], axis=1)

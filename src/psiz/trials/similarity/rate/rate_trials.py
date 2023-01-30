@@ -50,7 +50,7 @@ class RateTrials(SimilarityTrials, metaclass=ABCMeta):
         self.n_present = self._check_n_present(self.n_present)
 
         # Format stimulus set.
-        self.stimulus_set = self.stimulus_set[:, 0:self.max_n_present]
+        self.stimulus_set = self.stimulus_set[:, 0 : self.max_n_present]
 
     def _check_n_present(self, n_present):
         """Check the argument `n_present`.
@@ -67,8 +67,11 @@ class RateTrials(SimilarityTrials, metaclass=ABCMeta):
 
         """
         if np.sum(np.less(n_present, 2)) > 0:
-            raise ValueError((
-                "The argument `stimulus_set` must contain at least two "
-                "non-negative integers per a row, i.e., at least "
-                "two stimuli per trial."))
+            raise ValueError(
+                (
+                    "The argument `stimulus_set` must contain at least two "
+                    "non-negative integers per a row, i.e., at least "
+                    "two stimuli per trial."
+                )
+            )
         return n_present

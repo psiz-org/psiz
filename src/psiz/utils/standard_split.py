@@ -39,9 +39,7 @@ def standard_split(obs, shuffle=False, seed=None):
 
     """
     skf = StratifiedKFold(n_splits=5, shuffle=shuffle, random_state=seed)
-    (train_idx, holdout_idx) = list(
-        skf.split(obs.stimulus_set, obs.config_idx)
-    )[0]
+    (train_idx, holdout_idx) = list(skf.split(obs.stimulus_set, obs.config_idx))[0]
     obs_train = obs.subset(train_idx)
     obs_holdout = obs.subset(holdout_idx)
     skf = StratifiedKFold(n_splits=2, shuffle=shuffle, random_state=seed)

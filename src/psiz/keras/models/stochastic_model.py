@@ -28,7 +28,7 @@ from tensorflow.python.eager import backprop
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.models', name='StochasticModel'
+    package="psiz.keras.models", name="StochasticModel"
 )
 class StochasticModel(tf.keras.Model):
     """An abstract Keras model that accomodates stochastic layers.
@@ -122,7 +122,7 @@ class StochasticModel(tf.keras.Model):
         # warning.
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                'ignore', category=UserWarning, module=r'.*indexed_slices'
+                "ignore", category=UserWarning, module=r".*indexed_slices"
             )
             with backprop.GradientTape() as tape:
                 y_pred = self(x, training=True)
@@ -141,14 +141,10 @@ class StochasticModel(tf.keras.Model):
             # work-around is to convert the problematic gradients, which
             # are returned as tf.IndexedSlices, into dense tensors.
             for idx in range(len(gradients)):
-                if gradients[idx].__class__.__name__ == 'IndexedSlices':
-                    gradients[idx] = tf.convert_to_tensor(
-                        gradients[idx]
-                    )
+                if gradients[idx].__class__.__name__ == "IndexedSlices":
+                    gradients[idx] = tf.convert_to_tensor(gradients[idx])
 
-        self.optimizer.apply_gradients(zip(
-            gradients, trainable_variables)
-        )
+        self.optimizer.apply_gradients(zip(gradients, trainable_variables))
 
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
@@ -185,9 +181,7 @@ class StochasticModel(tf.keras.Model):
 
         y_pred = self(x, training=False)
 
-        self.compiled_loss(
-            y, y_pred, sample_weight, regularization_losses=self.losses
-        )
+        self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
@@ -219,9 +213,11 @@ class StochasticModel(tf.keras.Model):
     def get_config(self):
         """Return model configuration."""
         config = super(StochasticModel, self).get_config()
-        config.update({
-            'n_sample': self.n_sample,
-        })
+        config.update(
+            {
+                "n_sample": self.n_sample,
+            }
+        )
         return config
 
     @classmethod
@@ -282,9 +278,7 @@ class StochasticModel(tf.keras.Model):
         """
         if isinstance(data, dict):
             for key in data:
-                val = self.disentangle_repeated_samples(
-                    data[key], n_sample
-                )
+                val = self.disentangle_repeated_samples(data[key], n_sample)
                 data[key] = tf.reduce_mean(val, axis=1)
         else:
             data = self.disentangle_repeated_samples(data, n_sample)

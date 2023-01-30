@@ -1,6 +1,6 @@
-#########
+##########
 psiz.mplot
-#########
+##########
 
-.. automodule:: src.psiz.mplot
+.. automodule:: psiz.mplot
     :members:

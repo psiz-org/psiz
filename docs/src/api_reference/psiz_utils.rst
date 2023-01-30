@@ -1,6 +1,7 @@
-#########
+##########
 psiz.utils
-#########
+##########
 
-.. automodule:: src.psiz.utils
+.. automodule:: psiz.utils
+    :exclude-members: StratifiedGroupKFold
     :members:

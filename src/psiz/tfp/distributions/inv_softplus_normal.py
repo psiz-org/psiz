@@ -27,8 +27,14 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
     """The inverse-softplus-normal distribution."""
 
     def __init__(
-            self, loc, scale, hinge_softness=1., validate_args=False,
-            allow_nan_stats=True, name='InverseSoftplusNormal'):
+        self,
+        loc,
+        scale,
+        hinge_softness=1.0,
+        validate_args=False,
+        allow_nan_stats=True,
+        name="InverseSoftplusNormal",
+    ):
         """Construct an inverse-softplus-normal distribution.
 
         The InverseSoftplusNormal distribution models positive-valued
@@ -63,7 +69,7 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
                 bijector=Softplus(hinge_softness=hinge_softness),
                 validate_args=validate_args,
                 parameters=parameters,
-                name=name
+                name=name,
             )
 
     @classmethod
@@ -129,8 +135,10 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
         assertions = []
         if not self.validate_args:
             return assertions
-        assertions.append(assert_util.assert_non_negative(
-            value, message='Sample must be non-negative.')
+        assertions.append(
+            assert_util.assert_non_negative(
+                value, message="Sample must be non-negative."
+            )
         )
         return assertions
 
@@ -160,5 +168,5 @@ def _kl_lognormal_lognormal(a, b, name=None):
     return kullback_leibler.kl_divergence(
         a.distribution,
         b.distribution,
-        name=(name or 'kl_invsoftplusnormal_invsoftplusnormal')
+        name=(name or "kl_invsoftplusnormal_invsoftplusnormal"),
     )

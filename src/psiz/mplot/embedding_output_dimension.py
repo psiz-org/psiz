@@ -26,7 +26,7 @@ import numpy as np
 import tensorflow_probability as tfp
 
 
-def embedding_output_dimension(embedding, idx, ax=None, c='b'):
+def embedding_output_dimension(embedding, idx, ax=None, c="b"):
     """Visualize all embedding values for a requested output dimension.
 
     Plots point estimates of embedding values for the requested
@@ -68,13 +68,13 @@ def embedding_output_dimension(embedding, idx, ax=None, c='b'):
 
     # Scatter point estimates.
     xg = np.arange(n_input_dim)
-    ax.scatter(xg, z_mode, c=c, marker='_', linewidth=1)
+    ax.scatter(xg, z_mode, c=c, marker="_", linewidth=1)
 
     if is_distribution:
         dist = embedding.embeddings.distribution
 
         # Middle density interval: 99% probability mass.
-        p = .99
+        p = 0.99
         v = (1 - p) / 2
         mdi99_lower = dist.quantile(v).numpy()[:, idx]
         mdi99_upper = dist.quantile(1 - v).numpy()[:, idx]
@@ -83,7 +83,7 @@ def embedding_output_dimension(embedding, idx, ax=None, c='b'):
         y_max = np.max(mdi99_upper)
 
         # Middle density interval: 50% probability mass.
-        p = .5
+        p = 0.5
         v = (1 - p) / 2
         mdi50_lower = dist.quantile(v).numpy()[:, idx]
         mdi50_upper = dist.quantile(1 - v).numpy()[:, idx]
@@ -97,19 +97,15 @@ def embedding_output_dimension(embedding, idx, ax=None, c='b'):
         for i_dim in range(n_input_dim):
             xg = np.array([i_dim, i_dim])
             # Draw thin line for MDI 99%.
-            yg = np.array(
-                [mdi99_lower[i_dim], mdi99_upper[i_dim]]
-            )
+            yg = np.array([mdi99_lower[i_dim], mdi99_upper[i_dim]])
             ax.plot(xg, yg, c=c, linewidth=1)
 
             # Draw thick line for MDI 50%.
-            yg = np.array(
-                [mdi50_lower[i_dim], mdi50_upper[i_dim]]
-            )
+            yg = np.array([mdi50_lower[i_dim], mdi50_upper[i_dim]])
             ax.plot(xg, yg, c=c, linewidth=3)
 
-    ax.set_xlabel('Input Dimension')
-    ax.set_xlim([-.5, n_input_dim - .5])
+    ax.set_xlabel("Input Dimension")
+    ax.set_xlim([-0.5, n_input_dim - 0.5])
 
-    ax.set_ylabel(r'$z$')
+    ax.set_ylabel(r"$z$")
     ax.set_ylim([1.05 * y_min, 1.05 * y_max])

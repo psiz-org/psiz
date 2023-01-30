@@ -27,9 +27,7 @@ from psiz.keras.sparse_dispatcher import SparseDispatcher
 from psiz.keras.layers.gates.split_gate import SplitGate
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='BraidGate'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="BraidGate")
 class BraidGate(SplitGate):
     """A layer that routes inputs to subnetworks.
 
@@ -43,9 +41,10 @@ class BraidGate(SplitGate):
     For more information see `psiz.keras.layers.Gate`
 
     """
+
     def __init__(
-            self, subnets=None, pass_gate_weights=None, strip_inputs=None,
-            **kwargs):
+        self, subnets=None, pass_gate_weights=None, strip_inputs=None, **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -59,8 +58,11 @@ class BraidGate(SplitGate):
 
         """
         super(BraidGate, self).__init__(
-            subnets=subnets, pass_gate_weights=pass_gate_weights,
-            strip_inputs=strip_inputs, **kwargs)
+            subnets=subnets,
+            pass_gate_weights=pass_gate_weights,
+            strip_inputs=strip_inputs,
+            **kwargs
+        )
 
     def call(self, inputs, mask=None):
         """Call.
@@ -70,11 +72,10 @@ class BraidGate(SplitGate):
                 dictionary containing Tensors. If n-tuple, the trailing
                 Tensor is assumed to be a "gate weights" Tensor. If a
                 dictionary, one of the fields is assumed to be
-                `gate_weights`.
-                tuple format:
-                  [data Tensor, [data Tensor, ...], gate_weights Tensor]
-                data Tensor(s): shape=(batch, m, [n, ...])
-                gate_weights Tensor: shape=(batch, g)
+                `gate_weights`. The tuple format follows
+                [data Tensor, [data Tensor, ...], gate_weights Tensor].
+                The data Tensor(s) follows shape=(batch, m, [n, ...]).
+                The gate_weights Tensor follows shape=(batch, g)
             mask (optional): A Tensor indicating which timesteps should
                 be masked.
 
@@ -83,8 +84,7 @@ class BraidGate(SplitGate):
 
         # Run inputs through dispatcher that routes inputs to correct subnet.
         dispatcher = SparseDispatcher(
-            self.n_subnet, gate_weights,
-            has_timestep_axis=self._has_timestep_axis
+            self.n_subnet, gate_weights, has_timestep_axis=self._has_timestep_axis
         )
         subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
         subnet_outputs = []
@@ -145,11 +145,7 @@ class BraidGate(SplitGate):
         # Flatten non-batch dimensions.
         x_shape = tf.shape(x)
         if self._has_timestep_axis:
-            x = tf.reshape(
-                x, [x_shape[0], x_shape[1], -1]
-            )
+            x = tf.reshape(x, [x_shape[0], x_shape[1], -1])
         else:
-            x = tf.reshape(
-                x, [x_shape[0], -1]
-            )
+            x = tf.reshape(x, [x_shape[0], -1])
         return x, x_shape

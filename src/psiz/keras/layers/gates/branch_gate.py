@@ -27,9 +27,7 @@ from psiz.keras.sparse_dispatcher import SparseDispatcher
 from psiz.keras.layers.gates.split_gate import SplitGate
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='BranchGate'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="BranchGate")
 class BranchGate(SplitGate):
     """A layer that routes inputs to subnetworks.
 
@@ -39,9 +37,15 @@ class BranchGate(SplitGate):
     For more information see: `psiz.keras.layers.Gate`
 
     """
+
     def __init__(
-            self, subnets=None, pass_gate_weights=None, strip_inputs=None,
-            output_names=None, **kwargs):
+        self,
+        subnets=None,
+        pass_gate_weights=None,
+        strip_inputs=None,
+        output_names=None,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -59,12 +63,15 @@ class BranchGate(SplitGate):
 
         """
         super(BranchGate, self).__init__(
-            subnets=subnets, pass_gate_weights=pass_gate_weights,
-            strip_inputs=strip_inputs, **kwargs)
+            subnets=subnets,
+            pass_gate_weights=pass_gate_weights,
+            strip_inputs=strip_inputs,
+            **kwargs
+        )
         if output_names is None:
             output_names = []
             for i_subnet in range(self.n_subnet):
-                output_names.append(self.name + '_{0}'.format(i_subnet))
+                output_names.append(self.name + "_{0}".format(i_subnet))
         self.output_names = output_names
 
     def call(self, inputs, mask=None):
@@ -72,11 +79,10 @@ class BranchGate(SplitGate):
 
         Args:
             inputs: a n-tuple containing a data Tensor and a trailing
-                "gate weights" Tensor.
-                tuple format:
-                  [data Tensor, [data Tensor, ...], gate_weights Tensor]
-                data Tensor(s): shape=(batch, m, [n, ...])
-                gate_weights Tensor: shape=(batch, g)
+                "gate weights" Tensor. The tuple format follows:
+                [data Tensor, [data Tensor, ...], gate_weights Tensor].
+                The data Tensor(s) follows: shape=(batch, m, [n, ...]).
+                the gate_weights Tensor follows: shape=(batch, g)
             mask (optional): A Tensor indicating which timesteps should
                 be masked.
 

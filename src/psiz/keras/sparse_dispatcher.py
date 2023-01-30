@@ -41,6 +41,7 @@ Classes:
 
 """
 import tensorflow as tf
+
 # from tensorflow.python.framework import function
 
 
@@ -66,7 +67,7 @@ import tensorflow as tf
 #     return x
 
 
-class SparseDispatcher():
+class SparseDispatcher:
     """Helper for implementing a mixture of experts.
 
     The purpose of this class is to create input minibatches for a list
@@ -144,25 +145,19 @@ class SparseDispatcher():
         # as a 2D Tensor of matrix indices, (i.e., shape=(n_nonzero, 2)),
         # where the first column is the expert index and the second column
         # is an index in to the minibatch position.
-        where = tf.cast(
-            tf.where(tf.transpose(self._gates) > 0), tf.int32
-        )
+        where = tf.cast(tf.where(tf.transpose(self._gates) > 0), tf.int32)
 
         # Split `where` Tensor into two separate columns.
-        self._expert_index, self._batch_index = tf.unstack(
-            where, num=2, axis=1
-        )
+        self._expert_index, self._batch_index = tf.unstack(where, num=2, axis=1)
 
         # Determine minibatch sizes for each expert.
-        self._part_sizes_tensor = tf.reduce_sum(
-            tf.cast(self._gates > 0, tf.int32), [0]
-        )
+        self._part_sizes_tensor = tf.reduce_sum(tf.cast(self._gates > 0, tf.int32), [0])
 
         # Grab nonzero gate values (in the same order as `where`).
         self._nonzero_gates = tf.gather(
             tf.reshape(self._gates, [-1]),
             self._batch_index * num_experts + self._expert_index,
-            axis=0
+            axis=0,
         )
 
     # @add_name_scope()
@@ -263,9 +258,7 @@ class SparseDispatcher():
             inp_shape = tf.shape(inp)
             if self._has_timestep_axis:
                 # Combine batch and timestep axis via `reshape`.
-                inp2 = tf.reshape(
-                    inp, tf.concat([[-1], inp_shape[2:]], 0)
-                )
+                inp2 = tf.reshape(inp, tf.concat([[-1], inp_shape[2:]], 0))
                 inp2_shape = tf.shape(inp2)
                 # Sort/replicate inputs for splitting.
                 inp2 = tf.gather(inp2, self._batch_index, axis=0)
@@ -276,7 +269,7 @@ class SparseDispatcher():
                     inp_expert = tf.scatter_nd(
                         indices=indices[i_expert],
                         updates=inp2[i_expert],
-                        shape=inp2_shape
+                        shape=inp2_shape,
                     )
                     # Reshape to include timestep axis.
                     inp_expert = tf.reshape(inp_expert, inp_shape)
@@ -292,7 +285,7 @@ class SparseDispatcher():
                     inp_expert = tf.scatter_nd(
                         indices=indices[i_expert],
                         updates=inp[i_expert],
-                        shape=inp_shape
+                        shape=inp_shape,
                     )
                     if inputs_is_dict:
                         expert_list[i_expert][key] = inp_expert

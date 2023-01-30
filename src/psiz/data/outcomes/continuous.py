@@ -66,13 +66,13 @@ class Continuous(Outcome):
 
         return value
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Return appropriately formatted data.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -91,7 +91,7 @@ class Continuous(Outcome):
         if with_timestep_axis is False:
             value = unravel_timestep(value)
 
-        if export_format == 'tfds':
+        if export_format == "tfds":
             y = tf.constant(value, dtype=K.floatx())
         else:
             raise ValueError(

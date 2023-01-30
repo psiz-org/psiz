@@ -49,8 +49,14 @@ class Variational(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, posterior=None, prior=None, kl_weight=0., kl_use_exact=False,
-            kl_n_sample=100, **kwargs):
+        self,
+        posterior=None,
+        prior=None,
+        kl_weight=0.0,
+        kl_use_exact=False,
+        kl_n_sample=100,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -76,9 +82,11 @@ class Variational(tf.keras.layers.Layer):
         self.kl_use_exact = kl_use_exact
         self.kl_n_sample = kl_n_sample
         self.kl_anneal = self.add_weight(
-            name='kl_anneal', shape=[], dtype=K.floatx(),
-            initializer=tf.keras.initializers.Constant(1.),
-            trainable=False
+            name="kl_anneal",
+            shape=[],
+            dtype=K.floatx(),
+            initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
         )
 
     def build(self, input_shape):
@@ -91,15 +99,15 @@ class Variational(tf.keras.layers.Layer):
         """Add KL divergence loss."""
         if self.kl_use_exact:
             self.add_loss(
-                kl_lib.kl_divergence(
-                    posterior_dist, prior_dist
-                ) * self.kl_weight * self.kl_anneal
+                kl_lib.kl_divergence(posterior_dist, prior_dist)
+                * self.kl_weight
+                * self.kl_anneal
             )
         else:
             self.add_loss(
-                self._kl_approximation(
-                    posterior_dist, prior_dist
-                ) * self.kl_weight * self.kl_anneal
+                self._kl_approximation(posterior_dist, prior_dist)
+                * self.kl_weight
+                * self.kl_anneal
             )
 
     def _kl_approximation(self, posterior_dist, prior_dist):
@@ -113,13 +121,15 @@ class Variational(tf.keras.layers.Layer):
     def get_config(self):
         """Return configuration."""
         config = super().get_config()
-        config.update({
-            'posterior': tf.keras.utils.serialize_keras_object(self.posterior),
-            'prior': tf.keras.utils.serialize_keras_object(self.prior),
-            'kl_weight': float(self.kl_weight),
-            'kl_use_exact': self.kl_use_exact,
-            'kl_n_sample': int(self.kl_n_sample),
-        })
+        config.update(
+            {
+                "posterior": tf.keras.utils.serialize_keras_object(self.posterior),
+                "prior": tf.keras.utils.serialize_keras_object(self.prior),
+                "kl_weight": float(self.kl_weight),
+                "kl_use_exact": self.kl_use_exact,
+                "kl_n_sample": int(self.kl_n_sample),
+            }
+        )
         return config
 
     @classmethod
@@ -137,6 +147,6 @@ class Variational(tf.keras.layers.Layer):
             layer: A layer instance.
 
         """
-        config['posterior'] = tf.keras.layers.deserialize(config['posterior'])
-        config['prior'] = tf.keras.layers.deserialize(config['prior'])
+        config["posterior"] = tf.keras.layers.deserialize(config["posterior"])
+        config["prior"] = tf.keras.layers.deserialize(config["prior"])
         return cls(**config)

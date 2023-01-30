@@ -46,24 +46,32 @@ class PsychologicalEmbedding(tf.keras.Model):
             layers.
 
     """
+
     def __init_subclass__(cls, **kwargs):
         """Subclassing initialization."""
         warnings.warn(
             (
-                f'{cls.__name__} is deprecated and will be removed. '
-                'You should create a subclassed or functional Model instead. '
-                'Please see the models in the updated `examples/`; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{cls.__name__} is deprecated and will be removed. "
+                "You should create a subclassed or functional Model instead. "
+                "Please see the models in the updated `examples/`; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super().__init_subclass__(**kwargs)
 
     def __init__(
-            self, stimuli=None, kernel=None, behavior=None, n_sample=1,
-            use_group_stimuli=False, use_group_kernel=False,
-            use_group_behavior=False, **kwargs):
+        self,
+        stimuli=None,
+        kernel=None,
+        behavior=None,
+        n_sample=1,
+        use_group_stimuli=False,
+        use_group_kernel=False,
+        use_group_behavior=False,
+        **kwargs,
+    ):
         """Initialize.
 
         Args:
@@ -89,14 +97,14 @@ class PsychologicalEmbedding(tf.keras.Model):
         """
         warnings.warn(
             (
-                f'{self.__class__.__name__} is deprecated and will be '
-                'removed. '
-                'You should create a subclassed or functional Model instead. '
-                'Please see the models in the updated `examples/`; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{self.__class__.__name__} is deprecated and will be "
+                "removed. "
+                "You should create a subclassed or functional Model instead. "
+                "Please see the models in the updated `examples/`; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super().__init__(**kwargs)
 
@@ -107,9 +115,9 @@ class PsychologicalEmbedding(tf.keras.Model):
 
         # Handle layer switches.
         self._use_group = {
-            'stimuli': use_group_stimuli,
-            'kernel': use_group_kernel,
-            'behavior': use_group_behavior
+            "stimuli": use_group_stimuli,
+            "kernel": use_group_kernel,
+            "behavior": use_group_behavior,
         }
 
         self._n_sample = n_sample
@@ -238,7 +246,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         # warning.
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                'ignore', category=UserWarning, module=r'.*indexed_slices'
+                "ignore", category=UserWarning, module=r".*indexed_slices"
             )
             with backprop.GradientTape() as tape:
                 # Average over samples.
@@ -258,14 +266,10 @@ class PsychologicalEmbedding(tf.keras.Model):
             # work-around is to convert the problematic gradients, which
             # are returned as tf.IndexedSlices, into dense tensors.
             for idx in range(len(gradients)):
-                if gradients[idx].__class__.__name__ == 'IndexedSlices':
-                    gradients[idx] = tf.convert_to_tensor(
-                        gradients[idx]
-                    )
+                if gradients[idx].__class__.__name__ == "IndexedSlices":
+                    gradients[idx] = tf.convert_to_tensor(gradients[idx])
 
-        self.optimizer.apply_gradients(zip(
-            gradients, trainable_variables)
-        )
+        self.optimizer.apply_gradients(zip(gradients, trainable_variables))
 
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
@@ -276,8 +280,10 @@ class PsychologicalEmbedding(tf.keras.Model):
         Standard prediction is performmed with one sample. To
         accommodate variational inference, the log probability of the
         data is computed by averaging over samples from the model:
+        ```
         p(heldout | train) = int_model p(heldout|model) p(model|train)
                           ~= 1/n * sum_{i=1}^n p(heldout | model_i)
+        ```
         where model_i is a draw from the posterior p(model|train).
 
         Args:
@@ -296,9 +302,7 @@ class PsychologicalEmbedding(tf.keras.Model):
         # dimension, taking the mean is equivalent to a squeeze
         # operation.
         y_pred = tf.reduce_mean(self(x, training=False), axis=1)
-        self.compiled_loss(
-            y, y_pred, sample_weight, regularization_losses=self.losses
-        )
+        self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
         self.compiled_metrics.update_state(y, y_pred, sample_weight)
         return {m.name: m.result() for m in self.metrics}
 
@@ -324,27 +328,23 @@ class PsychologicalEmbedding(tf.keras.Model):
     def get_config(self):
         """Return model configuration."""
         ver = version("psiz")
-        ver = '.'.join(ver.split('.')[:3])
+        ver = ".".join(ver.split(".")[:3])
 
         layer_configs = {
-            'stimuli': tf.keras.utils.serialize_keras_object(
-                self.stimuli
-            ),
-            'kernel': tf.keras.utils.serialize_keras_object(
-                self.kernel
-            ),
-            'behavior': tf.keras.utils.serialize_keras_object(self.behavior)
+            "stimuli": tf.keras.utils.serialize_keras_object(self.stimuli),
+            "kernel": tf.keras.utils.serialize_keras_object(self.kernel),
+            "behavior": tf.keras.utils.serialize_keras_object(self.behavior),
         }
 
         config = {
-            'name': self.name,
-            'class_name': self.__class__.__name__,
-            'psiz_version': ver,
-            'n_sample': self.n_sample,
-            'layers': copy.deepcopy(layer_configs),
-            'use_group_stimuli': self._use_group['stimuli'],
-            'use_group_kernel': self._use_group['kernel'],
-            'use_group_behavior': self._use_group['behavior'],
+            "name": self.name,
+            "class_name": self.__class__.__name__,
+            "psiz_version": ver,
+            "n_sample": self.n_sample,
+            "layers": copy.deepcopy(layer_configs),
+            "use_group_stimuli": self._use_group["stimuli"],
+            "use_group_kernel": self._use_group["kernel"],
+            "use_group_behavior": self._use_group["behavior"],
         }
         return config
 
@@ -360,17 +360,17 @@ class PsychologicalEmbedding(tf.keras.Model):
 
         """
         model_config = copy.deepcopy(config)
-        model_config.pop('class_name', None)
-        model_config.pop('psiz_version', None)
+        model_config.pop("class_name", None)
+        model_config.pop("psiz_version", None)
 
         # Deserialize layers.
-        layer_configs = model_config.pop('layers', None)
+        layer_configs = model_config.pop("layers", None)
         built_layers = {}
         for layer_name, layer_config in layer_configs.items():
             layer = tf.keras.layers.deserialize(layer_config)
             # Convert old saved models.
-            if layer_name == 'embedding':
-                layer_name = 'stimuli'  # pragma: no cover
+            if layer_name == "embedding":
+                layer_name = "stimuli"  # pragma: no cover
             built_layers[layer_name] = layer
 
         model_config.update(built_layers)

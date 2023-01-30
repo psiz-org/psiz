@@ -24,14 +24,13 @@ Classes:
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.eager import context
+
 # from tensorflow.keras.utils import tf_utils
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import embedding_ops
 import tensorflow_probability as tfp
 
-from psiz.keras.layers.embeddings.stochastic_embedding import (
-    StochasticEmbedding
-)
+from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 
 
 class _EmbeddingLocScale(StochasticEmbedding):
@@ -41,12 +40,24 @@ class _EmbeddingLocScale(StochasticEmbedding):
     distribution.
 
     """
+
     def __init__(
-            self, input_dim, output_dim, mask_zero=False, input_length=1,
-            loc_initializer=None, scale_initializer=None, loc_regularizer=None,
-            scale_regularizer=None, loc_constraint=None, scale_constraint=None,
-            loc_trainable=True, scale_trainable=True, sample_shape=(),
-            **kwargs):
+        self,
+        input_dim,
+        output_dim,
+        mask_zero=False,
+        input_length=1,
+        loc_initializer=None,
+        scale_initializer=None,
+        loc_regularizer=None,
+        scale_regularizer=None,
+        loc_constraint=None,
+        scale_constraint=None,
+        loc_trainable=True,
+        scale_trainable=True,
+        sample_shape=(),
+        **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -72,8 +83,12 @@ class _EmbeddingLocScale(StochasticEmbedding):
 
         """
         super(_EmbeddingLocScale, self).__init__(
-            input_dim, output_dim, mask_zero=mask_zero,
-            input_length=input_length, sample_shape=sample_shape, **kwargs
+            input_dim,
+            output_dim,
+            mask_zero=mask_zero,
+            input_length=input_length,
+            sample_shape=sample_shape,
+            **kwargs
         )
 
         # Handle initializers.
@@ -81,30 +96,18 @@ class _EmbeddingLocScale(StochasticEmbedding):
             loc_initializer = tf.keras.initializers.RandomUniform()
         self.loc_initializer = tf.keras.initializers.get(loc_initializer)
         if scale_initializer is None:
-            scale_initializer = (
-                tf.keras.initializers.RandomNormal(
-                    mean=tfp.math.softplus_inverse(1.), stddev=.001
-                )
+            scale_initializer = tf.keras.initializers.RandomNormal(
+                mean=tfp.math.softplus_inverse(1.0), stddev=0.001
             )
-        self.scale_initializer = tf.keras.initializers.get(
-            scale_initializer
-        )
+        self.scale_initializer = tf.keras.initializers.get(scale_initializer)
 
         # Handle regularizers.
-        self.loc_regularizer = tf.keras.regularizers.get(
-            loc_regularizer
-        )
-        self.scale_regularizer = tf.keras.regularizers.get(
-            scale_regularizer
-        )
+        self.loc_regularizer = tf.keras.regularizers.get(loc_regularizer)
+        self.scale_regularizer = tf.keras.regularizers.get(scale_regularizer)
 
         # Handle constraints.
-        self.loc_constraint = tf.keras.constraints.get(
-            loc_constraint
-        )
-        self.scale_constraint = tf.keras.constraints.get(
-            scale_constraint
-        )
+        self.loc_constraint = tf.keras.constraints.get(loc_constraint)
+        self.scale_constraint = tf.keras.constraints.get(scale_constraint)
 
         self.loc_trainable = self.trainable and loc_trainable
         self.scale_trainable = self.trainable and scale_trainable
@@ -121,10 +124,8 @@ class _EmbeddingLocScale(StochasticEmbedding):
         # which can handle sparse optimizers.
         with tf.name_scope(self.name):
             if context.executing_eagerly() and context.context().num_gpus():
-                with ops.device('cpu:0'):
-                    self.embeddings = self._build_embeddings_distribution(
-                        dtype
-                    )
+                with ops.device("cpu:0"):
+                    self.embeddings = self._build_embeddings_distribution(dtype)
             else:
                 self.embeddings = self._build_embeddings_distribution(dtype)
 
@@ -165,20 +166,26 @@ class _EmbeddingLocScale(StochasticEmbedding):
     def get_config(self):
         """Return layer configuration."""
         config = super(_EmbeddingLocScale, self).get_config()
-        config.update({
-            'loc_initializer':
-                tf.keras.initializers.serialize(self.loc_initializer),
-            'scale_initializer':
-                tf.keras.initializers.serialize(self.scale_initializer),
-            'loc_regularizer':
-                tf.keras.regularizers.serialize(self.loc_regularizer),
-            'scale_regularizer':
-                tf.keras.regularizers.serialize(self.scale_regularizer),
-            'loc_constraint':
-                tf.keras.constraints.serialize(self.loc_constraint),
-            'scale_constraint':
-                tf.keras.constraints.serialize(self.scale_constraint),
-            'loc_trainable': self.loc_trainable,
-            'scale_trainable': self.scale_trainable,
-        })
+        config.update(
+            {
+                "loc_initializer": tf.keras.initializers.serialize(
+                    self.loc_initializer
+                ),
+                "scale_initializer": tf.keras.initializers.serialize(
+                    self.scale_initializer
+                ),
+                "loc_regularizer": tf.keras.regularizers.serialize(
+                    self.loc_regularizer
+                ),
+                "scale_regularizer": tf.keras.regularizers.serialize(
+                    self.scale_regularizer
+                ),
+                "loc_constraint": tf.keras.constraints.serialize(self.loc_constraint),
+                "scale_constraint": tf.keras.constraints.serialize(
+                    self.scale_constraint
+                ),
+                "loc_trainable": self.loc_trainable,
+                "scale_trainable": self.scale_trainable,
+            }
+        )
         return config

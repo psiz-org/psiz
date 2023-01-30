@@ -24,7 +24,7 @@ import tensorflow as tf
 from tensorflow.keras import constraints
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
 class Center(constraints.Constraint):
     """Constrains the weights to be zero-centered.
 
@@ -49,4 +49,4 @@ class Center(constraints.Constraint):
 
     def get_config(self):
         """Return configuration."""
-        return {'axis': self.axis}
+        return {"axis": self.axis}

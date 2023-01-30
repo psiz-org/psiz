@@ -29,7 +29,7 @@ from psiz.tf.ops.wpnorm import wpnorm
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='Minkowski'
+    package="psiz.keras.layers", name="Minkowski"
 )
 class Minkowski(tf.keras.layers.Layer):
     """Minkowski pairwise distance.
@@ -43,10 +43,17 @@ class Minkowski(tf.keras.layers.Layer):
     """
 
     def __init__(
-            self, rho_trainable=True, rho_initializer=None,
-            rho_regularizer=None, rho_constraint=None, w_trainable=True,
-            w_initializer=None, w_regularizer=None, w_constraint=None,
-            **kwargs):
+        self,
+        rho_trainable=True,
+        rho_initializer=None,
+        rho_regularizer=None,
+        rho_constraint=None,
+        w_trainable=True,
+        w_initializer=None,
+        w_regularizer=None,
+        w_constraint=None,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -64,7 +71,7 @@ class Minkowski(tf.keras.layers.Layer):
 
         self.rho_trainable = self.trainable and rho_trainable
         if rho_initializer is None:
-            rho_initializer = tf.random_uniform_initializer(1., 2.)
+            rho_initializer = tf.random_uniform_initializer(1.0, 2.0)
         self.rho_initializer = tf.keras.initializers.get(rho_initializer)
         self.rho_regularizer = tf.keras.regularizers.get(rho_regularizer)
         if rho_constraint is None:
@@ -72,15 +79,18 @@ class Minkowski(tf.keras.layers.Layer):
         self.rho_constraint = tf.keras.constraints.get(rho_constraint)
         with tf.name_scope(self.name):
             self.rho = self.add_weight(
-                shape=[], initializer=self.rho_initializer,
-                regularizer=self.rho_regularizer, trainable=self.rho_trainable,
-                name="rho", dtype=K.floatx(),
-                constraint=self.rho_constraint
+                shape=[],
+                initializer=self.rho_initializer,
+                regularizer=self.rho_regularizer,
+                trainable=self.rho_trainable,
+                name="rho",
+                dtype=K.floatx(),
+                constraint=self.rho_constraint,
             )
 
         self.w_trainable = self.trainable and w_trainable
         if w_initializer is None:
-            w_initializer = tf.random_uniform_initializer(1.01, 3.)
+            w_initializer = tf.random_uniform_initializer(1.01, 3.0)
         self.w_initializer = tf.keras.initializers.get(w_initializer)
         self.w_regularizer = tf.keras.regularizers.get(w_regularizer)
         if w_constraint is None:
@@ -93,9 +103,13 @@ class Minkowski(tf.keras.layers.Layer):
         """Build."""
         with tf.name_scope(self.name):
             self.w = self.add_weight(
-                shape=[input_shape[0][-1]], initializer=self.w_initializer,
-                regularizer=self.w_regularizer, trainable=self.w_trainable,
-                name="w", dtype=K.floatx(), constraint=self.w_constraint
+                shape=[input_shape[0][-1]],
+                initializer=self.w_initializer,
+                regularizer=self.w_regularizer,
+                trainable=self.w_trainable,
+                name="w",
+                dtype=K.floatx(),
+                constraint=self.w_constraint,
             )
 
     def call(self, inputs):
@@ -131,20 +145,20 @@ class Minkowski(tf.keras.layers.Layer):
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({
-            'rho_initializer':
-                tf.keras.initializers.serialize(self.rho_initializer),
-            'w_initializer':
-                tf.keras.initializers.serialize(self.w_initializer),
-            'rho_regularizer':
-                tf.keras.regularizers.serialize(self.rho_regularizer),
-            'w_regularizer':
-                tf.keras.regularizers.serialize(self.w_regularizer),
-            'rho_constraint':
-                tf.keras.constraints.serialize(self.rho_constraint),
-            'w_constraint':
-                tf.keras.constraints.serialize(self.w_constraint),
-            'rho_trainable': self.rho_trainable,
-            'w_trainable': self.w_trainable,
-        })
+        config.update(
+            {
+                "rho_initializer": tf.keras.initializers.serialize(
+                    self.rho_initializer
+                ),
+                "w_initializer": tf.keras.initializers.serialize(self.w_initializer),
+                "rho_regularizer": tf.keras.regularizers.serialize(
+                    self.rho_regularizer
+                ),
+                "w_regularizer": tf.keras.regularizers.serialize(self.w_regularizer),
+                "rho_constraint": tf.keras.constraints.serialize(self.rho_constraint),
+                "w_constraint": tf.keras.constraints.serialize(self.w_constraint),
+                "rho_trainable": self.rho_trainable,
+                "w_trainable": self.w_trainable,
+            }
+        )
         return config

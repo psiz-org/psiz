@@ -47,9 +47,17 @@ class RandomRank(DocketGenerator):
     """
 
     def __init__(
-            self, indices, n_reference=2, n_select=1, w=None,
-            replace=True, n_highest=None, n_worker=1, mask_zero=False,
-            verbose=0):
+        self,
+        indices,
+        n_reference=2,
+        n_select=1,
+        w=None,
+        replace=True,
+        n_highest=None,
+        n_worker=1,
+        mask_zero=False,
+        verbose=0,
+    ):
         """Initialize.
 
         Args:
@@ -100,18 +108,14 @@ class RandomRank(DocketGenerator):
         if indices.ndim == 0:
             indices = np.arange(indices)
         elif indices.ndim != 1:
-            raise ValueError('Argument `indices` must be 1D.')
+            raise ValueError("Argument `indices` must be 1D.")
         self.indices = indices
         self.n_idx = len(indices)
 
         if n_reference > self.n_idx:
-            raise ValueError(
-                'Argument `n_reference` must be less than `n_idx`'
-            )
+            raise ValueError("Argument `n_reference` must be less than `n_idx`")
         if n_select > n_reference:
-            raise ValueError(
-                'Argument `n_select` must be less than `n_reference`'
-            )
+            raise ValueError("Argument `n_select` must be less than `n_reference`")
 
         # Sanitize inputs.
         self.n_reference = np.int32(n_reference)
@@ -156,30 +160,26 @@ class RandomRank(DocketGenerator):
         query_idx_list = np.arange(self.n_idx)
         # Determine eligable queries from diagonal of `w`.
         w_diag = np.diag(self.w)
-        bidx = np.greater(w_diag, 0.)
+        bidx = np.greater(w_diag, 0.0)
         query_idx_list = query_idx_list[bidx]
         w_diag = w_diag[bidx]
 
         if len(bidx) == 0:
             raise ValueError(
-                'No queries are eligable. You must have some non-zero values'
-                'on the diagonal of `w`.'
+                "No queries are eligable. You must have some non-zero values"
+                "on the diagonal of `w`."
             )
 
         if per_query:
             # Generate `n_trial` for each query.
-            n_trial_per_query_list = np.full(
-                [len(query_idx_list)], n_trial
-            )
+            n_trial_per_query_list = np.full([len(query_idx_list)], n_trial)
         else:
             # Draw query index counts.
             w_diag = w_diag / np.sum(w_diag)
             rng = np.random.default_rng()
             n_trial_per_query_list = rng.multinomial(n_trial, w_diag)
 
-        stimulus_set = self._uniprocess_generate(
-            query_idx_list, n_trial_per_query_list
-        )
+        stimulus_set = self._uniprocess_generate(query_idx_list, n_trial_per_query_list)
         # TODO fix segfault issue with multiprocessing
         # stimulus_set = self._multiprocess_generate(
         #     query_idx_list, n_trial_per_query_list
@@ -190,29 +190,28 @@ class RandomRank(DocketGenerator):
         # Convert from contiguous indices to user-provided indices.
         stimulus_set = self.indices[stimulus_set]
 
-        return RankDocket(
-            stimulus_set, n_select=n_select, mask_zero=self.mask_zero
-        )
+        return RankDocket(stimulus_set, n_select=n_select, mask_zero=self.mask_zero)
 
     def _uniprocess_generate(self, query_idx_list, n_trial_per_query_list):
         """Uniprocessing strategy."""
         start_s = time()
 
         stimulus_set = []
-        for query_idx, n_trial_per_query in zip(
-            query_idx_list, n_trial_per_query_list
-        ):
+        for query_idx, n_trial_per_query in zip(query_idx_list, n_trial_per_query_list):
             w_q = self.w[query_idx]
             # Set query index to zero to prohibit sampling query as reference.
-            w_q[query_idx] = 0.
+            w_q[query_idx] = 0.0
             # Mask references (if any) below the specified limit.
             if self.n_highest is not None:
                 ref_priority = _mask_lowest(w_q, self.n_highest)
             else:
                 ref_priority = copy.copy(w_q)
             stimulus_set_q = sample_qr_sets(
-                query_idx, self.n_reference, n_trial_per_query, ref_priority,
-                replace=self.replace
+                query_idx,
+                self.n_reference,
+                n_trial_per_query,
+                ref_priority,
+                replace=self.replace,
             )
             stimulus_set.append(stimulus_set_q)
 
@@ -221,7 +220,7 @@ class RandomRank(DocketGenerator):
         if self.verbose > 0:
             duration_s = time() - start_s
             print(
-                'Docket assembly: n_trial {0} | duration {1:.0f} s'.format(
+                "Docket assembly: n_trial {0} | duration {1:.0f} s".format(
                     stimulus_set.shape[0], duration_s
                 )
             )
@@ -236,9 +235,7 @@ class RandomRank(DocketGenerator):
         # Partition the requested queries into sub-groups for consumption by
         # the worker pool.
         n_query = len(query_idx_list)
-        worker_boundaries = np.linspace(
-            0, n_query, self.n_worker + 1, dtype=int
-        )
+        worker_boundaries = np.linspace(0, n_query, self.n_worker + 1, dtype=int)
         start_s = time()
 
         with multiprocessing.Manager() as manager:
@@ -247,20 +244,24 @@ class RandomRank(DocketGenerator):
             process_list = []
             for idx in range(self.n_worker):
                 query_idx_list_sub = query_idx_list[
-                    worker_boundaries[idx]:worker_boundaries[idx + 1]
+                    worker_boundaries[idx] : worker_boundaries[idx + 1]
                 ]
                 n_trial_per_query_list_sub = n_trial_per_query_list[
-                    worker_boundaries[idx]:worker_boundaries[idx + 1]
+                    worker_boundaries[idx] : worker_boundaries[idx + 1]
                 ]
                 process_list.append(
                     multiprocessing.Process(
                         target=_worker_generate,
                         args=(
-                            query_idx_list_sub, stimulus_set_shared, self.w,
-                            self.n_reference, self.n_highest,
-                            n_trial_per_query_list_sub, self.replace,
-                            shared_exception
-                        )
+                            query_idx_list_sub,
+                            stimulus_set_shared,
+                            self.w,
+                            self.n_reference,
+                            self.n_highest,
+                            n_trial_per_query_list_sub,
+                            self.replace,
+                            shared_exception,
+                        ),
                     )
                 )
 
@@ -281,7 +282,7 @@ class RandomRank(DocketGenerator):
         if self.verbose > 0:
             duration_s = time() - start_s
             print(
-                'Docket assembly: n_trial {0} | duration {1:.0f} s'.format(
+                "Docket assembly: n_trial {0} | duration {1:.0f} s".format(
                     stimulus_set.shape[0], duration_s
                 )
             )
@@ -290,8 +291,15 @@ class RandomRank(DocketGenerator):
 
 
 def _worker_generate(
-        query_idx_list, stimulus_set, w, n_reference,
-        n_highest, n_trial_per_query_list, replace, shared_exception):
+    query_idx_list,
+    stimulus_set,
+    w,
+    n_reference,
+    n_highest,
+    n_trial_per_query_list,
+    replace,
+    shared_exception,
+):
     """Launch worker sub-process.
 
     Assemble complete stimulus set for a list of pre-selected query
@@ -310,20 +318,17 @@ def _worker_generate(
     """
     try:
         stimulus_set_batch = []
-        for query_idx, n_trial_per_query in zip(
-            query_idx_list, n_trial_per_query_list
-        ):
+        for query_idx, n_trial_per_query in zip(query_idx_list, n_trial_per_query_list):
             w_q = w[query_idx]
             # Set query index to zero to prohibit sampling query as reference.
-            w_q[query_idx] = 0.
+            w_q[query_idx] = 0.0
             # Mask references (if any) below the specified limit.
             if n_highest is not None:
                 ref_priority = _mask_lowest(w_q, n_highest)
             else:
                 ref_priority = copy.copy(w_q)
             stimulus_set_q = sample_qr_sets(
-                query_idx, n_reference, n_trial_per_query, ref_priority,
-                replace=replace
+                query_idx, n_reference, n_trial_per_query, ref_priority, replace=replace
             )
             stimulus_set_batch.append(stimulus_set_q)
 

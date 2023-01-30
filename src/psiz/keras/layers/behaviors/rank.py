@@ -26,7 +26,7 @@ import tensorflow as tf
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='RankBehavior'
+    package="psiz.keras.layers", name="RankBehavior"
 )
 class RankBehavior(tf.keras.layers.Layer):
     """A rank behavior layer.
@@ -34,16 +34,17 @@ class RankBehavior(tf.keras.layers.Layer):
     Embodies a `_tf_ranked_sequence_probability` call.
 
     """
+
     def __init_subclass__(cls, **kwargs):
         """Subclassing initialization."""
         warn(
             (
-                f'{cls.__name__} is deprecated and will be removed. '
-                'Use `psiz.keras.layers.RankSimilarity` instead; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{cls.__name__} is deprecated and will be removed. "
+                "Use `psiz.keras.layers.RankSimilarity` instead; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super().__init_subclass__(**kwargs)
 
@@ -51,13 +52,13 @@ class RankBehavior(tf.keras.layers.Layer):
         """Initialize."""
         warn(
             (
-                f'{self.__class__.__name__} is deprecated and will be '
-                'removed. '
-                'Use `psiz.keras.layers.RankSimilarity` instead; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{self.__class__.__name__} is deprecated and will be "
+                "removed. "
+                "Use `psiz.keras.layers.RankSimilarity` instead; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super().__init__(*args, **kwargs)
 

@@ -63,19 +63,17 @@ class Rank(Content):
 
         # Validate references and create private array-based attribute and
         # public scalar attribute.
-        self.n_reference, self._n_reference = self._validate_n_reference(
-            stimulus_set
-        )
+        self.n_reference, self._n_reference = self._validate_n_reference(stimulus_set)
 
         # Trim any excess placeholder padding off of reference axis before
         # setting public attribute.
-        stimulus_set = stimulus_set[:, :, 0:self.n_reference + 1]
+        stimulus_set = stimulus_set[:, :, 0 : self.n_reference + 1]
         self.stimulus_set = stimulus_set
 
         self.n_select, self._n_select_arr = self._validate_n_select(n_select)
 
         if name is None:
-            name = 'given{0}rank{1}'.format(self.n_reference, self.n_select)
+            name = "given{0}rank{1}".format(self.n_reference, self.n_select)
         self.name = name
 
     @property
@@ -102,9 +100,9 @@ class Rank(Content):
 
         """
         is_present = np.not_equal(stimulus_set, self.mask_value)
-        n_reference_arr = np.sum(
-            is_present, axis=self._reference_axis, dtype=np.int32
-        ) - 1
+        n_reference_arr = (
+            np.sum(is_present, axis=self._reference_axis, dtype=np.int32) - 1
+        )
         # NOTE: At this point n_reference_arr=-1 for trials that are
         # placeholders (i.e., completely empty trials).
 
@@ -127,9 +125,7 @@ class Rank(Content):
             raise ValueError(
                 "When creating a `psiz.data.Rank` object, all non-placeholder "
                 "trials must have the same number of references. Detected "
-                "{0} different reference counts.".format(
-                    unique_n_reference
-                )
+                "{0} different reference counts.".format(unique_n_reference)
             )
 
         # Floor at zero since timestep placeholders yield -1.
@@ -153,27 +149,20 @@ class Rank(Content):
             try:
                 n_select_scalar = int(n_select_scalar)
             except TypeError:
-                raise ValueError(
-                    "The argument `n_select` must be an integer."
-                )
+                raise ValueError("The argument `n_select` must be an integer.")
 
         # Check lowerbound support limit.
         if n_select_scalar < 1:
-            raise ValueError(
-                "The argument `n_select` must be greater than 0."
-            )
+            raise ValueError("The argument `n_select` must be greater than 0.")
         # Check upperbound support limit.
         if n_select_scalar > self.n_reference:
             raise ValueError(
-                "The argument `n_select` can not be greater than "
-                "`n_reference`."
+                "The argument `n_select` can not be greater than " "`n_reference`."
             )
 
         # Derive array which indicates `n_select` for every trial.
         # NOTE: Array creation uses same integer dtype as `stimulus_set`.
-        n_select_arr = (
-            self.is_actual.astype(self.stimulus_set.dtype) * n_select_scalar
-        )
+        n_select_arr = self.is_actual.astype(self.stimulus_set.dtype) * n_select_scalar
         return n_select_scalar, n_select_arr
 
     def _validate_stimulus_set(self, stimulus_set):
@@ -186,8 +175,7 @@ class Rank(Content):
         # Check that provided values are integers.
         if not issubclass(stimulus_set.dtype.type, np.integer):
             raise ValueError(
-                "The argument `stimulus_set` must be an np.ndarray of "
-                "integers."
+                "The argument `stimulus_set` must be an np.ndarray of " "integers."
             )
 
         # Check that all values are greater than or equal to placeholder.
@@ -210,7 +198,7 @@ class Rank(Content):
     @classmethod
     def _config_attrs(cls):
         """Return attributes that govern trial configurations."""
-        return ['_n_reference', '_n_select_arr']
+        return ["_n_reference", "_n_select_arr"]
 
     def _is_select(self, compress=False):
         """Indicate if a stimulus was selected.
@@ -242,17 +230,17 @@ class Rank(Content):
             is_select[locs, n_select] = True
 
         if compress:
-            is_select = is_select[:, :, 1:max_n_select + 1]
+            is_select = is_select[:, :, 1 : max_n_select + 1]
 
         return is_select
 
-    def export(self, export_format='tfds', with_timestep_axis=None):
+    def export(self, export_format="tfds", with_timestep_axis=None):
         """Prepare trial content data for dataset.
 
         Args:
             export_format (optional): The output format of the dataset.
                 By default the dataset is formatted as a
-                    tf.data.Dataset object.
+                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -263,15 +251,16 @@ class Rank(Content):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        if export_format == 'tfds':
+        if export_format == "tfds":
             stimulus_set = self.stimulus_set
 
             if with_timestep_axis is False:
                 stimulus_set = unravel_timestep(stimulus_set)
 
             x = {
-                self.name + '_stimulus_set': tf.constant(
-                    stimulus_set, name=(self.name + '_stimulus_set')
+                self.name
+                + "_stimulus_set": tf.constant(
+                    stimulus_set, name=(self.name + "_stimulus_set")
                 ),
             }
         else:

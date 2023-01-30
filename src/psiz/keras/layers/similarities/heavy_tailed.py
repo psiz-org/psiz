@@ -28,22 +28,30 @@ import psiz.keras.constraints as pk_constraints
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='HeavyTailedSimilarity'
+    package="psiz.keras.layers", name="HeavyTailedSimilarity"
 )
 class HeavyTailedSimilarity(tf.keras.layers.Layer):
     """Heavy-tailed family similarity function.
 
     The heavy-tailed similarity function is parameterized as:
-        s(x,y) = (kappa + (d(x,y).^tau)).^(-alpha),
+
+    s(x,y) = (kappa + (d(x,y).^tau)).^(-alpha),
+
     where x and y are n-dimensional vectors. The heavy-tailed family is
     a generalization of the Student-t family.
 
     """
 
     def __init__(
-            self, fit_tau=True, fit_kappa=True, fit_alpha=True,
-            tau_initializer=None, kappa_initializer=None,
-            alpha_initializer=None, **kwargs):
+        self,
+        fit_tau=True,
+        fit_kappa=True,
+        fit_alpha=True,
+        tau_initializer=None,
+        kappa_initializer=None,
+        alpha_initializer=None,
+        **kwargs
+    ):
         """Initialize.
 
         Args:
@@ -62,38 +70,47 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
 
         self.fit_tau = fit_tau
         if tau_initializer is None:
-            tau_initializer = tf.random_uniform_initializer(1., 2.)
+            tau_initializer = tf.random_uniform_initializer(1.0, 2.0)
         self.tau_initializer = tf.keras.initializers.get(tau_initializer)
         tau_trainable = self.trainable and self.fit_tau
         with tf.name_scope(self.name):
             self.tau = self.add_weight(
-                shape=[], initializer=self.tau_initializer,
-                trainable=tau_trainable, name="tau", dtype=K.floatx(),
-                constraint=pk_constraints.GreaterEqualThan(min_value=1.0)
+                shape=[],
+                initializer=self.tau_initializer,
+                trainable=tau_trainable,
+                name="tau",
+                dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
 
         self.fit_kappa = fit_kappa
         if kappa_initializer is None:
-            kappa_initializer = tf.random_uniform_initializer(1., 11.)
+            kappa_initializer = tf.random_uniform_initializer(1.0, 11.0)
         self.kappa_initializer = tf.keras.initializers.get(kappa_initializer)
         kappa_trainable = self.trainable and self.fit_kappa
         with tf.name_scope(self.name):
             self.kappa = self.add_weight(
-                shape=[], initializer=self.kappa_initializer,
-                trainable=kappa_trainable, name="kappa", dtype=K.floatx(),
-                constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+                shape=[],
+                initializer=self.kappa_initializer,
+                trainable=kappa_trainable,
+                name="kappa",
+                dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
 
         self.fit_alpha = fit_alpha
         if alpha_initializer is None:
-            alpha_initializer = tf.random_uniform_initializer(1., 10.)
+            alpha_initializer = tf.random_uniform_initializer(1.0, 10.0)
         self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
         alpha_trainable = self.trainable and self.fit_alpha
         with tf.name_scope(self.name):
             self.alpha = self.add_weight(
-                shape=[], initializer=self.alpha_initializer,
-                trainable=alpha_trainable, name="alpha", dtype=K.floatx(),
-                constraint=pk_constraints.GreaterEqualThan(min_value=0.0)
+                shape=[],
+                initializer=self.alpha_initializer,
+                trainable=alpha_trainable,
+                name="alpha",
+                dtype=K.floatx(),
+                constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
 
     def call(self, inputs):
@@ -106,25 +123,25 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        return tf.pow(
-            self.kappa + tf.pow(inputs, self.tau), (tf.negative(self.alpha))
-        )
+        return tf.pow(self.kappa + tf.pow(inputs, self.tau), (tf.negative(self.alpha)))
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
-        config.update({
-            'fit_tau': self.fit_tau,
-            'fit_kappa': self.fit_kappa,
-            'fit_alpha': self.fit_alpha,
-            'tau_initializer': tf.keras.initializers.serialize(
-                self.tau_initializer
-            ),
-            'kappa_initializer': tf.keras.initializers.serialize(
-                self.kappa_initializer
-            ),
-            'alpha_initializer': tf.keras.initializers.serialize(
-                self.alpha_initializer
-            ),
-        })
+        config.update(
+            {
+                "fit_tau": self.fit_tau,
+                "fit_kappa": self.fit_kappa,
+                "fit_alpha": self.fit_alpha,
+                "tau_initializer": tf.keras.initializers.serialize(
+                    self.tau_initializer
+                ),
+                "kappa_initializer": tf.keras.initializers.serialize(
+                    self.kappa_initializer
+                ),
+                "alpha_initializer": tf.keras.initializers.serialize(
+                    self.alpha_initializer
+                ),
+            }
+        )
         return config

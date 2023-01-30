@@ -89,8 +89,16 @@ class RateObservations(RateTrials):
     """
 
     def __init__(
-            self, stimulus_set, rating, mask_zero=False, groups=None,
-            agent_id=None, session_id=None, weight=None, rt_ms=None):
+        self,
+        stimulus_set,
+        rating,
+        mask_zero=False,
+        groups=None,
+        agent_id=None,
+        session_id=None,
+        weight=None,
+        rt_ms=None,
+    ):
         """Initialize.
 
         Extends initialization of SimilarityTrials.
@@ -164,16 +172,22 @@ class RateObservations(RateTrials):
         agent_id = agent_id.astype(np.int32)
         # Check shape agreement.
         if not (agent_id.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument 'agent_id' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+            raise ValueError(
+                (
+                    "The argument 'agent_id' must have the same length as the "
+                    "number of rows in the argument 'stimulus_set'."
+                )
+            )
         # Check lowerbound support limit.
         bad_locs = agent_id < 0
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
-            raise ValueError((
-                "The parameter 'agent_id' contains integers less than 0. "
-                "Found {0} bad trial(s).").format(n_bad))
+            raise ValueError(
+                (
+                    "The parameter 'agent_id' contains integers less than 0. "
+                    "Found {0} bad trial(s)."
+                ).format(n_bad)
+            )
         return agent_id
 
     def _check_session_id(self, session_id):
@@ -181,16 +195,22 @@ class RateObservations(RateTrials):
         session_id = session_id.astype(np.int32)
         # Check shape agreement.
         if not (session_id.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument 'session_id' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+            raise ValueError(
+                (
+                    "The argument 'session_id' must have the same length as the "
+                    "number of rows in the argument 'stimulus_set'."
+                )
+            )
         # Check lowerbound support limit.
         bad_locs = session_id < 0
         n_bad = np.sum(bad_locs)
         if n_bad != 0:
-            raise ValueError((
-                "The parameter 'session_id' contains integers less than 0. "
-                "Found {0} bad trial(s).").format(n_bad))
+            raise ValueError(
+                (
+                    "The parameter 'session_id' contains integers less than 0. "
+                    "Found {0} bad trial(s)."
+                ).format(n_bad)
+            )
         return session_id
 
     def _check_weight(self, weight):
@@ -198,9 +218,12 @@ class RateObservations(RateTrials):
         weight = weight.astype(float)
         # Check shape agreement.
         if not (weight.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument 'weight' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+            raise ValueError(
+                (
+                    "The argument 'weight' must have the same length as the "
+                    "number of rows in the argument 'stimulus_set'."
+                )
+            )
         return weight
 
     def _check_rt(self, rt_ms):
@@ -208,9 +231,12 @@ class RateObservations(RateTrials):
         rt_ms = rt_ms.astype(float)
         # Check shape agreement.
         if not (rt_ms.shape[0] == self.n_trial):
-            raise ValueError((
-                "The argument 'rt_ms' must have the same length as the "
-                "number of rows in the argument 'stimulus_set'."))
+            raise ValueError(
+                (
+                    "The argument 'rt_ms' must have the same length as the "
+                    "number of rows in the argument 'stimulus_set'."
+                )
+            )
         return rt_ms
 
     def subset(self, index):
@@ -224,10 +250,14 @@ class RateObservations(RateTrials):
 
         """
         return RateObservations(
-            self.stimulus_set[index, :], self.rating[index],
-            mask_zero=self.mask_zero, groups=self.groups[index],
-            agent_id=self.agent_id[index], session_id=self.session_id[index],
-            weight=self.weight[index], rt_ms=self.rt_ms[index]
+            self.stimulus_set[index, :],
+            self.rating[index],
+            mask_zero=self.mask_zero,
+            groups=self.groups[index],
+            agent_id=self.agent_id[index],
+            session_id=self.session_id[index],
+            weight=self.weight[index],
+            rt_ms=self.rt_ms[index],
         )
 
     def _set_configuration_data(self, n_present, groups):
@@ -254,9 +284,7 @@ class RateObservations(RateTrials):
         n_trial = len(n_present)
 
         # Determine unique display configurations.
-        d = {
-            'n_present': n_present
-        }
+        d = {"n_present": n_present}
         d_groups = self._split_groups_columns(groups)
         d.update(d_groups)
         df_config = pd.DataFrame(d)
@@ -335,10 +363,7 @@ class RateObservations(RateTrials):
         # NOTE: The dimensions of inputs are expanded to have an additional
         # singleton third dimension to indicate that there is only one outcome
         # that we are interested for each trial.
-        x = {
-            'stimulus_set': self.stimulus_set,
-            'groups': self.groups
-        }
+        x = {"stimulus_set": self.stimulus_set, "groups": self.groups}
         y = tf.constant(self.rating, dtype=K.floatx())
 
         # Observation weight.
@@ -363,16 +388,16 @@ class RateObservations(RateTrials):
             A new RateTrials object.
 
         """
-        _, max_n_present, mask_zero = cls._stack_precheck(
-            trials_list
-        )
+        _, max_n_present, mask_zero = cls._stack_precheck(trials_list)
 
         # Grab relevant information from first entry in list.
         n_pad = max_n_present - trials_list[0].max_n_present
         pad_width = ((0, 0), (0, n_pad))
         stimulus_set = np.pad(
-            trials_list[0].stimulus_set, pad_width, mode='constant',
-            constant_values=cls._mask_value
+            trials_list[0].stimulus_set,
+            pad_width,
+            mode="constant",
+            constant_values=cls._mask_value,
         )
         rating = trials_list[0].rating
         groups = trials_list[0].groups
@@ -385,8 +410,10 @@ class RateObservations(RateTrials):
             n_pad = max_n_present - i_trials.max_n_present
             pad_width = ((0, 0), (0, n_pad))
             curr_stimulus_set = np.pad(
-                i_trials.stimulus_set, pad_width, mode='constant',
-                constant_values=cls._mask_value
+                i_trials.stimulus_set,
+                pad_width,
+                mode="constant",
+                constant_values=cls._mask_value,
             )
             stimulus_set = np.vstack((stimulus_set, curr_stimulus_set))
             rating = np.hstack((rating, i_trials.rating))
@@ -397,9 +424,14 @@ class RateObservations(RateTrials):
             rt_ms = np.hstack((rt_ms, i_trials.rt_ms))
 
         trials_stacked = RateObservations(
-            stimulus_set, rating, mask_zero=mask_zero, groups=groups,
-            agent_id=agent_id, session_id=session_id, weight=weight,
-            rt_ms=rt_ms
+            stimulus_set,
+            rating,
+            mask_zero=mask_zero,
+            groups=groups,
+            agent_id=agent_id,
+            session_id=session_id,
+            weight=weight,
+            rt_ms=rt_ms,
         )
         return trials_stacked
 
@@ -447,8 +479,13 @@ class RateObservations(RateTrials):
         f.close()
 
         trials = RateObservations(
-            stimulus_set, rating=rating, mask_zero=mask_zero, groups=groups,
-            agent_id=agent_id, session_id=session_id, weight=weight,
-            rt_ms=rt_ms
+            stimulus_set,
+            rating=rating,
+            mask_zero=mask_zero,
+            groups=groups,
+            agent_id=agent_id,
+            session_id=session_id,
+            weight=weight,
+            rt_ms=rt_ms,
         )
         return trials

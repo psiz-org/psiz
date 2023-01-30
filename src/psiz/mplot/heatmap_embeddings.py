@@ -41,7 +41,7 @@ def heatmap_embeddings(embedding, ax=None, cmap=None):
         ax = plt.gca()
 
     if cmap is None:
-        cmap = matplotlib.colormaps['Greys']
+        cmap = matplotlib.colormaps["Greys"]
 
     if isinstance(embedding.embeddings, tfp.distributions.Distribution):
         # Handle distribution.
@@ -58,16 +58,15 @@ def heatmap_embeddings(embedding, ax=None, cmap=None):
     z_mode_max = np.max(z_mode)
     # MAYBE use `matshow` instead of imshow to fix interpolation issue?
     im = ax.imshow(
-        z_mode, cmap=cmap, interpolation='none',
-        vmin=z_mode_min, vmax=z_mode_max
+        z_mode, cmap=cmap, interpolation="none", vmin=z_mode_min, vmax=z_mode_max
     )
 
     # NOTE: `imshow` displays different rows as different values of y and
     # different columns as different values of x.
-    ax.set_xlabel('Output')
+    ax.set_xlabel("Output")
     ax.set_xticks([0, n_output_dim - 1])
     ax.set_xticklabels([0, n_output_dim - 1])
-    ax.set_ylabel('Input')
+    ax.set_ylabel("Input")
     # Grab current figure handle to use colorbar.
     fig = plt.gcf()
     fig.colorbar(im, ax=ax)

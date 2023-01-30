@@ -65,7 +65,7 @@ def affine_mvn(loc, cov, r=None, t=None):
     """
     if t is None:
         # Default to no translation.
-        t = 0.
+        t = 0.0
     if r is None:
         # Default to identity matrix (no rotation).
         n_dim = loc.shape[-1]

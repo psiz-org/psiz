@@ -23,11 +23,11 @@ Classes:
 import tensorflow as tf
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.regularizers')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.regularizers")
 class StimulusNormedL1(tf.keras.regularizers.Regularizer):
     """Stimulus-normed L1 regularization."""
 
-    def __init__(self, l1=0.):
+    def __init__(self, l1=0.0):
         """Initialize.
 
         Args:
@@ -48,4 +48,4 @@ class StimulusNormedL1(tf.keras.regularizers.Regularizer):
 
     def get_config(self):
         """Return config."""
-        return {'l1': float(self.l1)}
+        return {"l1": float(self.l1)}

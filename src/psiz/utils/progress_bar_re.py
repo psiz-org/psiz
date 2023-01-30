@@ -28,9 +28,7 @@ import time
 class ProgressBarRe(object):
     """Display a progress bar in terminal."""
 
-    def __init__(
-            self, total, prefix='', decimals=1, length=100,
-            fill='█'):
+    def __init__(self, total, prefix="", decimals=1, length=100, fill="█"):
         """Initialize.
 
         Args:
@@ -86,11 +84,12 @@ class ProgressBarRe(object):
         ett_str = str(datetime.timedelta(seconds=ett_s))
 
         filledLength = int(self.length * iteration // self.total)
-        bar = self.fill * filledLength + '-' * (self.length - filledLength)
+        bar = self.fill * filledLength + "-" * (self.length - filledLength)
         print(
-            '\r    {0} |{1}| {2}% | ETA: {3} | ETT: {4}'.format(
+            "\r    {0} |{1}| {2}% | ETA: {3} | ETT: {4}".format(
                 self.prefix, bar, percent, eta_str, ett_str
-            ), end='\r'
+            ),
+            end="\r",
         )
         # Print a new line on completion.
         if iteration == self.total:

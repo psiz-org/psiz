@@ -20,7 +20,7 @@ import scipy.stats as st
 import psiz
 
 
-def hdi_bvn(loc, cov, ax=None, p=.99, **kwargs):
+def hdi_bvn(loc, cov, ax=None, p=0.99, **kwargs):
     """Plot HDI of bivariate normal distributions.
 
     Ellipses are drawn to indicate the higest density interval.

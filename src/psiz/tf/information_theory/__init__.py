@@ -20,6 +20,6 @@ from psiz.tf.information_theory.ig_categorical import ig_categorical
 from psiz.tf.information_theory.ig_model_categorical import ig_model_categorical
 
 __all__ = [
-    'ig_categorical',
-    'ig_model_categorical',
+    "ig_categorical",
+    "ig_model_categorical",
 ]

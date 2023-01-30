@@ -23,9 +23,7 @@ Classes:
 import tensorflow as tf
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras', name='GateAdapter'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="GateAdapter")
 class GateAdapter(tf.keras.layers.Layer):
     """A layer that adapts inputs for networks with `Gates`.
 
@@ -36,9 +34,8 @@ class GateAdapter(tf.keras.layers.Layer):
         format_inputs_as_tuple: See `__init__` method.
 
     """
-    def __init__(
-        self, gating_keys=None, format_inputs_as_tuple=None, **kwargs
-    ):
+
+    def __init__(self, gating_keys=None, format_inputs_as_tuple=None, **kwargs):
         """Initialize.
 
         Args:
@@ -70,9 +67,7 @@ class GateAdapter(tf.keras.layers.Layer):
     @input_keys.setter
     def input_keys(self, input_keys):
         if input_keys is None:
-            raise ValueError(
-                'The argument `input_keys` cannot be `None`.'
-            )
+            raise ValueError("The argument `input_keys` cannot be `None`.")
         elif not isinstance(input_keys, list):
             input_keys = [input_keys]
         self._input_keys = input_keys
@@ -83,14 +78,13 @@ class GateAdapter(tf.keras.layers.Layer):
 
         if self._input_keys is None:
             raise ValueError(
-                'The attribute `input_keys` cannot be `None`. It should '
-                'be set by an external caller.'
+                "The attribute `input_keys` cannot be `None`. It should "
+                "be set by an external caller."
             )
         # Make sure inputs are a dictionary.
         if not isinstance(input_shape, dict):
             raise ValueError(
-                'GateAdapter layer only accepts dictionary-formatted '
-                '`inputs`.'
+                "GateAdapter layer only accepts dictionary-formatted " "`inputs`."
             )
 
         # Add input keys to list of all keys.
@@ -129,8 +123,10 @@ class GateAdapter(tf.keras.layers.Layer):
     def get_config(self):
         """Get configuration."""
         config = super(GateAdapter, self).get_config()
-        config.update({
-            'gating_keys': self.gating_keys,
-            'format_inputs_as_tuple': bool(self.format_inputs_as_tuple),
-        })
+        config.update(
+            {
+                "gating_keys": self.gating_keys,
+                "format_inputs_as_tuple": bool(self.format_inputs_as_tuple),
+            }
+        )
         return config

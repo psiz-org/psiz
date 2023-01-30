@@ -27,9 +27,7 @@ from psiz.keras.models.psych_embedding import PsychologicalEmbedding
 import psiz.keras.layers
 
 
-@tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.models', name='Rate'
-)
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.models", name="Rate")
 class Rate(PsychologicalEmbedding):
     """Psychological embedding inferred from ranked similarity judgments.
 
@@ -51,7 +49,7 @@ class Rate(PsychologicalEmbedding):
         # Initialize behavioral component.
         if behavior is None:
             behavior = psiz.keras.layers.RateBehavior()
-        kwargs.update({'behavior': behavior})
+        kwargs.update({"behavior": behavior})
         super().__init__(**kwargs)
 
     def call(self, inputs):
@@ -68,19 +66,17 @@ class Rate(PsychologicalEmbedding):
 
         """
         # Grab inputs.
-        stimulus_set = inputs['stimulus_set']
-        groups = inputs['groups']
+        stimulus_set = inputs["stimulus_set"]
+        groups = inputs["groups"]
 
         # Repeat `stimulus_set` `n_sample` times in a newly inserted
         # axis (axis=1).
         # TensorShape([batch_size, n_sample, 2])
-        stimulus_set = psiz.utils.expand_dim_repeat(
-            stimulus_set, self.n_sample, axis=1
-        )
+        stimulus_set = psiz.utils.expand_dim_repeat(stimulus_set, self.n_sample, axis=1)
 
         # Enbed stimuli indices in n-dimensional space.
         # TensorShape([batch_size, n_sample, 2, n_dim])
-        if self._use_group['stimuli']:
+        if self._use_group["stimuli"]:
             z = self.stimuli([stimulus_set, groups])
         else:
             z = self.stimuli(stimulus_set)
@@ -91,13 +87,13 @@ class Rate(PsychologicalEmbedding):
 
         # Pass through similarity kernel.
         # TensorShape([batch_size, n_sample,])
-        if self._use_group['kernel']:
+        if self._use_group["kernel"]:
             sim_01 = self.kernel([z_0, z_1, groups])
         else:
             sim_01 = self.kernel([z_0, z_1])
 
         # Predict rating of stimulus pair.
-        if self._use_group['behavior']:
+        if self._use_group["behavior"]:
             rating = self.behavior([sim_01, groups])
         else:
             rating = self.behavior([sim_01])

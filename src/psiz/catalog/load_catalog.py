@@ -50,18 +50,17 @@ def load_catalog(filepath, verbose=0):
         class_map_label = h5_file["class_map_label"][()]
         class_label_dict = {}
         for idx in np.arange(len(class_map_class_id)):
-            class_label_dict[class_map_class_id[idx]] = (
-                class_map_label[idx].decode('ascii')
+            class_label_dict[class_map_class_id[idx]] = class_map_label[idx].decode(
+                "ascii"
             )
     except KeyError:
         class_label_dict = None
 
-    catalog = Catalog(
-        stimulus_id, stimulus_filepath, class_id, class_label_dict)
+    catalog = Catalog(stimulus_id, stimulus_filepath, class_id, class_label_dict)
     h5_file.close()
 
     if verbose > 0:
         print("Catalog Summary")
-        print('  n_stimuli: {0}'.format(catalog.n_stimuli))
-        print('')
+        print("  n_stimuli: {0}".format(catalog.n_stimuli))
+        print("")
     return catalog

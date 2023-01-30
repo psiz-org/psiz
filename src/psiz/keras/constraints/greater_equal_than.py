@@ -25,11 +25,11 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import constraints
 
 
-@tf.keras.utils.register_keras_serializable(package='psiz.keras.constraints')
+@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
 class GreaterEqualThan(constraints.Constraint):
     """Constrains the weights to be greater/equal than a value."""
 
-    def __init__(self, min_value=0.):
+    def __init__(self, min_value=0.0):
         """Initialize.
 
         Args:
@@ -41,10 +41,10 @@ class GreaterEqualThan(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         w = w - self.min_value
-        w = w * tf.cast(tf.math.greater_equal(w, 0.), K.floatx())
+        w = w * tf.cast(tf.math.greater_equal(w, 0.0), K.floatx())
         w = w + self.min_value
         return w
 
     def get_config(self):
         """Return configuration."""
-        return {'min_value': self.min_value}
+        return {"min_value": self.min_value}

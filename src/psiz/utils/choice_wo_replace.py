@@ -65,8 +65,8 @@ def choice_wo_replace(a, size, p, rng=None):
     # Shift by numbers and find largest (by finding the smallest of the
     # negative).
     shifted_probabilities = random_shifts - replicated_probabilities
-    samples = np.argpartition(
-        shifted_probabilities, sample_size, axis=1
-    )[:, :sample_size]
+    samples = np.argpartition(shifted_probabilities, sample_size, axis=1)[
+        :, :sample_size
+    ]
 
     return a[samples]

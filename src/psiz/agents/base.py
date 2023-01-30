@@ -24,7 +24,7 @@ from abc import ABCMeta, abstractmethod
 import warnings
 
 
-class Agent():  # pylint: disable=too-few-public-methods
+class Agent:  # pylint: disable=too-few-public-methods
     """Abstract base class for simulating agent behavior.
 
     Methods:
@@ -38,14 +38,14 @@ class Agent():  # pylint: disable=too-few-public-methods
         """Subclassing initialization."""
         warnings.warn(
             (
-                f'{cls.__name__} is deprecated and will be removed. '
-                'You can use `tensorflow.data.Dataset.map` function to '
-                'simulate agents. Please see `examples/rank/mle_1g.py` for '
-                'details; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{cls.__name__} is deprecated and will be removed. "
+                "You can use `tensorflow.data.Dataset.map` function to "
+                "simulate agents. Please see `examples/rank/mle_1g.py` for "
+                "details; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         super().__init_subclass__(**kwargs)
 
@@ -53,15 +53,15 @@ class Agent():  # pylint: disable=too-few-public-methods
         """Initialize."""
         warnings.warn(
             (
-                f'{self.__class__.__name__} is deprecated and will be '
-                'removed. '
-                'You can use `tensorflow.data.Dataset.map` function to '
-                'simulate agents. Please see `examples/rank/mle_1g.py` for '
-                'details; '
-                'version_announced=0.8.0; version_scheduled=0.9.0'
+                f"{self.__class__.__name__} is deprecated and will be "
+                "removed. "
+                "You can use `tensorflow.data.Dataset.map` function to "
+                "simulate agents. Please see `examples/rank/mle_1g.py` for "
+                "details; "
+                "version_announced=0.8.0; version_scheduled=0.9.0"
             ),
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 
     @abstractmethod

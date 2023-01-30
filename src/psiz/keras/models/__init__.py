@@ -21,8 +21,8 @@ from psiz.keras.models.rate import Rate
 from psiz.keras.models.stochastic_model import StochasticModel
 
 __all__ = [
-    'PsychologicalEmbedding',
-    'Rank',
-    'Rate',
-    'StochasticModel',
+    "PsychologicalEmbedding",
+    "Rank",
+    "Rate",
+    "StochasticModel",
 ]

@@ -15,6 +15,7 @@
 # ============================================================================
 """Initialization file for top-level package modules."""
 
+import psiz.data
 import psiz.keras
 import psiz.mplot
 import psiz.tf

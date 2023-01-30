@@ -24,5 +24,5 @@ __all__ = [
     'PsychologicalEmbedding',
     'Rank',
     'Rate',
-    'StochasticModel'
+    'StochasticModel',
 ]

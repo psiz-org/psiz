@@ -20,5 +20,5 @@ from psiz.keras.initializers.softplus_uniform import SoftplusUniform
 
 __all__ = [
     'Dirichlet',
-    'SoftplusUniform'
+    'SoftplusUniform',
 ]

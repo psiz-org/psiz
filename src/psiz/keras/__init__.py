@@ -36,4 +36,6 @@ import psiz.keras.regularizers
 # mirror TensorFlow organization.
 from psiz.keras.models.stochastic_model import StochasticModel
 
-__all__ = ['StochasticModel']
+__all__ = [
+    'StochasticModel',
+]

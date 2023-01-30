@@ -41,5 +41,5 @@ __all__ = [
     'RandomRate',
     'RateTrials',
     'RateDocket',
-    'RateObservations'
+    'RateObservations',
 ]

@@ -82,5 +82,5 @@ __all__ = [
     'HeavyTailedSimilarity',
     'InverseSimilarity',
     'StudentsTSimilarity',
-    'Variational'
+    'Variational',
 ]

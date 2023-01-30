@@ -44,5 +44,5 @@ __all__ = [
     'rotation_matrix',
     'random_combinations',
     'standard_split',
-    'StratifiedGroupKFold'
+    'StratifiedGroupKFold',
 ]

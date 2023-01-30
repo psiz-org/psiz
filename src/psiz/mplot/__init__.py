@@ -26,5 +26,5 @@ __all__ = [
     'hdi_bvn',
     'heatmap_embeddings',
     'embedding_input_dimension',
-    'embedding_output_dimension'
+    'embedding_output_dimension',
 ]

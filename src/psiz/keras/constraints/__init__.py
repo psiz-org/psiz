@@ -30,5 +30,5 @@ __all__ = [
     'LessEqualThan',
     'LessThan',
     'MinMax',
-    'NonNegNorm'
+    'NonNegNorm',
 ]

@@ -22,4 +22,6 @@ Classes:
 
 from psiz.tfp.distributions.inv_softplus_normal import InvSoftplusNormal
 
-__all__ = ['InvSoftplusNormal']
+__all__ = [
+    'InvSoftplusNormal',
+]

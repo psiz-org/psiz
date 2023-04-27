@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""TensorFlow initialization."""
+"""Module of TensorFlow functions."""
 
 import psiz.tf.information_theory
+import psiz.tf.ops

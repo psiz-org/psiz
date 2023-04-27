@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""TensorFlow Probability (tfp) initialization file.
+"""Module of TensorFlow Probability (tfp) objects.
 
 Modules:
     distributions

@@ -14,3 +14,9 @@
 # limitations under the License.
 # ============================================================================
 """TensorFlow ops initialization."""
+
+from psiz.tf.ops.wpnorm import wpnorm
+
+__all__ = [
+    "wpnorm",
+]

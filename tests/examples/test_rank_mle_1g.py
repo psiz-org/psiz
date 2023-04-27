@@ -195,7 +195,7 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     "mask_zero", [True]
 )
 @pytest.mark.parametrize(
-    "is_eager", [True]
+    "is_eager", [True, False]
 )
 def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     """A crude MLE functional test that asserts more data helps."""

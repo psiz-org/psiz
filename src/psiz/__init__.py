@@ -15,12 +15,9 @@
 # ============================================================================
 """Initialization file for top-level package modules."""
 
-import psiz.agents
-import psiz.catalog
-import psiz.datasets
+import psiz.data
 import psiz.keras
 import psiz.mplot
 import psiz.tf
 import psiz.tfp
-import psiz.trials
 import psiz.utils

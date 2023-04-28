@@ -335,6 +335,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
                 "kernel_adapter": tf.keras.utils.serialize_keras_object(
                     self.kernel_adapter
                 ),
+                "data_scope": self.data_scope,
             }
         )
         return config

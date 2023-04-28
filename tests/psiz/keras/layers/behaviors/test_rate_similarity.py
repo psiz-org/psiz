@@ -84,3 +84,97 @@ def test_outcome_probability_v0():
     )
 
     tf.debugging.assert_near(rating, rating_desired)
+
+
+def test_serialization():
+    """Test serialization."""
+    n_stimuli = 4
+    n_dim = 2
+    beta = 10.
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli + 1,
+        n_dim,
+        mask_zero=True,
+        embeddings_initializer=tf.initializers.Constant(
+            tf.constant(
+                [
+                    [0.0, 0.0],
+                    [0.1, 0.1],
+                    [0.2, 0.1],
+                    [0.3, 0.1],
+                    [0.4, 0.1]
+                ]
+            )
+        )
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(beta),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            trainable=False,
+        )
+    )
+
+    # Default settings.
+    rate = psiz.keras.layers.RateSimilarity(
+        percept=percept, kernel=kernel, name="rs1"
+    )
+    cfg = rate.get_config()
+    # Verify.
+    assert cfg["name"] == "rs1"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["lower_trainable"] is False
+    assert cfg["upper_trainable"] is False
+    assert cfg["midpoint_trainable"] is True
+    assert cfg["rate_trainable"] is True
+    assert cfg["data_scope"] == "rate2"
+
+    rate2 = psiz.keras.layers.RateSimilarity.from_config(cfg)
+    assert rate2.name == "rs1"
+    assert rate2.trainable is True
+    assert rate2.dtype == "float32"
+    assert rate2.lower_trainable is False
+    assert rate2.upper_trainable is False
+    assert rate2.midpoint_trainable is True
+    assert rate2.rate_trainable is True
+    assert rate2.data_scope == "rate2"
+
+    # All optional settings.
+    rate = psiz.keras.layers.RateSimilarity(
+        percept=percept,
+        kernel=kernel,
+        data_scope="abc",
+        lower_trainable=True,
+        upper_trainable=True,
+        midpoint_trainable=False,
+        rate_trainable=False,
+        name="rs2",
+    )
+    cfg = rate.get_config()
+    # Verify.
+    assert cfg["name"] == "rs2"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["lower_trainable"] is True
+    assert cfg["upper_trainable"] is True
+    assert cfg["midpoint_trainable"] is False
+    assert cfg["rate_trainable"] is False
+    assert cfg["data_scope"] == "abc"
+
+    rate2 = psiz.keras.layers.RateSimilarity.from_config(cfg)
+    assert rate2.name == "rs2"
+    assert rate2.trainable is True
+    assert rate2.dtype == "float32"
+    assert rate2.lower_trainable is True
+    assert rate2.upper_trainable is True
+    assert rate2.midpoint_trainable is False
+    assert rate2.rate_trainable is False
+    assert rate2.data_scope == "abc"

@@ -252,6 +252,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
                 "rate_initializer": tf.keras.initializers.serialize(
                     self.rate_initializer
                 ),
+                "data_scope": self.data_scope,
             }
         )
         return config

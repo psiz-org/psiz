@@ -161,3 +161,52 @@ def test_call_v1(ds_3rank1_v1):
     )
     outputs, states_t1 = rank_similarity_cell_call(ds_3rank1_v1, rank_cell)
     tf.debugging.assert_equal(tf.shape(outputs), tf.TensorShape([4, 1, 3]))
+
+
+def test_serialization():
+    """Test serialization."""
+    percept = percept_static_v0()
+    kernel = kernel_v0()
+
+    # Default settings.
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
+        n_reference=2, n_select=1, percept=percept, kernel=kernel, name="rs1"
+    )
+    cfg = rank_cell.get_config()
+    # Verify.
+    assert cfg["name"] == "rs1"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["n_reference"] == 2
+    assert cfg["n_select"] == 1
+    assert cfg["data_scope"] == "given2rank1"
+
+    rank_cell2 = psiz.keras.layers.RankSimilarityCell.from_config(cfg)
+    assert rank_cell2.name == "rs1"
+    assert rank_cell2.trainable is True
+    assert rank_cell2.dtype == "float32"
+    assert rank_cell2.n_reference == 2
+    assert rank_cell2.n_select == 1
+    assert rank_cell2.data_scope == "given2rank1"
+
+    # All optional settings.
+    rank_cell = psiz.keras.layers.RankSimilarityCell(
+        n_reference=8, n_select=2, percept=percept, kernel=kernel, data_scope="abc",
+        name="rs2"
+    )
+    cfg = rank_cell.get_config()
+    # Verify.
+    assert cfg["name"] == "rs2"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["n_reference"] == 8
+    assert cfg["n_select"] == 2
+    assert cfg["data_scope"] == "abc"
+
+    rank_cell2 = psiz.keras.layers.RankSimilarity.from_config(cfg)
+    assert rank_cell2.name == "rs2"
+    assert rank_cell2.trainable is True
+    assert rank_cell2.dtype == "float32"
+    assert rank_cell2.n_reference == 8
+    assert rank_cell2.n_select == 2
+    assert rank_cell2.data_scope == "abc"

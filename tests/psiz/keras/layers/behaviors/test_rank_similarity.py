@@ -79,3 +79,83 @@ def test_outcome_probability_v0():
     outcome_prob_desired = s_qr / total_s
 
     tf.debugging.assert_near(outcome_prob, outcome_prob_desired)
+
+
+def test_serialization():
+    """Test serialization."""
+    n_stimuli = 4
+    n_dim = 2
+    beta = 10.
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli + 1,
+        n_dim,
+        mask_zero=True,
+        embeddings_initializer=tf.initializers.Constant(
+            tf.constant(
+                [
+                    [0.0, 0.0],
+                    [0.1, 0.1],
+                    [0.2, 0.1],
+                    [0.3, 0.1],
+                    [0.4, 0.1]
+                ]
+            )
+        )
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.),
+            w_initializer=tf.keras.initializers.Constant(1.),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(beta),
+            tau_initializer=tf.keras.initializers.Constant(1.),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            trainable=False,
+        )
+    )
+
+    # Default settings.
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=2, n_select=1, percept=percept, kernel=kernel, name="rs1"
+    )
+    cfg = rank.get_config()
+    # Verify.
+    assert cfg["name"] == "rs1"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["n_reference"] == 2
+    assert cfg["n_select"] == 1
+    assert cfg["data_scope"] == "given2rank1"
+
+    rank2 = psiz.keras.layers.RankSimilarity.from_config(cfg)
+    assert rank2.name == "rs1"
+    assert rank2.trainable is True
+    assert rank2.dtype == "float32"
+    assert rank2.n_reference == 2
+    assert rank2.n_select == 1
+    assert rank2.data_scope == "given2rank1"
+
+    # All optional settings.
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=8, n_select=2, percept=percept, kernel=kernel, data_scope="abc",
+        name="rs2"
+    )
+    cfg = rank.get_config()
+    # Verify.
+    assert cfg["name"] == "rs2"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["n_reference"] == 8
+    assert cfg["n_select"] == 2
+    assert cfg["data_scope"] == "abc"
+
+    rank2 = psiz.keras.layers.RankSimilarity.from_config(cfg)
+    assert rank2.name == "rs2"
+    assert rank2.trainable is True
+    assert rank2.dtype == "float32"
+    assert rank2.n_reference == 8
+    assert rank2.n_select == 2
+    assert rank2.data_scope == "abc"

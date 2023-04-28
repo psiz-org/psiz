@@ -453,6 +453,7 @@ class ALCOVECell(tf.keras.layers.Layer):
                     self.lr_association_constraint
                 ),
                 "lr_association_trainable": self.lr_association_trainable,
+                "data_scope": self.data_scope,
             }
         )
         return config

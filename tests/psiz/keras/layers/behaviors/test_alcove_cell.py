@@ -32,10 +32,36 @@ def test_serialization():
     embedding = tf.keras.layers.Embedding(
         11, 4, mask_zero=True, trainable=False,
     )
-    layer = ALCOVECell(units, similarity=similarity, percept=embedding)
-    config = layer.get_config()
 
-    recon_layer = ALCOVECell.from_config(config)
+    # Default options.
+    layer = ALCOVECell(units, similarity=similarity, percept=embedding, name="alcove_cell")
+    cfg = layer.get_config()
+    # Verify.
+    assert cfg["name"] == "alcove_cell"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["units"] == units
+    assert cfg["data_scope"] == "categorize"
+
+    recon_layer = ALCOVECell.from_config(cfg)
     tf.debugging.assert_equal(recon_layer.similarity.beta, 3.2)
     tf.debugging.assert_equal(recon_layer.similarity.tau, 1.0)
     assert recon_layer.units == units
+    assert recon_layer.data_scope == "categorize"
+
+    # Non-default options.
+    layer = ALCOVECell(units, similarity=similarity, percept=embedding, data_scope="abc")
+    cfg = layer.get_config()
+    # Verify.
+    # Verify.
+    assert cfg["name"] == "alcove_cell"
+    assert cfg["trainable"] is True
+    assert cfg["dtype"] == "float32"
+    assert cfg["units"] == units
+    assert cfg["data_scope"] == "abc"
+
+    recon_layer = ALCOVECell.from_config(cfg)
+    tf.debugging.assert_equal(recon_layer.similarity.beta, 3.2)
+    tf.debugging.assert_equal(recon_layer.similarity.tau, 1.0)
+    assert recon_layer.units == units
+    assert recon_layer.data_scope == "abc"

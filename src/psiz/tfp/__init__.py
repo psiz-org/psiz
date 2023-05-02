@@ -21,3 +21,8 @@ Modules:
 """
 
 from psiz.tfp import distributions
+from psiz.tfp.unpack_mvn import unpack_mvn
+
+__all__ = [
+    "unpack_mvn",
+]

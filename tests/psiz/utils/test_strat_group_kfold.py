@@ -37,9 +37,7 @@ def test_strat_group_kfold():
         group_test = group[test_idx]
 
         # Assert that groups are mutually exclusive in train and test.
-        intersect_arr = np.intersect1d(
-            np.unique(group_train), np.unique(group_test)
-        )
+        intersect_arr = np.intersect1d(np.unique(group_train), np.unique(group_test))
         assert len(intersect_arr) == 0
         y_count.append(np.sum(np.equal(y_train, 0)))
 
@@ -65,9 +63,7 @@ def test_strat_group_kfold_shuffle():
         group_test = group[test_idx]
 
         # Assert that groups are mutually exclusive in train and test.
-        intersect_arr = np.intersect1d(
-            np.unique(group_train), np.unique(group_test)
-        )
+        intersect_arr = np.intersect1d(np.unique(group_train), np.unique(group_test))
         assert len(intersect_arr) == 0
         y_count.append(np.sum(np.equal(y_train, 0)))
 

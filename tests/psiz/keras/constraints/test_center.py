@@ -28,20 +28,12 @@ def test_all():
 
     # Check get_config.
     config = con.get_config()
-    assert config['axis'] == 0
+    assert config["axis"] == 0
 
     # Check call.
-    w0 = tf.constant(
-        [
-            [1.36, -0.35],
-            [1.40, -0.41]
-        ], dtype=tf.float32
-    )
+    w0 = tf.constant([[1.36, -0.35], [1.40, -0.41]], dtype=tf.float32)
     w1 = con(w0)
     w_desired = tf.constant(
-        [
-            [-0.01999998, 0.03],
-            [0.01999998, -0.03]
-        ], dtype=tf.float32
+        [[-0.01999998, 0.03], [0.01999998, -0.03]], dtype=tf.float32
     )
     tf.debugging.assert_near(w_desired, w1)

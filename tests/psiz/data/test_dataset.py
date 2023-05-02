@@ -84,11 +84,10 @@ def test_init_1(c_2rank1_aa_4x1):
     """
     # TODO move rank_outcome to conftest to promote readability
     outcome_idx = np.zeros(
-        [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length],
-        dtype=np.int32
+        [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length], dtype=np.int32
     )
     rank_outcome = SparseCategorical(
-        outcome_idx, depth=c_2rank1_aa_4x1.n_outcome, name='rank_outcome'
+        outcome_idx, depth=c_2rank1_aa_4x1.n_outcome, name="rank_outcome"
     )
 
     pds = Dataset([c_2rank1_aa_4x1, rank_outcome])
@@ -109,15 +108,13 @@ def test_init_2(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
     """
     value = np.array(
         [
-            [[.1, .9]],
-            [[.5, .5]],
-            [[1., 0.]],
-            [[.9, .1]],
+            [[0.1, 0.9]],
+            [[0.5, 0.5]],
+            [[1.0, 0.0]],
+            [[0.9, 0.1]],
         ]
     )
-    group_0 = Group(
-        value, name='group_id'
-    )
+    group_0 = Group(value, name="group_id")
 
     pds = Dataset([c_2rank1_aa_4x1, group_0, o_2rank1_aa_4x1])
 
@@ -137,17 +134,16 @@ def test_init_3(c_2rank1_aa_4x1):
     """
     # Create rank outcome.
     outcome_idx = np.zeros(
-        [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length],
-        dtype=np.int32
+        [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length], dtype=np.int32
     )
-    sample_weight = .9 * np.ones(
+    sample_weight = 0.9 * np.ones(
         [c_2rank1_aa_4x1.n_sample, c_2rank1_aa_4x1.sequence_length]
     )
     rank_outcome = SparseCategorical(
         outcome_idx,
         depth=c_2rank1_aa_4x1.n_outcome,
         sample_weight=sample_weight,
-        name='rank_outcome'
+        name="rank_outcome",
     )
 
     value = np.array(
@@ -158,9 +154,7 @@ def test_init_3(c_2rank1_aa_4x1):
             [[0]],
         ]
     )
-    group_0 = Group(
-        value, name='condition_idx'
-    )
+    group_0 = Group(value, name="condition_idx")
 
     pds = Dataset([c_2rank1_aa_4x1, group_0, rank_outcome])
 
@@ -193,9 +187,7 @@ def test_init_5(c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2):
     * two outcomes
 
     """
-    pds = Dataset(
-        [c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2]
-    )
+    pds = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, c_rate2_e_3x2, o_rate2_a_3x2])
 
     assert pds.n_sample == 3
     assert pds.sequence_length == 2
@@ -261,15 +253,12 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
             [
                 [10, 11, 12],
                 [14, 15, 16],
-            ]
-        ], dtype=tf.int32
+            ],
+        ],
+        dtype=tf.int32,
     )
     desired_condition_id = tf.constant(
-        [
-            [[0], [0]],
-            [[1], [1]],
-            [[0], [0]]
-        ], dtype=tf.int32
+        [[[0], [0]], [[1], [1]], [[0], [0]]], dtype=tf.int32
     )
 
     tfds = pds.export().batch(4, drop_remainder=False)
@@ -277,12 +266,8 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
     x = ds_list[0]
 
     assert len(ds_list) == 1
-    tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['given2rank1_stimulus_set']
-    )
-    tf.debugging.assert_equal(
-        desired_condition_id, x['condition_idx']
-    )
+    tf.debugging.assert_equal(desired_x_stimulus_set, x["given2rank1_stimulus_set"])
+    tf.debugging.assert_equal(desired_condition_id, x["condition_idx"])
 
 
 def test_export_1(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
@@ -301,26 +286,22 @@ def test_export_1(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
             [0, 0, 0],
             [10, 11, 12],
             [14, 15, 16],
-        ], dtype=tf.int32
+        ],
+        dtype=tf.int32,
     )
-    desired_condition_id = tf.constant(
-        [
-            [0], [0], [1], [1], [0], [0]
-        ], dtype=tf.int32
-    )
+    desired_condition_id = tf.constant([[0], [0], [1], [1], [0], [0]], dtype=tf.int32)
     desired_y = tf.constant(
         [
-                [1., 0.],
-                [1., 0.],
-                [1., 0.],
-                [1., 0.],
-                [1., 0.],
-                [1., 0.],
-        ], dtype=tf.float32
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+        ],
+        dtype=tf.float32,
     )
-    desired_w = tf.constant(
-        [0.9, 0.9, 0.9, 0.9, 0.9, 0.9], dtype=tf.float32
-    )
+    desired_w = tf.constant([0.9, 0.9, 0.9, 0.9, 0.9, 0.9], dtype=tf.float32)
 
     tfds = pds.export(with_timestep_axis=False).batch(6, drop_remainder=False)
     ds_list = list(tfds)
@@ -329,28 +310,20 @@ def test_export_1(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     w = ds_list[0][2]
 
     assert len(ds_list[0]) == 3
-    tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['given2rank1_stimulus_set']
-    )
-    tf.debugging.assert_equal(
-        desired_condition_id, x['condition_idx']
-    )
+    tf.debugging.assert_equal(desired_x_stimulus_set, x["given2rank1_stimulus_set"])
+    tf.debugging.assert_equal(desired_condition_id, x["condition_idx"])
     tf.debugging.assert_equal(desired_y, y)
     tf.debugging.assert_equal(desired_w, w)
 
 
-def test_export_2a(
-    c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2
-):
+def test_export_2a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2):
     """Test export.
 
     * Multi-output model, therefore keep dictionary keys for `y` and
     `w`.
 
     """
-    pds = Dataset(
-        [c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2]
-    )
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2])
 
     desired_x_stimulus_set = tf.constant(
         [
@@ -365,52 +338,53 @@ def test_export_2a(
             [
                 [10, 11, 12],
                 [14, 15, 16],
-            ]
-        ], dtype=tf.int32
+            ],
+        ],
+        dtype=tf.int32,
     )
     desired_condition_id = tf.constant(
-        [
-            [[0], [0]],
-            [[1], [1]],
-            [[0], [0]]
-        ], dtype=tf.int32
+        [[[0], [0]], [[1], [1]], [[0], [0]]], dtype=tf.int32
     )
     desired_y_prob = tf.constant(
         [
             [
-                [1., 0.],
-                [1., 0.],
+                [1.0, 0.0],
+                [1.0, 0.0],
             ],
             [
-                [1., 0.],
-                [1., 0.],
+                [1.0, 0.0],
+                [1.0, 0.0],
             ],
             [
-                [1., 0.],
-                [1., 0.],
-            ]
-        ], dtype=tf.float32
+                [1.0, 0.0],
+                [1.0, 0.0],
+            ],
+        ],
+        dtype=tf.float32,
     )
     desired_w_prob = tf.constant(
         [
             [0.9, 0.9],
             [0.9, 0.9],
             [0.9, 0.9],
-        ], dtype=tf.float32
+        ],
+        dtype=tf.float32,
     )
     desired_y_rt = tf.constant(
         [
             [[4.1], [4.2]],
             [[5.1], [5.2]],
             [[6.1], [6.2]],
-        ], dtype=tf.float32
+        ],
+        dtype=tf.float32,
     )
     desired_w_rt = tf.constant(
         [
             [0.8, 0.8],
             [0.8, 0.8],
             [0.8, 0.8],
-        ], dtype=tf.float32
+        ],
+        dtype=tf.float32,
     )
 
     tfds = pds.export().batch(4, drop_remainder=False)
@@ -420,34 +394,28 @@ def test_export_2a(
     w = ds_list[0][2]
 
     assert len(ds_list[0]) == 3
-    tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['given2rank1_stimulus_set']
-    )
-    tf.debugging.assert_equal(
-        desired_condition_id, x['condition_idx']
-    )
-    tf.debugging.assert_equal(desired_y_prob, y['rank_prob'])
-    tf.debugging.assert_equal(desired_w_prob, w['rank_prob'])
-    tf.debugging.assert_equal(desired_y_rt, y['rt'])
-    tf.debugging.assert_equal(desired_w_rt, w['rt'])
+    tf.debugging.assert_equal(desired_x_stimulus_set, x["given2rank1_stimulus_set"])
+    tf.debugging.assert_equal(desired_condition_id, x["condition_idx"])
+    tf.debugging.assert_equal(desired_y_prob, y["rank_prob"])
+    tf.debugging.assert_equal(desired_w_prob, w["rank_prob"])
+    tf.debugging.assert_equal(desired_y_rt, y["rt"])
+    tf.debugging.assert_equal(desired_w_rt, w["rt"])
 
 
 def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     """Test export with `StringLookup`."""
-    pds = Dataset(
-        [c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1]
-    )
-    tfds = pds.export(export_format='tfds')
+    pds = Dataset([c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1])
+    tfds = pds.export(export_format="tfds")
 
     # Map strings to indices.
     condition_lookup_layer = tf.keras.layers.StringLookup(
-        vocabulary=['block', 'interleave'], num_oov_indices=0
+        vocabulary=["block", "interleave"], num_oov_indices=0
     )
 
     def parse_inputs(x):
-        condition_label = x.pop('condition_label')
+        condition_label = x.pop("condition_label")
         condition_idx = condition_lookup_layer(condition_label)
-        x['condition_idx'] = condition_idx
+        x["condition_idx"] = condition_idx
         return x
 
     ds2 = tfds.map(lambda x, y, w: (parse_inputs(x), y, w))
@@ -460,11 +428,10 @@ def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
             [[1]],
             [[0]],
             [[0]],
-        ], dtype=tf.int64
+        ],
+        dtype=tf.int64,
     )
-    tf.debugging.assert_equal(
-        ds2_list[0][0]['condition_idx'], desired_condition_idx
-    )
+    tf.debugging.assert_equal(ds2_list[0][0]["condition_idx"], desired_condition_idx)
 
 
 def test_export_4(c_2rank1_a_4x1):
@@ -472,12 +439,7 @@ def test_export_4(c_2rank1_a_4x1):
     pds = Dataset([c_2rank1_a_4x1])
 
     desired_x_stimulus_set = tf.constant(
-        [
-            [3, 1, 2],
-            [9, 12, 7],
-            [5, 6, 7],
-            [13, 14, 15]
-        ], dtype=np.int32
+        [[3, 1, 2], [9, 12, 7], [5, 6, 7], [13, 14, 15]], dtype=np.int32
     )
 
     tfds = pds.export().batch(4, drop_remainder=False)
@@ -485,9 +447,7 @@ def test_export_4(c_2rank1_a_4x1):
     x = ds_list[0]
 
     assert len(ds_list) == 1
-    tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['given2rank1_stimulus_set']
-    )
+    tf.debugging.assert_equal(desired_x_stimulus_set, x["given2rank1_stimulus_set"])
 
 
 def test_export_5(c_2rank1_aa_4x1):
@@ -495,12 +455,7 @@ def test_export_5(c_2rank1_aa_4x1):
     pds = Dataset([c_2rank1_aa_4x1])
 
     desired_x_stimulus_set = tf.constant(
-        [
-            [[3, 1, 2]],
-            [[9, 12, 7]],
-            [[5, 6, 7]],
-            [[13, 14, 15]]
-        ], dtype=np.int32
+        [[[3, 1, 2]], [[9, 12, 7]], [[5, 6, 7]], [[13, 14, 15]]], dtype=np.int32
     )
 
     tfds = pds.export().batch(4, drop_remainder=False)
@@ -508,9 +463,7 @@ def test_export_5(c_2rank1_aa_4x1):
     x = ds_list[0]
 
     assert len(ds_list) == 1
-    tf.debugging.assert_equal(
-        desired_x_stimulus_set, x['given2rank1_stimulus_set']
-    )
+    tf.debugging.assert_equal(desired_x_stimulus_set, x["given2rank1_stimulus_set"])
 
 
 def test_invalid_export_0(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
@@ -522,11 +475,9 @@ def test_invalid_export_0(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
 
     with pytest.raises(Exception) as e_info:
-        pds.export(export_format='garbage')
+        pds.export(export_format="garbage")
     assert e_info.type == ValueError
-    assert (
-        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
-    )
+    assert str(e_info.value) == "Unrecognized `export_format` 'garbage'."
 
 
 def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
@@ -538,13 +489,11 @@ def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
     pds = Dataset([c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname])
 
     with pytest.raises(Exception) as e_info:
-        pds.export(export_format='tfds')
+        pds.export(export_format="tfds")
     assert e_info.type == ValueError
-    assert (
-        str(e_info.value) == (
-            "When a `Dataset` has multiple outputs, all "
-            "outputs must be created with the `name` argument."
-        )
+    assert str(e_info.value) == (
+        "When a `Dataset` has multiple outputs, all "
+        "outputs must be created with the `name` argument."
     )
 
 
@@ -553,8 +502,8 @@ def test_tf_ds_concatenate(c_2rank1_d_3x2, c_2rank1_e_3x2):
     td_0 = Dataset([c_2rank1_d_3x2])
     td_1 = Dataset([c_2rank1_e_3x2])
 
-    ds_0 = td_0.export(export_format='tfds')
-    ds_1 = td_1.export(export_format='tfds')
+    ds_0 = td_0.export(export_format="tfds")
+    ds_1 = td_1.export(export_format="tfds")
 
     tfds = ds_0.concatenate(ds_1).batch(6)
     ds_list = list(tfds)

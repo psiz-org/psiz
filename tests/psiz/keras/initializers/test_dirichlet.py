@@ -27,17 +27,15 @@ def test_all():
     # Initialize.
     concentration = [1.1, 1.1, 1.1]
     initializer = Dirichlet(concentration, seed=[123, 252])
-    np.testing.assert_array_equal(
-        initializer.concentration, concentration
-    )
+    np.testing.assert_array_equal(initializer.concentration, concentration)
     assert initializer.scale == 1.0
 
     # Check `get_config`.
     config = initializer.get_config()
-    assert config['concentration'] == [1.1, 1.1, 1.1]
-    assert config['scale'] == 1.0
-    assert config['seed'][0] == 123
-    assert config['seed'][1] == 252
+    assert config["concentration"] == [1.1, 1.1, 1.1]
+    assert config["scale"] == 1.0
+    assert config["seed"][0] == 123
+    assert config["seed"][1] == 252
 
     # Check call does not raise error.
     tf_shape = tf.TensorShape([2, 4])

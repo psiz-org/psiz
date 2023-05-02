@@ -52,31 +52,27 @@ def test_init_with_shape(emb_input_1d):
 
     output = embedding(input)
 
-    desired_output_shape = np.hstack(
-        [sample_shape, input_shape, n_dim]
-    ).astype(int)
-    np.testing.assert_array_equal(
-        desired_output_shape, np.shape(output.numpy())
-    )
+    desired_output_shape = np.hstack([sample_shape, input_shape, n_dim]).astype(int)
+    np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
 
-@pytest.mark.parametrize(
-    "is_eager", [True, False]
-)
+@pytest.mark.parametrize("is_eager", [True, False])
 @pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
-    'embedding_class', [
+    "embedding_class",
+    [
         psiz.keras.layers.EmbeddingGammaDiag,
         psiz.keras.layers.EmbeddingLaplaceDiag,
         psiz.keras.layers.EmbeddingLogNormalDiag,
         psiz.keras.layers.EmbeddingLogitNormalDiag,
         psiz.keras.layers.EmbeddingNormalDiag,
-        psiz.keras.layers.EmbeddingTruncatedNormalDiag
-    ]
+        psiz.keras.layers.EmbeddingTruncatedNormalDiag,
+    ],
 )
 def test_call_1d_input(
-        emb_input_1d, sample_shape, embedding_class, mask_zero, is_eager):
+    emb_input_1d, sample_shape, embedding_class, mask_zero, is_eager
+):
     """Test call() return shape.
 
     Returned shape must include appropriate `sample_shape`."
@@ -91,88 +87,77 @@ def test_call_1d_input(
     if sample_shape is None:
         # Test default `sample_shape`.
         sample_shape = ()
-        embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=mask_zero
-        )
+        embedding = embedding_class(n_stimuli, n_dim, mask_zero=mask_zero)
     else:
         embedding = embedding_class(
             n_stimuli, n_dim, mask_zero=mask_zero, sample_shape=sample_shape
         )
 
     desired_input_length = 1
-    desired_output_shape = np.hstack(
-        [sample_shape, input_shape, n_dim]
-    ).astype(int)
+    desired_output_shape = np.hstack([sample_shape, input_shape, n_dim]).astype(int)
 
     # Test call
     output = embedding(input)
-    np.testing.assert_array_equal(
-        desired_output_shape, np.shape(output.numpy())
-    )
+    np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
     assert embedding.mask_zero == mask_zero
 
     # Verify `get_config` dictionary.
     config = embedding.get_config()
-    assert config['input_dim'] == n_stimuli
-    assert config['output_dim'] == n_dim
-    assert config['mask_zero'] == mask_zero
-    assert config['input_length'] == desired_input_length
-    assert config['sample_shape'] == sample_shape
+    assert config["input_dim"] == n_stimuli
+    assert config["output_dim"] == n_dim
+    assert config["mask_zero"] == mask_zero
+    assert config["input_length"] == desired_input_length
+    assert config["sample_shape"] == sample_shape
 
     # Reconstruct embedding and test.
     recon_emb = embedding_class.from_config(config)
     recon_output = recon_emb(input)
-    np.testing.assert_array_equal(
-        desired_output_shape, np.shape(recon_output.numpy())
-    )
+    np.testing.assert_array_equal(desired_output_shape, np.shape(recon_output.numpy()))
 
 
 @pytest.mark.parametrize(
-    'embedding_class', [
+    "embedding_class",
+    [
         psiz.keras.layers.EmbeddingGammaDiag,
         psiz.keras.layers.EmbeddingLaplaceDiag,
         psiz.keras.layers.EmbeddingLogNormalDiag,
         pytest.param(
             psiz.keras.layers.EmbeddingLogitNormalDiag,
-            marks=pytest.mark.xfail(reason="Mode not implemented.")
+            marks=pytest.mark.xfail(reason="Mode not implemented."),
         ),
         psiz.keras.layers.EmbeddingNormalDiag,
-        psiz.keras.layers.EmbeddingTruncatedNormalDiag
-    ]
+        psiz.keras.layers.EmbeddingTruncatedNormalDiag,
+    ],
 )
-def test_mode(
-        emb_input_1d, embedding_class):
+def test_mode(emb_input_1d, embedding_class):
     """Test mode() call and return shape."""
     input = emb_input_1d
     n_stimuli = 10
     n_dim = 2
 
-    embedding = embedding_class(
-        n_stimuli, n_dim, mask_zero=False
-    )
+    embedding = embedding_class(n_stimuli, n_dim, mask_zero=False)
 
     # Make call to ensure weight are built.
     _ = embedding(input)
 
     # Test `mode` method to make sure implemented, then check shape.
     emb_mode = embedding.embeddings.mode()
-    tf.debugging.assert_equal(
-        emb_mode.shape, tf.TensorShape([n_stimuli, n_dim])
-    )
+    tf.debugging.assert_equal(emb_mode.shape, tf.TensorShape([n_stimuli, n_dim]))
 
 
 @pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
-    'embedding_class', [
+    "embedding_class",
+    [
         psiz.keras.layers.EmbeddingGammaDiag,
         psiz.keras.layers.EmbeddingLaplaceDiag,
         psiz.keras.layers.EmbeddingLogNormalDiag,
         psiz.keras.layers.EmbeddingLogitNormalDiag,
         psiz.keras.layers.EmbeddingNormalDiag,
-        psiz.keras.layers.EmbeddingTruncatedNormalDiag
-    ]
+        psiz.keras.layers.EmbeddingTruncatedNormalDiag,
+    ],
 )
 def test_call_2d_input(emb_input_2d, sample_shape, embedding_class, mask_zero):
     """Test call() return shape.
@@ -188,21 +173,15 @@ def test_call_2d_input(emb_input_2d, sample_shape, embedding_class, mask_zero):
     if sample_shape is None:
         # Test default `sample_shape`.
         sample_shape = ()
-        embedding = embedding_class(
-            n_stimuli, n_dim, mask_zero=mask_zero
-        )
+        embedding = embedding_class(n_stimuli, n_dim, mask_zero=mask_zero)
     else:
         embedding = embedding_class(
             n_stimuli, n_dim, mask_zero=mask_zero, sample_shape=sample_shape
         )
 
-    desired_output_shape = np.hstack(
-        [sample_shape, input_shape, n_dim]
-    ).astype(int)
+    desired_output_shape = np.hstack([sample_shape, input_shape, n_dim]).astype(int)
 
     output = embedding(input)
-    np.testing.assert_array_equal(
-        desired_output_shape, np.shape(output.numpy())
-    )
+    np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
     assert embedding.mask_zero == mask_zero

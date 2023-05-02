@@ -30,9 +30,9 @@ def test_init_config():
 
     # Check get_config.
     config = con.get_config()
-    assert config['scale'] == 1.0
-    assert config['p'] == 2.0
-    assert config['axis'] == 1
+    assert config["scale"] == 1.0
+    assert config["p"] == 2.0
+    assert config["axis"] == 1
 
 
 def test_call_l1():
@@ -45,18 +45,10 @@ def test_call_l1():
     con = NonNegNorm(scale=1.0, p=1.0, axis=1)
 
     # Check call.
-    w0 = tf.constant(
-        [
-            [1.3, -0.35, 1.3],
-            [1.40, 0.41, 1.6]
-        ], dtype=tf.float32
-    )
+    w0 = tf.constant([[1.3, -0.35, 1.3], [1.40, 0.41, 1.6]], dtype=tf.float32)
     w1 = con(w0)
     w_desired = tf.constant(
-        [
-            [0.5, 0., 0.5],
-            [0.4105572, 0.12023461, 0.46920824]
-        ], dtype=tf.float32
+        [[0.5, 0.0, 0.5], [0.4105572, 0.12023461, 0.46920824]], dtype=tf.float32
     )
     tf.debugging.assert_near(w_desired, w1)
 
@@ -71,17 +63,10 @@ def test_call_l2():
     con = NonNegNorm(scale=1.0, p=2.0, axis=1)
 
     # Check call.
-    w0 = tf.constant(
-        [
-            [1.3, -0.35, 1.3],
-            [1.40, 0.41, 1.6]
-        ], dtype=tf.float32
-    )
+    w0 = tf.constant([[1.3, -0.35, 1.3], [1.40, 0.41, 1.6]], dtype=tf.float32)
     w1 = con(w0)
     w_desired = tf.constant(
-        [
-            [0.70710677, 0., 0.70710677],
-            [0.6465909, 0.18935876, 0.73896104]
-        ], dtype=tf.float32
+        [[0.70710677, 0.0, 0.70710677], [0.6465909, 0.18935876, 0.73896104]],
+        dtype=tf.float32,
     )
     tf.debugging.assert_near(w_desired, w1)

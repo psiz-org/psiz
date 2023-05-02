@@ -23,14 +23,14 @@ from psiz.keras.regularizers import StimulusNormedL1
 def test_all():
     """Test all methods."""
     # Initialize.
-    rate = .1
+    rate = 0.1
     reg = StimulusNormedL1(l1=rate)
 
     # Check get_config.
     config = reg.get_config()
-    assert config['l1'] == rate
+    assert config["l1"] == rate
 
     # Check call.
-    z = tf.constant([[0.5, 0.6, 0.7], [-.1, 1.2, .2], [-1., 1.3, .3]])
+    z = tf.constant([[0.5, 0.6, 0.7], [-0.1, 1.2, 0.2], [-1.0, 1.3, 0.3]])
     output = reg(z)
     tf.debugging.assert_equal(output, tf.constant(0.19666669))

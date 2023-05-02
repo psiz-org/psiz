@@ -32,13 +32,7 @@ def emb_inputs_v1():
     # Create a simple batch (batch_size=5).
     inputs = tf.constant(
         np.array(
-            [
-                [0, 1, 2],
-                [3, 4, 5],
-                [6, 7, 8],
-                [9, 1, 2],
-                [9, 1, 2]
-            ], dtype=np.int32
+            [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 1, 2], [9, 1, 2]], dtype=np.int32
         )
     )
     return inputs
@@ -49,27 +43,17 @@ def ds_3rank1_4x1():
     """Rank observations dataset."""
     n_sample = 4
     stimulus_set = np.array(
-        [
-            [1, 2, 3, 4],
-            [10, 13, 16, 19],
-            [4, 5, 6, 7],
-            [14, 15, 16, 17]
-        ], dtype=np.int32
+        [[1, 2, 3, 4], [10, 13, 16, 19], [4, 5, 6, 7], [14, 15, 16, 17]], dtype=np.int32
     )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     condition_idx = psiz.data.Group(
-        np.array([[0], [0], [1], [1]], dtype=np.int32),
-        name='condition_idx'
+        np.array([[0], [0], [1], [1]], dtype=np.int32), name="condition_idx"
     )
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset([content, outcome, condition_idx]).export()
     tfds = tfds.batch(n_sample, drop_remainder=False)
@@ -81,28 +65,25 @@ def ds_3rank1_4x1():
 def ds_3rank1_4x2():
     """Rank observations dataset."""
     n_sample = 4
-    stimulus_set = np.array([
-        [[1, 2, 3, 4], [5, 6, 7, 8]],
-        [[10, 13, 16, 19], [3, 6, 9, 12]],
-        [[4, 5, 6, 7], [8, 9, 10, 11]],
-        [[14, 15, 16, 17], [13, 12, 11, 10]],
-    ], dtype=np.int32)
+    stimulus_set = np.array(
+        [
+            [[1, 2, 3, 4], [5, 6, 7, 8]],
+            [[10, 13, 16, 19], [3, 6, 9, 12]],
+            [[4, 5, 6, 7], [8, 9, 10, 11]],
+            [[14, 15, 16, 17], [13, 12, 11, 10]],
+        ],
+        dtype=np.int32,
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     condition_idx = psiz.data.Group(
-        np.array(
-            [[[0], [0]], [[0], [0]], [[1], [1]], [[1], [1]]], dtype=np.int32
-        ),
-        name='condition_idx'
+        np.array([[[0], [0]], [[0], [0]], [[1], [1]], [[1], [1]]], dtype=np.int32),
+        name="condition_idx",
     )
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
     tfds = psiz.data.Dataset([content, outcome, condition_idx]).export()
     tfds = tfds.batch(n_sample, drop_remainder=False)
 
@@ -147,12 +128,10 @@ class TempNoRNN(psiz.keras.models.StochasticModel):
         """
         inputs = copy.copy(inputs)
         # Initialize states placeholder since not using RNN functionality
-        states = tf.constant([0.])
+        states = tf.constant([0.0])
 
         #  Drop sequence axis.
-        inputs['given3rank1_stimulus_set'] = (
-            inputs['given3rank1_stimulus_set'][:, 0]
-        )
+        inputs["given3rank1_stimulus_set"] = inputs["given3rank1_stimulus_set"][:, 0]
 
         output, states = self.net(inputs, states, training=training)
 
@@ -202,32 +181,39 @@ class TempRNN(psiz.keras.models.StochasticModel):
 
 def test_call_approx(emb_inputs_v1):
     """Test call."""
-    kl_weight = .1
+    kl_weight = 0.1
     n_stimuli = 10
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
+            1,
+            1,
+            loc_initializer=tf.keras.initializers.Constant(0.0),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
-        )
+        ),
     )
 
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=embedding_posterior,
+        prior=embedding_prior,
+        kl_weight=kl_weight,
+        kl_n_sample=30,
     )
 
     embedding_variational.build([None, 3])
@@ -240,32 +226,39 @@ def test_call_approx(emb_inputs_v1):
 
 def test_output_shape(emb_inputs_v1):
     """Test output_shape method."""
-    kl_weight = .1
+    kl_weight = 0.1
     n_stimuli = 10
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
+            1,
+            1,
+            loc_initializer=tf.keras.initializers.Constant(0.0),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
-        )
+        ),
     )
 
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=embedding_posterior,
+        prior=embedding_prior,
+        kl_weight=kl_weight,
+        kl_n_sample=30,
     )
 
     input_shape = tf.shape(emb_inputs_v1).numpy().tolist()
@@ -276,32 +269,39 @@ def test_output_shape(emb_inputs_v1):
 
 def test_serialization():
     """Test serialization."""
-    kl_weight = .1
+    kl_weight = 0.1
     n_stimuli = 10
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
+            1,
+            1,
+            loc_initializer=tf.keras.initializers.Constant(0.0),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
-        )
+        ),
     )
 
     orig_layer = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=embedding_posterior,
+        prior=embedding_prior,
+        kl_weight=kl_weight,
+        kl_n_sample=30,
     )
     orig_layer.build([None, 3])
     config = orig_layer.get_config()
@@ -311,41 +311,47 @@ def test_serialization():
 
     tf.debugging.assert_equal(
         tf.shape(orig_layer.posterior.embeddings.mode()),
-        tf.shape(recon_layer.posterior.embeddings.mode())
+        tf.shape(recon_layer.posterior.embeddings.mode()),
     )
     tf.debugging.assert_equal(
-        orig_layer.prior.embeddings.mode(),
-        recon_layer.prior.embeddings.mode()
+        orig_layer.prior.embeddings.mode(), recon_layer.prior.embeddings.mode()
     )
 
 
 def test_properties():
-    kl_weight = .1
+    kl_weight = 0.1
     n_stimuli = 10
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim, mask_zero=False,
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
+            1,
+            1,
+            loc_initializer=tf.keras.initializers.Constant(0.0),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
-        )
+        ),
     )
 
     orig_layer = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=embedding_posterior,
+        prior=embedding_prior,
+        kl_weight=kl_weight,
+        kl_n_sample=30,
     )
     orig_layer.build([None, 3])
 
@@ -362,56 +368,61 @@ def test_properties():
     assert isinstance(embeddings, tfp.distributions.Distribution)
 
 
-@pytest.mark.parametrize(
-    "is_eager", [True, False]
-)
+@pytest.mark.parametrize("is_eager", [True, False])
 def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
     """Test fit method (triggering backprop)."""
     tf.config.run_functions_eagerly(is_eager)
 
     tfds = ds_3rank1_4x1
 
-    kl_weight = .1
+    kl_weight = 0.1
     n_stimuli = 20
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=True,
+        n_stimuli,
+        n_dim,
+        mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim, mask_zero=True,
+        n_stimuli,
+        n_dim,
+        mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
+            1,
+            1,
+            loc_initializer=tf.keras.initializers.Constant(0.0),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
-        )
+        ),
     )
 
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=embedding_posterior,
+        prior=embedding_prior,
+        kl_weight=kl_weight,
+        kl_n_sample=30,
     )
 
     mink = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
-        trainable=False
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        trainable=False,
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=mink,
         similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
+            beta_initializer=tf.keras.initializers.Constant(10.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+        ),
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCell(
@@ -420,11 +431,9 @@ def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
 
     model = TempNoRNN(net=rank_cell, n_sample=1)
     compile_kwargs = {
-        'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-        'weighted_metrics': [
-            tf.keras.metrics.CategoricalCrossentropy(name='cce')
-        ]
+        "loss": tf.keras.losses.CategoricalCrossentropy(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
 
@@ -432,15 +441,16 @@ def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
 
 
 @pytest.mark.parametrize(
-    "is_eager", [
+    "is_eager",
+    [
         True,
         pytest.param(
             False,
             marks=pytest.mark.xfail(
                 reason="VI's 'add_loss' does not work inside RNN cell."
-            )
-        )
-    ]
+            ),
+        ),
+    ],
 )
 def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
     """Test fit method (triggering backprop)."""
@@ -448,47 +458,54 @@ def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
 
     tfds = ds_3rank1_4x2
 
-    kl_weight = .1
+    kl_weight = 0.1
     n_stimuli = 20
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
 
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli, n_dim, mask_zero=True,
+        n_stimuli,
+        n_dim,
+        mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
-        n_stimuli, n_dim, mask_zero=True,
+        n_stimuli,
+        n_dim,
+        mask_zero=True,
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
-            1, 1,
-            loc_initializer=tf.keras.initializers.Constant(0.),
+            1,
+            1,
+            loc_initializer=tf.keras.initializers.Constant(0.0),
             scale_initializer=tf.keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
-        )
+        ),
     )
 
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
-        posterior=embedding_posterior, prior=embedding_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=embedding_posterior,
+        prior=embedding_prior,
+        kl_weight=kl_weight,
+        kl_n_sample=30,
     )
 
     mink = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
-        trainable=False
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        trainable=False,
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=mink,
         similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
+            beta_initializer=tf.keras.initializers.Constant(10.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+        ),
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCell(
@@ -497,11 +514,9 @@ def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
 
     model = TempRNN(net=rank_cell, n_sample=1)
     compile_kwargs = {
-        'loss': tf.keras.losses.CategoricalCrossentropy(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-        'weighted_metrics': [
-            tf.keras.metrics.CategoricalCrossentropy(name='cce')
-        ]
+        "loss": tf.keras.losses.CategoricalCrossentropy(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
 

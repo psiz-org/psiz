@@ -39,8 +39,9 @@ def groups_5x3x3_index_v0():
             # Last two batches intentionally have different groups for
             # each timestep.
             [[0, 1, 1], [0, 2, 1], [0, 2, 0]],
-            [[0, 2, 1], [0, 0, 0], [0, 1, 1]]
-        ], dtype=tf.int32
+            [[0, 2, 1], [0, 0, 0], [0, 1, 1]],
+        ],
+        dtype=tf.int32,
     )
     return groups
 
@@ -54,13 +55,7 @@ def groups_v1():
     """
     # Create a simple batch (batch_size=5).
     groups = tf.constant(
-        [
-            [0, 1, 0],
-            [0, 1, 0],
-            [0, 1, 0],
-            [0, 0, 1],
-            [0, 0, 1]
-        ], dtype=np.int32
+        [[0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1], [0, 0, 1]], dtype=np.int32
     )
     return groups
 
@@ -74,13 +69,7 @@ def groups_v2():
     """
     # Create a simple batch (batch_size=5).
     groups = tf.constant(
-        [
-            [0, 1, 0],
-            [0, 1, 0],
-            [0, 1, 1],
-            [0, 0, 1],
-            [0, 0, 1]
-        ], dtype=np.int32
+        [[0, 1, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1], [0, 0, 1]], dtype=np.int32
     )
     return groups
 
@@ -99,7 +88,8 @@ def groups_v3():
             [0.0, 0.8, 0.2],
             [0.0, 0.5, 0.5],
             [0.0, 0.2, 0.8],
-            [0.0, 0.0, 1.0]
-        ], dtype=np.float32
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=np.float32,
     )
     return groups

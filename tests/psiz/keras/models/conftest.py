@@ -32,24 +32,17 @@ def ds_2rank1_v0():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3),
-        (18, 16, 14),
-        (17, 15, 13),
-        (4, 5, 6)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3), (18, 16, 14), (17, 15, 13), (4, 5, 6)), dtype=np.int32
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset([content, outcome]).export(
-        export_format='tfds', with_timestep_axis=False
+        export_format="tfds", with_timestep_axis=False
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -65,24 +58,18 @@ def ds_4rank1_v0():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5),
-        (10, 13, 8, 9, 12),
-        (4, 5, 6, 7, 8),
-        (14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4, 5), (10, 13, 8, 9, 12), (4, 5, 6, 7, 8), (14, 15, 16, 17, 18)),
+        dtype=np.int32,
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset([content, outcome]).export(
-        export_format='tfds', with_timestep_axis=False
+        export_format="tfds", with_timestep_axis=False
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -98,29 +85,22 @@ def ds_4rank1_v1():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5),
-        (10, 13, 8, 9, 12),
-        (4, 5, 6, 7, 8),
-        (14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4, 5), (10, 13, 8, 9, 12), (4, 5, 6, 7, 8), (14, 15, 16, 17, 18)),
+        dtype=np.int32,
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     groups = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32),
-        name='kernel_gate_weights'
+        np.array(([0], [0], [1], [1]), dtype=np.int32), name="kernel_gate_weights"
     )
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset([content, groups, outcome]).export(
-        export_format='tfds', with_timestep_axis=False
+        export_format="tfds", with_timestep_axis=False
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -136,35 +116,25 @@ def ds_4rank1_v2():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5),
-        (10, 13, 8, 9, 12),
-        (4, 5, 6, 7, 8),
-        (14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4, 5), (10, 13, 8, 9, 12), (4, 5, 6, 7, 8), (14, 15, 16, 17, 18)),
+        dtype=np.int32,
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     kernel_groups = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32),
-        name='kernel_gate_weights'
+        np.array(([0], [0], [1], [1]), dtype=np.int32), name="kernel_gate_weights"
     )
     percept_groups = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32),
-        name='percept_gate_weights'
+        np.array(([0], [0], [1], [1]), dtype=np.int32), name="percept_gate_weights"
     )
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset(
-        [content, kernel_groups, percept_groups, outcome]
-    ).export(
-        export_format='tfds', with_timestep_axis=False
+    tfds = psiz.data.Dataset([content, kernel_groups, percept_groups, outcome]).export(
+        export_format="tfds", with_timestep_axis=False
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -180,36 +150,26 @@ def ds_4rank1_v3():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5),
-        (10, 13, 8, 9, 12),
-        (4, 5, 6, 7, 8),
-        (14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4, 5), (10, 13, 8, 9, 12), (4, 5, 6, 7, 8), (14, 15, 16, 17, 18)),
+        dtype=np.int32,
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     percept_groups_0 = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32),
-        name='percept_gate_weights_0'
+        np.array(([0], [0], [1], [1]), dtype=np.int32), name="percept_gate_weights_0"
     )
     percept_groups_1 = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32),
-        name='percept_gate_weights_1'
+        np.array(([0], [0], [1], [1]), dtype=np.int32), name="percept_gate_weights_1"
     )
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset(
         [content, percept_groups_0, percept_groups_1, outcome]
-    ).export(
-        export_format='tfds', with_timestep_axis=False
-    )
+    ).export(export_format="tfds", with_timestep_axis=False)
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
 
@@ -224,24 +184,23 @@ def ds_8rank2_v0():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5, 6, 7, 8, 9),
-        (18, 16, 14, 12, 10, 8, 6, 4, 2),
-        (17, 15, 13, 11, 9, 7, 5, 3, 1),
-        (1, 2, 3, 4, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (18, 16, 14, 12, 10, 8, 6, 4, 2),
+            (17, 15, 13, 11, 9, 7, 5, 3, 1),
+            (1, 2, 3, 4, 14, 15, 16, 17, 18),
+        ),
+        dtype=np.int32,
+    )
     n_select = 2
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset([content, outcome]).export(
-        export_format='tfds', with_timestep_axis=False
+        export_format="tfds", with_timestep_axis=False
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -257,77 +216,65 @@ def ds_2rank1_8rank2_v0():
 
     """
     n_sample = 8
-    stimulus_set = np.array((
-        (1, 2, 3),
-        (18, 16, 14),
-        (17, 15, 13),
-        (4, 5, 6),
-        (0, 0, 0),
-        (0, 0, 0),
-        (0, 0, 0),
-        (0, 0, 0),
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (1, 2, 3),
+            (18, 16, 14),
+            (17, 15, 13),
+            (4, 5, 6),
+            (0, 0, 0),
+            (0, 0, 0),
+            (0, 0, 0),
+            (0, 0, 0),
+        ),
+        dtype=np.int32,
+    )
     n_select = 1
     content_2rank1 = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     outcome_idx = np.zeros(
-        [content_2rank1.n_sample, content_2rank1.sequence_length],
-        dtype=np.int32
+        [content_2rank1.n_sample, content_2rank1.sequence_length], dtype=np.int32
     )
-    sample_weight = np.array(
-        [1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32
-    )
+    sample_weight = np.array([1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
     outcome_2rank1 = psiz.data.SparseCategorical(
         outcome_idx,
         depth=content_2rank1.n_outcome,
-        name='given2rank1',
-        sample_weight=sample_weight
+        name="given2rank1",
+        sample_weight=sample_weight,
     )
 
-    stimulus_set = np.array((
-        (0, 0, 0, 0, 0, 0, 0, 0, 0),
-        (0, 0, 0, 0, 0, 0, 0, 0, 0),
-        (0, 0, 0, 0, 0, 0, 0, 0, 0),
-        (0, 0, 0, 0, 0, 0, 0, 0, 0),
-        (1, 2, 3, 4, 5, 6, 7, 8, 9),
-        (18, 16, 14, 12, 10, 8, 6, 4, 2),
-        (17, 15, 13, 11, 9, 7, 5, 3, 1),
-        (1, 2, 3, 4, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (18, 16, 14, 12, 10, 8, 6, 4, 2),
+            (17, 15, 13, 11, 9, 7, 5, 3, 1),
+            (1, 2, 3, 4, 14, 15, 16, 17, 18),
+        ),
+        dtype=np.int32,
+    )
     n_select = 2
     content_8rank2 = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     outcome_idx = np.zeros(
-        [content_8rank2.n_sample, content_8rank2.sequence_length],
-        dtype=np.int32
+        [content_8rank2.n_sample, content_8rank2.sequence_length], dtype=np.int32
     )
-    sample_weight = np.array(
-        [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32
-    )
+    sample_weight = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32)
     outcome_8rank2 = psiz.data.SparseCategorical(
         outcome_idx,
         depth=content_8rank2.n_outcome,
-        name='given8rank2',
-        sample_weight=sample_weight
+        name="given8rank2",
+        sample_weight=sample_weight,
     )
 
-    rank_config_val = np.array(
-        [[0], [0], [0], [0], [1], [1], [1], [1]], dtype=np.int32
-    )
-    rank_config = psiz.data.Group(
-        rank_config_val, name='rank_config'
-    )
+    rank_config_val = np.array([[0], [0], [0], [0], [1], [1], [1], [1]], dtype=np.int32)
+    rank_config = psiz.data.Group(rank_config_val, name="rank_config")
     tfds = psiz.data.Dataset(
-        [
-            content_2rank1,
-            outcome_2rank1,
-            content_8rank2,
-            outcome_8rank2,
-            rank_config
-        ]
-    ).export(
-        export_format='tfds', with_timestep_axis=False
-    )
+        [content_2rank1, outcome_2rank1, content_8rank2, outcome_8rank2, rank_config]
+    ).export(export_format="tfds", with_timestep_axis=False)
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
 
@@ -342,24 +289,23 @@ def ds_time_8rank2_v0():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5, 6, 7, 8, 9),
-        (10, 13, 8, 14, 15, 16, 11, 12, 9),
-        (4, 5, 6, 7, 8, 9, 10, 11, 12),
-        (4, 5, 6, 7, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (10, 13, 8, 14, 15, 16, 11, 12, 9),
+            (4, 5, 6, 7, 8, 9, 10, 11, 12),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18),
+        ),
+        dtype=np.int32,
+    )
     n_select = 2
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=True, export_format='tfds'
+        with_timestep_axis=True, export_format="tfds"
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -375,19 +321,14 @@ def ds_rate2_v0():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2),
-        (10, 13),
-        (4, 5),
-        (4, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(((1, 2), (10, 13), (4, 5), (4, 18)), dtype=np.int32)
     rating = np.array([[0.1], [0.4], [0.8], [0.9]])
     content = psiz.data.Rate(stimulus_set)
 
     outcome = psiz.data.Continuous(rating)
 
     tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=False, export_format='tfds'
+        with_timestep_axis=False, export_format="tfds"
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -403,19 +344,14 @@ def ds_time_rate2_v0():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2),
-        (10, 13),
-        (4, 5),
-        (4, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(((1, 2), (10, 13), (4, 5), (4, 18)), dtype=np.int32)
     content = psiz.data.Rate(stimulus_set)
 
-    rating = np.array([[0.1], [.4], [.8], [.9]])
+    rating = np.array([[0.1], [0.4], [0.8], [0.9]])
     outcome = psiz.data.Continuous(rating)
 
     tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=True, export_format='tfds'
+        with_timestep_axis=True, export_format="tfds"
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -431,24 +367,18 @@ def ds_rate2_v1():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2),
-        (10, 13),
-        (4, 5),
-        (4, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(((1, 2), (10, 13), (4, 5), (4, 18)), dtype=np.int32)
     content = psiz.data.Rate(stimulus_set)
 
     groups = psiz.data.Group(
-        np.array([[0], [0], [1], [1]], dtype=np.int32),
-        name='behavior_gate_weights'
+        np.array([[0], [0], [1], [1]], dtype=np.int32), name="behavior_gate_weights"
     )
 
-    rating = np.array([[0.1], [.4], [.8], [.9]])
+    rating = np.array([[0.1], [0.4], [0.8], [0.9]])
     outcome = psiz.data.Continuous(rating)
 
     tfds = psiz.data.Dataset([content, outcome, groups]).export(
-        with_timestep_axis=False, export_format='tfds'
+        with_timestep_axis=False, export_format="tfds"
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -473,7 +403,8 @@ def ds_time_categorize_v0():
             [[1], [3], [5], [7], [9], [11], [13], [15], [17], [19]],
             # NOTE: 2 masked trials
             [[2], [4], [6], [8], [10], [12], [14], [16], [0], [0]],
-        ], dtype=np.int32
+        ],
+        dtype=np.int32,
     )
     objective_query_label = np.array(
         [
@@ -481,14 +412,15 @@ def ds_time_categorize_v0():
             [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
             [0, 0, 0, 0, 0, 1, 1, 1, 2, 2],
             [0, 0, 0, 0, 0, 1, 1, 2, 0, 0],
-        ], dtype=np.int32
+        ],
+        dtype=np.int32,
     )
     sample_weight = np.array(
         [
-            [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
-            [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
-            [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.],
-            [1., 1., 1., 1., 1., 1., 1., 1., 0., 0.]
+            [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0],
         ]
     )
     outcome = psiz.data.SparseCategorical(
@@ -501,9 +433,7 @@ def ds_time_categorize_v0():
         stimulus_set=stimulus_set, objective_query_label=objective_query_label
     )
     pds = psiz.data.Dataset([content, outcome])
-    tfds = pds.export(export_format='tfds').batch(
-        n_sample, drop_remainder=False
-    )
+    tfds = pds.export(export_format="tfds").batch(n_sample, drop_remainder=False)
     return tfds
 
 
@@ -518,27 +448,22 @@ def ds_4rank2_rate2_v0():
     n_sample = 4
 
     # Rank data for dataset.
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5),
-        (10, 13, 8, 11, 12),
-        (4, 5, 6, 7, 8),
-        (14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4, 5), (10, 13, 8, 11, 12), (4, 5, 6, 7, 8), (14, 15, 16, 17, 18)),
+        dtype=np.int32,
+    )
     n_select = 2
     content_rank = psiz.data.Rank(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content_rank.n_sample, content_rank.sequence_length], dtype=np.int32
     )
     outcome_rank = psiz.data.SparseCategorical(
-        outcome_idx, depth=content_rank.n_outcome, name='rank_branch'
+        outcome_idx, depth=content_rank.n_outcome, name="rank_branch"
     )
 
     gate_weights = psiz.data.Group(
-        np.array(
-            ([1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]),
-            dtype=np.float32
-        ),
-        name='gate_weights_behavior'
+        np.array(([1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]), dtype=np.float32),
+        name="gate_weights_behavior",
     )
 
     # Rate data.
@@ -552,15 +477,14 @@ def ds_4rank2_rate2_v0():
     )
     content_rate = psiz.data.Rate(stimulus_set_rate)
     outcome_rate = psiz.data.Continuous(
-        np.array([[0.1], [.4], [.8], [.9]]),
-        name='rate_branch'
+        np.array([[0.1], [0.4], [0.8], [0.9]]), name="rate_branch"
     )
 
     pds = psiz.data.Dataset(
         [content_rank, outcome_rank, content_rate, outcome_rate, gate_weights]
     )
 
-    tfds = pds.export(export_format='tfds', with_timestep_axis=False).batch(
+    tfds = pds.export(export_format="tfds", with_timestep_axis=False).batch(
         n_sample, drop_remainder=False
     )
     return tfds
@@ -577,50 +501,46 @@ def ds_4rank1_rt_v0():
     n_trial = 8
 
     # Rank data for dataset.
-    stimulus_set = np.array((
-        (1, 2, 3, 4, 5),
-        (10, 11, 12, 13, 14),
-        (4, 5, 6, 7, 8),
-        (14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4, 5), (10, 11, 12, 13, 14), (4, 5, 6, 7, 8), (14, 15, 16, 17, 18)),
+        dtype=np.int32,
+    )
     n_select = 1
     content_rank = psiz.data.Rank(stimulus_set, n_select=n_select)
     outcome_idx = np.zeros(
         [content_rank.n_sample, content_rank.sequence_length], dtype=np.int32
     )
     outcome_rank = psiz.data.SparseCategorical(
-        outcome_idx, depth=content_rank.n_outcome, name='rank_choice_branch'
+        outcome_idx, depth=content_rank.n_outcome, name="rank_choice_branch"
     )
     outcome_rt = psiz.data.Continuous(
-        np.array([[4.0], [6.0], [7.0], [11.0]]),
-        name='rank_rt_branch'
+        np.array([[4.0], [6.0], [7.0], [11.0]]), name="rank_rt_branch"
     )
     pds = psiz.data.Dataset([content_rank, outcome_rank, outcome_rt])
-    tfds = pds.export(with_timestep_axis=False).batch(
-        n_trial, drop_remainder=False
-    )
+    tfds = pds.export(with_timestep_axis=False).batch(n_trial, drop_remainder=False)
     return tfds
 
 
 @pytest.fixture(scope="module")
 def ds_rank_docket():
     """Rank docket dataset."""
-    stimulus_set = np.array((
-        (1, 2, 3, 0, 0, 0, 0, 0, 0),
-        (10, 13, 8, 0, 0, 0, 0, 0, 0),
-        (4, 5, 6, 7, 8, 0, 0, 0, 0),
-        (4, 5, 6, 7, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18),
+        ),
+        dtype=np.int32,
+    )
 
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    docket = psiz.trials.RankDocket(
-        stimulus_set, n_select=n_select, mask_zero=True
-    )
+    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select, mask_zero=True)
 
-    ds_docket = docket.as_dataset(
-        np.zeros([n_trial, 1])
-    ).batch(n_trial, drop_remainder=False)
+    ds_docket = docket.as_dataset(np.zeros([n_trial, 1])).batch(
+        n_trial, drop_remainder=False
+    )
 
     return ds_docket
 
@@ -628,23 +548,29 @@ def ds_rank_docket():
 @pytest.fixture(scope="module")
 def ds_rank_docket_2g():
     """Rank docket dataset."""
-    stimulus_set = np.array((
-        (1, 2, 3, 0, 0, 0, 0, 0, 0),
-        (10, 13, 8, 0, 0, 0, 0, 0, 0),
-        (4, 5, 6, 7, 8, 0, 0, 0, 0),
-        (4, 5, 6, 7, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18),
+        ),
+        dtype=np.int32,
+    )
 
     n_trial = 4
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
-    docket = psiz.trials.RankDocket(
-        stimulus_set, n_select=n_select, mask_zero=True
-    )
+    docket = psiz.trials.RankDocket(stimulus_set, n_select=n_select, mask_zero=True)
 
     ds_docket = docket.as_dataset(
-        np.array([
-            [0], [0], [1], [1],
-        ])
+        np.array(
+            [
+                [0],
+                [0],
+                [1],
+                [1],
+            ]
+        )
     ).batch(n_trial, drop_remainder=False)
 
     return ds_docket
@@ -654,12 +580,15 @@ def ds_rank_docket_2g():
 def ds_rank_obs_2g():
     """Rank observations dataset."""
     n_trial = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 0, 0, 0, 0, 0, 0),
-        (10, 13, 8, 0, 0, 0, 0, 0, 0),
-        (4, 5, 6, 7, 8, 0, 0, 0, 0),
-        (4, 5, 6, 7, 14, 15, 16, 17, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        (
+            (1, 2, 3, 0, 0, 0, 0, 0, 0),
+            (10, 13, 8, 0, 0, 0, 0, 0, 0),
+            (4, 5, 6, 7, 8, 0, 0, 0, 0),
+            (4, 5, 6, 7, 14, 15, 16, 17, 18),
+        ),
+        dtype=np.int32,
+    )
     n_select = np.array((1, 1, 1, 2), dtype=np.int32)
 
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
@@ -675,19 +604,14 @@ def ds_rank_obs_2g():
 @pytest.fixture(scope="module")
 def ds_rate_docket():
     """Rate docket dataset."""
-    stimulus_set = np.array((
-        (1, 2),
-        (10, 13),
-        (4, 5),
-        (4, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(((1, 2), (10, 13), (4, 5), (4, 18)), dtype=np.int32)
 
     n_trial = 4
     docket = psiz.trials.RateDocket(stimulus_set)
 
-    ds_docket = docket.as_dataset(
-        np.zeros([n_trial, 1])
-    ).batch(n_trial, drop_remainder=False)
+    ds_docket = docket.as_dataset(np.zeros([n_trial, 1])).batch(
+        n_trial, drop_remainder=False
+    )
 
     return ds_docket
 
@@ -695,20 +619,20 @@ def ds_rate_docket():
 @pytest.fixture(scope="module")
 def ds_rate_docket_2g():
     """Rate docket dataset."""
-    stimulus_set = np.array((
-        (1, 2),
-        (10, 13),
-        (4, 5),
-        (4, 18)
-    ), dtype=np.int32)
+    stimulus_set = np.array(((1, 2), (10, 13), (4, 5), (4, 18)), dtype=np.int32)
 
     n_trial = 4
     docket = psiz.trials.RateDocket(stimulus_set)
 
     ds_docket = docket.as_dataset(
-        np.array([
-            [0], [0], [1], [1],
-        ])
+        np.array(
+            [
+                [0],
+                [0],
+                [1],
+                [1],
+            ]
+        )
     ).batch(n_trial, drop_remainder=False)
 
     return ds_docket
@@ -718,18 +642,11 @@ def ds_rate_docket_2g():
 def ds_rate_obs_2g():
     """Rate observations dataset."""
     n_trial = 4
-    stimulus_set = np.array((
-        (1, 2),
-        (10, 13),
-        (4, 5),
-        (4, 18)
-    ), dtype=np.int32)
-    rating = np.array([0.1, .4, .8, .9])
+    stimulus_set = np.array(((1, 2), (10, 13), (4, 5), (4, 18)), dtype=np.int32)
+    rating = np.array([0.1, 0.4, 0.8, 0.9])
     groups = np.array(([0], [0], [1], [1]), dtype=np.int32)
 
-    obs = psiz.trials.RateObservations(
-        stimulus_set, rating, groups=groups
-    )
+    obs = psiz.trials.RateObservations(stimulus_set, rating, groups=groups)
     ds_obs = obs.as_dataset().batch(n_trial, drop_remainder=False)
 
     return ds_obs
@@ -741,22 +658,20 @@ def rate_default_1g_mle():
     n_stimuli = 30
     n_dim = 10
 
-    stimuli = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
-    )
+    stimuli = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
-            trainable=False
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(3.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
+            beta_initializer=tf.keras.initializers.Constant(3.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+        ),
     )
 
     model = psiz.keras.models.Rate(stimuli=stimuli, kernel=kernel)

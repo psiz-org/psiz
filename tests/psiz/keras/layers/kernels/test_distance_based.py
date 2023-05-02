@@ -38,14 +38,14 @@ def kernel_db_static_v1():
 
     # Create "unweighted" Minkowski distance layer.
     distance = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
     )
     # Create exponential similarity function.
     similarity = ExponentialSimilarity(
         fit_beta=False,
-        beta_initializer=tf.keras.initializers.Constant(1.),
-        tau_initializer=tf.keras.initializers.Constant(1.),
+        beta_initializer=tf.keras.initializers.Constant(1.0),
+        tau_initializer=tf.keras.initializers.Constant(1.0),
         gamma_initializer=tf.keras.initializers.Constant(0.01),
     )
     # Package as distance-based kernel.
@@ -72,20 +72,11 @@ def test_call_v1(paired_inputs_v1, groups_v0, kernel_db_static_v1):
     kernel = kernel_db_static_v1
     outputs = kernel([inputs_0, inputs_1, groups_v0])
 
-    desired_outputs = np.array([
-        0.18692121,
-        0.15878458,
-        0.13512264,
-        0.13274848,
-        1.01
-    ])
-    np.testing.assert_array_almost_equal(
-        desired_outputs, outputs.numpy(), decimal=4
-    )
+    desired_outputs = np.array([0.18692121, 0.15878458, 0.13512264, 0.13274848, 1.01])
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=4)
 
 
-def test_coompute_output_shape(
-        paired_inputs_v0, groups_v0, kernel_db_static_v0):
+def test_coompute_output_shape(paired_inputs_v0, groups_v0, kernel_db_static_v0):
     """Test compute_output_shape method."""
     inputs_0 = paired_inputs_v0[0]
     inputs_1 = paired_inputs_v0[1]

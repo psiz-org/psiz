@@ -26,13 +26,8 @@ def gates_v0():
     # Create a simple batch (batch_size=5).
     gates = tf.constant(
         np.array(
-            [
-                [1, 0, 0],
-                [0, 1, 0],
-                [0, 0, 1],
-                [0, .3, .7],
-                [.5, 0, 0]
-            ], dtype=np.float32
+            [[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0.3, 0.7], [0.5, 0, 0]],
+            dtype=np.float32,
         )
     )
     return gates
@@ -49,8 +44,9 @@ def inputs_single():
                 [1.0, 1.1, 1.2],
                 [2.0, 2.1, 2.2],
                 [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2]
-            ], dtype=np.float32
+                [4.0, 4.1, 4.2],
+            ],
+            dtype=np.float32,
         )
     )
     return inputs
@@ -67,8 +63,9 @@ def inputs_list():
                 [1.0, 1.1, 1.2],
                 [2.0, 2.1, 2.2],
                 [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2]
-            ], dtype=np.float32
+                [4.0, 4.1, 4.2],
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -79,8 +76,9 @@ def inputs_list():
                 [11.0, 11.1, 11.2],
                 [12.0, 12.1, 12.2],
                 [13.0, 13.1, 13.2],
-                [14.0, 14.1, 14.2]
-            ], dtype=np.float32
+                [14.0, 14.1, 14.2],
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -100,8 +98,9 @@ def gates_v0_timestep():
             [[0.0, 0.3, 0.7], [0.0, 0.3, 0.7]],
             # NOTE: The last batch is intentionally different for the
             # two timesteps.
-            [[0.5, 0.0, 0.0], [0.0, 0.5, 0.0]]
-        ], dtype=tf.float32
+            [[0.5, 0.0, 0.0], [0.0, 0.5, 0.0]],
+        ],
+        dtype=tf.float32,
     )
     return gates
 
@@ -118,7 +117,8 @@ def inputs_list_timestep():
                 [[2.0, 2.1, 2.2], [2.01, 2.11, 2.21]],
                 [[3.0, 3.1, 3.2], [3.01, 3.11, 3.21]],
                 [[4.0, 4.1, 4.2], [4.01, 4.11, 4.21]],
-            ], dtype=np.float32
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -130,7 +130,8 @@ def inputs_list_timestep():
                 [[12.0, 12.1, 12.2], [12.01, 12.11, 12.21]],
                 [[13.0, 13.1, 13.2], [13.01, 13.11, 13.21]],
                 [[14.0, 14.1, 14.2], [14.01, 14.11, 14.21]],
-            ], dtype=np.float32
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -149,8 +150,9 @@ def inputs_dict():
                 [1.0, 1.1, 1.2],
                 [2.0, 2.1, 2.2],
                 [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2]
-            ], dtype=np.float32
+                [4.0, 4.1, 4.2],
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -161,15 +163,13 @@ def inputs_dict():
                 [11.0, 11.1, 11.2],
                 [12.0, 12.1, 12.2],
                 [13.0, 13.1, 13.2],
-                [14.0, 14.1, 14.2]
-            ], dtype=np.float32
+                [14.0, 14.1, 14.2],
+            ],
+            dtype=np.float32,
         )
     )
 
-    inputs = {
-        'inputs_0': inputs_0,
-        'inputs_1': inputs_1
-    }
+    inputs = {"inputs_0": inputs_0, "inputs_1": inputs_1}
     return inputs
 
 
@@ -185,7 +185,8 @@ def inputs_dict_timestep():
                 [[2.0, 2.1, 2.2], [2.01, 2.11, 2.21]],
                 [[3.0, 3.1, 3.2], [3.01, 3.11, 3.21]],
                 [[4.0, 4.1, 4.2], [4.01, 4.11, 4.21]],
-            ], dtype=np.float32
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -197,12 +198,10 @@ def inputs_dict_timestep():
                 [[12.0, 12.1, 12.2], [12.01, 12.11, 12.21]],
                 [[13.0, 13.1, 13.2], [13.01, 13.11, 13.21]],
                 [[14.0, 14.1, 14.2], [14.01, 14.11, 14.21]],
-            ], dtype=np.float32
+            ],
+            dtype=np.float32,
         )
     )
 
-    inputs = {
-        'inputs_0': inputs_0,
-        'inputs_1': inputs_1
-    }
+    inputs = {"inputs_0": inputs_0, "inputs_1": inputs_1}
     return inputs

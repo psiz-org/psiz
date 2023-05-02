@@ -25,9 +25,7 @@ def percept_static_v0():
     """Static percept layer."""
     n_stimuli = 20
     n_dim = 3
-    percept = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
-    )
+    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     return percept
 
 
@@ -35,12 +33,14 @@ def percept_stochastic_v0():
     """Stochastic percept layer."""
     n_stimuli = 20
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
     percept = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli + 1,
+        n_dim,
+        mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     return percept
 
@@ -49,16 +49,16 @@ def kernel_v0():
     """A kernel layer."""
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
+            beta_initializer=tf.keras.initializers.Constant(10.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.001),
             trainable=False,
-        )
+        ),
     )
     return kernel
 

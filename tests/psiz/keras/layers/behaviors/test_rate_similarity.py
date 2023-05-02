@@ -21,40 +21,30 @@ import tensorflow as tf
 def test_outcome_probability_v0():
     n_stimuli = 4
     n_dim = 2
-    beta = 10.
+    beta = 10.0
 
     percept = tf.keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
         embeddings_initializer=tf.initializers.Constant(
-            tf.constant(
-                [
-                    [0.0, 0.0],
-                    [0.1, 0.1],
-                    [0.2, 0.1],
-                    [0.3, 0.1],
-                    [0.4, 0.1]
-                ]
-            )
-        )
+            tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
+        ),
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
-        )
+        ),
     )
-    rate = psiz.keras.layers.RateSimilarity(
-        percept=percept, kernel=kernel
-    )
+    rate = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
     stimulus_set = tf.constant(
         [
             [1, 2],
@@ -64,12 +54,12 @@ def test_outcome_probability_v0():
         ]
     )
     x = {
-        'rate2_stimulus_set': stimulus_set,
+        "rate2_stimulus_set": stimulus_set,
     }
     rating = rate(x)
 
     # Desired outcome.
-    coords_x = .1 * tf.cast(stimulus_set, tf.float32)
+    coords_x = 0.1 * tf.cast(stimulus_set, tf.float32)
     z_q = tf.gather(coords_x, indices=tf.constant([0]), axis=1)
     z_r = tf.gather(coords_x, indices=tf.constant([1]), axis=1)
     d_qr = tf.abs(z_q - z_r)
@@ -90,42 +80,32 @@ def test_serialization():
     """Test serialization."""
     n_stimuli = 4
     n_dim = 2
-    beta = 10.
+    beta = 10.0
 
     percept = tf.keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
         embeddings_initializer=tf.initializers.Constant(
-            tf.constant(
-                [
-                    [0.0, 0.0],
-                    [0.1, 0.1],
-                    [0.2, 0.1],
-                    [0.3, 0.1],
-                    [0.4, 0.1]
-                ]
-            )
-        )
+            tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
+        ),
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
-        )
+        ),
     )
 
     # Default settings.
-    rate = psiz.keras.layers.RateSimilarity(
-        percept=percept, kernel=kernel, name="rs1"
-    )
+    rate = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel, name="rs1")
     cfg = rate.get_config()
     # Verify.
     assert cfg["name"] == "rs1"

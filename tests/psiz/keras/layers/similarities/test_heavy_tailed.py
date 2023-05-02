@@ -32,10 +32,12 @@ def test_init_default():
 def test_init_options_0():
     """Test initialization with optional arguments."""
     similarity = HeavyTailedSimilarity(
-        fit_tau=False, fit_kappa=False, fit_alpha=False,
-        tau_initializer=tf.keras.initializers.Constant(1.),
+        fit_tau=False,
+        fit_kappa=False,
+        fit_alpha=False,
+        tau_initializer=tf.keras.initializers.Constant(1.0),
         kappa_initializer=tf.keras.initializers.Constant(0.01),
-        alpha_initializer=tf.keras.initializers.Constant(10.),
+        alpha_initializer=tf.keras.initializers.Constant(10.0),
     )
 
     assert not similarity.fit_tau
@@ -46,24 +48,18 @@ def test_init_options_0():
 def test_call():
     """Test call."""
     similarity = HeavyTailedSimilarity(
-        tau_initializer=tf.keras.initializers.Constant(1.),
+        tau_initializer=tf.keras.initializers.Constant(1.0),
         kappa_initializer=tf.keras.initializers.Constant(2.1),
-        alpha_initializer=tf.keras.initializers.Constant(2.)
+        alpha_initializer=tf.keras.initializers.Constant(2.0),
     )
 
     dist = tf.constant(
-        [
-            [0.68166146, 1.394038],
-            [0.81919687, 1.25966185]
-        ], dtype=tf.float32
+        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
     )
     s_actual = similarity(dist)
 
     s_desired = tf.constant(
-        [
-            [0.12923837, 0.08191148],
-            [0.11734734, 0.08859494]
-        ], dtype=tf.float32
+        [[0.12923837, 0.08191148], [0.11734734, 0.08859494]], dtype=tf.float32
     )
     tf.debugging.assert_near(s_actual, s_desired)
 
@@ -72,6 +68,6 @@ def test_get_config():
     similarity = HeavyTailedSimilarity()
     config = similarity.get_config()
 
-    assert config['fit_tau']
-    assert config['fit_kappa']
-    assert config['fit_alpha']
+    assert config["fit_tau"]
+    assert config["fit_kappa"]
+    assert config["fit_alpha"]

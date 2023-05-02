@@ -23,12 +23,12 @@ from psiz.keras.regularizers import AttentionEntropy
 def test_all():
     """Test all methods."""
     # Initialize.
-    rate = .1
+    rate = 0.1
     reg = AttentionEntropy(rate=rate)
 
     # Check get_config.
     config = reg.get_config()
-    assert config['rate'] == rate
+    assert config["rate"] == rate
 
     # Check call.
     w = tf.constant([[0.5], [1.2], [1.3]])

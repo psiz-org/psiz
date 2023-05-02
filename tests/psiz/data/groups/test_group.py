@@ -31,12 +31,10 @@ def test_init_0(g_condition_idx_4x1):
             [[0]],
         ]
     )
-    assert g_condition_idx_4x1.name == 'condition_idx'
+    assert g_condition_idx_4x1.name == "condition_idx"
     assert g_condition_idx_4x1.n_sample == 4
     assert g_condition_idx_4x1.sequence_length == 1
-    np.testing.assert_array_equal(
-        g_condition_idx_4x1.value, desired_value
-    )
+    np.testing.assert_array_equal(g_condition_idx_4x1.value, desired_value)
 
 
 def test_init_1(g_condition_idx_4x3):
@@ -49,48 +47,43 @@ def test_init_1(g_condition_idx_4x3):
             [[0], [0], [0]],
         ]
     )
-    assert g_condition_idx_4x3.name == 'condition_idx'
+    assert g_condition_idx_4x3.name == "condition_idx"
     assert g_condition_idx_4x3.n_sample == 4
     assert g_condition_idx_4x3.sequence_length == 3
-    np.testing.assert_array_equal(
-        g_condition_idx_4x3.value, desired_value
-    )
+    np.testing.assert_array_equal(g_condition_idx_4x3.value, desired_value)
 
 
 def test_init_2(g_mix2_4x3):
     """Test initalization."""
     desired_value = np.array(
-       [
+        [
             [[0.5, 0.5], [0.6, 0.4], [0.7, 0.3]],
             [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
             [[0.8, 0.2], [0.8, 0.2], [0.8, 0.2]],
             [[0.2, 0.8], [0.2, 0.8], [0.2, 0.8]],
-        ], dtype=np.float32
+        ],
+        dtype=np.float32,
     )
-    assert g_mix2_4x3.name == 'mix2'
+    assert g_mix2_4x3.name == "mix2"
     assert g_mix2_4x3.n_sample == 4
     assert g_mix2_4x3.sequence_length == 3
-    np.testing.assert_array_equal(
-        g_mix2_4x3.value, desired_value
-    )
+    np.testing.assert_array_equal(g_mix2_4x3.value, desired_value)
 
 
 def test_init_3(g_condition_label_4x1):
     """Test initalization."""
     desired_value = np.array(
         [
-            [['block']],
-            [['interleave']],
-            [['block']],
-            [['block']],
+            [["block"]],
+            [["interleave"]],
+            [["block"]],
+            [["block"]],
         ]
     )
-    assert g_condition_label_4x1.name == 'condition_label'
+    assert g_condition_label_4x1.name == "condition_label"
     assert g_condition_label_4x1.n_sample == 4
     assert g_condition_label_4x1.sequence_length == 1
-    np.testing.assert_array_equal(
-        g_condition_label_4x1.value, desired_value
-    )
+    np.testing.assert_array_equal(g_condition_label_4x1.value, desired_value)
 
 
 def test_export_0a(g_mix2_4x3):
@@ -100,11 +93,12 @@ def test_export_0a(g_mix2_4x3):
             [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
             [[0.8, 0.2], [0.8, 0.2], [0.8, 0.2]],
             [[0.2, 0.8], [0.2, 0.8], [0.2, 0.8]],
-        ], dtype=tf.float32
+        ],
+        dtype=tf.float32,
     )
-    desired_name = 'mix2'
+    desired_name = "mix2"
 
-    x = g_mix2_4x3.export(export_format='tfds')
+    x = g_mix2_4x3.export(export_format="tfds")
     tf.debugging.assert_equal(desired_group_weight, x[desired_name])
 
 
@@ -116,17 +110,24 @@ def test_export_0b(g_mix2_4x3):
     """
     desired_group_weight = tf.constant(
         [
-            [0.5, 0.5], [0.6, 0.4], [0.7, 0.3],
-            [0.0, 1.0], [0.0, 1.0], [0.0, 1.0],
-            [0.8, 0.2], [0.8, 0.2], [0.8, 0.2],
-            [0.2, 0.8], [0.2, 0.8], [0.2, 0.8],
-        ], dtype=tf.float32
+            [0.5, 0.5],
+            [0.6, 0.4],
+            [0.7, 0.3],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.8, 0.2],
+            [0.8, 0.2],
+            [0.8, 0.2],
+            [0.2, 0.8],
+            [0.2, 0.8],
+            [0.2, 0.8],
+        ],
+        dtype=tf.float32,
     )
-    desired_name = 'mix2'
+    desired_name = "mix2"
 
-    x = g_mix2_4x3.export(
-        export_format='tfds', with_timestep_axis=False
-    )
+    x = g_mix2_4x3.export(export_format="tfds", with_timestep_axis=False)
     tf.debugging.assert_equal(desired_group_weight, x[desired_name])
 
 
@@ -134,15 +135,15 @@ def test_export_3a(g_condition_label_4x1):
     """Test export."""
     desired_value = tf.constant(
         [
-            [['block']],
-            [['interleave']],
-            [['block']],
-            [['block']],
+            [["block"]],
+            [["interleave"]],
+            [["block"]],
+            [["block"]],
         ]
     )
-    desired_name = 'condition_label'
+    desired_name = "condition_label"
 
-    x = g_condition_label_4x1.export(export_format='tfds')
+    x = g_condition_label_4x1.export(export_format="tfds")
     tf.debugging.assert_equal(desired_value, x[desired_name])
 
 
@@ -153,8 +154,6 @@ def test_export_wrong(g_mix2_4x3):
 
     """
     with pytest.raises(Exception) as e_info:
-        g_mix2_4x3.export(export_format='garbage')
+        g_mix2_4x3.export(export_format="garbage")
     assert e_info.type == ValueError
-    assert (
-        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
-    )
+    assert str(e_info.value) == "Unrecognized `export_format` 'garbage'."

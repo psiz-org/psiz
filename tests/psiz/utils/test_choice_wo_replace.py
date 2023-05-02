@@ -27,18 +27,34 @@ def test_choice_wo_replace():
     n_option = 20
 
     candidate_idx = np.arange(n_option)
-    candidate_prob = np.array([
-        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
-        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
-        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
-        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
-    ])
+    candidate_prob = np.array(
+        [
+            0.04787656,
+            0.01988875,
+            0.08106771,
+            0.08468775,
+            0.07918673,
+            0.05087084,
+            0.00922816,
+            0.08663405,
+            0.00707334,
+            0.02254985,
+            0.01820681,
+            0.01532338,
+            0.07702897,
+            0.06774214,
+            0.09976408,
+            0.05369049,
+            0.01056261,
+            0.07500489,
+            0.05508777,
+            0.03852514,
+        ]
+    )
 
     # Draw samples.
     np.random.seed(560897)
-    drawn_idx = choice_wo_replace(
-        candidate_idx, (n_trial, n_reference), candidate_prob
-    )
+    drawn_idx = choice_wo_replace(candidate_idx, (n_trial, n_reference), candidate_prob)
     bin_counts, bin_edges = np.histogram(drawn_idx.flatten(), bins=n_option)
     drawn_prob = bin_counts / np.sum(bin_counts)
 
@@ -57,22 +73,35 @@ def test_seed():
     n_option = 20
 
     candidate_idx = np.arange(n_option)
-    candidate_prob = np.array([
-        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
-        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
-        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
-        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
-    ])
+    candidate_prob = np.array(
+        [
+            0.04787656,
+            0.01988875,
+            0.08106771,
+            0.08468775,
+            0.07918673,
+            0.05087084,
+            0.00922816,
+            0.08663405,
+            0.00707334,
+            0.02254985,
+            0.01820681,
+            0.01532338,
+            0.07702897,
+            0.06774214,
+            0.09976408,
+            0.05369049,
+            0.01056261,
+            0.07500489,
+            0.05508777,
+            0.03852514,
+        ]
+    )
 
     # Draw samples using seed.
     rng = np.random.default_rng(seed=560897)
     drawn_idx = choice_wo_replace(
         candidate_idx, (n_trial, n_reference), candidate_prob, rng=rng
     )
-    drawn_idx_desired = np.array(
-        [
-            [2, 14, 3],
-            [12, 13, 15]
-        ], dtype=int
-    )
+    drawn_idx_desired = np.array([[2, 14, 3], [12, 13, 15]], dtype=int)
     np.testing.assert_array_equal(drawn_idx, drawn_idx_desired)

@@ -30,11 +30,16 @@ def test_serialization():
         trainable=False,
     )
     embedding = tf.keras.layers.Embedding(
-        11, 4, mask_zero=True, trainable=False,
+        11,
+        4,
+        mask_zero=True,
+        trainable=False,
     )
 
     # Default options.
-    layer = ALCOVECell(units, similarity=similarity, percept=embedding, name="alcove_cell")
+    layer = ALCOVECell(
+        units, similarity=similarity, percept=embedding, name="alcove_cell"
+    )
     cfg = layer.get_config()
     # Verify.
     assert cfg["name"] == "alcove_cell"
@@ -50,7 +55,9 @@ def test_serialization():
     assert recon_layer.data_scope == "categorize"
 
     # Non-default options.
-    layer = ALCOVECell(units, similarity=similarity, percept=embedding, data_scope="abc")
+    layer = ALCOVECell(
+        units, similarity=similarity, percept=embedding, data_scope="abc"
+    )
     cfg = layer.get_config()
     # Verify.
     # Verify.

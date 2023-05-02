@@ -35,14 +35,9 @@ def test_3prefer2():
     n_select = 2
     outcomes = m_prefer_n(m_option, n_select)
 
-    desired_outcomes = np.array((
-        (0, 1, 2),
-        (0, 2, 1),
-        (1, 0, 2),
-        (1, 2, 0),
-        (2, 0, 1),
-        (2, 1, 0)
-    ))
+    desired_outcomes = np.array(
+        ((0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0))
+    )
     np.testing.assert_array_equal(outcomes, desired_outcomes)
 
 
@@ -52,20 +47,22 @@ def test_4prefer2():
     n_select = 2
     outcomes = m_prefer_n(m_option, n_select)
 
-    desired_outcomes = np.array((
-        (0, 1, 2, 3),
-        (0, 2, 1, 3),
-        (0, 3, 1, 2),
-        (1, 0, 2, 3),
-        (1, 2, 0, 3),
-        (1, 3, 0, 2),
-        (2, 0, 1, 3),
-        (2, 1, 0, 3),
-        (2, 3, 0, 1),
-        (3, 0, 1, 2),
-        (3, 1, 0, 2),
-        (3, 2, 0, 1)
-    ))
+    desired_outcomes = np.array(
+        (
+            (0, 1, 2, 3),
+            (0, 2, 1, 3),
+            (0, 3, 1, 2),
+            (1, 0, 2, 3),
+            (1, 2, 0, 3),
+            (1, 3, 0, 2),
+            (2, 0, 1, 3),
+            (2, 1, 0, 3),
+            (2, 3, 0, 1),
+            (3, 0, 1, 2),
+            (3, 1, 0, 2),
+            (3, 2, 0, 1),
+        )
+    )
     np.testing.assert_array_equal(outcomes, desired_outcomes)
 
 
@@ -75,14 +72,16 @@ def test_8prefer1():
     n_select = 1
     outcomes = m_prefer_n(m_option, n_select)
 
-    desired_outcomes = np.array((
-        (0, 1, 2, 3, 4, 5, 6, 7),
-        (1, 0, 2, 3, 4, 5, 6, 7),
-        (2, 0, 1, 3, 4, 5, 6, 7),
-        (3, 0, 1, 2, 4, 5, 6, 7),
-        (4, 0, 1, 2, 3, 5, 6, 7),
-        (5, 0, 1, 2, 3, 4, 6, 7),
-        (6, 0, 1, 2, 3, 4, 5, 7),
-        (7, 0, 1, 2, 3, 4, 5, 6)
-    ))
+    desired_outcomes = np.array(
+        (
+            (0, 1, 2, 3, 4, 5, 6, 7),
+            (1, 0, 2, 3, 4, 5, 6, 7),
+            (2, 0, 1, 3, 4, 5, 6, 7),
+            (3, 0, 1, 2, 4, 5, 6, 7),
+            (4, 0, 1, 2, 3, 5, 6, 7),
+            (5, 0, 1, 2, 3, 4, 6, 7),
+            (6, 0, 1, 2, 3, 4, 5, 7),
+            (7, 0, 1, 2, 3, 4, 5, 6),
+        )
+    )
     np.testing.assert_array_equal(outcomes, desired_outcomes)

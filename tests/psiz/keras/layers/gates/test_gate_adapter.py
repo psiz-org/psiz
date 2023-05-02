@@ -36,10 +36,9 @@ class OuterPassesTuple(tf.keras.layers.Layer):
         super(OuterPassesTuple, self).__init__(**kwargs)
         self.inner_layer = inner
         self.gate_adapter = GateAdapter(
-            gating_keys=inner_gating_keys,
-            format_inputs_as_tuple=True
+            gating_keys=inner_gating_keys, format_inputs_as_tuple=True
         )
-        self.gate_adapter.input_keys = ['x0', 'x1']
+        self.gate_adapter.input_keys = ["x0", "x1"]
 
     def call(self, inputs):
         """Call."""
@@ -56,10 +55,9 @@ class OuterPassesDict(tf.keras.layers.Layer):
         super(OuterPassesDict, self).__init__(**kwargs)
         self.inner_layer = inner
         self.gate_adapter = GateAdapter(
-            gating_keys=inner_gating_keys,
-            format_inputs_as_tuple=False
+            gating_keys=inner_gating_keys, format_inputs_as_tuple=False
         )
-        self.gate_adapter.input_keys = ['x0', 'x1']
+        self.gate_adapter.input_keys = ["x0", "x1"]
 
     def call(self, inputs):
         """Call."""
@@ -78,7 +76,7 @@ class InnerNeedsDict(tf.keras.layers.Layer):
 
     def call(self, inputs):
         """Call."""
-        return self.factor * (inputs['x0'] + inputs['x1'])
+        return self.factor * (inputs["x0"] + inputs["x1"])
 
 
 class InnerNeedsTuple(tf.keras.layers.Layer):
@@ -100,12 +98,13 @@ def inputs_x0():
     # Create a simple batch (batch_size=5).
     inputs = tf.constant(
         [
-            [[0., 1., 2.], [3., 4., 5.]],
-            [[0., 1., 2.], [3., 4., 5.]],
-            [[0., 1., 2.], [3., 4., 5.]],
-            [[6., 7., 8.], [9., 10., 11.]],
-            [[6., 7., 8.], [9., 10., 11.]]
-        ], dtype=tf.float32
+            [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]],
+            [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]],
+            [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]],
+            [[6.0, 7.0, 8.0], [9.0, 10.0, 11.0]],
+            [[6.0, 7.0, 8.0], [9.0, 10.0, 11.0]],
+        ],
+        dtype=tf.float32,
     )
     return inputs
 
@@ -120,8 +119,9 @@ def inputs_x1():
             [[0.1, 1.1, 2.1], [3.1, 4.1, 5.1]],
             [[0.1, 1.1, 2.1], [3.1, 4.1, 5.1]],
             [[6.1, 7.1, 8.1], [9.1, 10.1, 11.1]],
-            [[6.1, 7.1, 8.1], [9.1, 10.1, 11.1]]
-        ], dtype=tf.float32
+            [[6.1, 7.1, 8.1], [9.1, 10.1, 11.1]],
+        ],
+        dtype=tf.float32,
     )
     return inputs
 
@@ -130,15 +130,7 @@ def inputs_x1():
 def inputs_groups0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups0 = tf.constant(
-        [
-            [0],
-            [0],
-            [1],
-            [0],
-            [1]
-        ], dtype=tf.int32
-    )
+    groups0 = tf.constant([[0], [0], [1], [0], [1]], dtype=tf.int32)
     return groups0
 
 
@@ -146,15 +138,7 @@ def inputs_groups0():
 def inputs_groups1():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups1 = tf.constant(
-        [
-            [0],
-            [1],
-            [0],
-            [0],
-            [0]
-        ], dtype=tf.int32
-    )
+    groups1 = tf.constant([[0], [1], [0], [0], [0]], dtype=tf.int32)
     return groups1
 
 
@@ -167,8 +151,9 @@ def outputs_desired_v0():
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
             [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
-            [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]]
-        ], dtype=tf.float32
+            [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
+        ],
+        dtype=tf.float32,
     )
     return outputs_desired
 
@@ -192,8 +177,9 @@ def outputs_desired_v1():
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
             [[0.2, 4.2, 8.2], [12.2, 16.2, 20.2]],
             [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
-            [[24.2, 28.2, 32.2], [36.2, 40.2, 44.2]]
-        ], dtype=tf.float32
+            [[24.2, 28.2, 32.2], [36.2, 40.2, 44.2]],
+        ],
+        dtype=tf.float32,
     )
     return outputs_desired
 
@@ -221,8 +207,9 @@ def outputs_desired_v2():
             [[0.3, 6.3, 12.3], [18.3, 24.3, 30.3]],
             [[0.2, 4.2, 8.2], [12.2, 16.2, 20.2]],
             [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
-            [[24.2, 28.2, 32.2], [36.2, 40.2, 44.2]]
-        ], dtype=tf.float32
+            [[24.2, 28.2, 32.2], [36.2, 40.2, 44.2]],
+        ],
+        dtype=tf.float32,
     )
     return outputs_desired
 
@@ -233,13 +220,10 @@ class TestInnerNeedsTuple:
     def test_no_gate(self, inputs_x0, inputs_x1, outputs_desired_v0):
         """Test using a subnetwork that does not have a gate."""
         outputs_desired = outputs_desired_v0
-        inputs = {
-            'x0': inputs_x0,
-            'x1': inputs_x1
-        }
+        inputs = {"x0": inputs_x0, "x1": inputs_x1}
 
         # Assemble and call module.
-        inner = InnerNeedsTuple(factor=1., name="inner_a")
+        inner = InnerNeedsTuple(factor=1.0, name="inner_a")
         outer = OuterPassesTuple(inner=inner, name="outer")
         outputs = outer(inputs)
 
@@ -247,55 +231,47 @@ class TestInnerNeedsTuple:
         tf.debugging.assert_near(outputs, outputs_desired)
 
     def test_with_braid_gate(
-            self, inputs_x0, inputs_x1, inputs_groups0, outputs_desired_v1):
+        self, inputs_x0, inputs_x1, inputs_groups0, outputs_desired_v1
+    ):
         """Test using a subnetwork that has a braid gate."""
         outputs_desired = outputs_desired_v1
         inputs = {
-            'x0': inputs_x0,
-            'x1': inputs_x1,
-            'groups0': inputs_groups0,
+            "x0": inputs_x0,
+            "x1": inputs_x1,
+            "groups0": inputs_groups0,
         }
 
         # Assemble and call module.
-        inner_a = InnerNeedsTuple(factor=1., name="inner_a")
-        inner_b = InnerNeedsTuple(factor=2., name="inner_b")
-        branch_a_b = BraidGate(
-            subnets=[inner_a, inner_b], gating_index=-1
-        )
+        inner_a = InnerNeedsTuple(factor=1.0, name="inner_a")
+        inner_b = InnerNeedsTuple(factor=2.0, name="inner_b")
+        branch_a_b = BraidGate(subnets=[inner_a, inner_b], gating_index=-1)
         outer = OuterPassesTuple(
-            inner=branch_a_b,
-            inner_gating_keys=['groups0'],
-            name="outer"
+            inner=branch_a_b, inner_gating_keys=["groups0"], name="outer"
         )
         outputs = outer(inputs)
 
         tf.debugging.assert_near(outputs, outputs_desired)
 
     def test_with_nested_braid_gate(
-            self, inputs_x0, inputs_x1, inputs_groups0, inputs_groups1,
-            outputs_desired_v2):
+        self, inputs_x0, inputs_x1, inputs_groups0, inputs_groups1, outputs_desired_v2
+    ):
         """Test using a subnetwork that has nested braid gates."""
         outputs_desired = outputs_desired_v2
         inputs = {
-            'x0': inputs_x0,
-            'x1': inputs_x1,
-            'groups0': inputs_groups0,
-            'groups1': inputs_groups1,
+            "x0": inputs_x0,
+            "x1": inputs_x1,
+            "groups0": inputs_groups0,
+            "groups1": inputs_groups1,
         }
 
         # Assemble and call module.
-        inner_a = InnerNeedsTuple(factor=1., name="inner_a")
-        inner_b = InnerNeedsTuple(factor=2., name="inner_b")
-        inner_c = InnerNeedsTuple(factor=3., name="inner_b")
-        branch_a_b = BraidGate(
-            subnets=[inner_a, inner_b], gating_index=-1
-        )
-        branch_ab_c = BraidGate(
-            subnets=[branch_a_b, inner_c], gating_index=-1
-        )
+        inner_a = InnerNeedsTuple(factor=1.0, name="inner_a")
+        inner_b = InnerNeedsTuple(factor=2.0, name="inner_b")
+        inner_c = InnerNeedsTuple(factor=3.0, name="inner_b")
+        branch_a_b = BraidGate(subnets=[inner_a, inner_b], gating_index=-1)
+        branch_ab_c = BraidGate(subnets=[branch_a_b, inner_c], gating_index=-1)
         outer = OuterPassesTuple(
-            inner=branch_ab_c, inner_gating_keys=['groups0', 'groups1'],
-            name="outer"
+            inner=branch_ab_c, inner_gating_keys=["groups0", "groups1"], name="outer"
         )
         outputs = outer(inputs)
         tf.debugging.assert_near(outputs, outputs_desired)
@@ -307,65 +283,55 @@ class TestInnerNeedsDict:
     def test_no_gate(self, inputs_x0, inputs_x1, outputs_desired_v0):
         """Test using a subnetwork that does not have a gate."""
         outputs_desired = outputs_desired_v0
-        inputs = {
-            'x0': inputs_x0,
-            'x1': inputs_x1
-        }
+        inputs = {"x0": inputs_x0, "x1": inputs_x1}
 
-        inner = InnerNeedsDict(factor=1., name="inner_a")
+        inner = InnerNeedsDict(factor=1.0, name="inner_a")
         outer = OuterPassesDict(inner=inner, name="outer")
         outputs = outer(inputs)
 
         tf.debugging.assert_near(outputs, outputs_desired)
 
     def test_with_braid_gate(
-            self, inputs_x0, inputs_x1, inputs_groups0, outputs_desired_v1):
+        self, inputs_x0, inputs_x1, inputs_groups0, outputs_desired_v1
+    ):
         """Test using a subnetwork that has a braid gate."""
         outputs_desired = outputs_desired_v1
         inputs = {
-            'x0': inputs_x0,
-            'x1': inputs_x1,
-            'groups0': inputs_groups0,
+            "x0": inputs_x0,
+            "x1": inputs_x1,
+            "groups0": inputs_groups0,
         }
 
-        inner_a = InnerNeedsDict(factor=1., name="inner_a")
-        inner_b = InnerNeedsDict(factor=2., name="inner_b")
-        inner = BraidGate(
-            subnets=[inner_a, inner_b], gating_key='groups0'
-        )
+        inner_a = InnerNeedsDict(factor=1.0, name="inner_a")
+        inner_b = InnerNeedsDict(factor=2.0, name="inner_b")
+        inner = BraidGate(subnets=[inner_a, inner_b], gating_key="groups0")
         outer = OuterPassesDict(
-            inner=inner, inner_gating_keys=['groups0'], name="outer"
+            inner=inner, inner_gating_keys=["groups0"], name="outer"
         )
         outputs = outer(inputs)
 
         tf.debugging.assert_near(outputs, outputs_desired)
 
     def test_with_nested_braid_gate(
-            self, inputs_x0, inputs_x1, inputs_groups0, inputs_groups1,
-            outputs_desired_v2):
+        self, inputs_x0, inputs_x1, inputs_groups0, inputs_groups1, outputs_desired_v2
+    ):
         """Test using a subnetwork that has nested braid gates."""
         outputs_desired = outputs_desired_v2
         inputs = {
-            'x0': inputs_x0,
-            'x1': inputs_x1,
-            'groups0': inputs_groups0,
-            'groups1': inputs_groups1,
+            "x0": inputs_x0,
+            "x1": inputs_x1,
+            "groups0": inputs_groups0,
+            "groups1": inputs_groups1,
         }
 
         # Assemble and call module.
-        inner_a = InnerNeedsDict(factor=1., name="inner_a")
-        inner_b = InnerNeedsDict(factor=2., name="inner_b")
-        inner_c = InnerNeedsDict(factor=3., name="inner_b")
-        branch_a_b = BraidGate(
-            subnets=[inner_a, inner_b], gating_key='groups0'
-        )
-        branch_ab_c = BraidGate(
-            subnets=[branch_a_b, inner_c], gating_key='groups1'
-        )
+        inner_a = InnerNeedsDict(factor=1.0, name="inner_a")
+        inner_b = InnerNeedsDict(factor=2.0, name="inner_b")
+        inner_c = InnerNeedsDict(factor=3.0, name="inner_b")
+        branch_a_b = BraidGate(subnets=[inner_a, inner_b], gating_key="groups0")
+        branch_ab_c = BraidGate(subnets=[branch_a_b, inner_c], gating_key="groups1")
         outer = OuterPassesDict(
-            inner=branch_ab_c,
-            inner_gating_keys=['groups0', 'groups1'],
-            name="outer"
+            inner=branch_ab_c, inner_gating_keys=["groups0", "groups1"], name="outer"
         )
         outputs = outer(inputs)
         tf.debugging.assert_near(outputs, outputs_desired)

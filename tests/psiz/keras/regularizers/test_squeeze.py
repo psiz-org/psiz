@@ -23,14 +23,14 @@ from psiz.keras.regularizers import Squeeze
 def test_all():
     """Test all methods."""
     # Initialize.
-    rate = .1
+    rate = 0.1
     reg = Squeeze(rate=rate)
 
     # Check get_config.
     config = reg.get_config()
-    assert config['rate'] == rate
+    assert config["rate"] == rate
 
     # Check call.
-    z = tf.constant([[0.5, 0.6, 0.7], [-.1, 1.2, .2], [-1., 1.3, .3]])
+    z = tf.constant([[0.5, 0.6, 0.7], [-0.1, 1.2, 0.2], [-1.0, 1.3, 0.3]])
     output = reg(z)
     tf.debugging.assert_equal(output, tf.constant(0.3))

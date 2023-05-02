@@ -50,7 +50,7 @@ def base_circular_model():
     # Create embedding points arranged in a circle.
     center_point = np.array([[0.25, 0.25]])
     # Determine polar coordiantes.
-    r = .15
+    r = 0.15
     theta = np.linspace(0, 2 * np.pi, 9)
     theta = theta[0:-1]  # Drop last point, which is a repeat of first.
     theta = np.expand_dims(theta, axis=1)
@@ -68,27 +68,29 @@ def base_circular_model():
     loc = np.vstack((np.zeros([1, 2]), loc))
 
     # Create model.
-    prior_scale = .17
+    prior_scale = 0.17
     percept = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli + 1,
+        n_dim,
+        mask_zero=True,
         loc_initializer=tf.keras.initializers.Constant(loc),
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
 
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
-            trainable=False
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
-            gamma_initializer=tf.keras.initializers.Constant(0.),
-        )
+            beta_initializer=tf.keras.initializers.Constant(10.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+        ),
     )
 
     rank = psiz.keras.layers.RankSimilarity(
@@ -106,14 +108,12 @@ def model_0():
     (n_point, n_dim) = loc.shape
 
     # Do not modify loc, but give one point 3x higher scale.
-    scale = .01 * np.ones([n_point, n_dim], dtype=np.float32)
-    scale[4, :] = .03
+    scale = 0.01 * np.ones([n_point, n_dim], dtype=np.float32)
+    scale[4, :] = 0.03
 
     # Assign `loc` and `scale` to model.
     model.behavior.percept.loc.assign(loc)
-    model.behavior.percept.untransformed_scale.assign(
-        tfp.math.softplus_inverse(scale)
-    )
+    model.behavior.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
     return model
 
 
@@ -123,15 +123,13 @@ def model_1():
     (n_point, n_dim) = loc.shape
 
     # Translate loc and give one point 3x higher scale.
-    loc = loc - .1
-    scale = .01 * np.ones([n_point, n_dim], dtype=np.float32)
-    scale[4, :] = .03
+    loc = loc - 0.1
+    scale = 0.01 * np.ones([n_point, n_dim], dtype=np.float32)
+    scale[4, :] = 0.03
 
     # Assign `loc` and `scale` to model.
     model.behavior.percept.loc.assign(loc)
-    model.behavior.percept.untransformed_scale.assign(
-        tfp.math.softplus_inverse(scale)
-    )
+    model.behavior.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
     return model
 
 
@@ -139,18 +137,12 @@ def model_1():
 def ds_2rank1():
     """Rank docket dataset."""
     stimulus_set = np.array(
-        [
-            [[4, 3, 5]],
-            [[4, 2, 5]],
-            [[4, 3, 6]],
-            [[4, 2, 6]],
-            [[4, 5, 6]],
-            [[7, 1, 3]]
-        ], dtype=np.int32
+        [[[4, 3, 5]], [[4, 2, 5]], [[4, 3, 6]], [[4, 2, 6]], [[4, 5, 6]], [[7, 1, 3]]],
+        dtype=np.int32,
     )
     content = psiz.data.Rank(stimulus_set, n_select=1)
     tfds = psiz.data.Dataset([content]).export(
-        export_format='tfds', with_timestep_axis=False
+        export_format="tfds", with_timestep_axis=False
     )
     tfds = tfds.batch(stimulus_set.shape[0], drop_remainder=False)
     return tfds
@@ -174,12 +166,10 @@ def test_1_model(model_0, ds_2rank1):
     #     ], dtype=tf.float32
     # )
     ig_desired = tf.constant(
-        [
-            0.03496134, 0.02489483, 0.02482754, 0.02341402, 0.003456,
-            0.00146809
-        ], dtype=tf.float32
+        [0.03496134, 0.02489483, 0.02482754, 0.02341402, 0.003456, 0.00146809],
+        dtype=tf.float32,
     )
-    tf.debugging.assert_near(ig, ig_desired, rtol=.1)
+    tf.debugging.assert_near(ig, ig_desired, rtol=0.1)
 
     # Assert that IG of first and last in correct order.
     tf.debugging.assert_greater(ig[0], ig[-1])
@@ -208,12 +198,10 @@ def test_2_models(model_0, model_1, ds_2rank1):
     #     ], dtype=tf.float32
     # )
     ig_desired = tf.constant(
-        [
-            0.03436345, 0.02473378, 0.02513063, 0.02297509, 0.00344968,
-            0.00151819
-        ], dtype=tf.float32
+        [0.03436345, 0.02473378, 0.02513063, 0.02297509, 0.00344968, 0.00151819],
+        dtype=tf.float32,
     )
-    tf.debugging.assert_near(ig, ig_desired, rtol=.1)
+    tf.debugging.assert_near(ig, ig_desired, rtol=0.1)
 
     # Assert that IG of first and last in correct order.
     tf.debugging.assert_greater(ig[0], ig[-1])

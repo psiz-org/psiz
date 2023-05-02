@@ -24,24 +24,24 @@ from psiz.keras.initializers import SoftplusUniform
 def test_all():
     """Test all methods."""
     # Initialize.
-    minval = .01
-    maxval = .05
-    hinge_softness = 1.
+    minval = 0.01
+    maxval = 0.05
+    hinge_softness = 1.0
     seed = 252
     initializer = SoftplusUniform(
         minval, maxval, hinge_softness=hinge_softness, seed=seed
     )
-    assert initializer.minval == .01
-    assert initializer.maxval == .05
-    assert initializer.hinge_softness == 1.
+    assert initializer.minval == 0.01
+    assert initializer.maxval == 0.05
+    assert initializer.hinge_softness == 1.0
     assert initializer.seed == 252
 
     # Check `get_config`.
     config = initializer.get_config()
-    assert config['minval'] == .01
-    assert config['maxval'] == .05
-    assert config['hinge_softness'] == 1.
-    assert config['seed'] == 252
+    assert config["minval"] == 0.01
+    assert config["maxval"] == 0.05
+    assert config["hinge_softness"] == 1.0
+    assert config["seed"] == 252
 
     # Check call does not raise error.
     tf_shape = tf.TensorShape([2, 4])

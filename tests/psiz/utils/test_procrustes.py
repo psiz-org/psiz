@@ -24,18 +24,20 @@ import psiz.utils
 @pytest.fixture(scope="module")
 def z0():
     """Create random set of points."""
-    z0 = np.array([
-        [0.46472851, 0.09534286],
-        [0.90612827, 0.21031482],
-        [0.46595517, 0.92022067],
-        [0.51457351, 0.88226988],
-        [0.24506303, 0.75287697],
-        [0.69773745, 0.25095083],
-        [0.71550351, 0.14846334],
-        [0.24825323, 0.96021703],
-        [0.85497989, 0.9114596],
-        [0.35982138, 0.85040905]
-    ])
+    z0 = np.array(
+        [
+            [0.46472851, 0.09534286],
+            [0.90612827, 0.21031482],
+            [0.46595517, 0.92022067],
+            [0.51457351, 0.88226988],
+            [0.24506303, 0.75287697],
+            [0.69773745, 0.25095083],
+            [0.71550351, 0.14846334],
+            [0.24825323, 0.96021703],
+            [0.85497989, 0.9114596],
+            [0.35982138, 0.85040905],
+        ]
+    )
     return z0
 
 
@@ -54,9 +56,7 @@ def test_simple_rotation_0(z0):
     z1_centered = z1
 
     # Attempt to recover original set of points.
-    r_recov = psiz.utils.procrustes_rotation(
-        z0, z1, scale=True
-    )
+    r_recov = psiz.utils.procrustes_rotation(z0, z1, scale=True)
     z0_rot = np.matmul(z0_centered, r_recov)
 
     np.testing.assert_almost_equal(z1_centered, z0_rot, decimal=2)
@@ -77,9 +77,7 @@ def test_simple_rotation_1(z0):
     z1_centered = z1
 
     # Attempt to recover original set of points.
-    r_recov = psiz.utils.procrustes_rotation(
-        z0, z1, scale=True
-    )
+    r_recov = psiz.utils.procrustes_rotation(z0, z1, scale=True)
     z0_rot = np.matmul(z0_centered, r_recov)
 
     np.testing.assert_almost_equal(z1_centered, z0_rot, decimal=2)
@@ -100,9 +98,7 @@ def test_scaled_rotation(z0):
     z1_centered = z1
 
     # Attempt to recover original set of points.
-    r_recov = psiz.utils.procrustes_rotation(
-        z0, z1, scale=True
-    )
+    r_recov = psiz.utils.procrustes_rotation(z0, z1, scale=True)
     z0_rot = np.matmul(z0_centered, r_recov)
 
     np.testing.assert_almost_equal(z1_centered, z0_rot, decimal=2)
@@ -123,12 +119,10 @@ def test_scaled_rotation_no_scale(z0):
     z1_centered = z1
 
     # Attempt to recover original set of points.
-    r_recov = psiz.utils.procrustes_rotation(
-        z0, z1, scale=False
-    )
+    r_recov = psiz.utils.procrustes_rotation(z0, z1, scale=False)
     z0_rot = np.matmul(z0_centered, r_recov)
 
-    z0_rot_desired = .5 * z1_centered
+    z0_rot_desired = 0.5 * z1_centered
     np.testing.assert_almost_equal(z0_rot_desired, z0_rot, decimal=2)
 
 
@@ -147,9 +141,7 @@ def test_x_reflection_rotation(z0):
     z1_centered = z1
 
     # Attempt to recover original set of points.
-    r_recov = psiz.utils.procrustes_rotation(
-        z0, z1, scale=True
-    )
+    r_recov = psiz.utils.procrustes_rotation(z0, z1, scale=True)
     z0_rot = np.matmul(z0_centered, r_recov)
 
     np.testing.assert_almost_equal(z1_centered, z0_rot, decimal=2)
@@ -170,9 +162,7 @@ def test_y_reflection_rotation(z0):
     z1_centered = z1
 
     # Attempt to recover original set of points.
-    r_recov = psiz.utils.procrustes_rotation(
-        z0, z1, scale=True
-    )
+    r_recov = psiz.utils.procrustes_rotation(z0, z1, scale=True)
     z0_rot = np.matmul(z0_centered, r_recov)
 
     np.testing.assert_almost_equal(z1_centered, z0_rot, decimal=2)
@@ -193,9 +183,7 @@ def test_xy_reflection_rotation(z0):
     z1_centered = z1
 
     # Attempt to recover original set of points.
-    r_recov = psiz.utils.procrustes_rotation(
-        z0, z1, scale=True
-    )
+    r_recov = psiz.utils.procrustes_rotation(z0, z1, scale=True)
     z0_rot = np.matmul(z0_centered, r_recov)
 
     np.testing.assert_almost_equal(z1_centered, z0_rot, decimal=2)

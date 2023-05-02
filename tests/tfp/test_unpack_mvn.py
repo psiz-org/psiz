@@ -32,32 +32,21 @@ def test_unpack_diagonal_covariance_mvn():
             [1.1, 1.2],
             [2.1, 2.2],
         ],
-        dtype=np.float32
+        dtype=np.float32,
     )
     cov_desired = np.array(
         [
-            [
-                [0.028900036588311195, 0.0],
-                [0.0, 0.028900036588311195]
-            ],
-            [
-                [0.028900036588311195, 0.0],
-                [0.0, 0.028900036588311195]
-            ],
-            [
-                [0.028900036588311195, 0.0],
-                [0.0, 0.028900036588311195]
-            ],
+            [[0.028900036588311195, 0.0], [0.0, 0.028900036588311195]],
+            [[0.028900036588311195, 0.0], [0.0, 0.028900036588311195]],
+            [[0.028900036588311195, 0.0], [0.0, 0.028900036588311195]],
         ],
-        dtype=np.float32
+        dtype=np.float32,
     )
 
     # Create diagonal covariance MVNs.
     dist = tfp.distributions.Normal(loc=loc_desired, scale=scale_desired)
     batch_ndims = tf.size(dist.batch_shape_tensor())
-    dist = tfp.distributions.Independent(
-        dist, reinterpreted_batch_ndims=batch_ndims
-    )
+    dist = tfp.distributions.Independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     loc, cov = unpack_mvn(dist)
 
@@ -83,24 +72,15 @@ def test_unpack_full_covariance_mvn():
             [1.1, 1.2],
             [2.1, 2.2],
         ],
-        dtype=np.float32
+        dtype=np.float32,
     )
     cov_desired = np.array(
         [
-            [
-                [0.028900036588311195, 0.0],
-                [0.0, 0.028900036588311195]
-            ],
-            [
-                [0.028900036588311195, 0.0],
-                [0.0, 0.028900036588311195]
-            ],
-            [
-                [0.028900036588311195, 0.0],
-                [0.0, 0.028900036588311195]
-            ],
+            [[0.028900036588311195, 0.0], [0.0, 0.028900036588311195]],
+            [[0.028900036588311195, 0.0], [0.0, 0.028900036588311195]],
+            [[0.028900036588311195, 0.0], [0.0, 0.028900036588311195]],
         ],
-        dtype=np.float32
+        dtype=np.float32,
     )
 
     dist = tfp.distributions.MultivariateNormalFullCovariance(

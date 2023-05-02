@@ -37,9 +37,7 @@ def test_wo_replace_exhaustive():
     # Sample query-reference sets.
     query_idx = 2
     n_sample = 36
-    qr_sets = sample_qr_sets(
-        query_idx, n_reference, n_sample, ref_prob, replace=False
-    )
+    qr_sets = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob, replace=False)
 
     qr_sets_desired = np.array(
         [
@@ -78,16 +76,15 @@ def test_wo_replace_exhaustive():
             [2, 6, 9],
             [2, 7, 8],
             [2, 7, 9],
-            [2, 8, 9]
-        ], dtype=int
+            [2, 8, 9],
+        ],
+        dtype=int,
     )
     np.testing.assert_array_equal(qr_sets, qr_sets_desired)
 
     # Check when n_sample is larger that unique possibilties.
     n_sample = 40
-    qr_sets = sample_qr_sets(
-        query_idx, n_reference, n_sample, ref_prob, replace=False
-    )
+    qr_sets = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob, replace=False)
     np.testing.assert_array_equal(qr_sets, qr_sets_desired)
 
 
@@ -113,8 +110,9 @@ def test_wo_replace_subset_seed():
         [
             [13, 0, 3, 9, 10, 12, 14, 15, 18],
             [13, 1, 2, 4, 5, 6, 9, 10, 18],
-            [13, 1, 4, 5, 6, 10, 11, 12, 16]
-        ], dtype=int
+            [13, 1, 4, 5, 6, 10, 11, 12, 16],
+        ],
+        dtype=int,
     )
     np.testing.assert_array_equal(qr_sets, qr_sets_desired)
 
@@ -128,9 +126,7 @@ def test_replace():
     # Sample query-reference sets.
     query_idx = 2
     n_sample = 40
-    qr_sets = sample_qr_sets(
-        query_idx, n_reference, n_sample, ref_prob
-    )
+    qr_sets = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob)
 
     # Check correct query index.
     query_arr_desired = np.full([n_sample], query_idx)
@@ -151,14 +147,9 @@ def test_replace_seed():
     query_idx = 88
     n_sample = 2
     rng = np.random.default_rng(seed=989)
-    qr_sets = sample_qr_sets(
-        query_idx, n_reference, n_sample, ref_prob, rng=rng
-    )
+    qr_sets = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob, rng=rng)
 
     qr_sets_desired = np.array(
-        [
-            [88, 78, 10, 28, 29, 48, 9, 32, 96],
-            [88, 77, 49, 43, 10, 63, 97, 56, 87]
-        ]
+        [[88, 78, 10, 28, 29, 48, 9, 32, 96], [88, 77, 49, 43, 10, 63, 97, 56, 87]]
     )
     np.testing.assert_array_equal(qr_sets, qr_sets_desired)

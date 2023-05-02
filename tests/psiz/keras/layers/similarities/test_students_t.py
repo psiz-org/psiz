@@ -31,8 +31,9 @@ def test_init_default():
 def test_init_options_0():
     """Test initialization with optional arguments."""
     similarity = StudentsTSimilarity(
-        fit_tau=False, fit_alpha=False,
-        tau_initializer=tf.keras.initializers.Constant(1.),
+        fit_tau=False,
+        fit_alpha=False,
+        tau_initializer=tf.keras.initializers.Constant(1.0),
         alpha_initializer=tf.keras.initializers.Constant(1.2),
     )
 
@@ -43,23 +44,17 @@ def test_init_options_0():
 def test_call():
     """Test call."""
     similarity = StudentsTSimilarity(
-        tau_initializer=tf.keras.initializers.Constant(2.),
-        alpha_initializer=tf.keras.initializers.Constant(1.)
+        tau_initializer=tf.keras.initializers.Constant(2.0),
+        alpha_initializer=tf.keras.initializers.Constant(1.0),
     )
 
     dist = tf.constant(
-        [
-            [0.68166146, 1.394038],
-            [0.81919687, 1.25966185]
-        ], dtype=tf.float32
+        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
     )
     s_actual = similarity(dist)
 
     s_desired = tf.constant(
-        [
-            [0.68275124, 0.33974987],
-            [0.5984142, 0.3865858]
-        ], dtype=tf.float32
+        [[0.68275124, 0.33974987], [0.5984142, 0.3865858]], dtype=tf.float32
     )
     tf.debugging.assert_near(s_actual, s_desired)
 
@@ -68,5 +63,5 @@ def test_get_config():
     similarity = StudentsTSimilarity()
     config = similarity.get_config()
 
-    assert config['fit_tau']
-    assert config['fit_alpha']
+    assert config["fit_tau"]
+    assert config["fit_alpha"]

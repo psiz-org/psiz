@@ -32,10 +32,12 @@ def test_init_default():
 def test_init_options_0():
     """Test initialization with optional arguments."""
     similarity = ExponentialSimilarity(
-        fit_tau=False, fit_gamma=False, fit_beta=False,
-        tau_initializer=tf.keras.initializers.Constant(1.),
+        fit_tau=False,
+        fit_gamma=False,
+        fit_beta=False,
+        tau_initializer=tf.keras.initializers.Constant(1.0),
         gamma_initializer=tf.keras.initializers.Constant(0.01),
-        beta_initializer=tf.keras.initializers.Constant(10.),
+        beta_initializer=tf.keras.initializers.Constant(10.0),
     )
 
     assert not similarity.fit_tau
@@ -57,22 +59,16 @@ def test_call():
     similarity = ExponentialSimilarity(
         tau_initializer=tf.keras.initializers.Constant(2.1),
         gamma_initializer=tf.keras.initializers.Constant(0.001),
-        beta_initializer=tf.keras.initializers.Constant(1.11)
+        beta_initializer=tf.keras.initializers.Constant(1.11),
     )
 
     dist = tf.constant(
-        [
-            [0.68166146, 1.394038],
-            [0.81919687, 1.25966185]
-        ], dtype=tf.float32
+        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
     )
     s_actual = similarity(dist)
 
     s_desired = tf.constant(
-        [
-            [0.6097281, 0.10853133],
-            [0.48281538, 0.16589916]
-        ], dtype=tf.float32
+        [[0.6097281, 0.10853133], [0.48281538, 0.16589916]], dtype=tf.float32
     )
     tf.debugging.assert_near(s_actual, s_desired)
 
@@ -81,6 +77,6 @@ def test_get_config():
     similarity = ExponentialSimilarity()
     config = similarity.get_config()
 
-    assert config['fit_tau']
-    assert config['fit_gamma']
-    assert config['fit_beta']
+    assert config["fit_tau"]
+    assert config["fit_gamma"]
+    assert config["fit_beta"]

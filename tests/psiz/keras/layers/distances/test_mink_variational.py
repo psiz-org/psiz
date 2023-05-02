@@ -25,47 +25,43 @@ from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
 
 def test_call(paired_inputs_v0):
     """Test call."""
-    kl_weight = .1
+    kl_weight = 0.1
 
     mink_posterior = MinkowskiStochastic()
     mink_prior = MinkowskiStochastic()
 
     mink_layer = MinkowskiVariational(
-        posterior=mink_posterior,
-        prior=mink_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=mink_posterior, prior=mink_prior, kl_weight=kl_weight, kl_n_sample=30
     )
     mink_layer.build([[None, 3], [None, 3]])
     outputs = mink_layer(paired_inputs_v0)
 
-    desired_outputs = np.array([
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387
-    ])
-    np.testing.assert_array_almost_equal(
-        desired_outputs, outputs.numpy(), decimal=4
+    desired_outputs = np.array(
+        [
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+        ]
     )
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=4)
 
 
 def test_output_shape(paired_inputs_v0):
     """Test output_shape method."""
-    kl_weight = .1
+    kl_weight = 0.1
 
     mink_posterior = MinkowskiStochastic()
     mink_prior = MinkowskiStochastic()
 
     mink_layer = MinkowskiVariational(
-        posterior=mink_posterior,
-        prior=mink_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=mink_posterior, prior=mink_prior, kl_weight=kl_weight, kl_n_sample=30
     )
 
     input_shape = [
         tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-        tf.TensorShape(tf.shape(paired_inputs_v0[1]))
+        tf.TensorShape(tf.shape(paired_inputs_v0[1])),
     ]
     output_shape = mink_layer.compute_output_shape(input_shape)
     desired_output_shape = tf.TensorShape([5])
@@ -74,15 +70,13 @@ def test_output_shape(paired_inputs_v0):
 
 def test_serialization():
     """Test serialization."""
-    kl_weight = .1
+    kl_weight = 0.1
 
     mink_posterior = MinkowskiStochastic()
     mink_prior = MinkowskiStochastic()
 
     mink_layer = MinkowskiVariational(
-        posterior=mink_posterior,
-        prior=mink_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=mink_posterior, prior=mink_prior, kl_weight=kl_weight, kl_n_sample=30
     )
     mink_layer.build([[None, 3], [None, 3]])
     config = mink_layer.get_config()
@@ -93,28 +87,22 @@ def test_serialization():
     tf.debugging.assert_equal(
         mink_layer.posterior.rho.mode(), recon_layer.posterior.rho.mode()
     )
-    tf.debugging.assert_equal(
-        mink_layer.prior.rho.mode(), recon_layer.prior.rho.mode()
-    )
+    tf.debugging.assert_equal(mink_layer.prior.rho.mode(), recon_layer.prior.rho.mode())
     tf.debugging.assert_equal(
         mink_layer.posterior.w.mode(), recon_layer.posterior.w.mode()
     )
-    tf.debugging.assert_equal(
-        mink_layer.prior.w.mode(), recon_layer.prior.w.mode()
-    )
+    tf.debugging.assert_equal(mink_layer.prior.w.mode(), recon_layer.prior.w.mode())
 
 
 def test_properties():
     """Test properties."""
-    kl_weight = .1
+    kl_weight = 0.1
 
     mink_posterior = MinkowskiStochastic()
     mink_prior = MinkowskiStochastic()
 
     mink_layer = MinkowskiVariational(
-        posterior=mink_posterior,
-        prior=mink_prior,
-        kl_weight=kl_weight, kl_n_sample=30
+        posterior=mink_posterior, prior=mink_prior, kl_weight=kl_weight, kl_n_sample=30
     )
     mink_layer.build([[None, 3], [None, 3]])
 

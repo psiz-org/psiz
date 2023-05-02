@@ -31,8 +31,9 @@ def test_init_default():
 def test_init_options_0():
     """Test initialization with optional arguments."""
     similarity = InverseSimilarity(
-        fit_tau=False, fit_mu=False,
-        tau_initializer=tf.keras.initializers.Constant(1.),
+        fit_tau=False,
+        fit_mu=False,
+        tau_initializer=tf.keras.initializers.Constant(1.0),
         mu_initializer=tf.keras.initializers.Constant(1.2),
     )
 
@@ -43,23 +44,17 @@ def test_init_options_0():
 def test_call():
     """Test call."""
     similarity = InverseSimilarity(
-        tau_initializer=tf.keras.initializers.Constant(2.),
-        mu_initializer=tf.keras.initializers.Constant(0.01)
+        tau_initializer=tf.keras.initializers.Constant(2.0),
+        mu_initializer=tf.keras.initializers.Constant(0.01),
     )
 
     dist = tf.constant(
-        [
-            [0.68166146, 1.394038],
-            [0.81919687, 1.25966185]
-        ], dtype=tf.float32
+        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
     )
     s_actual = similarity(dist)
 
     s_desired = tf.constant(
-        [
-            [0.4057351, 0.253592],
-            [0.3743799, 0.2788041]
-        ], dtype=tf.float32
+        [[0.4057351, 0.253592], [0.3743799, 0.2788041]], dtype=tf.float32
     )
     tf.debugging.assert_near(s_actual, s_desired)
 
@@ -68,5 +63,5 @@ def test_get_config():
     similarity = InverseSimilarity()
     config = similarity.get_config()
 
-    assert config['fit_tau']
-    assert config['fit_mu']
+    assert config["fit_tau"]
+    assert config["fit_mu"]

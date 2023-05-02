@@ -40,8 +40,9 @@ def test_scalar_defaults():
             [1, 4],
             [2, 3],
             [2, 4],
-            [3, 4]
-        ], dtype=np.int32
+            [3, 4],
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -65,8 +66,9 @@ def test_array_defaults():
             [1, 4],
             [2, 3],
             [2, 4],
-            [3, 4]
-        ], dtype=np.int32
+            [3, 4],
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -90,8 +92,9 @@ def test_list_defaults():
             [1, 4],
             [2, 3],
             [2, 4],
-            [3, 4]
-        ], dtype=np.int32
+            [3, 4],
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -99,7 +102,7 @@ def test_list_defaults():
 def test_all():
     """Test default optional arguments."""
     n_stimuli = 5
-    pairs = pairwise_indices(n_stimuli, elements='all')
+    pairs = pairwise_indices(n_stimuli, elements="all")
     pairs_desired = np.array(
         [
             [0, 0],
@@ -126,8 +129,9 @@ def test_all():
             [1, 4],
             [2, 4],
             [3, 4],
-            [4, 4]
-        ], dtype=np.int32
+            [4, 4],
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -135,7 +139,7 @@ def test_all():
 def test_lower():
     """Test default optional arguments."""
     n_stimuli = 5
-    pairs = pairwise_indices(n_stimuli, elements='lower')
+    pairs = pairwise_indices(n_stimuli, elements="lower")
     pairs_desired = np.array(
         [
             [1, 0],
@@ -148,7 +152,8 @@ def test_lower():
             [4, 1],
             [4, 2],
             [4, 3],
-        ], dtype=np.int32
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -156,7 +161,7 @@ def test_lower():
 def test_off():
     """Test default optional arguments."""
     n_stimuli = 5
-    pairs = pairwise_indices(n_stimuli, elements='off')
+    pairs = pairwise_indices(n_stimuli, elements="off")
     pairs_desired = np.array(
         [
             [0, 1],
@@ -179,7 +184,8 @@ def test_off():
             [4, 1],
             [4, 2],
             [4, 3],
-        ], dtype=np.int32
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -190,7 +196,7 @@ def test_wrong():
 
     # Raise error because elements argument is not implemented.
     with pytest.raises(Exception) as e_info:
-        _ = pairwise_indices(n_stimuli, elements='garbage')
+        _ = pairwise_indices(n_stimuli, elements="garbage")
     assert e_info.type == NotImplementedError
 
     # Raise error because indices argument must be scalar or 1D.
@@ -204,7 +210,7 @@ def test_subsample_0():
     """Test subsample."""
     n_stimuli = 10
     rng = np.random.default_rng(seed=252)
-    pairs = pairwise_indices(n_stimuli, elements='all', subsample=.1, rng=rng)
+    pairs = pairwise_indices(n_stimuli, elements="all", subsample=0.1, rng=rng)
     pairs_desired = np.array(
         [
             [7, 0],
@@ -216,8 +222,9 @@ def test_subsample_0():
             [0, 6],
             [3, 6],
             [3, 8],
-            [5, 9]
-        ], dtype=np.int32
+            [5, 9],
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -229,7 +236,7 @@ def test_subsample_1():
 
     """
     n_stimuli = 5
-    pairs = pairwise_indices(n_stimuli, elements='upper', subsample=1)
+    pairs = pairwise_indices(n_stimuli, elements="upper", subsample=1)
     pairs_desired = np.array(
         [
             [0, 1],
@@ -241,8 +248,9 @@ def test_subsample_1():
             [1, 4],
             [2, 3],
             [2, 4],
-            [3, 4]
-        ], dtype=np.int32
+            [3, 4],
+        ],
+        dtype=np.int32,
     )
     np.testing.assert_array_equal(pairs, pairs_desired)
 
@@ -253,14 +261,10 @@ def test_subsample_wrong():
 
     # Raise error because subsample is not in ]0,1].
     with pytest.raises(Exception) as e_info:
-        _ = pairwise_indices(
-            n_stimuli, elements='all', subsample=0
-        )
+        _ = pairwise_indices(n_stimuli, elements="all", subsample=0)
     assert e_info.type == ValueError
 
     # Raise error because subsample is not in ]0,1].
     with pytest.raises(Exception) as e_info:
-        _ = pairwise_indices(
-            n_stimuli, elements='all', subsample=5
-        )
+        _ = pairwise_indices(n_stimuli, elements="all", subsample=5)
     assert e_info.type == ValueError

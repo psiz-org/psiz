@@ -24,12 +24,30 @@ def test_w_replace_probs():
     """Test with replacement and probabilities."""
     n_option = 20
     arr = np.arange(n_option)
-    probs = np.array([
-        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
-        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
-        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
-        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
-    ])
+    probs = np.array(
+        [
+            0.04787656,
+            0.01988875,
+            0.08106771,
+            0.08468775,
+            0.07918673,
+            0.05087084,
+            0.00922816,
+            0.08663405,
+            0.00707334,
+            0.02254985,
+            0.01820681,
+            0.01532338,
+            0.07702897,
+            0.06774214,
+            0.09976408,
+            0.05369049,
+            0.01056261,
+            0.07500489,
+            0.05508777,
+            0.03852514,
+        ]
+    )
     k = 8
 
     # Draw samples.
@@ -51,24 +69,37 @@ def test_w_replace_seeded():
     """Test seed."""
     n_option = 20
     arr = np.arange(n_option)
-    probs = np.array([
-        0.04787656, 0.01988875, 0.08106771, 0.08468775, 0.07918673,
-        0.05087084, 0.00922816, 0.08663405, 0.00707334, 0.02254985,
-        0.01820681, 0.01532338, 0.07702897, 0.06774214, 0.09976408,
-        0.05369049, 0.01056261, 0.07500489, 0.05508777, 0.03852514
-    ])
+    probs = np.array(
+        [
+            0.04787656,
+            0.01988875,
+            0.08106771,
+            0.08468775,
+            0.07918673,
+            0.05087084,
+            0.00922816,
+            0.08663405,
+            0.00707334,
+            0.02254985,
+            0.01820681,
+            0.01532338,
+            0.07702897,
+            0.06774214,
+            0.09976408,
+            0.05369049,
+            0.01056261,
+            0.07500489,
+            0.05508777,
+            0.03852514,
+        ]
+    )
     k = 3
 
     # Draw samples using seed.
     n_sample = 2
     rng = np.random.default_rng(seed=560897)
     samples = random_combinations(arr, k, n_sample, p=probs, rng=rng)
-    samples_desired = np.array(
-        [
-            [2, 14, 3],
-            [12, 13, 15]
-        ], dtype=int
-    )
+    samples_desired = np.array([[2, 14, 3], [12, 13, 15]], dtype=int)
     np.testing.assert_array_equal(samples, samples_desired)
 
 
@@ -88,18 +119,7 @@ def test_wo_replace_exhaustive():
     samples = random_combinations(arr, k, n_sample, replace=False, rng=rng)
 
     samples_desired = np.array(
-        [
-            [0, 1],
-            [0, 2],
-            [0, 3],
-            [0, 4],
-            [1, 2],
-            [1, 3],
-            [1, 4],
-            [2, 3],
-            [2, 4],
-            [3, 4]
-        ]
+        [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]]
     )
     np.testing.assert_equal(samples, samples_desired)
 
@@ -113,18 +133,7 @@ def test_wo_replace_exhaustive():
     samples = random_combinations(arr, k, n_sample, replace=False, rng=rng)
 
     samples_desired = np.array(
-        [
-            [0, 1],
-            [0, 2],
-            [0, 3],
-            [0, 4],
-            [1, 2],
-            [1, 3],
-            [1, 4],
-            [2, 3],
-            [2, 4],
-            [3, 4]
-        ]
+        [[0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]]
     )
     np.testing.assert_equal(samples, samples_desired)
 
@@ -143,13 +152,5 @@ def test_wo_replace_subsample():
     rng = np.random.default_rng(seed=560897)
     samples = random_combinations(arr, k, n_sample, replace=False, rng=rng)
 
-    samples_desired = np.array(
-        [
-            [0, 1],
-            [0, 2],
-            [0, 3],
-            [1, 2],
-            [1, 3]
-        ]
-    )
+    samples_desired = np.array([[0, 1], [0, 2], [0, 3], [1, 2], [1, 3]])
     np.testing.assert_equal(samples, samples_desired)

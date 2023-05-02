@@ -27,16 +27,16 @@ def test_call(paired_inputs_v0):
     mink_layer = MinkowskiStochastic()
     outputs = mink_layer(paired_inputs_v0)
 
-    desired_outputs = np.array([
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387
-    ])
-    np.testing.assert_array_almost_equal(
-        desired_outputs, outputs.numpy(), decimal=4
+    desired_outputs = np.array(
+        [
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+        ]
     )
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=4)
 
 
 def test_output_shape(paired_inputs_v0):
@@ -44,7 +44,7 @@ def test_output_shape(paired_inputs_v0):
     mink_layer = MinkowskiStochastic()
     input_shape = [
         tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-        tf.TensorShape(tf.shape(paired_inputs_v0[1]))
+        tf.TensorShape(tf.shape(paired_inputs_v0[1])),
     ]
     output_shape = mink_layer.compute_output_shape(input_shape)
     desired_output_shape = tf.TensorShape([5])
@@ -55,28 +55,16 @@ def test_serialization():
     """Test serialization."""
     mink_layer = MinkowskiStochastic(
         rho_loc_initializer=tf.keras.initializers.Constant(2.1),
-        w_loc_initializer=tf.keras.initializers.Constant(1.1)
+        w_loc_initializer=tf.keras.initializers.Constant(1.1),
     )
     mink_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(
-        mink_layer.w.event_shape, tf.TensorShape([3])
-    )
-    tf.debugging.assert_equal(
-        mink_layer.rho.mode(), tf.constant([2.1])
-    )
-    tf.debugging.assert_equal(
-        mink_layer.w.mode(), tf.constant([1.1, 1.1, 1.1])
-    )
+    tf.debugging.assert_equal(mink_layer.w.event_shape, tf.TensorShape([3]))
+    tf.debugging.assert_equal(mink_layer.rho.mode(), tf.constant([2.1]))
+    tf.debugging.assert_equal(mink_layer.w.mode(), tf.constant([1.1, 1.1, 1.1]))
     config = mink_layer.get_config()
 
     recon_layer = MinkowskiStochastic.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(
-        recon_layer.w.event_shape, tf.TensorShape([3])
-    )
-    tf.debugging.assert_equal(
-        recon_layer.rho.mode(), tf.constant([2.1])
-    )
-    tf.debugging.assert_equal(
-        recon_layer.w.mode(), tf.constant([1.1, 1.1, 1.1])
-    )
+    tf.debugging.assert_equal(recon_layer.w.event_shape, tf.TensorShape([3]))
+    tf.debugging.assert_equal(recon_layer.rho.mode(), tf.constant([2.1]))
+    tf.debugging.assert_equal(recon_layer.w.mode(), tf.constant([1.1, 1.1, 1.1]))

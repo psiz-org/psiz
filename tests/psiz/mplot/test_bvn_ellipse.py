@@ -30,20 +30,16 @@ def test_hdi_bvn(ax_present):
     """
 
     # Create data for two normal distributions.
-    loc = np.array([
-        [0, 0],
-        [0, 0.1]
-    ])
-    cov = np.array([
-        [[1, 0], [0, 1]],
-        [[1, 0], [0, 2]],
-    ])
-    edgecolor = np.array([
-        [.9, .1, .1],
-        [.1, .1, .9]
-    ])
+    loc = np.array([[0, 0], [0, 0.1]])
+    cov = np.array(
+        [
+            [[1, 0], [0, 1]],
+            [[1, 0], [0, 2]],
+        ]
+    )
+    edgecolor = np.array([[0.9, 0.1, 0.1], [0.1, 0.1, 0.9]])
     lw = 1
-    alpha = .5
+    alpha = 0.5
     fill = False
 
     num_figures_before = plt.gcf().number
@@ -53,13 +49,11 @@ def test_hdi_bvn(ax_present):
     ax = fig.add_subplot(gs[0, 0])
     if ax_present:
         psiz.mplot.hdi_bvn(
-            loc, cov, ax=ax, p=.95, edgecolor=edgecolor, lw=lw,
-            alpha=alpha, fill=fill
+            loc, cov, ax=ax, p=0.95, edgecolor=edgecolor, lw=lw, alpha=alpha, fill=fill
         )
     else:
         psiz.mplot.hdi_bvn(
-            loc, cov, p=.95, edgecolor=edgecolor, lw=lw,
-            alpha=alpha, fill=fill
+            loc, cov, p=0.95, edgecolor=edgecolor, lw=lw, alpha=alpha, fill=fill
         )
 
     num_figures_after = plt.gcf().number

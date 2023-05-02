@@ -23,10 +23,7 @@ from psiz.utils import affine_mvn, rotation_matrix
 def test_defaults():
     """Test default arguments."""
     loc0 = np.array([0.2, -0.2])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
     loc1, cov1 = affine_mvn(loc0, cov0)
 
     desired_loc = loc0
@@ -39,24 +36,15 @@ def test_defaults():
 def test_translation():
     """Test translation."""
     loc0 = np.array([0.2, -0.2])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
-    r = np.array([
-        [1., 0.],
-        [0., 1.]
-    ])
-    t = np.array([.1, .1])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
+    r = np.array([[1.0, 0.0], [0.0, 1.0]])
+    t = np.array([0.1, 0.1])
     loc1, cov1 = affine_mvn(loc0, cov0, r, t)
 
-    desired_loc = np.array([.3, -.1])
+    desired_loc = np.array([0.3, -0.1])
     np.testing.assert_array_almost_equal(loc1, desired_loc)
 
-    desired_cov = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    desired_cov = np.array([[1.0, 0.0], [0.0, 1.2]])
     np.testing.assert_array_almost_equal(cov1, desired_cov)
 
 
@@ -67,23 +55,14 @@ def test_rotation_0():
 
     """
     loc0 = np.array([0.2, -0.2])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
-    r = np.array([
-        [-1., 0.],
-        [0., 1.]
-    ])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
+    r = np.array([[-1.0, 0.0], [0.0, 1.0]])
     loc1, cov1 = affine_mvn(loc0, cov0, r)
 
-    desired_loc = np.array([-.2, -.2])
+    desired_loc = np.array([-0.2, -0.2])
     np.testing.assert_array_almost_equal(loc1, desired_loc)
 
-    desired_cov = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    desired_cov = np.array([[1.0, 0.0], [0.0, 1.2]])
     np.testing.assert_array_almost_equal(cov1, desired_cov)
 
 
@@ -94,23 +73,14 @@ def test_rotation_1():
 
     """
     loc0 = np.array([0.2, -0.2])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
-    r = np.array([
-        [-1., 0.],
-        [0., -1.]
-    ])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
+    r = np.array([[-1.0, 0.0], [0.0, -1.0]])
     loc1, cov1 = affine_mvn(loc0, cov0, r)
 
-    desired_loc = np.array([-.2, .2])
+    desired_loc = np.array([-0.2, 0.2])
     np.testing.assert_array_almost_equal(loc1, desired_loc)
 
-    desired_cov = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    desired_cov = np.array([[1.0, 0.0], [0.0, 1.2]])
     np.testing.assert_array_almost_equal(cov1, desired_cov)
 
 
@@ -121,20 +91,14 @@ def test_rotation_2():
 
     """
     loc0 = np.array([0.2, -0.2])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
     r = rotation_matrix(np.pi)
     loc1, cov1 = affine_mvn(loc0, cov0, r)
 
-    desired_loc = np.array([-.2, .2])
+    desired_loc = np.array([-0.2, 0.2])
     np.testing.assert_array_almost_equal(loc1, desired_loc)
 
-    desired_cov = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    desired_cov = np.array([[1.0, 0.0], [0.0, 1.2]])
     np.testing.assert_array_almost_equal(cov1, desired_cov)
 
 
@@ -145,20 +109,14 @@ def test_rotation_3():
 
     """
     loc0 = np.array([0.2, -0.2])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
     r = rotation_matrix(np.pi / 2)
     loc1, cov1 = affine_mvn(loc0, cov0, r)
 
-    desired_loc = np.array([-.2, -.2])
+    desired_loc = np.array([-0.2, -0.2])
     np.testing.assert_array_almost_equal(loc1, desired_loc)
 
-    desired_cov = np.array([
-        [1.2, 0.],
-        [0., 1.]
-    ])
+    desired_cov = np.array([[1.2, 0.0], [0.0, 1.0]])
     np.testing.assert_array_almost_equal(cov1, desired_cov)
 
 
@@ -169,21 +127,15 @@ def test_rotation_plus_translation():
 
     """
     loc0 = np.array([0.2, -0.2])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
     r = rotation_matrix(np.pi / 2)
-    t = np.array([.1, .1])
+    t = np.array([0.1, 0.1])
     loc1, cov1 = affine_mvn(loc0, cov0, r, t)
 
-    desired_loc = np.array([-.1, -.1])
+    desired_loc = np.array([-0.1, -0.1])
     np.testing.assert_array_almost_equal(loc1, desired_loc)
 
-    desired_cov = np.array([
-        [1.2, 0.],
-        [0., 1.]
-    ])
+    desired_cov = np.array([[1.2, 0.0], [0.0, 1.0]])
     np.testing.assert_array_almost_equal(cov1, desired_cov)
 
 
@@ -195,24 +147,18 @@ def test_rotation_3_w_singleton_dims():
 
     """
     loc0 = np.array([[0.2, -0.2]])
-    cov0 = np.array([
-        [1., 0.],
-        [0., 1.2]
-    ])
+    cov0 = np.array([[1.0, 0.0], [0.0, 1.2]])
     r = rotation_matrix(np.pi / 2)
     loc1, cov1 = affine_mvn(loc0, cov0, r)
 
-    desired_loc = np.array([[-.2, -.2]])
+    desired_loc = np.array([[-0.2, -0.2]])
     np.testing.assert_array_almost_equal(loc1, desired_loc)
 
-    desired_cov = np.array([
-        [1.2, 0.],
-        [0., 1.]
-    ])
+    desired_cov = np.array([[1.2, 0.0], [0.0, 1.0]])
     np.testing.assert_array_almost_equal(cov1, desired_cov)
 
     # Test with non-singleton translation vector which should
     # broadcast correctly.
-    t = np.array([0., 0.])
+    t = np.array([0.0, 0.0])
     loc1, cov1 = affine_mvn(loc0, cov0, r, t)
     np.testing.assert_array_almost_equal(loc1, desired_loc)

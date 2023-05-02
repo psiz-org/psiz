@@ -56,7 +56,7 @@ class AddPairsDict(tf.keras.layers.Layer):
 
     def call(self, inputs):
         """Call."""
-        return inputs['inputs_0'] + inputs['inputs_1'] + self.v
+        return inputs["inputs_0"] + inputs["inputs_1"] + self.v
 
 
 def test_single_dispatch(gates_v0, inputs_single):
@@ -78,9 +78,9 @@ def test_single_dispatch(gates_v0, inputs_single):
     # Test `expert_to_gates`. These values are determined by `gates_v0`, and
     # reflect the weight of each expert on non-zero batch elements.
     weights = dispatcher.expert_to_gates()
-    desired_weight_0 = tf.constant([1., 0.5], dtype=tf.float32)
-    desired_weight_1 = tf.constant([1., 0.3], dtype=tf.float32)
-    desired_weight_2 = tf.constant([1., 0.7], dtype=tf.float32)
+    desired_weight_0 = tf.constant([1.0, 0.5], dtype=tf.float32)
+    desired_weight_1 = tf.constant([1.0, 0.3], dtype=tf.float32)
+    desired_weight_2 = tf.constant([1.0, 0.7], dtype=tf.float32)
     tf.debugging.assert_equal(weights[0], desired_weight_0)
     tf.debugging.assert_equal(weights[1], desired_weight_1)
     tf.debugging.assert_equal(weights[2], desired_weight_2)
@@ -113,8 +113,9 @@ def test_single_dispatch(gates_v0, inputs_single):
             [1.01, 1.11, 1.21],
             [2.02, 2.12, 2.22],
             [3.017, 3.117, 3.217],
-            [2.0, 2.05, 2.1]
-        ], dtype=tf.float32
+            [2.0, 2.05, 2.1],
+        ],
+        dtype=tf.float32,
     )
     tf.debugging.assert_near(outputs, desired_outputs)
 
@@ -127,8 +128,9 @@ def test_single_dispatch(gates_v0, inputs_single):
             [1.01, 1.11, 1.21],
             [2.02, 2.12, 2.22],
             [6.03, 6.23, 6.43],
-            [4.0, 4.1, 4.2]
-        ], dtype=tf.float32
+            [4.0, 4.1, 4.2],
+        ],
+        dtype=tf.float32,
     )
     tf.debugging.assert_near(outputs, desired_outputs)
 
@@ -157,9 +159,9 @@ def test_list_dispatch(gates_v0, inputs_list):
     # Test `expert_to_gates`. These values are determined by `gates_v0`, and
     # reflect the weight of each expert on non-zero batch elements.
     weights = dispatcher.expert_to_gates()
-    desired_weight_0 = tf.constant([1., 0.5], dtype=tf.float32)
-    desired_weight_1 = tf.constant([1., 0.3], dtype=tf.float32)
-    desired_weight_2 = tf.constant([1., 0.7], dtype=tf.float32)
+    desired_weight_0 = tf.constant([1.0, 0.5], dtype=tf.float32)
+    desired_weight_1 = tf.constant([1.0, 0.3], dtype=tf.float32)
+    desired_weight_2 = tf.constant([1.0, 0.7], dtype=tf.float32)
     tf.debugging.assert_equal(weights[0], desired_weight_0)
     tf.debugging.assert_equal(weights[1], desired_weight_1)
     tf.debugging.assert_equal(weights[2], desired_weight_2)
@@ -203,8 +205,9 @@ def test_list_dispatch(gates_v0, inputs_list):
             [12.01, 12.210001, 12.41],
             [14.02, 14.220001, 14.42],
             [16.017, 16.217001, 16.417],
-            [9.0, 9.1, 9.2]
-        ], dtype=tf.float32
+            [9.0, 9.1, 9.2],
+        ],
+        dtype=tf.float32,
     )
     tf.debugging.assert_near(outputs, desired_outputs)
 
@@ -217,8 +220,9 @@ def test_list_dispatch(gates_v0, inputs_list):
             [12.01, 12.210001, 12.41],
             [14.02, 14.220001, 14.42],
             [32.03, 32.43, 32.83],  # 2 * [16.0, 16.2, 16.4] + .03
-            [18.0, 18.2, 18.4]
-        ], dtype=tf.float32
+            [18.0, 18.2, 18.4],
+        ],
+        dtype=tf.float32,
     )
     tf.debugging.assert_near(outputs, desired_outputs)
 
@@ -246,9 +250,7 @@ def test_list_dispatch_timestep(gates_v0_timestep, inputs_list_timestep):
     experts = [expert_0, expert_1, expert_2]
 
     # Initialize.
-    dispatcher = SparseDispatcher(
-        n_expert, gates_v0_timestep, has_timestep_axis=True
-    )
+    dispatcher = SparseDispatcher(n_expert, gates_v0_timestep, has_timestep_axis=True)
 
     # Test `expert_to_gates`. These values are determined by
     # `gates_v0_timestep`, and reflect the weight of each expert on non-zero
@@ -284,21 +286,25 @@ def test_list_dispatch_timestep(gates_v0_timestep, inputs_list_timestep):
     expert_inputs = dispatcher.dispatch_multi_pad(inputs_list_timestep)
 
     # Spot check dispatched inputs.
-    expert_inputs_0_0_desired = tf.constant([
-        [[0.00, 0.10, 0.20], [0.01, 0.11, 0.21]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[4.00, 4.10, 4.20], [0.00, 0.00, 0.00]],
-    ])
+    expert_inputs_0_0_desired = tf.constant(
+        [
+            [[0.00, 0.10, 0.20], [0.01, 0.11, 0.21]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[4.00, 4.10, 4.20], [0.00, 0.00, 0.00]],
+        ]
+    )
     tf.debugging.assert_equal(expert_inputs[0][0], expert_inputs_0_0_desired)
-    expert_inputs_1_0_desired = tf.constant([
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[1.00, 1.10, 1.20], [1.01, 1.11, 1.21]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[3.00, 3.10, 3.20], [3.01, 3.11, 3.21]],
-        [[0.00, 0.00, 0.00], [4.01, 4.11, 4.21]],
-    ])
+    expert_inputs_1_0_desired = tf.constant(
+        [
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[1.00, 1.10, 1.20], [1.01, 1.11, 1.21]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[3.00, 3.10, 3.20], [3.01, 3.11, 3.21]],
+            [[0.00, 0.00, 0.00], [4.01, 4.11, 4.21]],
+        ]
+    )
     tf.debugging.assert_equal(expert_inputs[1][0], expert_inputs_1_0_desired)
 
     # Mimic calls to individual experts (i.e., subnets).
@@ -311,23 +317,28 @@ def test_list_dispatch_timestep(gates_v0_timestep, inputs_list_timestep):
         expert_outputs.append(out)
 
     # Spot check outputs.
-    expert_outputs_0_desired = tf.constant([
-        [[10.00, 10.200001, 10.40], [10.02, 10.219999, 10.42]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[18.00, 18.20, 18.40], [0.00, 0.00, 0.00]],
-    ])
+    expert_outputs_0_desired = tf.constant(
+        [
+            [[10.00, 10.200001, 10.40], [10.02, 10.219999, 10.42]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[18.00, 18.20, 18.40], [0.00, 0.00, 0.00]],
+        ]
+    )
     # NOTE: Placeholder values are incremented by the layer, but later
     # ignored.
     tf.debugging.assert_equal(expert_outputs_0_desired, expert_outputs[0])
-    expert_outputs_1_desired = tf.constant([
-        [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
-        [[12.01, 12.210001, 12.41], [12.030001, 12.23, 12.43]],
-        [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
-        [[16.01, 16.210001, 16.41], [16.03, 16.23, 16.43]],
-        [[0.01, 0.01, 0.01], [18.03, 18.23, 18.43]],
-    ], dtype=tf.float32)
+    expert_outputs_1_desired = tf.constant(
+        [
+            [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
+            [[12.01, 12.210001, 12.41], [12.030001, 12.23, 12.43]],
+            [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
+            [[16.01, 16.210001, 16.41], [16.03, 16.23, 16.43]],
+            [[0.01, 0.01, 0.01], [18.03, 18.23, 18.43]],
+        ],
+        dtype=tf.float32,
+    )
     tf.debugging.assert_equal(expert_outputs_1_desired, expert_outputs[1])
 
 
@@ -350,9 +361,9 @@ def test_dict_dispatch(gates_v0, inputs_dict):
     # Test `expert_to_gates`. These values are determined by `gates_v0`, and
     # reflect the weight of each expert on non-zero batch elements.
     weights = dispatcher.expert_to_gates()
-    desired_weight_0 = tf.constant([1., 0.5], dtype=tf.float32)
-    desired_weight_1 = tf.constant([1., 0.3], dtype=tf.float32)
-    desired_weight_2 = tf.constant([1., 0.7], dtype=tf.float32)
+    desired_weight_0 = tf.constant([1.0, 0.5], dtype=tf.float32)
+    desired_weight_1 = tf.constant([1.0, 0.3], dtype=tf.float32)
+    desired_weight_2 = tf.constant([1.0, 0.7], dtype=tf.float32)
     tf.debugging.assert_equal(weights[0], desired_weight_0)
     tf.debugging.assert_equal(weights[1], desired_weight_1)
     tf.debugging.assert_equal(weights[2], desired_weight_2)
@@ -383,31 +394,39 @@ def test_dict_dispatch(gates_v0, inputs_dict):
     # Check outputs.
     # NOTE: Placeholder values are incremented by the layer, but later
     # ignored via weighting.
-    expert_outputs_0_desired = tf.constant([
-        [10.00, 10.200001, 10.40],
-        [0.00, 0.00, 0.00],
-        [0.00, 0.00, 0.00],
-        [0.00, 0.00, 0.00],
-        [18.00, 18.20, 18.40],
-    ])
+    expert_outputs_0_desired = tf.constant(
+        [
+            [10.00, 10.200001, 10.40],
+            [0.00, 0.00, 0.00],
+            [0.00, 0.00, 0.00],
+            [0.00, 0.00, 0.00],
+            [18.00, 18.20, 18.40],
+        ]
+    )
     tf.debugging.assert_equal(expert_outputs_0_desired, expert_outputs[0])
 
-    expert_outputs_1_desired = tf.constant([
-        [0.01, 0.01, 0.01],
-        [12.01, 12.210001, 12.41],
-        [0.01, 0.01, 0.01],
-        [16.01, 16.210001, 16.41],
-        [0.01, 0.01, 0.01],
-    ], dtype=tf.float32)
+    expert_outputs_1_desired = tf.constant(
+        [
+            [0.01, 0.01, 0.01],
+            [12.01, 12.210001, 12.41],
+            [0.01, 0.01, 0.01],
+            [16.01, 16.210001, 16.41],
+            [0.01, 0.01, 0.01],
+        ],
+        dtype=tf.float32,
+    )
     tf.debugging.assert_equal(expert_outputs_1_desired, expert_outputs[1])
 
-    expert_outputs_2_desired = tf.constant([
-        [0.02, 0.02, 0.02],
-        [0.02, 0.02, 0.02],
-        [14.02, 14.220001, 14.42],
-        [16.02, 16.220001, 16.42],
-        [0.02, 0.02, 0.02],
-    ], dtype=tf.float32)
+    expert_outputs_2_desired = tf.constant(
+        [
+            [0.02, 0.02, 0.02],
+            [0.02, 0.02, 0.02],
+            [14.02, 14.220001, 14.42],
+            [16.02, 16.220001, 16.42],
+            [0.02, 0.02, 0.02],
+        ],
+        dtype=tf.float32,
+    )
     tf.debugging.assert_equal(expert_outputs_2_desired, expert_outputs[2])
 
 
@@ -433,9 +452,7 @@ def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
     experts = [expert_0, expert_1, expert_2]
 
     # Initialize.
-    dispatcher = SparseDispatcher(
-        n_expert, gates_v0_timestep, has_timestep_axis=True
-    )
+    dispatcher = SparseDispatcher(n_expert, gates_v0_timestep, has_timestep_axis=True)
 
     # Test `expert_to_gates`. These values are determined by
     # `gates_v0_timestep`, and reflect the weight of each expert on non-zero
@@ -471,26 +488,26 @@ def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
     expert_inputs = dispatcher.dispatch_multi_pad(inputs_dict_timestep)
 
     # Spot check dispatched inputs.
-    expert_inputs_0_0_desired = tf.constant([
-        [[0.00, 0.10, 0.20], [0.01, 0.11, 0.21]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[4.00, 4.10, 4.20], [0.00, 0.00, 0.00]],
-    ])
-    tf.debugging.assert_equal(
-        expert_inputs[0]['inputs_0'], expert_inputs_0_0_desired
+    expert_inputs_0_0_desired = tf.constant(
+        [
+            [[0.00, 0.10, 0.20], [0.01, 0.11, 0.21]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[4.00, 4.10, 4.20], [0.00, 0.00, 0.00]],
+        ]
     )
-    expert_inputs_1_0_desired = tf.constant([
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[1.00, 1.10, 1.20], [1.01, 1.11, 1.21]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[3.00, 3.10, 3.20], [3.01, 3.11, 3.21]],
-        [[0.00, 0.00, 0.00], [4.01, 4.11, 4.21]],
-    ])
-    tf.debugging.assert_equal(
-        expert_inputs[1]['inputs_0'], expert_inputs_1_0_desired
+    tf.debugging.assert_equal(expert_inputs[0]["inputs_0"], expert_inputs_0_0_desired)
+    expert_inputs_1_0_desired = tf.constant(
+        [
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[1.00, 1.10, 1.20], [1.01, 1.11, 1.21]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[3.00, 3.10, 3.20], [3.01, 3.11, 3.21]],
+            [[0.00, 0.00, 0.00], [4.01, 4.11, 4.21]],
+        ]
     )
+    tf.debugging.assert_equal(expert_inputs[1]["inputs_0"], expert_inputs_1_0_desired)
 
     # Mimic calls to individual experts (i.e., subnets).
     expert_outputs = []
@@ -499,21 +516,26 @@ def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
         expert_outputs.append(out)
 
     # Spot check outputs.
-    expert_outputs_0_desired = tf.constant([
-        [[10.00, 10.200001, 10.40], [10.02, 10.219999, 10.42]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
-        [[18.00, 18.20, 18.40], [0.00, 0.00, 0.00]],
-    ])
+    expert_outputs_0_desired = tf.constant(
+        [
+            [[10.00, 10.200001, 10.40], [10.02, 10.219999, 10.42]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[0.00, 0.00, 0.00], [0.00, 0.00, 0.00]],
+            [[18.00, 18.20, 18.40], [0.00, 0.00, 0.00]],
+        ]
+    )
     # NOTE: Placeholder values are incremented by the layer, but later
     # ignored.
     tf.debugging.assert_equal(expert_outputs_0_desired, expert_outputs[0])
-    expert_outputs_1_desired = tf.constant([
-        [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
-        [[12.01, 12.210001, 12.41], [12.030001, 12.23, 12.43]],
-        [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
-        [[16.01, 16.210001, 16.41], [16.03, 16.23, 16.43]],
-        [[0.01, 0.01, 0.01], [18.03, 18.23, 18.43]],
-    ], dtype=tf.float32)
+    expert_outputs_1_desired = tf.constant(
+        [
+            [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
+            [[12.01, 12.210001, 12.41], [12.030001, 12.23, 12.43]],
+            [[0.01, 0.01, 0.01], [0.01, 0.01, 0.01]],
+            [[16.01, 16.210001, 16.41], [16.03, 16.23, 16.43]],
+            [[0.01, 0.01, 0.01], [18.03, 18.23, 18.43]],
+        ],
+        dtype=tf.float32,
+    )
     tf.debugging.assert_equal(expert_outputs_1_desired, expert_outputs[1])

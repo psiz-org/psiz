@@ -21,36 +21,28 @@ import tensorflow as tf
 def test_outcome_probability_v0():
     n_stimuli = 4
     n_dim = 2
-    beta = 10.
+    beta = 10.0
 
     percept = tf.keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
         embeddings_initializer=tf.initializers.Constant(
-            tf.constant(
-                [
-                    [0.0, 0.0],
-                    [0.1, 0.1],
-                    [0.2, 0.1],
-                    [0.3, 0.1],
-                    [0.4, 0.1]
-                ]
-            )
-        )
+            tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
+        ),
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
-        )
+        ),
     )
     rank = psiz.keras.layers.RankSimilarity(
         n_reference=2, n_select=1, percept=percept, kernel=kernel
@@ -65,12 +57,12 @@ def test_outcome_probability_v0():
         ]
     )
     x = {
-        'given2rank1_stimulus_set': stimulus_set,
+        "given2rank1_stimulus_set": stimulus_set,
     }
     outcome_prob = rank(x)
 
     # Desired outcome.
-    coords_x = .1 * tf.cast(stimulus_set, tf.float32)
+    coords_x = 0.1 * tf.cast(stimulus_set, tf.float32)
     z_q = tf.gather(coords_x, indices=tf.constant([0]), axis=1)
     z_r = tf.gather(coords_x, indices=tf.constant([1, 2]), axis=1)
     d_qr = tf.abs(z_q - z_r)
@@ -85,36 +77,28 @@ def test_serialization():
     """Test serialization."""
     n_stimuli = 4
     n_dim = 2
-    beta = 10.
+    beta = 10.0
 
     percept = tf.keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
         embeddings_initializer=tf.initializers.Constant(
-            tf.constant(
-                [
-                    [0.0, 0.0],
-                    [0.1, 0.1],
-                    [0.2, 0.1],
-                    [0.3, 0.1],
-                    [0.4, 0.1]
-                ]
-            )
-        )
+            tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
+        ),
     )
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
-        )
+        ),
     )
 
     # Default settings.
@@ -140,8 +124,12 @@ def test_serialization():
 
     # All optional settings.
     rank = psiz.keras.layers.RankSimilarity(
-        n_reference=8, n_select=2, percept=percept, kernel=kernel, data_scope="abc",
-        name="rs2"
+        n_reference=8,
+        n_select=2,
+        percept=percept,
+        kernel=kernel,
+        data_scope="abc",
+        name="rs2",
     )
     cfg = rank.get_config()
     # Verify.

@@ -29,36 +29,44 @@ def emb_0(mask_zero, is_dist):
     n_stimuli = 5
     n_dim = 3
     if mask_zero:
-        locs = np.array([
-            [0., 0., 0.],
-            [-.14, .11, .11],
-            [-.14, -.12, .13],
-            [.16, .14, .12],
-            [.15, -.14, .05],
-            [.2, .2, .2],
-        ])
+        locs = np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [-0.14, 0.11, 0.11],
+                [-0.14, -0.12, 0.13],
+                [0.16, 0.14, 0.12],
+                [0.15, -0.14, 0.05],
+                [0.2, 0.2, 0.2],
+            ]
+        )
         n_stimuli += 1
     else:
-        locs = np.array([
-            [-.14, .11, .11],
-            [-.14, -.12, .13],
-            [.16, .14, .12],
-            [.15, -.14, .05],
-            [.2, .2, .2],
-        ])
+        locs = np.array(
+            [
+                [-0.14, 0.11, 0.11],
+                [-0.14, -0.12, 0.13],
+                [0.16, 0.14, 0.12],
+                [0.15, -0.14, 0.05],
+                [0.2, 0.2, 0.2],
+            ]
+        )
 
     if is_dist:
         emb = EmbeddingNormalDiag(
-            n_stimuli, n_dim, mask_zero=mask_zero,
+            n_stimuli,
+            n_dim,
+            mask_zero=mask_zero,
             loc_initializer=tf.keras.initializers.Constant(locs),
             scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(.2).numpy()
-            )
+                tfp.math.softplus_inverse(0.2).numpy()
+            ),
         )
     else:
         emb = tf.keras.layers.Embedding(
-            n_stimuli, n_dim, mask_zero=mask_zero,
-            embeddings_initializer=tf.keras.initializers.Constant(locs)
+            n_stimuli,
+            n_dim,
+            mask_zero=mask_zero,
+            embeddings_initializer=tf.keras.initializers.Constant(locs),
         )
     emb.build([None])
 
@@ -79,9 +87,9 @@ def test_deterministic_emb_input(mask_zero, ax_present):
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
     if ax_present:
-        embedding_input_dimension(emb, idx, ax=ax, c='b')
+        embedding_input_dimension(emb, idx, ax=ax, c="b")
     else:
-        embedding_input_dimension(emb, idx, c='b')
+        embedding_input_dimension(emb, idx, c="b")
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -91,16 +99,8 @@ def test_deterministic_emb_input(mask_zero, ax_present):
     cs = ax.collections[0]
     arr = cs.get_offsets()
 
-    desired_arr = np.array(
-        [
-            [0., -0.14],
-            [1., -0.12],
-            [2., 0.13]
-        ]
-    )
-    np.testing.assert_array_almost_equal(
-        arr.data, desired_arr
-    )
+    desired_arr = np.array([[0.0, -0.14], [1.0, -0.12], [2.0, 0.13]])
+    np.testing.assert_array_almost_equal(arr.data, desired_arr)
     plt.close(fig)
 
 
@@ -118,9 +118,9 @@ def test_stochastic_emb_input(mask_zero, ax_present):
     ax = fig.add_subplot(gs[0, 0])
     idx = 1
     if ax_present:
-        embedding_input_dimension(emb, idx, ax=ax, c='b')
+        embedding_input_dimension(emb, idx, ax=ax, c="b")
     else:
-        embedding_input_dimension(emb, idx, c='b')
+        embedding_input_dimension(emb, idx, c="b")
     gs.tight_layout(fig)
 
     num_figures_after = plt.gcf().number
@@ -130,24 +130,16 @@ def test_stochastic_emb_input(mask_zero, ax_present):
     cs = ax.collections[0]
     arr = cs.get_offsets()
 
-    desired_arr = np.array(
-        [
-            [0., -0.14],
-            [1., -0.12],
-            [2., 0.13]
-        ]
-    )
-    np.testing.assert_array_almost_equal(
-        arr.data, desired_arr
-    )
+    desired_arr = np.array([[0.0, -0.14], [1.0, -0.12], [2.0, 0.13]])
+    np.testing.assert_array_almost_equal(arr.data, desired_arr)
 
     # Spot check middle density intervals.
-    np.testing.assert_array_almost_equal(ax.lines[0]._x, np.array([0., 0.]))
+    np.testing.assert_array_almost_equal(ax.lines[0]._x, np.array([0.0, 0.0]))
     np.testing.assert_array_almost_equal(
         ax.lines[0]._y, np.array([-0.65516615, 0.37516624])
     )
 
-    np.testing.assert_array_almost_equal(ax.lines[-1]._x, np.array([2., 2.]))
+    np.testing.assert_array_almost_equal(ax.lines[-1]._x, np.array([2.0, 2.0]))
     np.testing.assert_array_almost_equal(
         ax.lines[-1]._y, np.array([-0.00489804, 0.26489803])
     )

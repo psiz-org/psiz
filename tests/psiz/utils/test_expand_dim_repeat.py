@@ -24,70 +24,44 @@ from psiz.utils import expand_dim_repeat
 
 def test_expand_dim_repeat_empty():
     x = tf.constant(
-        np.array([
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-            [9, 10, 11],
-            [12, 13, 14]
-        ])
+        np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
     )
 
     n_sample = ()
     with pytest.raises(Exception) as e_info:
         expand_dim_repeat(x, n_sample, axis=1)
-    assert str(e_info.value) == (
-        'Dimensions 1 and 0 are not compatible'
-    )
+    assert str(e_info.value) == ("Dimensions 1 and 0 are not compatible")
 
 
 def test_expand_dim_repeat_1():
     x = tf.constant(
-        np.array([
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-            [9, 10, 11],
-            [12, 13, 14]
-        ])
+        np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
     )
 
     n_sample = 1
     output = expand_dim_repeat(x, n_sample, axis=1)
 
-    desired_output = np.array([
-        [[0, 1, 2]],
-        [[3, 4, 5]],
-        [[6, 7, 8]],
-        [[9, 10, 11]],
-        [[12, 13, 14]]
-    ])
-    np.testing.assert_array_equal(
-        desired_output, output
+    desired_output = np.array(
+        [[[0, 1, 2]], [[3, 4, 5]], [[6, 7, 8]], [[9, 10, 11]], [[12, 13, 14]]]
     )
+    np.testing.assert_array_equal(desired_output, output)
 
 
 def test_expand_dim_repeat_2():
     x = tf.constant(
-        np.array([
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-            [9, 10, 11],
-            [12, 13, 14]
-        ])
+        np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
     )
 
     n_sample = 2
     output = expand_dim_repeat(x, n_sample, axis=1)
 
-    desired_output = np.array([
-        [[0, 1, 2], [0, 1, 2]],
-        [[3, 4, 5], [3, 4, 5]],
-        [[6, 7, 8], [6, 7, 8]],
-        [[9, 10, 11], [9, 10, 11]],
-        [[12, 13, 14], [12, 13, 14]]
-    ])
-    np.testing.assert_array_equal(
-        desired_output, output
+    desired_output = np.array(
+        [
+            [[0, 1, 2], [0, 1, 2]],
+            [[3, 4, 5], [3, 4, 5]],
+            [[6, 7, 8], [6, 7, 8]],
+            [[9, 10, 11], [9, 10, 11]],
+            [[12, 13, 14], [12, 13, 14]],
+        ]
     )
+    np.testing.assert_array_equal(desired_output, output)

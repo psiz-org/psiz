@@ -34,8 +34,9 @@ def paired_inputs_v0():
                 [1.0, 1.1, 1.2],
                 [2.0, 2.1, 2.2],
                 [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2]
-            ], dtype=np.float32
+                [4.0, 4.1, 4.2],
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -46,8 +47,9 @@ def paired_inputs_v0():
                 [6.0, 6.1, 6.2],
                 [7.0, 7.1, 7.2],
                 [8.0, 8.1, 8.2],
-                [9.0, 9.1, 9.2]
-            ], dtype=np.float32
+                [9.0, 9.1, 9.2],
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -66,8 +68,9 @@ def paired_inputs_v1():
                 [1.0, 1.1, 1.2],
                 [2.0, 2.1, 2.2],
                 [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2]
-            ], dtype=np.float32
+                [4.0, 4.1, 4.2],
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -78,8 +81,9 @@ def paired_inputs_v1():
                 [2.1, 2.2, 2.3],
                 [3.2, 3.3, 3.4],
                 [4.4, 4.3, 4.2],
-                [4.0, 4.1, 4.2]
-            ], dtype=np.float32
+                [4.0, 4.1, 4.2],
+            ],
+            dtype=np.float32,
         )
     )
 
@@ -91,13 +95,7 @@ def groups_v0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
     groups = tf.constant(
-        [
-            [0, 0, 0],
-            [0, 1, 0],
-            [0, 2, 0],
-            [0, 1, 1],
-            [0, 2, 1]
-        ], dtype=tf.int32
+        [[0, 0, 0], [0, 1, 0], [0, 2, 0], [0, 1, 1], [0, 2, 1]], dtype=tf.int32
     )
     return groups
 
@@ -106,16 +104,18 @@ def groups_v0():
 def kernel_v0():
     kernel = DistanceBased(
         distance=Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
-            trainable=False
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
         ),
         similarity=ExponentialSimilarity(
-            fit_tau=False, fit_gamma=False, fit_beta=False,
-            tau_initializer=tf.keras.initializers.Constant(1.),
+            fit_tau=False,
+            fit_gamma=False,
+            fit_beta=False,
+            tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
-            beta_initializer=tf.keras.initializers.Constant(.1),
-        )
+            beta_initializer=tf.keras.initializers.Constant(0.1),
+        ),
     )
     return kernel
 
@@ -125,12 +125,6 @@ def group_3g_empty_v0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
     groups = tf.constant(
-        [
-            [0, 1, 0],
-            [0, 1, 0],
-            [0, 2, 0],
-            [0, 1, 1],
-            [0, 2, 1]
-        ], dtype=np.int32
+        [[0, 1, 0], [0, 1, 0], [0, 2, 0], [0, 1, 1], [0, 2, 1]], dtype=np.int32
     )
     return groups

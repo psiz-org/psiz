@@ -30,36 +30,44 @@ def emb_0(mask_zero, is_dist):
     n_stimuli = 5
     n_dim = 3
     if mask_zero:
-        locs = np.array([
-            [0., 0., 0.],
-            [-.14, .11, .11],
-            [-.14, -.12, .13],
-            [.16, .14, .12],
-            [.15, -.14, .05],
-            [.2, .2, .2],
-        ])
+        locs = np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [-0.14, 0.11, 0.11],
+                [-0.14, -0.12, 0.13],
+                [0.16, 0.14, 0.12],
+                [0.15, -0.14, 0.05],
+                [0.2, 0.2, 0.2],
+            ]
+        )
         n_stimuli += 1
     else:
-        locs = np.array([
-            [-.14, .11, .11],
-            [-.14, -.12, .13],
-            [.16, .14, .12],
-            [.15, -.14, .05],
-            [.2, .2, .2],
-        ])
+        locs = np.array(
+            [
+                [-0.14, 0.11, 0.11],
+                [-0.14, -0.12, 0.13],
+                [0.16, 0.14, 0.12],
+                [0.15, -0.14, 0.05],
+                [0.2, 0.2, 0.2],
+            ]
+        )
 
     if is_dist:
         emb = EmbeddingNormalDiag(
-            n_stimuli, n_dim, mask_zero=mask_zero,
+            n_stimuli,
+            n_dim,
+            mask_zero=mask_zero,
             loc_initializer=tf.keras.initializers.Constant(locs),
             scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(.2).numpy()
-            )
+                tfp.math.softplus_inverse(0.2).numpy()
+            ),
         )
     else:
         emb = tf.keras.layers.Embedding(
-            n_stimuli, n_dim, mask_zero=mask_zero,
-            embeddings_initializer=tf.keras.initializers.Constant(locs)
+            n_stimuli,
+            n_dim,
+            mask_zero=mask_zero,
+            embeddings_initializer=tf.keras.initializers.Constant(locs),
         )
     emb.build([None])
 
@@ -81,7 +89,7 @@ def test_emb_heatmap(is_dist, mask_zero, cmap, ax_present):
     ax = fig.add_subplot(gs[0, 0])
 
     if cmap:
-        cmap = matplotlib.colormaps['Blues']
+        cmap = matplotlib.colormaps["Blues"]
         heatmap_embeddings(emb, ax=ax, cmap=cmap)
     else:
         if ax_present:
@@ -92,14 +100,17 @@ def test_emb_heatmap(is_dist, mask_zero, cmap, ax_present):
     num_figures_after = plt.gcf().number
     assert num_figures_before < num_figures_after
 
-    desired_array = np.array([
-        [-.14, .11, .11],
-        [-.14, -.12, .13],
-        [.16, .14, .12],
-        [.15, -.14, .05],
-        [.2, .2, .2],
-    ])
+    desired_array = np.array(
+        [
+            [-0.14, 0.11, 0.11],
+            [-0.14, -0.12, 0.13],
+            [0.16, 0.14, 0.12],
+            [0.15, -0.14, 0.05],
+            [0.2, 0.2, 0.2],
+        ]
+    )
     np.testing.assert_array_almost_equal(
-        desired_array, ax.images[0].get_array().data,
+        desired_array,
+        ax.images[0].get_array().data,
     )
     plt.close(fig)

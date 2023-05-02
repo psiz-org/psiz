@@ -17,6 +17,7 @@
 
 import pytest
 import tensorflow as tf
+
 # from tensorflow.python.eager import backprop
 
 
@@ -123,7 +124,7 @@ class FooModel2(tf.keras.Model):
             training (optional): Boolean indicating if training mode.
 
         """
-        states = tf.constant([0., 0., 0., 0., 0.])
+        states = tf.constant([0.0, 0.0, 0.0, 0.0, 0.0])
         output, states_tplus1 = self.cell(inputs, states, training=training)
         return output
 
@@ -181,13 +182,15 @@ class MyRegularizer(tf.keras.regularizers.Regularizer, tf.Module):
 
 def _make_kl_divergence_fn():
     def _fn(x):
-        x = tf.reduce_sum(x, name='kl_reduce')
-        return tf.add(x, tf.constant(1.0), name='kl_add')
+        x = tf.reduce_sum(x, name="kl_reduce")
+        return tf.add(x, tf.constant(1.0), name="kl_add")
+
     return _fn
 
 
 class BarCell(tf.keras.layers.Layer):
     """RNN cell for testing."""
+
     def __init__(self, **kwargs):
         """Initialize.
 
@@ -225,22 +228,23 @@ class BarCell(tf.keras.layers.Layer):
         return output, states_tplus1
 
 
-@pytest.mark.parametrize(
-    "is_eager", [True, False]
-)
+@pytest.mark.parametrize("is_eager", [True, False])
 def test_nornn_fit_with_add_loss(is_eager):
     """Test fit method (triggering backprop)."""
     tf.config.run_functions_eagerly(is_eager)
 
     # Some dummy input formatted as a TF Dataset.
     n_example = 5
-    x = tf.constant([
-        [1, 2, 3],
-        [1, 13, 8],
-        [1, 5, 6],
-        [1, 5, 12],
-        [1, 5, 6],
-    ], dtype=tf.float32)
+    x = tf.constant(
+        [
+            [1, 2, 3],
+            [1, 13, 8],
+            [1, 5, 6],
+            [1, 5, 12],
+            [1, 5, 6],
+        ],
+        dtype=tf.float32,
+    )
     y = tf.constant(
         [
             [1],
@@ -248,7 +252,8 @@ def test_nornn_fit_with_add_loss(is_eager):
             [4],
             [4],
             [4],
-        ], dtype=tf.float32
+        ],
+        dtype=tf.float32,
     )
     tfds = tf.data.Dataset.from_tensor_slices((x, y))
     tfds = tfds.batch(n_example, drop_remainder=False)
@@ -257,8 +262,8 @@ def test_nornn_fit_with_add_loss(is_eager):
     bar_cell = BarCell()
     model = FooModel2(cell=bar_cell)
     compile_kwargs = {
-        'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
+        "loss": tf.keras.losses.MeanSquaredError(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
     }
     model.compile(**compile_kwargs)
 
@@ -273,22 +278,25 @@ def test_nornn_fit_with_add_loss(is_eager):
         (True, True),
         (True, False),
         (False, True),
-        pytest.param(False, False, marks=pytest.mark.xfail)
-    ]
+        pytest.param(False, False, marks=pytest.mark.xfail),
+    ],
 )
 def test_withrnn_fit_with_add_loss(is_eager, unroll):
     """Test fit method (triggering backprop)."""
     tf.config.run_functions_eagerly(is_eager)
 
     # Some dummy input formatted as a TF Dataset.
-    x = tf.constant([
-        [[1, 2, 3], [2, 0, 0], [3, 0, 0], [4, 3, 4]],
-        [[1, 13, 8], [2, 0, 0], [3, 0, 0], [4, 13, 8]],
-        [[1, 5, 6], [2, 8, 0], [3, 16, 0], [0, 0, 0]],
-        [[1, 5, 12], [2, 14, 15], [3, 17, 18], [4, 5, 6]],
-        [[1, 5, 6], [2, 14, 15], [3, 17, 18], [4, 5, 6]],
-        [[1, 5, 6], [2, 14, 15], [3, 17, 18], [0, 0, 0]],
-    ], dtype=tf.float32)
+    x = tf.constant(
+        [
+            [[1, 2, 3], [2, 0, 0], [3, 0, 0], [4, 3, 4]],
+            [[1, 13, 8], [2, 0, 0], [3, 0, 0], [4, 13, 8]],
+            [[1, 5, 6], [2, 8, 0], [3, 16, 0], [0, 0, 0]],
+            [[1, 5, 12], [2, 14, 15], [3, 17, 18], [4, 5, 6]],
+            [[1, 5, 6], [2, 14, 15], [3, 17, 18], [4, 5, 6]],
+            [[1, 5, 6], [2, 14, 15], [3, 17, 18], [0, 0, 0]],
+        ],
+        dtype=tf.float32,
+    )
     y = tf.constant(
         [
             [[1], [2], [1], [2]],
@@ -297,17 +305,19 @@ def test_withrnn_fit_with_add_loss(is_eager, unroll):
             [[4], [2], [1], [2]],
             [[4], [2], [1], [2]],
             [[4], [2], [1], [0]],
-        ], dtype=tf.float32
+        ],
+        dtype=tf.float32,
     )
     w = tf.constant(
         [
-            [1., 1., 1., 1.],
-            [1., 1., 1., 1.],
-            [1., 1., 1., 0.],
-            [1., 1., 1., 1.],
-            [1., 1., 1., 1.],
-            [1., 1., 1., 0.],
-        ], dtype=tf.float32
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 0.0],
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 0.0],
+        ],
+        dtype=tf.float32,
     )
     tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
     tfds = tfds.batch(3, drop_remainder=False)
@@ -317,11 +327,9 @@ def test_withrnn_fit_with_add_loss(is_eager, unroll):
     rnn = tf.keras.layers.RNN(cell, return_sequences=True, unroll=unroll)
     model = FooModel(rnn=rnn)
     compile_kwargs = {
-        'loss': tf.keras.losses.MeanSquaredError(),
-        'optimizer': tf.keras.optimizers.Adam(learning_rate=.001),
-        'weighted_metrics': [
-            tf.keras.losses.MeanSquaredError(name='mse')
-        ],
+        "loss": tf.keras.losses.MeanSquaredError(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [tf.keras.losses.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
 

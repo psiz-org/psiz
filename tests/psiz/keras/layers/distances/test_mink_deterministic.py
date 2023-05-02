@@ -23,19 +23,21 @@ from psiz.keras.layers.distances.mink import Minkowski
 
 def test_call(paired_inputs_v0):
     mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
-        trainable=False
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        trainable=False,
     )
     outputs = mink_layer(paired_inputs_v0)
 
-    desired_outputs = np.array([
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387,
-        8.660254037844387
-    ])
+    desired_outputs = np.array(
+        [
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+            8.660254037844387,
+        ]
+    )
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
 
 
@@ -44,7 +46,7 @@ def test_output_shape(paired_inputs_v0):
     mink_layer = Minkowski()
     input_shape = [
         tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-        tf.TensorShape(tf.shape(paired_inputs_v0[1]))
+        tf.TensorShape(tf.shape(paired_inputs_v0[1])),
     ]
     output_shape = mink_layer.compute_output_shape(input_shape)
     desired_output_shape = tf.TensorShape([5])
@@ -54,9 +56,9 @@ def test_output_shape(paired_inputs_v0):
 def test_serialization():
     """Test serialization."""
     mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_initializer=tf.keras.initializers.Constant(1.),
-        trainable=False
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        trainable=False,
     )
     mink_layer.build([[None, 3], [None, 3]])
     tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))

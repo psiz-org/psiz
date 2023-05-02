@@ -26,21 +26,16 @@ def test_init_0(c_2rank1_a_4x1):
     """Test initialization with minimal rank arguments."""
     desired_n_sequence = 4
     desired_sequence_length = 1
-    desired_stimulus_set = np.array([
-        [[3, 1, 2]],
-        [[9, 12, 7]],
-        [[5, 6, 7]],
-        [[13, 14, 15]]
-    ], dtype=np.int32)
+    desired_stimulus_set = np.array(
+        [[[3, 1, 2]], [[9, 12, 7]], [[5, 6, 7]], [[13, 14, 15]]], dtype=np.int32
+    )
     desired_n_reference = 2
     desired_n_select = 1
     desired_n_outcome = 2
 
     assert c_2rank1_a_4x1.n_sample == desired_n_sequence
     assert c_2rank1_a_4x1.sequence_length == desired_sequence_length
-    np.testing.assert_array_equal(
-        desired_stimulus_set, c_2rank1_a_4x1.stimulus_set
-    )
+    np.testing.assert_array_equal(desired_stimulus_set, c_2rank1_a_4x1.stimulus_set)
     assert desired_n_reference == c_2rank1_a_4x1.n_reference
     assert desired_n_select == c_2rank1_a_4x1.n_select
     assert desired_n_outcome == c_2rank1_a_4x1.n_outcome
@@ -50,21 +45,16 @@ def test_init_1(c_2rank1_aa_4x1):
     """Test initialization with true rank arguments."""
     desired_n_sequence = 4
     desired_sequence_length = 1
-    desired_stimulus_set = np.array([
-        [[3, 1, 2]],
-        [[9, 12, 7]],
-        [[5, 6, 7]],
-        [[13, 14, 15]]
-    ], dtype=np.int32)
+    desired_stimulus_set = np.array(
+        [[[3, 1, 2]], [[9, 12, 7]], [[5, 6, 7]], [[13, 14, 15]]], dtype=np.int32
+    )
     desired_n_reference = 2
     desired_n_select = 1
     desired_n_outcome = 2
 
     assert c_2rank1_aa_4x1.n_sample == desired_n_sequence
     assert c_2rank1_aa_4x1.sequence_length == desired_sequence_length
-    np.testing.assert_array_equal(
-        desired_stimulus_set, c_2rank1_aa_4x1.stimulus_set
-    )
+    np.testing.assert_array_equal(desired_stimulus_set, c_2rank1_aa_4x1.stimulus_set)
     assert desired_n_reference == c_2rank1_aa_4x1.n_reference
     assert desired_n_select == c_2rank1_aa_4x1.n_select
     assert desired_n_outcome == c_2rank1_aa_4x1.n_outcome
@@ -76,23 +66,12 @@ def test_init_2(c_4rank2_b_4x2):
     desired_sequence_length = 2
     desired_stimulus_set = np.array(
         [
-            [
-                [1, 2, 3, 4, 5],
-                [5, 4, 3, 2, 1]
-            ],
-            [
-                [9, 12, 7, 13, 14],
-                [0, 0, 0, 0, 0]
-            ],
-            [
-                [3, 4, 5, 6, 7],
-                [7, 8, 9, 10, 11]
-            ],
-            [
-                [13, 14, 15, 16, 17],
-                [14, 15, 16, 17, 18]
-            ]
-        ], dtype=np.int32
+            [[1, 2, 3, 4, 5], [5, 4, 3, 2, 1]],
+            [[9, 12, 7, 13, 14], [0, 0, 0, 0, 0]],
+            [[3, 4, 5, 6, 7], [7, 8, 9, 10, 11]],
+            [[13, 14, 15, 16, 17], [14, 15, 16, 17, 18]],
+        ],
+        dtype=np.int32,
     )
     desired_n_reference = 4
     desired_n_select = 2
@@ -100,9 +79,7 @@ def test_init_2(c_4rank2_b_4x2):
 
     assert c_4rank2_b_4x2.n_sample == desired_n_sequence
     assert c_4rank2_b_4x2.sequence_length == desired_sequence_length
-    np.testing.assert_array_equal(
-        desired_stimulus_set, c_4rank2_b_4x2.stimulus_set
-    )
+    np.testing.assert_array_equal(desired_stimulus_set, c_4rank2_b_4x2.stimulus_set)
     assert desired_n_reference == c_4rank2_b_4x2.n_reference
     assert desired_n_select == c_4rank2_b_4x2.n_select
     assert desired_n_outcome == c_4rank2_b_4x2.n_outcome
@@ -118,27 +95,12 @@ def test_init_3(c_4rank2_c_4x3):
     desired_sequence_length = 3
     desired_stimulus_set = np.array(
         [
-            [
-                [3, 1, 2, 4, 5],
-                [3, 1, 2, 6, 7],
-                [0, 0, 0, 0, 0]
-            ],
-            [
-                [9, 12, 7, 14, 5],
-                [0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0]
-            ],
-            [
-                [3, 4, 5, 6, 7],
-                [8, 9, 10, 11, 12],
-                [0, 0, 0, 0, 0]
-            ],
-            [
-                [1, 3, 5, 7, 9],
-                [11, 9, 7, 5, 3],
-                [0, 0, 0, 0, 0]
-            ]
-        ], dtype=np.int32
+            [[3, 1, 2, 4, 5], [3, 1, 2, 6, 7], [0, 0, 0, 0, 0]],
+            [[9, 12, 7, 14, 5], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
+            [[3, 4, 5, 6, 7], [8, 9, 10, 11, 12], [0, 0, 0, 0, 0]],
+            [[1, 3, 5, 7, 9], [11, 9, 7, 5, 3], [0, 0, 0, 0, 0]],
+        ],
+        dtype=np.int32,
     )
     desired_n_reference = 4
     desired_n_select = 2
@@ -146,9 +108,7 @@ def test_init_3(c_4rank2_c_4x3):
 
     assert c_4rank2_c_4x3.n_sample == desired_n_sequence
     assert c_4rank2_c_4x3.sequence_length == desired_sequence_length
-    np.testing.assert_array_equal(
-        desired_stimulus_set, c_4rank2_c_4x3.stimulus_set
-    )
+    np.testing.assert_array_equal(desired_stimulus_set, c_4rank2_c_4x3.stimulus_set)
     assert desired_n_reference == c_4rank2_c_4x3.n_reference
     assert desired_n_select == c_4rank2_c_4x3.n_select
     assert desired_n_outcome == c_4rank2_c_4x3.n_outcome
@@ -174,8 +134,9 @@ def test_init_4():
             [
                 [10, 11, 12],
                 [14, 15, 16],
-            ]
-        ], dtype=np.int32
+            ],
+        ],
+        dtype=np.int32,
     )
     content = Rank(stimulus_set)
 
@@ -185,25 +146,17 @@ def test_init_4():
             [1, 1],
             [1, 0],
             [1, 1],
-        ], dtype=np.int32
+        ],
+        dtype=np.int32,
     )
     assert content.n_select == n_select_desired
-    np.testing.assert_array_equal(
-        content._n_select_arr, n_select_arr_desired
-    )
+    np.testing.assert_array_equal(content._n_select_arr, n_select_arr_desired)
 
 
 def test_invalid_stimulus_set():
     """Test handling of invalid `stimulus_set` argument."""
     # Non-integer input.
-    stimulus_set = np.array(
-        (
-            (3., 1, 2),
-            (9, 12, 7),
-            (3, 4, 5),
-            (3, 4, 5)
-        )
-    )
+    stimulus_set = np.array(((3.0, 1, 2), (9, 12, 7), (3, 4, 5), (3, 4, 5)))
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set)
     assert e_info.type == ValueError
@@ -212,14 +165,7 @@ def test_invalid_stimulus_set():
     )
 
     # Contains negative integers.
-    stimulus_set = np.array(
-        (
-            (3, 1, -1),
-            (9, 12, 7),
-            (3, 4, 5),
-            (3, 4, 5)
-        )
-    )
+    stimulus_set = np.array(((3, 1, -1), (9, 12, 7), (3, 4, 5), (3, 4, 5)))
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set)
     assert e_info.type == ValueError
@@ -229,14 +175,7 @@ def test_invalid_stimulus_set():
     )
 
     # Trials have different number of references.
-    stimulus_set = np.array(
-        (
-            (3, 1, 2, 4),
-            (9, 12, 7, 0),
-            (3, 4, 5, 0),
-            (3, 4, 5, 6)
-        )
-    )
+    stimulus_set = np.array(((3, 1, 2, 4), (9, 12, 7, 0), (3, 4, 5, 0), (3, 4, 5, 6)))
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set)
     assert e_info.type == ValueError
@@ -247,14 +186,7 @@ def test_invalid_stimulus_set():
     )
 
     # Does not contain enough references for each trial.
-    stimulus_set = np.array(
-        (
-            (3, 1, 2),
-            (9, 12, 7),
-            (3, 4, 0),
-            (3, 4, 5)
-        )
-    )
+    stimulus_set = np.array(((3, 1, 2), (9, 12, 7), (3, 4, 0), (3, 4, 5)))
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set)
     assert e_info.type == ValueError
@@ -266,26 +198,8 @@ def test_invalid_stimulus_set():
     # Is too large a rank.
     stimulus_set = np.array(
         [
-            [
-                [
-                    [3, 1, 2, 4],
-                    [9, 12, 7, 5]
-                ],
-                [
-                    [3, 1, 2, 3],
-                    [9, 12, 7, 9]
-                ]
-            ],
-            [
-                [
-                    [13, 14, 15, 2],
-                    [16, 17, 4, 5]
-                ],
-                [
-                    [3, 4, 5, 6],
-                    [3, 4, 5, 6]
-                ]
-            ]
+            [[[3, 1, 2, 4], [9, 12, 7, 5]], [[3, 1, 2, 3], [9, 12, 7, 9]]],
+            [[[13, 14, 15, 2], [16, 17, 4, 5]], [[3, 4, 5, 6], [3, 4, 5, 6]]],
         ]
     )
     with pytest.raises(Exception) as e_info:
@@ -296,12 +210,7 @@ def test_invalid_stimulus_set():
 def test_invalid_n_reference():
     """Test handling of invalid 'n_select' argument."""
     stimulus_set = np.array(
-        (
-            (3, 1, 2, 4, 5),
-            (9, 12, 7, 8, 9),
-            (3, 4, 5, 6, 7),
-            (13, 14, 15, 16, 17)
-        )
+        ((3, 1, 2, 4, 5), (9, 12, 7, 8, 9), (3, 4, 5, 6, 7), (13, 14, 15, 16, 17))
     )
 
     # Below support.
@@ -317,26 +226,17 @@ def test_invalid_n_reference():
     assert e_info.type == ValueError
 
     # Not an integer
-    n_select = np.array([
-        [[2], [1]], [[1], [2]]
-    ])
+    n_select = np.array([[[2], [1]], [[1], [2]]])
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set, n_select=n_select)
     assert e_info.type == ValueError
-    assert str(e_info.value) == (
-        "The argument `n_select` must be an integer."
-    )
+    assert str(e_info.value) == ("The argument `n_select` must be an integer.")
 
 
 def test_invalid_n_select():
     """Test handling of invalid 'n_select' argument."""
     stimulus_set = np.array(
-        (
-            (3, 1, 2, 4, 5),
-            (9, 12, 7, 8, 9),
-            (3, 4, 5, 6, 7),
-            (13, 14, 15, 16, 17)
-        )
+        ((3, 1, 2, 4, 5), (9, 12, 7, 8, 9), (3, 4, 5, 6, 7), (13, 14, 15, 16, 17))
     )
 
     # Below support.
@@ -352,33 +252,22 @@ def test_invalid_n_select():
     assert e_info.type == ValueError
 
     # Not an integer
-    n_select = np.array([
-        [[2], [1]], [[1], [2]]
-    ])
+    n_select = np.array([[[2], [1]], [[1], [2]]])
     with pytest.raises(Exception) as e_info:
         Rank(stimulus_set, n_select=n_select)
     assert e_info.type == ValueError
-    assert str(e_info.value) == (
-        "The argument `n_select` must be an integer."
-    )
+    assert str(e_info.value) == ("The argument `n_select` must be an integer.")
 
 
 def test_is_actual(c_4rank2_b_4x2):
     """Test is_actual method."""
-    desired_is_actual = np.array(
-        [
-            [1, 1],
-            [1, 0],
-            [1, 1],
-            [1, 1]
-        ], dtype=bool
-    )
+    desired_is_actual = np.array([[1, 1], [1, 0], [1, 1], [1, 1]], dtype=bool)
     np.testing.assert_array_equal(desired_is_actual, c_4rank2_b_4x2.is_actual)
 
 
 def test_config_attrs():
     """Test _config_attrs()"""
-    desired_list = ['_n_reference', '_n_select_arr']
+    desired_list = ["_n_reference", "_n_select_arr"]
     assert desired_list == Rank._config_attrs()
 
 
@@ -386,9 +275,7 @@ def test_possible_outcomes_2c1():
     """Test outcomes 2 choose 1 ranked trial."""
     n_reference = 2
     n_select = 1
-    outcomes = Rank.possible_outcomes(
-        n_reference, n_select
-    )
+    outcomes = Rank.possible_outcomes(n_reference, n_select)
 
     desired_outcomes = np.array(((0, 1), (1, 0)))
     np.testing.assert_array_equal(outcomes, desired_outcomes)
@@ -400,14 +287,9 @@ def test_possible_outcomes_3c2():
     n_select = 2
     outcomes = Rank.possible_outcomes(n_reference, n_select)
 
-    desired_outcomes = np.array((
-        (0, 1, 2),
-        (0, 2, 1),
-        (1, 0, 2),
-        (1, 2, 0),
-        (2, 0, 1),
-        (2, 1, 0)
-    ))
+    desired_outcomes = np.array(
+        ((0, 1, 2), (0, 2, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0))
+    )
     np.testing.assert_array_equal(outcomes, desired_outcomes)
 
 
@@ -417,11 +299,22 @@ def test_possible_outcomes_4c2():
     n_select = 2
     outcomes = Rank.possible_outcomes(n_reference, n_select)
 
-    desired_outcomes = np.array((
-        (0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2),
-        (1, 0, 2, 3), (1, 2, 0, 3), (1, 3, 0, 2),
-        (2, 0, 1, 3), (2, 1, 0, 3), (2, 3, 0, 1),
-        (3, 0, 1, 2), (3, 1, 0, 2), (3, 2, 0, 1)))
+    desired_outcomes = np.array(
+        (
+            (0, 1, 2, 3),
+            (0, 2, 1, 3),
+            (0, 3, 1, 2),
+            (1, 0, 2, 3),
+            (1, 2, 0, 3),
+            (1, 3, 0, 2),
+            (2, 0, 1, 3),
+            (2, 1, 0, 3),
+            (2, 3, 0, 1),
+            (3, 0, 1, 2),
+            (3, 1, 0, 2),
+            (3, 2, 0, 1),
+        )
+    )
     np.testing.assert_array_equal(outcomes, desired_outcomes)
 
 
@@ -431,15 +324,18 @@ def test_possible_outcomes_8c1():
     n_select = 1
     outcomes = Rank.possible_outcomes(n_reference, n_select)
 
-    correct = np.array((
-        (0, 1, 2, 3, 4, 5, 6, 7),
-        (1, 0, 2, 3, 4, 5, 6, 7),
-        (2, 0, 1, 3, 4, 5, 6, 7),
-        (3, 0, 1, 2, 4, 5, 6, 7),
-        (4, 0, 1, 2, 3, 5, 6, 7),
-        (5, 0, 1, 2, 3, 4, 6, 7),
-        (6, 0, 1, 2, 3, 4, 5, 7),
-        (7, 0, 1, 2, 3, 4, 5, 6)))
+    correct = np.array(
+        (
+            (0, 1, 2, 3, 4, 5, 6, 7),
+            (1, 0, 2, 3, 4, 5, 6, 7),
+            (2, 0, 1, 3, 4, 5, 6, 7),
+            (3, 0, 1, 2, 4, 5, 6, 7),
+            (4, 0, 1, 2, 3, 5, 6, 7),
+            (5, 0, 1, 2, 3, 4, 6, 7),
+            (6, 0, 1, 2, 3, 4, 5, 7),
+            (7, 0, 1, 2, 3, 4, 5, 6),
+        )
+    )
     np.testing.assert_array_equal(outcomes, correct)
 
 
@@ -561,23 +457,12 @@ def test_is_select_0(c_4rank2_b_4x2):
     is_select = c_4rank2_b_4x2._is_select()
     desired_is_select = np.array(
         [
-            [
-                [0, 1, 1, 0, 0],
-                [0, 1, 1, 0, 0]
-            ],
-            [
-                [0, 1, 1, 0, 0],
-                [0, 0, 0, 0, 0]
-            ],
-            [
-                [0, 1, 1, 0, 0],
-                [0, 1, 1, 0, 0]
-            ],
-            [
-                [0, 1, 1, 0, 0],
-                [0, 1, 1, 0, 0]
-            ]
-        ], dtype=bool
+            [[0, 1, 1, 0, 0], [0, 1, 1, 0, 0]],
+            [[0, 1, 1, 0, 0], [0, 0, 0, 0, 0]],
+            [[0, 1, 1, 0, 0], [0, 1, 1, 0, 0]],
+            [[0, 1, 1, 0, 0], [0, 1, 1, 0, 0]],
+        ],
+        dtype=bool,
     )
     np.testing.assert_array_equal(desired_is_select, is_select)
 
@@ -586,24 +471,8 @@ def test_is_select_compress_0(c_4rank2_b_4x2):
     """Test _is_select."""
     is_select = c_4rank2_b_4x2._is_select(compress=True)
     desired_is_select = np.array(
-        [
-            [
-                [1, 1],
-                [1, 1]
-            ],
-            [
-                [1, 1],
-                [0, 0]
-            ],
-            [
-                [1, 1],
-                [1, 1]
-            ],
-            [
-                [1, 1],
-                [1, 1]
-            ]
-        ], dtype=bool
+        [[[1, 1], [1, 1]], [[1, 1], [0, 0]], [[1, 1], [1, 1]], [[1, 1], [1, 1]]],
+        dtype=bool,
     )
     np.testing.assert_array_equal(desired_is_select, is_select)
 
@@ -624,8 +493,9 @@ def test_is_select_1(c_2rank1_d_3x2):
             [
                 [0, 1, 0],
                 [0, 1, 0],
-            ]
-        ], dtype=bool
+            ],
+        ],
+        dtype=bool,
     )
     np.testing.assert_array_equal(desired_is_select, is_select)
 
@@ -646,8 +516,9 @@ def test_is_select_compress_1(c_2rank1_d_3x2):
             [
                 [1],
                 [1],
-            ]
-        ], dtype=bool
+            ],
+        ],
+        dtype=bool,
     )
     np.testing.assert_array_equal(desired_is_select, is_select)
 
@@ -668,12 +539,11 @@ def test_export_0(c_2rank1_d_3x2):
             [
                 [10, 11, 12],
                 [14, 15, 16],
-            ]
-        ], dtype=tf.int32
+            ],
+        ],
+        dtype=tf.int32,
     )
-    tf.debugging.assert_equal(
-            desired_stimulus_set, x['given2rank1_stimulus_set']
-    )
+    tf.debugging.assert_equal(desired_stimulus_set, x["given2rank1_stimulus_set"])
 
 
 def test_export_1(c_2rank1_d_3x2):
@@ -691,11 +561,10 @@ def test_export_1(c_2rank1_d_3x2):
             [0, 0, 0],
             [10, 11, 12],
             [14, 15, 16],
-        ], dtype=tf.int32
+        ],
+        dtype=tf.int32,
     )
-    tf.debugging.assert_equal(
-        desired_stimulus_set, x['given2rank1_stimulus_set']
-    )
+    tf.debugging.assert_equal(desired_stimulus_set, x["given2rank1_stimulus_set"])
 
 
 def test_export_wrong(c_2rank1_d_3x2):
@@ -705,8 +574,6 @@ def test_export_wrong(c_2rank1_d_3x2):
 
     """
     with pytest.raises(Exception) as e_info:
-        c_2rank1_d_3x2.export(export_format='garbage')
+        c_2rank1_d_3x2.export(export_format="garbage")
     assert e_info.type == ValueError
-    assert (
-        str(e_info.value) == "Unrecognized `export_format` 'garbage'."
-    )
+    assert str(e_info.value) == "Unrecognized `export_format` 'garbage'."

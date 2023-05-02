@@ -27,9 +27,7 @@ def percept_static_v0():
     """Static percept layer."""
     n_stimuli = 20
     n_dim = 3
-    percept = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
-    )
+    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     return percept
 
 
@@ -37,12 +35,14 @@ def percept_stochastic_v0():
     """Stochastic percept layer."""
     n_stimuli = 20
     n_dim = 3
-    prior_scale = .2
+    prior_scale = 0.2
     percept = psiz.keras.layers.EmbeddingNormalDiag(
-        n_stimuli + 1, n_dim, mask_zero=True,
+        n_stimuli + 1,
+        n_dim,
+        mask_zero=True,
         scale_initializer=tf.keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
-        )
+        ),
     )
     return percept
 
@@ -51,16 +51,16 @@ def kernel_v0():
     """A kernel layer."""
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(1.),
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.),
-            tau_initializer=tf.keras.initializers.Constant(1.),
+            beta_initializer=tf.keras.initializers.Constant(10.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.001),
             trainable=False,
-        )
+        ),
     )
     return kernel
 
@@ -69,7 +69,7 @@ def rank_similarity_cell_call(tfds, rank_cell):
     """A rank similarity cell call."""
     for data in tfds:
         x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        batch_size = x['given3rank1_stimulus_set'].shape[0]
+        batch_size = x["given3rank1_stimulus_set"].shape[0]
         states_t0 = rank_cell.get_initial_state(batch_size=batch_size)
         outputs, states_t1 = rank_cell(x, states_t0)
     return outputs, states_t1
@@ -84,22 +84,15 @@ def ds_3rank1_v0():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4),
-        (10, 13, 16, 19),
-        (4, 5, 6, 7),
-        (14, 15, 16, 17)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4), (10, 13, 16, 19), (4, 5, 6, 7), (14, 15, 16, 17)), dtype=np.int32
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
     tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=False, export_format='tfds'
+        with_timestep_axis=False, export_format="tfds"
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -114,24 +107,17 @@ def ds_3rank1_v1():
 
     """
     n_sample = 4
-    stimulus_set = np.array((
-        (1, 2, 3, 4),
-        (10, 13, 16, 19),
-        (4, 5, 6, 7),
-        (14, 15, 16, 17)
-    ), dtype=np.int32)
+    stimulus_set = np.array(
+        ((1, 2, 3, 4), (10, 13, 16, 19), (4, 5, 6, 7), (14, 15, 16, 17)), dtype=np.int32
+    )
     n_select = 1
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
-    outcome_idx = np.zeros(
-        [content.n_sample, content.sequence_length], dtype=np.int32
-    )
-    outcome = psiz.data.SparseCategorical(
-        outcome_idx, depth=content.n_outcome
-    )
+    outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
+    outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
     tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=True, export_format='tfds'
+        with_timestep_axis=True, export_format="tfds"
     )
     tfds = tfds.batch(n_sample, drop_remainder=False)
     return tfds
@@ -191,8 +177,12 @@ def test_serialization():
 
     # All optional settings.
     rank_cell = psiz.keras.layers.RankSimilarityCell(
-        n_reference=8, n_select=2, percept=percept, kernel=kernel, data_scope="abc",
-        name="rs2"
+        n_reference=8,
+        n_select=2,
+        percept=percept,
+        kernel=kernel,
+        data_scope="abc",
+        name="rs2",
     )
     cfg = rank_cell.get_config()
     # Verify.

@@ -50,6 +50,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
+from psiz.tfp import unpack_mvn
 
 # Uncomment the following line to force eager execution.
 # tf.config.run_functions_eagerly(True)
@@ -779,29 +780,6 @@ def plot_embeddings(fig, ax, model_true, model_inferred, color_array):
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Inferred')
-
-
-def unpack_mvn(dist):
-    """Unpack multivariate normal distribution."""
-    def diag_to_full_cov(v):
-        """Convert diagonal variance to full covariance matrix.
-
-        Assumes `v` represents diagonal variance elements only.
-        """
-        n_stimuli = v.shape[0]
-        n_dim = v.shape[1]
-        cov = np.zeros([n_stimuli, n_dim, n_dim])
-        for i_stimulus in range(n_stimuli):
-            cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
-        return cov
-
-    loc = dist.mean().numpy()
-    v = dist.variance().numpy()
-
-    # Convert to full covariance matrix.
-    cov = diag_to_full_cov(v)
-
-    return loc, cov
 
 
 def apply_affine(loc, cov, r=None, t=None):

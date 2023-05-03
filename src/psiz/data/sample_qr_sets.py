@@ -75,17 +75,17 @@ def sample_qr_sets(
     ref_priority[query_idx] = 0
 
     # Find references with priorities greater than zero.
-    bidx_eligable = np.greater(ref_priority, 0)
-    ref_idx_eligable = np.arange(n_stimuli)
-    ref_idx_eligable = ref_idx_eligable[bidx_eligable]
+    bidx_eligible = np.greater(ref_priority, 0)
+    ref_idx_eligible = np.arange(n_stimuli)
+    ref_idx_eligible = ref_idx_eligible[bidx_eligible]
 
     # Convert priorities into proper probabilities.
-    ref_priority = ref_priority[bidx_eligable]
+    ref_priority = ref_priority[bidx_eligible]
     ref_probability = ref_priority / np.sum(ref_priority)
 
     # Sample references using eligible references only.
     ref_samples = random_combinations(
-        ref_idx_eligable,
+        ref_idx_eligible,
         n_reference,
         n_sample,
         p=ref_probability,

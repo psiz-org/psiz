@@ -98,8 +98,8 @@ def main():
 
         # Create exhaustive list of candidate trials.
         n_stimuli = model.behavior.percept.input_dim
-        eligable_list = np.arange(1, n_stimuli, dtype=np.int32)
-        stimulus_set = candidate_list(eligable_list, n_reference)
+        eligible_list = np.arange(1, n_stimuli, dtype=np.int32)
+        stimulus_set = candidate_list(eligible_list, n_reference)
         content = psiz.data.Rank(stimulus_set, n_select=n_select)
         tfds_all = psiz.data.Dataset([content]).export(
             export_format='tfds'
@@ -355,12 +355,12 @@ def package_case_data(model, stimulus_set, expected_ig):
     return case_data
 
 
-def candidate_list(eligable_list, n_reference):
+def candidate_list(eligible_list, n_reference):
     """Determine all possible trials."""
     stimulus_set = np.empty([0, n_reference + 1], dtype=np.int32)
-    for i_stim in eligable_list:
-        locs = np.not_equal(eligable_list, i_stim)
-        sub_list = itertools.combinations(eligable_list[locs], n_reference)
+    for i_stim in eligible_list:
+        locs = np.not_equal(eligible_list, i_stim)
+        sub_list = itertools.combinations(eligible_list[locs], n_reference)
         for item in sub_list:
             item = np.hstack((i_stim * np.ones(1), item))
             stimulus_set = np.vstack((stimulus_set, item))

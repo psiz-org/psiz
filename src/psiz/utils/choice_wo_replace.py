@@ -30,7 +30,7 @@ def choice_wo_replace(a, size, p, rng=None):
     there may be repetitions.
 
     Args:
-        a: An array indicating the eligable elements.
+        a: An array indicating the eligible elements.
         size: A 2-tuple indicating the number of independent samples and
             the number of draws (without replacement) for each sample.
             The tuple is ordered such that

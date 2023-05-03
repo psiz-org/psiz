@@ -27,7 +27,7 @@ import numpy as np
 def unravel_timestep(x):
     """Unravel sample and timestep axis into a single axis.
 
-    Arguments:
+    Args:
         x: A time-step based data structure.
             shape=(samples, sequence_length, [m, n, ...])
 

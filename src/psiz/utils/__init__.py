@@ -24,6 +24,7 @@ from psiz.utils.procrustes_rotation import procrustes_rotation
 from psiz.utils.progress_bar_re import ProgressBarRe
 from psiz.utils.random_combinations import random_combinations
 from psiz.utils.rotation_matrix import rotation_matrix
+from psiz.utils.sort_based_mask import sort_based_mask
 from psiz.utils.standard_split import standard_split
 from psiz.utils.stratified_group_kfold import StratifiedGroupKFold
 
@@ -35,8 +36,9 @@ __all__ = [
     "pairwise_indices",
     "procrustes_rotation",
     "ProgressBarRe",
-    "rotation_matrix",
     "random_combinations",
+    "rotation_matrix",
+    "sort_based_mask",
     "standard_split",
     "StratifiedGroupKFold",
 ]

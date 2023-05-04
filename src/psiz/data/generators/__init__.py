@@ -17,8 +17,10 @@
 
 from psiz.data.generators.content_generator import ContentGenerator
 from psiz.data.generators.rank_generator import RankGenerator
+from psiz.data.generators.weighted_rank import WeightedRank
 
 __all__ = [
     "ContentGenerator",
     "RankGenerator",
+    "WeightedRank",
 ]

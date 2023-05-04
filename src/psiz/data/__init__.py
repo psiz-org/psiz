@@ -22,6 +22,7 @@ from psiz.data.contents.content import Content
 from psiz.data.contents.categorize import Categorize
 from psiz.data.contents.rank import Rank
 from psiz.data.contents.rate import Rate
+import psiz.data.generators
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.outcomes.continuous import Continuous

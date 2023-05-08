@@ -15,6 +15,10 @@
 # ============================================================================
 """Module of Keras layers."""
 
+from psiz.keras.layers.activations.exponential import ExponentialSimilarity
+from psiz.keras.layers.activations.heavy_tailed import HeavyTailedSimilarity
+from psiz.keras.layers.activations.inverse import InverseSimilarity
+from psiz.keras.layers.activations.students_t import StudentsTSimilarity
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
@@ -42,10 +46,6 @@ from psiz.keras.layers.gates.branch_gate import BranchGate
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.keras.layers.gates.split_gate import SplitGate
 from psiz.keras.layers.kernels.distance_based import DistanceBased
-from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
-from psiz.keras.layers.similarities.heavy_tailed import HeavyTailedSimilarity
-from psiz.keras.layers.similarities.inverse import InverseSimilarity
-from psiz.keras.layers.similarities.students_t import StudentsTSimilarity
 
 __all__ = [
     "RankSimilarityBase",

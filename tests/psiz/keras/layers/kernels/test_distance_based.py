@@ -21,7 +21,7 @@ import tensorflow as tf
 
 from psiz.keras.layers import DistanceBased
 from psiz.keras.layers.distances.mink import Minkowski
-from psiz.keras.layers.similarities.exponential import ExponentialSimilarity
+from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 
 
 @pytest.fixture

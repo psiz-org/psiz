@@ -24,6 +24,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
+import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.utils.m_prefer_n import m_prefer_n
 
@@ -43,6 +44,8 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         percept_adapter=None,
         kernel_adapter=None,
         data_scope=None,
+        fit_temperature=False,
+        temperature_initializer=None,
         **kwargs
     ):
         """Initialize.
@@ -62,6 +65,10 @@ class RankSimilarityBase(tf.keras.layers.Layer):
                 layer.
             data_scope (optional): String indicating the behavioral
                 data that should be used for the layer.
+            fit_temperature (optional): Boolean indicating if variable
+                is trainable.
+            temperature_initializer (optional): Initializer for
+                temperature parameter
 
         """
         super(RankSimilarityBase, self).__init__(**kwargs)
@@ -89,6 +96,23 @@ class RankSimilarityBase(tf.keras.layers.Layer):
             kernel_adapter = GateAdapter(format_inputs_as_tuple=True)
         self.kernel_adapter = kernel_adapter
         self.kernel_adapter.input_keys = [data_scope + "_z_q", data_scope + "_z_r"]
+
+        self.fit_temperature = fit_temperature
+        if temperature_initializer is None:
+            temperature_initializer = tf.keras.initializers.Constant(value=1.0)
+        self.temperature_initializer = tf.keras.initializers.get(
+            temperature_initializer
+        )
+        temperature_trainable = self.trainable and self.fit_temperature
+        with tf.name_scope(self.name):
+            self.temperature = self.add_weight(
+                shape=[],
+                initializer=self.temperature_initializer,
+                trainable=temperature_trainable,
+                name="temperature",
+                dtype=K.floatx(),
+                constraint=pk_constraints.GreaterThan(min_value=0.0),
+            )
 
     def build(self, input_shape):
         """Build.
@@ -291,15 +315,18 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # occurred. Add fuzz factor to avoid log(0)
         sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
         denom = tf.maximum(denom, tf.keras.backend.epsilon())
-        event_logprob = tf.math.log(sim_qr) - tf.math.log(denom)
+        event_logit = tf.math.log(sim_qr) - tf.math.log(denom)
 
         # Mask non-existent selection events (i.e, non-existent reference
         # selections).
-        event_logprob = self._selection_mask * event_logprob
+        event_logit = self._selection_mask * event_logit
 
         # Compute log-probability of outcome (i.e., a sequence of events).
-        outcome_logprob = tf.reduce_sum(event_logprob, axis=self._stimuli_axis)
-        outcome_prob = tf.math.exp(outcome_logprob)
+        outcome_logit = tf.reduce_sum(event_logit, axis=self._stimuli_axis)
+
+        # Prepare for softmax op.
+        # Convert back to probility space.
+        outcome_prob = tf.math.exp(outcome_logit)
         outcome_prob = is_outcome * outcome_prob
 
         # Clean up numerical errors in probabilities.
@@ -314,10 +341,22 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # doesn't generate nan's.
         prob_placeholder = tf.cast(tf.math.equal(total_outcome_prob, 0.0), K.floatx())
         outcome_prob = outcome_prob + (prob_placeholder / self._n_outcome)
-        total_outcome_prob = total_outcome_prob + prob_placeholder
+        # TODO remove if keeping temperature calculation at end of function.
+        # NOTE: could `reduce_sum` op to compute `total_outcome_prob`, but
+        # the following op is slightly cheaper.
+        # total_outcome_prob = total_outcome_prob + prob_placeholder
 
-        # Smooth out any numerical erros in probabilities.
-        outcome_prob = tf.math.divide(outcome_prob, total_outcome_prob)
+        # Compute softmax using optional temperature parameter.
+        outcome_prob = tf.nn.softmax(tf.math.divide(tf.math.log(outcome_prob), self.temperature))
+        # TODO remove if no longer necessary, since using `tf.nn.softmax`.
+        # outcome_prob = tf.math.exp(
+        #     tf.math.divide(tf.math.log(outcome_prob), self.temperature)
+        # )
+        # total_outcome_prob = tf.math.reduce_sum(
+        #     outcome_prob, axis=(self._outcome_axis - 1), keepdims=True
+        # )
+        # # Smooth out any numerical erros in probabilities.
+        # outcome_prob = tf.math.divide(outcome_prob, total_outcome_prob)
         return outcome_prob
 
     def get_config(self):
@@ -336,6 +375,10 @@ class RankSimilarityBase(tf.keras.layers.Layer):
                     self.kernel_adapter
                 ),
                 "data_scope": self.data_scope,
+                "fit_temperature": self.fit_temperature,
+                "temperature_initializer": tf.keras.initializers.serialize(
+                    self.temperature_initializer
+                ),
             }
         )
         return config

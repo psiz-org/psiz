@@ -19,6 +19,7 @@ import tensorflow as tf
 
 
 def test_outcome_probability_v0():
+    """Test outcome probabilty computation."""
     n_stimuli = 4
     n_dim = 2
     beta = 10.0
@@ -70,6 +71,66 @@ def test_outcome_probability_v0():
     total_s = tf.reduce_sum(s_qr, axis=1, keepdims=True)
     outcome_prob_desired = s_qr / total_s
 
+    tf.debugging.assert_near(outcome_prob, outcome_prob_desired)
+
+
+def test_outcome_probability_v1():
+    """Test outcome probabilty computation."""
+    n_stimuli = 4
+    n_dim = 2
+    beta = 10.0
+
+    percept = tf.keras.layers.Embedding(
+        n_stimuli + 1,
+        n_dim,
+        mask_zero=True,
+        embeddings_initializer=tf.initializers.Constant(
+            tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
+        ),
+    )
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(beta),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            trainable=False,
+        ),
+    )
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=2,
+        n_select=1,
+        percept=percept,
+        kernel=kernel,
+        temperature_initializer=tf.keras.initializers.Constant(value=0.001)
+    )
+
+    stimulus_set = tf.constant(
+        [
+            [1, 2, 3],
+            [2, 3, 4],
+            [2, 1, 4],
+            [4, 3, 1],
+        ]
+    )
+    x = {
+        "given2rank1_stimulus_set": stimulus_set,
+    }
+    outcome_prob = rank(x)
+
+    # Desired outcome.
+    outcome_prob_desired = tf.constant(
+        [
+            [1., 0.],
+            [1., 0.],
+            [1., 0.],
+            [1., 0.],
+        ], dtype=tf.float32
+    )
     tf.debugging.assert_near(outcome_prob, outcome_prob_desired)
 
 

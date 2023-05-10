@@ -29,14 +29,14 @@ from psiz.utils.sort_based_mask import sort_based_mask
 def test_1d():
     w = np.array([1.0, 0.8, 0.6, 0.4])
 
-    w_masked = sort_based_mask(w, 2, direction="ascending")
+    w_mask = sort_based_mask(w, 2)
 
-    w_masked_desired = np.array([0.0, 0.0, 0.6, 0.4])
-    np.testing.assert_almost_equal(w_masked, w_masked_desired)
+    w_masked_desired = np.array([False, False, True, True])
+    np.testing.assert_almost_equal(w_mask, w_masked_desired)
 
-    w_masked = sort_based_mask(w, 2, direction="decending")
-    w_masked_desired = np.array([1.0, 0.8, 0.0, 0.0])
-    np.testing.assert_almost_equal(w_masked, w_masked_desired)
+    w_mask = sort_based_mask(-w, 2)
+    w_masked_desired = np.array([True, True, False, False])
+    np.testing.assert_almost_equal(w_mask, w_masked_desired)
 
 
 def test_2d():
@@ -49,25 +49,25 @@ def test_2d():
         ]
     )
 
-    w_masked = sort_based_mask(w, 2, direction="ascending")
+    w_mask = sort_based_mask(w, 2)
 
     w_masked_desired = np.array(
         [
-            [0.0, 0.0, 0.6, 0.4],
-            [0.0, 0.0, 0.0, 0.1],
-            [0.1, 0.2, 0.0, 0.0],
-            [0.5, 0.0, 0.0, 0.1],
+            [False, False, True, True],
+            [False, True, False, True],
+            [True, True, False, False],
+            [True, False, False, True],
         ]
     )
-    np.testing.assert_almost_equal(w_masked, w_masked_desired)
+    np.testing.assert_equal(w_mask, w_masked_desired)
 
-    w_masked = sort_based_mask(w, 2, direction="decending")
+    w_mask = sort_based_mask(-w, 2)
     w_masked_desired = np.array(
         [
-            [1.0, 0.8, 0.0, 0.0],
-            [0.7, 0.0, 0.2, 0.0],
-            [0.0, 0.0, 0.6, 0.6],
-            [0.5, 0.0, 0.7, 0.0],
+            [True, True, False, False],
+            [True, False, True, False],
+            [False, False, True, True],
+            [True, False, True, False],
         ]
     )
-    np.testing.assert_almost_equal(w_masked, w_masked_desired)
+    np.testing.assert_equal(w_mask, w_masked_desired)

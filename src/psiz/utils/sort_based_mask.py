@@ -17,7 +17,7 @@
 """Utility module.
 
 Functions:
-    mask_matrix
+    sort_based_mask
 
 """
 
@@ -27,47 +27,42 @@ import copy
 import numpy as np
 
 
-def sort_based_mask(a, n_retain, mask_value=0, direction="ascending"):
+def sort_based_mask(a, n_retain, **kwargs):
     """Mask 1D or 2D array of values based on ascending sorted order.
 
-    For each row, mask elements based on ascending sorted order.
+    For each row, mask elements based on ascending sorted order. If
+    elements should be sorted in descending order, pass in `-a`.
 
     Args:
         a: A 1D or 2D matrix.
         n_retain: The number of elements to retain (keep unmasked) for
             each row.
-        mask_value (optional): The value to use for the mask.
-        direction (optional): Sort in "ascending" or "decending" order.
+        kwargs: Key-word arguments to pass to `np.argsort`.
 
     Returns
-        a_masked: The matrix with mask applied.
+        mask: A Boolean mask.
 
     """
-    a_masked = copy.copy(a)
+    a_copy = copy.copy(a)
 
-    if a_masked.ndim == 1:
-        a_masked = np.expand_dims(a_masked, axis=0)
+    if a_copy.ndim == 1:
+        a_copy = np.expand_dims(a_copy, axis=0)
         is_1d = True
     else:
         is_1d = False
 
-    n_row = a_masked.shape[0]
+    # Identify indices to keep unmasked.
+    idx_sorted = np.argsort(a_copy, **kwargs)
+    idx_retain = idx_sorted[:, 0:n_retain]
+
+    # Create Boolean mask
+    mask = np.zeros_like(a_copy, dtype=bool)
+    n_row = a_copy.shape[0]
     for i_row in range(n_row):
-        if direction == "ascending":
-            idx_sorted = np.argsort(a_masked[i_row])
-        elif direction == "decending":
-            idx_sorted = np.argsort(-a_masked[i_row])
-        else:
-            raise NotImplementedError(
-                "The argument `direction` must be eight 'acending' or 'decending'."
-            )
-        # Retain necessary indices.
-        idx_mask = idx_sorted[n_retain:]
-        # Mask lowest values.
-        a_masked[i_row, idx_mask] = mask_value
+        mask[i_row, idx_retain[i_row]] = True
 
     # Undo added axis before returning.
     if is_1d:
-        a_masked = a_masked[0]
+        mask = mask[0]
 
-    return a_masked
+    return mask

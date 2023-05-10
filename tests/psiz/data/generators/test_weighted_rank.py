@@ -174,7 +174,8 @@ def test_query_with_mask():
     # Generate.
     n_sample_per_query = 10
     # NOTE: Add one to take into account query.
-    w_masked = sort_based_mask(w, n_highest + 1, direction="decending")
+    w_mask = sort_based_mask(-w, n_highest + 1)
+    w_masked = w * w_mask.astype(w.dtype)
     content = gen.generate(
         n_sample_per_query, w=w_masked, per_query=True, replace=replace
     )

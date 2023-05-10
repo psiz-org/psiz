@@ -13,20 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Test deterministic Minkowski layer."""
+"""Test MinkowskiStochastic layer."""
 
 import numpy as np
 import tensorflow as tf
 
-from psiz.keras.layers.distances.mink import Minkowski
+from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
 
 
 def test_call(paired_inputs_v0):
-    mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
-        trainable=False,
-    )
+    # Test with defaults.
+    mink_layer = MinkowskiStochastic()
     outputs = mink_layer(paired_inputs_v0)
 
     desired_outputs = np.array(
@@ -38,12 +35,12 @@ def test_call(paired_inputs_v0):
             8.660254037844387,
         ]
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=4)
 
 
 def test_output_shape(paired_inputs_v0):
     """Test output_shape method."""
-    mink_layer = Minkowski()
+    mink_layer = MinkowskiStochastic()
     input_shape = [
         tf.TensorShape(tf.shape(paired_inputs_v0[0])),
         tf.TensorShape(tf.shape(paired_inputs_v0[1])),
@@ -55,18 +52,18 @@ def test_output_shape(paired_inputs_v0):
 
 def test_serialization():
     """Test serialization."""
-    mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
-        trainable=False,
+    mink_layer = MinkowskiStochastic(
+        rho_loc_initializer=tf.keras.initializers.Constant(2.1),
+        w_loc_initializer=tf.keras.initializers.Constant(1.1),
     )
     mink_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))
+    tf.debugging.assert_equal(mink_layer.w.event_shape, tf.TensorShape([3]))
+    tf.debugging.assert_equal(mink_layer.rho.mode(), tf.constant([2.1]))
+    tf.debugging.assert_equal(mink_layer.w.mode(), tf.constant([1.1, 1.1, 1.1]))
     config = mink_layer.get_config()
 
-    recon_layer = Minkowski.from_config(config)
+    recon_layer = MinkowskiStochastic.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
-
-    tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
-    tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
+    tf.debugging.assert_equal(recon_layer.w.event_shape, tf.TensorShape([3]))
+    tf.debugging.assert_equal(recon_layer.rho.mode(), tf.constant([2.1]))
+    tf.debugging.assert_equal(recon_layer.w.mode(), tf.constant([1.1, 1.1, 1.1]))

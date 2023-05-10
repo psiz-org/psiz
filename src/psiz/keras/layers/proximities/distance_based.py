@@ -22,7 +22,7 @@ Classes:
 
 import tensorflow as tf
 
-from psiz.keras.layers.distances.mink import Minkowski
+from psiz.keras.layers.proximities.mink import Minkowski
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 
 

@@ -19,8 +19,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
-from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
+from psiz.keras.layers.proximities.mink_variational import MinkowskiVariational
+from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
 
 
 def test_call(paired_inputs_v0):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2023 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,9 +28,6 @@ from psiz.keras.layers.behaviors.rank_similarity_cell import RankSimilarityCell
 from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 from psiz.keras.layers.behaviors.rate_similarity import RateSimilarity
 from psiz.keras.layers.behaviors.rate_similarity_cell import RateSimilarityCell
-from psiz.keras.layers.distances.mink import Minkowski
-from psiz.keras.layers.distances.mink_stochastic import MinkowskiStochastic
-from psiz.keras.layers.distances.mink_variational import MinkowskiVariational
 from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
 from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
@@ -45,7 +42,10 @@ from psiz.keras.layers.gates.braid_gate import BraidGate
 from psiz.keras.layers.gates.branch_gate import BranchGate
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.keras.layers.gates.split_gate import SplitGate
-from psiz.keras.layers.kernels.distance_based import DistanceBased
+from psiz.keras.layers.proximities.distance_based import DistanceBased
+from psiz.keras.layers.proximities.mink import Minkowski
+from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
+from psiz.keras.layers.proximities.mink_variational import MinkowskiVariational
 
 __all__ = [
     "RankSimilarityBase",
@@ -55,9 +55,6 @@ __all__ = [
     "RateSimilarity",
     "RateSimilarityCell",
     "ALCOVECell",
-    "Minkowski",
-    "MinkowskiStochastic",
-    "MinkowskiVariational",
     "EmbeddingGammaDiag",
     "EmbeddingLaplaceDiag",
     "EmbeddingLogNormalDiag",
@@ -79,4 +76,7 @@ __all__ = [
     "InverseSimilarity",
     "StudentsTSimilarity",
     "Variational",
+    "Minkowski",
+    "MinkowskiStochastic",
+    "MinkowskiVariational",
 ]

@@ -134,7 +134,7 @@ def test_outcome_probability_v1():
     tf.debugging.assert_near(outcome_prob, outcome_prob_desired)
 
 
-def test_serialization():
+def test_serialization_v0():
     """Test serialization."""
     n_stimuli = 4
     n_dim = 2
@@ -174,6 +174,8 @@ def test_serialization():
     assert cfg["n_reference"] == 2
     assert cfg["n_select"] == 1
     assert cfg["data_scope"] == "given2rank1"
+    assert cfg["temperature_initializer"]["class_name"] == "Constant"
+    assert cfg["temperature_initializer"]["config"]["value"] == 1.0
 
     rank2 = psiz.keras.layers.RankSimilarity.from_config(cfg)
     assert rank2.name == "rs1"
@@ -182,6 +184,8 @@ def test_serialization():
     assert rank2.n_reference == 2
     assert rank2.n_select == 1
     assert rank2.data_scope == "given2rank1"
+    assert not rank2.fit_temperature
+    assert rank2.temperature_initializer.value == 1.0
 
     # All optional settings.
     rank = psiz.keras.layers.RankSimilarity(
@@ -191,6 +195,8 @@ def test_serialization():
         kernel=kernel,
         data_scope="abc",
         name="rs2",
+        fit_temperature=True,
+        temperature_initializer=tf.keras.initializers.Constant(0.01)
     )
     cfg = rank.get_config()
     # Verify.
@@ -200,6 +206,9 @@ def test_serialization():
     assert cfg["n_reference"] == 8
     assert cfg["n_select"] == 2
     assert cfg["data_scope"] == "abc"
+    assert cfg["fit_temperature"]
+    assert cfg["temperature_initializer"]["class_name"] == "Constant"
+    assert cfg["temperature_initializer"]["config"]["value"] == 0.01
 
     rank2 = psiz.keras.layers.RankSimilarity.from_config(cfg)
     assert rank2.name == "rs2"
@@ -208,3 +217,5 @@ def test_serialization():
     assert rank2.n_reference == 8
     assert rank2.n_select == 2
     assert rank2.data_scope == "abc"
+    assert rank2.fit_temperature
+    rank2.temperature_initializer.value == 0.01

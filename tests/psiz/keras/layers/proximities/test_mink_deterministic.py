@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2023 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ from psiz.keras.layers.proximities.mink import Minkowski
 
 
 def test_call_default(paired_inputs_v0):
+    """Test call with default (linear) activation."""
     mink_layer = Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.0),
         w_initializer=tf.keras.initializers.Constant(1.0),
@@ -43,6 +44,7 @@ def test_call_default(paired_inputs_v0):
 
 
 def test_call_exponential(paired_inputs_v0):
+    """Test call with exponential activation function."""
     mink_layer = Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.0),
         w_initializer=tf.keras.initializers.Constant(1.0),

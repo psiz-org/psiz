@@ -46,6 +46,7 @@ from psiz.keras.layers.proximities.distance_based import DistanceBased
 from psiz.keras.layers.proximities.mink import Minkowski
 from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
 from psiz.keras.layers.proximities.mink_variational import MinkowskiVariational
+from psiz.keras.layers.proximities.proximity import Proximity
 
 __all__ = [
     "RankSimilarityBase",
@@ -79,4 +80,5 @@ __all__ = [
     "Minkowski",
     "MinkowskiStochastic",
     "MinkowskiVariational",
+    "Proximity",
 ]

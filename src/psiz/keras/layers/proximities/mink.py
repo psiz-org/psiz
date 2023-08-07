@@ -26,16 +26,17 @@ from tensorflow.keras import backend as K
 
 import psiz.keras.constraints as pk_constraints
 from psiz.tf.ops.wpnorm import wpnorm
+from psiz.keras.layers.proximities.proximity import Proximity
 
 
 @tf.keras.utils.register_keras_serializable(
     package="psiz.keras.layers", name="Minkowski"
 )
-class Minkowski(tf.keras.layers.Layer):
+class Minkowski(Proximity):
     """Minkowski pairwise distance.
 
-    A pairwise distance layer that consumes the last axis of the input
-        tensors (see `call` method).
+    A pairwise Minkowski distance layer that consumes the last axis of
+        the input tensors (see `call` method).
 
     NOTE: It is assumed that both tensors have the same rank, are
     broadcast-compatible, and have the same size for the last axis.
@@ -140,7 +141,7 @@ class Minkowski(tf.keras.layers.Layer):
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)
         d_qr = tf.squeeze(d_qr, [-1])
-        return d_qr
+        return self.activation(d_qr)
 
     def get_config(self):
         """Return layer configuration."""

@@ -18,10 +18,11 @@
 import numpy as np
 import tensorflow as tf
 
+from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 from psiz.keras.layers.proximities.mink import Minkowski
 
 
-def test_call(paired_inputs_v0):
+def test_call_default(paired_inputs_v0):
     mink_layer = Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.0),
         w_initializer=tf.keras.initializers.Constant(1.0),
@@ -36,6 +37,32 @@ def test_call(paired_inputs_v0):
             8.660254037844387,
             8.660254037844387,
             8.660254037844387,
+        ]
+    )
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+
+
+def test_call_exponential(paired_inputs_v0):
+    mink_layer = Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(0.1),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            trainable=False,
+        ),
+        trainable=False,
+    )
+    outputs = mink_layer(paired_inputs_v0)
+
+    desired_outputs = np.array(
+        [
+            0.4216200260541147,
+            0.4216200260541147,
+            0.4216200260541147,
+            0.4216200260541147,
+            0.4216200260541147,
         ]
     )
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
@@ -58,15 +85,27 @@ def test_serialization():
     mink_layer = Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.0),
         w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(0.1),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            trainable=False,
+        ),
         trainable=False,
     )
     mink_layer.build([[None, 3], [None, 3]])
     tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))
+    tf.debugging.assert_equal(mink_layer.activation.beta, tf.constant(0.1))
+    tf.debugging.assert_equal(mink_layer.activation.tau, tf.constant(1.0))
+    tf.debugging.assert_equal(mink_layer.activation.gamma, tf.constant(0.001))
     config = mink_layer.get_config()
 
     recon_layer = Minkowski.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
     tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
+    tf.debugging.assert_equal(mink_layer.activation.beta, recon_layer.activation.beta)
+    tf.debugging.assert_equal(mink_layer.activation.tau, recon_layer.activation.tau)
+    tf.debugging.assert_equal(mink_layer.activation.gamma, recon_layer.activation.gamma)
 
     tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
     tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)

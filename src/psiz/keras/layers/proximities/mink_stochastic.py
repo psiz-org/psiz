@@ -26,12 +26,13 @@ import tensorflow_probability as tfp
 
 import psiz.keras.constraints as pk_constraints
 from psiz.tf.ops.wpnorm import wpnorm
+from psiz.keras.layers.proximities.proximity import Proximity
 
 
 @tf.keras.utils.register_keras_serializable(
     package="psiz.keras.layers", name="MinkowskiStochastic"
 )
-class MinkowskiStochastic(tf.keras.layers.Layer):
+class MinkowskiStochastic(Proximity):
     """A stochastic Minkowski distance layer."""
 
     def __init__(
@@ -217,7 +218,7 @@ class MinkowskiStochastic(tf.keras.layers.Layer):
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)
         d_qr = tf.squeeze(d_qr, [-1])
-        return d_qr
+        return self.activation(d_qr)
 
     def get_config(self):
         config = super().get_config()

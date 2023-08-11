@@ -102,6 +102,7 @@ class Minkowski(Proximity):
 
     def build(self, input_shape):
         """Build."""
+        dtype = tf.as_dtype(self.dtype or K.floatx())
         with tf.name_scope(self.name):
             self.w = self.add_weight(
                 shape=[input_shape[0][-1]],
@@ -109,7 +110,7 @@ class Minkowski(Proximity):
                 regularizer=self.w_regularizer,
                 trainable=self.w_trainable,
                 name="w",
-                dtype=K.floatx(),
+                dtype=dtype,
                 constraint=self.w_constraint,
             )
 

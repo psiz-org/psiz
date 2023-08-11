@@ -43,6 +43,7 @@ from psiz.keras.layers.gates.branch_gate import BranchGate
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.keras.layers.gates.split_gate import SplitGate
 from psiz.keras.layers.proximities.distance_based import DistanceBased
+from psiz.keras.layers.proximities.experimental.cosine_similarity import CosineSimilarity
 from psiz.keras.layers.proximities.experimental.inner_product import InnerProduct
 from psiz.keras.layers.proximities.experimental.generalized_inner_product import GeneralizedInnerProduct
 from psiz.keras.layers.proximities.mink import Minkowski
@@ -78,6 +79,7 @@ __all__ = [
     "SplitGate",
     "Drop",
     "DistanceBased",
+    "CosineSimilarity",
     "InnerProduct",
     "GeneralizedInnerProduct",
     "Variational",

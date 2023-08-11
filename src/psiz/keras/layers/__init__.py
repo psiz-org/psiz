@@ -44,6 +44,7 @@ from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.keras.layers.gates.split_gate import SplitGate
 from psiz.keras.layers.proximities.distance_based import DistanceBased
 from psiz.keras.layers.proximities.experimental.inner_product import InnerProduct
+from psiz.keras.layers.proximities.experimental.generalized_inner_product import GeneralizedInnerProduct
 from psiz.keras.layers.proximities.mink import Minkowski
 from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
 from psiz.keras.layers.proximities.mink_variational import MinkowskiVariational
@@ -78,6 +79,7 @@ __all__ = [
     "Drop",
     "DistanceBased",
     "InnerProduct",
+    "GeneralizedInnerProduct",
     "Variational",
     "Minkowski",
     "MinkowskiStochastic",

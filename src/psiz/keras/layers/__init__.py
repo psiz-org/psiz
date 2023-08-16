@@ -25,6 +25,8 @@ from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
 from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
 from psiz.keras.layers.behaviors.rank_similarity_cell import RankSimilarityCell
+from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
+from psiz.keras.layers.behaviors.soft_rank import SoftRank
 from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 from psiz.keras.layers.behaviors.rate_similarity import RateSimilarity
 from psiz.keras.layers.behaviors.rate_similarity_cell import RateSimilarityCell
@@ -59,6 +61,8 @@ __all__ = [
     "RankSimilarityBase",
     "RankSimilarity",
     "RankSimilarityCell",
+    "SoftRankBase",
+    "SoftRank",
     "RateSimilarityBase",
     "RateSimilarity",
     "RateSimilarityCell",

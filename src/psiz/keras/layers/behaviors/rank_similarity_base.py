@@ -347,7 +347,9 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # total_outcome_prob = total_outcome_prob + prob_placeholder
 
         # Compute softmax using optional temperature parameter.
-        outcome_prob = tf.nn.softmax(tf.math.divide(tf.math.log(outcome_prob), self.temperature))
+        outcome_prob = tf.nn.softmax(
+            tf.math.divide(tf.math.log(outcome_prob), self.temperature)
+        )
         # TODO remove if no longer necessary, since using `tf.nn.softmax`.
         # outcome_prob = tf.math.exp(
         #     tf.math.divide(tf.math.log(outcome_prob), self.temperature)

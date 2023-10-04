@@ -22,6 +22,7 @@ from psiz.keras.layers.activations.students_t import StudentsTSimilarity
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
+from psiz.keras.layers.behaviors.logistic import Logistic
 from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
 from psiz.keras.layers.behaviors.rank_similarity_cell import RankSimilarityCell
@@ -45,9 +46,13 @@ from psiz.keras.layers.gates.branch_gate import BranchGate
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.keras.layers.gates.split_gate import SplitGate
 from psiz.keras.layers.proximities.distance_based import DistanceBased
-from psiz.keras.layers.proximities.experimental.cosine_similarity import CosineSimilarity
+from psiz.keras.layers.proximities.experimental.cosine_similarity import (
+    CosineSimilarity,
+)
 from psiz.keras.layers.proximities.experimental.inner_product import InnerProduct
-from psiz.keras.layers.proximities.experimental.generalized_inner_product import GeneralizedInnerProduct
+from psiz.keras.layers.proximities.experimental.generalized_inner_product import (
+    GeneralizedInnerProduct,
+)
 from psiz.keras.layers.proximities.mink import Minkowski
 from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
 from psiz.keras.layers.proximities.mink_variational import MinkowskiVariational
@@ -67,6 +72,7 @@ __all__ = [
     "RateSimilarity",
     "RateSimilarityCell",
     "ALCOVECell",
+    "Logistic",
     "EmbeddingGammaDiag",
     "EmbeddingLaplaceDiag",
     "EmbeddingLogNormalDiag",

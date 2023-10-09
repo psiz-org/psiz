@@ -410,19 +410,16 @@ def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
         kl_n_sample=30,
     )
 
-    mink = psiz.keras.layers.Minkowski(
+    kernel = psiz.keras.layers.Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.0),
         w_initializer=tf.keras.initializers.Constant(1.0),
-        trainable=False,
-    )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=mink,
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+        activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
             beta_initializer=tf.keras.initializers.Constant(10.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
         ),
+        trainable=False,
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCell(
@@ -493,19 +490,16 @@ def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
         kl_n_sample=30,
     )
 
-    mink = psiz.keras.layers.Minkowski(
+    kernel = psiz.keras.layers.Minkowski(
         rho_initializer=tf.keras.initializers.Constant(2.0),
         w_initializer=tf.keras.initializers.Constant(1.0),
-        trainable=False,
-    )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=mink,
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+        activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
             beta_initializer=tf.keras.initializers.Constant(10.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
         ),
+        trainable=False,
     )
 
     rank_cell = psiz.keras.layers.RankSimilarityCell(

@@ -25,39 +25,45 @@ import psiz
 from psiz.utils import choice_wo_replace
 
 
-class BehaviorModel(tf.keras.Model):
+class RankModel(tf.keras.Model):
     """A behavior model.
 
     No Gates.
 
     """
 
-    def __init__(self, behavior=None, **kwargs):
+    def __init__(self, percept=None, proximity=None, **kwargs):
         """Initialize."""
-        super(BehaviorModel, self).__init__(**kwargs)
-        self.behavior = behavior
+        super(RankModel, self).__init__(**kwargs)
+        self.stimuli_axis = 1
+        self.percept = percept
+        self.proximity = proximity
+        self.soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
 
     def call(self, inputs):
         """Call."""
-        return self.behavior(inputs)
+        z = self.percept(inputs["given8rank2_stimulus_set"])
+        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        s = self.proximity([z_q, z_r])
+        return self.soft_8rank2(s)
 
 
 class SimilarityModel(tf.keras.Model):
     """A similarity model."""
 
-    def __init__(self, percept=None, kernel=None, **kwargs):
+    def __init__(self, percept=None, proximity=None, **kwargs):
         """Initialize."""
         super(SimilarityModel, self).__init__(**kwargs)
+        self.stimuli_axis = 1
         self.percept = percept
-        self.kernel = kernel
+        self.proximity = proximity
 
     def call(self, inputs):
         """Call."""
-        stimuli_axis = 1
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
-        return self.kernel([z_0, z_1])
+        z_0 = tf.gather(z, indices=tf.constant(0), axis=self.stimuli_axis)
+        z_1 = tf.gather(z, indices=tf.constant(1), axis=self.stimuli_axis)
+        return self.proximity([z_0, z_1])
 
 
 def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
@@ -107,20 +113,14 @@ def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
             mu_initializer=tf.keras.initializers.Constant(0.000001),
         )
 
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=similarity,
+    proximity = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=similarity,
+        trainable=False,
     )
 
-    rank = psiz.keras.layers.RankSimilarity(
-        n_reference=8, n_select=2, percept=percept, kernel=kernel
-    )
-
-    model = BehaviorModel(behavior=rank)
+    model = RankModel(percept=percept, proximity=proximity)
 
     compile_kwargs = {
         "loss": tf.keras.losses.CategoricalCrossentropy(),
@@ -166,14 +166,9 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     elif similarity_func == "Inverse":
         similarity = psiz.keras.layers.InverseSimilarity()
 
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(), similarity=similarity
-    )
-    rank = psiz.keras.layers.RankSimilarity(
-        n_reference=8, n_select=2, percept=percept, kernel=kernel
-    )
+    proximity = psiz.keras.layers.Minkowski(activation=similarity)
 
-    model = BehaviorModel(behavior=rank)
+    model = RankModel(percept=percept, proximity=proximity)
     compile_kwargs = {
         "loss": tf.keras.losses.CategoricalCrossentropy(),
         "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
@@ -185,7 +180,7 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 
 # TODO The coordinate space may need to be scaled so that it is
 # "learnable" by the other similarity functions.
-# TODO ideally use `tf.keras.utils.split_dataset`, but it's brittle.
+# TODO Would ideally use `tf.keras.utils.split_dataset`, but it is brittle.
 @pytest.mark.slow
 @pytest.mark.parametrize("similarity_func", ["Exponential"])
 @pytest.mark.parametrize("mask_zero", [True])
@@ -206,7 +201,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     # Define ground truth models.
     model_true = build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero)
     model_similarity_true = SimilarityModel(
-        percept=model_true.behavior.percept, kernel=model_true.behavior.kernel
+        percept=model_true.percept, proximity=model_true.proximity
     )
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
@@ -243,6 +238,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     tfds_content = pds.export(export_format="tfds")
 
     # Simulate similarity judgments and append outcomes to dataset.
+    tfds_content = tfds_content.batch(batch_size, drop_remainder=False)
     depth = content.n_outcome
 
     def simulate_agent(x):
@@ -253,6 +249,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         return outcome_one_hot
 
     tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).cache()
+    tfds_all = tfds_all.unbatch()
 
     # Partition data into 80% train and 20% validation.
     tfds_train = tfds_all.take(n_trial_train)
@@ -311,8 +308,8 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
         # Define model that outputs similarity based on inferred model.
         model_inferred_similarity = SimilarityModel(
-            percept=model_inferred.behavior.percept,
-            kernel=model_inferred.behavior.kernel,
+            percept=model_inferred.percept,
+            proximity=model_inferred.proximity,
         )
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.

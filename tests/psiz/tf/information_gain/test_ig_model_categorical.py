@@ -24,21 +24,37 @@ import psiz
 from psiz.tf.information_theory import ig_model_categorical
 
 
-class BehaviorModel(psiz.keras.StochasticModel):
+class RankModel(psiz.keras.StochasticModel):
     """A behavior model.
 
     No Gates.
 
     """
 
-    def __init__(self, behavior=None, **kwargs):
+    def __init__(self, percept=None, proximity=None, soft_2rank1=None, **kwargs):
         """Initialize."""
-        super(BehaviorModel, self).__init__(**kwargs)
-        self.behavior = behavior
+        super(RankModel, self).__init__(**kwargs)
+        self.stimuli_axis = 1
+        self.percept = percept
+        self.proximity = psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            activation=psiz.keras.layers.ExponentialSimilarity(
+                trainable=False,
+                beta_initializer=tf.keras.initializers.Constant(10.0),
+                tau_initializer=tf.keras.initializers.Constant(1.0),
+                gamma_initializer=tf.keras.initializers.Constant(0.0),
+            ),
+            trainable=False,
+        )
+        self.soft_2rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
-        return self.behavior(inputs)
+        z = self.percept(inputs["given2rank1_stimulus_set"])
+        z_q, z_r = tf.split(z, [1, 2], self.stimuli_axis)
+        s = self.proximity([z_q, z_r])
+        return self.soft_2rank1(s)
 
 
 def base_circular_model():
@@ -79,26 +95,9 @@ def base_circular_model():
         ),
     )
 
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
-            trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
-        ),
-    )
-
-    rank = psiz.keras.layers.RankSimilarity(
-        n_reference=2, n_select=1, percept=percept, kernel=kernel
-    )
-    model = BehaviorModel(behavior=rank)
+    model = RankModel(percept=percept)
     # Call build to force initializers to execute.
-    model.behavior.percept.build([None, None, None])
+    model.percept.build([None, None, None])
     return model, loc
 
 
@@ -112,8 +111,8 @@ def model_0():
     scale[4, :] = 0.03
 
     # Assign `loc` and `scale` to model.
-    model.behavior.percept.loc.assign(loc)
-    model.behavior.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
+    model.percept.loc.assign(loc)
+    model.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
     return model
 
 
@@ -128,8 +127,8 @@ def model_1():
     scale[4, :] = 0.03
 
     # Assign `loc` and `scale` to model.
-    model.behavior.percept.loc.assign(loc)
-    model.behavior.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
+    model.percept.loc.assign(loc)
+    model.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
     return model
 
 

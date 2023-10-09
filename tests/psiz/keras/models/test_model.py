@@ -55,14 +55,14 @@ class RankModelA(tf.keras.Model):
                 trainable=False,
             ),
         )
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given4rank1_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        return self.softrank_4_1(s)
+        return self.soft_4rank1(s)
 
     def get_config(self):
         config = super(RankModelA, self).get_config()
@@ -113,14 +113,14 @@ class RankModelB(tf.keras.Model):
             subnets=[proximity_0, proximity_1], gating_index=-1
         )
 
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given4rank1_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.braid_proximity([z_q, z_r, inputs["kernel_gate_weights"]])
-        return self.softrank_4_1(s)
+        return self.soft_4rank1(s)
 
     def get_config(self):
         config = super(RankModelB, self).get_config()
@@ -176,7 +176,7 @@ class RankModelC(tf.keras.Model):
             subnets=[proximity_0, proximity_1], gating_index=-1
         )
 
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
@@ -185,7 +185,7 @@ class RankModelC(tf.keras.Model):
         )
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.braid_proximity([z_q, z_r, inputs["kernel_gate_weights"]])
-        return self.softrank_4_1(s)
+        return self.soft_4rank1(s)
 
     def get_config(self):
         config = super(RankModelC, self).get_config()
@@ -238,7 +238,7 @@ class RankModelD(tf.keras.Model):
                 gamma_initializer=tf.keras.initializers.Constant(0.0),
             ),
         )
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
@@ -256,7 +256,7 @@ class RankModelD(tf.keras.Model):
         )
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        return self.softrank_4_1(s)
+        return self.soft_4rank1(s)
 
     def get_config(self):
         config = super(RankModelD, self).get_config()
@@ -291,14 +291,14 @@ class RankModelE(tf.keras.Model):
                 trainable=False,
             ),
         )
-        self.softrank_2_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_2rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given2rank1_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 2], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        return self.softrank_2_1(s)
+        return self.soft_2rank1(s)
 
     def get_config(self):
         config = super(RankModelE, self).get_config()
@@ -335,14 +335,14 @@ class RankModelF(tf.keras.Model):
             ),
         )
 
-        self.softrank_8_2 = psiz.keras.layers.SoftRank(n_select=2)
+        self.soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given8rank2_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        return self.softrank_8_2(s)
+        return self.soft_8rank2(s)
 
     def get_config(self):
         config = super(RankModelF, self).get_config()
@@ -378,8 +378,8 @@ class MultiRankModelA(tf.keras.Model):
                 trainable=False,
             ),
         )
-        self.softrank_2_1 = psiz.keras.layers.SoftRank(n_select=1)
-        self.softrank_8_2 = psiz.keras.layers.SoftRank(n_select=2)
+        self.soft_2rank1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
 
     def call(self, inputs):
         """Call."""
@@ -387,13 +387,13 @@ class MultiRankModelA(tf.keras.Model):
         z = self.percept(inputs["given2rank1_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 2], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        prob_2rank1 = self.softrank_2_1(s)
+        prob_2rank1 = self.soft_2rank1(s)
 
         # The 8-rank-2 branch.
         z = self.percept(inputs["given8rank2_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        prob_8rank2 = self.softrank_8_2(s)
+        prob_8rank2 = self.soft_8rank2(s)
 
         return {"given2rank1": prob_2rank1, "given8rank2": prob_8rank2}
 
@@ -685,7 +685,7 @@ class RankRateModelA(tf.keras.Model):
         )
 
         # Define a multi-output branches.
-        self.softrank_4_2 = psiz.keras.layers.SoftRank(n_select=2)
+        self.soft_4rank2 = psiz.keras.layers.SoftRank(n_select=2)
         self.rate = psiz.keras.layers.Logistic()
 
     def call(self, inputs):
@@ -694,7 +694,7 @@ class RankRateModelA(tf.keras.Model):
         z = self.percept(inputs["given4rank2_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        output_rank = self.softrank_4_2(s)
+        output_rank = self.soft_4rank2(s)
 
         # Rate branch.
         z = self.percept(inputs["rate2_stimulus_set"])
@@ -742,7 +742,7 @@ class RankRTModelA(tf.keras.Model):
         )
 
         # Define a multi-output branches.
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
         self.response_time = psiz.keras.layers.Logistic()
 
     def call(self, inputs):
@@ -751,7 +751,7 @@ class RankRTModelA(tf.keras.Model):
         z = self.percept(inputs["given4rank1_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        output_rank = self.softrank_4_1(s)
+        output_rank = self.soft_4rank1(s)
 
         # Response time branch.
         # Estimate response time as a function of soft rank outcome entropy.
@@ -811,7 +811,7 @@ def build_ranksim_functional_v0():
             trainable=False,
         ),
     )
-    softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+    soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     inputs = {
         "given4rank1_stimulus_set": tf.keras.Input(
@@ -821,7 +821,7 @@ def build_ranksim_functional_v0():
     z = percept(inputs["given4rank1_stimulus_set"])
     z_q, z_r = tf.split(z, [1, 4], stimuli_axis)
     s = proximity([z_q, z_r])
-    outputs = softrank_4_1(s)
+    outputs = soft_4rank1(s)
 
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
     compile_kwargs = {
@@ -1202,7 +1202,7 @@ def build_ranksim_ratesim_functional_v0():
     )
 
     # Define different behavioral branches.
-    softrank_4_2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_4rank2 = psiz.keras.layers.SoftRank(n_select=2)
     rate = psiz.keras.layers.Logistic()
 
     inp_rank_stimulus_set = tf.keras.Input(shape=(5,), name="given4rank1_stimulus_set")
@@ -1218,7 +1218,7 @@ def build_ranksim_ratesim_functional_v0():
     z = percept(inputs["given4rank2_stimulus_set"])
     z_q, z_r = tf.split(z, [1, 4], stimuli_axis)
     s = proximity([z_q, z_r])
-    output_rank = softrank_4_2(s)
+    output_rank = soft_4rank2(s)
 
     # Rate branch.
     z = percept(inputs["rate2_stimulus_set"])

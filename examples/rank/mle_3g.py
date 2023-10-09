@@ -40,6 +40,7 @@ Example output:
 """
 
 import os
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 
 import numpy as np
@@ -57,40 +58,48 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-class BehaviorModel(tf.keras.Model):
-    """A behavior model.
+class RankModel(tf.keras.Model):
+    """A soft rank model.
 
-    No Gates.
+    Proximity BraidGate.
 
     """
 
-    def __init__(self, behavior=None, **kwargs):
+    def __init__(
+        self, percept=None, braided_proximity=None, soft_8rank2=None, **kwargs
+    ):
         """Initialize."""
-        super(BehaviorModel, self).__init__(**kwargs)
-        self.behavior = behavior
+        super(RankModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.braided_proximity = braided_proximity
+        self.soft_8rank2 = soft_8rank2
+        self.stimuli_axis = 1
 
     def call(self, inputs):
         """Call."""
-        return self.behavior(inputs)
+        z = self.percept(inputs["given8rank2_stimulus_set"])
+        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        s = self.braided_proximity([z_q, z_r, inputs["expertise"]])
+        return self.soft_8rank2(s)
 
 
 class SimilarityModel(tf.keras.Model):
     """A similarity model."""
 
-    def __init__(self, percept=None, kernel=None, **kwargs):
+    def __init__(self, percept=None, braided_proximity=None, **kwargs):
         """Initialize."""
         super(SimilarityModel, self).__init__(**kwargs)
         self.percept = percept
-        self.kernel = kernel
+        self.braided_proximity = braided_proximity
 
     def call(self, inputs):
         """Call."""
         stimuli_axis = 1
-        expertise_group = inputs['expertise']
-        z = self.percept(inputs['rate2_stimulus_set'])
+        expertise_group = inputs["expertise"]
+        z = self.percept(inputs["rate2_stimulus_set"])
         z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
         z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
-        return self.kernel([z_0, z_1, expertise_group])
+        return self.braided_proximity([z_0, z_1, expertise_group])
 
 
 def main():
@@ -107,38 +116,43 @@ def main():
     # Define ground truth models.
     model_true = build_ground_truth_model(n_stimuli, n_dim)
     model_similarity_true = SimilarityModel(
-        percept=model_true.behavior.percept,
-        kernel=model_true.behavior.kernel
+        percept=model_true.percept, braided_proximity=model_true.braided_proximity
     )
 
     # Assemble dataset of stimuli pairs for comparing similarity matrices.
     # NOTE: We include an placeholder "target" component in dataset tuple to
     # satisfy the assumptions of `predict` method.
     content_pairs = psiz.data.Rate(
-        psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements='upper')
+        psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements="upper")
     )
     group_0 = psiz.data.Group(
         np.tile(np.array([1.0, 0.0, 0.0]), (content_pairs.n_sample, 1)),
-        name='expertise'
+        name="expertise",
     )
     group_1 = psiz.data.Group(
         np.tile(np.array([0.0, 1.0, 0.0]), (content_pairs.n_sample, 1)),
-        name='expertise'
+        name="expertise",
     )
     group_2 = psiz.data.Group(
         np.tile(np.array([0.0, 0.0, 1.0]), (content_pairs.n_sample, 1)),
-        name='expertise'
+        name="expertise",
     )
     dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
-    tfds_pairs_group0 = psiz.data.Dataset(
-        [content_pairs, group_0, dummy_outcome]
-    ).export().batch(batch_size, drop_remainder=False)
-    tfds_pairs_group1 = psiz.data.Dataset(
-        [content_pairs, group_1, dummy_outcome]
-    ).export().batch(batch_size, drop_remainder=False)
-    tfds_pairs_group2 = psiz.data.Dataset(
-        [content_pairs, group_2, dummy_outcome]
-    ).export().batch(batch_size, drop_remainder=False)
+    tfds_pairs_group0 = (
+        psiz.data.Dataset([content_pairs, group_0, dummy_outcome])
+        .export()
+        .batch(batch_size, drop_remainder=False)
+    )
+    tfds_pairs_group1 = (
+        psiz.data.Dataset([content_pairs, group_1, dummy_outcome])
+        .export()
+        .batch(batch_size, drop_remainder=False)
+    )
+    tfds_pairs_group2 = (
+        psiz.data.Dataset([content_pairs, group_2, dummy_outcome])
+        .export()
+        .batch(batch_size, drop_remainder=False)
+    )
 
     # Compute similarity matrix.
     simmat_truth = (
@@ -159,25 +173,22 @@ def main():
     expertise = psiz.data.Group(
         np.tile(
             np.array(
-                [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-                dtype=np.float32
+                [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32
             ),
-            [n_trial, 1]
+            [n_trial, 1],
         ),
-        name='expertise'
+        name="expertise",
     )
     pds = psiz.data.Dataset([content, expertise])
-    tfds_content = pds.export(export_format='tfds')
-    tfds_content = tfds_content.batch(batch_size, drop_remainder=False)
+    tfds_content = pds.export(export_format="tfds")
 
     # Simulate ranked similarity judgments and append outcomes to dataset.
+    tfds_content = tfds_content.batch(batch_size, drop_remainder=False)
     depth = content.n_outcome
 
     def simulate_agent(x):
         outcome_probs = model_true(x)
-        outcome_distribution = tfp.distributions.Categorical(
-            probs=outcome_probs
-        )
+        outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
         outcome_idx = outcome_distribution.sample()
         outcome_one_hot = tf.one_hot(outcome_idx, depth)
         return outcome_one_hot
@@ -185,19 +196,19 @@ def main():
     tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
     # Partition data into 80% train and 20% validation.
-    tfds_train = tfds_all.take(n_trial_train * 3).cache().shuffle(
-        buffer_size=n_trial_train * 3,
-        reshuffle_each_iteration=True
-    ).batch(
-        batch_size, drop_remainder=False
+    tfds_train = (
+        tfds_all.take(n_trial_train * 3)
+        .cache()
+        .shuffle(buffer_size=n_trial_train * 3, reshuffle_each_iteration=True)
+        .batch(batch_size, drop_remainder=False)
     )
-    tfds_val = tfds_all.skip(n_trial_train * 3).cache().batch(
-        batch_size, drop_remainder=False
+    tfds_val = (
+        tfds_all.skip(n_trial_train * 3).cache().batch(batch_size, drop_remainder=False)
     )
 
     # Use early stopping.
     early_stop = tf.keras.callbacks.EarlyStopping(
-        'val_cce', patience=15, mode='min', restore_best_weights=True
+        "val_cce", patience=15, mode="min", restore_best_weights=True
     )
     callbacks = [early_stop]
 
@@ -205,14 +216,17 @@ def main():
 
     # Infer embedding.
     model_inferred.fit(
-        x=tfds_train, validation_data=tfds_val, epochs=epochs,
-        callbacks=callbacks, verbose=0
+        x=tfds_train,
+        validation_data=tfds_val,
+        epochs=epochs,
+        callbacks=callbacks,
+        verbose=0,
     )
 
     # Create a model that computes similarity based on inferred model.
     model_similarity_inferred = SimilarityModel(
-        percept=model_inferred.behavior.percept,
-        kernel=model_inferred.behavior.kernel
+        percept=model_inferred.percept,
+        braided_proximity=model_inferred.braided_proximity,
     )
     # Compute inferred similarity matrix.
     simmat_inferred = (
@@ -233,11 +247,11 @@ def main():
     # Permute inferred dimensions to best match ground truth.
     attention_weight = tf.stack(
         [
-            model_inferred.behavior.kernel.subnets[0].distance.w,
-            model_inferred.behavior.kernel.subnets[1].distance.w,
-            model_inferred.behavior.kernel.subnets[2].distance.w
+            model_inferred.braided_proximity.subnets[0].w,
+            model_inferred.braided_proximity.subnets[1].w,
+            model_inferred.braided_proximity.subnets[2].w,
         ],
-        axis=0
+        axis=0,
     ).numpy()
     idx_sorted = np.argsort(-attention_weight[0, :])
     attention_weight = attention_weight[:, idx_sorted]
@@ -246,106 +260,87 @@ def main():
     for i_group in range(attention_weight.shape[0]):
         print(
             "    {0:>12} | {1}".format(
-                group_labels[i_group], np.array2string(
+                group_labels[i_group],
+                np.array2string(
                     attention_weight[i_group, :],
-                    formatter={'float_kind': lambda x: "%.2f" % x}
-                )
+                    formatter={"float_kind": lambda x: "%.2f" % x},
+                ),
             )
         )
 
     # Display comparison results. A good inferred model will have a high
     # R^2 value on the diagonal elements (max is 1) and relatively low R^2
     # values on the off-diagonal elements.
-    print('\n    Model Comparison (R^2)')
-    print('    ================================')
-    print('      True  |        Inferred')
-    print('            | Novice  Interm  Expert')
-    print('    --------+-----------------------')
-    print('     Novice | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
-        r_squared[0, 0], r_squared[0, 1], r_squared[0, 2]))
-    print('     Interm | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
-        r_squared[1, 0], r_squared[1, 1], r_squared[1, 2]))
-    print('     Expert | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}'.format(
-        r_squared[2, 0], r_squared[2, 1], r_squared[2, 2]))
-    print('\n')
+    print("\n    Model Comparison (R^2)")
+    print("    ================================")
+    print("      True  |        Inferred")
+    print("            | Novice  Interm  Expert")
+    print("    --------+-----------------------")
+    print(
+        "     Novice | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}".format(
+            r_squared[0, 0], r_squared[0, 1], r_squared[0, 2]
+        )
+    )
+    print(
+        "     Interm | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}".format(
+            r_squared[1, 0], r_squared[1, 1], r_squared[1, 2]
+        )
+    )
+    print(
+        "     Expert | {0: >6.2f}  {1: >6.2f}  {2: >6.2f}".format(
+            r_squared[2, 0], r_squared[2, 1], r_squared[2, 2]
+        )
+    )
+    print("\n")
 
 
 def build_ground_truth_model(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     percept = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(
-            stddev=.17
-        ),
-        mask_zero=True
+        n_stimuli + 1,
+        n_dim,
+        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=0.17),
+        mask_zero=True,
     )
-    # Define group-specific kernels.
-    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+    # Define group-specific proximity layers.
+    shared_activation = psiz.keras.layers.ExponentialSimilarity(
         trainable=False,
-        beta_initializer=tf.keras.initializers.Constant(10.),
-        tau_initializer=tf.keras.initializers.Constant(1.),
-        gamma_initializer=tf.keras.initializers.Constant(0.)
+        beta_initializer=tf.keras.initializers.Constant(10.0),
+        tau_initializer=tf.keras.initializers.Constant(1.0),
+        gamma_initializer=tf.keras.initializers.Constant(0.0),
     )
-    kernel_0 = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(
-                [1.8, 1.8, .2, .2]
-            ),
-            w_constraint=psiz.keras.constraints.NonNegNorm(
-                scale=n_dim, p=1.
-            ),
-        ),
-        similarity=shared_similarity
+    proximity_0 = psiz.keras.layers.Minkowski(
+        rho_trainable=False,
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant([1.8, 1.8, 0.2, 0.2]),
+        w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+        activation=shared_activation,
     )
-    kernel_1 = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(
-                [1., 1., 1., 1.]
-            ),
-            w_constraint=psiz.keras.constraints.NonNegNorm(
-                scale=n_dim, p=1.
-            ),
-        ),
-        similarity=shared_similarity
+    proximity_1 = psiz.keras.layers.Minkowski(
+        rho_trainable=False,
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant([1.0, 1.0, 1.0, 1.0]),
+        w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+        activation=shared_activation,
     )
-    kernel_2 = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.),
-            w_initializer=tf.keras.initializers.Constant(
-                [.2, .2, 1.8, 1.8]
-            ),
-            w_constraint=psiz.keras.constraints.NonNegNorm(
-                scale=n_dim, p=1.
-            ),
-        ),
-        similarity=shared_similarity
+    proximity_2 = psiz.keras.layers.Minkowski(
+        rho_trainable=False,
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant([0.2, 0.2, 1.8, 1.8]),
+        w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+        activation=shared_activation,
     )
-    kernel = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1, kernel_2], gating_index=-1
+    braided_proximity = psiz.keras.layers.BraidGate(
+        subnets=[proximity_0, proximity_1, proximity_2], gating_index=-1
     )
-    kernel_adapter = psiz.keras.layers.GateAdapter(
-        gating_keys='expertise',
-        format_inputs_as_tuple=True
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    model = RankModel(
+        percept=percept, braided_proximity=braided_proximity, soft_8rank2=soft_8rank2
     )
-    rank = psiz.keras.layers.RankSimilarity(
-        n_reference=8,
-        n_select=2,
-        percept=percept,
-        kernel=kernel,
-        kernel_adapter=kernel_adapter
-    )
-    model = BehaviorModel(behavior=rank)
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
-        weighted_metrics=[
-            tf.keras.metrics.CategoricalCrossentropy(name='cce')
-        ]
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        weighted_metrics=[tf.keras.metrics.CategoricalCrossentropy(name="cce")],
     )
     return model
 
@@ -362,57 +357,41 @@ def build_model(n_stimuli, n_dim):
         model: A TensorFlow Keras model.
 
     """
-    percept = tf.keras.layers.Embedding(
-        n_stimuli + 1, n_dim, mask_zero=True
-    )
-    # Define group-specific kernels.
-    shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    # Define group-specific proximity layers.
+    shared_activation = psiz.keras.layers.ExponentialSimilarity(
         trainable=False,
-        beta_initializer=tf.keras.initializers.Constant(10.),
-        tau_initializer=tf.keras.initializers.Constant(1.),
-        gamma_initializer=tf.keras.initializers.Constant(0.)
+        beta_initializer=tf.keras.initializers.Constant(10.0),
+        tau_initializer=tf.keras.initializers.Constant(1.0),
+        gamma_initializer=tf.keras.initializers.Constant(0.0),
     )
-    kernel_0 = build_kernel(shared_similarity, n_dim)
-    kernel_1 = build_kernel(shared_similarity, n_dim)
-    kernel_2 = build_kernel(shared_similarity, n_dim)
-    kernel = psiz.keras.layers.BraidGate(
-        subnets=[kernel_0, kernel_1, kernel_2], gating_index=-1
+    proximity_0 = build_proximity(shared_activation, n_dim)
+    proximity_1 = build_proximity(shared_activation, n_dim)
+    proximity_2 = build_proximity(shared_activation, n_dim)
+    braided_proximity = psiz.keras.layers.BraidGate(
+        subnets=[proximity_0, proximity_1, proximity_2], gating_index=-1
     )
-    kernel_adapter = psiz.keras.layers.GateAdapter(
-        gating_keys='expertise',
-        format_inputs_as_tuple=True
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    model = RankModel(
+        percept=percept, braided_proximity=braided_proximity, soft_8rank2=soft_8rank2
     )
-    rank = psiz.keras.layers.RankSimilarity(
-        n_reference=8,
-        n_select=2,
-        percept=percept,
-        kernel=kernel,
-        kernel_adapter=kernel_adapter
-    )
-    model = BehaviorModel(behavior=rank)
     model.compile(
         loss=tf.keras.losses.CategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=.001),
-        weighted_metrics=[
-            tf.keras.metrics.CategoricalCrossentropy(name='cce')
-        ]
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        weighted_metrics=[tf.keras.metrics.CategoricalCrossentropy(name="cce")],
     )
     return model
 
 
-def build_kernel(similarity, n_dim):
-    """Build kernel with learnable 'attention weights'."""
-    mink = psiz.keras.layers.Minkowski(
+def build_proximity(similarity, n_dim):
+    """Build proximity layer with learnable 'attention weights'."""
+    proximity = psiz.keras.layers.Minkowski(
         rho_trainable=False,
-        rho_initializer=tf.keras.initializers.Constant(2.),
-        w_constraint=psiz.keras.constraints.NonNegNorm(
-            scale=n_dim, p=1.
-        ),
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+        activation=similarity,
     )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=mink, similarity=similarity
-    )
-    return kernel
+    return proximity
 
 
 if __name__ == "__main__":

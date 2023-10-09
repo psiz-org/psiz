@@ -32,18 +32,16 @@ def test_outcome_probability_v0():
             tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
         ),
     )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
         ),
+        trainable=False,
     )
     rank = psiz.keras.layers.RankSimilarity(
         n_reference=2, n_select=1, percept=percept, kernel=kernel
@@ -88,25 +86,23 @@ def test_outcome_probability_v1():
             tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
         ),
     )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
         ),
+        trainable=False,
     )
     rank = psiz.keras.layers.RankSimilarity(
         n_reference=2,
         n_select=1,
         percept=percept,
         kernel=kernel,
-        temperature_initializer=tf.keras.initializers.Constant(value=0.001)
+        temperature_initializer=tf.keras.initializers.Constant(value=0.001),
     )
 
     stimulus_set = tf.constant(
@@ -125,11 +121,12 @@ def test_outcome_probability_v1():
     # Desired outcome.
     outcome_prob_desired = tf.constant(
         [
-            [1., 0.],
-            [1., 0.],
-            [1., 0.],
-            [1., 0.],
-        ], dtype=tf.float32
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+        ],
+        dtype=tf.float32,
     )
     tf.debugging.assert_near(outcome_prob, outcome_prob_desired)
 
@@ -148,18 +145,16 @@ def test_serialization_v0():
             tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
         ),
     )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
         ),
+        trainable=False,
     )
 
     # Default settings.
@@ -196,7 +191,7 @@ def test_serialization_v0():
         data_scope="abc",
         name="rs2",
         fit_temperature=True,
-        temperature_initializer=tf.keras.initializers.Constant(0.01)
+        temperature_initializer=tf.keras.initializers.Constant(0.01),
     )
     cfg = rank.get_config()
     # Verify.

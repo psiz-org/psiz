@@ -664,18 +664,16 @@ def rate_default_1g_mle():
 
     stimuli = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
 
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
             beta_initializer=tf.keras.initializers.Constant(3.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
         ),
+        trainable=False,
     )
 
     model = psiz.keras.models.Rate(stimuli=stimuli, kernel=kernel)

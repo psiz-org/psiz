@@ -31,18 +31,16 @@ def test_outcome_probability_v0():
             tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
         ),
     )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
         ),
+        trainable=False,
     )
     rate = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
     stimulus_set = tf.constant(
@@ -90,18 +88,16 @@ def test_serialization():
             tf.constant([[0.0, 0.0], [0.1, 0.1], [0.2, 0.1], [0.3, 0.1], [0.4, 0.1]])
         ),
     )
-    kernel = psiz.keras.layers.DistanceBased(
-        distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(beta),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
         ),
+        trainable=False,
     )
 
     # Default settings.

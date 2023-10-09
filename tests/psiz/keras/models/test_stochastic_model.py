@@ -330,14 +330,14 @@ class RankModelA(StochasticModel):
                 trainable=False,
             ),
         )
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given4rank1_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        return self.softrank_4_1(s)
+        return self.soft_4rank1(s)
 
     def get_config(self):
         return super(RankModelA, self).get_config()
@@ -402,14 +402,14 @@ class RankModelB(StochasticModel):
             ),
             trainable=False,
         )
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given4rank1_stimulus_set"])
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        return self.softrank_4_1(s)
+        return self.soft_4rank1(s)
 
     def get_config(self):
         return super(RankModelB, self).get_config()
@@ -492,7 +492,7 @@ class RankModelC(StochasticModel):
             ),
             trainable=False,
         )
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
 
     def call(self, inputs):
         """Call."""
@@ -501,7 +501,7 @@ class RankModelC(StochasticModel):
         )
         z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
-        return self.softrank_4_1(s)
+        return self.soft_4rank1(s)
 
     def get_config(self):
         return super(RankModelC, self).get_config()

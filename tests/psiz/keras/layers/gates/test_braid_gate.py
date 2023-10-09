@@ -20,7 +20,6 @@ import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from psiz.keras.layers import DistanceBased
 from psiz.keras.layers import EmbeddingNormalDiag
 from psiz.keras.layers import ExponentialSimilarity
 from psiz.keras.layers import BraidGate
@@ -37,6 +36,7 @@ def build_vi_kernel(similarity, n_dim, kl_weight):
         w_loc_trainable=False,
         w_scale_trainable=False,
         w_scale_initializer=tf.keras.initializers.Constant(0.1),
+        activation=similarity,
     )
 
     mink_posterior = MinkowskiStochastic(
@@ -45,13 +45,12 @@ def build_vi_kernel(similarity, n_dim, kl_weight):
         w_loc_trainable=True,
         w_scale_trainable=True,
         w_scale_initializer=tf.keras.initializers.Constant(0.1),
+        activation=similarity,
     )
 
-    mink = MinkowskiVariational(
+    kernel = MinkowskiVariational(
         prior=mink_prior, posterior=mink_posterior, kl_weight=kl_weight, kl_n_sample=30
     )
-
-    kernel = DistanceBased(distance=mink, similarity=similarity)
     return kernel
 
 
@@ -341,13 +340,10 @@ def emb_subnets_stoch_rank1():
 @pytest.fixture
 def kernel_subnets():
     """A list of subnets"""
-    pw_0 = DistanceBased(
-        distance=Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=ExponentialSimilarity(
+    proximity_0 = Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=ExponentialSimilarity(
             fit_tau=False,
             fit_gamma=False,
             fit_beta=False,
@@ -355,15 +351,13 @@ def kernel_subnets():
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             beta_initializer=tf.keras.initializers.Constant(0.1),
         ),
+        trainable=False,
     )
 
-    pw_1 = DistanceBased(
-        distance=Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=ExponentialSimilarity(
+    proximity_1 = Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=ExponentialSimilarity(
             fit_tau=False,
             fit_gamma=False,
             fit_beta=False,
@@ -371,15 +365,13 @@ def kernel_subnets():
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             beta_initializer=tf.keras.initializers.Constant(0.1),
         ),
+        trainable=False,
     )
 
-    pw_2 = DistanceBased(
-        distance=Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-        ),
-        similarity=ExponentialSimilarity(
+    proximity_2 = Minkowski(
+        rho_initializer=tf.keras.initializers.Constant(2.0),
+        w_initializer=tf.keras.initializers.Constant(1.0),
+        activation=ExponentialSimilarity(
             fit_tau=False,
             fit_gamma=False,
             fit_beta=False,
@@ -387,9 +379,10 @@ def kernel_subnets():
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             beta_initializer=tf.keras.initializers.Constant(0.1),
         ),
+        trainable=False,
     )
 
-    subnets = [pw_0, pw_1, pw_2]
+    subnets = [proximity_0, proximity_1, proximity_2]
     return subnets
 
 
@@ -665,14 +658,14 @@ def test_subnet_listinput(kernel_subnets):
     subnet_1 = braid_layer.subnets[1]
     subnet_2 = braid_layer.subnets[2]
 
-    tf.debugging.assert_equal(subnet_0.distance.rho, kernel_subnets[0].distance.rho)
-    tf.debugging.assert_equal(subnet_0.distance.w, kernel_subnets[0].distance.w)
+    tf.debugging.assert_equal(subnet_0.rho, kernel_subnets[0].rho)
+    tf.debugging.assert_equal(subnet_0.w, kernel_subnets[0].w)
 
-    tf.debugging.assert_equal(subnet_1.distance.rho, kernel_subnets[1].distance.rho)
-    tf.debugging.assert_equal(subnet_1.distance.w, kernel_subnets[1].distance.w)
+    tf.debugging.assert_equal(subnet_1.rho, kernel_subnets[1].rho)
+    tf.debugging.assert_equal(subnet_1.w, kernel_subnets[1].w)
 
-    tf.debugging.assert_equal(subnet_2.distance.rho, kernel_subnets[2].distance.rho)
-    tf.debugging.assert_equal(subnet_2.distance.w, kernel_subnets[2].distance.w)
+    tf.debugging.assert_equal(subnet_2.rho, kernel_subnets[2].rho)
+    tf.debugging.assert_equal(subnet_2.w, kernel_subnets[2].w)
 
 
 def test_bad_instantiation_listinput(kernel_subnets, paired_inputs_v0, groups_v0_0):

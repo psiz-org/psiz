@@ -25,6 +25,7 @@ from tensorflow.keras import backend
 
 from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
 from psiz.keras.constraints.min_max import MinMax
+from psiz.utils.m_prefer_n import m_prefer_n
 
 
 @tf.keras.utils.register_keras_serializable(
@@ -46,23 +47,15 @@ class SoftRankCell(SoftRankBase):
 
     p_{t} = (1- inertia) * outcomes_{t} + inertia * p_{t-1}
 
-    # TODO remove or clean up
-    s.t. x + y = 1.0
-    s.t. u = uniform (or a)
-
-    a   | ya + xu
-    b   | yb + xya + xxu
-    c   | yc + xyb + xxya + xxxu
-    d   | yd + xyc + xxyb + xxxya + xxxxu
-    e   | ye + xyd + xxyc + xxxyb + xxxxya + xxxxxu
-    f   | yf + xye + xxyd + xxxyc + xxxxyb + xxxxxya + xxxxxxu
-
     """
 
-    def __init__(self, inertia_initializer=None, inertia_constraint=None, **kwargs):
+    def __init__(
+        self, n_option=None, inertia_initializer=None, inertia_constraint=None, **kwargs
+    ):
         """Initialize.
 
         Args:
+            n_option: Scalar indicating thThe number of options.
             inertia_initializer (optional): Initializer for `inertia` scalar.
                 The default initializer is 0.0.
             inertia_constraint (optional): Constraint function applied to
@@ -89,15 +82,17 @@ class SoftRankCell(SoftRankBase):
         )
 
         # Satisfy RNNCell contract.
-        # NOTE: A placeholder state.
+        self.n_outcome = m_prefer_n(n_option, self.n_select).shape[0]
         self.state_size = [
-            tf.TensorShape([1])
-        ]  # TODO need this to be determined on first call
+            tf.TensorShape([self.n_outcome])
+        ]  # TODO ideally computed during build
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
-        # initial_state = self._compute_outcome_probability(inputs)
-        initial_state = [tf.ones([batch_size, 1], name="rank_cell_initial_state")]
+        # initial_state = self._compute_outcome_probability(inputs)  # TODO ideally instead of ones
+        initial_state = [
+            tf.ones([batch_size, self.n_outcome], name="rank_cell_initial_state")
+        ]
         return initial_state
 
     def call(self, inputs, states, training=None):

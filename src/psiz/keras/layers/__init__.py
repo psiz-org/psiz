@@ -21,16 +21,20 @@ from psiz.keras.layers.activations.inverse import InverseSimilarity
 from psiz.keras.layers.activations.students_t import StudentsTSimilarity
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational
-from psiz.keras.layers.behaviors.alcove_cell import ALCOVECell
+from psiz.keras.layers.behaviors.experimental.alcove_cell import ALCOVECell
 from psiz.keras.layers.behaviors.logistic import Logistic
 from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 from psiz.keras.layers.behaviors.rank_similarity import RankSimilarity
-from psiz.keras.layers.behaviors.rank_similarity_cell import RankSimilarityCell
+from psiz.keras.layers.behaviors.experimental.rank_similarity_cell import (
+    RankSimilarityCell,
+)
 from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
 from psiz.keras.layers.behaviors.soft_rank import SoftRank
 from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 from psiz.keras.layers.behaviors.rate_similarity import RateSimilarity
-from psiz.keras.layers.behaviors.rate_similarity_cell import RateSimilarityCell
+from psiz.keras.layers.behaviors.experimental.rate_similarity_cell import (
+    RateSimilarityCell,
+)
 from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
 from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
@@ -40,6 +44,7 @@ from psiz.keras.layers.embeddings.shared import EmbeddingShared
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag
 from psiz.keras.layers.embeddings.variational import EmbeddingVariational
+from psiz.keras.layers.behaviors.experimental.soft_rank_cell import SoftRankCell
 from psiz.keras.layers.gates.gate import Gate
 from psiz.keras.layers.gates.braid_gate import BraidGate
 from psiz.keras.layers.gates.branch_gate import BranchGate
@@ -82,6 +87,7 @@ __all__ = [
     "StochasticEmbedding",
     "EmbeddingTruncatedNormalDiag",
     "EmbeddingVariational",
+    "SoftRankCell",
     "Gate",
     "BraidGate",
     "BranchGate",

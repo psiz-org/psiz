@@ -15,6 +15,7 @@
 # ============================================================================
 """Module for testing models."""
 
+import copy
 
 import pytest
 import tensorflow as tf
@@ -37,32 +38,30 @@ class RankModelA(tf.keras.Model):
 
         n_stimuli = 20
         n_dim = 3
-        self.stimuli_axis = 1
 
-        self.percept = tf.keras.layers.Embedding(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-        )
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 beta_initializer=tf.keras.initializers.Constant(10.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                gamma_initializer=tf.keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        behavior = psiz.keras.layers.RankSimilarity(
+            n_reference=4, n_select=1, percept=percept, kernel=kernel
+        )
+
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        z = self.percept(inputs["given4rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        return self.softrank_4_1(s)
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RankModelA, self).get_config()
@@ -83,44 +82,54 @@ class RankModelB(tf.keras.Model):
 
         n_stimuli = 30
         n_dim = 10
-        self.stimuli_axis = 1
 
-        self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         # Define group-specific kernels.
-        shared_activation = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.0),
+        shared_similarity = psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(1.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
             trainable=False,
         )
-        proximity_0 = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(
-                [1.2, 1.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+        kernel_0 = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(
+                    [1.2, 1.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+                ),
             ),
-            trainable=False,
-            activation=shared_activation,
+            similarity=shared_similarity,
         )
-        proximity_1 = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(
-                [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0, 1.2]
+        kernel_1 = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(
+                    [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0, 1.2]
+                ),
             ),
-            trainable=False,
-            activation=shared_activation,
+            similarity=shared_similarity,
         )
-        self.braid_proximity = psiz.keras.layers.BraidGate(
-            subnets=[proximity_0, proximity_1], gating_index=-1
+        kernel = psiz.keras.layers.BraidGate(
+            subnets=[kernel_0, kernel_1], gating_index=-1
         )
 
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        kernel_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys="kernel_gate_weights", format_inputs_as_tuple=True
+        )
+        behavior = psiz.keras.layers.RankSimilarity(
+            n_reference=4,
+            n_select=1,
+            percept=percept,
+            kernel=kernel,
+            kernel_adapter=kernel_adapter,
+        )
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        z = self.percept(inputs["given4rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
-        s = self.braid_proximity([z_q, z_r, inputs["kernel_gate_weights"]])
-        return self.softrank_4_1(s)
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RankModelB, self).get_config()
@@ -142,50 +151,62 @@ class RankModelC(tf.keras.Model):
 
         n_stimuli = 30
         n_dim = 2
-        self.stimuli_axis = 1
 
         # Define group-specific percept layers.
         percept_0 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         percept_1 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        self.braid_percept = psiz.keras.layers.BraidGate(
+        percept = psiz.keras.layers.BraidGate(
             subnets=[percept_0, percept_1], gating_index=-1
         )
 
-        # Define group-specific proximity layers.
-        shared_activation = psiz.keras.layers.ExponentialSimilarity(
+        # Define group-specific kernel layers.
+        shared_similarity = psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
             beta_initializer=tf.keras.initializers.Constant(10.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
         )
-        proximity_0 = psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
-            w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
-            activation=shared_activation,
+        kernel_0 = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
+                w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+            ),
+            similarity=shared_similarity,
         )
-        proximity_1 = psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant([0.7, 1.3]),
-            w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
-            activation=shared_activation,
+        kernel_1 = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant([0.7, 1.3]),
+                w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+            ),
+            similarity=shared_similarity,
         )
-        self.braid_proximity = psiz.keras.layers.BraidGate(
-            subnets=[proximity_0, proximity_1], gating_index=-1
+        kernel = psiz.keras.layers.BraidGate(
+            subnets=[kernel_0, kernel_1], gating_index=-1
         )
 
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+        percept_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys=["percept_gate_weights"], format_inputs_as_tuple=True
+        )
+        kernel_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys=["kernel_gate_weights"], format_inputs_as_tuple=True
+        )
+        behavior = psiz.keras.layers.RankSimilarity(
+            n_reference=4,
+            n_select=1,
+            percept=percept,
+            kernel=kernel,
+            percept_adapter=percept_adapter,
+            kernel_adapter=kernel_adapter,
+        )
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        z = self.braid_percept(
-            [inputs["given4rank1_stimulus_set"], inputs["percept_gate_weights"]]
-        )
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
-        s = self.braid_proximity([z_q, z_r, inputs["kernel_gate_weights"]])
-        return self.softrank_4_1(s)
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RankModelC, self).get_config()
@@ -206,7 +227,6 @@ class RankModelD(tf.keras.Model):
 
         n_stimuli = 30
         n_dim = 2
-        self.stimuli_axis = 1
 
         # Define heirarchical percept layers.
         percept_0 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
@@ -221,42 +241,42 @@ class RankModelD(tf.keras.Model):
             subnets=[percept_2, percept_3], gating_index=-1, name="percept_23"
         )
 
-        self.braid_percept = psiz.keras.layers.BraidGate(
+        percept = psiz.keras.layers.BraidGate(
             subnets=[percept_01, percept_23], gating_index=-1, name="percept"
         )
+        percept_adapter = psiz.keras.layers.GateAdapter(
+            gating_keys=["percept_gate_weights_1", "percept_gate_weights_0"],
+            format_inputs_as_tuple=True,
+        )
 
-        # Define proximity.
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
-            w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        # Define kernel.
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
+                w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
                 beta_initializer=tf.keras.initializers.Constant(10.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
                 gamma_initializer=tf.keras.initializers.Constant(0.0),
             ),
         )
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+
+        behavior = psiz.keras.layers.RankSimilarity(
+            n_reference=4,
+            n_select=1,
+            percept=percept,
+            kernel=kernel,
+            percept_adapter=percept_adapter,
+        )
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        # NOTE: Because the BraidGates were initialized with the argument
-        # `gating_index=-1`, the corresponding gate weights are listed in the
-        # reverse order that they are consumed. In this case, the last item
-        # `percept_gate_weights_0`, is consumed first and used in routing at
-        # the outermost braid gate.
-        z = self.braid_percept(
-            [
-                inputs["given4rank1_stimulus_set"],
-                inputs["percept_gate_weights_1"],
-                inputs["percept_gate_weights_0"],
-            ]
-        )
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        return self.softrank_4_1(s)
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RankModelD, self).get_config()
@@ -277,28 +297,30 @@ class RankModelE(tf.keras.Model):
 
         n_stimuli = 20
         n_dim = 3
-        self.stimuli_axis = 1
 
-        self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 beta_initializer=tf.keras.initializers.Constant(10.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
                 gamma_initializer=tf.keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
-        self.softrank_2_1 = psiz.keras.layers.SoftRank(n_select=1)
+        behavior = psiz.keras.layers.RankSimilarity(
+            n_reference=2, n_select=1, percept=percept, kernel=kernel
+        )
+
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        z = self.percept(inputs["given2rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 2], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        return self.softrank_2_1(s)
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RankModelE, self).get_config()
@@ -319,30 +341,30 @@ class RankModelF(tf.keras.Model):
 
         n_stimuli = 20
         n_dim = 3
-        self.stimuli_axis = 1
 
-        self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 beta_initializer=tf.keras.initializers.Constant(10.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
                 gamma_initializer=tf.keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
+        behavior = psiz.keras.layers.RankSimilarity(
+            n_reference=8, n_select=2, percept=percept, kernel=kernel
+        )
 
-        self.softrank_8_2 = psiz.keras.layers.SoftRank(n_select=2)
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        z = self.percept(inputs["given8rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        return self.softrank_8_2(s)
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RankModelF, self).get_config()
@@ -363,88 +385,104 @@ class MultiRankModelA(tf.keras.Model):
 
         n_stimuli = 20
         n_dim = 3
-        self.stimuli_axis = 1
 
-        self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 beta_initializer=tf.keras.initializers.Constant(10.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
                 gamma_initializer=tf.keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
-        self.softrank_2_1 = psiz.keras.layers.SoftRank(n_select=1)
-        self.softrank_8_2 = psiz.keras.layers.SoftRank(n_select=2)
+        behavior_2rank1 = psiz.keras.layers.RankSimilarity(
+            n_reference=2, n_select=1, percept=percept, kernel=kernel
+        )
+        behavior_8rank2 = psiz.keras.layers.RankSimilarity(
+            n_reference=8, n_select=2, percept=percept, kernel=kernel
+        )
+        behavior_branch = psiz.keras.layers.BranchGate(
+            subnets=[behavior_2rank1, behavior_8rank2],
+            gating_key="rank_config",
+            output_names=["given2rank1", "given8rank2"],
+            name="behav_branch",
+        )
+        self.behavior = behavior_branch
 
     def call(self, inputs):
         """Call."""
-        # The 2-rank-1 branch.
-        z = self.percept(inputs["given2rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 2], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        prob_2rank1 = self.softrank_2_1(s)
-
-        # The 8-rank-2 branch.
-        z = self.percept(inputs["given8rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        prob_8rank2 = self.softrank_8_2(s)
-
-        return {"given2rank1": prob_2rank1, "given8rank2": prob_8rank2}
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(MultiRankModelA, self).get_config()
         return config
 
+    def train_step(self, data):
+        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        # Run forward pass.
+        with tf.GradientTape() as tape:
+            y_pred = self(x, training=True)
+            loss = self.compute_loss(x, y, y_pred, sample_weight)
+        self._validate_target_and_loss(y, loss)
+        # Run backwards pass.
+        self.optimizer.minimize(loss, self.trainable_variables, tape=tape)
+        return self.compute_metrics(x, y, y_pred, sample_weight)
 
-# TODO finish or move out
-# class RankCellModelA(tf.keras.Model):
-#     """A `RankSimilarityCell` model.
+    def compute_loss(self, x=None, y=None, y_pred=None, sample_weight=None):
+        del x  # The default implementation does not use `x`.
+        loss = self.compiled_loss(
+            y, y_pred, sample_weight, regularization_losses=self.losses
+        )
+        return loss
 
-#     Gates:
-#         None
 
-#     """
+class RankCellModelA(tf.keras.Model):
+    """A `RankSimilarityCell` model.
 
-#     def __init__(self, **kwargs):
-#         """Initialize."""
-#         super(RankCellModelA, self).__init__(**kwargs)
+    Gates:
+        None
 
-#         n_stimuli = 20
-#         n_dim = 3
-#         self.stimuli_axis = 2  # NOTE: Position different because of timestep axis.
+    """
 
-#         self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-#         self.proximity = psiz.keras.layers.Minkowski(
-#             rho_initializer=tf.keras.initializers.Constant(2.0),
-#             w_initializer=tf.keras.initializers.Constant(1.0),
-#             trainable=False,
-#             activation=psiz.keras.layers.ExponentialSimilarity(
-#                 beta_initializer=tf.keras.initializers.Constant(10.0),
-#                 tau_initializer=tf.keras.initializers.Constant(1.0),
-#                 gamma_initializer=tf.keras.initializers.Constant(0.001),
-#                 trainable=False,
-#             ),
-#         )
-#         rankcell_8_2 = psiz.keras.layers.SoftRankCell(n_select=2)
-#         self.rnn = tf.keras.layers.RNN(rankcell_8_2, return_sequences=True)
+    def __init__(self, **kwargs):
+        """Initialize."""
+        super(RankCellModelA, self).__init__(**kwargs)
 
-#     def call(self, inputs):
-#         """Call."""
-#         z = self.percept(inputs["given8rank2_stimulus_set"])
-#         z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
-#         s = self.proximity([z_q, z_r])
-#         output = self.rnn(s)
-#         return output
+        n_stimuli = 20
+        n_dim = 3
 
-#     def get_config(self):
-#         config = super(RankCellModelA, self).get_config()
-#         return config
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
+                beta_initializer=tf.keras.initializers.Constant(10.0),
+                tau_initializer=tf.keras.initializers.Constant(1.0),
+                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                trainable=False,
+            ),
+        )
+        cell = psiz.keras.layers.RankSimilarityCell(
+            n_reference=8, n_select=2, percept=percept, kernel=kernel
+        )
+        rnn = tf.keras.layers.RNN(cell, return_sequences=True)
+        self.behavior = rnn
+
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
+
+    def get_config(self):
+        config = super(RankCellModelA, self).get_config()
+        return config
 
 
 class RateModelA(tf.keras.Model):
@@ -461,28 +499,27 @@ class RateModelA(tf.keras.Model):
 
         n_stimuli = 30
         n_dim = 10
-        self.stimuli_axis = 1
 
-        self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
                 beta_initializer=tf.keras.initializers.Constant(3.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
                 gamma_initializer=tf.keras.initializers.Constant(0.0),
             ),
         )
-        self.rate = psiz.keras.layers.Logistic()
+        behavior = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        z = self.percept(inputs["rate2_stimulus_set"])
-        z_0, z_1 = tf.split(z, [1, 1], self.stimuli_axis)
-        s = self.proximity([z_0, z_1])
-        return self.rate(s)
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RateModelA, self).get_config()
@@ -494,7 +531,7 @@ class RateModelB(tf.keras.Model):
 
     Gates:
         Behavior layer (BraidGate:2) has two independent behavior
-            layers each with their own percept and proximity (but shared
+            layers each with their own percept and kernel (but shared
             similarity).
 
     """
@@ -505,9 +542,8 @@ class RateModelB(tf.keras.Model):
 
         n_stimuli = 20
         n_dim = 2
-        self.stimuli_axis = 1
 
-        shared_activation = psiz.keras.layers.ExponentialSimilarity(
+        shared_similarity = psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
             beta_initializer=tf.keras.initializers.Constant(10.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
@@ -516,90 +552,91 @@ class RateModelB(tf.keras.Model):
 
         # Group 0 layers.
         percept_0 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        proximity_0 = psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
-            w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
-            activation=shared_activation,
+        kernel_0 = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
+                w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+            ),
+            similarity=shared_similarity,
         )
-        rate_0 = psiz.keras.layers.Logistic()
+        behavior_0 = psiz.keras.layers.RateSimilarity(
+            percept=percept_0,
+            kernel=kernel_0,
+        )
 
         # Group 1 layers.
         percept_1 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        proximity_1 = psiz.keras.layers.Minkowski(
-            rho_trainable=False,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant([0.7, 1.3]),
-            w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
-            activation=shared_activation,
+        kernel_1 = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_trainable=False,
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant([0.7, 1.3]),
+                w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
+            ),
+            similarity=shared_similarity,
         )
-        rate_1 = psiz.keras.layers.Logistic()
+        behavior_1 = psiz.keras.layers.RateSimilarity(
+            percept=percept_1,
+            kernel=kernel_1,
+        )
 
         # Create behavior-level branch.
-        self.braid_percept = psiz.keras.layers.BraidGate(
-            subnets=[percept_0, percept_1], gating_index=-1
+        behavior = psiz.keras.layers.BraidGate(
+            subnets=[behavior_0, behavior_1], gating_key="behavior_gate_weights"
         )
-        self.braid_proximity = psiz.keras.layers.BraidGate(
-            subnets=[proximity_0, proximity_1], gating_index=-1
-        )
-        self.braid_rate = psiz.keras.layers.BraidGate(
-            subnets=[rate_0, rate_1], gating_index=-1
-        )
+        self.behavior = behavior
 
     def call(self, inputs):
         """Call."""
-        z = self.braid_percept(
-            [inputs["rate2_stimulus_set"], inputs["behavior_gate_weights"]]
-        )
-        z_0, z_1 = tf.split(z, [1, 1], self.stimuli_axis)
-        s = self.braid_proximity([z_0, z_1, inputs["behavior_gate_weights"]])
-        return self.braid_rate([s, inputs["behavior_gate_weights"]])
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RateModelB, self).get_config()
         return config
 
 
-# TODO finish or move out
-# class RateCellModelA(tf.keras.Model):
-#     """A `RateSimilarityCell` model.
+class RateCellModelA(tf.keras.Model):
+    """A `RateSimilarityCell` model.
 
-#     Gates:
-#         None
+    Gates:
+        None
 
-#     """
+    """
 
-#     def __init__(self, **kwargs):
-#         """Initialize."""
-#         super(RateCellModelA, self).__init__(**kwargs)
+    def __init__(self, **kwargs):
+        """Initialize."""
+        super(RateCellModelA, self).__init__(**kwargs)
 
-#         n_stimuli = 30
-#         n_dim = 10
+        n_stimuli = 30
+        n_dim = 10
 
-#         percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-#         proximity = psiz.keras.layers.Minkowski(
-#             rho_initializer=tf.keras.initializers.Constant(2.0),
-#             w_initializer=tf.keras.initializers.Constant(1.0),
-#             activation=psiz.keras.layers.ExponentialSimilarity(
-#                 trainable=False,
-#                 beta_initializer=tf.keras.initializers.Constant(3.0),
-#                 tau_initializer=tf.keras.initializers.Constant(1.0),
-#                 gamma_initializer=tf.keras.initializers.Constant(0.0),
-#             ),
-#             trainable=False,
-#         )
-#         rate_cell = psiz.keras.layers.RateSimilarityCell(percept=percept, kernel=proximity)
-#         rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
-#         self.behavior = rnn
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
+                trainable=False,
+                beta_initializer=tf.keras.initializers.Constant(3.0),
+                tau_initializer=tf.keras.initializers.Constant(1.0),
+                gamma_initializer=tf.keras.initializers.Constant(0.0),
+            ),
+        )
+        rate_cell = psiz.keras.layers.RateSimilarityCell(percept=percept, kernel=kernel)
+        rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+        self.behavior = rnn
 
-#     def call(self, inputs):
-#         """Call."""
-#         return self.behavior(inputs)
+    def call(self, inputs):
+        """Call."""
+        return self.behavior(inputs)
 
-#     def get_config(self):
-#         config = super(RateCellModelA, self).get_config()
-#         return config
+    def get_config(self):
+        config = super(RateCellModelA, self).get_config()
+        return config
 
 
 class ALCOVEModelA(tf.keras.Model):
@@ -666,17 +703,17 @@ class RankRateModelA(tf.keras.Model):
 
         n_stimuli = 20
         n_dim = 3
-        self.stimuli_axis = 1
 
         # Define a percept layer that will be shared across behaviors.
-        self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-
-        # Define a proximity layer that will be shared across behaviors.
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        # Define a kernel layer that will be shared across behaviors.
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 beta_initializer=tf.keras.initializers.Constant(10.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
                 gamma_initializer=tf.keras.initializers.Constant(0.001),
@@ -684,29 +721,73 @@ class RankRateModelA(tf.keras.Model):
             ),
         )
 
-        # Define a multi-output branches.
-        self.softrank_4_2 = psiz.keras.layers.SoftRank(n_select=2)
-        self.rate = psiz.keras.layers.Logistic()
+        # Define a multi-behavior module
+        rank = psiz.keras.layers.RankSimilarity(
+            n_reference=4, n_select=2, percept=percept, kernel=kernel
+        )
+        rate = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
+        behavior_branch = psiz.keras.layers.BranchGate(
+            subnets=[rank, rate],
+            gating_key="gate_weights_behavior",
+            output_names=["rank_branch", "rate_branch"],
+            name="behav_branch",
+        )
+        self.behavior = behavior_branch
 
     def call(self, inputs):
         """Call."""
-        # Rank branch.
-        z = self.percept(inputs["given4rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        output_rank = self.softrank_4_2(s)
-
-        # Rate branch.
-        z = self.percept(inputs["rate2_stimulus_set"])
-        z_0, z_1 = tf.split(z, [1, 1], self.stimuli_axis)
-        s = self.proximity([z_0, z_1])
-        output_rate = self.rate(s)
-
-        return {"rank_branch": output_rank, "rate_branch": output_rate}
+        return self.behavior(inputs)
 
     def get_config(self):
         config = super(RankRateModelA, self).get_config()
         return config
+
+
+class RankSimilarityRT(psiz.keras.layers.RankSimilarityBase):
+    """A rank similarity behavior layer."""
+
+    def __init__(self, **kwargs):
+        """Initialize.
+
+        Args:
+            kwargs: See `RankSimilarityBase`
+
+        """
+        super(RankSimilarityRT, self).__init__(**kwargs)
+
+    def call(self, inputs, training=None):
+        """Return probability of a ranked selection sequence.
+
+        Args:
+            inputs: A dictionary containing the following information:
+                rank_similarity_stimulus_set: A tensor containing
+                    indices that define the stimuli used in each trial.
+                    shape=(batch_size, max_reference + 1)
+                gate_weights (optional): Tensor(s) containing gate
+                    weights. The actual key value(s) will depend on how
+                    the user initialized the layer.
+
+        Returns:
+            outcome_prob: Probability of different behavioral outcomes.
+
+        """
+        # NOTE: The inputs are copied, because modifying the original `inputs`
+        # is bad practice in TF. For example, it creates issues when saving
+        # a model.
+        inputs_copied = copy.copy(inputs)
+
+        stimulus_set = inputs_copied[self.data_scope + "_stimulus_set"]
+        is_reference_present = self._is_reference_present(stimulus_set)
+
+        # Compute pairwise similarity between query and references.
+        sim_qr = self._pairwise_similarity(inputs_copied)
+
+        outcome_prob = self._compute_outcome_probability(is_reference_present, sim_qr)
+
+        # TODO replace dummy RT computation with something else.
+        outcome_rt = tf.reduce_sum(outcome_prob, axis=1, keepdims=True)
+
+        return [outcome_prob, outcome_rt]
 
 
 class RankRTModelA(tf.keras.Model):
@@ -723,17 +804,17 @@ class RankRTModelA(tf.keras.Model):
 
         n_stimuli = 20
         n_dim = 3
-        self.stimuli_axis = 1
 
         # Define a percept layer that will be shared across behaviors.
-        self.percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-
-        # Define a proximity layer that will be shared across behaviors.
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        # Define a kernel layer that will be shared across behaviors.
+        kernel = psiz.keras.layers.DistanceBased(
+            distance=psiz.keras.layers.Minkowski(
+                rho_initializer=tf.keras.initializers.Constant(2.0),
+                w_initializer=tf.keras.initializers.Constant(1.0),
+                trainable=False,
+            ),
+            similarity=psiz.keras.layers.ExponentialSimilarity(
                 beta_initializer=tf.keras.initializers.Constant(10.0),
                 tau_initializer=tf.keras.initializers.Constant(1.0),
                 gamma_initializer=tf.keras.initializers.Constant(0.001),
@@ -741,30 +822,18 @@ class RankRTModelA(tf.keras.Model):
             ),
         )
 
-        # Define a multi-output branches.
-        self.softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
-        self.response_time = psiz.keras.layers.Logistic()
+        # Define a multi-behavior module
+        rank = RankSimilarityRT(
+            n_reference=4, n_select=1, percept=percept, kernel=kernel
+        )
+        self.behavior = rank
 
     def call(self, inputs):
         """Call."""
-        # Rank branch.
-        z = self.percept(inputs["given4rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
-        s = self.proximity([z_q, z_r])
-        output_rank = self.softrank_4_1(s)
-
-        # Response time branch.
-        # Estimate response time as a function of soft rank outcome entropy.
-        entropy = -tf.reduce_sum(
-            tf.math.multiply(output_rank, tf.math.log(output_rank)),
-            axis=1,
-            keepdims=True,
-        )
-        output_rt = self.response_time(entropy)
-
+        rank_outcome_prob, rank_rt = self.behavior(inputs)
         outputs = {
-            "rank_choice_branch": output_rank,
-            "rank_rt_branch": output_rt,
+            "rank_choice_branch": rank_outcome_prob,
+            "rank_rt_branch": rank_rt,
         }
         return outputs
 
@@ -797,32 +866,30 @@ def build_ranksim_functional_v0():
     """
     n_stimuli = 20
     n_dim = 3
-    stimuli_axis = 1
 
     percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-    proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
-        trainable=False,
-        activation=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(10.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.001),
             trainable=False,
         ),
     )
-    softrank_4_1 = psiz.keras.layers.SoftRank(n_select=1)
+    behavior = psiz.keras.layers.RankSimilarity(
+        n_reference=4, n_select=1, percept=percept, kernel=kernel
+    )
 
+    inp_stimulus_set = tf.keras.Input(shape=(5,), name="given4rank1_stimulus_set")
     inputs = {
-        "given4rank1_stimulus_set": tf.keras.Input(
-            shape=(5,), name="given4rank1_stimulus_set"
-        ),
+        "given4rank1_stimulus_set": inp_stimulus_set,
     }
-    z = percept(inputs["given4rank1_stimulus_set"])
-    z_q, z_r = tf.split(z, [1, 4], stimuli_axis)
-    s = proximity([z_q, z_r])
-    outputs = softrank_4_1(s)
-
+    outputs = behavior(inputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
     compile_kwargs = {
         "loss": tf.keras.losses.CategoricalCrossentropy(),
@@ -931,59 +998,59 @@ def build_multirank_subclass_a():
     return model
 
 
-# TODO finish or move out
-# def build_ranksimcell_subclass_a():
-#     """Build subclassed `Model`.
+def build_ranksimcell_subclass_a():
+    """Build subclassed `Model`.
 
-#     RankSimilarityCell, one group, MLE.
+    RankSimilarityCell, one group, MLE.
 
-#     """
-#     model = RankCellModelA()
-#     compile_kwargs = {
-#         "loss": tf.keras.losses.CategoricalCrossentropy(),
-#         "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-#         "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
-#     }
-#     model.compile(**compile_kwargs)
-#     return model
+    """
+    model = RankCellModelA()
+    compile_kwargs = {
+        "loss": tf.keras.losses.CategoricalCrossentropy(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+    }
+    model.compile(**compile_kwargs)
+    return model
 
 
-# TODO finish or move out
-# def build_ranksimcell_functional_v0():
-#     """Build model useing functional API."""
-#     n_stimuli = 20
-#     n_dim = 3
+def build_ranksimcell_functional_v0():
+    """Build model useing functional API."""
+    n_stimuli = 20
+    n_dim = 3
 
-#     percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-#     proximity = psiz.keras.layers.Minkowski(
-#         rho_initializer=tf.keras.initializers.Constant(2.0),
-#         w_initializer=tf.keras.initializers.Constant(1.0),
-#         activation=psiz.keras.layers.ExponentialSimilarity(
-#             beta_initializer=tf.keras.initializers.Constant(10.0),
-#             tau_initializer=tf.keras.initializers.Constant(1.0),
-#             gamma_initializer=tf.keras.initializers.Constant(0.001),
-#             trainable=False,
-#         ),
-#         trainable=False,
-#     )
-#     cell = psiz.keras.layers.RankSimilarityCell(
-#         n_reference=8, n_select=2, percept=percept, kernel=proximity
-#     )
-#     rnn = tf.keras.layers.RNN(cell, return_sequences=True)
+    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            beta_initializer=tf.keras.initializers.Constant(10.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            trainable=False,
+        ),
+    )
+    cell = psiz.keras.layers.RankSimilarityCell(
+        n_reference=8, n_select=2, percept=percept, kernel=kernel
+    )
+    rnn = tf.keras.layers.RNN(cell, return_sequences=True)
 
-#     inp_stimulus_set = tf.keras.Input(shape=(None, 9), name="given8rank2_stimulus_set")
-#     inputs = {
-#         "given8rank2_stimulus_set": inp_stimulus_set,
-#     }
-#     outputs = rnn(inputs)
-#     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
-#     compile_kwargs = {
-#         "loss": tf.keras.losses.CategoricalCrossentropy(),
-#         "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-#         "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
-#     }
-#     model.compile(**compile_kwargs)
-#     return model
+    inp_stimulus_set = tf.keras.Input(shape=(None, 9), name="given8rank2_stimulus_set")
+    inputs = {
+        "given8rank2_stimulus_set": inp_stimulus_set,
+    }
+    outputs = rnn(inputs)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
+    compile_kwargs = {
+        "loss": tf.keras.losses.CategoricalCrossentropy(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+    }
+    model.compile(**compile_kwargs)
+    return model
 
 
 def build_ratesim_subclass_a():
@@ -1002,30 +1069,28 @@ def build_ratesim_functional_v0():
     """Build model using functional API."""
     n_stimuli = 30
     n_dim = 10
-    stimuli_axis = 1
 
     percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-    proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
-        trainable=False,
-        activation=psiz.keras.layers.ExponentialSimilarity(
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
             beta_initializer=tf.keras.initializers.Constant(3.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.0),
         ),
     )
-    rate = psiz.keras.layers.Logistic()
+    behavior = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
 
     inp_stimulus_set = tf.keras.Input(shape=(2,), name="rate2_stimulus_set")
     inputs = {
         "rate2_stimulus_set": inp_stimulus_set,
     }
-    z = percept(inputs["rate2_stimulus_set"])
-    z_0, z_1 = tf.split(z, [1, 1], stimuli_axis)
-    s = proximity([z_0, z_1])
-    outputs = rate(s)
+    outputs = behavior(inputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rate")
     compile_kwargs = {
         "loss": tf.keras.losses.MeanSquaredError(),
@@ -1048,59 +1113,59 @@ def build_ratesim_subclass_b():
     return model
 
 
-# TODO finish or move out
-# def build_ratesimcell_subclass_a():
-#     """Build subclassed `Model`."""
-#     model = RateCellModelA()
-#     compile_kwargs = {
-#         "loss": tf.keras.losses.MeanSquaredError(),
-#         "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-#         "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
-#     }
-#     model.compile(**compile_kwargs)
-#     return model
+def build_ratesimcell_subclass_a():
+    """Build subclassed `Model`."""
+    model = RateCellModelA()
+    compile_kwargs = {
+        "loss": tf.keras.losses.MeanSquaredError(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+    }
+    model.compile(**compile_kwargs)
+    return model
 
 
-# TODO finish or move out
-# def build_ratesimcell_functional_v0():
-#     """Build model useing functional API."""
-#     n_stimuli = 30
-#     n_dim = 10
+def build_ratesimcell_functional_v0():
+    """Build model useing functional API."""
+    n_stimuli = 30
+    n_dim = 10
 
-#     percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-#     proximity = psiz.keras.layers.Minkowski(
-#         rho_initializer=tf.keras.initializers.Constant(2.0),
-#         w_initializer=tf.keras.initializers.Constant(1.0),
-#         activation=psiz.keras.layers.ExponentialSimilarity(
-#             trainable=False,
-#             beta_initializer=tf.keras.initializers.Constant(3.0),
-#             tau_initializer=tf.keras.initializers.Constant(1.0),
-#             gamma_initializer=tf.keras.initializers.Constant(0.0),
-#         ),
-#         trainable=False,
-#     )
-#     rate_cell = psiz.keras.layers.RateSimilarityCell(percept=percept, kernel=proximity)
-#     rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
+            trainable=False,
+            beta_initializer=tf.keras.initializers.Constant(3.0),
+            tau_initializer=tf.keras.initializers.Constant(1.0),
+            gamma_initializer=tf.keras.initializers.Constant(0.0),
+        ),
+    )
+    rate_cell = psiz.keras.layers.RateSimilarityCell(percept=percept, kernel=kernel)
+    rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
 
-#     inp_stimulus_set = tf.keras.Input(
-#         shape=(
-#             None,
-#             2,
-#         ),
-#         name="rate2_stimulus_set",
-#     )
-#     inputs = {
-#         "rate2_stimulus_set": inp_stimulus_set,
-#     }
-#     outputs = rnn(inputs)
-#     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rate")
-#     compile_kwargs = {
-#         "loss": tf.keras.losses.MeanSquaredError(),
-#         "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-#         "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
-#     }
-#     model.compile(**compile_kwargs)
-#     return model
+    inp_stimulus_set = tf.keras.Input(
+        shape=(
+            None,
+            2,
+        ),
+        name="rate2_stimulus_set",
+    )
+    inputs = {
+        "rate2_stimulus_set": inp_stimulus_set,
+    }
+    outputs = rnn(inputs)
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rate")
+    compile_kwargs = {
+        "loss": tf.keras.losses.MeanSquaredError(),
+        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+    }
+    model.compile(**compile_kwargs)
+    return model
 
 
 def build_alcove_subclass_a():
@@ -1164,7 +1229,7 @@ def build_alcove_functional_v0():
     return model
 
 
-def build_ranksim_ratesim_subclass_a():
+def buld_ranksim_ratesim_subclass_a():
     """Build subclassed `Model`."""
     model = RankRateModelA()
     compile_kwargs = {
@@ -1183,17 +1248,17 @@ def build_ranksim_ratesim_functional_v0():
     """Build model using functional API."""
     n_stimuli = 20
     n_dim = 3
-    stimuli_axis = 1
 
     # Define a percept layer that will be shared across behaviors.
     percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-
-    # Define a proximity layer that will be shared across behaviors.
-    proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
-        trainable=False,
-        activation=psiz.keras.layers.ExponentialSimilarity(
+    # Define a kernel layer that will be shared across behaviors.
+    kernel = psiz.keras.layers.DistanceBased(
+        distance=psiz.keras.layers.Minkowski(
+            rho_initializer=tf.keras.initializers.Constant(2.0),
+            w_initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False,
+        ),
+        similarity=psiz.keras.layers.ExponentialSimilarity(
             beta_initializer=tf.keras.initializers.Constant(10.0),
             tau_initializer=tf.keras.initializers.Constant(1.0),
             gamma_initializer=tf.keras.initializers.Constant(0.001),
@@ -1201,9 +1266,17 @@ def build_ranksim_ratesim_functional_v0():
         ),
     )
 
-    # Define different behavioral branches.
-    softrank_4_2 = psiz.keras.layers.SoftRank(n_select=2)
-    rate = psiz.keras.layers.Logistic()
+    # Define a multi-behavior module
+    rank = psiz.keras.layers.RankSimilarity(
+        n_reference=4, n_select=2, percept=percept, kernel=kernel
+    )
+    rate = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
+    behavior_branch = psiz.keras.layers.BranchGate(
+        subnets=[rank, rate],
+        gating_key="gate_weights_behavior",
+        output_names=["rank_branch", "rate_branch"],
+        name="behav_branch",
+    )
 
     inp_rank_stimulus_set = tf.keras.Input(shape=(5,), name="given4rank1_stimulus_set")
     inp_rate_stimulus_set = tf.keras.Input(shape=(2,), name="rate2_stimulus_set")
@@ -1213,20 +1286,7 @@ def build_ranksim_ratesim_functional_v0():
         "rate2_stimulus_set": inp_rate_stimulus_set,
         "gate_weights_behavior": inp_gate_weights,
     }
-
-    # Rank branch.
-    z = percept(inputs["given4rank2_stimulus_set"])
-    z_q, z_r = tf.split(z, [1, 4], stimuli_axis)
-    s = proximity([z_q, z_r])
-    output_rank = softrank_4_2(s)
-
-    # Rate branch.
-    z = percept(inputs["rate2_stimulus_set"])
-    z_0, z_1 = tf.split(z, [1, 1], stimuli_axis)
-    s = proximity([z_0, z_1])
-    output_rate = rate(s)
-
-    outputs = {"rank_branch": output_rank, "rate_branch": output_rate}
+    outputs = behavior_branch(inputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank_rate")
     compile_kwargs = {
         "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
@@ -1456,79 +1516,77 @@ class TestMultiRankSimilarity:
         assert result0[1] == result1[1]
 
 
-# TODO finish or move out
-# class TestRankSimilarityCell:
-#     """Test using `RankSimilaritycell` layer."""
+class TestRankSimilarityCell:
+    """Test using `RankSimilaritycell` layer."""
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#
-#     def test_usage_subclass_a(self, ds_time_8rank2_v0, is_eager):
-#         """Test model using subclass API."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_usage_subclass_a(self, ds_time_8rank2_v0, is_eager):
+        """Test model using subclass API."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_subclass_a()
-#         call_fit_evaluate_predict(model, tfds)
-#         tf.keras.backend.clear_session()
+        tfds = ds_time_8rank2_v0
+        model = build_ranksimcell_subclass_a()
+        call_fit_evaluate_predict(model, tfds)
+        tf.keras.backend.clear_session()
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#     @pytest.mark.parametrize("save_traces", [True, False])
-#     def test_save_load_subclass_a(
-#         self, ds_time_8rank2_v0, is_eager, save_traces, tmpdir
-#     ):
-#         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    @pytest.mark.parametrize("save_traces", [True, False])
+    def test_save_load_subclass_a(
+        self, ds_time_8rank2_v0, is_eager, save_traces, tmpdir
+    ):
+        """Test serialization."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_subclass_a()
-#         model.fit(tfds, epochs=1)
-#         result0 = model.evaluate(tfds)
+        tfds = ds_time_8rank2_v0
+        model = build_ranksimcell_subclass_a()
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
-#         # Test storage.
-#         fp_model = tmpdir.join("test_model")
-#         model.save(fp_model, save_traces=save_traces)
-#         del model
-#         # Load the saved model.
-#         loaded = tf.keras.models.load_model(
-#             fp_model, custom_objects={"RankCellModelA": RankCellModelA}
-#         )
-#         result1 = loaded.evaluate(tfds)
+        # Test storage.
+        fp_model = tmpdir.join("test_model")
+        model.save(fp_model, save_traces=save_traces)
+        del model
+        # Load the saved model.
+        loaded = tf.keras.models.load_model(
+            fp_model, custom_objects={"RankCellModelA": RankCellModelA}
+        )
+        result1 = loaded.evaluate(tfds)
 
-#         # Test for model equality.
-#         assert result0[0] == result1[0]
-#         assert result0[1] == result1[1]
+        # Test for model equality.
+        assert result0[0] == result1[0]
+        assert result0[1] == result1[1]
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#     def test_usage_functional_v0(self, ds_time_8rank2_v0, is_eager):
-#         """Test model using functional API."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_usage_functional_v0(self, ds_time_8rank2_v0, is_eager):
+        """Test model using functional API."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_functional_v0()
-#         call_fit_evaluate_predict(model, tfds)
-#         tf.keras.backend.clear_session()
+        tfds = ds_time_8rank2_v0
+        model = build_ranksimcell_functional_v0()
+        call_fit_evaluate_predict(model, tfds)
+        tf.keras.backend.clear_session()
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#     def test_save_load_functional_v0(self, ds_time_8rank2_v0, is_eager, tmpdir):
-#         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_save_load_functional_v0(self, ds_time_8rank2_v0, is_eager, tmpdir):
+        """Test serialization."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_functional_v0()
-#         model.fit(tfds, epochs=1)
-#         result0 = model.evaluate(tfds)
+        tfds = ds_time_8rank2_v0
+        model = build_ranksimcell_functional_v0()
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
-#         # Test storage.
-#         fp_model = tmpdir.join("test_model")
-#         model.save(fp_model)
-#         del model
-#         # Load the saved model.
-#         loaded = tf.keras.models.load_model(fp_model)
-#         result1 = loaded.evaluate(tfds)
+        # Test storage.
+        fp_model = tmpdir.join("test_model")
+        model.save(fp_model)
+        del model
+        # Load the saved model.
+        loaded = tf.keras.models.load_model(fp_model)
+        result1 = loaded.evaluate(tfds)
 
-#         # Test for model equality.
-#         assert result0[0] == result1[0]
-#         assert result0[1] == result1[1]
+        # Test for model equality.
+        assert result0[0] == result1[0]
+        assert result0[1] == result1[1]
 
 
 class TestRateSimilarity:
@@ -1612,78 +1670,77 @@ class TestRateSimilarity:
         tf.keras.backend.clear_session()
 
 
-# TODO finish or move out
-# class TestRateSimilarityCell:
-#     """Test using `RateSimilarityCell` layer."""
+class TestRateSimilarityCell:
+    """Test using `RateSimilarityCell` layer."""
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#     def test_usage_subclass_a(self, ds_time_rate2_v0, is_eager):
-#         """Test subclass model, one group."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_usage_subclass_a(self, ds_time_rate2_v0, is_eager):
+        """Test subclass model, one group."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_subclass_a()
-#         call_fit_evaluate_predict(model, tfds)
-#         tf.keras.backend.clear_session()
+        tfds = ds_time_rate2_v0
+        model = build_ratesimcell_subclass_a()
+        call_fit_evaluate_predict(model, tfds)
+        tf.keras.backend.clear_session()
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#     @pytest.mark.parametrize("save_traces", [True, False])
-#     def test_save_load_subclass_a(
-#         self, ds_time_rate2_v0, is_eager, save_traces, tmpdir
-#     ):
-#         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    @pytest.mark.parametrize("save_traces", [True, False])
+    def test_save_load_subclass_a(
+        self, ds_time_rate2_v0, is_eager, save_traces, tmpdir
+    ):
+        """Test serialization."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_subclass_a()
-#         model.fit(tfds, epochs=1)
-#         result0 = model.evaluate(tfds)
+        tfds = ds_time_rate2_v0
+        model = build_ratesimcell_subclass_a()
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
-#         # Test storage.
-#         fp_model = tmpdir.join("test_model")
-#         model.save(fp_model, save_traces=save_traces)
-#         del model
-#         # Load the saved model.
-#         loaded = tf.keras.models.load_model(
-#             fp_model, custom_objects={"RateCellModelA": RateCellModelA}
-#         )
-#         result1 = loaded.evaluate(tfds)
+        # Test storage.
+        fp_model = tmpdir.join("test_model")
+        model.save(fp_model, save_traces=save_traces)
+        del model
+        # Load the saved model.
+        loaded = tf.keras.models.load_model(
+            fp_model, custom_objects={"RateCellModelA": RateCellModelA}
+        )
+        result1 = loaded.evaluate(tfds)
 
-#         # Test for model equality.
-#         assert result0[0] == result1[0]
-#         assert result0[1] == result1[1]
+        # Test for model equality.
+        assert result0[0] == result1[0]
+        assert result0[1] == result1[1]
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#     def test_usage_functional_v0(self, ds_time_rate2_v0, is_eager):
-#         """Test model using functional API."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_usage_functional_v0(self, ds_time_rate2_v0, is_eager):
+        """Test model using functional API."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_functional_v0()
-#         call_fit_evaluate_predict(model, tfds)
-#         tf.keras.backend.clear_session()
+        tfds = ds_time_rate2_v0
+        model = build_ratesimcell_functional_v0()
+        call_fit_evaluate_predict(model, tfds)
+        tf.keras.backend.clear_session()
 
-#     @pytest.mark.parametrize("is_eager", [True, False])
-#     def test_save_load_functional_v0(self, ds_time_rate2_v0, is_eager, tmpdir):
-#         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_save_load_functional_v0(self, ds_time_rate2_v0, is_eager, tmpdir):
+        """Test serialization."""
+        tf.config.run_functions_eagerly(is_eager)
 
-#         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_functional_v0()
-#         model.fit(tfds, epochs=1)
-#         result0 = model.evaluate(tfds)
+        tfds = ds_time_rate2_v0
+        model = build_ratesimcell_functional_v0()
+        model.fit(tfds, epochs=1)
+        result0 = model.evaluate(tfds)
 
-#         # Test storage.
-#         fp_model = tmpdir.join("test_model")
-#         model.save(fp_model)
-#         del model
-#         # Load the saved model.
-#         loaded = tf.keras.models.load_model(fp_model)
-#         result1 = loaded.evaluate(tfds)
+        # Test storage.
+        fp_model = tmpdir.join("test_model")
+        model.save(fp_model)
+        del model
+        # Load the saved model.
+        loaded = tf.keras.models.load_model(fp_model)
+        result1 = loaded.evaluate(tfds)
 
-#         # Test for model equality.
-#         assert result0[0] == result1[0]
-#         assert result0[1] == result1[1]
+        # Test for model equality.
+        assert result0[0] == result1[0]
+        assert result0[1] == result1[1]
 
 
 class TestALCOVECell:
@@ -1768,7 +1825,7 @@ class TestJointRankRate:
         tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank2_rate2_v0
-        model = build_ranksim_ratesim_subclass_a()
+        model = buld_ranksim_ratesim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
         tf.keras.backend.clear_session()
 
@@ -1781,7 +1838,7 @@ class TestJointRankRate:
         tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank2_rate2_v0
-        model = build_ranksim_ratesim_subclass_a()
+        model = buld_ranksim_ratesim_subclass_a()
         model.fit(tfds, epochs=1)
         result0 = model.evaluate(tfds, return_dict=True)
 
@@ -1838,7 +1895,7 @@ class TestJointRankRate:
 
 
 class TestRankRT:
-    """Test using multi-output rank similarity and response times."""
+    """Test using `RankSimilarityRT`  layers."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_rt_v0, is_eager):

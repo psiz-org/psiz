@@ -29,7 +29,7 @@ from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
     package="psiz.keras.layers", name="SoftRank"
 )
 class SoftRank(SoftRankBase):
-    """A soft rank layer.
+    """A (stateless) soft rank layer.
 
     A (stateless) layer that outputs a soft rank of items based on
     incoming 'strength' associated with each option.

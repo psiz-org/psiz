@@ -14,8 +14,10 @@
 # limitations under the License.
 # ============================================================================
 
-import psiz
+import pytest
 import tensorflow as tf
+
+import psiz
 
 
 def test_outcome_probability_v0():
@@ -271,5 +273,59 @@ def test_serialization_v0():
     assert rank2.dtype == "float32"
     assert rank2.n_select == 2
     rank2.temperature_initializer.value == 0.01
-    assert type(rank2.temperature_constraint) == tf.keras.constraints.NonNeg
-    assert type(rank2.temperature_regularizer) == tf.keras.regularizers.L1
+    assert isinstance(rank2.temperature_constraint, tf.keras.constraints.NonNeg)
+    assert isinstance(rank2.temperature_regularizer, tf.keras.regularizers.L1)
+
+
+def test_bad_input_v0():
+    """Test outcome probabilty computation.
+
+    Verify placeholder behavior.
+
+    """
+    softrank_3_3 = psiz.keras.layers.SoftRank(n_select=3)
+
+    strengths = tf.constant(
+        [
+            [1, 2, 3],
+            [0, 0, 0],
+            [2, 1, 4],
+            [4, 3, 1],
+        ],
+        dtype=tf.float32,
+    )
+
+    with pytest.raises(Exception) as e_info:
+        softrank_3_3(strengths)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `n_select` must be less than the number of options "
+        "implied by the inputs."
+    )
+
+
+def test_bad_input_v1():
+    """Test outcome probabilty computation.
+
+    Verify placeholder behavior.
+
+    """
+    softrank_3_4 = psiz.keras.layers.SoftRank(n_select=4)
+
+    strengths = tf.constant(
+        [
+            [1, 2, 3],
+            [0, 0, 0],
+            [2, 1, 4],
+            [4, 3, 1],
+        ],
+        dtype=tf.float32,
+    )
+
+    with pytest.raises(Exception) as e_info:
+        softrank_3_4(strengths)
+    assert e_info.type == ValueError
+    assert str(e_info.value) == (
+        "The argument `n_select` must be less than the number of options "
+        "implied by the inputs."
+    )

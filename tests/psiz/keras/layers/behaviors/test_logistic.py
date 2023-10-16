@@ -126,6 +126,6 @@ def test_serialization_v0():
     assert logistic_2.upper_initializer.value == 2.0
     assert logistic_2.midpoint_initializer.value == 1.0
     assert logistic_2.rate_initializer.value == 0.5
-    assert type(logistic_2.upper_constraint) == tf.keras.constraints.NonNeg
-    assert type(logistic_2.midpoint_constraint) == tf.keras.constraints.NonNeg
-    assert type(logistic_2.rate_constraint) == tf.keras.constraints.NonNeg
+    assert isinstance(logistic_2.upper_constraint, tf.keras.constraints.NonNeg)
+    assert isinstance(logistic_2.midpoint_constraint, tf.keras.constraints.NonNeg)
+    assert isinstance(logistic_2.rate_constraint, tf.keras.constraints.NonNeg)

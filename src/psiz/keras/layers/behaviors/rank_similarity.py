@@ -21,6 +21,7 @@ Classes:
 """
 
 import copy
+import warnings
 
 import tensorflow as tf
 
@@ -40,6 +41,17 @@ class RankSimilarity(RankSimilarityBase):
             kwargs: See `RankSimilarityBase`
 
         """
+        warnings.warn(
+            (
+                "RankSimilarity is deprecated and will be removed in a "
+                "future release. You can use "
+                "`psiz.keras.layers.SoftRank` layer instead. See the examples "
+                "for guidance; "
+                "version_announced=0.10.0; version_scheduled=0.11.0"
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super(RankSimilarity, self).__init__(**kwargs)
 
     def call(self, inputs, training=None):

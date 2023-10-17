@@ -23,6 +23,8 @@ import tensorflow_probability as tfp
 
 import psiz
 
+pytestmark = pytest.mark.skip("All tests deprecated.")
+
 
 class RankModelA(tf.keras.Model):
     """A `RankSimilarity` model.

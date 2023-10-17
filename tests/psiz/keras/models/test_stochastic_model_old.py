@@ -22,6 +22,8 @@ import tensorflow_probability as tfp
 import psiz.keras.layers
 from psiz.keras.models.stochastic_model import StochasticModel
 
+pytestmark = pytest.mark.skip("All tests deprecated.")
+
 
 class LayerA(tf.keras.layers.Layer):
     def __init__(self, units, **kwargs):

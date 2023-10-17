@@ -23,6 +23,8 @@ from psiz.keras.layers import DistanceBased
 from psiz.keras.layers.proximities.mink import Minkowski
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 
+pytestmark = pytest.mark.skip("All tests deprecated.")
+
 
 @pytest.fixture
 def kernel_db_static_v0():

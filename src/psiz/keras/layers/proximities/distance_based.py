@@ -20,6 +20,8 @@ Classes:
 
 """
 
+import warnings
+
 import tensorflow as tf
 
 from psiz.keras.layers.proximities.mink import Minkowski
@@ -34,6 +36,17 @@ class DistanceBased(tf.keras.layers.Layer):
 
     def __init__(self, distance=None, similarity=None, **kwargs):
         """Initialize."""
+        warnings.warn(
+            (
+                "DistanceBased is deprecated and will be removed in a "
+                "future release. You can use a subclass of a "
+                "`psiz.keras.layers.Proximity` layer instead along with "
+                "an optional `activation` argument; "
+                "version_announced=0.10.0; version_scheduled=0.11.0"
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super(DistanceBased, self).__init__(**kwargs)
 
         if distance is None:

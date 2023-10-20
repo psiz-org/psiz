@@ -22,7 +22,7 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.unravel_timestep import unravel_timestep
@@ -131,7 +131,7 @@ class SparseCategorical(Outcome):
             # pylint: disable=unexpected-keyword-arg
             # NOTE: A float for loss computation.
             y = tf.one_hot(
-                index, self.depth, on_value=1.0, off_value=0.0, dtype=K.floatx()
+                index, self.depth, on_value=1.0, off_value=0.0, dtype=backend.floatx()
             )
         else:
             raise ValueError(

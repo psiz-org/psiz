@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 import tensorflow_probability as tfp
 
 import psiz.keras.constraints as pk_constraints
@@ -106,7 +106,7 @@ class MinkowskiStochastic(Proximity):
 
     def build(self, input_shape):
         """Build."""
-        dtype = tf.as_dtype(self.dtype or K.floatx())
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
         self.rho = self._build_rho(input_shape, dtype)
         self.w = self._build_w(input_shape, dtype)
 
@@ -134,7 +134,8 @@ class MinkowskiStochastic(Proximity):
                 constraint=self.rho_scale_constraint,
             )
         rho_scale = tfp.util.DeferredTensor(
-            self.rho_untransformed_scale, lambda x: (K.epsilon() + tf.nn.softplus(x))
+            self.rho_untransformed_scale,
+            lambda x: (backend.epsilon() + tf.nn.softplus(x)),
         )
 
         rho_dist = tfp.distributions.TruncatedNormal(
@@ -168,7 +169,8 @@ class MinkowskiStochastic(Proximity):
                 constraint=self.w_scale_constraint,
             )
         w_scale = tfp.util.DeferredTensor(
-            self.w_untransformed_scale, lambda x: (K.epsilon() + tf.nn.softplus(x))
+            self.w_untransformed_scale,
+            lambda x: (backend.epsilon() + tf.nn.softplus(x)),
         )
 
         w_dist = tfp.distributions.TruncatedNormal(

@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 from tensorflow.keras import constraints
 
 
@@ -51,13 +51,13 @@ class NonNegNorm(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         # Enforce nonnegative.
-        w = w * tf.cast(tf.math.greater_equal(w, 0.0), K.floatx())
+        w = w * tf.cast(tf.math.greater_equal(w, 0.0), backend.floatx())
 
         # Enforce norm.
         return self.scale * (
             w
             / (
-                K.epsilon()
+                backend.epsilon()
                 + tf.pow(
                     tf.reduce_sum(w**self.p, axis=self.axis, keepdims=True),
                     tf.divide(1.0, self.p),

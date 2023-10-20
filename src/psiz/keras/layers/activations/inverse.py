@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 
@@ -69,7 +69,7 @@ class InverseSimilarity(tf.keras.layers.Layer):
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
 
@@ -84,7 +84,7 @@ class InverseSimilarity(tf.keras.layers.Layer):
                 initializer=self.tau_initializer,
                 trainable=mu_trainable,
                 name="mu",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16),
             )
 

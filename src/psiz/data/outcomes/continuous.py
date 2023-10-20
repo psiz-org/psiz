@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.unravel_timestep import unravel_timestep
@@ -92,7 +92,7 @@ class Continuous(Outcome):
             value = unravel_timestep(value)
 
         if export_format == "tfds":
-            y = tf.constant(value, dtype=K.floatx())
+            y = tf.constant(value, dtype=backend.floatx())
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)

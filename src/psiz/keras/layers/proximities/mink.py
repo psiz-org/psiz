@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 from psiz.tf.ops.wpnorm import wpnorm
@@ -85,7 +85,7 @@ class Minkowski(Proximity):
                 regularizer=self.rho_regularizer,
                 trainable=self.rho_trainable,
                 name="rho",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=self.rho_constraint,
             )
 
@@ -102,7 +102,7 @@ class Minkowski(Proximity):
 
     def build(self, input_shape):
         """Build."""
-        dtype = tf.as_dtype(self.dtype or K.floatx())
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
         with tf.name_scope(self.name):
             self.w = self.add_weight(
                 shape=[input_shape[0][-1]],

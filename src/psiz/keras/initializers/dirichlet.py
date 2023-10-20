@@ -23,7 +23,7 @@ Classes:
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import initializers
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 import tensorflow_probability as tfp
 
 
@@ -51,7 +51,7 @@ class Dirichlet(initializers.Initializer):
     def __call__(self, shape, dtype=None, **kwargs):
         """Call."""
         if dtype is None:
-            dtype = K.floatx()
+            dtype = backend.floatx()
         dist = tfp.distributions.Dirichlet(tf.cast(self.concentration, dtype))
         sample = tf.cast(self.scale, dtype) * dist.sample(shape, seed=self.seed)
         return sample

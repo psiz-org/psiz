@@ -17,7 +17,7 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.keras.initializers import Dirichlet
 
@@ -41,7 +41,7 @@ def test_all():
     tf_shape = tf.TensorShape([2, 4])
     _ = initializer(tf_shape)
 
-    _ = initializer(tf_shape, dtype=K.floatx())
+    _ = initializer(tf_shape, dtype=backend.floatx())
 
     # TODO Solve RNG seed issue so that the following test works
     # locally and on CI servers.

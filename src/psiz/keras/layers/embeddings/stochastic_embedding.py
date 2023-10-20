@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 from tensorflow.python.ops import math_ops
 
 
@@ -55,7 +55,7 @@ class StochasticEmbedding(tf.keras.layers.Layer):
         """
         if "input_shape" not in kwargs:
             kwargs["input_shape"] = (input_length,)
-        dtype = kwargs.pop("dtype", K.floatx())
+        dtype = kwargs.pop("dtype", backend.floatx())
         # We set autocast to False, as we do not want to cast floating-
         # point inputs to self.dtype. In call(), we cast to int32, and
         # casting to self.dtype before casting to int32 might cause the
@@ -73,7 +73,7 @@ class StochasticEmbedding(tf.keras.layers.Layer):
 
     def call(self, inputs):
         """Call."""
-        dtype = K.dtype(inputs)
+        dtype = backend.dtype(inputs)
         if dtype != "int32" and dtype != "int64":
             inputs = math_ops.cast(inputs, "int32")
         return inputs

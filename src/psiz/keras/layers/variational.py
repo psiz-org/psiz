@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 from tensorflow_probability.python.distributions import kullback_leibler as kl_lib
 
 
@@ -84,7 +84,7 @@ class Variational(tf.keras.layers.Layer):
         self.kl_anneal = self.add_weight(
             name="kl_anneal",
             shape=[],
-            dtype=K.floatx(),
+            dtype=backend.floatx(),
             initializer=tf.keras.initializers.Constant(1.0),
             trainable=False,
         )

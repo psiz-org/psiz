@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.keras.layers.drop import Drop
 
@@ -173,7 +173,7 @@ class Gate(tf.keras.layers.Layer):
             else:
                 gate_weights = gate_weights[:, 0]
             # Make sure `gate_weights` are integer type before using `one_hot`.
-            dtype = K.dtype(gate_weights)
+            dtype = backend.dtype(gate_weights)
             if dtype != "int32" and dtype != "int64":
                 gate_weights = tf.cast(gate_weights, "int32")
             gate_weights = tf.one_hot(

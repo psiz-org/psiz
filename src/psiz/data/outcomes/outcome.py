@@ -22,7 +22,7 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.data.dataset_component import DatasetComponent
 from psiz.data.unravel_timestep import unravel_timestep
@@ -121,7 +121,7 @@ class Outcome(DatasetComponent):
             sample_weight = unravel_timestep(sample_weight)
 
         if export_format == "tfds":
-            sample_weight = tf.constant(sample_weight, dtype=K.floatx())
+            sample_weight = tf.constant(sample_weight, dtype=backend.floatx())
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)

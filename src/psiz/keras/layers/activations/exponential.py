@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 
@@ -99,7 +99,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
 
@@ -114,7 +114,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
                 initializer=self.gamma_initializer,
                 trainable=gamma_trainable,
                 name="gamma",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
 
@@ -132,7 +132,7 @@ class ExponentialSimilarity(tf.keras.layers.Layer):
                 initializer=self.beta_initializer,
                 trainable=beta_trainable,
                 name="beta",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=pk_constraints.GreaterThan(min_value=0.0),
             )
 

@@ -22,7 +22,7 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.data.contents.content import Content
 from psiz.data.unravel_timestep import unravel_timestep
@@ -166,7 +166,7 @@ class Categorize(Content):
                 + "_objective_query_label": tf.constant(
                     objective_query_label,
                     name=(self.name + "_objective_query_label"),
-                    dtype=K.floatx(),
+                    dtype=backend.floatx(),
                 ),
             }
         else:

@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 from tensorflow.python.eager import context
 from tensorflow.python.framework import ops
 from tensorflow.python.ops import embedding_ops
@@ -126,7 +126,7 @@ class EmbeddingGammaDiag(StochasticEmbedding):
         self.rate_trainable = self.trainable and rate_trainable
 
         # If self.dtype is None, build weights using the default dtype.
-        dtype = tf.as_dtype(self.dtype or K.floatx())
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
 
         # Note: most sparse optimizers do not have GPU kernels defined.
         # When building graphs, the placement algorithm is able to

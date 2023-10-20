@@ -22,7 +22,7 @@ Classes:
 
 import tensorflow as tf
 from tensorflow.keras import initializers
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 import tensorflow_probability as tfp
 
 
@@ -50,7 +50,7 @@ class SoftplusUniform(initializers.Initializer):
         """Call."""
         # pylint: disable=unexpected-keyword-arg
         if dtype is None:
-            dtype = K.floatx()
+            dtype = backend.floatx()
 
         w = tf.random.uniform(
             shape,

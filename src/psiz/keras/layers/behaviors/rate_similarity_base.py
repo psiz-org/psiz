@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
@@ -129,7 +129,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
             initializer=self.lower_initializer,
             trainable=self.lower_trainable,
             name="lower",
-            dtype=K.floatx(),
+            dtype=backend.floatx(),
             constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
         )
 
@@ -142,7 +142,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
             initializer=self.upper_initializer,
             trainable=self.upper_trainable,
             name="upper",
-            dtype=K.floatx(),
+            dtype=backend.floatx(),
             constraint=pk_constraints.LessEqualThan(max_value=1.0),
         )
 
@@ -155,7 +155,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
             initializer=self.midpoint_initializer,
             trainable=self.midpoint_trainable,
             name="midpoint",
-            dtype=K.floatx(),
+            dtype=backend.floatx(),
             constraint=pk_constraints.MinMax(0.0, 1.0),
         )
 
@@ -168,7 +168,7 @@ class RateSimilarityBase(tf.keras.layers.Layer):
             initializer=self.rate_initializer,
             trainable=self.rate_trainable,
             name="rate",
-            dtype=K.floatx(),
+            dtype=backend.floatx(),
         )
 
     def build(self, input_shape):

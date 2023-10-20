@@ -16,7 +16,7 @@
 """Test constraints module."""
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.keras.initializers import SoftplusUniform
 
@@ -47,4 +47,4 @@ def test_all():
     tf_shape = tf.TensorShape([2, 4])
     _ = initializer(tf_shape)
 
-    _ = initializer(tf_shape, dtype=K.floatx())
+    _ = initializer(tf_shape, dtype=backend.floatx())

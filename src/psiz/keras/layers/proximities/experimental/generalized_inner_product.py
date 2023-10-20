@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.keras.layers.proximities.proximity import Proximity
 
@@ -79,7 +79,7 @@ class GeneralizedInnerProduct(Proximity):
     def build(self, input_shape):
         """Build."""
         n_dim = input_shape[0][-1]
-        dtype = tf.as_dtype(self.dtype or K.floatx())
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
         with tf.name_scope(self.name):
             self.w = self.add_weight(
                 shape=[n_dim, n_dim],
@@ -110,10 +110,10 @@ class GeneralizedInnerProduct(Proximity):
 
         # Add dummy axis to achieve batch dot product.
         z_0 = tf.expand_dims(z_0, -2)
-        z_1 = tf.expand_dims(z_1, -1)  # NOTE: `axis=-1` is intentional to acheive transpose
-        d = tf.matmul(
-            tf.matmul(z_0, self.w), z_1
-        )
+        z_1 = tf.expand_dims(
+            z_1, -1
+        )  # NOTE: `axis=-1` is intentional to acheive transpose
+        d = tf.matmul(tf.matmul(z_0, self.w), z_1)
         # Remove dummy and vetigal axis.
         d = tf.squeeze(d, [-2, -1])
 

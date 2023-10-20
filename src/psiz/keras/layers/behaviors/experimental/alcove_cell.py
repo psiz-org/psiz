@@ -23,7 +23,7 @@ Classes:
 import copy
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
@@ -151,7 +151,7 @@ class ALCOVECell(tf.keras.layers.Layer):
                 regularizer=self.rho_regularizer,
                 trainable=self.rho_trainable,
                 name="rho",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=self.rho_constraint,
             )
 
@@ -175,7 +175,7 @@ class ALCOVECell(tf.keras.layers.Layer):
                 regularizer=self.temperature_regularizer,
                 trainable=self.temperature_trainable,
                 name="temperature",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=self.temperature_constraint,
             )
 
@@ -199,7 +199,7 @@ class ALCOVECell(tf.keras.layers.Layer):
                 regularizer=self.lr_attention_regularizer,
                 trainable=self.lr_attention_trainable,
                 name="lr_attention",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=self.lr_attention_constraint,
             )
 
@@ -225,7 +225,7 @@ class ALCOVECell(tf.keras.layers.Layer):
                 regularizer=self.lr_association_regularizer,
                 trainable=self.lr_association_trainable,
                 name="lr_association",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=self.lr_association_constraint,
             )
 
@@ -388,8 +388,8 @@ class ALCOVECell(tf.keras.layers.Layer):
 
         """
         # Settings
-        min_val = tf.cast(-1.0, K.floatx())
-        max_val = tf.cast(1.0, K.floatx())
+        min_val = tf.cast(-1.0, backend.floatx())
+        max_val = tf.cast(1.0, backend.floatx())
 
         y_teach_min = tf.math.minimum(min_val, y_pred)
         y_teach_max = tf.math.maximum(max_val, y_pred)

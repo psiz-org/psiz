@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 from psiz.keras.layers.proximities.proximity import Proximity
 
@@ -81,7 +81,7 @@ class CosineSimilarity(Proximity):
     def build(self, input_shape):
         """Build."""
         n_dim = input_shape[0][-1]
-        dtype = tf.as_dtype(self.dtype or K.floatx())
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
 
         with tf.name_scope(self.name):
             self.w = self.add_weight(
@@ -116,12 +116,8 @@ class CosineSimilarity(Proximity):
         w = tf.broadcast_to(self.w, z_shape)
 
         numer = tf.reduce_sum(w * z_0 * z_1, axis=-1)
-        denom_0 = tf.sqrt(
-            tf.reduce_sum(w * z_0 * z_0, axis=-1)
-        )
-        denom_1 = tf.sqrt(
-            tf.reduce_sum(w * z_1 * z_1, axis=-1)
-        )
+        denom_0 = tf.sqrt(tf.reduce_sum(w * z_0 * z_0, axis=-1))
+        denom_1 = tf.sqrt(tf.reduce_sum(w * z_1 * z_1, axis=-1))
         s = numer / (denom_0 * denom_1)
 
         return self.activation(s)

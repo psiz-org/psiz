@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
@@ -68,7 +68,7 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint,
         )
         scale = tfp.util.DeferredTensor(
-            self.untransformed_scale, lambda x: (K.epsilon() + tf.nn.softplus(x))
+            self.untransformed_scale, lambda x: (backend.epsilon() + tf.nn.softplus(x))
         )
 
         dist = tfp.distributions.Normal(loc=self.loc, scale=scale)

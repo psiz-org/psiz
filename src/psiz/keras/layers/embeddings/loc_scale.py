@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 from tensorflow.python.eager import context
 
 # from tensorflow.keras.utils import tf_utils
@@ -113,7 +113,7 @@ class _EmbeddingLocScale(StochasticEmbedding):
         self.scale_trainable = self.trainable and scale_trainable
 
         # If self.dtype is None, build weights using the default dtype.
-        dtype = tf.as_dtype(self.dtype or K.floatx())
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
 
         # Note: most sparse optimizers do not have GPU kernels defined.
         # When building graphs, the placement algorithm is able to
@@ -133,7 +133,7 @@ class _EmbeddingLocScale(StochasticEmbedding):
     # def build(self, input_shape):
     #     """Build."""
     #     # If self.dtype is None, build weights using the default dtype.
-    #     dtype = tf.as_dtype(self.dtype or K.floatx())
+    #     dtype = tf.as_dtype(self.dtype or backend.floatx())
 
     #     # Note: most sparse optimizers do not have GPU kernels defined.
     #     # When building graphs, the placement algorithm is able to

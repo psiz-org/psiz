@@ -22,7 +22,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.proximities.proximity import Proximity
@@ -88,7 +88,7 @@ class InnerProduct(Proximity):
     def build(self, input_shape):
         """Build."""
         n_dim = input_shape[0][-1]
-        dtype = tf.as_dtype(self.dtype or K.floatx())
+        dtype = tf.as_dtype(self.dtype or backend.floatx())
         n_tril_element = int(n_dim * (n_dim + 1) / 2)
         self._tril_mask = tfp.math.fill_triangular(
             tf.ones([n_tril_element], dtype=dtype), upper=False, name=None
@@ -137,10 +137,10 @@ class InnerProduct(Proximity):
 
         # Add dummy axis to achieve batch dot product.
         z_0 = tf.expand_dims(z_0, -2)
-        z_1 = tf.expand_dims(z_1, -1)  # NOTE: `axis=-1` is intentional to acheive transpose
-        d = tf.matmul(
-            tf.matmul(z_0, w), z_1
-        )
+        z_1 = tf.expand_dims(
+            z_1, -1
+        )  # NOTE: `axis=-1` is intentional to acheive transpose
+        d = tf.matmul(tf.matmul(z_0, w), z_1)
         # Remove dummy and vetigal axis.
         d = tf.squeeze(d, [-2, -1])
 
@@ -151,9 +151,15 @@ class InnerProduct(Proximity):
         config = super().get_config()
         config.update(
             {
-                "w_tril_initializer": tf.keras.initializers.serialize(self.w_tril_initializer),
-                "w_tril_regularizer": tf.keras.regularizers.serialize(self.w_tril_regularizer),
-                "w_tril_constraint": tf.keras.constraints.serialize(self.w_tril_constraint),
+                "w_tril_initializer": tf.keras.initializers.serialize(
+                    self.w_tril_initializer
+                ),
+                "w_tril_regularizer": tf.keras.regularizers.serialize(
+                    self.w_tril_regularizer
+                ),
+                "w_tril_constraint": tf.keras.constraints.serialize(
+                    self.w_tril_constraint
+                ),
                 "w_tril_trainable": self.w_tril_trainable,
             }
         )

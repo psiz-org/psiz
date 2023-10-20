@@ -22,7 +22,7 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
@@ -110,7 +110,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
                 initializer=self.temperature_initializer,
                 trainable=temperature_trainable,
                 name="temperature",
-                dtype=K.floatx(),
+                dtype=backend.floatx(),
                 constraint=pk_constraints.GreaterThan(min_value=0.0),
             )
 
@@ -159,7 +159,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         selection_mask = np.zeros([self.n_reference])
         for i_select in range(self.n_select):
             selection_mask[i_select] = 1.0
-        selection_mask = tf.constant(selection_mask, dtype=K.floatx())
+        selection_mask = tf.constant(selection_mask, dtype=backend.floatx())
         # Add any necessary leading axes before stimulus axis.
         if self._stimuli_axis > 0:
             for i_axis in range(self._stimuli_axis):
@@ -193,7 +193,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # Transpose `outcome_idx` to make more efficient when used inside
         # `call` method.
         outcome_idx = tf.transpose(tf.constant(outcome_idx))
-        n_outcome = tf.constant(n_outcome, dtype=K.floatx())
+        n_outcome = tf.constant(n_outcome, dtype=backend.floatx())
         return outcome_idx, n_outcome
 
     def _split_stimulus_set(self, z):
@@ -284,7 +284,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # effectively been "consumed" by the similarity operation.
         # NOTE: `is_reference_present` only relevant for placeholder trials
         # since all trials will have the same number of references.
-        is_reference_present = tf.cast(is_reference_present, K.floatx())
+        is_reference_present = tf.cast(is_reference_present, backend.floatx())
         # Zero out non-present similarities.
         sim_qr = tf.math.multiply(
             sim_qr, is_reference_present, name="rank_sim_zero_out_nonpresent"
@@ -339,7 +339,9 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # NOTE: Some trials will be placeholders, so we adjust the output
         # probability to be uniform so that downstream loss computation
         # doesn't generate nan's.
-        prob_placeholder = tf.cast(tf.math.equal(total_outcome_prob, 0.0), K.floatx())
+        prob_placeholder = tf.cast(
+            tf.math.equal(total_outcome_prob, 0.0), backend.floatx()
+        )
         outcome_prob = outcome_prob + (prob_placeholder / self._n_outcome)
         # TODO remove if keeping temperature calculation at end of function.
         # NOTE: could `reduce_sum` op to compute `total_outcome_prob`, but

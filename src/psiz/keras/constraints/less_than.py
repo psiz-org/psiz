@@ -21,7 +21,7 @@ Classes:
 """
 
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import backend
 from tensorflow.keras import constraints
 
 
@@ -41,7 +41,7 @@ class LessThan(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         w = w - self.max_value
-        w = w * tf.cast(tf.math.greater(0.0, w), K.floatx())
+        w = w * tf.cast(tf.math.greater(0.0, w), backend.floatx())
         w = w + self.max_value
         return w
 

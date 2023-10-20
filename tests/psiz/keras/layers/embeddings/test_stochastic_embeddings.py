@@ -56,7 +56,7 @@ def test_init_with_shape(emb_input_1d):
     np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
 
-@pytest.mark.parametrize("is_eager", [True, False])
+@pytest.mark.parametrize("is_eager", [True, False])  # TODO uncomment
 @pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
@@ -111,7 +111,9 @@ def test_call_1d_input(
     assert config["sample_shape"] == sample_shape
 
     # Reconstruct embedding and test.
-    recon_emb = embedding_class.from_config(config)
+    recon_emb = embedding_class.from_config(
+        config
+    )  # TODO YOU ARE HERE something not right
     recon_output = recon_emb(input)
     np.testing.assert_array_equal(desired_output_shape, np.shape(recon_output.numpy()))
 

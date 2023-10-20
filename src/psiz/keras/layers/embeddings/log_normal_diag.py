@@ -40,11 +40,11 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
 
     def __init__(self, input_dim, output_dim, **kwargs):
         """Initialize."""
-        # Overide default scale initializer.
+        # Pass in an alternative "default" scale initializer.
         scale_initializer = kwargs.pop("scale_initializer", None)
         if scale_initializer is None:
             scale_initializer = tf.keras.initializers.RandomNormal(
-                mean=tfp.math.softplus_inverse(2.0), stddev=0.01
+                mean=tfp.math.softplus_inverse(2.0).numpy(), stddev=0.01
             )
 
         self.loc = None

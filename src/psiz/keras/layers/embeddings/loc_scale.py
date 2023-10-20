@@ -97,7 +97,7 @@ class _EmbeddingLocScale(StochasticEmbedding):
         self.loc_initializer = tf.keras.initializers.get(loc_initializer)
         if scale_initializer is None:
             scale_initializer = tf.keras.initializers.RandomNormal(
-                mean=tfp.math.softplus_inverse(1.0), stddev=0.001
+                mean=tfp.math.softplus_inverse(1.0).numpy(), stddev=0.001
             )
         self.scale_initializer = tf.keras.initializers.get(scale_initializer)
 

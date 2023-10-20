@@ -148,7 +148,6 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
 
 @kullback_leibler.RegisterKL(InvSoftplusNormal, InvSoftplusNormal)
 def _kl_lognormal_lognormal(a, b, name=None):
-
     """Calculate the batched KL divergence KL(a || b) with a and b LogNormal.
 
     This is the same as the KL divergence between the underlying Normal

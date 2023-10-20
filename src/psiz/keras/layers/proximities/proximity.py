@@ -47,7 +47,7 @@ class Proximity(tf.keras.layers.Layer):
         """
         super(Proximity, self).__init__(**kwargs)
 
-        if (activation is None):
+        if activation is None:
             activation = tf.keras.layers.Activation("linear")
         self.activation = activation
 

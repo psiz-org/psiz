@@ -33,7 +33,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
-from psiz.tf.information_theory import ig_model_categorical
+from psiz.keras.ops import ig_model_categorical
 from psiz.tfp import unpack_mvn
 
 # Uncomment the following line to force eager execution.
@@ -97,8 +97,8 @@ def main():
     for i_case in range(n_case):
         model = build_model(n_reference, n_select, i_case)
         model.compile(
-            loss=tf.keras.losses.CategoricalCrossentropy(),
-            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+            loss=keras.losses.CategoricalCrossentropy(),
+            optimizer=keras.optimizers.Adam(learning_rate=0.001),
         )
 
         # Create exhaustive list of candidate trials.
@@ -276,18 +276,18 @@ def build_model(n_reference, n_select, case):
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
-        scale_initializer=tf.keras.initializers.Constant(
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         ),
     )
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
         trainable=False,
     )

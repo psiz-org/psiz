@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2024 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of information theory functionality."""
+"""Module of utility functions.
+
+Functions:
+    expand_dim_repeat: Repeat Tensor along a newly inserted axis.
+
+"""
 
 
-from psiz.tf.information_theory.ig_categorical import ig_categorical
-from psiz.tf.information_theory.ig_model_categorical import ig_model_categorical
+import keras
 
-__all__ = [
-    "ig_categorical",
-    "ig_model_categorical",
-]
+
+def expand_dim_repeat(x, n_repeat, axis=1):
+    """Repeat Tensor along a newly inserted axis."""
+    x = keras.ops.expand_dims(x, axis=axis)
+    return keras.ops.repeat(x, n_repeat, axis=axis)

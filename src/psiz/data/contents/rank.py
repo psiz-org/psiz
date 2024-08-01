@@ -316,7 +316,7 @@ class Rank(Content):
         outcomes = outcomes[:, 0:n_select]
         # Find outcome idx by finding a match.
         is_equal = np.equal(outcomes, selection_indices)
-        is_equal = np.product(is_equal, 1).astype(bool)
+        is_equal = np.prod(is_equal, 1).astype(bool)
         # There should only be one True location.
         outcome_idx = dmy_idx[is_equal][0]
         return outcome_idx

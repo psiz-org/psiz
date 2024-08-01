@@ -16,7 +16,7 @@
 """Test constraints module."""
 
 import tensorflow as tf
-from tensorflow.keras import backend
+from keras import backend
 
 from psiz.keras.initializers import SoftplusUniform
 
@@ -48,3 +48,5 @@ def test_all():
     _ = initializer(tf_shape)
 
     _ = initializer(tf_shape, dtype=backend.floatx())
+
+    # TODO add serialization test

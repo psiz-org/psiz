@@ -22,7 +22,7 @@ Classes:
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend
+from keras import backend
 
 from psiz.data.contents.content import Content
 from psiz.data.unravel_timestep import unravel_timestep

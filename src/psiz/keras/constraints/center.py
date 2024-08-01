@@ -20,12 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import constraints
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
-class Center(constraints.Constraint):
+@keras.saving.register_keras_serializable(package="psiz.keras.constraints")
+class Center(keras.constraints.Constraint):
     """Constrains the weights to be zero-centered.
 
     This constraint can be used to improve the numerical stability of
@@ -45,7 +45,7 @@ class Center(constraints.Constraint):
 
     def __call__(self, w):
         """Call."""
-        return w - tf.reduce_mean(w, axis=self.axis, keepdims=True)
+        return w - keras.ops.mean(w, axis=self.axis, keepdims=True)
 
     def get_config(self):
         """Return configuration."""

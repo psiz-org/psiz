@@ -20,19 +20,19 @@ Classes:
 
 """
 
+
+import keras
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.utils.m_prefer_n import m_prefer_n
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="RankSimilarityBase"
 )
-class RankSimilarityBase(tf.keras.layers.Layer):
+class RankSimilarityBase(keras.layers.Layer):
     """A base layer for rank similarity behavior."""
 
     def __init__(
@@ -99,18 +99,16 @@ class RankSimilarityBase(tf.keras.layers.Layer):
 
         self.fit_temperature = fit_temperature
         if temperature_initializer is None:
-            temperature_initializer = tf.keras.initializers.Constant(value=1.0)
-        self.temperature_initializer = tf.keras.initializers.get(
-            temperature_initializer
-        )
+            temperature_initializer = keras.initializers.Constant(value=1.0)
+        self.temperature_initializer = keras.initializers.get(temperature_initializer)
         temperature_trainable = self.trainable and self.fit_temperature
-        with tf.name_scope(self.name):
+        with keras.name_scope(self.name):
             self.temperature = self.add_weight(
                 shape=[],
                 initializer=self.temperature_initializer,
                 trainable=temperature_trainable,
                 name="temperature",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterThan(min_value=0.0),
             )
 
@@ -129,16 +127,14 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # Convert from *relative* axis index to *absolute* axis index.
         n_axis = len(input_shape[self.data_scope + "_stimulus_set"])
         self._stimuli_axis = n_axis + stimuli_axis
-        self._stimuli_axis_tensor = tf.constant(self._stimuli_axis)
+        self._stimuli_axis_tensor = keras.ops.convert_to_tensor(self._stimuli_axis)
         self._outcome_axis = n_axis + outcome_axis
-        self._outcome_axis_tensor = tf.constant(self._outcome_axis)
+        self._outcome_axis_tensor = keras.ops.convert_to_tensor(self._outcome_axis)
 
         # Preassemble a reference index for expected `stimulus_set`.
         # Tensor to grab references only (i.e., drop query index).
-        self._n_reference = tf.constant(self.n_reference)
-        self._reference_indices = tf.range(
-            tf.constant(1), tf.constant(self.n_reference + 1)
-        )
+        self._n_reference = keras.ops.convert_to_tensor(self.n_reference)
+        self._reference_indices = keras.ops.arange(1, self.n_reference + 1)
 
         # Determine what the shape of `z_q` and `z_r` for the stimulus axis.
         # NOTE: We use `n_axis + 1` in anticipation of the added "embedding
@@ -159,13 +155,15 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         selection_mask = np.zeros([self.n_reference])
         for i_select in range(self.n_select):
             selection_mask[i_select] = 1.0
-        selection_mask = tf.constant(selection_mask, dtype=backend.floatx())
+        selection_mask = keras.ops.convert_to_tensor(
+            selection_mask, dtype=keras.backend.floatx()
+        )
         # Add any necessary leading axes before stimulus axis.
         if self._stimuli_axis > 0:
             for i_axis in range(self._stimuli_axis):
-                selection_mask = tf.expand_dims(selection_mask, 0)
+                selection_mask = keras.ops.expand_dims(selection_mask, 0)
         # Add outcome axis.
-        selection_mask = tf.expand_dims(selection_mask, self._outcome_axis)
+        selection_mask = keras.ops.expand_dims(selection_mask, self._outcome_axis)
         self._selection_mask = selection_mask
 
     def _possible_outcomes(self):
@@ -176,7 +174,7 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         Returns:
             An 2D Tensor indicating all possible outcomes where the
                 values indicate indices of the reference stimuli. Since
-                the Tensor will be used in `tf.gather`, each column
+                the Tensor will be used in `take`, each column
                 (not row) corresponds to one outcome. Note the indices
                 refer to references only and do not include an index
                 for the query. Also note that the unpermuted index is
@@ -192,8 +190,8 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         n_outcome = outcome_idx.shape[0]
         # Transpose `outcome_idx` to make more efficient when used inside
         # `call` method.
-        outcome_idx = tf.transpose(tf.constant(outcome_idx))
-        n_outcome = tf.constant(n_outcome, dtype=backend.floatx())
+        outcome_idx = keras.ops.transpose(keras.ops.convert_to_tensor(outcome_idx))
+        n_outcome = keras.ops.convert_to_tensor(n_outcome, dtype=keras.backend.floatx())
         return outcome_idx, n_outcome
 
     def _split_stimulus_set(self, z):
@@ -217,11 +215,10 @@ class RankSimilarityBase(tf.keras.layers.Layer):
 
         """
         # Split query and reference embeddings:
-        z_q, z_r = tf.split(z, [1, self._n_reference], self._stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], axis=self._stimuli_axis)  # TODO verify
 
-        # The `tf.split` op does not infer split dimension shape.
-        # TODO Is this still necessary given `_n_reference` defined in
-        # `build` method?
+        # TODO Is this still necessary in Keras 3? Also `_n_reference` is defined in
+        # `build` method
         z_q.set_shape(self._z_q_shape)
         z_r.set_shape(self._z_r_shape)
 
@@ -239,13 +236,13 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         """
         # NOTE: Equivalent to:
         #     is_reference_present = stimulus_set[:, 1:]
-        reference_stimulus_set = tf.gather(
+        reference_stimulus_set = keras.ops.take(
             stimulus_set,
             indices=self._reference_indices,
             axis=self._stimuli_axis_tensor,
         )
         # NOTE: Assumes `mask_zero=True`.
-        return tf.math.not_equal(reference_stimulus_set, 0)
+        return keras.ops.not_equal(reference_stimulus_set, 0)
 
     def _pairwise_similarity(self, inputs_copied):
         """Compute pairwise similarity."""
@@ -284,63 +281,75 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # effectively been "consumed" by the similarity operation.
         # NOTE: `is_reference_present` only relevant for placeholder trials
         # since all trials will have the same number of references.
-        is_reference_present = tf.cast(is_reference_present, backend.floatx())
-        # Zero out non-present similarities.
-        sim_qr = tf.math.multiply(
-            sim_qr, is_reference_present, name="rank_sim_zero_out_nonpresent"
+        is_reference_present = keras.ops.cast(
+            is_reference_present, keras.backend.floatx()
         )
+        # Zero out non-present similarities.
+        sim_qr = keras.ops.multiply(sim_qr, is_reference_present)
 
         # Add trialing outcome axis to `sim_qr` that reflects all possible
         # outcomes.
-        sim_qr = tf.gather(sim_qr, self._outcome_idx, axis=self._stimuli_axis_tensor)
+        sim_qr = keras.ops.take(
+            sim_qr, self._outcome_idx, axis=self._stimuli_axis_tensor
+        )
         # Add singleton outcome axis to `is_reference_present`.
-        is_reference_present = tf.expand_dims(is_reference_present, self._outcome_axis)
+        is_reference_present = keras.ops.expand_dims(
+            is_reference_present, self._outcome_axis
+        )
 
         # Determine if outcome is legitimate by checking if at least one
         # reference is present. This is important because some trials are
         # placeholders.
         # NOTE: Equivalent to:
         #     is_outcome = is_reference_present[:, 0]
-        is_outcome = tf.gather(
-            is_reference_present, indices=tf.constant(0), axis=self._stimuli_axis_tensor
+        is_outcome = keras.ops.take(
+            is_reference_present,
+            indices=keras.ops.convert_to_tensor(0),
+            axis=self._stimuli_axis_tensor,
         )
 
         # Compute denominator based on formulation of Luce's choice rule by
         # summing over the different references present in a trial. Note that
         # the similarity for placeholder references will be zero since they
         # were zeroed out by the multiply op with `is_reference_present` above.
-        denom = tf.cumsum(sim_qr, axis=self._stimuli_axis, reverse=True)
+        denom = keras.ops.flip(
+            keras.ops.cumsum(
+                keras.ops.flip(sim_qr, axis=self._stimuli_axis),
+                axis=self._stimuli_axis,
+            ),
+            axis=self._stimuli_axis,
+        )
 
         # Compute log-probability of each selection, assuming all selections
         # occurred. Add fuzz factor to avoid log(0)
-        sim_qr = tf.maximum(sim_qr, tf.keras.backend.epsilon())
-        denom = tf.maximum(denom, tf.keras.backend.epsilon())
-        event_logit = tf.math.log(sim_qr) - tf.math.log(denom)
+        sim_qr = keras.ops.maximum(sim_qr, keras.backend.epsilon())
+        denom = keras.ops.maximum(denom, keras.backend.epsilon())
+        event_logit = keras.ops.log(sim_qr) - keras.ops.log(denom)
 
         # Mask non-existent selection events (i.e, non-existent reference
         # selections).
         event_logit = self._selection_mask * event_logit
 
         # Compute log-probability of outcome (i.e., a sequence of events).
-        outcome_logit = tf.reduce_sum(event_logit, axis=self._stimuli_axis)
+        outcome_logit = keras.ops.sum(event_logit, axis=self._stimuli_axis)
 
         # Prepare for softmax op.
         # Convert back to probility space.
-        outcome_prob = tf.math.exp(outcome_logit)
+        outcome_prob = keras.ops.exp(outcome_logit)
         outcome_prob = is_outcome * outcome_prob
 
         # Clean up numerical errors in probabilities.
         # NOTE: The `reduce_sum` op above means that the outcome axis has been
         # shifted by one, so the next op uses `self._outcome_axis - 1`.
-        total_outcome_prob = tf.reduce_sum(
+        total_outcome_prob = keras.ops.sum(
             outcome_prob, axis=(self._outcome_axis - 1), keepdims=True
         )
 
         # NOTE: Some trials will be placeholders, so we adjust the output
         # probability to be uniform so that downstream loss computation
         # doesn't generate nan's.
-        prob_placeholder = tf.cast(
-            tf.math.equal(total_outcome_prob, 0.0), backend.floatx()
+        prob_placeholder = keras.ops.cast(
+            keras.ops.equal(total_outcome_prob, 0.0), keras.backend.floatx()
         )
         outcome_prob = outcome_prob + (prob_placeholder / self._n_outcome)
         # TODO remove if keeping temperature calculation at end of function.
@@ -349,18 +358,9 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         # total_outcome_prob = total_outcome_prob + prob_placeholder
 
         # Compute softmax using optional temperature parameter.
-        outcome_prob = tf.nn.softmax(
-            tf.math.divide(tf.math.log(outcome_prob), self.temperature)
+        outcome_prob = keras.ops.softmax(
+            keras.ops.divide(keras.ops.log(outcome_prob), self.temperature)
         )
-        # TODO remove if no longer necessary, since using `tf.nn.softmax`.
-        # outcome_prob = tf.math.exp(
-        #     tf.math.divide(tf.math.log(outcome_prob), self.temperature)
-        # )
-        # total_outcome_prob = tf.math.reduce_sum(
-        #     outcome_prob, axis=(self._outcome_axis - 1), keepdims=True
-        # )
-        # # Smooth out any numerical erros in probabilities.
-        # outcome_prob = tf.math.divide(outcome_prob, total_outcome_prob)
         return outcome_prob
 
     def get_config(self):
@@ -370,17 +370,17 @@ class RankSimilarityBase(tf.keras.layers.Layer):
             {
                 "n_reference": self.n_reference,
                 "n_select": self.n_select,
-                "percept": tf.keras.utils.serialize_keras_object(self.percept),
-                "kernel": tf.keras.utils.serialize_keras_object(self.kernel),
-                "percept_adapter": tf.keras.utils.serialize_keras_object(
+                "percept": keras.saving.serialize_keras_object(self.percept),
+                "kernel": keras.saving.serialize_keras_object(self.kernel),
+                "percept_adapter": keras.saving.serialize_keras_object(
                     self.percept_adapter
                 ),
-                "kernel_adapter": tf.keras.utils.serialize_keras_object(
+                "kernel_adapter": keras.saving.serialize_keras_object(
                     self.kernel_adapter
                 ),
                 "data_scope": self.data_scope,
                 "fit_temperature": self.fit_temperature,
-                "temperature_initializer": tf.keras.initializers.serialize(
+                "temperature_initializer": keras.initializers.serialize(
                     self.temperature_initializer
                 ),
             }
@@ -393,8 +393,12 @@ class RankSimilarityBase(tf.keras.layers.Layer):
         kernel_serial = config["kernel"]
         percept_adapter_serial = config["percept_adapter"]
         kernel_adapter_serial = config["kernel_adapter"]
-        config["percept"] = tf.keras.layers.deserialize(percept_serial)
-        config["kernel"] = tf.keras.layers.deserialize(kernel_serial)
-        config["percept_adapter"] = tf.keras.layers.deserialize(percept_adapter_serial)
-        config["kernel_adapter"] = tf.keras.layers.deserialize(kernel_adapter_serial)
+        config["percept"] = keras.saving.deserialize_keras_object(percept_serial)
+        config["kernel"] = keras.saving.deserialize_keras_object(kernel_serial)
+        config["percept_adapter"] = keras.saving.deserialize_keras_object(
+            percept_adapter_serial
+        )
+        config["kernel_adapter"] = keras.saving.deserialize_keras_object(
+            kernel_adapter_serial
+        )
         return super().from_config(config)

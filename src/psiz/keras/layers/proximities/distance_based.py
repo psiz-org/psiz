@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of TensorFlow kernel layers.
+"""Module of Keras proximity layers.
 
 Classes:
     DistanceBased: A distance-based similarity kernel.
@@ -22,16 +22,16 @@ Classes:
 
 import warnings
 
-import tensorflow as tf
+import keras
 
 from psiz.keras.layers.proximities.mink import Minkowski
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="DistanceBased"
 )
-class DistanceBased(tf.keras.layers.Layer):
+class DistanceBased(keras.layers.Layer):
     """A distance-based kernel layer."""
 
     def __init__(self, distance=None, similarity=None, **kwargs):
@@ -63,8 +63,8 @@ class DistanceBased(tf.keras.layers.Layer):
         Compute k(z_0, z_1), where `k` is the pairwise kernel function.
 
         Args:
-            inputs: A list of two tf.Tensor's, plus an optional third
-                Tensor. The first two tensors representing coordinates
+            inputs: A list of two tensors, plus an optional third
+                tensor. The first two tensors representing coordinates
                 the pairwise coordinates for which to compute
                 similarity. The coordinate tensors are assumed be at
                 least rank 2, where the first axis indicates the batch
@@ -76,7 +76,7 @@ class DistanceBased(tf.keras.layers.Layer):
                 shape=(batch_size, n_col)
 
         Returns:
-            sim_qr: A tf.Tensor of pairwise similarites.
+            sim_qr: A tensor of pairwise similarites.
                 shape=(batch_size, [n, m, ...])
 
         """
@@ -101,8 +101,8 @@ class DistanceBased(tf.keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
-                "distance": tf.keras.utils.serialize_keras_object(self.distance),
-                "similarity": tf.keras.utils.serialize_keras_object(self.similarity),
+                "distance": keras.saving.serialize_keras_object(self.distance),
+                "similarity": keras.saving.serialize_keras_object(self.similarity),
             }
         )
         return config
@@ -110,8 +110,10 @@ class DistanceBased(tf.keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         """Create from configuration."""
-        config["distance"] = tf.keras.layers.deserialize(config["distance"])
-        config["similarity"] = tf.keras.layers.deserialize(config["similarity"])
+        config["distance"] = keras.saving.deserialize_keras_object(config["distance"])
+        config["similarity"] = keras.saving.deserialize_keras_object(
+            config["similarity"]
+        )
         return cls(**config)
 
     def compute_output_shape(self, input_shape):

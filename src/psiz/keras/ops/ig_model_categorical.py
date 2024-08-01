@@ -25,7 +25,7 @@ import copy
 
 import tensorflow as tf
 
-from psiz.tf.information_theory import ig_categorical
+from psiz.keras.ops import ig_categorical
 
 
 def ig_model_categorical(model_list, inputs, n_sample):

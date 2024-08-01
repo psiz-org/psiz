@@ -52,7 +52,7 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-class RateModel(tf.keras.Model):
+class RateModel(keras.Model):
     """A rate model.
 
     No Gates.
@@ -75,7 +75,7 @@ class RateModel(tf.keras.Model):
         return self.rate(s)
 
 
-class SimilarityModel(tf.keras.Model):
+class SimilarityModel(keras.Model):
     """A similarity model."""
 
     def __init__(self, percept=None, proximity=None, **kwargs):
@@ -177,7 +177,7 @@ def main():
 
     # Use Tensorboard callback.
     fp_board_frame = fp_board / Path("frame_0")
-    cb_board = tf.keras.callbacks.TensorBoard(
+    cb_board = keras.callbacks.TensorBoard(
         log_dir=fp_board_frame,
         histogram_freq=0,
         write_graph=False,
@@ -187,7 +187,7 @@ def main():
         embeddings_freq=0,
         embeddings_metadata=None,
     )
-    early_stop = tf.keras.callbacks.EarlyStopping(
+    early_stop = keras.callbacks.EarlyStopping(
         "mse", patience=15, mode="min", restore_best_weights=True
     )
     callbacks = [cb_board, early_stop]
@@ -246,29 +246,27 @@ def main():
 def build_ground_truth_randn(n_stimuli, n_dim):
     """Return a ground truth embedding."""
     seed = 252
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(
-            stddev=0.17, seed=seed
-        ),
+        embeddings_initializer=keras.initializers.RandomNormal(stddev=0.17, seed=seed),
         mask_zero=True,
     )
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
         trainable=False,
     )
     rate = psiz.keras.layers.Logistic(
-        upper_initializer=tf.keras.initializers.Constant(1.0),
-        midpoint_initializer=tf.keras.initializers.Constant(0.4),
-        rate_initializer=tf.keras.initializers.Constant(15.0),
+        upper_initializer=keras.initializers.Constant(1.0),
+        midpoint_initializer=keras.initializers.Constant(0.4),
+        rate_initializer=keras.initializers.Constant(15.0),
     )
     model = RateModel(percept=percept, proximity=proximity, behavior=rate)
     return model
@@ -284,29 +282,29 @@ def build_ground_truth_grid():
     # Add placeholder.
     z_grid = np.vstack((np.ones([1, 2]), z_grid))
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
-        embeddings_initializer=tf.keras.initializers.Constant(z_grid),
+        embeddings_initializer=keras.initializers.Constant(z_grid),
         mask_zero=True,
     )
 
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
         trainable=False,
     )
 
     rate = psiz.keras.layers.Logistic(
-        upper_initializer=tf.keras.initializers.Constant(1.0),
-        midpoint_initializer=tf.keras.initializers.Constant(0.5),
-        rate_initializer=tf.keras.initializers.Constant(15.0),
+        upper_initializer=keras.initializers.Constant(1.0),
+        midpoint_initializer=keras.initializers.Constant(0.5),
+        rate_initializer=keras.initializers.Constant(15.0),
     )
     model = RateModel(percept=percept, proximity=proximity, rate=rate)
 
@@ -315,24 +313,24 @@ def build_ground_truth_grid():
 
 def build_model(n_stimuli, n_dim, lr):
     """Build a model to use for inference."""
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
         trainable=False,
     )
     rate = psiz.keras.layers.Logistic()
     model = RateModel(percept=percept, proximity=proximity, rate=rate)
     model.compile(
-        loss=tf.keras.losses.MeanSquaredError(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
-        weighted_metrics=[tf.keras.metrics.MeanSquaredError(name="mse")],
+        loss=keras.losses.MeanSquaredError(),
+        optimizer=keras.optimizers.Adam(learning_rate=lr),
+        weighted_metrics=[keras.metrics.MeanSquaredError(name="mse")],
     )
     return model
 

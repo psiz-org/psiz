@@ -20,14 +20,15 @@ Classes:
 
 """
 
+
+import keras
 import tensorflow as tf
-from tensorflow.keras import backend
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="EmbeddingLaplaceDiag"
 )
 class EmbeddingLaplaceDiag(_EmbeddingLocScale):
@@ -44,14 +45,16 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
         self.untransformed_scale = None
         super(EmbeddingLaplaceDiag, self).__init__(input_dim, output_dim, **kwargs)
 
-    def _build_embeddings_distribution(self, dtype):
+    def build(self, input_shape=None):
         """Build embeddings distribution."""
+        if self.built:
+            return
+
         # Handle location variables.
         self.loc = self.add_weight(
-            name="loc",
             shape=[self.input_dim, self.output_dim],
-            dtype=dtype,
             initializer=self.loc_initializer,
+            name="loc",
             regularizer=self.loc_regularizer,
             trainable=self.loc_trainable,
             constraint=self.loc_constraint,
@@ -59,18 +62,22 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
 
         # Handle scale variables.
         self.untransformed_scale = self.add_weight(
-            name="untransformed_scale",
             shape=[self.input_dim, self.output_dim],
-            dtype=dtype,
             initializer=self.scale_initializer,
+            name="untransformed_scale",
             regularizer=self.scale_regularizer,
             trainable=self.scale_trainable,
             constraint=self.scale_constraint,
         )
-        scale = tfp.util.DeferredTensor(
-            self.untransformed_scale, lambda x: (backend.epsilon() + tf.nn.softplus(x))
-        )
+        self.built = True
 
+    @property
+    def embeddings(self):
+        """Return embeddings."""
+        scale = tfp.util.DeferredTensor(
+            self.untransformed_scale,
+            lambda x: (keras.backend.epsilon() + tf.nn.softplus(x)),
+        )
         dist = tfp.distributions.Laplace(loc=self.loc, scale=scale)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(

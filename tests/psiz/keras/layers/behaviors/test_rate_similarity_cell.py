@@ -15,7 +15,8 @@
 # ============================================================================
 """Module for testing models."""
 
-import tensorflow as tf
+
+import keras
 import tensorflow_probability as tfp
 
 import psiz
@@ -25,7 +26,7 @@ def percept_static_v0():
     """Static percept layer."""
     n_stimuli = 20
     n_dim = 3
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     return percept
 
 
@@ -38,7 +39,7 @@ def percept_stochastic_v0():
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
-        scale_initializer=tf.keras.initializers.Constant(
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         ),
     )
@@ -48,12 +49,12 @@ def percept_stochastic_v0():
 def kernel_v0():
     """A kernel layer."""
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
         trainable=False,

@@ -21,12 +21,13 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 from psiz.keras.layers.gates.gate import Gate
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="SplitGate")
+@keras.saving.register_keras_serializable(package="psiz.keras", name="SplitGate")
 class SplitGate(Gate):
     """Abstract layer that routes inputs to subnetworks."""
 
@@ -101,7 +102,7 @@ class SplitGate(Gate):
         subnets_serial = []
         for i in range(self.n_subnet):
             subnets_serial.append(
-                tf.keras.utils.serialize_keras_object(
+                keras.saving.serialize_keras_object(
                     self._unprocess_subnet(self._processed_subnets[i])
                 )
             )
@@ -116,9 +117,4 @@ class SplitGate(Gate):
 
     @classmethod
     def from_config(cls, config):
-        subnets_serial = config["subnets"]
-        subnets = []
-        for subnet_serial in subnets_serial:
-            subnets.append(tf.keras.layers.deserialize(subnet_serial))
-        config["subnets"] = subnets
         return cls(**config)

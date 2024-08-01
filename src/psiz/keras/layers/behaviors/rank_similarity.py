@@ -20,15 +20,16 @@ Classes:
 
 """
 
+
 import copy
 import warnings
 
-import tensorflow as tf
+import keras
 
 from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="RankSimilarity"
 )
 class RankSimilarity(RankSimilarityBase):

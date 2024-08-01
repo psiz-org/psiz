@@ -21,14 +21,13 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
-import tensorflow_probability as tfp
+
+import keras
 
 from psiz.keras.layers.proximities.proximity import Proximity
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="InnerProduct"
 )
 class InnerProduct(Proximity):
@@ -78,29 +77,36 @@ class InnerProduct(Proximity):
 
         self.w_tril_trainable = self.trainable and w_tril_trainable
         if w_tril_initializer is None:
-            w_tril_initializer = tf.keras.initializers.Identity(gain=1.0)
+            w_tril_initializer = keras.initializers.Identity(gain=1.0)
         else:
-            w_tril_initializer = tf.keras.initializers.get(w_tril_initializer)
+            w_tril_initializer = keras.initializers.get(w_tril_initializer)
         self.w_tril_initializer = w_tril_initializer
-        self.w_tril_regularizer = tf.keras.regularizers.get(w_tril_regularizer)
-        self.w_tril_constraint = tf.keras.constraints.get(w_tril_constraint)
+        self.w_tril_regularizer = keras.regularizers.get(w_tril_regularizer)
+        self.w_tril_constraint = keras.constraints.get(w_tril_constraint)
 
     def build(self, input_shape):
         """Build."""
         n_dim = input_shape[0][-1]
-        dtype = tf.as_dtype(self.dtype or backend.floatx())
-        n_tril_element = int(n_dim * (n_dim + 1) / 2)
-        self._tril_mask = tfp.math.fill_triangular(
-            tf.ones([n_tril_element], dtype=dtype), upper=False, name=None
-        )
-        with tf.name_scope(self.name):
+        # Create lower triangular mask.
+        tril_mask = []
+        for i in range(n_dim):
+            tril_mask_row = []
+            for j in range(n_dim):
+                if i >= j:
+                    tril_mask_row.append(1.0)
+                else:
+                    tril_mask_row.append(0.0)
+            tril_mask.append(tril_mask_row)
+        tril_mask = keras.ops.stack(tril_mask)
+        self._tril_mask = tril_mask
+
+        with keras.name_scope(self.name):
             self._untransformed_w_tril = self.add_weight(
                 shape=[n_dim, n_dim],
                 initializer=self.w_tril_initializer,
                 regularizer=self.w_tril_regularizer,
                 trainable=self.w_tril_trainable,
                 name="w_tril",
-                dtype=dtype,
                 constraint=self.w_tril_constraint,
             )
 
@@ -113,13 +119,13 @@ class InnerProduct(Proximity):
     def w(self):
         """Return `w` attribute."""
         w_tril = self._tril_mask * self._untransformed_w_tril
-        return tf.matmul(w_tril, w_tril, transpose_b=True)
+        return keras.ops.matmul(w_tril, keras.ops.transpose(w_tril))
 
     def call(self, inputs):
         """Call.
 
         Args:
-            inputs: A list of two tf.Tensor's denoting a the set of
+            inputs: A list of two tensors denoting a the set of
                 vectors to compute pairwise distances. Each tensor is
                 assumed to have the same shape and be at least rank-2.
                 Any additional tensors in the list are ignored.
@@ -133,16 +139,16 @@ class InnerProduct(Proximity):
         z_1 = inputs[1]
 
         w_tril = self._tril_mask * self._untransformed_w_tril
-        w = tf.matmul(w_tril, w_tril, transpose_b=True)
+        w = keras.ops.matmul(w_tril, keras.ops.transpose(w_tril))
 
         # Add dummy axis to achieve batch dot product.
-        z_0 = tf.expand_dims(z_0, -2)
-        z_1 = tf.expand_dims(
+        z_0 = keras.ops.expand_dims(z_0, -2)
+        z_1 = keras.ops.expand_dims(
             z_1, -1
         )  # NOTE: `axis=-1` is intentional to acheive transpose
-        d = tf.matmul(tf.matmul(z_0, w), z_1)
+        d = keras.ops.matmul(keras.ops.matmul(z_0, w), z_1)
         # Remove dummy and vetigal axis.
-        d = tf.squeeze(d, [-2, -1])
+        d = keras.ops.squeeze(d, [-2, -1])
 
         return self.activation(d)
 
@@ -151,13 +157,13 @@ class InnerProduct(Proximity):
         config = super().get_config()
         config.update(
             {
-                "w_tril_initializer": tf.keras.initializers.serialize(
+                "w_tril_initializer": keras.initializers.serialize(
                     self.w_tril_initializer
                 ),
-                "w_tril_regularizer": tf.keras.regularizers.serialize(
+                "w_tril_regularizer": keras.regularizers.serialize(
                     self.w_tril_regularizer
                 ),
-                "w_tril_constraint": tf.keras.constraints.serialize(
+                "w_tril_constraint": keras.constraints.serialize(
                     self.w_tril_constraint
                 ),
                 "w_tril_trainable": self.w_tril_trainable,

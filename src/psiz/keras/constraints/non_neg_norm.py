@@ -20,13 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
-from tensorflow.keras import constraints
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
-class NonNegNorm(constraints.Constraint):
+@keras.saving.register_keras_serializable(package="psiz.keras.constraints")
+class NonNegNorm(keras.constraints.Constraint):
     """Non-negative norm weight constraint.
 
     Constrains the weights incident to each hidden unit
@@ -51,16 +50,16 @@ class NonNegNorm(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         # Enforce nonnegative.
-        w = w * tf.cast(tf.math.greater_equal(w, 0.0), backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), keras.backend.floatx())
 
         # Enforce norm.
         return self.scale * (
             w
             / (
-                backend.epsilon()
-                + tf.pow(
-                    tf.reduce_sum(w**self.p, axis=self.axis, keepdims=True),
-                    tf.divide(1.0, self.p),
+                keras.backend.epsilon()
+                + keras.ops.power(
+                    keras.ops.sum(w**self.p, axis=self.axis, keepdims=True),
+                    keras.ops.divide(1.0, self.p),
                 )
             )
         )

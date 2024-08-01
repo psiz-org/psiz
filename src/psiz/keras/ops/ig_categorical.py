@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2024 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ Functions:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 
 def ig_categorical(y_pred):
@@ -41,12 +42,11 @@ def ig_categorical(y_pred):
     `y_pred` is zero for those elements.
 
     Args:
-        y_pred: A tf.Tensor of model's categorical outcome predictions.
+        y_pred: A tensor of a model's categorical outcome predictions.
             shape=(n_event, n_sample, n_outcome)
 
     Returns:
-        A tf.Tensor object representing the expected information gain
-            of the candidate event(s).
+        A tensor representing the expected information gain of the candidate event(s).
             shape=(n_event,)
 
     """
@@ -55,25 +55,25 @@ def ig_categorical(y_pred):
     # where `c` indicates a candidate event that we want to compute the
     # expected information gain for.
     # Take mean over samples to approximate p(y_i | obs, c).
-    term0 = tf.reduce_mean(y_pred, axis=1)  # shape=(n_event, n_outcome)
-    term0 = term0 * tf.math.log(tf.math.maximum(term0, tf.keras.backend.epsilon()))
+    term0 = keras.ops.mean(y_pred, axis=1)  # shape=(n_event, n_outcome)
+    term0 = term0 * keras.ops.log(keras.ops.maximum(term0, keras.backend.epsilon()))
     # TODO do I need to zero out place-holder outcomes here? I'm not
     # sure because y_pred is not zero for placeholder elements any more.
     # NOTE: At this point we would need to zero out place-holder outcomes,
     # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.
     # Sum over possible outcomes.
-    term0 = -tf.reduce_sum(term0, axis=1)  # shape=(n_event,)
+    term0 = -keras.ops.sum(term0, axis=1)  # shape=(n_event,)
 
     # Second term of mutual information.
     # E[H(Y | Z, D, x)]
-    term1 = y_pred * tf.math.log(tf.math.maximum(y_pred, tf.keras.backend.epsilon()))
+    term1 = y_pred * keras.ops.log(keras.ops.maximum(y_pred, keras.backend.epsilon()))
     # Take the sum over the possible outcomes.
     # NOTE: At this point we would need to zero out place-holder outcomes,
     # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.
-    term1 = tf.reduce_sum(term1, axis=2)  # shape=(n_event, n_sample)
+    term1 = keras.ops.sum(term1, axis=2)  # shape=(n_event, n_sample)
     # Take the mean over all samples.
-    term1 = tf.reduce_mean(term1, axis=1)  # shape=(n_event,)
+    term1 = keras.ops.mean(term1, axis=1)  # shape=(n_event,)
 
     return term0 + term1

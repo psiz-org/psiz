@@ -14,8 +14,11 @@
 # limitations under the License.
 # ============================================================================
 
-import psiz
+
+import keras
 import tensorflow as tf
+
+import psiz
 
 
 def test_outcome_probability_v0():
@@ -23,7 +26,7 @@ def test_outcome_probability_v0():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -32,12 +35,12 @@ def test_outcome_probability_v0():
         ),
     )
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
         trainable=False,
@@ -80,7 +83,7 @@ def test_serialization():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -89,12 +92,12 @@ def test_serialization():
         ),
     )
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
         trainable=False,

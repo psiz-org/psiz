@@ -21,17 +21,15 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 import psiz.keras.constraints as pk_constraints
-from psiz.tf.ops.wpnorm import wpnorm
+from psiz.keras.ops.wpnorm import wpnorm
 from psiz.keras.layers.proximities.proximity import Proximity
 
 
-@tf.keras.utils.register_keras_serializable(
-    package="psiz.keras.layers", name="Minkowski"
-)
+@keras.saving.register_keras_serializable(package="psiz.keras.layers", name="Minkowski")
 class Minkowski(Proximity):
     """Minkowski pairwise distance.
 
@@ -72,53 +70,52 @@ class Minkowski(Proximity):
 
         self.rho_trainable = self.trainable and rho_trainable
         if rho_initializer is None:
-            rho_initializer = tf.random_uniform_initializer(1.0, 2.0)
-        self.rho_initializer = tf.keras.initializers.get(rho_initializer)
-        self.rho_regularizer = tf.keras.regularizers.get(rho_regularizer)
+            rho_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
+        self.rho_initializer = keras.initializers.get(rho_initializer)
+        self.rho_regularizer = keras.regularizers.get(rho_regularizer)
         if rho_constraint is None:
             rho_constraint = pk_constraints.GreaterEqualThan(min_value=1.0)
-        self.rho_constraint = tf.keras.constraints.get(rho_constraint)
-        with tf.name_scope(self.name):
+        self.rho_constraint = keras.constraints.get(rho_constraint)
+        with keras.name_scope(self.name):
             self.rho = self.add_weight(
                 shape=[],
                 initializer=self.rho_initializer,
                 regularizer=self.rho_regularizer,
                 trainable=self.rho_trainable,
                 name="rho",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=self.rho_constraint,
             )
 
         self.w_trainable = self.trainable and w_trainable
         if w_initializer is None:
-            w_initializer = tf.random_uniform_initializer(1.01, 3.0)
-        self.w_initializer = tf.keras.initializers.get(w_initializer)
-        self.w_regularizer = tf.keras.regularizers.get(w_regularizer)
+            w_initializer = keras.initializers.RandomUniform(minval=1.01, maxval=3.0)
+        self.w_initializer = keras.initializers.get(w_initializer)
+        self.w_regularizer = keras.regularizers.get(w_regularizer)
         if w_constraint is None:
-            w_constraint = tf.keras.constraints.NonNeg()
-        self.w_constraint = tf.keras.constraints.get(w_constraint)
-
-        self.w = None
+            w_constraint = keras.constraints.NonNeg()
+        self.w_constraint = keras.constraints.get(w_constraint)
 
     def build(self, input_shape):
         """Build."""
-        dtype = tf.as_dtype(self.dtype or backend.floatx())
-        with tf.name_scope(self.name):
+        if self.built:
+            return
+        with keras.name_scope(self.name):
             self.w = self.add_weight(
                 shape=[input_shape[0][-1]],
                 initializer=self.w_initializer,
                 regularizer=self.w_regularizer,
                 trainable=self.w_trainable,
                 name="w",
-                dtype=dtype,
                 constraint=self.w_constraint,
             )
+        super().build(input_shape)
 
     def call(self, inputs):
         """Call.
 
         Args:
-            inputs: A list of two tf.Tensor's denoting a the set of
+            inputs: A list of two tensors denoting a the set of
                 vectors to compute pairwise distances. Each tensor is
                 assumed to have the same shape and be at least rank-2.
                 Any additional tensors in the list are ignored.
@@ -133,15 +130,15 @@ class Minkowski(Proximity):
         x = z_0 - z_1
 
         # Broadcast `rho` and `w` to appropriate shape.
-        x_shape = tf.shape(x)
+        x_shape = keras.ops.shape(x)
         # Broadcast `rho` to shape=(batch_size, [n, m, ...]).
-        rho = self.rho * tf.ones(x_shape[0:-1])
+        rho = self.rho * keras.ops.ones(x_shape[0:-1])
         # Broadcast `w` to shape=(batch_size, [n, m, ...] n_dim).
-        w = tf.broadcast_to(self.w, x_shape)
+        w = keras.ops.broadcast_to(self.w, x_shape)
 
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)
-        d_qr = tf.squeeze(d_qr, [-1])
+        d_qr = keras.ops.squeeze(d_qr, [-1])
         return self.activation(d_qr)
 
     def get_config(self):
@@ -149,16 +146,12 @@ class Minkowski(Proximity):
         config = super().get_config()
         config.update(
             {
-                "rho_initializer": tf.keras.initializers.serialize(
-                    self.rho_initializer
-                ),
-                "w_initializer": tf.keras.initializers.serialize(self.w_initializer),
-                "rho_regularizer": tf.keras.regularizers.serialize(
-                    self.rho_regularizer
-                ),
-                "w_regularizer": tf.keras.regularizers.serialize(self.w_regularizer),
-                "rho_constraint": tf.keras.constraints.serialize(self.rho_constraint),
-                "w_constraint": tf.keras.constraints.serialize(self.w_constraint),
+                "rho_initializer": keras.initializers.serialize(self.rho_initializer),
+                "w_initializer": keras.initializers.serialize(self.w_initializer),
+                "rho_regularizer": keras.regularizers.serialize(self.rho_regularizer),
+                "w_regularizer": keras.regularizers.serialize(self.w_regularizer),
+                "rho_constraint": keras.constraints.serialize(self.rho_constraint),
+                "w_constraint": keras.constraints.serialize(self.w_constraint),
                 "rho_trainable": self.rho_trainable,
                 "w_trainable": self.w_trainable,
             }

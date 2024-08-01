@@ -20,11 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="GateAdapter")
-class GateAdapter(tf.keras.layers.Layer):
+@keras.saving.register_keras_serializable(package="psiz.keras", name="GateAdapter")
+class GateAdapter(keras.layers.Layer):
     """A layer that adapts inputs for networks with `Gates`.
 
     Attributes:
@@ -56,7 +57,9 @@ class GateAdapter(tf.keras.layers.Layer):
         self.gating_keys = gating_keys
         if format_inputs_as_tuple is None:
             format_inputs_as_tuple = True
-        self.format_inputs_as_tuple = tf.constant(format_inputs_as_tuple)
+        self.format_inputs_as_tuple = (
+            format_inputs_as_tuple  # TODO does this need to be a keras tensor?
+        )
 
         self._strip_inputs = None
 
@@ -95,17 +98,19 @@ class GateAdapter(tf.keras.layers.Layer):
             self._all_keys.append(key)
 
         if len(self._all_keys) == 1:
-            self._strip_inputs = tf.constant(True)
+            # self._strip_inputs = tf.constant(True)  # TODO does this need to be a keras tensor?
+            self._strip_inputs = True
         else:
-            self._strip_inputs = tf.constant(False)
+            # self._strip_inputs = tf.constant(False)  # TODO does this need to be a keras tensor?
+            self._strip_inputs = False
 
     def call(self, inputs, training=None, mask=None):
         """Call.
 
         Args:
             inputs: A dictionary of Tensors.
-            training (optional): see tf.keras.layers.Layer
-            mask (optional): see tf.keras.layers.Layer
+            training (optional): see keras.layers.Layer
+            mask (optional): see keras.layers.Layer
 
         """
         if self.format_inputs_as_tuple:

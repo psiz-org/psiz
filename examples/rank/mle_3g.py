@@ -58,7 +58,7 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-class RankModel(tf.keras.Model):
+class RankModel(keras.Model):
     """A soft rank model.
 
     Proximity BraidGate.
@@ -83,7 +83,7 @@ class RankModel(tf.keras.Model):
         return self.soft_8rank2(s)
 
 
-class SimilarityModel(tf.keras.Model):
+class SimilarityModel(keras.Model):
     """A similarity model."""
 
     def __init__(self, percept=None, braided_proximity=None, **kwargs):
@@ -207,7 +207,7 @@ def main():
     )
 
     # Use early stopping.
-    early_stop = tf.keras.callbacks.EarlyStopping(
+    early_stop = keras.callbacks.EarlyStopping(
         "val_cce", patience=15, mode="min", restore_best_weights=True
     )
     callbacks = [early_stop]
@@ -296,37 +296,37 @@ def main():
 
 def build_ground_truth_model(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=0.17),
+        embeddings_initializer=keras.initializers.RandomNormal(stddev=0.17),
         mask_zero=True,
     )
     # Define group-specific proximity layers.
     shared_activation = psiz.keras.layers.ExponentialSimilarity(
         trainable=False,
-        beta_initializer=tf.keras.initializers.Constant(10.0),
-        tau_initializer=tf.keras.initializers.Constant(1.0),
-        gamma_initializer=tf.keras.initializers.Constant(0.0),
+        beta_initializer=keras.initializers.Constant(10.0),
+        tau_initializer=keras.initializers.Constant(1.0),
+        gamma_initializer=keras.initializers.Constant(0.0),
     )
     proximity_0 = psiz.keras.layers.Minkowski(
         rho_trainable=False,
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant([1.8, 1.8, 0.2, 0.2]),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant([1.8, 1.8, 0.2, 0.2]),
         w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
         activation=shared_activation,
     )
     proximity_1 = psiz.keras.layers.Minkowski(
         rho_trainable=False,
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant([1.0, 1.0, 1.0, 1.0]),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant([1.0, 1.0, 1.0, 1.0]),
         w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
         activation=shared_activation,
     )
     proximity_2 = psiz.keras.layers.Minkowski(
         rho_trainable=False,
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant([0.2, 0.2, 1.8, 1.8]),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant([0.2, 0.2, 1.8, 1.8]),
         w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
         activation=shared_activation,
     )
@@ -338,9 +338,9 @@ def build_ground_truth_model(n_stimuli, n_dim):
         percept=percept, braided_proximity=braided_proximity, soft_8rank2=soft_8rank2
     )
     model.compile(
-        loss=tf.keras.losses.CategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        weighted_metrics=[tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        loss=keras.losses.CategoricalCrossentropy(),
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        weighted_metrics=[keras.metrics.CategoricalCrossentropy(name="cce")],
     )
     return model
 
@@ -357,13 +357,13 @@ def build_model(n_stimuli, n_dim):
         model: A TensorFlow Keras model.
 
     """
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     # Define group-specific proximity layers.
     shared_activation = psiz.keras.layers.ExponentialSimilarity(
         trainable=False,
-        beta_initializer=tf.keras.initializers.Constant(10.0),
-        tau_initializer=tf.keras.initializers.Constant(1.0),
-        gamma_initializer=tf.keras.initializers.Constant(0.0),
+        beta_initializer=keras.initializers.Constant(10.0),
+        tau_initializer=keras.initializers.Constant(1.0),
+        gamma_initializer=keras.initializers.Constant(0.0),
     )
     proximity_0 = build_proximity(shared_activation, n_dim)
     proximity_1 = build_proximity(shared_activation, n_dim)
@@ -376,9 +376,9 @@ def build_model(n_stimuli, n_dim):
         percept=percept, braided_proximity=braided_proximity, soft_8rank2=soft_8rank2
     )
     model.compile(
-        loss=tf.keras.losses.CategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        weighted_metrics=[tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        loss=keras.losses.CategoricalCrossentropy(),
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        weighted_metrics=[keras.metrics.CategoricalCrossentropy(name="cce")],
     )
     return model
 
@@ -387,7 +387,7 @@ def build_proximity(similarity, n_dim):
     """Build proximity layer with learnable 'attention weights'."""
     proximity = psiz.keras.layers.Minkowski(
         rho_trainable=False,
-        rho_initializer=tf.keras.initializers.Constant(2.0),
+        rho_initializer=keras.initializers.Constant(2.0),
         w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
         activation=similarity,
     )

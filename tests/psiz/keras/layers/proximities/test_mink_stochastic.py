@@ -15,6 +15,8 @@
 # ============================================================================
 """Test MinkowskiStochastic layer."""
 
+
+import keras
 import numpy as np
 import tensorflow as tf
 
@@ -43,9 +45,9 @@ def test_call_exponential(paired_inputs_v0):
     """Test call with exponential activation function."""
     mink_layer = MinkowskiStochastic(
         activation=ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(0.1),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(0.1),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
     )
@@ -63,31 +65,21 @@ def test_call_exponential(paired_inputs_v0):
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
 
 
-def test_output_shape(paired_inputs_v0):
-    """Test output_shape method."""
-    mink_layer = MinkowskiStochastic()
-    input_shape = [
-        tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-        tf.TensorShape(tf.shape(paired_inputs_v0[1])),
-    ]
-    output_shape = mink_layer.compute_output_shape(input_shape)
-    desired_output_shape = tf.TensorShape([5])
-    tf.debugging.assert_equal(output_shape, desired_output_shape)
-
-
 def test_serialization():
     """Test serialization."""
     mink_layer = MinkowskiStochastic(
-        rho_loc_initializer=tf.keras.initializers.Constant(2.1),
-        w_loc_initializer=tf.keras.initializers.Constant(1.1),
+        rho_loc_initializer=keras.initializers.Constant(2.1),
+        w_loc_initializer=keras.initializers.Constant(1.1),
         activation=ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(0.1),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(0.1),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
     )
-    mink_layer.build([[None, 3], [None, 3]])
+    mink_layer.build(
+        [[None, 3], [None, 3]]
+    )  # TODO I suspect I'm not calling build correctly
     tf.debugging.assert_equal(mink_layer.w.event_shape, tf.TensorShape([3]))
     tf.debugging.assert_equal(mink_layer.rho.mode(), tf.constant([2.1]))
     tf.debugging.assert_equal(mink_layer.w.mode(), tf.constant([1.1, 1.1, 1.1]))

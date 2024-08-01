@@ -21,14 +21,16 @@ Classes:
 
 """
 
+
+import keras
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="EmbeddingShared"
 )
-class EmbeddingShared(tf.keras.layers.Layer):
+class EmbeddingShared(keras.layers.Layer):
     """A class for wrapping a shared Embedding."""
 
     def __init__(self, input_dim, output_dim, embedding, mask_zero=False, **kwargs):
@@ -67,7 +69,7 @@ class EmbeddingShared(tf.keras.layers.Layer):
             {
                 "input_dim": int(self.input_dim),
                 "output_dim": int(self.output_dim),
-                "embedding": tf.keras.utils.serialize_keras_object(self._embedding),
+                "embedding": keras.saving.serialize_keras_object(self._embedding),
                 "mask_zero": self.mask_zero,
             }
         )
@@ -88,7 +90,7 @@ class EmbeddingShared(tf.keras.layers.Layer):
             layer: A layer instance.
 
         """
-        config["embedding"] = tf.keras.layers.deserialize(config["embedding"])
+        config["embedding"] = keras.saving.deserialize_keras_object(config["embedding"])
         return cls(**config)
 
     @property

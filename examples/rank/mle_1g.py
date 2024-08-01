@@ -48,7 +48,7 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-class RankModel(tf.keras.Model):
+class RankModel(keras.Model):
     """A soft rank model.
 
     No Gates.
@@ -71,7 +71,7 @@ class RankModel(tf.keras.Model):
         return self.soft_8rank2(s)
 
 
-class SimilarityModel(tf.keras.Model):
+class SimilarityModel(keras.Model):
     """A similarity model."""
 
     def __init__(self, percept=None, proximity=None, **kwargs):
@@ -167,7 +167,7 @@ def main():
     )
 
     # Use early stopping.
-    early_stop = tf.keras.callbacks.EarlyStopping(
+    early_stop = keras.callbacks.EarlyStopping(
         "val_cce", patience=30, mode="min", restore_best_weights=True
     )
 
@@ -197,7 +197,7 @@ def main():
 
         # Use Tensorboard callback.
         fp_board_frame = fp_board / Path("frame_{0}".format(i_frame))
-        cb_board = tf.keras.callbacks.TensorBoard(
+        cb_board = keras.callbacks.TensorBoard(
             log_dir=fp_board_frame,
             histogram_freq=0,
             write_graph=False,
@@ -271,29 +271,29 @@ def main():
 
 def build_ground_truth_model(n_stimuli, n_dim):
     """Return a ground truth embedding."""
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=0.17),
+        embeddings_initializer=keras.initializers.RandomNormal(stddev=0.17),
         mask_zero=True,
     )
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
         ),
         trainable=False,
     )
     soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
     model = RankModel(percept=percept, proximity=proximity, soft_8rank2=soft_8rank2)
     model.compile(
-        loss=tf.keras.losses.CategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        weighted_metrics=[tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        loss=keras.losses.CategoricalCrossentropy(),
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        weighted_metrics=[keras.metrics.CategoricalCrossentropy(name="cce")],
     )
 
     return model
@@ -312,25 +312,25 @@ def build_model(n_stimuli, n_dim):
 
     """
     # Create a group-agnostic percept layer.
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     # Create a group-agnostic proximity layer.
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
         ),
         trainable=False,
     )
     soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
     model = RankModel(percept=percept, proximity=proximity, soft_8rank2=soft_8rank2)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model

@@ -15,13 +15,14 @@
 # ============================================================================
 """Test trials module."""
 
+import keras
 import numpy as np
 import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
-from psiz.tf.information_theory import ig_model_categorical
+from psiz.keras.ops import ig_model_categorical
 
 
 class RankModel(psiz.keras.StochasticModel):
@@ -37,13 +38,13 @@ class RankModel(psiz.keras.StochasticModel):
         self.stimuli_axis = 1
         self.percept = percept
         self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             activation=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
             trainable=False,
         )
@@ -52,7 +53,7 @@ class RankModel(psiz.keras.StochasticModel):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given2rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 2], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_2rank1(s)
 
@@ -89,15 +90,15 @@ def base_circular_model():
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
-        loc_initializer=tf.keras.initializers.Constant(loc),
-        scale_initializer=tf.keras.initializers.Constant(
+        loc_initializer=keras.initializers.Constant(loc),
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         ),
     )
 
     model = RankModel(percept=percept)
     # Call build to force initializers to execute.
-    model.percept.build([None, None, None])
+    # model.percept.build([None, None, None])
     return model, loc
 
 
@@ -110,8 +111,8 @@ def model_0():
     scale = 0.01 * np.ones([n_point, n_dim], dtype=np.float32)
     scale[4, :] = 0.03
 
-    # Assign `loc` and `scale` to model.
-    model.percept.loc.assign(loc)
+    # Update `scale` of model.
+    model.percept.build()
     model.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
     return model
 
@@ -126,7 +127,8 @@ def model_1():
     scale = 0.01 * np.ones([n_point, n_dim], dtype=np.float32)
     scale[4, :] = 0.03
 
-    # Assign `loc` and `scale` to model.
+    # Update `loc` and `scale` in model.
+    model.percept.build()
     model.percept.loc.assign(loc)
     model.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
     return model
@@ -157,13 +159,6 @@ def test_1_model(model_0, ds_2rank1):
     ig = tf.concat(ig, 0)
 
     # Assert IG values are in the right ballpark.
-    # Old target.
-    # ig_desired = tf.constant(
-    #     [
-    #         0.01855242, 0.01478302, 0.01481092, 0.01253963, 0.0020327,
-    #         0.00101262
-    #     ], dtype=tf.float32
-    # )
     ig_desired = tf.constant(
         [0.03496134, 0.02489483, 0.02482754, 0.02341402, 0.003456, 0.00146809],
         dtype=tf.float32,
@@ -189,13 +184,6 @@ def test_2_models(model_0, model_1, ds_2rank1):
     ig = tf.concat(ig, 0)
 
     # Assert IG values are in the right ballpark.
-    # Old target.
-    # ig_desired = tf.constant(
-    #     [
-    #         0.01855242, 0.01478302, 0.01481092, 0.01253963, 0.0020327,
-    #         0.00101262
-    #     ], dtype=tf.float32
-    # )
     ig_desired = tf.constant(
         [0.03436345, 0.02473378, 0.02513063, 0.02297509, 0.00344968, 0.00151819],
         dtype=tf.float32,

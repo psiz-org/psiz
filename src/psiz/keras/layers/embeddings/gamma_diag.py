@@ -20,10 +20,9 @@ Classes:
 
 """
 
+
+import keras
 import tensorflow as tf
-from tensorflow.keras import backend
-from tensorflow.python.eager import context
-from tensorflow.python.framework import ops
 from tensorflow.python.ops import embedding_ops
 import tensorflow_probability as tfp
 
@@ -31,7 +30,7 @@ import psiz.keras.constraints
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="EmbeddingGammaDiag"
 )
 class EmbeddingGammaDiag(StochasticEmbedding):
@@ -96,60 +95,43 @@ class EmbeddingGammaDiag(StochasticEmbedding):
 
         # Handle initializers.
         if concentration_initializer is None:
-            concentration_initializer = tf.keras.initializers.RandomUniform(1.0, 3.0)
-        self.concentration_initializer = tf.keras.initializers.get(
+            concentration_initializer = keras.initializers.RandomUniform(1.0, 3.0)
+        self.concentration_initializer = keras.initializers.get(
             concentration_initializer
         )
         if rate_initializer is None:
-            rate_initializer = tf.keras.initializers.RandomUniform(0.0, 1.0)
-        self.rate_initializer = tf.keras.initializers.get(rate_initializer)
+            rate_initializer = keras.initializers.RandomUniform(0.0, 1.0)
+        self.rate_initializer = keras.initializers.get(rate_initializer)
 
         # Handle regularizers.
-        self.concentration_regularizer = tf.keras.regularizers.get(
+        self.concentration_regularizer = keras.regularizers.get(
             concentration_regularizer
         )
-        self.rate_regularizer = tf.keras.regularizers.get(rate_regularizer)
+        self.rate_regularizer = keras.regularizers.get(rate_regularizer)
 
         # Handle constraints.
         if concentration_constraint is None:
             concentration_constraint = psiz.keras.constraints.GreaterEqualThan(
                 min_value=1.0
             )
-        self.concentration_constraint = tf.keras.constraints.get(
-            concentration_constraint
-        )
+        self.concentration_constraint = keras.constraints.get(concentration_constraint)
         if rate_constraint is None:
             rate_constraint = psiz.keras.constraints.GreaterThan(min_value=0.0)
-        self.rate_constraint = tf.keras.constraints.get(rate_constraint)
+        self.rate_constraint = keras.constraints.get(rate_constraint)
 
         self.concentration_trainable = self.trainable and concentration_trainable
         self.rate_trainable = self.trainable and rate_trainable
 
-        # If self.dtype is None, build weights using the default dtype.
-        dtype = tf.as_dtype(self.dtype or backend.floatx())
-
-        # Note: most sparse optimizers do not have GPU kernels defined.
-        # When building graphs, the placement algorithm is able to
-        # place variables on CPU since it knows all kernels using the
-        # variable only exist on CPU. When eager execution is enabled,
-        # the placement decision has to be made right now. Checking for
-        # the presence of GPUs to avoid complicating the TPU codepaths
-        # which can handle sparse optimizers.
-        with tf.name_scope(self.name):
-            if context.executing_eagerly() and context.context().num_gpus():
-                with ops.device("cpu:0"):
-                    self.embeddings = self._build_embeddings_distribution(dtype)
-            else:
-                self.embeddings = self._build_embeddings_distribution(dtype)
-
-    def _build_embeddings_distribution(self, dtype):
+    def build(self, input_shape=None):
         """Build embeddings distribution."""
+        if self.built:
+            return
+
         # Handle concentration variables.
         self.concentration = self.add_weight(
-            name="concentration",
             shape=[self.input_dim, self.output_dim],
-            dtype=dtype,
             initializer=self.concentration_initializer,
+            name="concentration",
             regularizer=self.concentration_regularizer,
             trainable=self.concentration_trainable,
             constraint=self.concentration_constraint,
@@ -157,15 +139,17 @@ class EmbeddingGammaDiag(StochasticEmbedding):
 
         # Handle rate variables.
         self.rate = self.add_weight(
-            name="untransformed_rate",
             shape=[self.input_dim, self.output_dim],
-            dtype=dtype,
             initializer=self.rate_initializer,
+            name="untransformed_rate",
             regularizer=self.rate_regularizer,
             trainable=self.rate_trainable,
             constraint=self.rate_constraint,
         )
 
+    @property
+    def embeddings(self):
+        """Return embeddings."""
         dist = tfp.distributions.Gamma(self.concentration, self.rate)
         batch_ndims = tf.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
@@ -196,22 +180,18 @@ class EmbeddingGammaDiag(StochasticEmbedding):
         config = super(EmbeddingGammaDiag, self).get_config()
         config.update(
             {
-                "concentration_initializer": tf.keras.initializers.serialize(
+                "concentration_initializer": keras.initializers.serialize(
                     self.concentration_initializer
                 ),
-                "rate_initializer": tf.keras.initializers.serialize(
-                    self.rate_initializer
-                ),
-                "concentration_regularizer": tf.keras.regularizers.serialize(
+                "rate_initializer": keras.initializers.serialize(self.rate_initializer),
+                "concentration_regularizer": keras.regularizers.serialize(
                     self.concentration_regularizer
                 ),
-                "rate_regularizer": tf.keras.regularizers.serialize(
-                    self.rate_regularizer
-                ),
-                "concentration_constraint": tf.keras.constraints.serialize(
+                "rate_regularizer": keras.regularizers.serialize(self.rate_regularizer),
+                "concentration_constraint": keras.constraints.serialize(
                     self.concentration_constraint
                 ),
-                "rate_constraint": tf.keras.constraints.serialize(self.rate_constraint),
+                "rate_constraint": keras.constraints.serialize(self.rate_constraint),
                 "concentration_trainable": self.concentration_trainable,
                 "rate_trainable": self.rate_trainable,
             }

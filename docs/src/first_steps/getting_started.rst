@@ -46,7 +46,7 @@ You can also install PsiZ via `git`. You first clone the PsiZ repository from Gi
 Design Philosophy
 =================
 
-PsiZ is built using the TensorFlow ecosystem and strives to closely follow  TensorFlow and Keras idioms, therefore inheriting all of the powerful functionality of TensorFlow and Keras. PsiZ focuses on providing mid-level objects that subclass :py:class:`tf.keras.layers.Layer`. PsiZ aims to follow the principle of *progressive disclosure of complexity* to enable low-friction startup and opt-in flexibility.
+PsiZ is built using the TensorFlow ecosystem and strives to closely follow  TensorFlow and Keras idioms, therefore inheriting all of the powerful functionality of TensorFlow and Keras. PsiZ focuses on providing mid-level objects that subclass :py:class:`keras.layers.Layer`. PsiZ aims to follow the principle of *progressive disclosure of complexity* to enable low-friction startup and opt-in flexibility.
 
 
 What next?

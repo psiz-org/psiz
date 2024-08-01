@@ -20,12 +20,13 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 from psiz.keras.layers.variational import Variational
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="MinkowskiVariational"
 )
 class MinkowskiVariational(Variational):
@@ -44,7 +45,7 @@ class MinkowskiVariational(Variational):
         """Call.
 
         Args:
-            inputs: A list of two tf.Tensor's denoting a the set of
+            inputs: A list of two tensors denoting a the set of
                 vectors to compute pairwise distance. Each tensor is
                 assumed to have the same shape and be at least rank-2.
                 Any additional tensors in the list are ignored.

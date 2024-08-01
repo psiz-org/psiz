@@ -13,18 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for a TensorFlow layers.
+"""Module for a Keras layers.
 
 Classes:
     Drop: A layer that drops a Tensor in the `inputs`.
 
 """
 
-import tensorflow as tf
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="Drop")
-class Drop(tf.keras.layers.Layer):
+@keras.saving.register_keras_serializable(package="psiz.keras", name="Drop")
+class Drop(keras.layers.Layer):
     """A wrapper layer that drops part of the inputs.
 
     Assumues `inputs` provided to call is a list of Tensors.
@@ -70,17 +71,16 @@ class Drop(tf.keras.layers.Layer):
             input_shape_w_drop = input_shape_w_drop[0]
 
         # Build subnet.
-        self.subnet.build(input_shape_w_drop)
+        if not self.subnet.built:
+            self.subnet.build(input_shape_w_drop)
 
         super().build(input_shape)
 
-    def call(self, inputs, mask=None):
+    def call(self, inputs):
         """Call.
 
         Args:
             inputs: a n-tuple or list containing Tensors.
-            mask (optional): A Tensor indicating which timesteps should
-                be masked.
 
         """
         # Drop requested tensor from `inputs`.
@@ -91,17 +91,14 @@ class Drop(tf.keras.layers.Layer):
         if self._strip_inputs:
             inputs_less_drop = inputs_less_drop[0]
 
-        if mask is not None and self.subnet.supports_masking:
-            return self.subnet(inputs_less_drop, mask=mask)
-        else:
-            return self.subnet(inputs_less_drop)
+        return self.subnet(inputs_less_drop)
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
         config.update(
             {
-                "subnet": tf.keras.utils.serialize_keras_object(self.subnet),
+                "subnet": keras.saving.serialize_keras_object(self.subnet),
                 "drop_index": int(self.drop_index),
                 "strip_inputs": bool(self.strip_inputs),
             }
@@ -111,9 +108,10 @@ class Drop(tf.keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         subnet_serial = config["subnet"]
-        config["subnet"] = tf.keras.layers.deserialize(subnet_serial)
+        config["subnet"] = keras.saving.deserialize_keras_object(subnet_serial)
         return super().from_config(config)
 
+    # TODO remove
     def compute_output_shape(self, input_shape):
         """Computes the output shape of the layer.
 

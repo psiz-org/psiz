@@ -23,14 +23,15 @@ Classes:
 
 import warnings
 
+import keras
 import tensorflow as tf
 from tensorflow.python.eager import backprop
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.models", name="StochasticModel"
 )
-class StochasticModel(tf.keras.Model):
+class StochasticModel(keras.Model):
     """An abstract Keras model that accomodates stochastic layers.
 
     Incoming data is transformed by repeating all samples in the batch
@@ -48,7 +49,7 @@ class StochasticModel(tf.keras.Model):
         n_sample: See `init` method.
 
     Methods:
-        See `tf.keras.Model` for inherited methods.
+        See `keras.Model` for inherited methods.
         repeat_samples_in_batch_axis: Transforms data structure by
             repeating all samples in the batch axis `n_sample` times.
         average_repeated_samples: Transforms data structure by
@@ -87,7 +88,7 @@ class StochasticModel(tf.keras.Model):
     def call(self, inputs, training=None):
         """Call."""
         raise NotImplementedError(
-            "Unimplemented `tf.keras.StochasticModel.call()`: "
+            "Unimplemented `keras.StochasticModel.call()`: "
             "subclass `StochasticModel` with an overridden `call()` "
             " method."
         )
@@ -100,12 +101,12 @@ class StochasticModel(tf.keras.Model):
 
         Returns:
             A `dict` containing values that will be passed to
-            `tf.keras.callbacks.CallbackList.on_train_batch_end`.
+            `keras.callbacks.CallbackList.on_train_batch_end`.
             Typically, the values of the `Model`'s metrics are
             returned. Example: `{'loss': 0.2, 'accuracy': 0.7}`.
 
         """
-        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         # Adjust `x`, `y` and `sample_weight` batch axis to reflect multiple
         # samples.
         x = self.repeat_samples_in_batch_axis(x, self._n_sample)
@@ -134,7 +135,7 @@ class StochasticModel(tf.keras.Model):
             trainable_variables = self.trainable_variables
             gradients = tape.gradient(loss, trainable_variables)
             # NOTE: There is an open issue for using constraints with
-            # embedding-like layers (e.g., tf.keras.layers.Embedding)
+            # embedding-like layers (e.g., keras.layers.Embedding)
             # see:
             # https://github.com/tensorflow/tensorflow/issues/33755.
             # There are also issues when using Eager Execution. A
@@ -164,12 +165,12 @@ class StochasticModel(tf.keras.Model):
 
         Returns:
             A `dict` containing values that will be passed to
-            `tf.keras.callbacks.CallbackList.on_train_batch_end`.
+            `keras.callbacks.CallbackList.on_train_batch_end`.
             Typically, the values of the `Model`'s metrics are
             returned.
 
         """
-        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         # Adjust `x`, `y` and `sample_weight` batch axis to reflect multiple
         # samples.
         x = self.repeat_samples_in_batch_axis(x, self._n_sample)
@@ -200,7 +201,7 @@ class StochasticModel(tf.keras.Model):
             calling the `Model` on data.
 
         """
-        x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(data)
         x = self.repeat_samples_in_batch_axis(x, self._n_sample)
         y_pred = self(x, training=False)
 

@@ -21,13 +21,14 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 from psiz.keras.layers.gates.split_gate import SplitGate
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="BranchGate")
+@keras.saving.register_keras_serializable(package="psiz.keras", name="BranchGate")
 class BranchGate(SplitGate):
     """A layer that routes inputs to subnetworks.
 
@@ -74,7 +75,7 @@ class BranchGate(SplitGate):
                 output_names.append(self.name + "_{0}".format(i_subnet))
         self.output_names = output_names
 
-    def call(self, inputs, mask=None):
+    def call(self, inputs):
         """Call.
 
         Args:
@@ -83,8 +84,6 @@ class BranchGate(SplitGate):
                 [data Tensor, [data Tensor, ...], gate_weights Tensor].
                 The data Tensor(s) follows: shape=(batch, m, [n, ...]).
                 the gate_weights Tensor follows: shape=(batch, g)
-            mask (optional): A Tensor indicating which timesteps should
-                be masked.
 
         Returns:
             outputs: A dictionary of Tensors.
@@ -99,10 +98,21 @@ class BranchGate(SplitGate):
         subnet_outputs = {}
 
         for i in range(self.n_subnet):
-            if mask is None:
-                out = self._processed_subnets[i](subnet_inputs[i])
-            else:
-                out = self._processed_subnets[i](subnet_inputs[i], mask=mask)
+            out = self._processed_subnets[i](subnet_inputs[i])
             subnet_outputs[self.output_names[i]] = out
 
         return subnet_outputs
+
+    def get_config(self):
+        config = super().get_config()
+        return config
+
+    # TODO move to SplitGate
+    @classmethod
+    def from_config(cls, config):
+        subnets_serial = config["subnets"]
+        subnets = []
+        for subnet_serial in subnets_serial:
+            subnets.append(keras.saving.deserialize_keras_object(subnet_serial))
+        config["subnets"] = subnets
+        return cls(**config)

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of TensorFlow kernel layers.
+"""Module of Keras activation layers.
 
 Classes:
     HeavyTailedSimilarity: A parameterized heavy-tailed similarity
@@ -21,16 +21,16 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 import psiz.keras.constraints as pk_constraints
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="HeavyTailedSimilarity"
 )
-class HeavyTailedSimilarity(tf.keras.layers.Layer):
+class HeavyTailedSimilarity(keras.layers.Layer):
     """Heavy-tailed family similarity function.
 
     The heavy-tailed similarity function is parameterized as:
@@ -70,48 +70,56 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
 
         self.fit_tau = fit_tau
         if tau_initializer is None:
-            tau_initializer = tf.random_uniform_initializer(1.0, 2.0)
-        self.tau_initializer = tf.keras.initializers.get(tau_initializer)
+            tau_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
+        self.tau_initializer = keras.initializers.get(tau_initializer)
+
+        self.fit_kappa = fit_kappa
+        if kappa_initializer is None:
+            kappa_initializer = keras.initializers.RandomUniform(
+                minval=1.0, maxval=11.0
+            )
+        self.kappa_initializer = keras.initializers.get(kappa_initializer)
+
+        self.fit_alpha = fit_alpha
+        if alpha_initializer is None:
+            alpha_initializer = keras.initializers.RandomUniform(
+                minval=1.0, maxval=10.0
+            )
+        self.alpha_initializer = keras.initializers.get(alpha_initializer)
+
+    def build(self, input_shape):
+        """Build."""
+        if self.built:
+            return
         tau_trainable = self.trainable and self.fit_tau
-        with tf.name_scope(self.name):
+        kappa_trainable = self.trainable and self.fit_kappa
+        alpha_trainable = self.trainable and self.fit_alpha
+        with keras.name_scope(self.name):
             self.tau = self.add_weight(
                 shape=[],
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
-
-        self.fit_kappa = fit_kappa
-        if kappa_initializer is None:
-            kappa_initializer = tf.random_uniform_initializer(1.0, 11.0)
-        self.kappa_initializer = tf.keras.initializers.get(kappa_initializer)
-        kappa_trainable = self.trainable and self.fit_kappa
-        with tf.name_scope(self.name):
             self.kappa = self.add_weight(
                 shape=[],
                 initializer=self.kappa_initializer,
                 trainable=kappa_trainable,
                 name="kappa",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
-
-        self.fit_alpha = fit_alpha
-        if alpha_initializer is None:
-            alpha_initializer = tf.random_uniform_initializer(1.0, 10.0)
-        self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
-        alpha_trainable = self.trainable and self.fit_alpha
-        with tf.name_scope(self.name):
             self.alpha = self.add_weight(
                 shape=[],
                 initializer=self.alpha_initializer,
                 trainable=alpha_trainable,
                 name="alpha",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
+        self.built = True
 
     def call(self, inputs):
         """Call.
@@ -123,7 +131,10 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        return tf.pow(self.kappa + tf.pow(inputs, self.tau), (tf.negative(self.alpha)))
+        return keras.ops.power(
+            self.kappa + keras.ops.power(inputs, self.tau),
+            (keras.ops.negative(self.alpha)),
+        )
 
     def get_config(self):
         """Return layer configuration."""
@@ -133,13 +144,11 @@ class HeavyTailedSimilarity(tf.keras.layers.Layer):
                 "fit_tau": self.fit_tau,
                 "fit_kappa": self.fit_kappa,
                 "fit_alpha": self.fit_alpha,
-                "tau_initializer": tf.keras.initializers.serialize(
-                    self.tau_initializer
-                ),
-                "kappa_initializer": tf.keras.initializers.serialize(
+                "tau_initializer": keras.initializers.serialize(self.tau_initializer),
+                "kappa_initializer": keras.initializers.serialize(
                     self.kappa_initializer
                 ),
-                "alpha_initializer": tf.keras.initializers.serialize(
+                "alpha_initializer": keras.initializers.serialize(
                     self.alpha_initializer
                 ),
             }

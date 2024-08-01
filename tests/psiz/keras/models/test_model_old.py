@@ -15,8 +15,10 @@
 # ============================================================================
 """Module for testing models."""
 
+
 import copy
 
+import keras
 import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -26,7 +28,7 @@ import psiz
 pytestmark = pytest.mark.skip("All tests deprecated.")
 
 
-class RankModelA(tf.keras.Model):
+class RankModelA(keras.Model):
     """A `RankSimilarity` model.
 
     Gates:
@@ -41,17 +43,17 @@ class RankModelA(tf.keras.Model):
         n_stimuli = 20
         n_dim = 3
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
@@ -70,7 +72,7 @@ class RankModelA(tf.keras.Model):
         return config
 
 
-class RankModelB(tf.keras.Model):
+class RankModelB(keras.Model):
     """A `RankSimilarity` model.
 
     Gates:
@@ -85,19 +87,19 @@ class RankModelB(tf.keras.Model):
         n_stimuli = 30
         n_dim = 10
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         # Define group-specific kernels.
         shared_similarity = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(1.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(1.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         )
         kernel_0 = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(
                     [1.2, 1.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
                 ),
             ),
@@ -106,8 +108,8 @@ class RankModelB(tf.keras.Model):
         kernel_1 = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(
                     [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0, 1.2]
                 ),
             ),
@@ -138,7 +140,7 @@ class RankModelB(tf.keras.Model):
         return config
 
 
-class RankModelC(tf.keras.Model):
+class RankModelC(keras.Model):
     """A `RankSimilarity` model.
 
     Gates:
@@ -155,8 +157,8 @@ class RankModelC(tf.keras.Model):
         n_dim = 2
 
         # Define group-specific percept layers.
-        percept_0 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        percept_1 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_0 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_1 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         percept = psiz.keras.layers.BraidGate(
             subnets=[percept_0, percept_1], gating_index=-1
         )
@@ -164,15 +166,15 @@ class RankModelC(tf.keras.Model):
         # Define group-specific kernel layers.
         shared_similarity = psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         )
         kernel_0 = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant([1.2, 0.8]),
                 w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
             ),
             similarity=shared_similarity,
@@ -180,8 +182,8 @@ class RankModelC(tf.keras.Model):
         kernel_1 = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant([0.7, 1.3]),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant([0.7, 1.3]),
                 w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
             ),
             similarity=shared_similarity,
@@ -215,7 +217,7 @@ class RankModelC(tf.keras.Model):
         return config
 
 
-class RankModelD(tf.keras.Model):
+class RankModelD(keras.Model):
     """A `RankSimilarity` model.
 
     Gates:
@@ -231,14 +233,14 @@ class RankModelD(tf.keras.Model):
         n_dim = 2
 
         # Define heirarchical percept layers.
-        percept_0 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        percept_1 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_0 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_1 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         percept_01 = psiz.keras.layers.BraidGate(
             subnets=[percept_0, percept_1], gating_index=-1, name="percept_01"
         )
 
-        percept_2 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
-        percept_3 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_2 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_3 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         percept_23 = psiz.keras.layers.BraidGate(
             subnets=[percept_2, percept_3], gating_index=-1, name="percept_23"
         )
@@ -255,15 +257,15 @@ class RankModelD(tf.keras.Model):
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant([1.2, 0.8]),
                 w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
         )
 
@@ -285,7 +287,7 @@ class RankModelD(tf.keras.Model):
         return config
 
 
-class RankModelE(tf.keras.Model):
+class RankModelE(keras.Model):
     """A `RankSimilarity` model.
 
     Gates:
@@ -300,17 +302,17 @@ class RankModelE(tf.keras.Model):
         n_stimuli = 20
         n_dim = 3
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
@@ -329,7 +331,7 @@ class RankModelE(tf.keras.Model):
         return config
 
 
-class RankModelF(tf.keras.Model):
+class RankModelF(keras.Model):
     """A `RankSimilarity` model.
 
     Gates:
@@ -344,17 +346,17 @@ class RankModelF(tf.keras.Model):
         n_stimuli = 20
         n_dim = 3
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
@@ -373,7 +375,7 @@ class RankModelF(tf.keras.Model):
         return config
 
 
-class MultiRankModelA(tf.keras.Model):
+class MultiRankModelA(keras.Model):
     """A `RankSimilarity` model.
 
     Gates:
@@ -388,17 +390,17 @@ class MultiRankModelA(tf.keras.Model):
         n_stimuli = 20
         n_dim = 3
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
@@ -425,7 +427,7 @@ class MultiRankModelA(tf.keras.Model):
         return config
 
     def train_step(self, data):
-        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         # Run forward pass.
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)
@@ -443,7 +445,7 @@ class MultiRankModelA(tf.keras.Model):
         return loss
 
 
-class RankCellModelA(tf.keras.Model):
+class RankCellModelA(keras.Model):
     """A `RankSimilarityCell` model.
 
     Gates:
@@ -458,24 +460,24 @@ class RankCellModelA(tf.keras.Model):
         n_stimuli = 20
         n_dim = 3
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
         cell = psiz.keras.layers.RankSimilarityCell(
             n_reference=8, n_select=2, percept=percept, kernel=kernel
         )
-        rnn = tf.keras.layers.RNN(cell, return_sequences=True)
+        rnn = keras.layers.RNN(cell, return_sequences=True)
         self.behavior = rnn
 
     def call(self, inputs):
@@ -487,7 +489,7 @@ class RankCellModelA(tf.keras.Model):
         return config
 
 
-class RateModelA(tf.keras.Model):
+class RateModelA(keras.Model):
     """A `RateSimilarity` model.
 
     Gates:
@@ -502,18 +504,18 @@ class RateModelA(tf.keras.Model):
         n_stimuli = 30
         n_dim = 10
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(3.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(3.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
         )
         behavior = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
@@ -528,7 +530,7 @@ class RateModelA(tf.keras.Model):
         return config
 
 
-class RateModelB(tf.keras.Model):
+class RateModelB(keras.Model):
     """A `RateSimilarity` model.
 
     Gates:
@@ -547,18 +549,18 @@ class RateModelB(tf.keras.Model):
 
         shared_similarity = psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         )
 
         # Group 0 layers.
-        percept_0 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_0 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel_0 = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant([1.2, 0.8]),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant([1.2, 0.8]),
                 w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
             ),
             similarity=shared_similarity,
@@ -569,12 +571,12 @@ class RateModelB(tf.keras.Model):
         )
 
         # Group 1 layers.
-        percept_1 = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept_1 = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel_1 = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
                 rho_trainable=False,
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant([0.7, 1.3]),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant([0.7, 1.3]),
                 w_constraint=psiz.keras.constraints.NonNegNorm(scale=n_dim, p=1.0),
             ),
             similarity=shared_similarity,
@@ -599,7 +601,7 @@ class RateModelB(tf.keras.Model):
         return config
 
 
-class RateCellModelA(tf.keras.Model):
+class RateCellModelA(keras.Model):
     """A `RateSimilarityCell` model.
 
     Gates:
@@ -614,22 +616,22 @@ class RateCellModelA(tf.keras.Model):
         n_stimuli = 30
         n_dim = 10
 
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(3.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(3.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
         )
         rate_cell = psiz.keras.layers.RateSimilarityCell(percept=percept, kernel=kernel)
-        rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+        rnn = keras.layers.RNN(rate_cell, return_sequences=True)
         self.behavior = rnn
 
     def call(self, inputs):
@@ -641,7 +643,7 @@ class RateCellModelA(tf.keras.Model):
         return config
 
 
-class ALCOVEModelA(tf.keras.Model):
+class ALCOVEModelA(keras.Model):
     """An `ALCOVECell` model.
 
     Gates:
@@ -657,29 +659,29 @@ class ALCOVEModelA(tf.keras.Model):
         n_dim = 4
         n_output = 3
 
-        percept = tf.keras.layers.Embedding(
+        percept = keras.layers.Embedding(
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
             trainable=False,
         )
         similarity = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         )
         cell = psiz.keras.layers.ALCOVECell(
             n_output,
             percept=percept,
             similarity=similarity,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            temperature_initializer=tf.keras.initializers.Constant(1.0),
-            lr_attention_initializer=tf.keras.initializers.Constant(0.03),
-            lr_association_initializer=tf.keras.initializers.Constant(0.03),
+            rho_initializer=keras.initializers.Constant(2.0),
+            temperature_initializer=keras.initializers.Constant(1.0),
+            lr_attention_initializer=keras.initializers.Constant(0.03),
+            lr_association_initializer=keras.initializers.Constant(0.03),
             trainable=False,
         )
-        rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
+        rnn = keras.layers.RNN(cell, return_sequences=True, stateful=False)
         self.behavior = rnn
 
     def call(self, inputs):
@@ -691,7 +693,7 @@ class ALCOVEModelA(tf.keras.Model):
         return config
 
 
-class RankRateModelA(tf.keras.Model):
+class RankRateModelA(keras.Model):
     """A joint `RankSimilarity` and `RateSimilarity` model.
 
     Gates:
@@ -707,18 +709,18 @@ class RankRateModelA(tf.keras.Model):
         n_dim = 3
 
         # Define a percept layer that will be shared across behaviors.
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         # Define a kernel layer that will be shared across behaviors.
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
@@ -792,7 +794,7 @@ class RankSimilarityRT(psiz.keras.layers.RankSimilarityBase):
         return [outcome_prob, outcome_rt]
 
 
-class RankRTModelA(tf.keras.Model):
+class RankRTModelA(keras.Model):
     """A `RankSimilarity` with response times model.
 
     Gates:
@@ -808,18 +810,18 @@ class RankRTModelA(tf.keras.Model):
         n_dim = 3
 
         # Define a percept layer that will be shared across behaviors.
-        percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+        percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
         # Define a kernel layer that will be shared across behaviors.
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
@@ -852,9 +854,9 @@ def build_ranksim_subclass_a():
     """
     model = RankModelA()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -869,17 +871,17 @@ def build_ranksim_functional_v0():
     n_stimuli = 20
     n_dim = 3
 
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
     )
@@ -887,16 +889,16 @@ def build_ranksim_functional_v0():
         n_reference=4, n_select=1, percept=percept, kernel=kernel
     )
 
-    inp_stimulus_set = tf.keras.Input(shape=(5,), name="given4rank1_stimulus_set")
+    inp_stimulus_set = keras.Input(shape=(5,), name="given4rank1_stimulus_set")
     inputs = {
         "given4rank1_stimulus_set": inp_stimulus_set,
     }
     outputs = behavior(inputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
+    model = keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -910,9 +912,9 @@ def build_ranksim_subclass_b():
     """
     model = RankModelB()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -926,9 +928,9 @@ def build_ranksim_subclass_c():
     """
     model = RankModelC()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -942,9 +944,9 @@ def build_ranksim_subclass_d():
     """
     model = RankModelD()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -958,9 +960,9 @@ def build_ranksim_subclass_e():
     """
     model = RankModelE()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -974,9 +976,9 @@ def build_ranksim_subclass_f():
     """
     model = RankModelF()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -985,12 +987,12 @@ def build_ranksim_subclass_f():
 def build_multirank_subclass_a():
     model = MultiRankModelA()
     compile_kwargs = {
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "loss": {
-            "given2rank1": tf.keras.losses.CategoricalCrossentropy(
+            "given2rank1": keras.losses.CategoricalCrossentropy(
                 name="given2rank1_loss"
             ),
-            "given8rank2": tf.keras.losses.CategoricalCrossentropy(
+            "given8rank2": keras.losses.CategoricalCrossentropy(
                 name="given8rank2_loss"
             ),
         },
@@ -1008,9 +1010,9 @@ def build_ranksimcell_subclass_a():
     """
     model = RankCellModelA()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1021,35 +1023,35 @@ def build_ranksimcell_functional_v0():
     n_stimuli = 20
     n_dim = 3
 
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
     )
     cell = psiz.keras.layers.RankSimilarityCell(
         n_reference=8, n_select=2, percept=percept, kernel=kernel
     )
-    rnn = tf.keras.layers.RNN(cell, return_sequences=True)
+    rnn = keras.layers.RNN(cell, return_sequences=True)
 
-    inp_stimulus_set = tf.keras.Input(shape=(None, 9), name="given8rank2_stimulus_set")
+    inp_stimulus_set = keras.Input(shape=(None, 9), name="given8rank2_stimulus_set")
     inputs = {
         "given8rank2_stimulus_set": inp_stimulus_set,
     }
     outputs = rnn(inputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
+    model = keras.Model(inputs=inputs, outputs=outputs, name="functional_rank")
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1059,9 +1061,9 @@ def build_ratesim_subclass_a():
     """Build subclassed `Model`."""
     model = RateModelA()
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1072,32 +1074,32 @@ def build_ratesim_functional_v0():
     n_stimuli = 30
     n_dim = 10
 
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
     )
     behavior = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
 
-    inp_stimulus_set = tf.keras.Input(shape=(2,), name="rate2_stimulus_set")
+    inp_stimulus_set = keras.Input(shape=(2,), name="rate2_stimulus_set")
     inputs = {
         "rate2_stimulus_set": inp_stimulus_set,
     }
     outputs = behavior(inputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rate")
+    model = keras.Model(inputs=inputs, outputs=outputs, name="functional_rate")
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1107,9 +1109,9 @@ def build_ratesim_subclass_b():
     """Build subclassed `Model`."""
     model = RateModelB()
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1119,9 +1121,9 @@ def build_ratesimcell_subclass_a():
     """Build subclassed `Model`."""
     model = RateCellModelA()
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1132,24 +1134,24 @@ def build_ratesimcell_functional_v0():
     n_stimuli = 30
     n_dim = 10
 
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
     )
     rate_cell = psiz.keras.layers.RateSimilarityCell(percept=percept, kernel=kernel)
-    rnn = tf.keras.layers.RNN(rate_cell, return_sequences=True)
+    rnn = keras.layers.RNN(rate_cell, return_sequences=True)
 
-    inp_stimulus_set = tf.keras.Input(
+    inp_stimulus_set = keras.Input(
         shape=(
             None,
             2,
@@ -1160,11 +1162,11 @@ def build_ratesimcell_functional_v0():
         "rate2_stimulus_set": inp_stimulus_set,
     }
     outputs = rnn(inputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rate")
+    model = keras.Model(inputs=inputs, outputs=outputs, name="functional_rate")
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1174,9 +1176,9 @@ def build_alcove_subclass_a():
     """Build subclassed `Model`."""
     model = ALCOVEModelA()
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1188,32 +1190,32 @@ def build_alcove_functional_v0():
     n_dim = 4
     n_output = 3
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
         trainable=False,
     )
     similarity = psiz.keras.layers.ExponentialSimilarity(
-        beta_initializer=tf.keras.initializers.Constant(3.0),
-        tau_initializer=tf.keras.initializers.Constant(1.0),
-        gamma_initializer=tf.keras.initializers.Constant(0.0),
+        beta_initializer=keras.initializers.Constant(3.0),
+        tau_initializer=keras.initializers.Constant(1.0),
+        gamma_initializer=keras.initializers.Constant(0.0),
         trainable=False,
     )
     cell = psiz.keras.layers.ALCOVECell(
         n_output,
         percept=percept,
         similarity=similarity,
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        temperature_initializer=tf.keras.initializers.Constant(1.0),
-        lr_attention_initializer=tf.keras.initializers.Constant(0.03),
-        lr_association_initializer=tf.keras.initializers.Constant(0.03),
+        rho_initializer=keras.initializers.Constant(2.0),
+        temperature_initializer=keras.initializers.Constant(1.0),
+        lr_attention_initializer=keras.initializers.Constant(0.03),
+        lr_association_initializer=keras.initializers.Constant(0.03),
         trainable=False,
     )
-    rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
+    rnn = keras.layers.RNN(cell, return_sequences=True, stateful=False)
 
-    inp_stimulus_set = tf.keras.Input(shape=(None, 1), name="categorize_stimulus_set")
-    inp_objective_query_label = tf.keras.Input(
+    inp_stimulus_set = keras.Input(shape=(None, 1), name="categorize_stimulus_set")
+    inp_objective_query_label = keras.Input(
         shape=(None, n_output), name="categorize_objective_query_label"
     )
     inputs = {
@@ -1221,11 +1223,11 @@ def build_alcove_functional_v0():
         "categorize_objective_query_label": inp_objective_query_label,
     }
     outputs = rnn(inputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_alcove")
+    model = keras.Model(inputs=inputs, outputs=outputs, name="functional_alcove")
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1235,10 +1237,10 @@ def buld_ranksim_ratesim_subclass_a():
     """Build subclassed `Model`."""
     model = RankRateModelA()
     compile_kwargs = {
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "loss": {
-            "rank_branch": tf.keras.losses.CategoricalCrossentropy(name="rank_loss"),
-            "rate_branch": tf.keras.losses.MeanSquaredError(name="rate_loss"),
+            "rank_branch": keras.losses.CategoricalCrossentropy(name="rank_loss"),
+            "rate_branch": keras.losses.MeanSquaredError(name="rate_loss"),
         },
         "loss_weights": {"rank_branch": 1.0, "rate_branch": 1.0},
     }
@@ -1252,18 +1254,18 @@ def build_ranksim_ratesim_functional_v0():
     n_dim = 3
 
     # Define a percept layer that will be shared across behaviors.
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     # Define a kernel layer that will be shared across behaviors.
     kernel = psiz.keras.layers.DistanceBased(
         distance=psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         ),
         similarity=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
     )
@@ -1280,21 +1282,21 @@ def build_ranksim_ratesim_functional_v0():
         name="behav_branch",
     )
 
-    inp_rank_stimulus_set = tf.keras.Input(shape=(5,), name="given4rank1_stimulus_set")
-    inp_rate_stimulus_set = tf.keras.Input(shape=(2,), name="rate2_stimulus_set")
-    inp_gate_weights = tf.keras.Input(shape=(1,), name="gate_weights_behavior")
+    inp_rank_stimulus_set = keras.Input(shape=(5,), name="given4rank1_stimulus_set")
+    inp_rate_stimulus_set = keras.Input(shape=(2,), name="rate2_stimulus_set")
+    inp_gate_weights = keras.Input(shape=(1,), name="gate_weights_behavior")
     inputs = {
         "given4rank2_stimulus_set": inp_rank_stimulus_set,
         "rate2_stimulus_set": inp_rate_stimulus_set,
         "gate_weights_behavior": inp_gate_weights,
     }
     outputs = behavior_branch(inputs)
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="functional_rank_rate")
+    model = keras.Model(inputs=inputs, outputs=outputs, name="functional_rank_rate")
     compile_kwargs = {
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "loss": {
-            "rank_branch": tf.keras.losses.CategoricalCrossentropy(name="rank_loss"),
-            "rate_branch": tf.keras.losses.MeanSquaredError(name="rate_loss"),
+            "rank_branch": keras.losses.CategoricalCrossentropy(name="rank_loss"),
+            "rate_branch": keras.losses.MeanSquaredError(name="rate_loss"),
         },
         "loss_weights": {"rank_branch": 1.0, "rate_branch": 1.0},
     }
@@ -1306,12 +1308,12 @@ def buld_ranksim_rt_subclass_a():
     """Build subclassed `Model`."""
     model = RankRTModelA()
     compile_kwargs = {
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "loss": {
-            "rank_choice_branch": tf.keras.losses.CategoricalCrossentropy(
+            "rank_choice_branch": keras.losses.CategoricalCrossentropy(
                 name="choice_loss"
             ),
-            "rank_rt_branch": tf.keras.losses.MeanSquaredError(name="rt_loss"),
+            "rank_rt_branch": keras.losses.MeanSquaredError(name="rt_loss"),
         },
         "loss_weights": {"rank_choice_branch": 1.0, "rank_rt_branch": 1.0},
     }
@@ -1323,7 +1325,7 @@ def call_fit_evaluate_predict(model, tfds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
     for data in tfds:
-        x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(data)
         _ = model(x, training=False)
 
     # Test fit.
@@ -1347,7 +1349,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1365,7 +1367,7 @@ class TestRankSimilarity:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RankModelA": RankModelA}
         )
         result1 = loaded.evaluate(tfds)
@@ -1382,7 +1384,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v0
         model = build_ranksim_functional_v0()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_4rank1_v0, is_eager, tmpdir):
@@ -1399,7 +1401,7 @@ class TestRankSimilarity:
         model.save(fp_model)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model)
+        loaded = keras.models.load_model(fp_model)
         result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
@@ -1414,7 +1416,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v1
         model = build_ranksim_subclass_b()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
@@ -1424,7 +1426,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v2
         model = build_ranksim_subclass_c()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_d(self, ds_4rank1_v3, is_eager):
@@ -1434,7 +1436,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v3
         model = build_ranksim_subclass_d()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_e(self, ds_2rank1_v0, is_eager):
@@ -1444,7 +1446,7 @@ class TestRankSimilarity:
         tfds = ds_2rank1_v0
         model = build_ranksim_subclass_e()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_f(self, ds_8rank2_v0, is_eager):
@@ -1454,7 +1456,7 @@ class TestRankSimilarity:
         tfds = ds_8rank2_v0
         model = build_ranksim_subclass_f()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
@@ -1474,7 +1476,7 @@ class TestRankSimilarity:
 
         _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
 
 class TestMultiRankSimilarity:
@@ -1488,7 +1490,7 @@ class TestMultiRankSimilarity:
         tfds = ds_2rank1_8rank2_v0
         model = build_multirank_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1508,7 +1510,7 @@ class TestMultiRankSimilarity:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"MultiRankModelA": MultiRankModelA}
         )
         result1 = loaded.evaluate(tfds)
@@ -1529,7 +1531,7 @@ class TestRankSimilarityCell:
         tfds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1549,7 +1551,7 @@ class TestRankSimilarityCell:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RankCellModelA": RankCellModelA}
         )
         result1 = loaded.evaluate(tfds)
@@ -1566,7 +1568,7 @@ class TestRankSimilarityCell:
         tfds = ds_time_8rank2_v0
         model = build_ranksimcell_functional_v0()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_time_8rank2_v0, is_eager, tmpdir):
@@ -1583,7 +1585,7 @@ class TestRankSimilarityCell:
         model.save(fp_model)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model)
+        loaded = keras.models.load_model(fp_model)
         result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
@@ -1602,7 +1604,7 @@ class TestRateSimilarity:
         tfds = ds_rate2_v0
         model = build_ratesim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1620,7 +1622,7 @@ class TestRateSimilarity:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RateModelA": RateModelA}
         )
         result1 = loaded.evaluate(tfds)
@@ -1637,7 +1639,7 @@ class TestRateSimilarity:
         tfds = ds_rate2_v0
         model = build_ratesim_functional_v0()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_rate2_v0, is_eager, tmpdir):
@@ -1654,7 +1656,7 @@ class TestRateSimilarity:
         model.save(fp_model)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model)
+        loaded = keras.models.load_model(fp_model)
         result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
@@ -1669,7 +1671,7 @@ class TestRateSimilarity:
         tfds = ds_rate2_v1
         model = build_ratesim_subclass_b()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
 
 class TestRateSimilarityCell:
@@ -1683,7 +1685,7 @@ class TestRateSimilarityCell:
         tfds = ds_time_rate2_v0
         model = build_ratesimcell_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1703,7 +1705,7 @@ class TestRateSimilarityCell:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RateCellModelA": RateCellModelA}
         )
         result1 = loaded.evaluate(tfds)
@@ -1720,7 +1722,7 @@ class TestRateSimilarityCell:
         tfds = ds_time_rate2_v0
         model = build_ratesimcell_functional_v0()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_time_rate2_v0, is_eager, tmpdir):
@@ -1737,7 +1739,7 @@ class TestRateSimilarityCell:
         model.save(fp_model)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model)
+        loaded = keras.models.load_model(fp_model)
         result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
@@ -1756,7 +1758,7 @@ class TestALCOVECell:
         tfds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1776,7 +1778,7 @@ class TestALCOVECell:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
         )
         result1 = loaded.evaluate(tfds)
@@ -1793,7 +1795,7 @@ class TestALCOVECell:
         tfds = ds_time_categorize_v0
         model = build_alcove_functional_v0()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_time_categorize_v0, is_eager, tmpdir):
@@ -1810,7 +1812,7 @@ class TestALCOVECell:
         model.save(fp_model)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model)
+        loaded = keras.models.load_model(fp_model)
         result1 = loaded.evaluate(tfds)
 
         # Test for model equality.
@@ -1829,7 +1831,7 @@ class TestJointRankRate:
         tfds = ds_4rank2_rate2_v0
         model = buld_ranksim_ratesim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("save_traces", [True, False])
     @pytest.mark.parametrize("is_eager", [True, False])
@@ -1849,7 +1851,7 @@ class TestJointRankRate:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RankRateModelA": RankRateModelA}
         )
         result1 = loaded.evaluate(tfds, return_dict=True)
@@ -1868,7 +1870,7 @@ class TestJointRankRate:
         tfds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_functional_v0()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.xfail(reason="Not sure why failing.")
@@ -1886,7 +1888,7 @@ class TestJointRankRate:
         model.save(fp_model)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model)
+        loaded = keras.models.load_model(fp_model)
         result1 = loaded.evaluate(tfds, return_dict=True)
 
         # Test for model equality.
@@ -1907,4 +1909,4 @@ class TestRankRT:
         tfds = ds_4rank1_rt_v0
         model = buld_ranksim_rt_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()

@@ -15,8 +15,9 @@
 # ============================================================================
 """Test similarities module."""
 
-import tensorflow as tf
 
+import keras
+import tensorflow as tf
 from psiz.keras.layers import ExponentialSimilarity
 
 
@@ -35,9 +36,9 @@ def test_init_options_0():
         fit_tau=False,
         fit_gamma=False,
         fit_beta=False,
-        tau_initializer=tf.keras.initializers.Constant(1.0),
-        gamma_initializer=tf.keras.initializers.Constant(0.01),
-        beta_initializer=tf.keras.initializers.Constant(10.0),
+        tau_initializer=keras.initializers.Constant(1.0),
+        gamma_initializer=keras.initializers.Constant(0.01),
+        beta_initializer=keras.initializers.Constant(10.0),
     )
 
     assert not similarity.fit_tau
@@ -57,9 +58,9 @@ def test_init_options_1():
 def test_call():
     """Test call."""
     similarity = ExponentialSimilarity(
-        tau_initializer=tf.keras.initializers.Constant(2.1),
-        gamma_initializer=tf.keras.initializers.Constant(0.001),
-        beta_initializer=tf.keras.initializers.Constant(1.11),
+        tau_initializer=keras.initializers.Constant(2.1),
+        gamma_initializer=keras.initializers.Constant(0.001),
+        beta_initializer=keras.initializers.Constant(1.11),
     )
 
     dist = tf.constant(
@@ -80,3 +81,29 @@ def test_get_config():
     assert config["fit_tau"]
     assert config["fit_gamma"]
     assert config["fit_beta"]
+
+
+def test_serialization():
+    """Test serialization with weights."""
+    similarity = ExponentialSimilarity()
+
+    # Call to ensure built.
+    dist = tf.constant(
+        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
+    )
+    s0 = similarity(dist)
+
+    config = similarity.get_config()
+    # OR config = keras.layers.serialize(similarity)
+    weights = similarity.get_weights()
+
+    recon_layer = ExponentialSimilarity.from_config(config)
+    # OR recon_layer = keras.layers.deserialize(config)
+    recon_layer.build([[None, 2], [None, 2]])
+    recon_layer.set_weights(weights)
+    s1 = recon_layer(dist)
+
+    tf.debugging.assert_equal(similarity.beta, recon_layer.beta)
+    tf.debugging.assert_equal(similarity.tau, recon_layer.tau)
+    tf.debugging.assert_equal(similarity.gamma, recon_layer.gamma)
+    tf.debugging.assert_equal(s0, s1)

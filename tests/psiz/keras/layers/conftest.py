@@ -15,6 +15,8 @@
 # ============================================================================
 """keras.layers pytest setup."""
 
+
+import keras
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -103,15 +105,15 @@ def groups_v0():
 @pytest.fixture
 def kernel_v0():
     kernel = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=ExponentialSimilarity(
             fit_tau=False,
             fit_gamma=False,
             fit_beta=False,
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
-            beta_initializer=tf.keras.initializers.Constant(0.1),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(0.1),
         ),
         trainable=False,
     )
@@ -126,3 +128,76 @@ def group_3g_empty_v0():
         [[0, 1, 0], [0, 1, 0], [0, 2, 0], [0, 1, 1], [0, 2, 1]], dtype=np.int32
     )
     return groups
+
+
+@pytest.fixture
+def category_learning_inputs_v0():
+    """A minibatch of category learning inputs.
+
+    No timestep axis.
+    No groups.
+
+    """
+    # Create a simple batch (batch_size=4).
+    stimulus_set = tf.constant(
+        np.array(
+            [
+                [1],
+                [11],
+                [1],
+                [2],
+            ],
+            dtype=np.int32,
+        )
+    )
+    objective_query_label = tf.constant(
+        np.array(
+            [0, 1, 0, 0],
+            dtype=np.int32,
+        )
+    )
+    objective_query_label = keras.utils.to_categorical(
+        objective_query_label, num_classes=3
+    )
+    inputs = {
+        "categorize_stimulus_set": stimulus_set,
+        "categorize_objective_query_label": objective_query_label,
+    }
+    return inputs
+
+
+@pytest.fixture
+def category_learning_inputs_v1():
+    """A minibatch of category learning inputs."""
+    # Create a simple batch (batch_size=5).
+    stimulus_set = tf.constant(
+        np.array(
+            [
+                [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]],
+                [[11], [12], [13], [14], [15], [16], [17], [18], [19], [20]],
+                [[1], [3], [5], [7], [9], [11], [13], [15], [17], [19]],
+                # NOTE: 2 masked trials
+                [[2], [4], [6], [8], [10], [12], [14], [16], [0], [0]],
+            ],
+            dtype=np.int32,
+        )
+    )
+    objective_query_label = tf.constant(
+        np.array(
+            [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+                [0, 0, 0, 0, 0, 1, 1, 1, 2, 2],
+                [0, 0, 0, 0, 0, 1, 1, 2, 0, 0],
+            ],
+            dtype=np.int32,
+        )
+    )
+    objective_query_label = keras.utils.to_categorical(
+        objective_query_label, num_classes=3
+    )
+    inputs = {
+        "categorize_stimulus_set": stimulus_set,
+        "categorize_objective_query_label": objective_query_label,
+    }
+    return inputs

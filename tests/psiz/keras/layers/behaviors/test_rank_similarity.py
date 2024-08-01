@@ -14,8 +14,11 @@
 # limitations under the License.
 # ============================================================================
 
-import psiz
+
+import keras
 import tensorflow as tf
+
+import psiz
 
 
 def test_outcome_probability_v0():
@@ -24,7 +27,7 @@ def test_outcome_probability_v0():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -33,12 +36,12 @@ def test_outcome_probability_v0():
         ),
     )
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
         trainable=False,
@@ -78,7 +81,7 @@ def test_outcome_probability_v1():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -87,12 +90,12 @@ def test_outcome_probability_v1():
         ),
     )
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
         trainable=False,
@@ -102,7 +105,7 @@ def test_outcome_probability_v1():
         n_select=1,
         percept=percept,
         kernel=kernel,
-        temperature_initializer=tf.keras.initializers.Constant(value=0.001),
+        temperature_initializer=keras.initializers.Constant(value=0.001),
     )
 
     stimulus_set = tf.constant(
@@ -137,7 +140,7 @@ def test_serialization_v0():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -146,12 +149,12 @@ def test_serialization_v0():
         ),
     )
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
         trainable=False,
@@ -191,7 +194,7 @@ def test_serialization_v0():
         data_scope="abc",
         name="rs2",
         fit_temperature=True,
-        temperature_initializer=tf.keras.initializers.Constant(0.01),
+        temperature_initializer=keras.initializers.Constant(0.01),
     )
     cfg = rank.get_config()
     # Verify.

@@ -14,8 +14,11 @@
 # limitations under the License.
 # ============================================================================
 
-import psiz
+
+import keras
 import tensorflow as tf
+
+import psiz
 
 
 def test_v0():
@@ -53,9 +56,9 @@ def test_v0():
 def test_v1():
     """Test logistic layer init and call."""
     logistic = psiz.keras.layers.Logistic(
-        upper_initializer=tf.keras.initializers.Constant(2.0),
-        midpoint_initializer=tf.keras.initializers.Constant(1.0),
-        rate_initializer=tf.keras.initializers.Constant(0.5),
+        upper_initializer=keras.initializers.Constant(2.0),
+        midpoint_initializer=keras.initializers.Constant(1.0),
+        rate_initializer=keras.initializers.Constant(0.5),
     )
 
     x = tf.constant(
@@ -89,11 +92,11 @@ def test_v1():
 def test_serialization_v0():
     """Test serialization."""
     logistic = psiz.keras.layers.Logistic(
-        upper_initializer=tf.keras.initializers.Constant(2.0),
-        midpoint_initializer=tf.keras.initializers.Constant(1.0),
-        rate_initializer=tf.keras.initializers.Constant(0.5),
-        midpoint_constraint=tf.keras.constraints.NonNeg(),
-        rate_constraint=tf.keras.constraints.NonNeg(),
+        upper_initializer=keras.initializers.Constant(2.0),
+        midpoint_initializer=keras.initializers.Constant(1.0),
+        rate_initializer=keras.initializers.Constant(0.5),
+        midpoint_constraint=keras.constraints.NonNeg(),
+        rate_constraint=keras.constraints.NonNeg(),
         name="my_logistic",
     )
 
@@ -126,6 +129,6 @@ def test_serialization_v0():
     assert logistic_2.upper_initializer.value == 2.0
     assert logistic_2.midpoint_initializer.value == 1.0
     assert logistic_2.rate_initializer.value == 0.5
-    assert isinstance(logistic_2.upper_constraint, tf.keras.constraints.NonNeg)
-    assert isinstance(logistic_2.midpoint_constraint, tf.keras.constraints.NonNeg)
-    assert isinstance(logistic_2.rate_constraint, tf.keras.constraints.NonNeg)
+    assert isinstance(logistic_2.upper_constraint, keras.constraints.NonNeg)
+    assert isinstance(logistic_2.midpoint_constraint, keras.constraints.NonNeg)
+    assert isinstance(logistic_2.rate_constraint, keras.constraints.NonNeg)

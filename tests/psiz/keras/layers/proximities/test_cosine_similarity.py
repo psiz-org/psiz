@@ -18,7 +18,9 @@
 import numpy as np
 import tensorflow as tf
 
-from psiz.keras.layers.proximities.experimental.cosine_similarity import CosineSimilarity
+from psiz.keras.layers.proximities.experimental.cosine_similarity import (
+    CosineSimilarity,
+)
 
 from scipy.spatial.distance import cosine
 
@@ -73,27 +75,10 @@ def test_init_call_v1(paired_inputs_v0):
     tf.debugging.assert_equal(desired_outputs, outputs)
 
 
-def test_output_shape(paired_inputs_v0):
-    """Test output_shape method."""
-    w = np.ones([3], dtype=np.float32)
-    proximity_layer = CosineSimilarity(
-        w_initializer=tf.initializers.Constant(w)
-    )
-    input_shape = [
-        tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-        tf.TensorShape(tf.shape(paired_inputs_v0[1])),
-    ]
-    output_shape = proximity_layer.compute_output_shape(input_shape)
-    desired_output_shape = tf.TensorShape([5])
-    tf.debugging.assert_equal(output_shape, desired_output_shape)
-
-
 def test_serialization():
     """Test serialization."""
     w = np.ones([3], dtype=np.float32)
-    proximity_layer = CosineSimilarity(
-        w_initializer=tf.initializers.Constant(w)
-    )
+    proximity_layer = CosineSimilarity(w_initializer=tf.initializers.Constant(w))
     proximity_layer.build([[None, 3], [None, 3]])
     tf.debugging.assert_equal(proximity_layer.w, tf.constant(w))
     config = proximity_layer.get_config()

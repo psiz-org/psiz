@@ -13,23 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of TensorFlow kernel layers.
+"""Module of Keras activation layers.
 
 Classes:
     InverseSimilarity: A parameterized inverse similarity layer.
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 import psiz.keras.constraints as pk_constraints
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="InverseSimilarity"
 )
-class InverseSimilarity(tf.keras.layers.Layer):
+class InverseSimilarity(keras.layers.Layer):
     """Inverse-distance similarity function.
 
     The inverse-distance similarity function is parameterized as:
@@ -60,33 +60,40 @@ class InverseSimilarity(tf.keras.layers.Layer):
 
         self.fit_tau = fit_tau
         if tau_initializer is None:
-            tau_initializer = tf.random_uniform_initializer(1.0, 2.0)
-        self.tau_initializer = tf.keras.initializers.get(tau_initializer)
+            tau_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
+        self.tau_initializer = keras.initializers.get(tau_initializer)
+
+        self.fit_mu = fit_mu
+        if mu_initializer is None:
+            mu_initializer = keras.initializers.RandomUniform(
+                minval=0.0000000001, maxval=0.001
+            )
+        self.mu_initializer = keras.initializers.get(tau_initializer)
+
+    def build(self, input_shape):
+        """Build."""
+        if self.built:
+            return
         tau_trainable = self.trainable and self.fit_tau
-        with tf.name_scope(self.name):
+        mu_trainable = self.trainable and self.fit_mu
+        with keras.name_scope(self.name):
             self.tau = self.add_weight(
                 shape=[],
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
-
-        self.fit_mu = fit_mu
-        if mu_initializer is None:
-            mu_initializer = tf.random_uniform_initializer(0.0000000001, 0.001)
-        self.mu_initializer = tf.keras.initializers.get(tau_initializer)
-        mu_trainable = self.trainable and self.fit_mu
-        with tf.name_scope(self.name):
             self.mu = self.add_weight(
                 shape=[],
                 initializer=self.tau_initializer,
                 trainable=mu_trainable,
                 name="mu",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16),
             )
+        self.built = True
 
     def call(self, inputs):
         """Call.
@@ -98,7 +105,7 @@ class InverseSimilarity(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        return 1 / (tf.pow(inputs, self.tau) + self.mu)
+        return 1 / (keras.ops.power(inputs, self.tau) + self.mu)
 
     def get_config(self):
         """Return layer configuration."""
@@ -107,10 +114,8 @@ class InverseSimilarity(tf.keras.layers.Layer):
             {
                 "fit_tau": self.fit_tau,
                 "fit_mu": self.fit_mu,
-                "tau_initializer": tf.keras.initializers.serialize(
-                    self.tau_initializer
-                ),
-                "mu_initializer": tf.keras.initializers.serialize(self.mu_initializer),
+                "tau_initializer": keras.initializers.serialize(self.tau_initializer),
+                "mu_initializer": keras.initializers.serialize(self.mu_initializer),
             }
         )
         return config

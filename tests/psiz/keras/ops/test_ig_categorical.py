@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2021 The PsiZ Authors. All Rights Reserved.
+# Copyright 2024 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 
 import tensorflow as tf
 
-from psiz.tf.information_theory import ig_categorical
+from psiz.keras.ops import ig_categorical
 
 
 def test_0():

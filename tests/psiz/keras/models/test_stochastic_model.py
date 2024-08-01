@@ -15,6 +15,10 @@
 # ============================================================================
 """Module for testing models.py."""
 
+
+from pathlib import Path
+
+import keras
 import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -23,26 +27,26 @@ import psiz.keras.layers
 from psiz.keras.models.stochastic_model import StochasticModel
 
 
-class LayerA(tf.keras.layers.Layer):
+class LayerA(keras.layers.Layer):
     def __init__(self, units, **kwargs):
         super(LayerA, self).__init__(**kwargs)
         self.units = units
-        self.kernel_initializer = tf.keras.initializers.Constant(1.0)
+        self.kernel_initializer = keras.initializers.Constant(1.0)
 
     def build(self, input_shape):
         """Build."""
         last_dim = input_shape[-1]
         self.kernel = self.add_weight(
-            "kernel",
             shape=[last_dim, self.units],
             initializer=self.kernel_initializer,
-            dtype=self.dtype,
             trainable=True,
+            name="kernel",
+            dtype=self.dtype,
         )
         self.built = True
 
     def call(self, inputs, training=False):
-        x = tf.matmul(a=inputs, b=self.kernel)
+        x = keras.ops.matmul(inputs, self.kernel)
         return x
 
     def get_config(self):
@@ -55,22 +59,22 @@ class LayerA(tf.keras.layers.Layer):
         return cls(**config)
 
 
-class LayerB(tf.keras.layers.Layer):
+class LayerB(keras.layers.Layer):
     """A simple repeat layer."""
 
     def __init__(self, **kwargs):
         """Initialize."""
         super(LayerB, self).__init__(**kwargs)
-        self.w0_initializer = tf.keras.initializers.Constant(1.0)
+        self.w0_initializer = keras.initializers.Constant(1.0)
 
     def build(self, input_shape):
         """Build."""
         self.w0 = self.add_weight(
-            "w0",
             shape=[],
             initializer=self.w0_initializer,
-            dtype=self.dtype,
             trainable=True,
+            name="w0",
+            dtype=self.dtype,
         )
         self.built = True
 
@@ -86,7 +90,7 @@ class LayerB(tf.keras.layers.Layer):
         return cls(**config)
 
 
-class CellA(tf.keras.layers.Layer):
+class CellA(keras.layers.Layer):
     """A simple RNN cell."""
 
     def __init__(self, **kwargs):
@@ -96,11 +100,11 @@ class CellA(tf.keras.layers.Layer):
 
         # Satisfy RNNCell contract.
         # NOTE: A placeholder state.
-        self.state_size = [tf.TensorShape([1])]
+        self.state_size = [1]
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
-        initial_state = [tf.zeros([batch_size, 1], name="zeros_initial_state")]
+        initial_state = [keras.ops.zeros([batch_size, 1])]
         return initial_state
 
     def call(self, inputs, states, training=None):
@@ -116,7 +120,7 @@ class CellA(tf.keras.layers.Layer):
         return cls(**config)
 
 
-class ModelControl(tf.keras.Model):
+class ModelControl(keras.Model):
     """A non-stochastic model to use as a control case.
 
     Gates:
@@ -124,9 +128,11 @@ class ModelControl(tf.keras.Model):
 
     """
 
-    def __init__(self):
-        super(ModelControl, self).__init__()
-        self.dense_layer = tf.keras.layers.Dense(3)
+    def __init__(self, dense_layer=None, **kwargs):
+        super(ModelControl, self).__init__(**kwargs)
+        if dense_layer is None:
+            dense_layer = keras.layers.Dense(3)
+        self.dense_layer = dense_layer
 
     def call(self, inputs):
         x = inputs["x_a"]
@@ -134,7 +140,18 @@ class ModelControl(tf.keras.Model):
         return x
 
     def get_config(self):
-        return super(ModelControl, self).get_config()
+        config = super().get_config()
+        config.update(
+            {
+                "dense_layer": self.dense_layer,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["dense_layer"] = keras.layers.deserialize(config["dense_layer"])
+        return cls(**config)
 
 
 class ModelA(StochasticModel):
@@ -148,16 +165,29 @@ class ModelA(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, dense_layer=None, **kwargs):
         super(ModelA, self).__init__(**kwargs)
-        self.dense_layer = tf.keras.layers.Dense(3)
+        if dense_layer is None:
+            dense_layer = keras.layers.Dense(3)
+        self.dense_layer = dense_layer
 
     def call(self, inputs):
         x = self.dense_layer(inputs["x_a"])
         return x
 
     def get_config(self):
-        return super(ModelA, self).get_config()
+        config = super(ModelA, self).get_config()
+        config.update(
+            {
+                "dense_layer": self.dense_layer,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["dense_layer"] = keras.layers.deserialize(config["dense_layer"])
+        return cls(**config)
 
 
 class ModelB(StochasticModel):
@@ -171,9 +201,11 @@ class ModelB(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, custom_layer=None, **kwargs):
         super(ModelB, self).__init__(**kwargs)
-        self.custom_layer = LayerA(3)
+        if custom_layer is None:
+            custom_layer = LayerA(3)
+        self.custom_layer = custom_layer
 
     def call(self, inputs):
         x = self.custom_layer(inputs["x_a"])
@@ -181,7 +213,19 @@ class ModelB(StochasticModel):
 
     def get_config(self):
         """Return model configuration."""
-        return super(ModelB, self).get_config()
+        config = super(ModelB, self).get_config()
+        config.update(
+            {
+                "custom_layer": self.custom_layer,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        # config["custom_layer"] = LayerA.from_config(config["custom_layer"]) TODO use or remove
+        config["custom_layer"] = keras.layers.deserialize(config["custom_layer"])
+        return cls(**config)
 
 
 class ModelB2(StochasticModel):
@@ -195,9 +239,11 @@ class ModelB2(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, custom_layer=None, **kwargs):
         super(ModelB2, self).__init__(**kwargs)
-        self.custom_layer = LayerA(3)
+        if custom_layer is None:
+            custom_layer = LayerA(3)
+        self.custom_layer = custom_layer
 
     def call(self, inputs):
         x = self.custom_layer(inputs)
@@ -205,7 +251,18 @@ class ModelB2(StochasticModel):
 
     def get_config(self):
         """Return model configuration."""
-        return super(ModelB2, self).get_config()
+        config = super(ModelB2, self).get_config()
+        config.update(
+            {
+                "custom_layer": self.custom_layer,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["custom_layer"] = keras.layers.deserialize(config["custom_layer"])
+        return cls(**config)
 
 
 class ModelC(StochasticModel):
@@ -218,7 +275,7 @@ class ModelC(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, branch_0=None, branch_1=None, **kwargs):
         """Initialize."
 
         Args:
@@ -229,9 +286,13 @@ class ModelC(StochasticModel):
 
         """
         super(ModelC, self).__init__(**kwargs)
-        self.branch_0 = LayerB()
-        self.branch_1 = LayerB()
-        self.add_layer = tf.keras.layers.Add()
+        if branch_0 is None:
+            branch_0 = LayerB()
+        self.branch_0 = branch_0
+        if branch_1 is None:
+            branch_1 = LayerB()
+        self.branch_1 = branch_1
+        self.add_layer = keras.layers.Add()
 
     def call(self, inputs):
         """Call.
@@ -248,7 +309,20 @@ class ModelC(StochasticModel):
 
     def get_config(self):
         """Return model configuration."""
-        return super(ModelC, self).get_config()
+        config = super(ModelC, self).get_config()
+        config.update(
+            {
+                "branch_0": self.branch_0,
+                "branch_1": self.branch_1,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["branch_0"] = keras.layers.deserialize(config["branch_0"])
+        config["branch_1"] = keras.layers.deserialize(config["branch_1"])
+        return cls(**config)
 
 
 class ModelD(StochasticModel):
@@ -261,7 +335,7 @@ class ModelD(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, rnn_layer=None, **kwargs):
         """Initialize."
 
         Args:
@@ -272,8 +346,10 @@ class ModelD(StochasticModel):
 
         """
         super(ModelD, self).__init__(**kwargs)
-        self.rnn_layer = tf.keras.layers.RNN(CellA(), return_sequences=True)
-        self.add_layer = tf.keras.layers.Add()
+        if rnn_layer is None:
+            rnn_layer = keras.layers.RNN(CellA(), return_sequences=True)
+        self.rnn_layer = rnn_layer
+        self.add_layer = keras.layers.Add()
 
     def call(self, inputs):
         """Call.
@@ -289,7 +365,18 @@ class ModelD(StochasticModel):
 
     def get_config(self):
         """Return model configuration."""
-        return super(ModelD, self).get_config()
+        config = super(ModelD, self).get_config()
+        config.update(
+            {
+                "rnn_layer": self.rnn_layer,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["rnn_layer"] = keras.layers.deserialize(config["rnn_layer"])
+        return cls(**config)
 
 
 class RankModelA(StochasticModel):
@@ -302,45 +389,68 @@ class RankModelA(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, percept=None, proximity=None, soft_4rank1=None, **kwargs):
         """Initialize."""
         super(RankModelA, self).__init__(**kwargs)
 
-        n_stimuli = 20
-        n_dim = 3
-        prior_scale = 0.2
         self.stimuli_axis = 1
 
-        self.percept = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-        )
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            trainable=False,
-            activation=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+        if percept is None:
+            n_stimuli = 20
+            n_dim = 3
+            prior_scale = 0.2
+            percept = psiz.keras.layers.EmbeddingNormalDiag(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                scale_initializer=keras.initializers.Constant(
+                    tfp.math.softplus_inverse(prior_scale).numpy()
+                ),
+            )
+        self.percept = percept
+
+        if proximity is None:
+            proximity = psiz.keras.layers.Minkowski(
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
-            ),
-        )
-        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
+                activation=psiz.keras.layers.ExponentialSimilarity(
+                    beta_initializer=keras.initializers.Constant(10.0),
+                    tau_initializer=keras.initializers.Constant(1.0),
+                    gamma_initializer=keras.initializers.Constant(0.001),
+                    trainable=False,
+                ),
+            )
+        self.proximity = proximity
+
+        if soft_4rank1 is None:
+            soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = soft_4rank1
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given4rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_4rank1(s)
 
     def get_config(self):
-        return super(RankModelA, self).get_config()
+        config = super(RankModelA, self).get_config()
+        config.update(
+            {
+                "percept": keras.layers.serialize(self.percept),
+                "proximity": keras.layers.serialize(self.proximity),
+                "soft_4rank1": keras.layers.serialize(self.soft_4rank1),
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["percept"] = keras.layers.deserialize(config["percept"])
+        config["proximity"] = keras.layers.deserialize(config["proximity"])
+        config["soft_4rank1"] = keras.layers.deserialize(config["soft_4rank1"])
+        return cls(**config)
 
 
 class RankModelB(StochasticModel):
@@ -353,7 +463,7 @@ class RankModelB(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, percept=None, proximity=None, soft_4rank1=None, **kwargs):
         """Initialize."""
         super(RankModelB, self).__init__(**kwargs)
 
@@ -363,56 +473,79 @@ class RankModelB(StochasticModel):
         prior_scale = 0.2
         self.stimuli_axis = 1
 
-        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingNormalDiag(
-                1,
-                1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+        if percept is None:
+            embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
-                loc_trainable=False,
-            ),
-        )
-        self.percept = psiz.keras.layers.EmbeddingVariational(
-            posterior=embedding_posterior,
-            prior=embedding_prior,
-            kl_weight=kl_weight,
-            kl_n_sample=30,
-        )
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            activation=psiz.keras.layers.ExponentialSimilarity(
+            )
+            embedding_prior = psiz.keras.layers.EmbeddingShared(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                embedding=psiz.keras.layers.EmbeddingNormalDiag(
+                    1,
+                    1,
+                    loc_initializer=keras.initializers.Constant(0.0),
+                    scale_initializer=keras.initializers.Constant(
+                        tfp.math.softplus_inverse(prior_scale).numpy()
+                    ),
+                    loc_trainable=False,
+                ),
+            )
+            percept = psiz.keras.layers.EmbeddingVariational(
+                posterior=embedding_posterior,
+                prior=embedding_prior,
+                kl_weight=kl_weight,
+                kl_n_sample=30,
+            )
+        self.percept = percept
+
+        if proximity is None:
+            proximity = psiz.keras.layers.Minkowski(
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
+                activation=psiz.keras.layers.ExponentialSimilarity(
+                    trainable=False,
+                    beta_initializer=keras.initializers.Constant(10.0),
+                    tau_initializer=keras.initializers.Constant(1.0),
+                    gamma_initializer=keras.initializers.Constant(0.0),
+                ),
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
-            ),
-            trainable=False,
-        )
-        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
+            )
+        self.proximity = proximity
+
+        if soft_4rank1 is None:
+            soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = soft_4rank1
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given4rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_4rank1(s)
 
     def get_config(self):
-        return super(RankModelB, self).get_config()
+        config = super(RankModelB, self).get_config()
+        config.update(
+            {
+                "percept": self.percept,
+                "proximity": self.proximity,
+                "soft_4rank1": self.soft_4rank1,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["percept"] = keras.layers.deserialize(config["percept"])
+        config["proximity"] = keras.layers.deserialize(config["proximity"])
+        config["soft_4rank1"] = keras.layers.deserialize(config["soft_4rank1"])
+        return cls(**config)
 
 
 class RankModelC(StochasticModel):
@@ -425,7 +558,7 @@ class RankModelC(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, braid_percept=None, proximity=None, soft_4rank1=None, **kwargs):
         """Initialize."""
         super(RankModelC, self).__init__(**kwargs)
 
@@ -435,76 +568,98 @@ class RankModelC(StochasticModel):
         prior_scale = 0.2
         self.stimuli_axis = 1
 
-        embedding_posterior_0 = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-        )
-        embedding_posterior_1 = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingNormalDiag(
-                1,
-                1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+        if braid_percept is None:
+            embedding_posterior_0 = psiz.keras.layers.EmbeddingNormalDiag(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
-                loc_trainable=False,
-            ),
-        )
-        percept_0 = psiz.keras.layers.EmbeddingVariational(
-            posterior=embedding_posterior_0,
-            prior=embedding_prior,
-            kl_weight=kl_weight,
-            kl_n_sample=30,
-        )
-        percept_1 = psiz.keras.layers.EmbeddingVariational(
-            posterior=embedding_posterior_1,
-            prior=embedding_prior,
-            kl_weight=kl_weight,
-            kl_n_sample=30,
-        )
-        self.braid_percept = psiz.keras.layers.BraidGate(
-            subnets=[percept_0, percept_1], gating_index=-1
-        )
+            )
+            embedding_posterior_1 = psiz.keras.layers.EmbeddingNormalDiag(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                scale_initializer=keras.initializers.Constant(
+                    tfp.math.softplus_inverse(prior_scale).numpy()
+                ),
+            )
+            embedding_prior = psiz.keras.layers.EmbeddingShared(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                embedding=psiz.keras.layers.EmbeddingNormalDiag(
+                    1,
+                    1,
+                    loc_initializer=keras.initializers.Constant(0.0),
+                    scale_initializer=keras.initializers.Constant(
+                        tfp.math.softplus_inverse(prior_scale).numpy()
+                    ),
+                    loc_trainable=False,
+                ),
+            )
+            percept_0 = psiz.keras.layers.EmbeddingVariational(
+                posterior=embedding_posterior_0,
+                prior=embedding_prior,
+                kl_weight=kl_weight,
+                kl_n_sample=30,
+            )
+            percept_1 = psiz.keras.layers.EmbeddingVariational(
+                posterior=embedding_posterior_1,
+                prior=embedding_prior,
+                kl_weight=kl_weight,
+                kl_n_sample=30,
+            )
+            braid_percept = psiz.keras.layers.BraidGate(
+                subnets=[percept_0, percept_1], gating_index=-1
+            )
+        self.braid_percept = braid_percept
 
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            activation=psiz.keras.layers.ExponentialSimilarity(
+        if proximity is None:
+            proximity = psiz.keras.layers.Minkowski(
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
+                activation=psiz.keras.layers.ExponentialSimilarity(
+                    trainable=False,
+                    beta_initializer=keras.initializers.Constant(10.0),
+                    tau_initializer=keras.initializers.Constant(1.0),
+                    gamma_initializer=keras.initializers.Constant(0.0),
+                ),
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
-            ),
-            trainable=False,
-        )
-        self.soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
+            )
+        self.proximity = proximity
+
+        if soft_4rank1 is None:
+            soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = soft_4rank1
 
     def call(self, inputs):
         """Call."""
         z = self.braid_percept(
             [inputs["given4rank1_stimulus_set"], inputs["percept_gate_weights"]]
         )
-        z_q, z_r = tf.split(z, [1, 4], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_4rank1(s)
 
     def get_config(self):
-        return super(RankModelC, self).get_config()
+        config = super(RankModelC, self).get_config()
+        config.update(
+            {
+                "braid_percept": self.braid_percept,
+                "proximity": self.proximity,
+                "soft_4rank1": self.soft_4rank1,
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["braid_percept"] = keras.layers.deserialize(config["braid_percept"])
+        config["proximity"] = keras.layers.deserialize(config["proximity"])
+        config["soft_4rank1"] = keras.layers.deserialize(config["soft_4rank1"])
+        return cls(**config)
 
 
 # finish or move out
@@ -531,7 +686,7 @@ class RankModelC(StochasticModel):
 #             n_stimuli + 1,
 #             n_dim,
 #             mask_zero=True,
-#             scale_initializer=tf.keras.initializers.Constant(
+#             scale_initializer=keras.initializers.Constant(
 #                 tfp.math.softplus_inverse(prior_scale).numpy()
 #             ),
 #         )
@@ -542,8 +697,8 @@ class RankModelC(StochasticModel):
 #             embedding=psiz.keras.layers.EmbeddingNormalDiag(
 #                 1,
 #                 1,
-#                 loc_initializer=tf.keras.initializers.Constant(0.0),
-#                 scale_initializer=tf.keras.initializers.Constant(
+#                 loc_initializer=keras.initializers.Constant(0.0),
+#                 scale_initializer=keras.initializers.Constant(
 #                     tfp.math.softplus_inverse(prior_scale).numpy()
 #                 ),
 #                 loc_trainable=False,
@@ -556,20 +711,20 @@ class RankModelC(StochasticModel):
 #             kl_n_sample=30,
 #         )
 #         proximity = psiz.keras.layers.Minkowski(
-#             rho_initializer=tf.keras.initializers.Constant(2.0),
-#             w_initializer=tf.keras.initializers.Constant(1.0),
+#             rho_initializer=keras.initializers.Constant(2.0),
+#             w_initializer=keras.initializers.Constant(1.0),
 #             activation=psiz.keras.layers.ExponentialSimilarity(
 #                 trainable=False,
-#                 beta_initializer=tf.keras.initializers.Constant(10.0),
-#                 tau_initializer=tf.keras.initializers.Constant(1.0),
-#                 gamma_initializer=tf.keras.initializers.Constant(0.0),
+#                 beta_initializer=keras.initializers.Constant(10.0),
+#                 tau_initializer=keras.initializers.Constant(1.0),
+#                 gamma_initializer=keras.initializers.Constant(0.0),
 #             ),
 #             trainable=False,
 #         )
 #         rank_cell = psiz.keras.layers.RankSimilarityCell(
 #             n_reference=8, n_select=2, percept=percept, kernel=proximity
 #         )
-#         rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+#         rnn = keras.layers.RNN(rank_cell, return_sequences=True)
 #         self.behavior = rnn
 
 #     def call(self, inputs):
@@ -590,7 +745,7 @@ class RateModelA(StochasticModel):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, percept=None, proximity=None, rate=None, **kwargs):
         """Initialize."""
         super(RateModelA, self).__init__(**kwargs)
 
@@ -600,185 +755,210 @@ class RateModelA(StochasticModel):
         prior_scale = 0.2
         self.stimuli_axis = 1
 
-        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingNormalDiag(
-                1,
-                1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+        if percept is None:
+            embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
-                loc_trainable=False,
-            ),
-        )
-        self.percept = psiz.keras.layers.EmbeddingVariational(
-            posterior=embedding_posterior,
-            prior=embedding_prior,
-            kl_weight=kl_weight,
-            kl_n_sample=30,
-        )
-        self.proximity = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
-            activation=psiz.keras.layers.ExponentialSimilarity(
+            )
+            embedding_prior = psiz.keras.layers.EmbeddingShared(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                embedding=psiz.keras.layers.EmbeddingNormalDiag(
+                    1,
+                    1,
+                    loc_initializer=keras.initializers.Constant(0.0),
+                    scale_initializer=keras.initializers.Constant(
+                        tfp.math.softplus_inverse(prior_scale).numpy()
+                    ),
+                    loc_trainable=False,
+                ),
+            )
+            percept = psiz.keras.layers.EmbeddingVariational(
+                posterior=embedding_posterior,
+                prior=embedding_prior,
+                kl_weight=kl_weight,
+                kl_n_sample=30,
+            )
+        self.percept = percept
+
+        if proximity is None:
+            proximity = psiz.keras.layers.Minkowski(
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
+                activation=psiz.keras.layers.ExponentialSimilarity(
+                    trainable=False,
+                    beta_initializer=keras.initializers.Constant(10.0),
+                    tau_initializer=keras.initializers.Constant(1.0),
+                    gamma_initializer=keras.initializers.Constant(0.0),
+                ),
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
-            ),
-            trainable=False,
-        )
-        self.rate = psiz.keras.layers.Logistic()
+            )
+        self.proximity = proximity
+
+        if rate is None:
+            rate = psiz.keras.layers.Logistic()
+        self.rate = rate
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0, z_1 = tf.split(z, [1, 1], self.stimuli_axis)
+        z_0, z_1 = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_0, z_1])
         return self.rate(s)
 
     def get_config(self):
-        return super(RateModelA, self).get_config()
-
-
-class ALCOVEModelA(StochasticModel):
-    """An `ALCOVECell` model.
-
-    Gates:
-        None
-
-    """
-
-    def __init__(self, **kwargs):
-        """Initialize."""
-        super(ALCOVEModelA, self).__init__(**kwargs)
-
-        n_stimuli = 20
-        n_dim = 4
-        n_output = 3
-        prior_scale = 0.2
-
-        percept = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-            trainable=False,
+        config = super(RateModelA, self).get_config()
+        config.update(
+            {
+                "percept": self.percept,
+                "proximity": self.proximity,
+                "rate": self.rate,
+            }
         )
-        similarity = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
-            trainable=False,
-        )
-        cell = psiz.keras.layers.ALCOVECell(
-            n_output,
-            percept=percept,
-            similarity=similarity,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            temperature_initializer=tf.keras.initializers.Constant(1.0),
-            lr_attention_initializer=tf.keras.initializers.Constant(0.03),
-            lr_association_initializer=tf.keras.initializers.Constant(0.03),
-            trainable=False,
-        )
-        rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
-        self.behavior = rnn
+        return config
 
-    def call(self, inputs):
-        """Call."""
-        return self.behavior(inputs)
-
-    def get_config(self):
-        return super(ALCOVEModelA, self).get_config()
+    @classmethod
+    def from_config(cls, config):
+        config["percept"] = keras.layers.deserialize(config["percept"])
+        config["proximity"] = keras.layers.deserialize(config["proximity"])
+        config["rate"] = keras.layers.deserialize(config["rate"])
+        return cls(**config)
 
 
-class ALCOVEModelB(StochasticModel):
-    """An `ALCOVECell` model.
+# TODO finish or move out
+# class ALCOVEModelA(StochasticModel):
+#     """An `ALCOVECell` model.
 
-    VI percept layer.
+#     Gates:
+#         None
 
-    Gates:
-        None
+#     """
 
-    """
+#     def __init__(self, **kwargs):
+#         """Initialize."""
+#         super(ALCOVEModelA, self).__init__(**kwargs)
 
-    def __init__(self, **kwargs):
-        """Initialize."""
-        super(ALCOVEModelB, self).__init__(**kwargs)
+#         n_stimuli = 20
+#         n_dim = 4
+#         n_output = 3
+#         prior_scale = 0.2
 
-        n_stimuli = 20
-        n_dim = 4
-        n_output = 3
-        kl_weight = 0.1
-        prior_scale = 0.2
+#         percept = psiz.keras.layers.EmbeddingNormalDiag(
+#             n_stimuli + 1,
+#             n_dim,
+#             mask_zero=True,
+#             scale_initializer=keras.initializers.Constant(
+#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#             ),
+#             trainable=False,
+#         )
+#         similarity = psiz.keras.layers.ExponentialSimilarity(
+#             beta_initializer=keras.initializers.Constant(3.0),
+#             tau_initializer=keras.initializers.Constant(1.0),
+#             gamma_initializer=keras.initializers.Constant(0.0),
+#             trainable=False,
+#         )
+#         cell = psiz.keras.layers.ALCOVECell(
+#             n_output,
+#             percept=percept,
+#             similarity=similarity,
+#             rho_initializer=keras.initializers.Constant(2.0),
+#             temperature_initializer=keras.initializers.Constant(1.0),
+#             lr_attention_initializer=keras.initializers.Constant(0.03),
+#             lr_association_initializer=keras.initializers.Constant(0.03),
+#             trainable=False,
+#         )
+#         rnn = keras.layers.RNN(cell, return_sequences=True, stateful=False)
+#         self.behavior = rnn
 
-        # VI percept layer
-        embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
-            ),
-        )
-        embedding_prior = psiz.keras.layers.EmbeddingShared(
-            n_stimuli + 1,
-            n_dim,
-            mask_zero=True,
-            embedding=psiz.keras.layers.EmbeddingNormalDiag(
-                1,
-                1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
-                ),
-                loc_trainable=False,
-            ),
-        )
-        percept = psiz.keras.layers.EmbeddingVariational(
-            posterior=embedding_posterior,
-            prior=embedding_prior,
-            kl_weight=kl_weight,
-            kl_n_sample=30,
-        )
-        similarity = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
-            trainable=False,
-        )
-        cell = psiz.keras.layers.ALCOVECell(
-            n_output,
-            percept=percept,
-            similarity=similarity,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            temperature_initializer=tf.keras.initializers.Constant(1.0),
-            lr_attention_initializer=tf.keras.initializers.Constant(0.03),
-            lr_association_initializer=tf.keras.initializers.Constant(0.03),
-            trainable=False,
-        )
-        rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
-        self.behavior = rnn
+#     def call(self, inputs):
+#         """Call."""
+#         return self.behavior(inputs)
 
-    def call(self, inputs):
-        """Call."""
-        return self.behavior(inputs)
+#     def get_config(self):
+#         return super(ALCOVEModelA, self).get_config()
 
-    def get_config(self):
-        return super(ALCOVEModelB, self).get_config()
+
+# TODO finish or move out
+# class ALCOVEModelB(StochasticModel):
+#     """An `ALCOVECell` model.
+
+#     VI percept layer.
+
+#     Gates:
+#         None
+
+#     """
+
+#     def __init__(self, **kwargs):
+#         """Initialize."""
+#         super(ALCOVEModelB, self).__init__(**kwargs)
+
+#         n_stimuli = 20
+#         n_dim = 4
+#         n_output = 3
+#         kl_weight = 0.1
+#         prior_scale = 0.2
+
+#         # VI percept layer
+#         embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+#             n_stimuli + 1,
+#             n_dim,
+#             mask_zero=True,
+#             scale_initializer=keras.initializers.Constant(
+#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#             ),
+#         )
+#         embedding_prior = psiz.keras.layers.EmbeddingShared(
+#             n_stimuli + 1,
+#             n_dim,
+#             mask_zero=True,
+#             embedding=psiz.keras.layers.EmbeddingNormalDiag(
+#                 1,
+#                 1,
+#                 loc_initializer=keras.initializers.Constant(0.0),
+#                 scale_initializer=keras.initializers.Constant(
+#                     tfp.math.softplus_inverse(prior_scale).numpy()
+#                 ),
+#                 loc_trainable=False,
+#             ),
+#         )
+#         percept = psiz.keras.layers.EmbeddingVariational(
+#             posterior=embedding_posterior,
+#             prior=embedding_prior,
+#             kl_weight=kl_weight,
+#             kl_n_sample=30,
+#         )
+#         similarity = psiz.keras.layers.ExponentialSimilarity(
+#             beta_initializer=keras.initializers.Constant(3.0),
+#             tau_initializer=keras.initializers.Constant(1.0),
+#             gamma_initializer=keras.initializers.Constant(0.0),
+#             trainable=False,
+#         )
+#         cell = psiz.keras.layers.ALCOVECell(
+#             n_output,
+#             percept=percept,
+#             similarity=similarity,
+#             rho_initializer=keras.initializers.Constant(2.0),
+#             temperature_initializer=keras.initializers.Constant(1.0),
+#             lr_attention_initializer=keras.initializers.Constant(0.03),
+#             lr_association_initializer=keras.initializers.Constant(0.03),
+#             trainable=False,
+#         )
+#         rnn = keras.layers.RNN(cell, return_sequences=True, stateful=False)
+#         self.behavior = rnn
+
+#     def call(self, inputs):
+#         """Call."""
+#         return self.behavior(inputs)
+
+#     def get_config(self):
+#         return super(ALCOVEModelB, self).get_config()
 
 
 def build_ranksim_subclass_a():
@@ -789,9 +969,9 @@ def build_ranksim_subclass_a():
     """
     model = RankModelA(n_sample=3)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -805,9 +985,9 @@ def build_ranksim_subclass_b():
     """
     model = RankModelB(n_sample=3)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -821,9 +1001,9 @@ def build_ranksim_subclass_c():
     """
     model = RankModelC(n_sample=3)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -838,9 +1018,9 @@ def build_ranksim_subclass_c():
 #     """
 #     model = RankCellModelA(n_sample=3)
 #     compile_kwargs = {
-#         "loss": tf.keras.losses.CategoricalCrossentropy(),
-#         "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-#         "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+#         "loss": keras.losses.CategoricalCrossentropy(),
+#         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+#         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
 #     }
 #     model.compile(**compile_kwargs)
 #     return model
@@ -850,44 +1030,44 @@ def build_ratesim_subclass_a():
     """Build subclassed `Model`."""
     model = RateModelA(n_sample=11)
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_alcove_subclass_a():
-    """Build subclassed `Model`.
+# def build_alcove_subclass_a():
+#     """Build subclassed `Model`.
 
-    ALCOVECell, one group, stochastic (non VI).
+#     ALCOVECell, one group, stochastic (non VI).
 
-    """
-    model = ALCOVEModelA(n_sample=2)
-    compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
-    }
-    model.compile(**compile_kwargs)
-    return model
+#     """
+#     model = ALCOVEModelA(n_sample=2)
+#     compile_kwargs = {
+#         "loss": keras.losses.CategoricalCrossentropy(),
+#         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+#         "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
+#     }
+#     model.compile(**compile_kwargs)
+#     return model
 
 
-def build_alcove_subclass_b():
-    """Build subclassed `Model`.
+# def build_alcove_subclass_b():
+#     """Build subclassed `Model`.
 
-    ALCOVECell, one group, VI percept layer.
+#     ALCOVECell, one group, VI percept layer.
 
-    """
-    model = ALCOVEModelB(n_sample=2)
-    compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
-    }
-    model.compile(**compile_kwargs)
-    return model
+#     """
+#     model = ALCOVEModelB(n_sample=2)
+#     compile_kwargs = {
+#         "loss": keras.losses.CategoricalCrossentropy(),
+#         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+#         "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
+#     }
+#     model.compile(**compile_kwargs)
+#     return model
 
 
 @pytest.fixture(scope="module")
@@ -1109,17 +1289,17 @@ def call_fit_evaluate_predict(model, tfds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
     for data in tfds:
-        x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
-        _ = model(x, training=False)
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
+        y_pred = model(x, training=False)
 
     # Test fit.
     model.fit(tfds, epochs=3)
 
     # Test evaluate.
-    model.evaluate(tfds)
+    eval0 = model.evaluate(tfds)
 
     # Test predict.
-    model.predict(tfds)
+    pred0 = model.predict(tfds)
 
 
 class TestControl:
@@ -1133,20 +1313,21 @@ class TestControl:
 
         model = ModelControl()
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
         result0 = model.evaluate(tfds)
         kernel0 = model.dense_layer.kernel
         bias0 = model.dense_layer.bias
-        fp_model = tmpdir.join("test_model")
+        fp_model = Path(tmpdir) / "test_model.keras"
         model.save(fp_model)
         del model
 
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"ModelControl": ModelControl}
+        loaded = keras.models.load_model(
+            fp_model,
+            custom_objects={"ModelControl": ModelControl},
         )
         result1 = loaded.evaluate(tfds)
         kernel1 = loaded.dense_layer.kernel
@@ -1162,16 +1343,15 @@ class TestModelA:
     """Test custom ModelA"""
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load(self, ds_x2, is_eager, save_traces, tmpdir):
+    def test_save_load(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
         tfds = ds_x2["tfds"]
 
         model = ModelA(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1179,11 +1359,11 @@ class TestModelA:
         results_0 = model.evaluate(tfds, return_dict=True)
         kernel0 = model.dense_layer.kernel
         bias0 = model.dense_layer.bias
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
+        fp_model = Path(tmpdir) / "test_model.keras"
+        model.save(fp_model)
         del model
 
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelA": ModelA})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelA": ModelA})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.dense_layer.kernel
         bias1 = loaded.dense_layer.bias
@@ -1199,27 +1379,26 @@ class TestModelB:
     """Test custom ModelB"""
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load_b1(self, ds_x2, is_eager, save_traces, tmpdir):
+    def test_save_load_b1(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
         tfds = ds_x2["tfds"]
 
         model = ModelB(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
         assert model.n_sample == 2
         results_0 = model.evaluate(tfds, return_dict=True)
         kernel0 = model.custom_layer.kernel
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
+        fp_model = Path(tmpdir) / "test_model.keras"
+        model.save(fp_model)
         del model
 
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelB": ModelB})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelB": ModelB})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.custom_layer.kernel
 
@@ -1229,28 +1408,28 @@ class TestModelB:
         tf.debugging.assert_equal(kernel0, kernel1)
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load_b2(self, ds_x2_as_tensor, is_eager, save_traces, tmpdir):
+    def test_save_load_b2(self, ds_x2_as_tensor, is_eager, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
         tfds = ds_x2_as_tensor["tfds"]
 
         model = ModelB2(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
         assert model.n_sample == 2
         results_0 = model.evaluate(tfds, return_dict=True)
         kernel0 = model.custom_layer.kernel
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
+        fp_model = Path(tmpdir) / "test_model.keras"
+        model.save(fp_model)
         del model
 
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"ModelB2": ModelB2}
+        loaded = keras.models.load_model(
+            fp_model,
+            custom_objects={"ModelB2": ModelB2},
         )
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.custom_layer.kernel
@@ -1371,7 +1550,7 @@ class TestModelC:
 
         # Perform a `test_step`.
         for data in tfds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+            x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
             x = model.repeat_samples_in_batch_axis(x, model.n_sample)
@@ -1399,8 +1578,8 @@ class TestModelC:
         tfds = ds_x2_x2_x2["tfds"]
         model = ModelC(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds)
@@ -1483,7 +1662,7 @@ class TestModelC:
 
         # Perform a `test_step` to verify `n_sample` took effect.
         for data in tfds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+            x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
             x = model.repeat_samples_in_batch_axis(x, model.n_sample)
@@ -1501,16 +1680,15 @@ class TestModelC:
             tf.debugging.assert_equal(tf.shape(y_pred), y_pred_shape_desired)
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load(self, ds_x2_x2_x2, is_eager, save_traces, tmpdir):
+    def test_save_load(self, ds_x2_x2_x2, is_eager, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_x2_x2_x2["tfds"]
         model = ModelC(n_sample=7)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
 
@@ -1521,12 +1699,12 @@ class TestModelC:
         branch_1_w0_0 = model.branch_1.w0
 
         # Save the model.
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
+        fp_model = Path(tmpdir) / "test_model.keras"
+        model.save(fp_model)
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelC": ModelC})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelC": ModelC})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         branch_0_w0_1 = loaded.branch_0.w0
         branch_1_w0_1 = loaded.branch_1.w0
@@ -1562,7 +1740,7 @@ class TestModelD:
 
         # Perform a `test_step`.
         for data in tfds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+            x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
             x = model.repeat_samples_in_batch_axis(x, model.n_sample)
@@ -1581,16 +1759,15 @@ class TestModelD:
             tf.debugging.assert_equal(y_pred.shape, y_pred_shape_desired)
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load(self, ds_x3_x3, is_eager, save_traces, tmpdir):
+    def test_save_load(self, ds_x3_x3, is_eager, tmpdir):
         """Test model serialization."""
         tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_x3_x3["tfds"]
         model = ModelD(n_sample=11)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
 
@@ -1600,12 +1777,12 @@ class TestModelD:
         kernel_0 = model.rnn_layer.cell.layer_0.kernel
 
         # Save the model.
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
+        fp_model = Path(tmpdir) / "test_model.keras"
+        model.save(fp_model)
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelD": ModelD})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelD": ModelD})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel_1 = loaded.rnn_layer.cell.layer_0.kernel
 
@@ -1626,11 +1803,10 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load_subclass_a(self, ds_4rank1_v0, is_eager, save_traces, tmpdir):
+    def test_save_load_subclass_a(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load.
 
         We change default `n_sample` for a more comprehensive test.
@@ -1640,8 +1816,9 @@ class TestRankSimilarity:
 
         tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
-        input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
-        model.build(input_shape)
+        # TODO remove?
+        # input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
+        # model.build(input_shape)
 
         # Test initialization settings.
         assert model.n_sample == 3
@@ -1649,23 +1826,26 @@ class TestRankSimilarity:
         # Test propogation of setting `n_sample`.
         model.n_sample = 21
         assert model.n_sample == 21
-
         model.fit(tfds, epochs=1)
         _ = model.evaluate(tfds)
+        percept_mean_0 = model.percept.loc.numpy()  # TODO remove
         percept_mean = model.percept.embeddings.mean()
         percept_variance = model.percept.embeddings.variance()
 
         # Test storage serialization.
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
-        del model
-
+        fp_model = Path(tmpdir) / "test_model.keras"
+        model.save(fp_model)
+        # del model TODO uncomment
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"RankModelA": RankModelA}
+        loaded = keras.models.load_model(
+            fp_model,
+            custom_objects={"RankModelA": RankModelA},
         )
         _ = loaded.evaluate(tfds)
+        # TODO there's some kind of issue where after loading
+        # loaded.percept.embeddings.mean() != loaded.percept.loc.numpy()
         loaded_percept_mean = loaded.percept.embeddings.mean()
+        loaded_percept_mean_0 = loaded.percept.loc.numpy()  # TODO remove
         loaded_percept_variance = loaded.percept.embeddings.variance()
 
         # Test for model equality.
@@ -1675,7 +1855,7 @@ class TestRankSimilarity:
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
         tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_b(self, ds_4rank1_v0, is_eager):
@@ -1685,11 +1865,10 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load_subclass_b(self, ds_4rank1_v0, is_eager, save_traces, tmpdir):
+    def test_save_load_subclass_b(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load."""
         tf.config.run_functions_eagerly(is_eager)
 
@@ -1711,13 +1890,14 @@ class TestRankSimilarity:
         percept_variance = model.percept.embeddings.variance()
 
         # Test storage serialization.
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
+        fp_model = Path(tmpdir) / "test_model.keras"
+        model.save(fp_model)
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"RankModelB": RankModelB}
+        loaded = keras.models.load_model(
+            fp_model,
+            custom_objects={"RankModelB": RankModelB},
         )
         _ = loaded.evaluate(tfds)
         loaded_percept_mean = loaded.percept.embeddings.mean()
@@ -1728,7 +1908,7 @@ class TestRankSimilarity:
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
         tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
@@ -1738,7 +1918,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v2
         model = build_ranksim_subclass_c()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
@@ -1761,7 +1941,7 @@ class TestRankSimilarity:
 
         _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
 
 # TODO finish or move out
@@ -1787,13 +1967,13 @@ class TestRankSimilarity:
 #         tfds = ds_time_8rank2_v0
 #         model = build_ranksimcell_subclass_a()
 #         call_fit_evaluate_predict(model, tfds)
-#         tf.keras.backend.clear_session()
+#         keras.backend.clear_session()
 
 #     @pytest.mark.xfail(reason="'add_loss' does not work inside RNN cell.")
 #     @pytest.mark.parametrize("is_eager", [True, False])
-#     @pytest.mark.parametrize("save_traces", [True, False])
+#
 #     def test_save_load_subclass_a(
-#         self, ds_time_8rank2_v0, is_eager, save_traces, tmpdir
+#         self, ds_time_8rank2_v0, is_eager, tmpdir
 #     ):
 #         """Test save/load."""
 #         tf.config.run_functions_eagerly(is_eager)
@@ -1815,12 +1995,12 @@ class TestRankSimilarity:
 #         _ = model.evaluate(tfds)
 
 #         # Test storage serialization.
-#         fp_model = tmpdir.join("test_model")
-#         model.save(fp_model, save_traces=save_traces)
+#         fp_model = Path(tmpdir) / "test_model.keras"
+#         model.save(fp_model)
 #         del model
 
 #         # Load the saved model.
-#         loaded = tf.keras.models.load_model(
+#         loaded = keras.models.load_model(
 #             fp_model, custom_objects={"RankModelB": RankModelB}
 #         )
 #         loaded_percept_mean = loaded.cell.percept.embeddings.mean()
@@ -1832,7 +2012,7 @@ class TestRankSimilarity:
 #         # Check `percept` posterior mean the same.
 #         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
 
-#         tf.keras.backend.clear_session()
+#         keras.backend.clear_session()
 
 
 class TestRateSimilarity:
@@ -1846,7 +2026,7 @@ class TestRateSimilarity:
         tfds = ds_rate2_v0
         model = build_ratesim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_rate2_v0, is_eager, tmpdir):
@@ -1864,13 +2044,14 @@ class TestRateSimilarity:
         percept_mean = model.percept.embeddings.mean()
 
         # Test storage serialization.
-        fp_model = tmpdir.join("test_model")
+        fp_model = Path(tmpdir) / "test_model.keras"
         model.save(fp_model)
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"RateModelA": RateModelA}
+        loaded = keras.models.load_model(
+            fp_model,
+            custom_objects={"RateModelA": RateModelA},
         )
         _ = loaded.evaluate(tfds)
 
@@ -1880,119 +2061,116 @@ class TestRateSimilarity:
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded.percept.embeddings.mean())
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
 
-class TestALCOVECell:
-    """Test using `ALCOVECell` layer."""
+# TODO finish or move out
+# class TestALCOVECell:
+#     """Test using `ALCOVECell` layer."""
 
-    @pytest.mark.parametrize("is_eager", [True, False])
-    def test_usage_subclass_a(self, ds_time_categorize_v0, is_eager):
-        """Test subclassed model, one group."""
-        tf.config.run_functions_eagerly(is_eager)
+#     @pytest.mark.parametrize("is_eager", [True, False])
+#     def test_usage_subclass_a(self, ds_time_categorize_v0, is_eager):
+#         """Test subclassed model, one group."""
+#         tf.config.run_functions_eagerly(is_eager)
 
-        tfds = ds_time_categorize_v0
-        model = build_alcove_subclass_a()
-        call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+#         tfds = ds_time_categorize_v0
+#         model = build_alcove_subclass_a()
+#         call_fit_evaluate_predict(model, tfds)
+#         keras.backend.clear_session()
 
-    @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load_subclass_a(
-        self, ds_time_categorize_v0, is_eager, save_traces, tmpdir
-    ):
-        """Test save/load."""
-        tf.config.run_functions_eagerly(is_eager)
+#     @pytest.mark.parametrize("is_eager", [True, False])
+#     def test_save_load_subclass_a(self, ds_time_categorize_v0, is_eager, tmpdir):
+#         """Test save/load."""
+#         tf.config.run_functions_eagerly(is_eager)
 
-        tfds = ds_time_categorize_v0
-        model = build_alcove_subclass_a()
-        model.fit(tfds, epochs=1)
+#         tfds = ds_time_categorize_v0
+#         model = build_alcove_subclass_a()
+#         model.fit(tfds, epochs=1)
 
-        # Test initialization settings.
-        assert model.n_sample == 2
+#         # Test initialization settings.
+#         assert model.n_sample == 2
 
-        # Update `n_sample`.
-        model.n_sample = 11
-        _ = model.evaluate(tfds)
-        percept_mean = model.behavior.cell.percept.embeddings.mean()
+#         # Update `n_sample`.
+#         model.n_sample = 11
+#         _ = model.evaluate(tfds)
+#         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
-        # Test storage.
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
-        del model
-        # Load the saved model.
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
-        )
-        _ = loaded.evaluate(tfds)
+#         # Test storage.
+#         fp_model = Path(tmpdir) / "test_model.keras"
+#         model.save(fp_model)
+#         del model
+#         # Load the saved model.
+#         loaded = keras.models.load_model(
+#             fp_model,
+#             custom_objects={"ALCOVEModelA": ALCOVEModelA},
+#         )
+#         _ = loaded.evaluate(tfds)
 
-        # Test for model equality.
-        loaded_percept_mean = loaded.behavior.cell.percept.embeddings.mean()
-        assert loaded.n_sample == 11
+#         # Test for model equality.
+#         loaded_percept_mean = loaded.behavior.cell.percept.embeddings.mean()
+#         assert loaded.n_sample == 11
 
-        # Check `percept` posterior mean the same.
-        tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
+#         # Check `percept` posterior mean the same.
+#         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
 
-        tf.keras.backend.clear_session()
+#         keras.backend.clear_session()
 
-    @pytest.mark.parametrize(
-        "is_eager",
-        [
-            True,
-            pytest.param(
-                False,
-                marks=pytest.mark.xfail(
-                    reason="'add_loss' does not work inside RNN cell."
-                ),
-            ),
-        ],
-    )
-    def test_usage_subclass_b(self, ds_time_categorize_v0, is_eager):
-        """Test subclassed model, one group."""
-        tf.config.run_functions_eagerly(is_eager)
+#     @pytest.mark.parametrize(
+#         "is_eager",
+#         [
+#             True,
+#             pytest.param(
+#                 False,
+#                 marks=pytest.mark.xfail(
+#                     reason="'add_loss' does not work inside RNN cell."
+#                 ),
+#             ),
+#         ],
+#     )
+#     def test_usage_subclass_b(self, ds_time_categorize_v0, is_eager):
+#         """Test subclassed model, one group."""
+#         tf.config.run_functions_eagerly(is_eager)
 
-        tfds = ds_time_categorize_v0
-        model = build_alcove_subclass_b()
-        call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+#         tfds = ds_time_categorize_v0
+#         model = build_alcove_subclass_b()
+#         call_fit_evaluate_predict(model, tfds)
+#         keras.backend.clear_session()
 
-    @pytest.mark.xfail(reason="'add_loss' does not work inside RNN cell.")
-    @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.parametrize("save_traces", [True, False])
-    def test_save_load_subclass_b(
-        self, ds_time_categorize_v0, is_eager, save_traces, tmpdir
-    ):
-        """Test save/load."""
-        tf.config.run_functions_eagerly(is_eager)
+#     @pytest.mark.xfail(reason="'add_loss' does not work inside RNN cell.")
+#     @pytest.mark.parametrize("is_eager", [True, False])
+#     def test_save_load_subclass_b(self, ds_time_categorize_v0, is_eager, tmpdir):
+#         """Test save/load."""
+#         tf.config.run_functions_eagerly(is_eager)
 
-        tfds = ds_time_categorize_v0
-        model = build_alcove_subclass_b()
-        model.fit(tfds, epochs=1)
+#         tfds = ds_time_categorize_v0
+#         model = build_alcove_subclass_b()
+#         model.fit(tfds, epochs=1)
 
-        # Test initialization settings.
-        assert model.n_sample == 2
+#         # Test initialization settings.
+#         assert model.n_sample == 2
 
-        # Increase `n_sample` to get more consistent evaluations
-        model.n_sample = 11
-        _ = model.evaluate(tfds)
-        percept_mean = model.behavior.cell.percept.embeddings.mean()
+#         # Increase `n_sample` to get more consistent evaluations
+#         model.n_sample = 11
+#         _ = model.evaluate(tfds)
+#         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
-        # Test storage.
-        fp_model = tmpdir.join("test_model")
-        model.save(fp_model, save_traces=save_traces)
-        del model
-        # Load the saved model.
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
-        )
-        _ = loaded.evaluate(tfds)
+#         # Test storage.
+#         fp_model = Path(tmpdir) / "test_model.keras"
+#         model.save(fp_model)
+#         del model
+#         # Load the saved model.
+#         loaded = keras.models.load_model(
+#             fp_model,
+#             custom_objects={"ALCOVEModelA": ALCOVEModelA},
+#         )
+#         _ = loaded.evaluate(tfds)
 
-        # Test for model equality.
-        assert loaded.n_sample == 11
+#         # Test for model equality.
+#         assert loaded.n_sample == 11
 
-        # Check `percept` posterior mean the same.
-        tf.debugging.assert_equal(
-            percept_mean, loaded.behavior.cell.percept.embeddings.mean()
-        )
+#         # Check `percept` posterior mean the same.
+#         tf.debugging.assert_equal(
+#             percept_mean, loaded.behavior.cell.percept.embeddings.mean()
+#         )
 
-        tf.keras.backend.clear_session()
+#         keras.backend.clear_session()

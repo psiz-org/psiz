@@ -20,14 +20,15 @@ Classes:
 
 """
 
+
 import copy
 
-import tensorflow as tf
+import keras
 
 from psiz.keras.layers.behaviors.rank_similarity_base import RankSimilarityBase
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="RankSimilarityCell"
 )
 class RankSimilarityCell(RankSimilarityBase):
@@ -44,11 +45,11 @@ class RankSimilarityCell(RankSimilarityBase):
 
         # Satisfy RNNCell contract.
         # NOTE: A placeholder state.
-        self.state_size = [tf.TensorShape([1])]
+        self.state_size = [1]
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
-        initial_state = [tf.zeros([batch_size, 1], name="rank_cell_initial_state")]
+        initial_state = [keras.ops.zeros([batch_size, 1])]
         return initial_state
 
     def call(self, inputs, states, training=None):

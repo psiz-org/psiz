@@ -15,6 +15,8 @@
 # ============================================================================
 """Module for testing models.py."""
 
+
+import keras
 import numpy as np
 import pytest
 from scipy.stats import pearsonr
@@ -25,7 +27,7 @@ import psiz
 from psiz.utils import choice_wo_replace
 
 
-class RankModel(tf.keras.Model):
+class RankModel(keras.Model):
     """A behavior model.
 
     No Gates.
@@ -48,7 +50,7 @@ class RankModel(tf.keras.Model):
         return self.soft_8rank2(s)
 
 
-class SimilarityModel(tf.keras.Model):
+class SimilarityModel(keras.Model):
     """A similarity model."""
 
     def __init__(self, percept=None, proximity=None, **kwargs):
@@ -73,11 +75,11 @@ def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
     else:
         n_stimuli_emb = n_stimuli
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli_emb,
         n_dim,
         mask_zero=mask_zero,
-        embeddings_initializer=tf.keras.initializers.RandomNormal(stddev=0.17, seed=4),
+        embeddings_initializer=keras.initializers.RandomNormal(stddev=0.17, seed=4),
     )
 
     # Set similarity function.
@@ -86,36 +88,36 @@ def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
             fit_tau=False,
             fit_gamma=False,
             fit_beta=False,
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
         )
     elif similarity_func == "StudentsT":
         similarity = psiz.keras.layers.StudentsTSimilarity(
             fit_tau=False,
             fit_alpha=False,
-            tau_initializer=tf.keras.initializers.Constant(2.0),
-            alpha_initializer=tf.keras.initializers.Constant(1.0),
+            tau_initializer=keras.initializers.Constant(2.0),
+            alpha_initializer=keras.initializers.Constant(1.0),
         )
     elif similarity_func == "HeavyTailed":
         similarity = psiz.keras.layers.HeavyTailedSimilarity(
             fit_tau=False,
             fit_kappa=False,
             fit_alpha=False,
-            tau_initializer=tf.keras.initializers.Constant(2.0),
-            kappa_initializer=tf.keras.initializers.Constant(2.0),
-            alpha_initializer=tf.keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(2.0),
+            kappa_initializer=keras.initializers.Constant(2.0),
+            alpha_initializer=keras.initializers.Constant(10.0),
         )
     elif similarity_func == "Inverse":
         similarity = psiz.keras.layers.InverseSimilarity(
             fit_tau=False,
             fit_mu=False,
-            tau_initializer=tf.keras.initializers.Constant(2.0),
-            mu_initializer=tf.keras.initializers.Constant(0.000001),
+            tau_initializer=keras.initializers.Constant(2.0),
+            mu_initializer=keras.initializers.Constant(0.000001),
         )
 
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=similarity,
         trainable=False,
     )
@@ -123,9 +125,9 @@ def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
     model = RankModel(percept=percept, proximity=proximity)
 
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -148,14 +150,14 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
     else:
         n_stimuli_emb = n_stimuli
 
-    percept = tf.keras.layers.Embedding(n_stimuli_emb, n_dim, mask_zero=mask_zero)
+    percept = keras.layers.Embedding(n_stimuli_emb, n_dim, mask_zero=mask_zero)
 
     # Set similarity function.
     if similarity_func == "Exponential":
         similarity = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             fit_beta=False,
             fit_tau=False,
         )
@@ -170,9 +172,9 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 
     model = RankModel(percept=percept, proximity=proximity)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -180,7 +182,7 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 
 # TODO The coordinate space may need to be scaled so that it is
 # "learnable" by the other similarity functions.
-# TODO Would ideally use `tf.keras.utils.split_dataset`, but it is brittle.
+# TODO Would ideally use `keras.utils.split_dataset`, but it is brittle.
 @pytest.mark.slow
 @pytest.mark.parametrize("similarity_func", ["Exponential"])
 @pytest.mark.parametrize("mask_zero", [True])
@@ -258,10 +260,10 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     )
 
     # Use early stopping.
-    early_stop = tf.keras.callbacks.EarlyStopping(
+    early_stop = keras.callbacks.EarlyStopping(
         "val_cce", patience=30, mode="min", restore_best_weights=True
     )
-    cb_board = tf.keras.callbacks.TensorBoard(
+    cb_board = keras.callbacks.TensorBoard(
         log_dir=tmpdir,
         histogram_freq=0,
         write_graph=False,

@@ -13,20 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of TensorFlow kernel layers.
+"""Module of Keras proximity layers.
 
 Classes:
     Proximity: A pairwise proximity kernel layer.
 
 """
 
-import tensorflow as tf
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(
-    package="psiz.keras.layers", name="Proximity"
-)
-class Proximity(tf.keras.layers.Layer):
+@keras.saving.register_keras_serializable(package="psiz.keras.layers", name="Proximity")
+class Proximity(keras.layers.Layer):
     """Abstract base class for pairwise proximity kernel layer.
 
     A pairwise proximity layer that consumes the last axis of the input
@@ -48,19 +47,28 @@ class Proximity(tf.keras.layers.Layer):
         super(Proximity, self).__init__(**kwargs)
 
         if activation is None:
-            activation = tf.keras.layers.Activation("linear")
+            activation = keras.layers.Activation("linear")
         self.activation = activation
 
     def call(self, inputs):
         """Call."""
         raise NotImplementedError
 
+    def build(self, input_shape):
+        """Build."""
+        if self.built:
+            return
+        # Since activation is applied to the output of the proximity layer, only need input shape
+        # of one of the inputs, less the last axis which will have been consumed by the proximity layer.
+        self.activation.build(input_shape[0][:-1])
+        self.built = True
+
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
         config.update(
             {
-                "activation": tf.keras.utils.serialize_keras_object(self.activation),
+                "activation": keras.saving.serialize_keras_object(self.activation),
             }
         )
         return config
@@ -68,5 +76,7 @@ class Proximity(tf.keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         """Create from configuration."""
-        config["activation"] = tf.keras.layers.deserialize(config["activation"])
+        config["activation"] = keras.saving.deserialize_keras_object(
+            config["activation"]
+        )
         return cls(**config)

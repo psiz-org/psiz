@@ -21,13 +21,14 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 from psiz.keras.layers.gates.split_gate import SplitGate
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="BraidGate")
+@keras.saving.register_keras_serializable(package="psiz.keras", name="BraidGate")
 class BraidGate(SplitGate):
     """A layer that routes inputs to subnetworks.
 
@@ -64,7 +65,7 @@ class BraidGate(SplitGate):
             **kwargs
         )
 
-    def call(self, inputs, mask=None):
+    def call(self, inputs):
         """Call.
 
         Args:
@@ -76,8 +77,6 @@ class BraidGate(SplitGate):
                 [data Tensor, [data Tensor, ...], gate_weights Tensor].
                 The data Tensor(s) follows shape=(batch, m, [n, ...]).
                 The gate_weights Tensor follows shape=(batch, g)
-            mask (optional): A Tensor indicating which timesteps should
-                be masked.
 
         """
         gate_weights = self._process_gate_weights(inputs)
@@ -89,25 +88,25 @@ class BraidGate(SplitGate):
         subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
         subnet_outputs = []
         for i in range(self.n_subnet):
-            if mask is None:
-                out = self._processed_subnets[i](subnet_inputs[i])
-            else:
-                out = self._processed_subnets[i](subnet_inputs[i], mask=mask)
+            out = self._processed_subnets[i](subnet_inputs[i])
             out, lost_shape = self._pre_combine(out)
             # Weight outputs appropriately.
             if self._has_timestep_axis:
-                out = out * tf.expand_dims(gate_weights[:, :, i], axis=2)
+                out = out * keras.ops.expand_dims(gate_weights[:, :, i], axis=2)
             else:
-                out = out * tf.expand_dims(gate_weights[:, i], axis=1)
+                out = out * keras.ops.expand_dims(gate_weights[:, i], axis=1)
             subnet_outputs.append(out)
 
-        outputs = tf.math.add_n(subnet_outputs)
+        outputs = subnet_outputs[0]
+        for i in range(1, self.n_subnet):
+            outputs = outputs + subnet_outputs[i]
 
         # Handle reshaping of output.
-        outputs = tf.reshape(outputs, lost_shape)
+        outputs = keras.ops.reshape(outputs, lost_shape)
 
         return outputs
 
+    # TODO remove
     def compute_output_shape(self, input_shape):
         """Computes the output shape of the layer.
 
@@ -143,9 +142,22 @@ class BraidGate(SplitGate):
 
         """
         # Flatten non-batch dimensions.
-        x_shape = tf.shape(x)
+        x_shape = keras.ops.shape(x)
         if self._has_timestep_axis:
-            x = tf.reshape(x, [x_shape[0], x_shape[1], -1])
+            x = keras.ops.reshape(x, [x_shape[0], x_shape[1], -1])
         else:
-            x = tf.reshape(x, [x_shape[0], -1])
+            x = keras.ops.reshape(x, [x_shape[0], -1])
         return x, x_shape
+
+    def get_config(self):
+        config = super().get_config()
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        subnets_serial = config["subnets"]
+        subnets = []
+        for subnet_serial in subnets_serial:
+            subnets.append(keras.saving.deserialize_keras_object(subnet_serial))
+        config["subnets"] = subnets
+        return cls(**config)

@@ -17,7 +17,6 @@
 
 from psiz.utils.affine_mvn import affine_mvn
 from psiz.utils.choice_wo_replace import choice_wo_replace
-from psiz.utils.expand_dim_repeat import expand_dim_repeat
 from psiz.utils.m_prefer_n import m_prefer_n
 from psiz.utils.pairwise_indices import pairwise_indices
 from psiz.utils.procrustes_rotation import procrustes_rotation
@@ -31,7 +30,6 @@ from psiz.utils.stratified_group_kfold import StratifiedGroupKFold
 __all__ = [
     "affine_mvn",
     "choice_wo_replace",
-    "expand_dim_repeat",
     "m_prefer_n",
     "pairwise_indices",
     "procrustes_rotation",

@@ -15,13 +15,15 @@
 # ============================================================================
 """Test RNN `fit` method that uses `add_loss`."""
 
+
+import keras
 import pytest
 import tensorflow as tf
 
 # from tensorflow.python.eager import backprop
 
 
-class FooModel(tf.keras.Model):
+class FooModel(keras.Model):
     """A basic model for testing.
 
     Attributes:
@@ -57,12 +59,12 @@ class FooModel(tf.keras.Model):
 
         Returns:
             A `dict` containing values that will be passed to
-            `tf.keras.callbacks.CallbackList.on_train_batch_end`.
+            `keras.callbacks.CallbackList.on_train_batch_end`.
             Typically, the values of the `Model`'s metrics are
             returned. Example: `{'loss': 0.2, 'accuracy': 0.7}`.
 
         """
-        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         # Run forward pass.
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)
@@ -92,7 +94,7 @@ class FooModel(tf.keras.Model):
         return output
 
 
-class FooModel2(tf.keras.Model):
+class FooModel2(keras.Model):
     """A basic model for testing.
 
     Attributes:
@@ -136,12 +138,12 @@ class FooModel2(tf.keras.Model):
 
         Returns:
             A `dict` containing values that will be passed to
-            `tf.keras.callbacks.CallbackList.on_train_batch_end`.
+            `keras.callbacks.CallbackList.on_train_batch_end`.
             Typically, the values of the `Model`'s metrics are
             returned. Example: `{'loss': 0.2, 'accuracy': 0.7}`.
 
         """
-        # x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        # x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
 
         # with backprop.GradientTape() as tape:
         #     y_pred = self(x, training=True)
@@ -158,7 +160,7 @@ class FooModel2(tf.keras.Model):
 
         # self.compiled_metrics.update_state(y, y_pred, sample_weight)
         # return {m.name: m.result() for m in self.metrics}
-        x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         # Run forward pass.
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)
@@ -169,7 +171,7 @@ class FooModel2(tf.keras.Model):
         return self.compute_metrics(x, y, y_pred, sample_weight)
 
 
-class MyRegularizer(tf.keras.regularizers.Regularizer, tf.Module):
+class MyRegularizer(keras.regularizers.Regularizer, tf.Module):
     def __init__(self):
         """Initialize."""
         super(MyRegularizer, self).__init__()
@@ -188,7 +190,7 @@ def _make_kl_divergence_fn():
     return _fn
 
 
-class BarCell(tf.keras.layers.Layer):
+class BarCell(keras.layers.Layer):
     """RNN cell for testing."""
 
     def __init__(self, **kwargs):
@@ -262,8 +264,8 @@ def test_nornn_fit_with_add_loss(is_eager):
     bar_cell = BarCell()
     model = FooModel2(cell=bar_cell)
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
     }
     model.compile(**compile_kwargs)
 
@@ -324,12 +326,12 @@ def test_withrnn_fit_with_add_loss(is_eager, unroll):
 
     # A minimum model to reproduce the issue.
     cell = BarCell()
-    rnn = tf.keras.layers.RNN(cell, return_sequences=True, unroll=unroll)
+    rnn = keras.layers.RNN(cell, return_sequences=True, unroll=unroll)
     model = FooModel(rnn=rnn)
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.losses.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.losses.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
 

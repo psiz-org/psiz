@@ -20,14 +20,15 @@ Classes:
 
 """
 
+
 import copy
 
-import tensorflow as tf
+import keras
 
 from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="RateSimilarityCell"
 )
 class RateSimilarityCell(RateSimilarityBase):
@@ -58,11 +59,11 @@ class RateSimilarityCell(RateSimilarityBase):
 
         # Satisfy RNNCell contract.
         # NOTE: A placeholder state.
-        self.state_size = [tf.TensorShape([1])]
+        self.state_size = [1]
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
-        initial_state = [tf.zeros([batch_size, 1], name="rate_cell_initial_state")]
+        initial_state = [keras.ops.zeros([batch_size, 1])]
         return initial_state
 
     def call(self, inputs, states, training=None):
@@ -85,9 +86,9 @@ class RateSimilarityCell(RateSimilarityBase):
 
         sim_qr = self._pairwise_similarity(inputs_copied)
 
-        rating = self.lower + tf.math.divide(
+        rating = self.lower + keras.ops.divide(
             self.upper - self.lower,
-            1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint)),
+            1 + keras.ops.exp(-self.rate * (sim_qr - self.midpoint)),
         )
 
         return rating, states

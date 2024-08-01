@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of abstract TensorFlow variational layer.
+"""Module of abstract Keras variational layer.
 
 Classes:
     Variational: An abstract base class for variational inference
@@ -21,12 +21,12 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 from tensorflow_probability.python.distributions import kullback_leibler as kl_lib
 
 
-class Variational(tf.keras.layers.Layer):
+class Variational(keras.layers.Layer):
     """An abstract base class for variational layers.
 
     This class can take advantage of a registered KL divergence
@@ -84,8 +84,8 @@ class Variational(tf.keras.layers.Layer):
         self.kl_anneal = self.add_weight(
             name="kl_anneal",
             shape=[],
-            dtype=backend.floatx(),
-            initializer=tf.keras.initializers.Constant(1.0),
+            dtype=self.variable_dtype,
+            initializer=keras.initializers.Constant(1.0),
             trainable=False,
         )
 
@@ -113,7 +113,7 @@ class Variational(tf.keras.layers.Layer):
     def _kl_approximation(self, posterior_dist, prior_dist):
         """Sample-based KL approximation."""
         posterior_samples = posterior_dist.sample(self.kl_n_sample)
-        return tf.reduce_mean(
+        return keras.ops.mean(
             posterior_dist.log_prob(posterior_samples)
             - prior_dist.log_prob(posterior_samples)
         )
@@ -123,8 +123,8 @@ class Variational(tf.keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
-                "posterior": tf.keras.utils.serialize_keras_object(self.posterior),
-                "prior": tf.keras.utils.serialize_keras_object(self.prior),
+                "posterior": keras.saving.serialize_keras_object(self.posterior),
+                "prior": keras.saving.serialize_keras_object(self.prior),
                 "kl_weight": float(self.kl_weight),
                 "kl_use_exact": self.kl_use_exact,
                 "kl_n_sample": int(self.kl_n_sample),
@@ -147,6 +147,6 @@ class Variational(tf.keras.layers.Layer):
             layer: A layer instance.
 
         """
-        config["posterior"] = tf.keras.layers.deserialize(config["posterior"])
-        config["prior"] = tf.keras.layers.deserialize(config["prior"])
+        config["posterior"] = keras.saving.deserialize_keras_object(config["posterior"])
+        config["prior"] = keras.saving.deserialize_keras_object(config["prior"])
         return cls(**config)

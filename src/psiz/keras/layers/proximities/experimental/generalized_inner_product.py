@@ -21,13 +21,13 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 from psiz.keras.layers.proximities.proximity import Proximity
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="GeneralizedInnerProduct"
 )
 class GeneralizedInnerProduct(Proximity):
@@ -69,25 +69,23 @@ class GeneralizedInnerProduct(Proximity):
 
         self.w_trainable = self.trainable and w_trainable
         if w_initializer is None:
-            w_initializer = tf.keras.initializers.Identity(gain=1.0)
+            w_initializer = keras.initializers.Identity(gain=1.0)
         else:
-            w_initializer = tf.keras.initializers.get(w_initializer)
+            w_initializer = keras.initializers.get(w_initializer)
         self.w_initializer = w_initializer
-        self.w_regularizer = tf.keras.regularizers.get(w_regularizer)
-        self.w_constraint = tf.keras.constraints.get(w_constraint)
+        self.w_regularizer = keras.regularizers.get(w_regularizer)
+        self.w_constraint = keras.constraints.get(w_constraint)
 
     def build(self, input_shape):
         """Build."""
         n_dim = input_shape[0][-1]
-        dtype = tf.as_dtype(self.dtype or backend.floatx())
-        with tf.name_scope(self.name):
+        with keras.name_scope(self.name):
             self.w = self.add_weight(
                 shape=[n_dim, n_dim],
                 initializer=self.w_initializer,
                 regularizer=self.w_regularizer,
                 trainable=self.w_trainable,
                 name="w",
-                dtype=dtype,
                 constraint=self.w_constraint,
             )
 
@@ -95,7 +93,7 @@ class GeneralizedInnerProduct(Proximity):
         """Call.
 
         Args:
-            inputs: A list of two tf.Tensor's denoting a the set of
+            inputs: A list of two tensors denoting a the set of
                 vectors to compute pairwise distances. Each tensor is
                 assumed to have the same shape and be at least rank-2.
                 Any additional tensors in the list are ignored.
@@ -109,13 +107,13 @@ class GeneralizedInnerProduct(Proximity):
         z_1 = inputs[1]
 
         # Add dummy axis to achieve batch dot product.
-        z_0 = tf.expand_dims(z_0, -2)
-        z_1 = tf.expand_dims(
+        z_0 = keras.ops.expand_dims(z_0, -2)
+        z_1 = keras.ops.expand_dims(
             z_1, -1
         )  # NOTE: `axis=-1` is intentional to acheive transpose
-        d = tf.matmul(tf.matmul(z_0, self.w), z_1)
+        d = keras.ops.matmul(keras.ops.matmul(z_0, self.w), z_1)
         # Remove dummy and vetigal axis.
-        d = tf.squeeze(d, [-2, -1])
+        d = keras.ops.squeeze(d, [-2, -1])
 
         return self.activation(d)
 
@@ -124,9 +122,9 @@ class GeneralizedInnerProduct(Proximity):
         config = super().get_config()
         config.update(
             {
-                "w_initializer": tf.keras.initializers.serialize(self.w_initializer),
-                "w_regularizer": tf.keras.regularizers.serialize(self.w_regularizer),
-                "w_constraint": tf.keras.constraints.serialize(self.w_constraint),
+                "w_initializer": keras.initializers.serialize(self.w_initializer),
+                "w_regularizer": keras.regularizers.serialize(self.w_regularizer),
+                "w_constraint": keras.constraints.serialize(self.w_constraint),
                 "w_trainable": self.w_trainable,
             }
         )

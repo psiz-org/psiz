@@ -20,16 +20,16 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 import tensorflow_probability as tfp
 
 import psiz.keras.constraints as pk_constraints
-from psiz.tf.ops.wpnorm import wpnorm
+from psiz.keras.ops.wpnorm import wpnorm
 from psiz.keras.layers.proximities.proximity import Proximity
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="MinkowskiStochastic"
 )
 class MinkowskiStochastic(Proximity):
@@ -65,31 +65,31 @@ class MinkowskiStochastic(Proximity):
         self.w_high = 1000000.0
 
         if rho_loc_initializer is None:
-            rho_loc_initializer = tf.keras.initializers.Constant(2.0)
-        self.rho_loc_initializer = tf.keras.initializers.get(rho_loc_initializer)
+            rho_loc_initializer = keras.initializers.Constant(2.0)
+        self.rho_loc_initializer = keras.initializers.get(rho_loc_initializer)
         if rho_loc_constraint is None:
             rho_loc_constraint = pk_constraints.GreaterEqualThan(1.0)
-        self.rho_loc_constraint = tf.keras.constraints.get(rho_loc_constraint)
-        self.rho_loc_regularizer = tf.keras.regularizers.get(rho_loc_regularizer)
+        self.rho_loc_constraint = keras.constraints.get(rho_loc_constraint)
+        self.rho_loc_regularizer = keras.regularizers.get(rho_loc_regularizer)
 
         if rho_scale_initializer is None:
-            rho_scale_initializer = tf.keras.initializers.Constant(-13.0)
-        self.rho_scale_initializer = tf.keras.initializers.get(rho_scale_initializer)
-        self.rho_scale_constraint = tf.keras.constraints.get(rho_scale_constraint)
-        self.rho_scale_regularizer = tf.keras.regularizers.get(rho_scale_regularizer)
+            rho_scale_initializer = keras.initializers.Constant(-13.0)
+        self.rho_scale_initializer = keras.initializers.get(rho_scale_initializer)
+        self.rho_scale_constraint = keras.constraints.get(rho_scale_constraint)
+        self.rho_scale_regularizer = keras.regularizers.get(rho_scale_regularizer)
 
         if w_loc_initializer is None:
-            w_loc_initializer = tf.keras.initializers.Constant(1.0)
-        self.w_loc_initializer = tf.keras.initializers.get(w_loc_initializer)
+            w_loc_initializer = keras.initializers.Constant(1.0)
+        self.w_loc_initializer = keras.initializers.get(w_loc_initializer)
         if w_loc_constraint is None:
-            w_loc_constraint = tf.keras.constraints.NonNeg()
-        self.w_loc_constraint = tf.keras.constraints.get(w_loc_constraint)
-        self.w_loc_regularizer = tf.keras.regularizers.get(w_loc_regularizer)
+            w_loc_constraint = keras.constraints.NonNeg()
+        self.w_loc_constraint = keras.constraints.get(w_loc_constraint)
+        self.w_loc_regularizer = keras.regularizers.get(w_loc_regularizer)
         if w_scale_initializer is None:
-            w_scale_initializer = tf.keras.initializers.Constant(-13.0)
-        self.w_scale_initializer = tf.keras.initializers.get(w_scale_initializer)
-        self.w_scale_constraint = tf.keras.constraints.get(w_scale_constraint)
-        self.w_scale_regularizer = tf.keras.regularizers.get(w_scale_regularizer)
+            w_scale_initializer = keras.initializers.Constant(-13.0)
+        self.w_scale_initializer = keras.initializers.get(w_scale_initializer)
+        self.w_scale_constraint = keras.constraints.get(w_scale_constraint)
+        self.w_scale_regularizer = keras.regularizers.get(w_scale_regularizer)
 
         self.rho_loc_trainable = self.trainable and rho_loc_trainable
         self.rho_scale_trainable = self.trainable and rho_scale_trainable
@@ -106,17 +106,16 @@ class MinkowskiStochastic(Proximity):
 
     def build(self, input_shape):
         """Build."""
-        dtype = tf.as_dtype(self.dtype or backend.floatx())
-        self.rho = self._build_rho(input_shape, dtype)
-        self.w = self._build_w(input_shape, dtype)
+        self.rho = self._build_rho(input_shape)
+        self.w = self._build_w(input_shape)
+        super().build(input_shape)
 
-    def _build_rho(self, input_shape, dtype):
+    def _build_rho(self, input_shape):
         # pylint: disable=unused-argument
-        with tf.name_scope(self.name):
+        with keras.name_scope(self.name):
             self.rho_loc = self.add_weight(
                 name="rho_loc",
                 shape=[],
-                dtype=dtype,
                 initializer=self.rho_loc_initializer,
                 regularizer=self.rho_loc_regularizer,
                 trainable=self.rho_loc_trainable,
@@ -127,7 +126,6 @@ class MinkowskiStochastic(Proximity):
             self.rho_untransformed_scale = self.add_weight(
                 name="rho_untransformed_scale",
                 shape=[],
-                dtype=dtype,
                 initializer=self.rho_scale_initializer,
                 regularizer=self.rho_scale_regularizer,
                 trainable=self.rho_scale_trainable,
@@ -135,23 +133,22 @@ class MinkowskiStochastic(Proximity):
             )
         rho_scale = tfp.util.DeferredTensor(
             self.rho_untransformed_scale,
-            lambda x: (backend.epsilon() + tf.nn.softplus(x)),
+            lambda x: (keras.backend.epsilon() + keras.activations.softplus(x)),
         )
 
         rho_dist = tfp.distributions.TruncatedNormal(
             self.rho_loc, rho_scale, self.rho_low, self.rho_high
         )
-        batch_ndims = tf.size(rho_dist.batch_shape_tensor())
+        batch_ndims = keras.ops.size(rho_dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             rho_dist, reinterpreted_batch_ndims=batch_ndims
         )
 
-    def _build_w(self, input_shape, dtype):
-        with tf.name_scope(self.name):
+    def _build_w(self, input_shape):
+        with keras.name_scope(self.name):
             self.w_loc = self.add_weight(
                 name="w_loc",
                 shape=[input_shape[0][-1]],
-                dtype=dtype,
                 initializer=self.w_loc_initializer,
                 regularizer=self.w_loc_regularizer,
                 trainable=self.w_loc_trainable,
@@ -162,7 +159,6 @@ class MinkowskiStochastic(Proximity):
             self.w_untransformed_scale = self.add_weight(
                 name="w_untransformed_scale",
                 shape=[input_shape[0][-1]],
-                dtype=dtype,
                 initializer=self.w_scale_initializer,
                 regularizer=self.w_scale_regularizer,
                 trainable=self.w_scale_trainable,
@@ -170,13 +166,13 @@ class MinkowskiStochastic(Proximity):
             )
         w_scale = tfp.util.DeferredTensor(
             self.w_untransformed_scale,
-            lambda x: (backend.epsilon() + tf.nn.softplus(x)),
+            lambda x: (keras.backend.epsilon() + keras.activations.softplus(x)),
         )
 
         w_dist = tfp.distributions.TruncatedNormal(
             self.w_loc, w_scale, self.w_low, self.w_high
         )
-        batch_ndims = tf.size(w_dist.batch_shape_tensor())
+        batch_ndims = keras.ops.size(w_dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             w_dist, reinterpreted_batch_ndims=batch_ndims
         )
@@ -185,7 +181,7 @@ class MinkowskiStochastic(Proximity):
         """Call.
 
         Args:
-            inputs: A list of two tf.Tensor's denoting a the set of
+            inputs: A list of two tensors denoting a the set of
                 vectors to compute pairwise distance. Each tensor is
                 assumed to have the same shape and be at least rank-2.
                 Any additional tensors in the list are ignored.
@@ -198,7 +194,7 @@ class MinkowskiStochastic(Proximity):
         z_0 = inputs[0]
         z_1 = inputs[1]
         x = z_0 - z_1
-        x_shape = tf.shape(x)
+        x_shape = keras.ops.shape(x)
 
         # Sample free parameters based on input shape.
         # Note that `wpnorm` expects `rho` to have one less rank than
@@ -206,60 +202,58 @@ class MinkowskiStochastic(Proximity):
         # We wrap the sample call in a conditional to protect against
         # batch_size=0.
         batch_size = x_shape[0]
-        rho = tf.cond(
+        rho = keras.ops.cond(
             batch_size == 0,
-            lambda: tf.zeros(x_shape[0:-1]),
+            lambda: keras.ops.zeros(x_shape[0:-1]),
             lambda: self.rho.sample(x_shape[0:-1]),
         )
-        w = tf.cond(
+        w = keras.ops.cond(
             batch_size == 0,
-            lambda: tf.zeros(x_shape),
+            lambda: keras.ops.zeros(x_shape),
             lambda: self.w.sample(x_shape[0:-1]),
         )
 
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)
-        d_qr = tf.squeeze(d_qr, [-1])
+        d_qr = keras.ops.squeeze(d_qr, [-1])
         return self.activation(d_qr)
 
     def get_config(self):
         config = super().get_config()
         config.update(
             {
-                "rho_loc_initializer": tf.keras.initializers.serialize(
+                "rho_loc_initializer": keras.initializers.serialize(
                     self.rho_loc_initializer
                 ),
-                "rho_scale_initializer": tf.keras.initializers.serialize(
+                "rho_scale_initializer": keras.initializers.serialize(
                     self.rho_scale_initializer
                 ),
-                "w_loc_initializer": tf.keras.initializers.serialize(
+                "w_loc_initializer": keras.initializers.serialize(
                     self.w_loc_initializer
                 ),
-                "w_scale_initializer": tf.keras.initializers.serialize(
+                "w_scale_initializer": keras.initializers.serialize(
                     self.w_scale_initializer
                 ),
-                "rho_loc_regularizer": tf.keras.regularizers.serialize(
+                "rho_loc_regularizer": keras.regularizers.serialize(
                     self.rho_loc_regularizer
                 ),
-                "rho_scale_regularizer": tf.keras.regularizers.serialize(
+                "rho_scale_regularizer": keras.regularizers.serialize(
                     self.rho_scale_regularizer
                 ),
-                "w_loc_regularizer": tf.keras.regularizers.serialize(
+                "w_loc_regularizer": keras.regularizers.serialize(
                     self.w_loc_regularizer
                 ),
-                "w_scale_regularizer": tf.keras.regularizers.serialize(
+                "w_scale_regularizer": keras.regularizers.serialize(
                     self.w_scale_regularizer
                 ),
-                "rho_loc_constraint": tf.keras.constraints.serialize(
+                "rho_loc_constraint": keras.constraints.serialize(
                     self.rho_loc_constraint
                 ),
-                "rho_scale_constraint": tf.keras.constraints.serialize(
+                "rho_scale_constraint": keras.constraints.serialize(
                     self.rho_scale_constraint
                 ),
-                "w_loc_constraint": tf.keras.constraints.serialize(
-                    self.w_loc_constraint
-                ),
-                "w_scale_constraint": tf.keras.constraints.serialize(
+                "w_loc_constraint": keras.constraints.serialize(self.w_loc_constraint),
+                "w_scale_constraint": keras.constraints.serialize(
                     self.w_scale_constraint
                 ),
                 "rho_loc_trainable": self.rho_loc_trainable,

@@ -18,6 +18,5 @@
 import psiz.data
 import psiz.keras
 import psiz.mplot
-import psiz.tf
 import psiz.tfp
 import psiz.utils

@@ -20,14 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(
-    package="psiz.keras.layers", name="Logistic"
-)
-class Logistic(tf.keras.layers.Layer):
+@keras.saving.register_keras_serializable(package="psiz.keras.layers", name="Logistic")
+class Logistic(keras.layers.Layer):
     """A layer for learning a parameterized logistic function.
 
     Inputs are converted via the parameterized
@@ -76,45 +74,51 @@ class Logistic(tf.keras.layers.Layer):
         super(Logistic, self).__init__(**kwargs)
 
         if upper_initializer is None:
-            upper_initializer = tf.keras.initializers.Constant(1.0)
-        self.upper_initializer = tf.keras.initializers.get(upper_initializer)
+            upper_initializer = keras.initializers.Constant(1.0)
+        self.upper_initializer = keras.initializers.get(upper_initializer)
         if upper_constraint is None:
-            upper_constraint = tf.keras.constraints.NonNeg()
-        self.upper_constraint = tf.keras.constraints.get(upper_constraint)
+            upper_constraint = keras.constraints.NonNeg()
+        self.upper_constraint = keras.constraints.get(upper_constraint)
+
+        if midpoint_initializer is None:
+            midpoint_initializer = keras.initializers.Constant(0.0)
+        self.midpoint_initializer = keras.initializers.get(midpoint_initializer)
+        self.midpoint_constraint = keras.constraints.get(midpoint_constraint)
+
+        if rate_initializer is None:
+            rate_initializer = keras.initializers.Constant(1.0)
+        self.rate_initializer = keras.initializers.get(rate_initializer)
+        self.rate_constraint = keras.constraints.get(rate_constraint)
+
+    def build(self, input_shape):
+        """Build."""
+        if self.built:
+            return
         self.upper = self.add_weight(
             shape=[],
             initializer=self.upper_initializer,
             trainable=self.trainable,
             name="upper",
-            dtype=backend.floatx(),
-            constraint=upper_constraint,
+            dtype=keras.backend.floatx(),
+            constraint=self.upper_constraint,
         )
-
-        if midpoint_initializer is None:
-            midpoint_initializer = tf.keras.initializers.Constant(0.0)
-        self.midpoint_initializer = tf.keras.initializers.get(midpoint_initializer)
-        self.midpoint_constraint = tf.keras.constraints.get(midpoint_constraint)
         self.midpoint = self.add_weight(
             shape=[],
             initializer=self.midpoint_initializer,
             trainable=self.trainable,
             name="midpoint",
-            dtype=backend.floatx(),
-            constraint=midpoint_constraint,
+            dtype=keras.backend.floatx(),
+            constraint=self.midpoint_constraint,
         )
-
-        if rate_initializer is None:
-            rate_initializer = tf.keras.initializers.Constant(1.0)
-        self.rate_initializer = tf.keras.initializers.get(rate_initializer)
-        self.rate_constraint = tf.keras.constraints.get(rate_constraint)
         self.rate = self.add_weight(
             shape=[],
             initializer=self.rate_initializer,
             trainable=self.trainable,
             name="rate",
-            dtype=backend.floatx(),
-            constraint=rate_constraint,
+            dtype=keras.backend.floatx(),
+            constraint=self.rate_constraint,
         )
+        self.built = True
 
     def call(self, inputs, training=None):
         """Return logistic function output.
@@ -128,9 +132,9 @@ class Logistic(tf.keras.layers.Layer):
                 shape=(batch_size, n, [m, ...])
 
         """
-        y = tf.math.divide(
+        y = keras.ops.divide(
             self.upper,
-            1 + tf.math.exp(-self.rate * (inputs - self.midpoint)),
+            1 + keras.ops.exp(-self.rate * (inputs - self.midpoint)),
         )
 
         return y
@@ -140,22 +144,18 @@ class Logistic(tf.keras.layers.Layer):
         config = super(Logistic, self).get_config()
         config.update(
             {
-                "upper_constraint": tf.keras.constraints.serialize(
-                    self.upper_constraint
-                ),
-                "midpoint_constraint": tf.keras.constraints.serialize(
+                "upper_constraint": keras.constraints.serialize(self.upper_constraint),
+                "midpoint_constraint": keras.constraints.serialize(
                     self.midpoint_constraint
                 ),
-                "rate_constraint": tf.keras.constraints.serialize(self.rate_constraint),
-                "upper_initializer": tf.keras.initializers.serialize(
+                "rate_constraint": keras.constraints.serialize(self.rate_constraint),
+                "upper_initializer": keras.initializers.serialize(
                     self.upper_initializer
                 ),
-                "midpoint_initializer": tf.keras.initializers.serialize(
+                "midpoint_initializer": keras.initializers.serialize(
                     self.midpoint_initializer
                 ),
-                "rate_initializer": tf.keras.initializers.serialize(
-                    self.rate_initializer
-                ),
+                "rate_initializer": keras.initializers.serialize(self.rate_initializer),
             }
         )
         return config

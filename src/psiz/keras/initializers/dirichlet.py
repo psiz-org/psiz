@@ -20,15 +20,15 @@ Classes:
 
 """
 
+
+import keras
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import initializers
-from tensorflow.keras import backend
 import tensorflow_probability as tfp
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.initializers")
-class Dirichlet(initializers.Initializer):
+@keras.saving.register_keras_serializable(package="psiz.keras.initializers")
+class Dirichlet(keras.initializers.Initializer):
     """Initializer based on a Dirichlet distribution."""
 
     def __init__(self, concentration, scale=1.0, seed=None):
@@ -51,7 +51,7 @@ class Dirichlet(initializers.Initializer):
     def __call__(self, shape, dtype=None, **kwargs):
         """Call."""
         if dtype is None:
-            dtype = backend.floatx()
+            dtype = keras.backend.floatx()
         dist = tfp.distributions.Dirichlet(tf.cast(self.concentration, dtype))
         sample = tf.cast(self.scale, dtype) * dist.sample(shape, seed=self.seed)
         return sample

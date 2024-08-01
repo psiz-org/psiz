@@ -21,13 +21,9 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
-from tensorflow.python.eager import context
 
-# from tensorflow.keras.utils import tf_utils
-from tensorflow.python.framework import ops
-from tensorflow.python.ops import embedding_ops
+import keras
+from tensorflow.python.ops import embedding_ops  # TODO is there a keras equivalent?
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
@@ -93,61 +89,24 @@ class _EmbeddingLocScale(StochasticEmbedding):
 
         # Handle initializers.
         if loc_initializer is None:
-            loc_initializer = tf.keras.initializers.RandomUniform()
-        self.loc_initializer = tf.keras.initializers.get(loc_initializer)
+            loc_initializer = keras.initializers.RandomUniform()
+        self.loc_initializer = keras.initializers.get(loc_initializer)
         if scale_initializer is None:
-            scale_initializer = tf.keras.initializers.RandomNormal(
+            scale_initializer = keras.initializers.RandomNormal(
                 mean=tfp.math.softplus_inverse(1.0).numpy(), stddev=0.001
             )
-        self.scale_initializer = tf.keras.initializers.get(scale_initializer)
+        self.scale_initializer = keras.initializers.get(scale_initializer)
 
         # Handle regularizers.
-        self.loc_regularizer = tf.keras.regularizers.get(loc_regularizer)
-        self.scale_regularizer = tf.keras.regularizers.get(scale_regularizer)
+        self.loc_regularizer = keras.regularizers.get(loc_regularizer)
+        self.scale_regularizer = keras.regularizers.get(scale_regularizer)
 
         # Handle constraints.
-        self.loc_constraint = tf.keras.constraints.get(loc_constraint)
-        self.scale_constraint = tf.keras.constraints.get(scale_constraint)
+        self.loc_constraint = keras.constraints.get(loc_constraint)
+        self.scale_constraint = keras.constraints.get(scale_constraint)
 
         self.loc_trainable = self.trainable and loc_trainable
         self.scale_trainable = self.trainable and scale_trainable
-
-        # If self.dtype is None, build weights using the default dtype.
-        dtype = tf.as_dtype(self.dtype or backend.floatx())
-
-        # Note: most sparse optimizers do not have GPU kernels defined.
-        # When building graphs, the placement algorithm is able to
-        # place variables on CPU since it knows all kernels using the
-        # variable only exist on CPU. When eager execution is enabled,
-        # the placement decision has to be made right now. Checking for
-        # the presence of GPUs to avoid complicating the TPU codepaths
-        # which can handle sparse optimizers.
-        with tf.name_scope(self.name):
-            if context.executing_eagerly() and context.context().num_gpus():
-                with ops.device("cpu:0"):
-                    self.embeddings = self._build_embeddings_distribution(dtype)
-            else:
-                self.embeddings = self._build_embeddings_distribution(dtype)
-
-    # @tf_utils.shape_type_conversion
-    # def build(self, input_shape):
-    #     """Build."""
-    #     # If self.dtype is None, build weights using the default dtype.
-    #     dtype = tf.as_dtype(self.dtype or backend.floatx())
-
-    #     # Note: most sparse optimizers do not have GPU kernels defined.
-    #     # When building graphs, the placement algorithm is able to
-    #     # place variables on CPU since it knows all kernels using the
-    #     # variable only exist on CPU. When eager execution is enabled,
-    #     # the placement decision has to be made right now. Checking for
-    #     # the presence of GPUs to avoid complicating the TPU codepaths
-    #     # which can handle sparse optimizers.
-    #     if context.executing_eagerly() and context.context().num_gpus():
-    #         with ops.device('cpu:0'):
-    #             self.embeddings = self._build_embeddings_distribution(dtype)
-    #     else:
-    #         self.embeddings = self._build_embeddings_distribution(dtype)
-    #     self.built = True
 
     def call(self, inputs):
         """Call."""
@@ -168,22 +127,16 @@ class _EmbeddingLocScale(StochasticEmbedding):
         config = super(_EmbeddingLocScale, self).get_config()
         config.update(
             {
-                "loc_initializer": tf.keras.initializers.serialize(
-                    self.loc_initializer
-                ),
-                "scale_initializer": tf.keras.initializers.serialize(
+                "loc_initializer": keras.initializers.serialize(self.loc_initializer),
+                "scale_initializer": keras.initializers.serialize(
                     self.scale_initializer
                 ),
-                "loc_regularizer": tf.keras.regularizers.serialize(
-                    self.loc_regularizer
-                ),
-                "scale_regularizer": tf.keras.regularizers.serialize(
+                "loc_regularizer": keras.regularizers.serialize(self.loc_regularizer),
+                "scale_regularizer": keras.regularizers.serialize(
                     self.scale_regularizer
                 ),
-                "loc_constraint": tf.keras.constraints.serialize(self.loc_constraint),
-                "scale_constraint": tf.keras.constraints.serialize(
-                    self.scale_constraint
-                ),
+                "loc_constraint": keras.constraints.serialize(self.loc_constraint),
+                "scale_constraint": keras.constraints.serialize(self.scale_constraint),
                 "loc_trainable": self.loc_trainable,
                 "scale_trainable": self.scale_trainable,
             }

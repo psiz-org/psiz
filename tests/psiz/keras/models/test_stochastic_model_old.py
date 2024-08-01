@@ -15,6 +15,8 @@
 # ============================================================================
 """Module for testing models.py."""
 
+
+import keras
 import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -25,11 +27,11 @@ from psiz.keras.models.stochastic_model import StochasticModel
 pytestmark = pytest.mark.skip("All tests deprecated.")
 
 
-class LayerA(tf.keras.layers.Layer):
+class LayerA(keras.layers.Layer):
     def __init__(self, units, **kwargs):
         super(LayerA, self).__init__(**kwargs)
         self.units = units
-        self.kernel_initializer = tf.keras.initializers.Constant(1.0)
+        self.kernel_initializer = keras.initializers.Constant(1.0)
 
     def build(self, input_shape):
         """Build."""
@@ -57,13 +59,13 @@ class LayerA(tf.keras.layers.Layer):
         return cls(**config)
 
 
-class LayerB(tf.keras.layers.Layer):
+class LayerB(keras.layers.Layer):
     """A simple repeat layer."""
 
     def __init__(self, **kwargs):
         """Initialize."""
         super(LayerB, self).__init__(**kwargs)
-        self.w0_initializer = tf.keras.initializers.Constant(1.0)
+        self.w0_initializer = keras.initializers.Constant(1.0)
 
     def build(self, input_shape):
         """Build."""
@@ -88,7 +90,7 @@ class LayerB(tf.keras.layers.Layer):
         return cls(**config)
 
 
-class CellA(tf.keras.layers.Layer):
+class CellA(keras.layers.Layer):
     """A simple RNN cell."""
 
     def __init__(self, **kwargs):
@@ -118,7 +120,7 @@ class CellA(tf.keras.layers.Layer):
         return cls(**config)
 
 
-class ModelControl(tf.keras.Model):
+class ModelControl(keras.Model):
     """A non-stochastic model to use as a control case.
 
     Gates:
@@ -128,7 +130,7 @@ class ModelControl(tf.keras.Model):
 
     def __init__(self):
         super(ModelControl, self).__init__()
-        self.dense_layer = tf.keras.layers.Dense(3)
+        self.dense_layer = keras.layers.Dense(3)
 
     def call(self, inputs):
         x = inputs["x_a"]
@@ -152,7 +154,7 @@ class ModelA(StochasticModel):
 
     def __init__(self, **kwargs):
         super(ModelA, self).__init__(**kwargs)
-        self.dense_layer = tf.keras.layers.Dense(3)
+        self.dense_layer = keras.layers.Dense(3)
 
     def call(self, inputs):
         x = self.dense_layer(inputs["x_a"])
@@ -233,7 +235,7 @@ class ModelC(StochasticModel):
         super(ModelC, self).__init__(**kwargs)
         self.branch_0 = LayerB()
         self.branch_1 = LayerB()
-        self.add_layer = tf.keras.layers.Add()
+        self.add_layer = keras.layers.Add()
 
     def call(self, inputs):
         """Call.
@@ -274,8 +276,8 @@ class ModelD(StochasticModel):
 
         """
         super(ModelD, self).__init__(**kwargs)
-        self.rnn_layer = tf.keras.layers.RNN(CellA(), return_sequences=True)
-        self.add_layer = tf.keras.layers.Add()
+        self.rnn_layer = keras.layers.RNN(CellA(), return_sequences=True)
+        self.add_layer = keras.layers.Add()
 
     def call(self, inputs):
         """Call.
@@ -316,20 +318,20 @@ class RankModelA(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
         )
         kernel = psiz.keras.layers.DistanceBased(
             distance=psiz.keras.layers.Minkowski(
-                rho_initializer=tf.keras.initializers.Constant(2.0),
-                w_initializer=tf.keras.initializers.Constant(1.0),
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
                 trainable=False,
             ),
             similarity=psiz.keras.layers.ExponentialSimilarity(
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.001),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.001),
                 trainable=False,
             ),
         )
@@ -368,7 +370,7 @@ class RankModelB(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
         )
@@ -379,8 +381,8 @@ class RankModelB(StochasticModel):
             embedding=psiz.keras.layers.EmbeddingNormalDiag(
                 1,
                 1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+                loc_initializer=keras.initializers.Constant(0.0),
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
                 loc_trainable=False,
@@ -393,17 +395,17 @@ class RankModelB(StochasticModel):
             kl_n_sample=30,
         )
         mink = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         )
         kernel = psiz.keras.layers.DistanceBased(
             distance=mink,
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
         )
         behavior = psiz.keras.layers.RankSimilarity(
@@ -441,7 +443,7 @@ class RankModelC(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
         )
@@ -449,7 +451,7 @@ class RankModelC(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
         )
@@ -460,8 +462,8 @@ class RankModelC(StochasticModel):
             embedding=psiz.keras.layers.EmbeddingNormalDiag(
                 1,
                 1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+                loc_initializer=keras.initializers.Constant(0.0),
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
                 loc_trainable=False,
@@ -487,17 +489,17 @@ class RankModelC(StochasticModel):
         )
 
         mink = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         )
         kernel = psiz.keras.layers.DistanceBased(
             distance=mink,
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
         )
         behavior = psiz.keras.layers.RankSimilarity(
@@ -540,7 +542,7 @@ class RankCellModelA(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
         )
@@ -551,8 +553,8 @@ class RankCellModelA(StochasticModel):
             embedding=psiz.keras.layers.EmbeddingNormalDiag(
                 1,
                 1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+                loc_initializer=keras.initializers.Constant(0.0),
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
                 loc_trainable=False,
@@ -565,23 +567,23 @@ class RankCellModelA(StochasticModel):
             kl_n_sample=30,
         )
         mink = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         )
         kernel = psiz.keras.layers.DistanceBased(
             distance=mink,
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
         )
         rank_cell = psiz.keras.layers.RankSimilarityCell(
             n_reference=8, n_select=2, percept=percept, kernel=kernel
         )
-        rnn = tf.keras.layers.RNN(rank_cell, return_sequences=True)
+        rnn = keras.layers.RNN(rank_cell, return_sequences=True)
         self.behavior = rnn
 
     def call(self, inputs):
@@ -614,7 +616,7 @@ class RateModelA(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
         )
@@ -625,8 +627,8 @@ class RateModelA(StochasticModel):
             embedding=psiz.keras.layers.EmbeddingNormalDiag(
                 1,
                 1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+                loc_initializer=keras.initializers.Constant(0.0),
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
                 loc_trainable=False,
@@ -639,17 +641,17 @@ class RateModelA(StochasticModel):
             kl_n_sample=30,
         )
         mink = psiz.keras.layers.Minkowski(
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            w_initializer=tf.keras.initializers.Constant(1.0),
+            rho_initializer=keras.initializers.Constant(2.0),
+            w_initializer=keras.initializers.Constant(1.0),
             trainable=False,
         )
         kernel = psiz.keras.layers.DistanceBased(
             distance=mink,
             similarity=psiz.keras.layers.ExponentialSimilarity(
                 trainable=False,
-                beta_initializer=tf.keras.initializers.Constant(10.0),
-                tau_initializer=tf.keras.initializers.Constant(1.0),
-                gamma_initializer=tf.keras.initializers.Constant(0.0),
+                beta_initializer=keras.initializers.Constant(10.0),
+                tau_initializer=keras.initializers.Constant(1.0),
+                gamma_initializer=keras.initializers.Constant(0.0),
             ),
         )
         behavior = psiz.keras.layers.RateSimilarity(percept=percept, kernel=kernel)
@@ -684,28 +686,28 @@ class ALCOVEModelA(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             trainable=False,
         )
         similarity = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         )
         cell = psiz.keras.layers.ALCOVECell(
             n_output,
             percept=percept,
             similarity=similarity,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            temperature_initializer=tf.keras.initializers.Constant(1.0),
-            lr_attention_initializer=tf.keras.initializers.Constant(0.03),
-            lr_association_initializer=tf.keras.initializers.Constant(0.03),
+            rho_initializer=keras.initializers.Constant(2.0),
+            temperature_initializer=keras.initializers.Constant(1.0),
+            lr_attention_initializer=keras.initializers.Constant(0.03),
+            lr_association_initializer=keras.initializers.Constant(0.03),
             trainable=False,
         )
-        rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
+        rnn = keras.layers.RNN(cell, return_sequences=True, stateful=False)
         self.behavior = rnn
 
     def call(self, inputs):
@@ -741,7 +743,7 @@ class ALCOVEModelB(StochasticModel):
             n_stimuli + 1,
             n_dim,
             mask_zero=True,
-            scale_initializer=tf.keras.initializers.Constant(
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
         )
@@ -752,8 +754,8 @@ class ALCOVEModelB(StochasticModel):
             embedding=psiz.keras.layers.EmbeddingNormalDiag(
                 1,
                 1,
-                loc_initializer=tf.keras.initializers.Constant(0.0),
-                scale_initializer=tf.keras.initializers.Constant(
+                loc_initializer=keras.initializers.Constant(0.0),
+                scale_initializer=keras.initializers.Constant(
                     tfp.math.softplus_inverse(prior_scale).numpy()
                 ),
                 loc_trainable=False,
@@ -766,22 +768,22 @@ class ALCOVEModelB(StochasticModel):
             kl_n_sample=30,
         )
         similarity = psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         )
         cell = psiz.keras.layers.ALCOVECell(
             n_output,
             percept=percept,
             similarity=similarity,
-            rho_initializer=tf.keras.initializers.Constant(2.0),
-            temperature_initializer=tf.keras.initializers.Constant(1.0),
-            lr_attention_initializer=tf.keras.initializers.Constant(0.03),
-            lr_association_initializer=tf.keras.initializers.Constant(0.03),
+            rho_initializer=keras.initializers.Constant(2.0),
+            temperature_initializer=keras.initializers.Constant(1.0),
+            lr_attention_initializer=keras.initializers.Constant(0.03),
+            lr_association_initializer=keras.initializers.Constant(0.03),
             trainable=False,
         )
-        rnn = tf.keras.layers.RNN(cell, return_sequences=True, stateful=False)
+        rnn = keras.layers.RNN(cell, return_sequences=True, stateful=False)
         self.behavior = rnn
 
     def call(self, inputs):
@@ -800,9 +802,9 @@ def build_ranksim_subclass_a():
     """
     model = RankModelA(n_sample=3)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -816,9 +818,9 @@ def build_ranksim_subclass_b():
     """
     model = RankModelB(n_sample=3)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -832,9 +834,9 @@ def build_ranksim_subclass_c():
     """
     model = RankModelC(n_sample=3)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -848,9 +850,9 @@ def build_ranksimcell_subclass_a():
     """
     model = RankCellModelA(n_sample=3)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -860,9 +862,9 @@ def build_ratesim_subclass_a():
     """Build subclassed `Model`."""
     model = RateModelA(n_sample=11)
     compile_kwargs = {
-        "loss": tf.keras.losses.MeanSquaredError(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.MeanSquaredError(name="mse")],
+        "loss": keras.losses.MeanSquaredError(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -876,9 +878,9 @@ def build_alcove_subclass_a():
     """
     model = ALCOVEModelA(n_sample=2)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -892,9 +894,9 @@ def build_alcove_subclass_b():
     """
     model = ALCOVEModelB(n_sample=2)
     compile_kwargs = {
-        "loss": tf.keras.losses.CategoricalCrossentropy(),
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
-        "weighted_metrics": [tf.keras.metrics.CategoricalAccuracy(name="accuracy")],
+        "loss": keras.losses.CategoricalCrossentropy(),
+        "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
     }
     model.compile(**compile_kwargs)
     return model
@@ -1119,7 +1121,7 @@ def call_fit_evaluate_predict(model, tfds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
     for data in tfds:
-        x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(data)
         _ = model(x, training=False)
 
     # Test fit.
@@ -1143,8 +1145,8 @@ class TestControl:
 
         model = ModelControl()
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1155,7 +1157,7 @@ class TestControl:
         model.save(fp_model)
         del model
 
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"ModelControl": ModelControl}
         )
         result1 = loaded.evaluate(tfds)
@@ -1180,8 +1182,8 @@ class TestModelA:
 
         model = ModelA(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1193,7 +1195,7 @@ class TestModelA:
         model.save(fp_model, save_traces=save_traces)
         del model
 
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelA": ModelA})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelA": ModelA})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.dense_layer.kernel
         bias1 = loaded.dense_layer.bias
@@ -1217,8 +1219,8 @@ class TestModelB:
 
         model = ModelB(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1229,7 +1231,7 @@ class TestModelB:
         model.save(fp_model, save_traces=save_traces)
         del model
 
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelB": ModelB})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelB": ModelB})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.custom_layer.kernel
 
@@ -1247,8 +1249,8 @@ class TestModelB:
 
         model = ModelB2(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1259,9 +1261,7 @@ class TestModelB:
         model.save(fp_model, save_traces=save_traces)
         del model
 
-        loaded = tf.keras.models.load_model(
-            fp_model, custom_objects={"ModelB2": ModelB2}
-        )
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelB2": ModelB2})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.custom_layer.kernel
 
@@ -1381,7 +1381,7 @@ class TestModelC:
 
         # Perform a `test_step`.
         for data in tfds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+            x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
             x = model.repeat_samples_in_batch_axis(x, model.n_sample)
@@ -1409,8 +1409,8 @@ class TestModelC:
         tfds = ds_x2_x2_x2["tfds"]
         model = ModelC(n_sample=2)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
         model.fit(tfds)
@@ -1493,7 +1493,7 @@ class TestModelC:
 
         # Perform a `test_step` to verify `n_sample` took effect.
         for data in tfds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+            x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
             x = model.repeat_samples_in_batch_axis(x, model.n_sample)
@@ -1519,8 +1519,8 @@ class TestModelC:
         tfds = ds_x2_x2_x2["tfds"]
         model = ModelC(n_sample=7)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
 
@@ -1536,7 +1536,7 @@ class TestModelC:
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelC": ModelC})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelC": ModelC})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         branch_0_w0_1 = loaded.branch_0.w0
         branch_1_w0_1 = loaded.branch_1.w0
@@ -1572,7 +1572,7 @@ class TestModelD:
 
         # Perform a `test_step`.
         for data in tfds:
-            x, y, sample_weight = tf.keras.utils.unpack_x_y_sample_weight(data)
+            x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
             x = model.repeat_samples_in_batch_axis(x, model.n_sample)
@@ -1599,8 +1599,8 @@ class TestModelD:
         tfds = ds_x3_x3["tfds"]
         model = ModelD(n_sample=11)
         compile_kwargs = {
-            "loss": tf.keras.losses.MeanSquaredError(),
-            "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+            "loss": keras.losses.MeanSquaredError(),
+            "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         }
         model.compile(**compile_kwargs)
 
@@ -1615,7 +1615,7 @@ class TestModelD:
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(fp_model, custom_objects={"ModelD": ModelD})
+        loaded = keras.models.load_model(fp_model, custom_objects={"ModelD": ModelD})
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel_1 = loaded.rnn_layer.cell.layer_0.kernel
 
@@ -1636,7 +1636,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v0
         model = build_ranksim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1671,7 +1671,7 @@ class TestRankSimilarity:
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RankModelA": RankModelA}
         )
         _ = loaded.evaluate(tfds)
@@ -1685,7 +1685,7 @@ class TestRankSimilarity:
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
         tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_b(self, ds_4rank1_v0, is_eager):
@@ -1695,7 +1695,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1726,7 +1726,7 @@ class TestRankSimilarity:
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RankModelB": RankModelB}
         )
         _ = loaded.evaluate(tfds)
@@ -1738,7 +1738,7 @@ class TestRankSimilarity:
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
         tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
@@ -1748,7 +1748,7 @@ class TestRankSimilarity:
         tfds = ds_4rank1_v2
         model = build_ranksim_subclass_c()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
@@ -1771,7 +1771,7 @@ class TestRankSimilarity:
 
         _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
 
 class TestRankSimilarityCell:
@@ -1796,7 +1796,7 @@ class TestRankSimilarityCell:
         tfds = ds_time_8rank2_v0
         model = build_ranksimcell_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.xfail(reason="'add_loss' does not work inside RNN cell.")
     @pytest.mark.parametrize("is_eager", [True, False])
@@ -1829,7 +1829,7 @@ class TestRankSimilarityCell:
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RankModelB": RankModelB}
         )
         loaded_percept_mean = loaded.behavior.cell.percept.embeddings.mean()
@@ -1841,7 +1841,7 @@ class TestRankSimilarityCell:
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
 
 class TestRateSimilarity:
@@ -1855,7 +1855,7 @@ class TestRateSimilarity:
         tfds = ds_rate2_v0
         model = build_ratesim_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_rate2_v0, is_eager, tmpdir):
@@ -1878,7 +1878,7 @@ class TestRateSimilarity:
         del model
 
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"RateModelA": RateModelA}
         )
         _ = loaded.evaluate(tfds)
@@ -1891,7 +1891,7 @@ class TestRateSimilarity:
             percept_mean, loaded.behavior.percept.embeddings.mean()
         )
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
 
 class TestALCOVECell:
@@ -1905,7 +1905,7 @@ class TestALCOVECell:
         tfds = ds_time_categorize_v0
         model = build_alcove_subclass_a()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.parametrize("save_traces", [True, False])
@@ -1932,7 +1932,7 @@ class TestALCOVECell:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
         )
         _ = loaded.evaluate(tfds)
@@ -1944,7 +1944,7 @@ class TestALCOVECell:
         # Check `percept` posterior mean the same.
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.parametrize(
         "is_eager",
@@ -1965,7 +1965,7 @@ class TestALCOVECell:
         tfds = ds_time_categorize_v0
         model = build_alcove_subclass_b()
         call_fit_evaluate_predict(model, tfds)
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
 
     @pytest.mark.xfail(reason="'add_loss' does not work inside RNN cell.")
     @pytest.mark.parametrize("is_eager", [True, False])
@@ -1993,7 +1993,7 @@ class TestALCOVECell:
         model.save(fp_model, save_traces=save_traces)
         del model
         # Load the saved model.
-        loaded = tf.keras.models.load_model(
+        loaded = keras.models.load_model(
             fp_model, custom_objects={"ALCOVEModelA": ALCOVEModelA}
         )
         _ = loaded.evaluate(tfds)
@@ -2006,4 +2006,4 @@ class TestALCOVECell:
             percept_mean, loaded.behavior.cell.percept.embeddings.mean()
         )
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()

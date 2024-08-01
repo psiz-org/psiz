@@ -20,11 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.regularizers")
-class StimulusNormedL1(tf.keras.regularizers.Regularizer):
+@keras.saving.register_keras_serializable(package="psiz.keras.regularizers")
+class StimulusNormedL1(keras.regularizers.Regularizer):
     """Stimulus-normed L1 regularization."""
 
     def __init__(self, l1=0.0):
@@ -44,7 +45,7 @@ class StimulusNormedL1(tf.keras.regularizers.Regularizer):
                 shape=[n_stimuli, n_dim].
 
         """
-        return self.l1 * (tf.reduce_sum(tf.abs(z)) / z.shape[0])
+        return self.l1 * (keras.ops.sum(keras.ops.abs(z)) / z.shape[0])
 
     def get_config(self):
         """Return config."""

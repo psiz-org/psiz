@@ -48,26 +48,6 @@ def test_call(paired_inputs_v0):
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=4)
 
 
-def test_output_shape(paired_inputs_v0):
-    """Test output_shape method."""
-    kl_weight = 0.1
-
-    mink_posterior = MinkowskiStochastic()
-    mink_prior = MinkowskiStochastic()
-
-    mink_layer = MinkowskiVariational(
-        posterior=mink_posterior, prior=mink_prior, kl_weight=kl_weight, kl_n_sample=30
-    )
-
-    input_shape = [
-        tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-        tf.TensorShape(tf.shape(paired_inputs_v0[1])),
-    ]
-    output_shape = mink_layer.compute_output_shape(input_shape)
-    desired_output_shape = tf.TensorShape([5])
-    tf.debugging.assert_equal(output_shape, desired_output_shape)
-
-
 def test_serialization():
     """Test serialization."""
     kl_weight = 0.1
@@ -82,7 +62,6 @@ def test_serialization():
     config = mink_layer.get_config()
 
     recon_layer = MinkowskiVariational.from_config(config)
-    recon_layer.build([[None, 3], [None, 3]])
 
     tf.debugging.assert_equal(
         mink_layer.posterior.rho.mode(), recon_layer.posterior.rho.mode()

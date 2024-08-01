@@ -22,13 +22,15 @@ satisfies it's role as an adapter.
 
 """
 
+
+import keras
 import pytest
 import tensorflow as tf
 
 from psiz.keras.layers import GateAdapter, BraidGate
 
 
-class OuterPassesTuple(tf.keras.layers.Layer):
+class OuterPassesTuple(keras.layers.Layer):
     """A layer that calls inner layer with tuple-formated inputs."""
 
     def __init__(self, inner=None, inner_gating_keys=None, **kwargs):
@@ -47,7 +49,7 @@ class OuterPassesTuple(tf.keras.layers.Layer):
         return outputs
 
 
-class OuterPassesDict(tf.keras.layers.Layer):
+class OuterPassesDict(keras.layers.Layer):
     """A layer that calls inner layer with dictionary-formated inputs."""
 
     def __init__(self, inner=None, inner_gating_keys=None, **kwargs):
@@ -66,7 +68,7 @@ class OuterPassesDict(tf.keras.layers.Layer):
         return outputs
 
 
-class InnerNeedsDict(tf.keras.layers.Layer):
+class InnerNeedsDict(keras.layers.Layer):
     """A simple layer that passes inputs as outputs."""
 
     def __init__(self, factor=None, **kwargs):
@@ -79,7 +81,7 @@ class InnerNeedsDict(tf.keras.layers.Layer):
         return self.factor * (inputs["x0"] + inputs["x1"])
 
 
-class InnerNeedsTuple(tf.keras.layers.Layer):
+class InnerNeedsTuple(keras.layers.Layer):
     """A simple layer that passes inputs as outputs."""
 
     def __init__(self, factor=None, **kwargs):

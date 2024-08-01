@@ -14,10 +14,11 @@
 # limitations under the License.
 # ============================================================================
 
+
+import keras
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingNormalDiag
@@ -56,17 +57,17 @@ def emb_0(mask_zero, is_dist):
             n_stimuli,
             n_dim,
             mask_zero=mask_zero,
-            loc_initializer=tf.keras.initializers.Constant(locs),
-            scale_initializer=tf.keras.initializers.Constant(
+            loc_initializer=keras.initializers.Constant(locs),
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(0.2).numpy()
             ),
         )
     else:
-        emb = tf.keras.layers.Embedding(
+        emb = keras.layers.Embedding(
             n_stimuli,
             n_dim,
             mask_zero=mask_zero,
-            embeddings_initializer=tf.keras.initializers.Constant(locs),
+            embeddings_initializer=keras.initializers.Constant(locs),
         )
     emb.build([None])
 

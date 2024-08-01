@@ -15,6 +15,8 @@
 # ============================================================================
 """Module for testing models."""
 
+
+import keras
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -27,7 +29,7 @@ def percept_static_v0():
     """Static percept layer."""
     n_stimuli = 20
     n_dim = 3
-    percept = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
     return percept
 
 
@@ -40,7 +42,7 @@ def percept_stochastic_v0():
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
-        scale_initializer=tf.keras.initializers.Constant(
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         ),
     )
@@ -50,12 +52,12 @@ def percept_stochastic_v0():
 def kernel_v0():
     """A kernel layer."""
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
         trainable=False,
@@ -66,7 +68,7 @@ def kernel_v0():
 def rank_similarity_cell_call(tfds, rank_cell):
     """A rank similarity cell call."""
     for data in tfds:
-        x, _, _ = tf.keras.utils.unpack_x_y_sample_weight(data)
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(data)
         batch_size = x["given3rank1_stimulus_set"].shape[0]
         states_t0 = rank_cell.get_initial_state(batch_size=batch_size)
         outputs, states_t1 = rank_cell(x, states_t0)
@@ -135,7 +137,7 @@ def test_call_v0(ds_3rank1_v0):
 def test_call_v1(ds_3rank1_v1):
     """Test call.
 
-    Using timestep axis as stand additional (unused) axis.
+    Using timestep axis as stand-in for additional (unused) axis.
 
     """
     percept = percept_static_v0()

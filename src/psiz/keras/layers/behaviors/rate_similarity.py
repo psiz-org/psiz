@@ -20,15 +20,16 @@ Classes:
 
 """
 
+
 import copy
 import warnings
 
-import tensorflow as tf
+import keras
 
 from psiz.keras.layers.behaviors.rate_similarity_base import RateSimilarityBase
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="RateSimilarity"
 )
 class RateSimilarity(RateSimilarityBase):
@@ -74,9 +75,9 @@ class RateSimilarity(RateSimilarityBase):
 
         sim_qr = self._pairwise_similarity(inputs_copied)
 
-        rating = self.lower + tf.math.divide(
+        rating = self.lower + keras.ops.divide(
             self.upper - self.lower,
-            1 + tf.math.exp(-self.rate * (sim_qr - self.midpoint)),
+            1 + keras.ops.exp(-self.rate * (sim_qr - self.midpoint)),
         )
 
         return rating

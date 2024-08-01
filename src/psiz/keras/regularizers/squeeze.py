@@ -20,11 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.regularizers")
-class Squeeze(tf.keras.regularizers.Regularizer):
+@keras.saving.register_keras_serializable(package="psiz.keras.regularizers")
+class Squeeze(keras.regularizers.Regularizer):
     """Squeeze representation into a low number of dimensions.
 
     Regularizer determines the "max usage" for each dimension by taking
@@ -53,8 +54,8 @@ class Squeeze(tf.keras.regularizers.Regularizer):
         """
         # Max across stimuli (axis=0), identifying the "maximum usage" of each
         # dimension (axis=1).
-        max_usage_per_dim = tf.reduce_max(tf.math.abs(z), axis=0)
-        return self.rate * tf.reduce_sum(max_usage_per_dim)
+        max_usage_per_dim = keras.ops.max(keras.ops.abs(z), axis=0)
+        return self.rate * keras.ops.sum(max_usage_per_dim)
 
     def get_config(self):
         """Return config."""

@@ -61,7 +61,7 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-class RankModel(tf.keras.Model):
+class RankModel(keras.Model):
     """A soft rank model.
 
     No Gates.
@@ -88,7 +88,7 @@ class RankModel(tf.keras.Model):
         return self.soft_8rank2(s)
 
 
-class SimilarityModel(tf.keras.Model):
+class SimilarityModel(keras.Model):
     """A similarity model."""
 
     def __init__(self, braided_percept=None, proximity=None, **kwargs):
@@ -311,7 +311,7 @@ def main():
 
         # Define callbacks.
         fp_board_frame = fp_board / Path("frame_{0}".format(i_frame))
-        cb_board = tf.keras.callbacks.TensorBoard(
+        cb_board = keras.callbacks.TensorBoard(
             log_dir=fp_board_frame,
             histogram_freq=0,
             write_graph=False,
@@ -321,7 +321,7 @@ def main():
             embeddings_freq=0,
             embeddings_metadata=None,
         )
-        cb_early = tf.keras.callbacks.EarlyStopping(
+        cb_early = keras.callbacks.EarlyStopping(
             "loss", patience=15, mode="min", restore_best_weights=False, verbose=1
         )
         callbacks = [cb_board, cb_early]
@@ -357,7 +357,7 @@ def main():
         train_loss[i_frame] = history.history["loss"][-1]
         val_loss[i_frame] = history.history["val_loss"][-1]
 
-        tf.keras.backend.clear_session()
+        keras.backend.clear_session()
         model_inferred.n_sample = 100
         test_metrics = model_inferred.evaluate(tfds_test, verbose=0, return_dict=True)
         test_loss[i_frame] = test_metrics["loss"]
@@ -487,13 +487,13 @@ def build_ground_truth_model():
     # Define shared proximity.
     proximity = psiz.keras.layers.Minkowski(
         trainable=False,
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
     )
 
@@ -502,9 +502,9 @@ def build_ground_truth_model():
         braided_percept=braided_percept, proximity=proximity, soft_8rank2=soft_8rank2
     )
     model.compile(
-        loss=tf.keras.losses.CategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        weighted_metrics=[tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        loss=keras.losses.CategoricalCrossentropy(),
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        weighted_metrics=[keras.metrics.CategoricalCrossentropy(name="cce")],
     )
     return model
 
@@ -515,10 +515,10 @@ def build_ground_truth_percept(class_mean_full, exemplar_locs_centered, scale):
     exemplar_locs = class_mean_full + (scale * exemplar_locs_centered)
     # Add placeholder.
     exemplar_locs = np.vstack([np.array([0.0, 0.0]), exemplar_locs])
-    stim = tf.keras.layers.Embedding(
+    stim = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
-        embeddings_initializer=tf.keras.initializers.Constant(exemplar_locs),
+        embeddings_initializer=keras.initializers.Constant(exemplar_locs),
         mask_zero=True,
     )
     return stim
@@ -559,13 +559,13 @@ def build_model(n_stimuli, n_dim, kl_weight):
 
     # Define a simple, shared, non-trainable proximity function.
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(10.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(10.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
         trainable=False,
     )
@@ -577,9 +577,9 @@ def build_model(n_stimuli, n_dim, kl_weight):
         n_sample=30,
     )
     model.compile(
-        loss=tf.keras.losses.CategoricalCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        weighted_metrics=[tf.keras.metrics.CategoricalCrossentropy(name="cce")],
+        loss=keras.losses.CategoricalCrossentropy(),
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        weighted_metrics=[keras.metrics.CategoricalCrossentropy(name="cce")],
     )
     return model
 
@@ -592,7 +592,7 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
         n_stimuli + 1,
         n_dim,
-        scale_initializer=tf.keras.initializers.Constant(
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(posterior_scale).numpy()
         ),
         mask_zero=True,
@@ -603,8 +603,8 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
         embedding=psiz.keras.layers.EmbeddingNormalDiag(
             1,
             1,
-            loc_initializer=tf.keras.initializers.Constant(0.0),
-            scale_initializer=tf.keras.initializers.Constant(
+            loc_initializer=keras.initializers.Constant(0.0),
+            scale_initializer=keras.initializers.Constant(
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
@@ -629,8 +629,8 @@ def build_vi_percept(n_stimuli, n_dim, shared_prior, kl_weight, name):
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
         n_stimuli + 1,
         n_dim,
-        loc_initializer=tf.keras.initializers.Constant(shared_prior.posterior.loc),
-        scale_initializer=tf.keras.initializers.Constant(
+        loc_initializer=keras.initializers.Constant(shared_prior.posterior.loc),
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         ),
         mask_zero=True,

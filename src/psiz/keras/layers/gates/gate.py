@@ -21,14 +21,14 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 from psiz.keras.layers.drop import Drop
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras", name="Gate")
-class Gate(tf.keras.layers.Layer):
+@keras.saving.register_keras_serializable(package="psiz.keras", name="Gate")
+class Gate(keras.layers.Layer):
     """Abstract layer that routes inputs to subnetworks."""
 
     def __init__(self, gating_index=None, gating_key=None, **kwargs):
@@ -77,7 +77,13 @@ class Gate(tf.keras.layers.Layer):
         are_inputs_dict = False
         if isinstance(input_shape, dict):
             are_inputs_dict = True
-        self.are_inputs_dict = tf.constant(are_inputs_dict)
+        self.are_inputs_dict = are_inputs_dict
+        # TODO use or remove
+        # self.add_weight(
+        #     initializer=keras.initializers.Constant(are_inputs_dict),
+        #     shape=(1,),
+        #     trainable=False,
+        # )
 
         # Check if appropriate argument has been provided.
         if are_inputs_dict:
@@ -106,15 +112,27 @@ class Gate(tf.keras.layers.Layer):
         gate_weights_are_indices = False
         if gate_weights_shape[-1] == 1:
             gate_weights_are_indices = True
-        self._gate_weights_are_indices = tf.constant(gate_weights_are_indices)
+        self._gate_weights_are_indices = gate_weights_are_indices
+        # TODO use or remove
+        # self.add_weight(
+        #     initializer=keras.initializers.Contant(gate_weights_are_indices),
+        #     shape=(1,),
+        #     trainable=False,
+        # )
 
         # Determine if input has timestep axis.
         # NOTE: rank==3 logic in below if statement requires using singleton
         # dimension when supplying indices instead of weights.
         has_timestep_axis = False
-        if gate_weights_shape.rank == 3:
+        if len(gate_weights_shape) == 3:
             has_timestep_axis = True
-        self._has_timestep_axis = tf.constant(has_timestep_axis)
+        self._has_timestep_axis = has_timestep_axis
+        # TODO use or remove
+        # self.add_weight(
+        #     initializer=keras.initializers.Constant(has_timestep_axis),
+        #     shape=(1,),
+        #     trainable=False,
+        # )
 
     def _process_subnet(self, subnet, pass_gate_weights, strip_inputs):
         """Process subnet.
@@ -166,19 +184,17 @@ class Gate(tf.keras.layers.Layer):
 
         # Convert indices to one-hot encoding if necessary.
         if self._gate_weights_are_indices:
-            # NOTE: Drop singleton gate axis, but do not call tf.squeeze in
+            # NOTE: Drop singleton gate axis, but do not call `squeeze` in
             # case timestep axis is also singleton.
             if self._has_timestep_axis:
                 gate_weights = gate_weights[:, :, 0]
             else:
                 gate_weights = gate_weights[:, 0]
             # Make sure `gate_weights` are integer type before using `one_hot`.
-            dtype = backend.dtype(gate_weights)
+            dtype = gate_weights.dtype  # TODO is this valid and best practice?
             if dtype != "int32" and dtype != "int64":
-                gate_weights = tf.cast(gate_weights, "int32")
-            gate_weights = tf.one_hot(
-                gate_weights, self.n_subnet, on_value=1.0, off_value=0.0
-            )
+                gate_weights = keras.ops.cast(gate_weights, "int32")
+            gate_weights = keras.ops.one_hot(gate_weights, self.n_subnet)
         return gate_weights
 
     def get_config(self):

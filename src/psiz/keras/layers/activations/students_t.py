@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of TensorFlow kernel layers.
+"""Module of Keras activation layers.
 
 Classes:
     StudentsTSimilarity: A parameterized Student's t-distribution
@@ -21,16 +21,16 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 import psiz.keras.constraints as pk_constraints
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="StudentsTSimilarity"
 )
-class StudentsTSimilarity(tf.keras.layers.Layer):
+class StudentsTSimilarity(keras.layers.Layer):
     """Student's t-distribution similarity function.
 
     The Student's t-distribution similarity function is parameterized
@@ -72,33 +72,40 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
 
         self.fit_tau = fit_tau
         if tau_initializer is None:
-            tau_initializer = tf.random_uniform_initializer(1.0, 2.0)
-        self.tau_initializer = tf.keras.initializers.get(tau_initializer)
+            tau_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
+        self.tau_initializer = keras.initializers.get(tau_initializer)
+
+        self.fit_alpha = fit_alpha
+        if alpha_initializer is None:
+            alpha_initializer = keras.initializers.RandomUniform(
+                minval=1.0, maxval=10.0
+            )
+        self.alpha_initializer = keras.initializers.get(alpha_initializer)
+
+    def build(self, input_shape):
+        """Build."""
+        if self.built:
+            return
         tau_trainable = self.trainable and self.fit_tau
-        with tf.name_scope(self.name):
+        alpha_trainable = self.trainable and self.fit_alpha
+        with keras.name_scope(self.name):
             self.tau = self.add_weight(
                 shape=[],
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
-
-        self.fit_alpha = fit_alpha
-        if alpha_initializer is None:
-            alpha_initializer = tf.random_uniform_initializer(1.0, 10.0)
-        self.alpha_initializer = tf.keras.initializers.get(alpha_initializer)
-        alpha_trainable = self.trainable and self.fit_alpha
-        with tf.name_scope(self.name):
             self.alpha = self.add_weight(
                 shape=[],
                 initializer=self.alpha_initializer,
                 trainable=alpha_trainable,
                 name="alpha",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.000001),
             )
+        self.built = True
 
     def call(self, inputs):
         """Call.
@@ -110,8 +117,9 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
             A tensor of similarities.
 
         """
-        return tf.pow(
-            1 + (tf.pow(inputs, self.tau) / self.alpha), tf.negative(self.alpha + 1) / 2
+        return keras.ops.power(
+            1 + (keras.ops.power(inputs, self.tau) / self.alpha),
+            keras.ops.negative(self.alpha + 1) / 2,
         )
 
     def get_config(self):
@@ -121,10 +129,8 @@ class StudentsTSimilarity(tf.keras.layers.Layer):
             {
                 "fit_tau": self.fit_tau,
                 "fit_alpha": self.fit_alpha,
-                "tau_initializer": tf.keras.initializers.serialize(
-                    self.tau_initializer
-                ),
-                "alpha_initializer": tf.keras.initializers.serialize(
+                "tau_initializer": keras.initializers.serialize(self.tau_initializer),
+                "alpha_initializer": keras.initializers.serialize(
                     self.alpha_initializer
                 ),
             }

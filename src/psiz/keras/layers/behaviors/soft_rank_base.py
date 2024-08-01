@@ -20,18 +20,18 @@ Classes:
 
 """
 
+
+import keras
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras import backend
 
 import psiz.keras.constraints as pk_constraints
 from psiz.utils.m_prefer_n import m_prefer_n
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="SoftRankBase"
 )
-class SoftRankBase(tf.keras.layers.Layer):
+class SoftRankBase(keras.layers.Layer):
     """A base layer for ranking options.
 
     A base layer that outputs a soft rank of items based on incoming
@@ -75,26 +75,22 @@ class SoftRankBase(tf.keras.layers.Layer):
         self.n_select = int(n_select)
 
         if temperature_initializer is None:
-            temperature_initializer = tf.keras.initializers.Constant(value=1.0)
-        self.temperature_initializer = tf.keras.initializers.get(
-            temperature_initializer
-        )
+            temperature_initializer = keras.initializers.Constant(value=1.0)
+        self.temperature_initializer = keras.initializers.get(temperature_initializer)
 
         if temperature_constraint is None:
             temperature_constraint = pk_constraints.GreaterThan(min_value=0.0)
-        self.temperature_constraint = tf.keras.constraints.get(temperature_constraint)
+        self.temperature_constraint = keras.constraints.get(temperature_constraint)
 
-        self.temperature_regularizer = tf.keras.regularizers.get(
-            temperature_regularizer
-        )
+        self.temperature_regularizer = keras.regularizers.get(temperature_regularizer)
 
-        with tf.name_scope(self.name):
+        with keras.name_scope(self.name):
             self.temperature = self.add_weight(
                 shape=[],
                 initializer=self.temperature_initializer,
                 trainable=self.trainable,
                 name="temperature",
-                dtype=backend.floatx(),
+                dtype=keras.backend.floatx(),
                 constraint=self.temperature_constraint,
                 regularizer=self.temperature_regularizer,
             )
@@ -113,9 +109,11 @@ class SoftRankBase(tf.keras.layers.Layer):
         # Convert from *relative* axis index to *absolute* axis index.
         n_axis = len(input_shape)
         self._option_axis = n_axis + option_axis
-        self._option_axis_tensor = tf.constant(self._option_axis)
+        # self._option_axis_tensor = keras.ops.convert_to_tensor(self._option_axis)  # TODO
+        self._option_axis_tensor = self._option_axis  # TODO
         self._outcome_axis = n_axis + outcome_axis
-        self._outcome_axis_tensor = tf.constant(self._outcome_axis)
+        # self._outcome_axis_tensor = keras.ops.convert_to_tensor(self._outcome_axis)  # TODO
+        self._outcome_axis_tensor = self._outcome_axis  # TODO
 
         self.n_option = input_shape[self._option_axis]
         if self.n_select >= self.n_option:
@@ -125,21 +123,30 @@ class SoftRankBase(tf.keras.layers.Layer):
             )
         # Prebuild "outcome indices" that indicate all the possible
         # n-rank-m behavioral outcomes.
-        self._outcome_idx, self._n_outcome = self._possible_outcomes()
+        outcome_idx, n_outcome = self._possible_outcomes()
+        # self._outcome_idx = keras.ops.convert_to_tensor(outcome_idx)  # TODO
+        self._outcome_idx = outcome_idx  # TODO
+        # self._n_outcome = keras.ops.convert_to_tensor(
+        #     n_outcome, dtype=keras.backend.floatx()
+        # )  # TODO
+        self._n_outcome = float(n_outcome)
 
         # Prebuild a "selection mask" which will be used to mask probabilities
         # associated with non-selection events.
-        selection_mask = np.zeros([self.n_option])
+        selection_mask = np.zeros([self.n_option], dtype=np.float32)
         for i_select in range(self.n_select):
             selection_mask[i_select] = 1.0
-        selection_mask = tf.constant(selection_mask, dtype=backend.floatx())
         # Add any necessary leading axes before stimulus axis.
         if self._option_axis > 0:
-            for i_axis in range(self._option_axis):
-                selection_mask = tf.expand_dims(selection_mask, 0)
+            for _ in range(self._option_axis):
+                selection_mask = np.expand_dims(selection_mask, 0)
         # Add outcome axis.
-        selection_mask = tf.expand_dims(selection_mask, self._outcome_axis)
+        selection_mask = np.expand_dims(selection_mask, self._outcome_axis)
+        # selection_mask = keras.ops.convert_to_tensor(
+        #     selection_mask, dtype=keras.backend.floatx()
+        # )
         self._selection_mask = selection_mask
+        self.built = True
 
     def _possible_outcomes(self):
         """Return the possible outcomes of a rank similarity trial.
@@ -149,7 +156,7 @@ class SoftRankBase(tf.keras.layers.Layer):
         Returns:
             An 2D Tensor indicating all possible outcomes where the
                 values indicate indices of the options. Since
-                the Tensor will be used in `tf.gather`, each column
+                the Tensor will be used in `take`, each column
                 (not row) corresponds to one outcome. Note the indices
                 are zero-indexed relative to the options and the
                 unpermuted index is returned first.
@@ -161,8 +168,7 @@ class SoftRankBase(tf.keras.layers.Layer):
         n_outcome = outcome_idx.shape[0]
         # Transpose `outcome_idx` to make more efficient when used inside
         # `call` method.
-        outcome_idx = tf.transpose(tf.constant(outcome_idx))
-        n_outcome = tf.constant(n_outcome, dtype=backend.floatx())
+        outcome_idx = np.transpose(outcome_idx)
         return outcome_idx, n_outcome
 
     def _compute_outcome_probability(self, strength):
@@ -179,51 +185,57 @@ class SoftRankBase(tf.keras.layers.Layer):
         """
         # NOTE: Keeping `is_option_present` explicit for now in case refactor
         # is necessary later. If keeping, remove commented casting line.
-        is_option_present = tf.ones_like(strength)
-        # is_option_present = tf.cast(is_option_present, backend.floatx())
+        is_option_present = keras.ops.ones_like(strength)
+        # is_option_present = keras.ops.cast(is_option_present,keras.backend.floatx())
 
         # Zero out "non-present" strengths.
         # NOTE: `is_option_present` only relevant for placeholder trials
         # since all trials will have the same number of options.
-        strength = tf.math.multiply(
-            strength, is_option_present, name="rank_sim_zero_out_nonpresent"
-        )
+        strength = keras.ops.multiply(strength, is_option_present)
 
         # Create and populate "outcome" axis to `strength` that reflects all
         # possible outcomes.
-        strength = tf.gather(strength, self._outcome_idx, axis=self._option_axis_tensor)
+        strength = keras.ops.take(
+            strength, self._outcome_idx, axis=self._option_axis_tensor
+        )
         # Add singleton outcome axis to `is_option_present` to keep tensor shapes
         # consistent.
-        is_option_present = tf.expand_dims(is_option_present, self._outcome_axis)
+        is_option_present = keras.ops.expand_dims(is_option_present, self._outcome_axis)
 
         # Determine if outcome is legitimate by checking if at least one
         # option is present. This is important because some trials are
         # placeholders. Analogous to: `is_outcome = is_option_present[:, 0]`
-        is_outcome = tf.gather(
-            is_option_present, indices=tf.constant(0), axis=self._option_axis_tensor
+        is_outcome = keras.ops.take(
+            is_option_present,
+            indices=keras.ops.convert_to_tensor(0),
+            axis=self._option_axis_tensor,
         )
 
         # Compute denominator based on formulation of Luce's choice rule by
         # summing over the different options present in a trial. Note that
         # the similarity for placeholder options will be zero since they
         # were zeroed out by the multiply op with `is_option_present` above.
-        denom = tf.cumsum(strength, axis=self._option_axis, reverse=True)
-
+        denom = keras.ops.flip(
+            keras.ops.cumsum(
+                keras.ops.flip(strength, axis=self._option_axis), axis=self._option_axis
+            ),
+            axis=self._option_axis,
+        )
         # Compute log-probability of each selection, assuming all selections
         # occurred. Add fuzz factor to avoid log(0)
-        strength = tf.maximum(strength, tf.keras.backend.epsilon())
-        denom = tf.maximum(denom, tf.keras.backend.epsilon())
-        event_logit = tf.math.log(strength) - tf.math.log(denom)
+        strength = keras.ops.maximum(strength, keras.backend.epsilon())
+        denom = keras.ops.maximum(denom, keras.backend.epsilon())
+        event_logit = keras.ops.log(strength) - keras.ops.log(denom)
 
         # Mask non-existent selection events (i.e, non-existent option
         # selections).
         event_logit = self._selection_mask * event_logit
 
         # Compute log-probability of outcome (i.e., a sequence of events).
-        outcome_logit = tf.reduce_sum(event_logit, axis=self._option_axis)
+        outcome_logit = keras.ops.sum(event_logit, axis=self._option_axis)
 
         # Prepare for softmax op by converting back to probility space.
-        outcome_prob = tf.math.exp(outcome_logit)
+        outcome_prob = keras.ops.exp(outcome_logit)
         outcome_prob = is_outcome * outcome_prob
 
         # Some trials will be placeholders, so we adjust the output
@@ -231,17 +243,17 @@ class SoftRankBase(tf.keras.layers.Layer):
         # does not generate nan's.
         # NOTE: The `reduce_sum` op above means that the outcome axis has been
         # shifted by one, so the next `resuce_sum` op uses `self._outcome_axis - 1`.
-        total_outcome_prob = tf.reduce_sum(
+        total_outcome_prob = keras.ops.sum(
             outcome_prob, axis=(self._outcome_axis - 1), keepdims=True
         )
-        prob_placeholder = tf.cast(
-            tf.math.equal(total_outcome_prob, 0.0), backend.floatx()
+        prob_placeholder = keras.ops.cast(
+            keras.ops.equal(total_outcome_prob, 0.0), keras.backend.floatx()
         )
         outcome_prob = outcome_prob + (prob_placeholder / self._n_outcome)
 
         # Compute softmax using (optional) temperature parameter.
-        outcome_prob = tf.nn.softmax(
-            tf.math.divide(tf.math.log(outcome_prob), self.temperature)
+        outcome_prob = keras.ops.softmax(
+            keras.ops.divide(keras.ops.log(outcome_prob), self.temperature)
         )
         return outcome_prob
 
@@ -251,13 +263,13 @@ class SoftRankBase(tf.keras.layers.Layer):
         config.update(
             {
                 "n_select": self.n_select,
-                "temperature_initializer": tf.keras.initializers.serialize(
+                "temperature_initializer": keras.initializers.serialize(
                     self.temperature_initializer
                 ),
-                "temperature_constraint": tf.keras.constraints.serialize(
+                "temperature_constraint": keras.constraints.serialize(
                     self.temperature_constraint
                 ),
-                "temperature_regularizer": tf.keras.regularizers.serialize(
+                "temperature_regularizer": keras.regularizers.serialize(
                     self.temperature_regularizer
                 ),
             }

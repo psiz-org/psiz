@@ -14,6 +14,8 @@
 # limitations under the License.
 # ============================================================================
 
+
+import keras
 import pytest
 import tensorflow as tf
 
@@ -26,7 +28,7 @@ def test_outcome_probability_v0():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -35,13 +37,13 @@ def test_outcome_probability_v0():
         ),
     )
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         trainable=False,
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
     )
@@ -83,7 +85,7 @@ def test_outcome_probability_v1():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -92,18 +94,18 @@ def test_outcome_probability_v1():
         ),
     )
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         trainable=False,
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
     )
     softrank_2_1 = psiz.keras.layers.SoftRank(
-        n_select=1, temperature_initializer=tf.keras.initializers.Constant(value=0.001)
+        n_select=1, temperature_initializer=keras.initializers.Constant(value=0.001)
     )
 
     stimulus_set = tf.constant(
@@ -143,7 +145,7 @@ def test_outcome_probability_v2():
     n_dim = 2
     beta = 10.0
 
-    percept = tf.keras.layers.Embedding(
+    percept = keras.layers.Embedding(
         n_stimuli + 1,
         n_dim,
         mask_zero=True,
@@ -152,13 +154,13 @@ def test_outcome_probability_v2():
         ),
     )
     proximity = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         trainable=False,
         activation=psiz.keras.layers.ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(beta),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(beta),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
             trainable=False,
         ),
     )
@@ -252,9 +254,9 @@ def test_serialization_v0():
         n_select=2,
         name="rs2",
         trainable=False,
-        temperature_initializer=tf.keras.initializers.Constant(0.01),
-        temperature_constraint=tf.keras.constraints.NonNeg(),
-        temperature_regularizer=tf.keras.regularizers.L1(l1=0.03),
+        temperature_initializer=keras.initializers.Constant(0.01),
+        temperature_constraint=keras.constraints.NonNeg(),
+        temperature_regularizer=keras.regularizers.L1(l1=0.03),
     )
     cfg = rank.get_config()
     # Verify.
@@ -273,8 +275,8 @@ def test_serialization_v0():
     assert rank2.dtype == "float32"
     assert rank2.n_select == 2
     rank2.temperature_initializer.value == 0.01
-    assert isinstance(rank2.temperature_constraint, tf.keras.constraints.NonNeg)
-    assert isinstance(rank2.temperature_regularizer, tf.keras.regularizers.L1)
+    assert isinstance(rank2.temperature_constraint, keras.constraints.NonNeg)
+    assert isinstance(rank2.temperature_regularizer, keras.regularizers.L1)
 
 
 def test_bad_input_v0():

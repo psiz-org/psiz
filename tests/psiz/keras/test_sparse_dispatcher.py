@@ -15,12 +15,14 @@
 # ============================================================================
 """Test SparseDispatcher."""
 
+
+import keras
 import tensorflow as tf
 
 from psiz.keras.sparse_dispatcher import SparseDispatcher
 
 
-class Increment(tf.keras.layers.Layer):
+class Increment(keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
@@ -33,7 +35,7 @@ class Increment(tf.keras.layers.Layer):
         return inputs + self.v
 
 
-class AddPairs(tf.keras.layers.Layer):
+class AddPairs(keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):
@@ -46,7 +48,7 @@ class AddPairs(tf.keras.layers.Layer):
         return inputs[0] + inputs[1] + self.v
 
 
-class AddPairsDict(tf.keras.layers.Layer):
+class AddPairsDict(keras.layers.Layer):
     """A simple layer that increments input by a value."""
 
     def __init__(self, v, **kwargs):

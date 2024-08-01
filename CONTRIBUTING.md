@@ -6,7 +6,7 @@ Please note we have a code of conduct, please follow it in all your interactions
 
 PsiZ's scope is restricted to computational modeling of human behavioral data. This includes similarity ratings, similarity rankings, pile-sorts, and categorization of stimuli. Not all of this functionality is implemented. Contributions that support this functionality are welcome.
 
-PsiZ closely adheres to TensorFlow and Keras idioms. Model components are implemented as layers. Custom Keras objects are placed in `psiz.keras` and intentionally mirror the module structure of `tensorflow.keras` in order to leverage developers and users pre-existing knowledge of TensorFlow's organization.
+PsiZ closely adheres to TensorFlow and Keras idioms. Model components are implemented as layers. Custom Keras objects are placed in `psiz.keras` and intentionally mirror the module structure of `keras` in order to leverage developers and users pre-existing knowledge of Keras' organization.
 
 ## Issues
 

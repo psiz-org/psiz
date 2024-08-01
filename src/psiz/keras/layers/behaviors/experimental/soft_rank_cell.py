@@ -20,15 +20,15 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
 from psiz.keras.constraints.min_max import MinMax
 from psiz.utils.m_prefer_n import m_prefer_n
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="SoftRankCell"
 )
 class SoftRankCell(SoftRankBase):
@@ -67,31 +67,29 @@ class SoftRankCell(SoftRankBase):
         super(SoftRankCell, self).__init__(**kwargs)
 
         if inertia_initializer is None:
-            inertia_initializer = tf.keras.initializers.Constant(0.0)
-        self.inertia_initializer = tf.keras.initializers.get(inertia_initializer)
+            inertia_initializer = keras.initializers.Constant(0.0)
+        self.inertia_initializer = keras.initializers.get(inertia_initializer)
         if inertia_constraint is None:
             inertia_constraint = MinMax(0.0, 0.99)
-        self.inertia_constraint = tf.keras.constraints.get(inertia_constraint)
+        self.inertia_constraint = keras.constraints.get(inertia_constraint)
         self.inertia = self.add_weight(
             shape=[],
             initializer=self.inertia_initializer,
             trainable=self.trainable,
             name="inertia",
-            dtype=backend.floatx(),
+            dtype=keras.backend.floatx(),
             constraint=inertia_constraint,
         )
 
         # Satisfy RNNCell contract.
         self.n_outcome = m_prefer_n(n_option, self.n_select).shape[0]
-        self.state_size = [
-            tf.TensorShape([self.n_outcome])
-        ]  # TODO ideally computed during build
+        self.state_size = [self.n_outcome]
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
         # initial_state = self._compute_outcome_probability(inputs)  # TODO ideally instead of ones
         initial_state = [
-            tf.ones([batch_size, self.n_outcome], name="rank_cell_initial_state")
+            keras.ops.ones([batch_size, self.n_outcome], name="rank_cell_initial_state")
         ]
         return initial_state
 

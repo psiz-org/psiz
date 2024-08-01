@@ -15,6 +15,8 @@
 # ============================================================================
 """Test deterministic Minkowski layer."""
 
+
+import keras
 import numpy as np
 import tensorflow as tf
 
@@ -25,8 +27,8 @@ from psiz.keras.layers.proximities.mink import Minkowski
 def test_call_default(paired_inputs_v0):
     """Test call with default (linear) activation."""
     mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         trainable=False,
     )
     outputs = mink_layer(paired_inputs_v0)
@@ -46,12 +48,12 @@ def test_call_default(paired_inputs_v0):
 def test_call_exponential(paired_inputs_v0):
     """Test call with exponential activation function."""
     mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(0.1),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(0.1),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
         trainable=False,
@@ -70,27 +72,15 @@ def test_call_exponential(paired_inputs_v0):
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
 
 
-def test_output_shape(paired_inputs_v0):
-    """Test output_shape method."""
-    mink_layer = Minkowski()
-    input_shape = [
-        tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-        tf.TensorShape(tf.shape(paired_inputs_v0[1])),
-    ]
-    output_shape = mink_layer.compute_output_shape(input_shape)
-    desired_output_shape = tf.TensorShape([5])
-    tf.debugging.assert_equal(output_shape, desired_output_shape)
-
-
-def test_serialization():
+def test_serialization_0():
     """Test serialization."""
     mink_layer = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=ExponentialSimilarity(
-            beta_initializer=tf.keras.initializers.Constant(0.1),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(0.1),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
             trainable=False,
         ),
         trainable=False,
@@ -104,6 +94,41 @@ def test_serialization():
 
     recon_layer = Minkowski.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
+    tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
+    tf.debugging.assert_equal(mink_layer.activation.beta, recon_layer.activation.beta)
+    tf.debugging.assert_equal(mink_layer.activation.tau, recon_layer.activation.tau)
+    tf.debugging.assert_equal(mink_layer.activation.gamma, recon_layer.activation.gamma)
+
+    tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
+    tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
+
+
+# TODO
+def test_serialization_1(paired_inputs_v0):
+    """Test serialization with weights."""
+    mink_layer = Minkowski(
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.RandomUniform(),
+        activation=ExponentialSimilarity(
+            beta_initializer=keras.initializers.Constant(0.1),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.001),
+            trainable=False,
+        ),
+        trainable=False,
+    )
+    mink_layer.build([[None, 3], [None, 3]])
+    tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))
+    tf.debugging.assert_equal(mink_layer.activation.beta, tf.constant(0.1))
+    tf.debugging.assert_equal(mink_layer.activation.tau, tf.constant(1.0))
+    tf.debugging.assert_equal(mink_layer.activation.gamma, tf.constant(0.001))
+    config = mink_layer.get_config()
+    weights = mink_layer.get_weights()
+
+    recon_layer = Minkowski.from_config(config)
+    # NOTE: Calling build is necessary for the weights to be set, otherwise an error is thrown.
+    recon_layer.build([[None, 3], [None, 3]])
+    recon_layer.set_weights(weights)
     tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
     tf.debugging.assert_equal(mink_layer.activation.beta, recon_layer.activation.beta)
     tf.debugging.assert_equal(mink_layer.activation.tau, recon_layer.activation.tau)

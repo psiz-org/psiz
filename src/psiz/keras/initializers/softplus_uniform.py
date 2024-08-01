@@ -20,14 +20,13 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import initializers
-from tensorflow.keras import backend
+
+import keras
 import tensorflow_probability as tfp
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.initializers")
-class SoftplusUniform(initializers.Initializer):
+@keras.saving.register_keras_serializable(package="psiz.keras.initializers")
+class SoftplusUniform(keras.initializers.Initializer):
     """Initializer using an inverse-softplus-uniform distribution."""
 
     def __init__(self, minval=-0.05, maxval=0.05, hinge_softness=1.0, seed=None):
@@ -44,21 +43,20 @@ class SoftplusUniform(initializers.Initializer):
         self.minval = minval
         self.maxval = maxval
         self.hinge_softness = hinge_softness
-        self.seed = seed
+        self._init_seed = seed
+        self.seed = (
+            seed if seed is not None else keras.backend.random.make_default_seed()
+        )
+        super().__init__()
 
-    def __call__(self, shape, dtype=None, **kwargs):
+    def __call__(self, shape, dtype=None):
         """Call."""
-        # pylint: disable=unexpected-keyword-arg
-        if dtype is None:
-            dtype = backend.floatx()
-
-        w = tf.random.uniform(
-            shape,
+        w = keras.random.uniform(
+            shape=shape,
             minval=self.minval,
             maxval=self.maxval,
-            dtype=dtype,
             seed=self.seed,
-            name=None,
+            dtype=dtype,
         )
 
         def generalized_softplus_inverse(x, c):
@@ -69,10 +67,11 @@ class SoftplusUniform(initializers.Initializer):
 
     def get_config(self):
         """Return configuration."""
+        seed_config = keras.saving.serialize_keras_object(self._init_seed)
         config = {
             "minval": self.minval,
             "maxval": self.maxval,
             "hinge_softness": self.hinge_softness,
-            "seed": self.seed,
+            "seed": seed_config,
         }
         return config

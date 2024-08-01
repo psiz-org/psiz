@@ -20,12 +20,13 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 from psiz.keras.layers.variational import Variational
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="EmbeddingVariational"
 )
 class EmbeddingVariational(Variational):
@@ -72,3 +73,7 @@ class EmbeddingVariational(Variational):
     def embeddings(self):
         """Getter method for (posterior) embeddings."""
         return self.posterior.embeddings
+
+    # TODO verify correctness of new method
+    def compute_output_shape(self, input_shape):
+        return self.posterior.compute_output_shape(input_shape)

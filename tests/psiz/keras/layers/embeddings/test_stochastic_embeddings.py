@@ -37,7 +37,18 @@ def emb_input_2d():
     return batch
 
 
-def test_init_with_shape(emb_input_1d):
+@pytest.mark.parametrize(
+    "embedding_class",
+    [
+        psiz.keras.layers.EmbeddingGammaDiag,
+        psiz.keras.layers.EmbeddingLaplaceDiag,
+        psiz.keras.layers.EmbeddingLogNormalDiag,
+        psiz.keras.layers.EmbeddingLogitNormalDiag,
+        psiz.keras.layers.EmbeddingNormalDiag,
+        psiz.keras.layers.EmbeddingTruncatedNormalDiag,
+    ],
+)
+def test_init_with_shape(emb_input_1d, embedding_class):
     """Test initialization with `input_shape`."""
     input = emb_input_1d
 
@@ -46,7 +57,7 @@ def test_init_with_shape(emb_input_1d):
     mask_zero = False
     input_shape = (3,)
     sample_shape = ()
-    embedding = psiz.keras.layers.EmbeddingNormalDiag(
+    embedding = embedding_class(
         n_stimuli, n_dim, mask_zero=mask_zero, input_shape=input_shape
     )
 
@@ -70,7 +81,7 @@ def test_init_with_shape(emb_input_1d):
         psiz.keras.layers.EmbeddingTruncatedNormalDiag,
     ],
 )
-def test_call_1d_input(
+def test_call_1d_input_and_serialization(
     emb_input_1d, sample_shape, embedding_class, mask_zero, is_eager
 ):
     """Test call() return shape.
@@ -97,7 +108,7 @@ def test_call_1d_input(
     desired_output_shape = np.hstack([sample_shape, input_shape, n_dim]).astype(int)
 
     # Test call
-    output = embedding(input)
+    output = embedding(input)  # Call to build.
     np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
     assert embedding.mask_zero == mask_zero
@@ -110,12 +121,23 @@ def test_call_1d_input(
     assert config["input_length"] == desired_input_length
     assert config["sample_shape"] == sample_shape
 
+    weights = embedding.get_weights()
+
     # Reconstruct embedding and test.
-    recon_emb = embedding_class.from_config(
-        config
-    )  # TODO YOU ARE HERE something not right
+    recon_emb = embedding_class.from_config(config)
+    recon_emb.build()
+    recon_emb.set_weights(weights)
+
     recon_output = recon_emb(input)
+
     np.testing.assert_array_equal(desired_output_shape, np.shape(recon_output.numpy()))
+    if embedding_class == psiz.keras.layers.EmbeddingNormalDiag:
+        orig_mean = embedding.embeddings.mean()
+        orig_variance = embedding.embeddings.variance()
+        recon_mean = recon_emb.embeddings.mean()
+        recon_variance = recon_emb.embeddings.variance()
+        tf.test.TestCase().assertAllClose(orig_mean, recon_mean, atol=1e-6)
+        tf.test.TestCase().assertAllClose(orig_variance, recon_variance, atol=1e-6)
 
 
 @pytest.mark.parametrize(

@@ -15,6 +15,8 @@
 # ============================================================================
 """Test data module."""
 
+
+import keras
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -42,7 +44,7 @@ def test_init_0(c_categorize_a_4x10):
         ],
         dtype=np.int32,
     )
-    desired_objective_query_label = tf.keras.utils.to_categorical(
+    desired_objective_query_label = keras.utils.to_categorical(
         desired_objective_query_label, num_classes=3
     )
     desired_is_actual = np.array(
@@ -81,14 +83,14 @@ def test_export_0(c_categorize_b_4x3):
     )
     desired_objective_query_label = tf.constant(
         [
-            [[0], [0], [0]],
-            [[1], [1], [2]],
-            [[0], [1], [2]],
-            [[2], [2], [0]],
+            [0, 0, 0],
+            [1, 1, 2],
+            [0, 1, 2],
+            [2, 2, 0],
         ],
         dtype=tf.int32,
     )
-    desired_objective_query_label = tf.keras.utils.to_categorical(
+    desired_objective_query_label = keras.utils.to_categorical(
         desired_objective_query_label, num_classes=3
     )
     tf.debugging.assert_equal(desired_stimulus_set, x["categorize_stimulus_set"])
@@ -108,9 +110,9 @@ def test_export_1(c_categorize_b_4x3):
         [[1], [2], [3], [11], [12], [13], [1], [3], [5], [2], [4], [6]], dtype=tf.int32
     )
     desired_objective_query_label = tf.constant(
-        [[0], [0], [0], [1], [1], [2], [0], [1], [2], [2], [2], [0]], dtype=tf.int32
+        [0, 0, 0, 1, 1, 2, 0, 1, 2, 2, 2, 0], dtype=tf.int32
     )
-    desired_objective_query_label = tf.keras.utils.to_categorical(
+    desired_objective_query_label = keras.utils.to_categorical(
         desired_objective_query_label, num_classes=3
     )
     tf.debugging.assert_equal(desired_stimulus_set, x["categorize_stimulus_set"])

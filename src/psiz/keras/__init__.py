@@ -19,6 +19,7 @@ import psiz.keras.constraints
 import psiz.keras.initializers
 import psiz.keras.layers
 import psiz.keras.models
+import psiz.keras.ops
 import psiz.keras.regularizers
 
 # Promote `StochasticModel` to `psiz.keras` namespace for convenience and to

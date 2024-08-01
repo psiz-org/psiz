@@ -20,13 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
-from tensorflow.keras import constraints
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
-class GreaterThan(constraints.Constraint):
+@keras.saving.register_keras_serializable(package="psiz.keras.constraints")
+class GreaterThan(keras.constraints.Constraint):
     """Constrains the weights to be greater than a value."""
 
     def __init__(self, min_value=0.0):
@@ -41,7 +40,7 @@ class GreaterThan(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         w = w - self.min_value
-        w = w * tf.cast(tf.math.greater(w, 0.0), backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater(w, 0.0), keras.backend.floatx())
         w = w + self.min_value
         return w
 

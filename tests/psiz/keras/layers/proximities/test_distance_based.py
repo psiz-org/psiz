@@ -40,15 +40,15 @@ def kernel_db_static_v1():
 
     # Create "unweighted" Minkowski distance layer.
     distance = Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
     )
     # Create exponential similarity function.
     similarity = ExponentialSimilarity(
         fit_beta=False,
-        beta_initializer=tf.keras.initializers.Constant(1.0),
-        tau_initializer=tf.keras.initializers.Constant(1.0),
-        gamma_initializer=tf.keras.initializers.Constant(0.01),
+        beta_initializer=keras.initializers.Constant(1.0),
+        tau_initializer=keras.initializers.Constant(1.0),
+        gamma_initializer=keras.initializers.Constant(0.01),
     )
     # Package as distance-based kernel.
     kernel = DistanceBased(distance=distance, similarity=similarity)

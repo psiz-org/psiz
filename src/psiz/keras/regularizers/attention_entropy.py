@@ -20,11 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.regularizers")
-class AttentionEntropy(tf.keras.regularizers.Regularizer):
+@keras.saving.register_keras_serializable(package="psiz.keras.regularizers")
+class AttentionEntropy(keras.regularizers.Regularizer):
     """Entropy-based regularization to encourage sparsity."""
 
     def __init__(self, rate=0.0):
@@ -38,12 +39,12 @@ class AttentionEntropy(tf.keras.regularizers.Regularizer):
 
     def __call__(self, w):
         """Call."""
-        n_dim = tf.cast(tf.shape(w)[0], tf.keras.backend.floatx())
+        n_dim = keras.ops.cast(keras.ops.shape(w)[0], keras.backend.floatx())
         # Scale weights to sum to one and add fudge factor. Here we assume
         # that weights sum to n_dim.
-        w = w / n_dim + tf.keras.backend.epsilon()
-        t = tf.negative(tf.math.reduce_sum(w * tf.math.log(w), axis=1))
-        return self.rate * tf.reduce_mean(t)
+        w = w / n_dim + keras.backend.epsilon()
+        t = keras.ops.negative(keras.ops.sum(w * keras.ops.log(w), axis=1))
+        return self.rate * keras.ops.mean(t)
 
     def get_config(self):
         """Return config."""

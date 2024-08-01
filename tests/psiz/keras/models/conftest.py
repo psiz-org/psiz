@@ -15,9 +15,10 @@
 # ============================================================================
 """Fixtures for models."""
 
+
+import keras
 import numpy as np
 import pytest
-import tensorflow as tf
 
 import psiz
 
@@ -222,10 +223,10 @@ def ds_2rank1_8rank2_v0():
             (18, 16, 14),
             (17, 15, 13),
             (4, 5, 6),
-            (0, 0, 0),
-            (0, 0, 0),
-            (0, 0, 0),
-            (0, 0, 0),
+            (1, 2, 3),  # Masked trial
+            (1, 2, 3),  # Masked trial
+            (1, 2, 3),  # Masked trial
+            (1, 2, 3),  # Masked trial
         ),
         dtype=np.int32,
     )
@@ -245,10 +246,10 @@ def ds_2rank1_8rank2_v0():
 
     stimulus_set = np.array(
         (
-            (0, 0, 0, 0, 0, 0, 0, 0, 0),
-            (0, 0, 0, 0, 0, 0, 0, 0, 0),
-            (0, 0, 0, 0, 0, 0, 0, 0, 0),
-            (0, 0, 0, 0, 0, 0, 0, 0, 0),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),  # Masked trial
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),  # Masked trial
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),  # Masked trial
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),  # Masked trial
             (1, 2, 3, 4, 5, 6, 7, 8, 9),
             (18, 16, 14, 12, 10, 8, 6, 4, 2),
             (17, 15, 13, 11, 9, 7, 5, 3, 1),
@@ -426,7 +427,7 @@ def ds_time_categorize_v0():
     outcome = psiz.data.SparseCategorical(
         objective_query_label, depth=n_output, sample_weight=sample_weight
     )
-    objective_query_label = tf.keras.utils.to_categorical(
+    objective_query_label = keras.utils.to_categorical(
         objective_query_label, num_classes=3
     )
     content = psiz.data.Categorize(
@@ -662,16 +663,16 @@ def rate_default_1g_mle():
     n_stimuli = 30
     n_dim = 10
 
-    stimuli = tf.keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    stimuli = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
 
     kernel = psiz.keras.layers.Minkowski(
-        rho_initializer=tf.keras.initializers.Constant(2.0),
-        w_initializer=tf.keras.initializers.Constant(1.0),
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
         activation=psiz.keras.layers.ExponentialSimilarity(
             trainable=False,
-            beta_initializer=tf.keras.initializers.Constant(3.0),
-            tau_initializer=tf.keras.initializers.Constant(1.0),
-            gamma_initializer=tf.keras.initializers.Constant(0.0),
+            beta_initializer=keras.initializers.Constant(3.0),
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.0),
         ),
         trainable=False,
     )

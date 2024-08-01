@@ -20,13 +20,12 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
-from tensorflow.keras import constraints
+
+import keras
 
 
-@tf.keras.utils.register_keras_serializable(package="psiz.keras.constraints")
-class MinMax(constraints.Constraint):
+@keras.saving.register_keras_serializable(package="psiz.keras.constraints")
+class MinMax(keras.constraints.Constraint):
     """Constrains the weights to be between/equal values."""
 
     def __init__(self, min_value, max_value):
@@ -43,11 +42,11 @@ class MinMax(constraints.Constraint):
     def __call__(self, w):
         """Call."""
         w = w - self.min_value
-        w = w * tf.cast(tf.math.greater_equal(w, 0.0), backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), keras.backend.floatx())
         w = w + self.min_value
 
         w = w - self.max_value
-        w = w * tf.cast(tf.math.greater_equal(0.0, w), backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater_equal(0.0, w), keras.backend.floatx())
         w = w + self.max_value
 
         return w

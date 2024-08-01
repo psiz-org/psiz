@@ -21,13 +21,13 @@ Classes:
 
 """
 
-import tensorflow as tf
-from tensorflow.keras import backend
+
+import keras
 
 from psiz.keras.layers.proximities.proximity import Proximity
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="CosineSimilarity"
 )
 class CosineSimilarity(Proximity):
@@ -71,26 +71,24 @@ class CosineSimilarity(Proximity):
 
         self.w_trainable = self.trainable and w_trainable
         if w_initializer is None:
-            w_initializer = tf.keras.initializers.Ones()
+            w_initializer = keras.initializers.Ones()
         else:
-            w_initializer = tf.keras.initializers.get(w_initializer)
+            w_initializer = keras.initializers.get(w_initializer)
         self.w_initializer = w_initializer
-        self.w_regularizer = tf.keras.regularizers.get(w_regularizer)
-        self.w_constraint = tf.keras.constraints.get(w_constraint)
+        self.w_regularizer = keras.regularizers.get(w_regularizer)
+        self.w_constraint = keras.constraints.get(w_constraint)
 
     def build(self, input_shape):
         """Build."""
         n_dim = input_shape[0][-1]
-        dtype = tf.as_dtype(self.dtype or backend.floatx())
 
-        with tf.name_scope(self.name):
+        with keras.name_scope(self.name):
             self.w = self.add_weight(
                 shape=[n_dim],
                 initializer=self.w_initializer,
                 regularizer=self.w_regularizer,
                 trainable=self.w_trainable,
                 name="w",
-                dtype=dtype,
                 constraint=self.w_constraint,
             )
 
@@ -98,7 +96,7 @@ class CosineSimilarity(Proximity):
         """Call.
 
         Args:
-            inputs: A list of two tf.Tensor's denoting a the set of
+            inputs: A list of two tensors denoting a the set of
                 vectors to compute pairwise distances. Each tensor is
                 assumed to have the same shape and be at least rank-2.
                 Any additional tensors in the list are ignored.
@@ -112,12 +110,12 @@ class CosineSimilarity(Proximity):
         z_1 = inputs[1]
 
         # Broadcast `w` to appropriate shape.
-        z_shape = tf.shape(z_0)
-        w = tf.broadcast_to(self.w, z_shape)
+        z_shape = keras.ops.shape(z_0)
+        w = keras.ops.broadcast_to(self.w, z_shape)
 
-        numer = tf.reduce_sum(w * z_0 * z_1, axis=-1)
-        denom_0 = tf.sqrt(tf.reduce_sum(w * z_0 * z_0, axis=-1))
-        denom_1 = tf.sqrt(tf.reduce_sum(w * z_1 * z_1, axis=-1))
+        numer = keras.ops.sum(w * z_0 * z_1, axis=-1)
+        denom_0 = keras.ops.sqrt(keras.ops.sum(w * z_0 * z_0, axis=-1))
+        denom_1 = keras.ops.sqrt(keras.ops.sum(w * z_1 * z_1, axis=-1))
         s = numer / (denom_0 * denom_1)
 
         return self.activation(s)
@@ -127,9 +125,9 @@ class CosineSimilarity(Proximity):
         config = super().get_config()
         config.update(
             {
-                "w_initializer": tf.keras.initializers.serialize(self.w_initializer),
-                "w_regularizer": tf.keras.regularizers.serialize(self.w_regularizer),
-                "w_constraint": tf.keras.constraints.serialize(self.w_constraint),
+                "w_initializer": keras.initializers.serialize(self.w_initializer),
+                "w_regularizer": keras.regularizers.serialize(self.w_regularizer),
+                "w_constraint": keras.constraints.serialize(self.w_constraint),
                 "w_trainable": self.w_trainable,
             }
         )

@@ -15,6 +15,8 @@
 # ============================================================================
 """Test data module."""
 
+
+import keras
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -408,7 +410,7 @@ def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     tfds = pds.export(export_format="tfds")
 
     # Map strings to indices.
-    condition_lookup_layer = tf.keras.layers.StringLookup(
+    condition_lookup_layer = keras.layers.StringLookup(
         vocabulary=["block", "interleave"], num_oov_indices=0
     )
 

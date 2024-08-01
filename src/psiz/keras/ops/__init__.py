@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The PsiZ Authors. All Rights Reserved.
+# Copyright 2024 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of utility functions.
-
-Functions:
-    expand_dim_repeat: Repeat Tensor along a newly inserted axis.
-
-"""
-
-import tensorflow as tf
+"""TensorFlow ops initialization."""
 
 
-def expand_dim_repeat(x, n_repeat, axis=1):
-    """Repeat Tensor along a newly inserted axis."""
-    x = tf.expand_dims(x, axis=axis)
-    return tf.repeat(x, n_repeat, axis=axis)
+from psiz.keras.ops.expand_dim_repeat import expand_dim_repeat
+from psiz.keras.ops.ig_categorical import ig_categorical
+from psiz.keras.ops.ig_model_categorical import ig_model_categorical
+from psiz.keras.ops.wpnorm import wpnorm
+
+__all__ = [
+    "expand_dim_repeat",
+    "ig_categorical",
+    "ig_model_categorical",
+    "wpnorm",
+]

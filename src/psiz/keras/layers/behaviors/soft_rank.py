@@ -20,14 +20,13 @@ Classes:
 
 """
 
-import tensorflow as tf
+
+import keras
 
 from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
 
 
-@tf.keras.utils.register_keras_serializable(
-    package="psiz.keras.layers", name="SoftRank"
-)
+@keras.saving.register_keras_serializable(package="psiz.keras.layers", name="SoftRank")
 class SoftRank(SoftRankBase):
     """A (stateless) soft rank layer.
 

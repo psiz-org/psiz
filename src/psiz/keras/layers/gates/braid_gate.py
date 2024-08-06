@@ -25,11 +25,11 @@ Classes:
 import keras
 
 from psiz.keras.sparse_dispatcher import SparseDispatcher
-from psiz.keras.layers.gates.split_gate import SplitGate
+from psiz.keras.layers.gates.gate import Gate
 
 
 @keras.saving.register_keras_serializable(package="psiz.keras", name="BraidGate")
-class BraidGate(SplitGate):
+class BraidGate(Gate):
     """A layer that routes inputs to subnetworks.
 
     In a `BraidGate` the subnetworks are re-combined at the end (in

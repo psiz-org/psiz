@@ -99,56 +99,6 @@ class AddPairsDict(keras.layers.Layer):
 
 
 @pytest.fixture
-def groups_v0_0():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[0], [0], [0], [0], [0]], dtype=tf.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_v0_1():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[0], [1], [2], [1], [2]], dtype=tf.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_v0_2():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[0], [0], [0], [1], [1]], dtype=tf.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_v3_12():
-    """A minibatch of gate weights."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant(
-        [[1.0, 0.0], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.0, 1.0]], dtype=np.float32
-    )
-    return groups
-
-
-@pytest.fixture
-def group_3g_empty_v0_0():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[0], [0], [0], [0], [0]], dtype=np.int32)
-    return groups
-
-
-@pytest.fixture
-def group_3g_empty_v0_1():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[1], [1], [2], [1], [2]], dtype=np.int32)
-    return groups
-
-
-@pytest.fixture
 def inputs_emb_v0():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
@@ -620,32 +570,6 @@ def test_serialization_1input_emb(emb_subnets_stoch_rank1, inputs_emb_v0, groups
     )
 
 
-# def test_compute_output_shape_1input_deterministic_embedding(
-#     emb_subnets_determ, inputs_emb_v0, groups_v0_1
-# ):
-#     """Test `compute_output_shape`."""
-#     groups = groups_v0_1
-
-#     braid_layer = BraidGate(subnets=emb_subnets_determ, gating_index=-1)
-#     input_shape = [inputs_emb_v0.shape, groups.shape]
-#     braid_layer.build(input_shape)
-#     output_shape = braid_layer.compute_output_shape(input_shape)
-#     assert output_shape == tf.TensorShape([5, 3, 3])
-
-
-# def test_compute_output_shape_1input_stochastic_embedding(
-#     emb_subnets_stoch_rank0, inputs_emb_v0, groups_v0_1
-# ):
-#     """Test `compute_output_shape`."""
-#     groups = groups_v0_1
-
-#     braid_layer = BraidGate(subnets=emb_subnets_stoch_rank0, gating_index=-1)
-#     input_shape = [inputs_emb_v0.shape, groups.shape]
-#     braid_layer.build(input_shape)
-#     output_shape = braid_layer.compute_output_shape(input_shape)
-#     assert output_shape == tf.TensorShape([5, 3, 3])
-
-
 def test_subnet_listinput(kernel_subnets):
     braid_layer = BraidGate(subnets=kernel_subnets, gating_index=-1)
     braid_layer.build(
@@ -725,25 +649,6 @@ def test_call_listinput_kernel_empty_branch(paired_inputs_v0, group_3g_empty_v0_
     kernel_group = BraidGate(subnets=[kernel_0, kernel_1, kernel_2], gating_index=-1)
 
     _ = kernel_group([paired_inputs_v0[0], paired_inputs_v0[1], group_3g_empty_v0_0])
-
-
-# def test_compute_output_shape_listinput_kernel(
-#     kernel_subnets, paired_inputs_v0, groups_v0_0
-# ):
-#     """Test output_shape method."""
-#     groups = groups_v0_0
-
-#     braid_layer = BraidGate(subnets=kernel_subnets, gating_index=-1)
-
-#     input_shape = [
-#         tf.TensorShape(tf.shape(paired_inputs_v0[0])),
-#         tf.TensorShape(tf.shape(paired_inputs_v0[1])),
-#         tf.TensorShape(tf.shape(groups)),
-#     ]
-#     braid_layer.build(input_shape)
-#     output_shape = braid_layer.compute_output_shape(input_shape)
-#     desired_output_shape = tf.TensorShape([5])
-#     tf.debugging.assert_equal(output_shape, desired_output_shape)
 
 
 def test_serialization_listinput(kernel_subnets, paired_inputs_v0, groups_v0_0):

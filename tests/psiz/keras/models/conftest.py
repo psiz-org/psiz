@@ -94,7 +94,8 @@ def ds_4rank1_v1():
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     groups = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32), name="kernel_gate_weights"
+        np.array(([1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]), dtype=np.float32),
+        name="kernel_gate_weights",
     )
 
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
@@ -125,10 +126,12 @@ def ds_4rank1_v2():
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     kernel_groups = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32), name="kernel_gate_weights"
+        np.array(([1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]), dtype=np.float32),
+        name="kernel_gate_weights",
     )
     percept_groups = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32), name="percept_gate_weights"
+        np.array(([1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]), dtype=np.float32),
+        name="percept_gate_weights",
     )
 
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
@@ -159,10 +162,12 @@ def ds_4rank1_v3():
     content = psiz.data.Rank(stimulus_set, n_select=n_select)
 
     percept_groups_0 = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32), name="percept_gate_weights_0"
+        np.array(([1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]), dtype=np.float32),
+        name="percept_gate_weights_0",
     )
     percept_groups_1 = psiz.data.Group(
-        np.array(([0], [0], [1], [1]), dtype=np.int32), name="percept_gate_weights_1"
+        np.array(([1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]), dtype=np.float32),
+        name="percept_gate_weights_1",
     )
 
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
@@ -271,7 +276,19 @@ def ds_2rank1_8rank2_v0():
         sample_weight=sample_weight,
     )
 
-    rank_config_val = np.array([[0], [0], [0], [0], [1], [1], [1], [1]], dtype=np.int32)
+    rank_config_val = np.array(
+        [
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+        ],
+        dtype=np.float32,
+    )
     rank_config = psiz.data.Group(rank_config_val, name="rank_config")
     tfds = psiz.data.Dataset(
         [content_2rank1, outcome_2rank1, content_8rank2, outcome_8rank2, rank_config]
@@ -372,7 +389,8 @@ def ds_rate2_v1():
     content = psiz.data.Rate(stimulus_set)
 
     groups = psiz.data.Group(
-        np.array([[0], [0], [1], [1]], dtype=np.int32), name="behavior_gate_weights"
+        np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]], dtype=np.float32),
+        name="behavior_gate_weights",
     )
 
     rating = np.array([[0.1], [0.4], [0.8], [0.9]])

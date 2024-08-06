@@ -166,79 +166,6 @@ def inputs_5x3x2_v0():
     return inputs_0
 
 
-@pytest.fixture
-def groups_v0_0():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[0], [0], [0], [0], [0]], dtype=tf.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_v0_1():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[0], [1], [2], [1], [2]], dtype=tf.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_v0_2():
-    """A minibatch of group indices."""
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[0], [0], [0], [1], [1]], dtype=tf.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_v1_12():
-    """A minibatch of group indices.
-
-    Disjoint gate weights.
-
-    """
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[1, 0], [1, 0], [1, 0], [0, 1], [0, 1]], dtype=np.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_v2_12():
-    """A minibatch of group indices.
-
-    Overlapping gate weights.
-
-    """
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant([[1, 0], [1, 0], [1, 1], [0, 1], [0, 1]], dtype=np.int32)
-    return groups
-
-
-@pytest.fixture
-def groups_5x3x3_index_v0_2():
-    """A minibatch of group indices.
-
-    * 5 batches
-    * index "gate weight" columns
-    * 3 timesteps
-
-    """
-    # Create a simple batch (batch_size=5).
-    groups = tf.constant(
-        [
-            [[0], [0], [0]],
-            [[1], [1], [1]],
-            [[0], [0], [0]],
-            # Last two batches intentionally have different groups for
-            # each timestep.
-            [[1], [1], [0]],
-            [[1], [0], [1]],
-        ],
-        dtype=tf.int32,
-    )
-    return groups
-
-
 def test_init_options():
     """Test init options."""
     branch = BranchGate(
@@ -469,36 +396,50 @@ def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2, is_eager)
     # Define model.
     input_0 = keras.Input(shape=(3,), name="data_0")
     input_1 = keras.Input(shape=(3,), name="data_1")
-    input_2 = keras.Input(shape=(None, 1), dtype=tf.dtypes.int32, name="groups")
+    input_2 = keras.Input(shape=(3,), dtype=tf.dtypes.float32, name="groups")
 
     # NOTE: You have to know TF's default naming scheme to suppy these
     # names ahead of time, i.e, `['<layer.name>', '<layer_name>_0',
     # '<layer_name>_1', ...]`. The best we can do here is anticipate and
     # set the layer name.
 
-    name_branch_0 = "branch"
+    name_branch_0 = "branch_0"
     name_branch_1 = "branch_1"
     outputs = BranchGate(
         subnets=[AddPairs(-0.1), AddPairs(0.1)],
         gating_index=-1,
         output_names=[name_branch_0, name_branch_1],
-        name="branch",
+        name="twiggy",
     )([input_0, input_1, input_2])
+    # NOTE: When using a functional model, the output names are determined based on the
+    # name of the last layer. Here we use an identity layer to guide Keras into attaching the
+    # appropriate name to each branch. Without these lines, the output names would use the name
+    # of the `BranchGate` layer twice.
+    outputs_0 = keras.layers.Identity(name=name_branch_0)(outputs[name_branch_0])
+    outputs_1 = keras.layers.Identity(name=name_branch_1)(outputs[name_branch_1])
     model = keras.Model(
         inputs=[input_0, input_1, input_2],
         outputs={
-            name_branch_0: outputs[name_branch_0],
-            name_branch_1: outputs[name_branch_1],
+            name_branch_0: outputs_0,
+            name_branch_1: outputs_1,
         },
     )
 
     model.compile(
         optimizer=keras.optimizers.Adam(),
-        loss=[
-            keras.losses.MeanAbsoluteError(name="mae_0"),
-            keras.losses.MeanAbsoluteError(name="mae_1"),
-        ],
-        loss_weights=[1.0, 1.0],
+        loss={
+            name_branch_0: keras.losses.MeanAbsoluteError(name="mae_0"),
+            name_branch_1: keras.losses.MeanAbsoluteError(name="mae_1"),
+        },
+        loss_weights={
+            name_branch_0: 1.0,
+            name_branch_1: 1.0,
+        },
+        # NOTE: Add weighted metrics to track track the loss associated with each branch.
+        weighted_metrics={
+            name_branch_0: "mae",
+            name_branch_1: "mae",
+        },
     )
 
     # Test dataset.
@@ -532,24 +473,18 @@ def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2, is_eager)
         n_data, drop_remainder=False
     )
 
-    # TODO temporary debug block to figure out issue
-    for data in tfds:
-        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
-        # TODO something isn't write with prediction, it's only computing the first sample correctly
-        # suspect dictionary and corresponding list order are not in agreeement
-        y_pred = model(x, training=False)
-        xxx = 0
-
     history = model.fit(tfds, epochs=2, verbose=1)
-
     # NOTE: There are no trainable parameters, so the loss is predictable and
     # does not change across epochs.
     zeros_2epochs = [0.0, 0.0]
-    # TODO not sure why losses for each branch are no longer placed in separate dictionary keys in Keras 3
-    # TODO also not sure why loss is not 0.0
     assert history.history["loss"] == zeros_2epochs
-    assert history.history[name_branch_0 + "_loss"] == zeros_2epochs
-    assert history.history[name_branch_1 + "_loss"] == zeros_2epochs
+    assert history.history[name_branch_0 + "_mae"] == zeros_2epochs
+    assert history.history[name_branch_1 + "_mae"] == zeros_2epochs
+
+    eval = model.evaluate(tfds, return_dict=True)
+    assert eval["loss"] == 0.0
+    assert eval[name_branch_0 + "_mae"] == 0.0
+    assert eval[name_branch_1 + "_mae"] == 0.0
 
 
 @pytest.mark.parametrize("is_eager", [True, False])
@@ -595,6 +530,11 @@ def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2, is_eager):
             name_branch_1: keras.losses.MeanAbsoluteError(name="mae_1"),
         },
         loss_weights={name_branch_0: 1.0, name_branch_1: 1.0},
+        # NOTE: Add weighted metrics to track track the loss associated with each branch.
+        weighted_metrics={
+            name_branch_0: "mae",
+            name_branch_1: "mae",
+        },
     )
 
     # Create test dataset.
@@ -629,8 +569,13 @@ def test_fit_5x3_subclass(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2, is_eager):
     # does not change across epochs.
     zeros_2epochs = [0.0, 0.0]
     assert history.history["loss"] == zeros_2epochs
-    # assert history.history[name_branch_0 + "_loss"] == zeros_2epochs  # TODO don't know why branch losses aren't added
-    # assert history.history[name_branch_1 + "_loss"] == zeros_2epochs  # TODO don't know why branch losses aren't added
+    assert history.history[name_branch_0 + "_mae"] == zeros_2epochs
+    assert history.history[name_branch_1 + "_mae"] == zeros_2epochs
+
+    eval = model.evaluate(tfds, return_dict=True)
+    assert eval["loss"] == 0.0
+    assert eval[name_branch_0 + "_mae"] == 0.0
+    assert eval[name_branch_1 + "_mae"] == 0.0
 
 
 def test_call_2g_5x3x2_timestep(inputs_5x3x2_v0, groups_5x3x3_index_v0_2):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2022 The PsiZ Authors. All Rights Reserved.
+# Copyright 2024 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,15 @@ from psiz.keras.layers.drop import Drop
 class Gate(keras.layers.Layer):
     """Abstract layer that routes inputs to subnetworks."""
 
-    def __init__(self, gating_index=None, gating_key=None, **kwargs):
+    def __init__(
+        self,
+        subnets=None,
+        gating_index=None,
+        gating_key=None,
+        pass_gate_weights=None,
+        strip_inputs=None,
+        **kwargs
+    ):
         """Initialize.
 
         Initialization must provide either `gating_index` (if `inputs`
@@ -41,17 +49,36 @@ class Gate(keras.layers.Layer):
         provide `gating_index`.
 
         Args:
+            subnets: A non-empty list of sub-networks.
             gating_index (optional): If inputs are tuple-formatte,
                 the index position of the gate weights.
             gating_key (optional): If inputs are dictionary-
                 formatted, the dictionary key name of the gate weights.
+            pass_gate_weights (optional): Applies to tuple-formatted
+                `input` only. Boolean 1D array-like indicating if
+                "gate weights"  should be passed to the subnets. By
+                default, gate weights will not be passed. This argument
+                can be used to override the default behavior. If
+                provided by the user, the length must agree with the
+                number of subnets.
+                shape=(n_subnet)
+            strip_inputs (optional): Applies to tuple-formatted
+                `input` only. Boolean 1D array-like indicating if
+                `inputs` to the subnetworks should be stripped to a
+                single tensor if the tuple has only one element. This is
+                useful if the subnet network is a TensorFlow layer that
+                expects a single Tensor for the `inputs` argument
+                (e.g., Embedding). By default, this is True. If
+                provided, the length must agree with the number of
+                subnets.
+
+        Raises:
+            ValueError if subnetwork's non-batch output shape is not
+            fully defined.
 
         Notes:
-        It is assumed that gate weights are either a) integers
-        respresenting indices or b) floats representing mixing
-        coefficients. If gate weights axis=1 is a singleton dimension,
-        then values are assumed to be indices. Otherwise assumed to be
-        the raw mixing coefficients.
+        It is assumed that gate weights are floats representing mixing
+        coefficients.
 
         """
         super(Gate, self).__init__(**kwargs)
@@ -60,7 +87,6 @@ class Gate(keras.layers.Layer):
         # Handle "gate weights" attributes.
         self.gating_index = gating_index
         self.gating_key = gating_key
-        self._gate_weights_are_indices = None
 
         # Handle masking support.
         self.supports_masking = True
@@ -68,6 +94,21 @@ class Gate(keras.layers.Layer):
         self.are_inputs_dict = None
         # Handle timestep axis attributes.
         self._has_timestep_axis = None
+
+        self.n_subnet = len(subnets)
+        self._subnets = subnets
+
+        if pass_gate_weights is None:
+            pass_gate_weights = [False] * self.n_subnet
+        self.pass_gate_weights = pass_gate_weights
+
+        if strip_inputs is None:
+            strip_inputs = [True] * self.n_subnet
+        self.strip_inputs = strip_inputs
+
+    @property
+    def subnets(self):
+        return self._subnets
 
     def build(self, input_shape):
         """Build."""
@@ -107,22 +148,7 @@ class Gate(keras.layers.Layer):
         else:
             gate_weights_shape = input_shape[self.gating_index]
 
-        # Determine if `gate_weights` are indices based on the shape of the
-        # last axis. If singleton, assume indices.
-        gate_weights_are_indices = False
-        if gate_weights_shape[-1] == 1:
-            gate_weights_are_indices = True
-        self._gate_weights_are_indices = gate_weights_are_indices
-        # TODO use or remove
-        # self.add_weight(
-        #     initializer=keras.initializers.Contant(gate_weights_are_indices),
-        #     shape=(1,),
-        #     trainable=False,
-        # )
-
         # Determine if input has timestep axis.
-        # NOTE: rank==3 logic in below if statement requires using singleton
-        # dimension when supplying indices instead of weights.
         has_timestep_axis = False
         if len(gate_weights_shape) == 3:
             has_timestep_axis = True
@@ -133,6 +159,20 @@ class Gate(keras.layers.Layer):
         #     shape=(1,),
         #     trainable=False,
         # )
+
+        processed_subnets = []
+        for idx, subnet in enumerate(self._subnets):
+            processed_subnets.append(
+                self._process_subnet(
+                    subnet, self.pass_gate_weights[idx], self.strip_inputs[idx]
+                )
+            )
+        self._processed_subnets = processed_subnets
+
+        # Build subnets.
+        for subnet in self._processed_subnets:
+            subnet.build(input_shape)
+        super().build(input_shape)
 
     def _process_subnet(self, subnet, pass_gate_weights, strip_inputs):
         """Process subnet.
@@ -182,19 +222,6 @@ class Gate(keras.layers.Layer):
         else:
             gate_weights = inputs[self.gating_index]
 
-        # Convert indices to one-hot encoding if necessary.
-        if self._gate_weights_are_indices:
-            # NOTE: Drop singleton gate axis, but do not call `squeeze` in
-            # case timestep axis is also singleton.
-            if self._has_timestep_axis:
-                gate_weights = gate_weights[:, :, 0]
-            else:
-                gate_weights = gate_weights[:, 0]
-            # Make sure `gate_weights` are integer type before using `one_hot`.
-            dtype = gate_weights.dtype  # TODO is this valid and best practice?
-            if dtype != "int32" and dtype != "int64":
-                gate_weights = keras.ops.cast(gate_weights, "int32")
-            gate_weights = keras.ops.one_hot(gate_weights, self.n_subnet)
         return gate_weights
 
     def get_config(self):
@@ -204,6 +231,22 @@ class Gate(keras.layers.Layer):
             config.update({"gating_index": int(self.gating_index)})
         if self.gating_key is not None:
             config.update({"gating_key": self.gating_key})
+
+        subnets_serial = []
+        for i in range(self.n_subnet):
+            subnets_serial.append(
+                keras.saving.serialize_keras_object(
+                    self._unprocess_subnet(self._processed_subnets[i])
+                )
+            )
+        config.update(
+            {
+                "subnets": subnets_serial,
+                "pass_gate_weights": list(self.pass_gate_weights),
+                "strip_inputs": list(self.strip_inputs),
+            }
+        )
+
         return config
 
     @classmethod

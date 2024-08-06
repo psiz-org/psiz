@@ -28,7 +28,7 @@ import psiz
 
 
 class RankModelA(keras.Model):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     Gates:
         None
@@ -96,7 +96,7 @@ class RankModelA(keras.Model):
 
 
 class RankModelB(keras.Model):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     Gates:
         Kernel layer (BraidGate:2) with shared similarity layer.
@@ -175,7 +175,7 @@ class RankModelB(keras.Model):
 
 
 class RankModelC(keras.Model):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     Gates:
         Percept layer (BraidGate:2)
@@ -240,7 +240,7 @@ class RankModelC(keras.Model):
 
 
 class RankModelD(keras.Model):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     Gates:
         Percept layer (BraidGate:2, BraidGate:2)
@@ -311,7 +311,7 @@ class RankModelD(keras.Model):
 
 
 class RankModelE(keras.Model):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     Gates:
         None
@@ -353,7 +353,7 @@ class RankModelE(keras.Model):
 
 
 class RankModelF(keras.Model):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     Gates:
         None
@@ -397,7 +397,7 @@ class RankModelF(keras.Model):
 
 
 class MultiRankModelA(keras.Model):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     Gates:
         BranchGate
@@ -554,7 +554,7 @@ class MultiRankModelA(keras.Model):
 
 
 class RateModelA(keras.Model):
-    """A `RateSimilarity` model.
+    """A `Logistic` model.
 
     Gates:
         None
@@ -596,7 +596,7 @@ class RateModelA(keras.Model):
 
 
 class RateModelB(keras.Model):
-    """A `RateSimilarity` model.
+    """A `Logistic` model.
 
     Gates:
         Behavior layer (BraidGate:2) has two independent behavior
@@ -768,7 +768,7 @@ class ALCOVEModelA(keras.Model):
 
 
 class RankRateModelA(keras.Model):
-    """A joint `RankSimilarity` and `RateSimilarity` model.
+    """A joint `SoftRank` and `Logistic` model.
 
     Gates:
         Behavior layer (BranchGate:2)
@@ -884,7 +884,7 @@ class RankRateModelA(keras.Model):
 
 
 class RankRTModelA(keras.Model):
-    """A `RankSimilarity` with response times model.
+    """A `SoftRank` with response times model.
 
     Gates:
         None
@@ -950,7 +950,7 @@ class RankRTModelA(keras.Model):
 def build_ranksim_subclass_a():
     """Build subclassed `Model`.
 
-    RankSimilarity, one group, MLE.
+    SoftRank, one group, MLE.
 
     """
     model = RankModelA()
@@ -966,7 +966,7 @@ def build_ranksim_subclass_a():
 def build_ranksim_functional_v0():
     """Build model useing functional API.
 
-    RankSimilarity, one group, MLE.
+    SoftRank, one group, MLE.
 
     """
     n_stimuli = 20
@@ -1010,7 +1010,7 @@ def build_ranksim_functional_v0():
 def build_ranksim_subclass_b():
     """Build subclassed `Model`.
 
-    RankSimilarity, two kernels, MLE.
+    SoftRank, two kernels, MLE.
 
     """
     model = RankModelB()
@@ -1026,7 +1026,7 @@ def build_ranksim_subclass_b():
 def build_ranksim_subclass_c():
     """Build subclassed `Model`.
 
-    RankSimilarity, two kernels, MLE.
+    SoftRank, two kernels, MLE.
 
     """
     model = RankModelC()
@@ -1042,7 +1042,7 @@ def build_ranksim_subclass_c():
 def build_ranksim_subclass_d():
     """Build subclassed `Model`.
 
-    RankSimilarity, two kernels, MLE.
+    SoftRank, two kernels, MLE.
 
     """
     model = RankModelD()
@@ -1058,7 +1058,7 @@ def build_ranksim_subclass_d():
 def build_ranksim_subclass_e():
     """Build subclassed `Model`.
 
-    RankSimilarity, one group, MLE.
+    SoftRank, one group, MLE.
 
     """
     model = RankModelE()
@@ -1074,7 +1074,7 @@ def build_ranksim_subclass_e():
 def build_ranksim_subclass_f():
     """Build subclassed `Model`.
 
-    RankSimilarity, one group, MLE.
+    SoftRank, one group, MLE.
 
     """
     model = RankModelF()
@@ -1380,16 +1380,15 @@ def build_ranksim_ratesim_functional_v0():
     )
 
     # Define different behavioral branches.
-    soft_4rank2 = psiz.keras.layers.SoftRank(n_select=2)
-    rate = psiz.keras.layers.Logistic()
+    soft_4rank2 = psiz.keras.layers.SoftRank(n_select=2, name="rank_branch")
+    rate = psiz.keras.layers.Logistic(name="rate_branch")
 
-    inp_rank_stimulus_set = keras.Input(shape=(5,), name="given4rank1_stimulus_set")
+    inp_rank_stimulus_set = keras.Input(shape=(5,), name="given4rank2_stimulus_set")
     inp_rate_stimulus_set = keras.Input(shape=(2,), name="rate2_stimulus_set")
     # inp_gate_weights = keras.Input(shape=(1,), name="gate_weights_behavior")
     inputs = {
         "given4rank2_stimulus_set": inp_rank_stimulus_set,
         "rate2_stimulus_set": inp_rate_stimulus_set,
-        # "gate_weights_behavior": inp_gate_weights,
     }
 
     # Rank branch.
@@ -1413,6 +1412,10 @@ def build_ranksim_ratesim_functional_v0():
             "rate_branch": keras.losses.MeanSquaredError(name="rate_loss"),
         },
         "loss_weights": {"rank_branch": 1.0, "rate_branch": 1.0},
+        "weighted_metrics": {
+            "rank_branch": keras.metrics.CategoricalCrossentropy(name="rank_cce"),
+            "rate_branch": keras.metrics.MeanSquaredError(name="rate_mse"),
+        },
     }
     model.compile(**compile_kwargs)
     return model
@@ -1454,8 +1457,8 @@ def call_fit_evaluate_predict(model, tfds):
     # assert not np.isnan(eval0)  TODO make work for returned nan or array of values
 
 
-class TestRankSimilarity:
-    """Test using `RankSimilarity` layer."""
+class TestSoftRank:
+    """Test using `SoftRank` layer."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
@@ -1600,7 +1603,7 @@ class TestRankSimilarity:
 
 
 class TestMultiRankSimilarity:
-    """Test using `RankSimilarity` layer."""
+    """Test using multiple branches of `SoftRank` layer."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_2rank1_8rank2_v0, is_eager):
@@ -1718,8 +1721,8 @@ class TestMultiRankSimilarity:
 #         assert eval0[1] == eval1[1]
 
 
-class TestRateSimilarity:
-    """Test using `RateSimilarity` layer."""
+class TestLogistic:
+    """Test using `Logistic` layer."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_rate2_v0, is_eager):
@@ -1955,8 +1958,8 @@ class TestALCOVECell:
         assert eval0[1] == eval1[1]
 
 
-class TestJointRankRate:
-    """Test using joint `RankSimilarity` and `RateSimilarity` layers."""
+class TestJointSoftRankRate:
+    """Test using joint `SoftRank` and `Logistic` layers."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank2_rate2_v0, is_eager):

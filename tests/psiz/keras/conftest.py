@@ -26,11 +26,165 @@ def gates_v0():
     # Create a simple batch (batch_size=5).
     gates = tf.constant(
         np.array(
-            [[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0.3, 0.7], [0.5, 0, 0]],
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.3, 0.7],
+                [0.5, 0.0, 0.0],
+            ],
             dtype=np.float32,
         )
     )
     return gates
+
+
+@pytest.fixture
+def groups_v0_0():
+    """A minibatch of group indices."""
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ],
+        dtype=tf.float32,
+    )
+    return groups
+
+
+@pytest.fixture
+def groups_v0_1():
+    """A minibatch of group weights without timestep axis.."""
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=tf.float32,
+    )
+    return groups
+
+
+@pytest.fixture
+def groups_v0_2():
+    """A minibatch of group indices."""
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ],
+        dtype=tf.float32,
+    )
+    return groups
+
+
+@pytest.fixture
+def groups_v1_12():
+    """A minibatch of group indices.
+
+    Disjoint gate weights.
+
+    """
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]], dtype=tf.float32
+    )
+    return groups
+
+
+@pytest.fixture
+def groups_v2_12():
+    """A minibatch of group indices.
+
+    Overlapping gate weights.
+
+    """
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [[1.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.0, 1.0]], dtype=tf.float32
+    )
+    return groups
+
+
+@pytest.fixture
+def groups_v3_12():
+    """A minibatch of gate weights."""
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [[1.0, 0.0], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.0, 1.0]], dtype=tf.float32
+    )
+    return groups
+
+
+@pytest.fixture
+def group_3g_empty_v0_0():
+    """A minibatch of group indices."""
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ],
+        dtype=tf.float32,
+    )
+    return groups
+
+
+@pytest.fixture
+def group_3g_empty_v0_1():
+    """A minibatch of group indices."""
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [
+            [0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=tf.float32,
+    )
+    return groups
+
+
+@pytest.fixture
+def groups_5x3x3_index_v0_2():
+    """A minibatch of group indices.
+
+    * 5 batches
+    * index "gate weight" columns
+    * 3 timesteps
+
+    """
+    # Create a simple batch (batch_size=5).
+    groups = tf.constant(
+        [
+            [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0]],
+            [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
+            [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0]],
+            # Last two batches intentionally have different groups for
+            # each timestep.
+            [[0.0, 1.0], [0.0, 1.0], [1.0, 0.0]],
+            [[0.0, 1.0], [1.0, 0.0], [0.0, 1.0]],
+        ],
+        dtype=tf.float32,
+    )
+    return groups
 
 
 @pytest.fixture

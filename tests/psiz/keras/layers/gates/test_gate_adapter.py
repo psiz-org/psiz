@@ -132,7 +132,9 @@ def inputs_x1():
 def inputs_groups0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups0 = tf.constant([[0], [0], [1], [0], [1]], dtype=tf.int32)
+    groups0 = tf.constant(
+        [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]], dtype=tf.float32
+    )
     return groups0
 
 
@@ -140,7 +142,9 @@ def inputs_groups0():
 def inputs_groups1():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups1 = tf.constant([[0], [1], [0], [0], [0]], dtype=tf.int32)
+    groups1 = tf.constant(
+        [[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 0.0], [1.0, 0.0]], dtype=tf.float32
+    )
     return groups1
 
 

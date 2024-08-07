@@ -68,7 +68,6 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
             constraint=self.scale_constraint,
             trainable=self.scale_trainable,
         )
-        self.built = True
 
     @property
     def embeddings(self):

@@ -94,7 +94,6 @@ class DistanceBased(keras.layers.Layer):
         # pylint: disable=protected-access
         self.distance._clear_losses()
         self.similarity.build(distance_output_shape)
-        super().build(input_shape)
 
     def get_config(self):
         """Return layer configuration."""

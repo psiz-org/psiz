@@ -98,8 +98,6 @@ class Minkowski(Proximity):
 
     def build(self, input_shape):
         """Build."""
-        if self.built:
-            return
         with keras.name_scope(self.name):
             self.w = self.add_weight(
                 shape=[input_shape[0][-1]],
@@ -109,6 +107,7 @@ class Minkowski(Proximity):
                 name="w",
                 constraint=self.w_constraint,
             )
+        #  NOTE: Calling super because Proximity.build() builds activation layer.
         super().build(input_shape)
 
     def call(self, inputs):

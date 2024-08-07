@@ -92,8 +92,6 @@ class Logistic(keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
-        if self.built:
-            return
         self.upper = self.add_weight(
             shape=[],
             initializer=self.upper_initializer,
@@ -118,7 +116,6 @@ class Logistic(keras.layers.Layer):
             dtype=keras.backend.floatx(),
             constraint=self.rate_constraint,
         )
-        self.built = True
 
     def call(self, inputs, training=None):
         """Return logistic function output.

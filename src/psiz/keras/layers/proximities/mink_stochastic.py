@@ -108,6 +108,7 @@ class MinkowskiStochastic(Proximity):
         """Build."""
         self.rho = self._build_rho(input_shape)
         self.w = self._build_w(input_shape)
+        #  NOTE: Calling super because Proximity.build() builds activation layer.
         super().build(input_shape)
 
     def _build_rho(self, input_shape):

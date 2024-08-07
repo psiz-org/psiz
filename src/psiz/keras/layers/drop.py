@@ -74,8 +74,6 @@ class Drop(keras.layers.Layer):
         if not self.subnet.built:
             self.subnet.build(input_shape_w_drop)
 
-        super().build(input_shape)
-
     def call(self, inputs):
         """Call.
 

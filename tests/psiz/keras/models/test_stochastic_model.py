@@ -43,7 +43,6 @@ class LayerA(keras.layers.Layer):
             name="kernel",
             dtype=self.dtype,
         )
-        self.built = True
 
     def call(self, inputs, training=False):
         x = keras.ops.matmul(inputs, self.kernel)
@@ -76,7 +75,6 @@ class LayerB(keras.layers.Layer):
             name="w0",
             dtype=self.dtype,
         )
-        self.built = True
 
     def call(self, inputs, training=None):
         """Call."""
@@ -101,6 +99,10 @@ class CellA(keras.layers.Layer):
         # Satisfy RNNCell contract.
         # NOTE: A placeholder state.
         self.state_size = [1]
+
+    def build(self, input_shape):
+        """Build."""
+        super().build(input_shape)
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
@@ -467,13 +469,13 @@ class RankModelB(StochasticModel):
         """Initialize."""
         super(RankModelB, self).__init__(**kwargs)
 
-        n_stimuli = 20
-        n_dim = 3
-        kl_weight = 0.1
-        prior_scale = 0.2
         self.stimuli_axis = 1
 
         if percept is None:
+            n_stimuli = 20
+            n_dim = 3
+            kl_weight = 0.1
+            prior_scale = 0.2
             embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
                 n_stimuli + 1,
                 n_dim,
@@ -1826,34 +1828,32 @@ class TestRankSimilarity:
         # Test propogation of setting `n_sample`.
         model.n_sample = 21
         assert model.n_sample == 21
+
         model.fit(tfds, epochs=1)
         _ = model.evaluate(tfds)
-        percept_mean_0 = model.percept.loc.numpy()  # TODO remove
         percept_mean = model.percept.embeddings.mean()
         percept_variance = model.percept.embeddings.variance()
 
         # Test storage serialization.
         fp_model = Path(tmpdir) / "test_model.keras"
         model.save(fp_model)
-        # del model TODO uncomment
+        del model
+
         # Load the saved model.
         loaded = keras.models.load_model(
             fp_model,
             custom_objects={"RankModelA": RankModelA},
         )
         _ = loaded.evaluate(tfds)
-        # TODO there's some kind of issue where after loading
-        # loaded.percept.embeddings.mean() != loaded.percept.loc.numpy()
         loaded_percept_mean = loaded.percept.embeddings.mean()
-        loaded_percept_mean_0 = loaded.percept.loc.numpy()  # TODO remove
         loaded_percept_variance = loaded.percept.embeddings.variance()
 
         # Test for model equality.
-        # NOTE: Don't check loss for equivalence because of
-        # stochasticity.
         assert loaded.n_sample == 21
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
         tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
+        # NOTE: Don't check loss for equivalence because of
+        # stochasticity.
 
         keras.backend.clear_session()
 
@@ -1874,8 +1874,9 @@ class TestRankSimilarity:
 
         tfds = ds_4rank1_v0
         model = build_ranksim_subclass_b()
-        input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
-        model.build(input_shape)
+        # TODO remove?
+        # input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
+        # model.build(input_shape)
 
         # Test initialization settings.
         assert model.n_sample == 3
@@ -1907,6 +1908,8 @@ class TestRankSimilarity:
         assert loaded.n_sample == 21
         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
         tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
+        # NOTE: Don't check loss for equivalence because of
+        # stochasticity.
 
         keras.backend.clear_session()
 

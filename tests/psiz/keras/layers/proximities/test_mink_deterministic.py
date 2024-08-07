@@ -103,7 +103,6 @@ def test_serialization_0():
     tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
 
 
-# TODO
 def test_serialization_1(paired_inputs_v0):
     """Test serialization with weights."""
     mink_layer = Minkowski(
@@ -133,6 +132,27 @@ def test_serialization_1(paired_inputs_v0):
     tf.debugging.assert_equal(mink_layer.activation.beta, recon_layer.activation.beta)
     tf.debugging.assert_equal(mink_layer.activation.tau, recon_layer.activation.tau)
     tf.debugging.assert_equal(mink_layer.activation.gamma, recon_layer.activation.gamma)
+
+    tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
+    tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
+
+
+def test_serialization_2():
+    """Test serialization with default activation layer."""
+    mink_layer = Minkowski(
+        rho_initializer=keras.initializers.Constant(2.0),
+        w_initializer=keras.initializers.Constant(1.0),
+        trainable=False,
+    )
+    mink_layer.build([[None, 3], [None, 3]])
+    tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))
+    tf.debugging.assert_equal(mink_layer.activation.weights, [])
+    config = mink_layer.get_config()
+
+    recon_layer = Minkowski.from_config(config)
+    recon_layer.build([[None, 3], [None, 3]])
+    tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
+    tf.debugging.assert_equal(recon_layer.activation.weights, [])
 
     tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
     tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)

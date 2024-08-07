@@ -146,7 +146,6 @@ class SoftRankBase(keras.layers.Layer):
         #     selection_mask, dtype=keras.backend.floatx()
         # )
         self._selection_mask = selection_mask
-        self.built = True
 
     def _possible_outcomes(self):
         """Return the possible outcomes of a rank similarity trial.

@@ -23,6 +23,9 @@ Classes:
 import keras
 
 
+@keras.saving.register_keras_serializable(
+    package="psiz.keras.layers", name="StochasticEmbedding"
+)
 class StochasticEmbedding(keras.layers.Layer):
     """Abstract base class for stochastic embeddings.
 
@@ -71,7 +74,6 @@ class StochasticEmbedding(keras.layers.Layer):
 
     def call(self, inputs):
         """Call."""
-        # inputs = keras.ops.cast(inputs, self.compute_dtype)  # TODO do we need to enforce int casting?
         return inputs
 
     def get_config(self):

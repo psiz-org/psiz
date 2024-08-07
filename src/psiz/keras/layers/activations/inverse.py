@@ -93,7 +93,6 @@ class InverseSimilarity(keras.layers.Layer):
                 dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16),
             )
-        self.built = True
 
     def call(self, inputs):
         """Call.

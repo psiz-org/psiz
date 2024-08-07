@@ -172,7 +172,6 @@ class Gate(keras.layers.Layer):
         # Build subnets.
         for subnet in self._processed_subnets:
             subnet.build(input_shape)
-        super().build(input_shape)
 
     def _process_subnet(self, subnet, pass_gate_weights, strip_inputs):
         """Process subnet.

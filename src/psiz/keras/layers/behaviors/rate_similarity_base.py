@@ -142,8 +142,6 @@ class RateSimilarityBase(keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
-        if self.built:
-            return
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1  # i.e., stimuli indices.
         # Convert from *relative* axis index to *absolute* axis index.
@@ -181,7 +179,6 @@ class RateSimilarityBase(keras.layers.Layer):
             name="rate",
             dtype=keras.backend.floatx(),
         )
-        self.built = True
 
     def _split_stimulus_set(self, z):
         """Split stimulus set into pairs.

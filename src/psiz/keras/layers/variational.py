@@ -26,6 +26,9 @@ import keras
 from tensorflow_probability.python.distributions import kullback_leibler as kl_lib
 
 
+@keras.saving.register_keras_serializable(
+    package="psiz.keras.layers", name="Variational"
+)
 class Variational(keras.layers.Layer):
     """An abstract base class for variational layers.
 
@@ -81,6 +84,9 @@ class Variational(keras.layers.Layer):
         self.kl_weight = kl_weight
         self.kl_use_exact = kl_use_exact
         self.kl_n_sample = kl_n_sample
+
+    def build(self, input_shape):
+        """Build."""
         self.kl_anneal = self.add_weight(
             name="kl_anneal",
             shape=[],
@@ -88,12 +94,8 @@ class Variational(keras.layers.Layer):
             initializer=keras.initializers.Constant(1.0),
             trainable=False,
         )
-
-    def build(self, input_shape):
-        """Build."""
         self.prior.build(input_shape)
         self.posterior.build(input_shape)
-        super().build(input_shape)
 
     def add_kl_loss(self, posterior_dist, prior_dist):
         """Add KL divergence loss."""

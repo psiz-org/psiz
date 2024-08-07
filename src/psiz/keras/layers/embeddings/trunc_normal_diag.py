@@ -79,7 +79,6 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
             trainable=self.scale_trainable,
             constraint=self.scale_constraint,
         )
-        self.built = True
 
     @property
     def embeddings(self):

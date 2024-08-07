@@ -142,16 +142,6 @@ class ALCOVECell(keras.layers.Layer):
         if rho_constraint is None:
             rho_constraint = pk_constraints.GreaterEqualThan(min_value=1.0)
         self.rho_constraint = keras.constraints.get(rho_constraint)
-        with keras.name_scope(self.name):
-            self.rho = self.add_weight(
-                shape=[],
-                initializer=self.rho_initializer,
-                regularizer=self.rho_regularizer,
-                trainable=self.rho_trainable,
-                name="rho",
-                dtype=keras.backend.floatx(),
-                constraint=self.rho_constraint,
-            )
 
         # Process `temperature`.
         self.temperature_trainable = self.trainable and temperature_trainable
@@ -164,16 +154,6 @@ class ALCOVECell(keras.layers.Layer):
         if temperature_constraint is None:
             temperature_constraint = pk_constraints.GreaterEqualThan(min_value=0.0)
         self.temperature_constraint = keras.constraints.get(temperature_constraint)
-        with keras.name_scope(self.name):
-            self.temperature = self.add_weight(
-                shape=[],
-                initializer=self.temperature_initializer,
-                regularizer=self.temperature_regularizer,
-                trainable=self.temperature_trainable,
-                name="temperature",
-                dtype=keras.backend.floatx(),
-                constraint=self.temperature_constraint,
-            )
 
         # Process `lr_attention`.
         self.lr_attention_trainable = self.trainable and lr_attention_trainable
@@ -186,16 +166,6 @@ class ALCOVECell(keras.layers.Layer):
         if lr_attention_constraint is None:
             lr_attention_constraint = pk_constraints.GreaterEqualThan(min_value=0.0)
         self.lr_attention_constraint = keras.constraints.get(lr_attention_constraint)
-        with keras.name_scope(self.name):
-            self.lr_attention = self.add_weight(
-                shape=[],
-                initializer=self.lr_attention_initializer,
-                regularizer=self.lr_attention_regularizer,
-                trainable=self.lr_attention_trainable,
-                name="lr_attention",
-                dtype=keras.backend.floatx(),
-                constraint=self.lr_attention_constraint,
-            )
 
         # Process `lr_association`.
         self.lr_association_trainable = self.trainable and lr_association_trainable
@@ -214,16 +184,6 @@ class ALCOVECell(keras.layers.Layer):
         self.lr_association_constraint = keras.constraints.get(
             lr_association_constraint
         )
-        with keras.name_scope(self.name):
-            self.lr_association = self.add_weight(
-                shape=[],
-                initializer=self.lr_association_initializer,
-                regularizer=self.lr_association_regularizer,
-                trainable=self.lr_association_trainable,
-                name="lr_association",
-                dtype=keras.backend.floatx(),
-                constraint=self.lr_association_constraint,
-            )
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state.
@@ -251,6 +211,44 @@ class ALCOVECell(keras.layers.Layer):
                 (batch_size, [1,]).
 
         """
+        with keras.name_scope(self.name):
+            self.rho = self.add_weight(
+                shape=[],
+                initializer=self.rho_initializer,
+                regularizer=self.rho_regularizer,
+                trainable=self.rho_trainable,
+                name="rho",
+                dtype=keras.backend.floatx(),
+                constraint=self.rho_constraint,
+            )
+            self.temperature = self.add_weight(
+                shape=[],
+                initializer=self.temperature_initializer,
+                regularizer=self.temperature_regularizer,
+                trainable=self.temperature_trainable,
+                name="temperature",
+                dtype=keras.backend.floatx(),
+                constraint=self.temperature_constraint,
+            )
+            self.lr_attention = self.add_weight(
+                shape=[],
+                initializer=self.lr_attention_initializer,
+                regularizer=self.lr_attention_regularizer,
+                trainable=self.lr_attention_trainable,
+                name="lr_attention",
+                dtype=keras.backend.floatx(),
+                constraint=self.lr_attention_constraint,
+            )
+            self.lr_association = self.add_weight(
+                shape=[],
+                initializer=self.lr_association_initializer,
+                regularizer=self.lr_association_regularizer,
+                trainable=self.lr_association_trainable,
+                name="lr_association",
+                dtype=keras.backend.floatx(),
+                constraint=self.lr_association_constraint,
+            )
+
         # We assume axes semantics based on relative position from last axis.
         stimuli_axis = -1
         # Convert from *relative* axis index to *absolute* axis index.
@@ -260,7 +258,8 @@ class ALCOVECell(keras.layers.Layer):
 
         # Precompute indices for all ALCOVE RBFs.
         self._alcove_idx = self._precompute_alcove_indices()
-        self.built = True
+
+        super().build(input_shape)
 
     def call(self, inputs, states, training=None):
         """Call.

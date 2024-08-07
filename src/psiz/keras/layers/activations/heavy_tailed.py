@@ -119,7 +119,6 @@ class HeavyTailedSimilarity(keras.layers.Layer):
                 dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
-        self.built = True
 
     def call(self, inputs):
         """Call.

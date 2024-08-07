@@ -52,14 +52,17 @@ class EmbeddingShared(keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
-        super().build(input_shape)
         self._embedding.build(input_shape)
+        super().build(input_shape)
 
     def call(self, inputs):
         """Call."""
-        # Intercept inputs.
+        # Intercept inputs and convert to zeros because all indices share the same underlying
+        # embedding coordinate.
         inputs = tf.zeros_like(inputs)
+
         outputs = self._embedding(inputs)
+        outputs = keras.ops.repeat(outputs, self.output_dim, axis=-1)
         return outputs
 
     def get_config(self):

@@ -40,10 +40,10 @@ from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
 from psiz.keras.layers.embeddings.logit_normal_diag import EmbeddingLogitNormalDiag
 from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
-from psiz.keras.layers.embeddings.shared import EmbeddingShared
+from psiz.keras.layers.embeddings.embedding_shared import EmbeddingShared
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag
-from psiz.keras.layers.embeddings.variational import EmbeddingVariational
+from psiz.keras.layers.embeddings.embedding_variational import EmbeddingVariational
 from psiz.keras.layers.behaviors.experimental.soft_rank_cell import SoftRankCell
 from psiz.keras.layers.gates.gate import Gate
 from psiz.keras.layers.gates.braid_gate import BraidGate
@@ -57,9 +57,9 @@ from psiz.keras.layers.proximities.experimental.inner_product import InnerProduc
 from psiz.keras.layers.proximities.experimental.generalized_inner_product import (
     GeneralizedInnerProduct,
 )
-from psiz.keras.layers.proximities.mink import Minkowski
-from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
-from psiz.keras.layers.proximities.mink_variational import MinkowskiVariational
+from psiz.keras.layers.proximities.minkowski import Minkowski
+from psiz.keras.layers.proximities.minkowski_stochastic import MinkowskiStochastic
+from psiz.keras.layers.proximities.minkowski_variational import MinkowskiVariational
 from psiz.keras.layers.proximities.proximity import Proximity
 
 __all__ = [

@@ -21,7 +21,7 @@ import numpy as np
 import tensorflow as tf
 
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
-from psiz.keras.layers.proximities.mink_stochastic import MinkowskiStochastic
+from psiz.keras.layers.proximities.minkowski_stochastic import MinkowskiStochastic
 
 
 def test_call_default(paired_inputs_v0):

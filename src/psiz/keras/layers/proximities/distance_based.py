@@ -24,7 +24,7 @@ import warnings
 
 import keras
 
-from psiz.keras.layers.proximities.mink import Minkowski
+from psiz.keras.layers.proximities.minkowski import Minkowski
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 
 

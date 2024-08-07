@@ -20,7 +20,7 @@ import pytest
 import tensorflow as tf
 
 from psiz.keras.layers import DistanceBased
-from psiz.keras.layers.proximities.mink import Minkowski
+from psiz.keras.layers.proximities.minkowski import Minkowski
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 
 pytestmark = pytest.mark.skip("All tests deprecated.")

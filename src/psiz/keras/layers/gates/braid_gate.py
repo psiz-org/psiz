@@ -106,26 +106,6 @@ class BraidGate(Gate):
 
         return outputs
 
-    # TODO remove
-    def compute_output_shape(self, input_shape):
-        """Computes the output shape of the layer.
-
-        Args:
-            input_shape: Shape tuple (tuple of integers) or list of
-                shape tuples (one per output tensor of the layer).
-                Shape tuples can include None for free dimensions,
-                instead of an integer.
-
-        Returns:
-            A tf.TensorShape representing the output shape.
-
-        NOTE: This method overrides the TF default, since the default
-        cannot infer the correct output shape.
-
-        """
-        # Compute output shape for a subnetwork.
-        return self._processed_subnets[0].compute_output_shape(input_shape)
-
     def _pre_combine(self, x):
         """Prepare Tensor for combine operation.
 

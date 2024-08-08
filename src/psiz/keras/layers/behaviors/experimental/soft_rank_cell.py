@@ -72,18 +72,22 @@ class SoftRankCell(SoftRankBase):
         if inertia_constraint is None:
             inertia_constraint = MinMax(0.0, 0.99)
         self.inertia_constraint = keras.constraints.get(inertia_constraint)
+
+        # Satisfy RNNCell contract.
+        self.n_outcome = m_prefer_n(n_option, self.n_select).shape[0]
+        self.state_size = [self.n_outcome]
+
+    def build(self, input_shape):
+        """Build."""
         self.inertia = self.add_weight(
             shape=[],
             initializer=self.inertia_initializer,
             trainable=self.trainable,
             name="inertia",
             dtype=keras.backend.floatx(),
-            constraint=inertia_constraint,
+            constraint=self.inertia_constraint,
         )
-
-        # Satisfy RNNCell contract.
-        self.n_outcome = m_prefer_n(n_option, self.n_select).shape[0]
-        self.state_size = [self.n_outcome]
+        super(SoftRankCell, self).build(input_shape)
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""

@@ -382,7 +382,7 @@ class ModelD(StochasticModel):
 
 
 class RankModelA(StochasticModel):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     A stochastic, non-VI percept layer.
 
@@ -456,7 +456,7 @@ class RankModelA(StochasticModel):
 
 
 class RankModelB(StochasticModel):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     A variational percept layer.
 
@@ -551,7 +551,7 @@ class RankModelB(StochasticModel):
 
 
 class RankModelC(StochasticModel):
-    """A `RankSimilarity` model.
+    """A `SoftRank` model.
 
     A variational percept layer.
 
@@ -738,7 +738,7 @@ class RankModelC(StochasticModel):
 
 
 class RateModelA(StochasticModel):
-    """A `RateSimilarity` model.
+    """A `Logistic` model.
 
     A variatoinal percept layer.
 
@@ -966,7 +966,7 @@ class RateModelA(StochasticModel):
 def build_ranksim_subclass_a():
     """Build subclassed `Model`.
 
-    RankSimilarity, one group, stochastic (non VI).
+    SoftRank, one group, stochastic (non VI).
 
     """
     model = RankModelA(n_sample=3)
@@ -982,7 +982,7 @@ def build_ranksim_subclass_a():
 def build_ranksim_subclass_b():
     """Build subclassed `Model`.
 
-    RankSimilarity, one group, stochastic (non VI).
+    SoftRank, one group, stochastic (non VI).
 
     """
     model = RankModelB(n_sample=3)
@@ -998,7 +998,7 @@ def build_ranksim_subclass_b():
 def build_ranksim_subclass_c():
     """Build subclassed `Model`.
 
-    RankSimilarity, gated VI percept.
+    SoftRank, gated VI percept.
 
     """
     model = RankModelC(n_sample=3)
@@ -1795,7 +1795,7 @@ class TestModelD:
 
 
 class TestRankSimilarity:
-    """Test using `RankSimilarity` layer."""
+    """Test using `SoftRank` layer."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
@@ -2019,7 +2019,7 @@ class TestRankSimilarity:
 
 
 class TestRateSimilarity:
-    """Test using `RateSimilarity` layer."""
+    """Test using `Logistic` layer."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_rate2_v0, is_eager):

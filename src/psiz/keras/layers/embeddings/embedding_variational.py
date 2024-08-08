@@ -73,7 +73,3 @@ class EmbeddingVariational(Variational):
     def embeddings(self):
         """Getter method for (posterior) embeddings."""
         return self.posterior.embeddings
-
-    # TODO verify correctness of new method
-    def compute_output_shape(self, input_shape):
-        return self.posterior.compute_output_shape(input_shape)

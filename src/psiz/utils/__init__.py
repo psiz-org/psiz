@@ -20,7 +20,6 @@ from psiz.utils.choice_wo_replace import choice_wo_replace
 from psiz.utils.m_prefer_n import m_prefer_n
 from psiz.utils.pairwise_indices import pairwise_indices
 from psiz.utils.procrustes_rotation import procrustes_rotation
-from psiz.utils.progress_bar_re import ProgressBarRe
 from psiz.utils.random_combinations import random_combinations
 from psiz.utils.rotation_matrix import rotation_matrix
 from psiz.utils.sort_based_mask import sort_based_mask
@@ -33,7 +32,6 @@ __all__ = [
     "m_prefer_n",
     "pairwise_indices",
     "procrustes_rotation",
-    "ProgressBarRe",
     "random_combinations",
     "rotation_matrix",
     "sort_based_mask",

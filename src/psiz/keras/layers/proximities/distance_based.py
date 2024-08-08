@@ -114,8 +114,3 @@ class DistanceBased(keras.layers.Layer):
             config["similarity"]
         )
         return cls(**config)
-
-    def compute_output_shape(self, input_shape):
-        dist_output_shape = self.distance.compute_output_shape(input_shape)
-        kernel_output_shape = self.similarity.compute_output_shape(dist_output_shape)
-        return kernel_output_shape

@@ -109,40 +109,6 @@ class Drop(keras.layers.Layer):
         config["subnet"] = keras.saving.deserialize_keras_object(subnet_serial)
         return super().from_config(config)
 
-    # TODO remove
-    def compute_output_shape(self, input_shape):
-        """Computes the output shape of the layer.
-
-        Args:
-            input_shape: Shape tuple (tuple of integers) or list of
-                shape tuples (one per output tensor of the layer).
-                Shape tuples can include None for free dimensions,
-                instead of an integer.
-
-        Returns:
-            A tf.TensorShape representing the output shape.
-
-        NOTE: This method overrides the TF default, since the default
-        cannot infer the correct output shape.
-
-        """
-        # To make things easier when we use addition on the index, we convert
-        # '-1' to the actual index.
-        if self._drop_index == -1:
-            self._drop_index = len(input_shape) - 1
-
-        # Drop requested tensor from `input_shape`.
-        input_shape_w_drop = (
-            input_shape[0 : self._drop_index] + input_shape[(self._drop_index + 1) :]
-        )
-
-        # Determine how inputs should be pre-processed.
-        self._check_strip_inputs(input_shape_w_drop)
-
-        if self._strip_inputs:
-            input_shape_w_drop = input_shape_w_drop[0]
-        return self.subnet.compute_output_shape(input_shape_w_drop)
-
     def _check_strip_inputs(self, input_shape_w_drop):
         """Check if `_strip_inputs` has been set.
 

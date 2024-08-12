@@ -859,3 +859,6 @@ def test_call_mixture_w_emb(groups_v3_12):
         dtype=np.float32,
     )
     np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+
+
+# TODO add fit test

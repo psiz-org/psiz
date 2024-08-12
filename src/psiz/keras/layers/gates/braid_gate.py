@@ -24,7 +24,7 @@ Classes:
 
 import keras
 
-from psiz.keras.sparse_dispatcher import SparseDispatcher
+from psiz.keras.sparse_dispatcher import Splitter
 from psiz.keras.layers.gates.gate import Gate
 
 
@@ -81,11 +81,9 @@ class BraidGate(Gate):
         """
         gate_weights = self._process_gate_weights(inputs)
 
-        # Run inputs through dispatcher that routes inputs to correct subnet.
-        dispatcher = SparseDispatcher(
-            self.n_subnet, gate_weights, has_timestep_axis=self._has_timestep_axis
-        )
-        subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
+        # Run inputs through splitter that routes inputs to correct subnet.
+        splitter = Splitter(self.n_subnet, has_timestep_axis=self._has_timestep_axis)
+        subnet_inputs = splitter(inputs)
         subnet_outputs = []
         for i in range(self.n_subnet):
             out = self._processed_subnets[i](subnet_inputs[i])
@@ -101,7 +99,7 @@ class BraidGate(Gate):
         for i in range(1, self.n_subnet):
             outputs = outputs + subnet_outputs[i]
 
-        # Handle reshaping of output.
+        # Post combine: handle reshaping of output.
         outputs = keras.ops.reshape(outputs, lost_shape)
 
         return outputs

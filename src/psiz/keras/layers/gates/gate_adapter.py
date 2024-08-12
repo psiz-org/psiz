@@ -98,11 +98,9 @@ class GateAdapter(keras.layers.Layer):
             self._all_keys.append(key)
 
         if len(self._all_keys) == 1:
-            # self._strip_inputs = tf.constant(True)  # TODO does this need to be a keras tensor?
-            self._strip_inputs = True
+            self._strip_inputs = True  # TODO does this need to be a keras tensor?
         else:
-            # self._strip_inputs = tf.constant(False)  # TODO does this need to be a keras tensor?
-            self._strip_inputs = False
+            self._strip_inputs = False  # TODO does this need to be a keras tensor?
 
     def call(self, inputs, training=None, mask=None):
         """Call.

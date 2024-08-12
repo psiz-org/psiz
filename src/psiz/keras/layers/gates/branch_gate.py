@@ -24,7 +24,7 @@ Classes:
 
 import keras
 
-from psiz.keras.sparse_dispatcher import SparseDispatcher
+from psiz.keras.sparse_dispatcher import Splitter
 from psiz.keras.layers.gates.gate import Gate
 
 
@@ -88,13 +88,11 @@ class BranchGate(Gate):
         Returns:
             outputs: A dictionary of Tensors.
         """
-        gates = self._process_gate_weights(inputs)
+        gates = self._process_gate_weights(inputs)  # TODO use or remove
 
-        # Run inputs through dispatcher that routes inputs to correct subnet.
-        dispatcher = SparseDispatcher(
-            self.n_subnet, gates, has_timestep_axis=self._has_timestep_axis
-        )
-        subnet_inputs = dispatcher.dispatch_multi_pad(inputs)
+        # Run inputs through splitter that routes inputs to correct subnet.
+        splitter = Splitter(self.n_subnet, has_timestep_axis=self._has_timestep_axis)
+        subnet_inputs = splitter(inputs)
         subnet_outputs = {}
 
         for i in range(self.n_subnet):

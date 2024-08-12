@@ -189,18 +189,11 @@ def test_bad_instantiation_tuple(inputs_5x1_v0, groups_v0_2):
 
 def test_call_2g_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0_2):
     """Test call."""
+    # TODO groups_v0_2 is not used in this test.
     inputs_v0 = inputs_5x1_v0
 
-    holder = tf.constant([0.0]) - tf.constant(0.1)
-    incremented = inputs_v0 - tf.constant(0.1)
-    desired_output_br0 = tf.stack(
-        [incremented[0], incremented[1], incremented[2], holder, holder], axis=0
-    )
-    holder = tf.constant([0.0]) + tf.constant(0.1)
-    incremented = inputs_v0 + tf.constant(0.1)
-    desired_output_br1 = tf.stack(
-        [holder, holder, holder, incremented[3], incremented[4]], axis=0
-    )
+    desired_output_br0 = inputs_v0 - tf.constant(0.1)
+    desired_output_br1 = inputs_v0 + tf.constant(0.1)
 
     inputs = [inputs_v0, groups_v0_2]
 
@@ -226,18 +219,11 @@ def test_call_2g_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0_2):
 
 def test_call_2g_5x1_disjoint(inputs_5x1_v0, groups_v1_12):
     """Test call."""
+    # TODO groups_v1_12 is not used in this test.
     inputs_v0 = inputs_5x1_v0
 
-    holder = tf.constant([0.0]) - tf.constant(0.1)
-    incremented = inputs_v0 - tf.constant(0.1)
-    desired_output_br0 = tf.stack(
-        [incremented[0], incremented[1], incremented[2], holder, holder], axis=0
-    )
-    holder = tf.constant([0.0]) + tf.constant(0.1)
-    incremented = inputs_v0 + tf.constant(0.1)
-    desired_output_br1 = tf.stack(
-        [holder, holder, holder, incremented[3], incremented[4]], axis=0
-    )
+    desired_output_br0 = inputs_v0 - tf.constant(0.1)
+    desired_output_br1 = inputs_v0 + tf.constant(0.1)
 
     inputs = [inputs_v0, groups_v1_12]
 
@@ -263,18 +249,21 @@ def test_call_2g_5x1_disjoint(inputs_5x1_v0, groups_v1_12):
 
 def test_call_2g_5x1_intersecting(inputs_5x1_v0, groups_v2_12):
     """Test call."""
+    # TODO groups_v2_12 is not used in this test.
     inputs_v0 = inputs_5x1_v0
 
-    holder = tf.constant([0.0]) - tf.constant(0.1)
-    incremented = inputs_v0 - tf.constant(0.1)
-    desired_output_br0 = tf.stack(
-        [incremented[0], incremented[1], incremented[2], holder, holder], axis=0
-    )
-    holder = tf.constant([0.0]) + tf.constant(0.1)
-    incremented = inputs_v0 + tf.constant(0.1)
-    desired_output_br1 = tf.stack(
-        [holder, holder, incremented[2], incremented[3], incremented[4]], axis=0
-    )
+    desired_output_br0 = inputs_v0 - tf.constant(0.1)
+    desired_output_br1 = inputs_v0 + tf.constant(0.1)
+    # holder = tf.constant([0.0]) - tf.constant(0.1)
+    # incremented = inputs_v0 - tf.constant(0.1)
+    # desired_output_br0 = tf.stack(
+    #     [incremented[0], incremented[1], incremented[2], holder, holder], axis=0
+    # )
+    # holder = tf.constant([0.0]) + tf.constant(0.1)
+    # incremented = inputs_v0 + tf.constant(0.1)
+    # desired_output_br1 = tf.stack(
+    #     [holder, holder, incremented[2], incremented[3], incremented[4]], axis=0
+    # )
 
     inputs = [inputs_v0, groups_v2_12]
 
@@ -300,17 +289,12 @@ def test_call_2g_5x1_intersecting(inputs_5x1_v0, groups_v2_12):
 
 def test_call_2g_5x3(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2):
     """Test call."""
+    # TODO groups_v0_2 is not used in this test.
     inputs_v0 = inputs_5x3_v0
     inputs_v1 = inputs_5x3_v1
 
-    holder = tf.constant([0.0, 0.0, 0.0]) - tf.constant(0.1)
-    added = inputs_v0 + inputs_v1 - tf.constant(0.1)
-    desired_output_br0 = tf.stack(
-        [added[0], added[1], added[2], holder, holder], axis=0
-    )
-    holder = tf.constant([0.0, 0.0, 0.0]) + tf.constant(0.1)
-    added = inputs_v0 + inputs_v1 + tf.constant(0.1)
-    desired_output_br1 = tf.stack([holder, holder, holder, added[3], added[4]], axis=0)
+    desired_output_br0 = inputs_v0 + inputs_v1 - tf.constant(0.1)
+    desired_output_br1 = inputs_v0 + inputs_v1 + tf.constant(0.1)
 
     inputs = [inputs_v0, inputs_v1, groups_v0_2]
 
@@ -341,21 +325,25 @@ def test_call_3g_5x3x2(inputs_5x3x2_v0, groups_v0_1):
     second input dimension.
 
     """
+    # TODO groups_v0_1 is not used in this test.
     inputs_v0 = inputs_5x3x2_v0
 
     # NOTE: The Select layers are provided indices in the order [1, 0, 2]
-    # just to mix things up. Thus inputs_v0[x, y] where y refeflects that
+    # just to mix things up. Thus inputs_v0[x, y] where y reflects that
     # order; x is just the batch index.
-    holder = tf.zeros([2], tf.float32)
-    desired_output_br0 = tf.stack(
-        [inputs_v0[0, 1], holder, holder, holder, holder], axis=0
-    )
-    desired_output_br1 = tf.stack(
-        [holder, inputs_v0[1, 0], holder, inputs_v0[3, 0], holder], axis=0
-    )
-    desired_output_br2 = tf.stack(
-        [holder, holder, inputs_v0[2, 2], holder, inputs_v0[4, 2]], axis=0
-    )
+    desired_output_br0 = inputs_v0[:, 1]
+    desired_output_br1 = inputs_v0[:, 0]
+    desired_output_br2 = inputs_v0[:, 2]
+    # holder = tf.zeros([2], tf.float32)
+    # desired_output_br0 = tf.stack(
+    #     [inputs_v0[0, 1], holder, holder, holder, holder], axis=0
+    # )
+    # desired_output_br1 = tf.stack(
+    #     [holder, inputs_v0[1, 0], holder, inputs_v0[3, 0], holder], axis=0
+    # )
+    # desired_output_br2 = tf.stack(
+    #     [holder, holder, inputs_v0[2, 2], holder, inputs_v0[4, 2]], axis=0
+    # )
 
     inputs = [inputs_v0, groups_v0_1]
 
@@ -389,6 +377,7 @@ def test_fit_5x3_functional(inputs_5x3_v0, inputs_5x3_v1, groups_v0_2, is_eager)
     to a different branch.
 
     """
+    # TODO groups_v0_2 is not really used in this test.
     tf.config.run_functions_eagerly(is_eager)
     inputs_v0 = inputs_5x3_v0
     inputs_v1 = inputs_5x3_v1
@@ -591,36 +580,12 @@ def test_call_2g_5x3x2_timestep(inputs_5x3x2_v0, groups_5x3x3_index_v0_2):
     ]
 
     """
+    # TODO  groups_5x3x3_index_v0_2 is not used in this test.
     inputs_0 = inputs_5x3x2_v0
     groups = groups_5x3x3_index_v0_2
 
-    # Branch 0.
-    holder = tf.constant([-0.1, -0.1])
-    added = inputs_0 - tf.constant(0.1)
-    desired_output_br0 = tf.stack(
-        [
-            tf.stack([added[0, 0], added[0, 1], added[0, 2]], axis=0),
-            tf.stack([holder, holder, holder], axis=0),
-            tf.stack([added[2, 0], added[2, 1], added[2, 2]], axis=0),
-            tf.stack([holder, holder, added[3, 2]], axis=0),
-            tf.stack([holder, added[4, 1], holder], axis=0),
-        ],
-        axis=0,
-    )
-
-    # Branch 1.
-    holder = tf.constant([0.1, 0.1])
-    added = inputs_0 + tf.constant(0.1)
-    desired_output_br1 = tf.stack(
-        [
-            tf.stack([holder, holder, holder], axis=0),
-            tf.stack([added[1, 0], added[1, 1], added[1, 2]], axis=0),
-            tf.stack([holder, holder, holder], axis=0),
-            tf.stack([added[3, 0], added[3, 1], holder], axis=0),
-            tf.stack([added[4, 0], holder, added[4, 2]], axis=0),
-        ],
-        axis=0,
-    )
+    desired_output_br0 = inputs_0 - tf.constant(0.1)
+    desired_output_br1 = inputs_0 + tf.constant(0.1)
 
     inputs = [inputs_0, groups]
 
@@ -664,18 +629,11 @@ def test_call_dictinputs_2g_5x1_disjoint_viaindex(inputs_5x1_v0, groups_v0_2):
     Use `gate_weights` [0, 0, 0, 1, 1].
 
     """
+    # TODO groups_v0_2 is not used in this test.
     inputs_v0 = inputs_5x1_v0
 
-    holder = tf.constant([0.0]) - tf.constant(0.1)
-    incremented = inputs_v0 - tf.constant(0.1)
-    desired_output_br0 = tf.stack(
-        [incremented[0], incremented[1], incremented[2], holder, holder], axis=0
-    )
-    holder = tf.constant([0.0]) + tf.constant(0.1)
-    incremented = inputs_v0 + tf.constant(0.1)
-    desired_output_br1 = tf.stack(
-        [holder, holder, holder, incremented[3], incremented[4]], axis=0
-    )
+    desired_output_br0 = inputs_v0 - tf.constant(0.1)
+    desired_output_br1 = inputs_v0 + tf.constant(0.1)
 
     inputs = {"inputs_0": inputs_v0, "groups": groups_v0_2}
 
@@ -714,36 +672,12 @@ def test_call_dictinputs_2g_5x3x2_timestep(inputs_5x3x2_v0, groups_5x3x3_index_v
     ]
 
     """
+    # TODO groups_5x3x3_index_v0_2 is not used in this test.
     inputs_0 = inputs_5x3x2_v0
     groups = groups_5x3x3_index_v0_2
 
-    # Branch 0.
-    holder = tf.constant([-0.1, -0.1])
-    added = inputs_0 - tf.constant(0.1)
-    desired_output_br0 = tf.stack(
-        [
-            tf.stack([added[0, 0], added[0, 1], added[0, 2]], axis=0),
-            tf.stack([holder, holder, holder], axis=0),
-            tf.stack([added[2, 0], added[2, 1], added[2, 2]], axis=0),
-            tf.stack([holder, holder, added[3, 2]], axis=0),
-            tf.stack([holder, added[4, 1], holder], axis=0),
-        ],
-        axis=0,
-    )
-
-    # Branch 1.
-    holder = tf.constant([0.1, 0.1])
-    added = inputs_0 + tf.constant(0.1)
-    desired_output_br1 = tf.stack(
-        [
-            tf.stack([holder, holder, holder], axis=0),
-            tf.stack([added[1, 0], added[1, 1], added[1, 2]], axis=0),
-            tf.stack([holder, holder, holder], axis=0),
-            tf.stack([added[3, 0], added[3, 1], holder], axis=0),
-            tf.stack([added[4, 0], holder, added[4, 2]], axis=0),
-        ],
-        axis=0,
-    )
+    desired_output_br0 = inputs_0 - tf.constant(0.1)
+    desired_output_br1 = inputs_0 + tf.constant(0.1)
 
     inputs = {"inputs_0": inputs_0, "groups": groups}
 

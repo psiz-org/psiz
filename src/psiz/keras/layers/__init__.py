@@ -19,6 +19,7 @@ from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 from psiz.keras.layers.activations.heavy_tailed import HeavyTailedSimilarity
 from psiz.keras.layers.activations.inverse import InverseSimilarity
 from psiz.keras.layers.activations.students_t import StudentsTSimilarity
+from psiz.keras.layers.combiner import Combiner
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational
 from psiz.keras.layers.behaviors.experimental.alcove_cell import ALCOVECell
@@ -75,6 +76,7 @@ __all__ = [
     "BraidGate",
     "BranchGate",
     "GateAdapter",
+    "Combiner",
     "Drop",
     "DistanceBased",
     "CosineSimilarity",

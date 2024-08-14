@@ -19,7 +19,7 @@
 import keras
 import tensorflow as tf
 
-from psiz.keras.sparse_dispatcher import Splitter
+from psiz.keras.layers.splitter import Splitter
 from psiz.keras.layers import Combiner
 
 

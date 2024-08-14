@@ -1,25 +1,4 @@
 # coding=utf-8
-# Copyright 2020 The Tensor2Tensor Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# Modified by The PsiZ Authors (2024).
-# - Updated to use Keras 3.x modules (e.g., keras.ops).
-# - Removed dependency on external module (common_layers).
-# - Updated to accommodate inputs that are lists of Tensors.
-# - Updated to accommodate inputs that are one-level dictionaries of Tensors.
-# - Updated to acommodate a timestep axis.
-#
 # Copyright 2024 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for TensorFlow dispatching.
+"""Module of Keras layers.
 
 Classes:
-    Splitter: A sparse dispatcer.
+    Splitter: A layer that splits an input into duplicate channels.
 
 """
 
@@ -69,12 +48,12 @@ class Splitter(keras.layers.Layer):
     inputs: a float32 `Tensor` with shape `[batch_size, input_size]`
     experts: a list of length `n_channel` containing sub-networks.
 
-        dispatcher = Splitter(n_channel, gates)
-        expert_inputs = dispatcher.split(inputs)
+        splitter = Splitter(n_channel, gates)
+        expert_inputs = splitterplit(inputs)
         expert_outputs = [
             experts[i](expert_inputs[i]) for i in range(n_channel)
         ]
-        outputs = dispatcher.combine(expert_outputs)
+        outputs = splitter.combine(expert_outputs)
 
     The preceding code sets the output for a particular example b to:
     output[b] = Sum_i(gates[b, i] * experts[i](inputs[b]))

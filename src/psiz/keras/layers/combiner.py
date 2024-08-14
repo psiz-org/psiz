@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module for TensorFlow dispatching.
+"""Module for Keras layers.
 
 Classes:
-    Combiner: A signal combiner.
+    Combiner: A channel combiner.
 
 """
 

@@ -250,20 +250,20 @@ class StochasticModel(keras.Model):
         if isinstance(data, dict):
             new_data = {}
             for key in data:
-                new_data[key] = tf.repeat(data[key], repeats=n_sample, axis=0)
+                new_data[key] = keras.ops.repeat(data[key], repeats=n_sample, axis=0)
         elif isinstance(data, tuple):
             new_data = []
             for i_data in data:
-                new_data.append(tf.repeat(i_data, repeats=n_sample, axis=0))
+                new_data.append(keras.ops.repeat(i_data, repeats=n_sample, axis=0))
             new_data = tuple(new_data)
         else:
-            new_data = tf.repeat(data, repeats=n_sample, axis=0)
+            new_data = keras.ops.repeat(data, repeats=n_sample, axis=0)
         return new_data
 
     def average_repeated_samples(self, data, n_sample):
         """Average over repeated samples.
 
-        Assumes `tf.repeat` repitition rules were used to create
+        Assumes `keras.ops.repeat` repitition rules were used to create
         repeated samples.
 
         Args:
@@ -280,16 +280,16 @@ class StochasticModel(keras.Model):
         if isinstance(data, dict):
             for key in data:
                 val = self.disentangle_repeated_samples(data[key], n_sample)
-                data[key] = tf.reduce_mean(val, axis=1)
+                data[key] = keras.ops.mean(val, axis=1)
         else:
             data = self.disentangle_repeated_samples(data, n_sample)
-            data = tf.reduce_mean(data, axis=1)
+            data = keras.ops.mean(data, axis=1)
         return data
 
     def disentangle_repeated_samples(self, data, n_sample):
         """Move repeated samples to new axis.
 
-        Assumes `tf.repeat` repitition rules were used to create
+        Assumes `keras.ops.repeat` repitition rules were used to create
         repeated samples.
 
         Args:
@@ -301,5 +301,12 @@ class StochasticModel(keras.Model):
             A Tensor with a new "repated samples" axis at index=1.
 
         """
-        new_shape = tf.concat([[-1], [n_sample], tf.shape(data)[1:]], 0)
-        return tf.reshape(data, new_shape)
+        new_shape = keras.ops.concatenate(
+            [
+                keras.ops.convert_to_tensor([-1]),
+                keras.ops.convert_to_tensor([n_sample]),
+                keras.ops.convert_to_tensor(keras.ops.shape(data)[1:]),
+            ],
+            0,
+        )
+        return keras.ops.reshape(data, new_shape)

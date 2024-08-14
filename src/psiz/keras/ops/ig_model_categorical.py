@@ -23,7 +23,7 @@ Functions:
 
 import copy
 
-import tensorflow as tf
+import keras
 
 from psiz.keras.ops import ig_categorical
 
@@ -62,7 +62,7 @@ def ig_model_categorical(model_list, inputs, n_sample):
         outputs = model.disentangle_repeated_samples(outputs, n_sample)
         output_predictions.append(outputs)
     # Concatenate different ensemble predictions along samples axis.
-    output_predictions = tf.concat(output_predictions, sample_axis)
+    output_predictions = keras.ops.concatenate(output_predictions, sample_axis)
     return ig_categorical(output_predictions)
 
     # For comparision, here is an alternative computation where IG is computed
@@ -73,6 +73,6 @@ def ig_model_categorical(model_list, inputs, n_sample):
     #     outputs = model.disentangle_repeated_samples(outputs, n_sample)
     #     ig.append(ig_categorical(outputs))
     # # Concatenate different ensemble predictions along samples axis.
-    # ig = tf.stack(ig, 0)
-    # ig = tf.reduce_mean(ig, 0)
+    # ig = keras.ops.stack(ig, 0)
+    # ig = keras.ops.mean(ig, 0)
     # return ig

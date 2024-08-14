@@ -23,7 +23,6 @@ Classes:
 
 
 import keras
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 
@@ -59,7 +58,7 @@ class EmbeddingShared(keras.layers.Layer):
         """Call."""
         # Intercept inputs and convert to zeros because all indices share the same underlying
         # embedding coordinate.
-        inputs = tf.zeros_like(inputs)
+        inputs = keras.ops.zeros_like(inputs)
 
         outputs = self._embedding(inputs)
         outputs = keras.ops.repeat(outputs, self.output_dim, axis=-1)
@@ -111,9 +110,7 @@ class EmbeddingShared(keras.layers.Layer):
 
         """
         # First, reshape event_shape from [1, 1] to [].
-        b = tfp.bijectors.Reshape(
-            event_shape_out=tf.TensorShape([]), event_shape_in=tf.TensorShape([1, 1])
-        )
+        b = tfp.bijectors.Reshape(event_shape_out=[], event_shape_in=[1, 1])
 
         # Second, use Sample to expand event_shape to,
         # [self.input_dim, self.output.dim].

@@ -22,7 +22,6 @@ Classes:
 
 
 import keras
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
@@ -75,10 +74,10 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
         """Return embeddings."""
         scale = tfp.util.DeferredTensor(
             self.untransformed_scale,
-            lambda x: (keras.backend.epsilon() + tf.nn.softplus(x)),
+            lambda x: (keras.backend.epsilon() + keras.ops.softplus(x)),
         )
         dist = tfp.distributions.Laplace(loc=self.loc, scale=scale)
-        batch_ndims = tf.size(dist.batch_shape_tensor())
+        batch_ndims = keras.ops.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )

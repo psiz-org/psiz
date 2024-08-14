@@ -22,7 +22,6 @@ Classes:
 
 
 import keras
-import tensorflow as tf
 from tensorflow.python.ops import embedding_ops
 import tensorflow_probability as tfp
 
@@ -151,7 +150,7 @@ class EmbeddingGammaDiag(StochasticEmbedding):
     def embeddings(self):
         """Return embeddings."""
         dist = tfp.distributions.Gamma(self.concentration, self.rate)
-        batch_ndims = tf.size(dist.batch_shape_tensor())
+        batch_ndims = keras.ops.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )

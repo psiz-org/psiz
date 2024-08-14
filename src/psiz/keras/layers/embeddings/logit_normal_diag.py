@@ -22,7 +22,6 @@ Classes:
 """
 
 import keras
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
@@ -82,10 +81,10 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         """Return embeddings."""
         scale = tfp.util.DeferredTensor(
             self.untransformed_scale,
-            lambda x: (keras.backend.epsilon() + tf.math.exp(x)),
+            lambda x: (keras.backend.epsilon() + keras.ops.exp(x)),
         )
         dist = tfp.distributions.LogitNormal(loc=self.untransformed_loc, scale=scale)
-        batch_ndims = tf.size(dist.batch_shape_tensor())
+        batch_ndims = keras.ops.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )

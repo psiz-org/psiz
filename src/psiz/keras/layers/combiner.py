@@ -45,22 +45,12 @@ class Combiner(keras.layers.Layer):
 
         """
         super(Combiner, self).__init__(**kwargs)
-
-        if has_timestep_axis:
-            self._has_timestep_axis = True
-        else:
-            self._has_timestep_axis = False
+        self._has_timestep_axis = has_timestep_axis
 
     def build(self, input_shape):
         """Build."""
         # NOTE: First input is assumed to be the mixing weights.
         self._n_channel = len(input_shape) - 1
-
-        # Determine if inputs are a dictionary.
-        are_inputs_dict = False
-        if isinstance(input_shape[0], dict):
-            are_inputs_dict = True
-        self.are_inputs_dict = are_inputs_dict
 
     def call(self, inputs):
         """Call.
@@ -77,16 +67,6 @@ class Combiner(keras.layers.Layer):
         """
         mixing_weights = inputs[0]
         channel_inputs = inputs[1:]
-
-        # TODO use or remove
-        # if self._has_timestep_axis:
-        #     mixing_weights = keras.ops.reshape(mixing_weights, [-1, self._n_channel])
-
-        # TODO use or remove
-        # if self._has_timestep_axis:
-        #     input_axis = 3
-        # else:
-        #     input_axis = 2
 
         # NOTE: Expand weight shape to account for input axis.
         mixing_weights = keras.ops.expand_dims(mixing_weights, axis=-1)

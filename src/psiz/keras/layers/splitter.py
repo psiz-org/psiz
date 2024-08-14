@@ -31,58 +31,20 @@ class Splitter(keras.layers.Layer):
     A `Splitter` layer duplicates inputs for each downstream
     consumer and can be useful for a mixture of experts.
 
-
-
-    # TODO update description
-    The class is initialized with a "gates" Tensor, which specifies
-    which batch elements go to which experts, and the weights to use
-    when combining the outputs.  Batch element b is sent to expert e
-    iff gates[b, e] != 0. The inputs and outputs are all
-    two-dimensional [batch, depth]. Caller is responsible for
-    collapsing additional dimensions prior to calling this class and
-    reshaping the output to the original shape.
-    See common_layers.reshape_like().
-
-    Example use: TODO update example
-    gates: a float32 `Tensor` with shape `[batch_size, n_channel]`
-    inputs: a float32 `Tensor` with shape `[batch_size, input_size]`
-    experts: a list of length `n_channel` containing sub-networks.
-
-        splitter = Splitter(n_channel, gates)
-        expert_inputs = splitterplit(inputs)
-        expert_outputs = [
-            experts[i](expert_inputs[i]) for i in range(n_channel)
-        ]
-        outputs = splitter.combine(expert_outputs)
-
-    The preceding code sets the output for a particular example b to:
-    output[b] = Sum_i(gates[b, i] * experts[i](inputs[b]))
-
-    This class takes advantage of sparsity in the gate matrix by
-    including in the `Tensor`s for expert i only the batch elements for
-    which `gates[b, i] > 0`.
-
     """
 
     def __init__(self, n_channel, has_timestep_axis=False, **kwargs):
         """Create a Splitter.
 
         Args:
-            n_channel: an integer.
+            n_channel: The number of duplicate channels to create.
             has_timestep_axis (optional): Beolean indicating if second
-                axis should be interpretted as a timestep axis.
-
-        Returns:
-            a Splitter
+                axis should be interpretted as a timestep axis (default is `False`).
 
         """
         super(Splitter, self).__init__(**kwargs)
-
-        if has_timestep_axis:
-            self._has_timestep_axis = True
-        else:
-            self._has_timestep_axis = False
         self._n_channel = n_channel
+        self._has_timestep_axis = has_timestep_axis
 
     def build(self, input_shape):
         """Build."""
@@ -91,12 +53,6 @@ class Splitter(keras.layers.Layer):
         if isinstance(input_shape, dict):
             are_inputs_dict = True
         self.are_inputs_dict = are_inputs_dict
-        # TODO use or remove
-        # self.add_weight(
-        #     initializer=keras.initializers.Constant(are_inputs_dict),
-        #     shape=(1,),
-        #     trainable=False,
-        # )
 
     def call(self, inputs):
         """Call.

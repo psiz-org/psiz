@@ -48,8 +48,8 @@ def emb_input_2d():
         psiz.keras.layers.EmbeddingTruncatedNormalDiag,
     ],
 )
-def test_init_with_shape(emb_input_1d, embedding_class):
-    """Test initialization with `input_shape`."""
+def test_init_shape(emb_input_1d, embedding_class):
+    """Test resulting shape of initialization."""
     input = emb_input_1d
 
     n_stimuli = 10
@@ -57,9 +57,7 @@ def test_init_with_shape(emb_input_1d, embedding_class):
     mask_zero = False
     input_shape = (3,)
     sample_shape = ()
-    embedding = embedding_class(
-        n_stimuli, n_dim, mask_zero=mask_zero, input_shape=input_shape
-    )
+    embedding = embedding_class(n_stimuli, n_dim, mask_zero=mask_zero)
 
     output = embedding(input)
 
@@ -67,7 +65,7 @@ def test_init_with_shape(emb_input_1d, embedding_class):
     np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
 
-@pytest.mark.parametrize("is_eager", [True, False])  # TODO uncomment
+@pytest.mark.parametrize("is_eager", [True, False])
 @pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(

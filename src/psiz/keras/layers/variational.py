@@ -87,6 +87,8 @@ class Variational(keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
+        if self.built:
+            return
         self.kl_anneal = self.add_weight(
             name="kl_anneal",
             shape=[],

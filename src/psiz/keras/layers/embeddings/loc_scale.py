@@ -23,7 +23,6 @@ Classes:
 
 
 import keras
-from tensorflow.python.ops import embedding_ops  # TODO is there a keras equivalent?
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
@@ -111,15 +110,10 @@ class _EmbeddingLocScale(StochasticEmbedding):
     def call(self, inputs):
         """Call."""
         inputs = super().call(inputs)
-
         # Delay reification until end of subclass call in order to
         # generate independent samples for each instance in batch_size.
-        inputs_loc = embedding_ops.embedding_lookup(
-            self.embeddings.distribution.loc, inputs
-        )
-        inputs_scale = embedding_ops.embedding_lookup(
-            self.embeddings.distribution.scale, inputs
-        )
+        inputs_loc = keras.ops.take(self.loc, inputs, axis=0)
+        inputs_scale = keras.ops.take(self.scale, inputs, axis=0)
         return [inputs_loc, inputs_scale]
 
     def get_config(self):

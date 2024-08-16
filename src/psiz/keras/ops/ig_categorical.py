@@ -57,8 +57,6 @@ def ig_categorical(y_pred):
     # Take mean over samples to approximate p(y_i | obs, c).
     term0 = keras.ops.mean(y_pred, axis=1)  # shape=(n_event, n_outcome)
     term0 = term0 * keras.ops.log(keras.ops.maximum(term0, keras.backend.epsilon()))
-    # TODO do I need to zero out place-holder outcomes here? I'm not
-    # sure because y_pred is not zero for placeholder elements any more.
     # NOTE: At this point we would need to zero out place-holder outcomes,
     # but placeholder elements will always have a value of zero since
     # y_pred will be zero for placeholder elements.

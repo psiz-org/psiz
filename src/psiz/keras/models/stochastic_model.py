@@ -21,11 +21,17 @@ Classes:
 
 """
 
-import warnings
-
 import keras
-import tensorflow as tf
-from tensorflow.python.eager import backprop
+
+if keras.backend.backend() == "tensorflow":
+    import tensorflow as tf
+elif keras.backend.backend() == "jax":
+    pass
+    # import jax  # TODO support jax backend.
+elif keras.backend.backend() == "torch":
+    import torch
+else:
+    raise RuntimeError(f"Unrecognized Keras Backend '{keras.backend.backend()}'.")
 
 
 @keras.saving.register_keras_serializable(
@@ -93,7 +99,7 @@ class StochasticModel(keras.Model):
             " method."
         )
 
-    def train_step(self, data):
+    def train_step(self, *args, **kwargs):
         """Logic for one training step.
 
         Args:
@@ -106,6 +112,17 @@ class StochasticModel(keras.Model):
             returned. Example: `{'loss': 0.2, 'accuracy': 0.7}`.
 
         """
+        if keras.backend.backend() == "jax":
+            return self._jax_train_step(*args, **kwargs)
+        elif keras.backend.backend() == "tensorflow":
+            return self._tensorflow_train_step(*args, **kwargs)
+        elif keras.backend.backend() == "torch":
+            return self._torch_train_step(*args, **kwargs)
+
+    def _jax_train_step(self, state, data):
+        raise NotImplementedError("JAX backend not yet supported.")
+
+    def _tensorflow_train_step(self, data):
         x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         # Adjust `x`, `y` and `sample_weight` batch axis to reflect multiple
         # samples.
@@ -116,38 +133,74 @@ class StochasticModel(keras.Model):
                 sample_weight, self._n_sample
             )
 
-        # NOTE: During computation of gradients, IndexedSlices are
-        # created which generates a TensorFlow warning. I cannot
-        # find an implementation that avoids IndexedSlices. The
-        # following catch environment silences the offending
-        # warning.
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", category=UserWarning, module=r".*indexed_slices"
+        with tf.GradientTape() as tape:
+            y_pred = self(x, training=True)  # Forward pass
+            # Compute the loss value.
+            # The loss function is configured in `compile()`.
+            loss = self.compute_loss(
+                y=y,
+                y_pred=y_pred,
+                sample_weight=sample_weight,
             )
-            with backprop.GradientTape() as tape:
-                y_pred = self(x, training=True)
-                loss = self.compiled_loss(
-                    y, y_pred, sample_weight, regularization_losses=self.losses
-                )
 
-            # Custom training steps:
-            trainable_variables = self.trainable_variables
-            gradients = tape.gradient(loss, trainable_variables)
-            # NOTE: There is an open issue for using constraints with
-            # embedding-like layers (e.g., keras.layers.Embedding)
-            # see:
-            # https://github.com/tensorflow/tensorflow/issues/33755.
-            # There are also issues when using Eager Execution. A
-            # work-around is to convert the problematic gradients, which
-            # are returned as tf.IndexedSlices, into dense tensors.
-            for idx in range(len(gradients)):
-                if gradients[idx].__class__.__name__ == "IndexedSlices":
-                    gradients[idx] = tf.convert_to_tensor(gradients[idx])
+        # Compute gradients
+        trainable_vars = self.trainable_variables
+        gradients = tape.gradient(loss, trainable_vars)
 
-        self.optimizer.apply_gradients(zip(gradients, trainable_variables))
+        # Update weights
+        self.optimizer.apply(gradients, trainable_vars)
 
-        self.compiled_metrics.update_state(y, y_pred, sample_weight)
+        # Update the metrics.
+        for metric in self.metrics:
+            if metric.name == "loss":
+                metric.update_state(loss)
+            else:
+                metric.update_state(y, y_pred, sample_weight=sample_weight)
+
+        return {m.name: m.result() for m in self.metrics}
+
+    def _torch_train_step(self, data):
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
+        # Adjust `x`, `y` and `sample_weight` batch axis to reflect multiple
+        # samples.
+        x = self.repeat_samples_in_batch_axis(x, self._n_sample)
+        y = self.repeat_samples_in_batch_axis(y, self._n_sample)
+        if sample_weight is not None:
+            sample_weight = self.repeat_samples_in_batch_axis(
+                sample_weight, self._n_sample
+            )
+
+        # Clear the leftover gradients.
+        self.zero_grad()
+
+        # Compute loss
+        y_pred = self(x, training=True)
+        loss = self.compute_loss(
+            y=y,
+            y_pred=y_pred,
+            sample_weight=sample_weight,
+        )
+
+        # Call torch.Tensor.backward() on the loss to compute gradients
+        # for the weights.
+        loss.backward()
+
+        trainable_weights = [v for v in self.trainable_weights]
+        gradients = [v.value.grad for v in trainable_weights]
+
+        # Update weights
+        with torch.no_grad():
+            self.optimizer.apply(gradients, trainable_weights)
+
+        # Update metrics (includes the metric that tracks the loss)
+        for metric in self.metrics:
+            if metric.name == "loss":
+                metric.update_state(loss)
+            else:
+                metric.update_state(y, y_pred, sample_weight=sample_weight)
+
+        # Return a dict mapping metric names to current value
+        # Note that it will include the loss (tracked in self.metrics).
         return {m.name: m.result() for m in self.metrics}
 
     def test_step(self, data):
@@ -182,8 +235,19 @@ class StochasticModel(keras.Model):
 
         y_pred = self(x, training=False)
 
-        self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
-        self.compiled_metrics.update_state(y, y_pred, sample_weight)
+        loss = self.compute_loss(
+            y=y,
+            y_pred=y_pred,
+            sample_weight=sample_weight,
+        )
+
+        # Update the metrics.
+        for metric in self.metrics:
+            if metric.name == "loss":
+                metric.update_state(loss)
+            else:
+                metric.update_state(y, y_pred)
+
         return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, data):
@@ -233,8 +297,8 @@ class StochasticModel(keras.Model):
         `data` Tensor is structured like:
             `[batch_0, batch_0, batch_1, batch_1, ...]`.
 
-        The block structure is leveraged later when `tf.reshape` is
-        used.
+        The block structure is leveraged later when `keras.ops.reshape`
+        is used.
 
         Args:
             data: A data structure of Tensors. Can be a single Tensor,
@@ -303,9 +367,9 @@ class StochasticModel(keras.Model):
         """
         new_shape = keras.ops.concatenate(
             [
-                keras.ops.convert_to_tensor([-1]),
-                keras.ops.convert_to_tensor([n_sample]),
-                keras.ops.convert_to_tensor(keras.ops.shape(data)[1:]),
+                keras.ops.convert_to_tensor([-1], dtype="int32"),
+                keras.ops.convert_to_tensor([n_sample], dtype="int32"),
+                keras.ops.convert_to_tensor(keras.ops.shape(data)[1:], dtype="int32"),
             ],
             0,
         )

@@ -22,7 +22,6 @@ Classes:
 
 
 import keras
-from tensorflow.python.ops import embedding_ops
 import tensorflow_probability as tfp
 
 import psiz.keras.constraints
@@ -161,12 +160,10 @@ class EmbeddingGammaDiag(StochasticEmbedding):
 
         # Delay reification until end of subclass call in order to
         # generate independent samples for each instance in batch_size.
-        inputs_concentration = embedding_ops.embedding_lookup(
-            self.embeddings.distribution.concentration, inputs
+        inputs_concentration = keras.ops.take(
+            self.embeddings.distribution.concentration, inputs, axis=0
         )
-        inputs_rate = embedding_ops.embedding_lookup(
-            self.embeddings.distribution.rate, inputs
-        )
+        inputs_rate = keras.ops.take(self.embeddings.distribution.rate, inputs, axis=0)
 
         # [inputs_concetration, inputs_rate] = super().call(inputs)
         # Use reparameterization trick.

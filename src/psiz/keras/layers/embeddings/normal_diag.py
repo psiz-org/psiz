@@ -69,13 +69,15 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
         )
 
     @property
+    def scale(self):
+        """Return embeddings."""
+        scale = keras.backend.epsilon() + keras.ops.softplus(self.untransformed_scale)
+        return scale
+
+    @property
     def embeddings(self):
         """Return embeddings."""
-        scale = tfp.util.DeferredTensor(
-            self.untransformed_scale,
-            lambda x: (keras.backend.epsilon() + keras.ops.softplus(x)),
-        )
-        dist = tfp.distributions.Normal(loc=self.loc, scale=scale)
+        dist = tfp.distributions.Normal(loc=self.loc, scale=self.scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
@@ -87,4 +89,6 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
         # Use reparameterization trick.
         dist_batch = tfp.distributions.Normal(loc=inputs_loc, scale=inputs_scale)
         # Reify output using samples.
-        return dist_batch.sample(self.sample_shape)
+        outputs = dist_batch.sample(self.sample_shape)
+        # TODO MAYBE keras.ops.cast(outputs, dtype=self.compute_dtype)
+        return outputs

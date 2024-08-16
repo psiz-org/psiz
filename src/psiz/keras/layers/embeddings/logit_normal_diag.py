@@ -45,7 +45,7 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         if scale_initializer is None:
             scale_initializer = keras.initializers.RandomNormal(0.3, 0.01)
 
-        self.untransformed_loc = None
+        self.loc = None
         self.untransformed_scale = None
         super(EmbeddingLogitNormalDiag, self).__init__(
             input_dim, output_dim, scale_initializer=scale_initializer, **kwargs
@@ -57,10 +57,10 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
             return
 
         # Handle location variables.
-        self.untransformed_loc = self.add_weight(
+        self.loc = self.add_weight(
             shape=[self.input_dim, self.output_dim],
             initializer=self.loc_initializer,
-            name="untransformed_loc",
+            name="loc",
             regularizer=self.loc_regularizer,
             trainable=self.loc_trainable,
             constraint=self.loc_constraint,
@@ -77,13 +77,15 @@ class EmbeddingLogitNormalDiag(_EmbeddingLocScale):
         )
 
     @property
+    def scale(self):
+        """Return embeddings."""
+        scale = keras.backend.epsilon() + keras.ops.exp(self.untransformed_scale)
+        return scale
+
+    @property
     def embeddings(self):
         """Return embeddings."""
-        scale = tfp.util.DeferredTensor(
-            self.untransformed_scale,
-            lambda x: (keras.backend.epsilon() + keras.ops.exp(x)),
-        )
-        dist = tfp.distributions.LogitNormal(loc=self.untransformed_loc, scale=scale)
+        dist = tfp.distributions.LogitNormal(loc=self.loc, scale=self.scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims

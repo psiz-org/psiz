@@ -80,13 +80,17 @@ class EmbeddingTruncatedNormalDiag(_EmbeddingLocScale):
         )
 
     @property
+    def scale(self):
+        """Return embeddings."""
+        scale = keras.backend.epsilon() + keras.ops.softplus(self.untransformed_scale)
+        return scale
+
+    @property
     def embeddings(self):
         """Return embeddings."""
-        scale = tfp.util.DeferredTensor(
-            self.untransformed_scale,
-            lambda x: (keras.backend.epsilon() + keras.ops.softplus(x)),
+        dist = tfp.distributions.TruncatedNormal(
+            self.loc, self.scale, self.low, self.high
         )
-        dist = tfp.distributions.TruncatedNormal(self.loc, scale, self.low, self.high)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims

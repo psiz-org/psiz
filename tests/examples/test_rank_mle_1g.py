@@ -40,12 +40,12 @@ class RankModel(keras.Model):
         self.stimuli_axis = 1
         self.percept = percept
         self.proximity = proximity
-        self.soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+        self.soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
 
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given8rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_8rank2(s)
 
@@ -63,8 +63,8 @@ class SimilarityModel(keras.Model):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=self.stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=self.stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=self.stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=self.stimuli_axis)
         return self.proximity([z_0, z_1])
 
 
@@ -192,13 +192,15 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     tf.config.run_functions_eagerly(is_eager)
 
     # Settings.
-    n_stimuli = 30
+    n_stimuli = 100
     n_dim = 3
-    epochs = 1000
-    batch_size = 128
-    n_trial_train = batch_size * 10
-    n_trial = batch_size * 12
+    epochs = 30
+    batch_size = 512
+    n_trial = 30 * batch_size
+    n_trial_train = 24 * batch_size
+    # n_trial_val = 3 * batch_size
     n_frame = 2
+    patience = 10
 
     # Define ground truth models.
     model_true = build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero)
@@ -247,7 +249,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         outcome_probs = model_true(x)
         outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
         outcome_idx = outcome_distribution.sample()
-        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
     tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).cache()
@@ -261,7 +263,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     # Use early stopping.
     early_stop = keras.callbacks.EarlyStopping(
-        "val_cce", patience=30, mode="min", restore_best_weights=True
+        "val_cce", patience=patience, mode="min", restore_best_weights=True
     )
     cb_board = keras.callbacks.TensorBoard(
         log_dir=tmpdir,
@@ -324,8 +326,3 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     # Assert that more data helps inference.
     assert r2[-1] > r2[0]
-
-    # Strong test: Assert that the last frame (the most data) has an R^2 value
-    # greater than 0.9. This indicates that inference has found a model that
-    # closely matches the ground truth (which is never directly observed).
-    # assert r2[-1] > .9

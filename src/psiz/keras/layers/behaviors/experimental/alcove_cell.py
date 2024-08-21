@@ -253,7 +253,6 @@ class ALCOVECell(keras.layers.Layer):
         stimuli_axis = -1
         # Convert from *relative* axis index to *absolute* axis index.
         n_axis = len(input_shape[self.data_scope + "_stimulus_set"])
-        # self._stimuli_axis = keras.ops.convert_to_tensor(n_axis + stimuli_axis)  TODO decide on tensor or numpy strategy
         self._stimuli_axis = n_axis + stimuli_axis
 
         # Precompute indices for all ALCOVE RBFs.
@@ -462,8 +461,6 @@ class ALCOVECell(keras.layers.Layer):
         # is `None`.
         alcove_idx = np.expand_dims(alcove_idx, axis=0)
         # shape=(1, n_ref)
-
-        # alcove_idx = keras.ops.convert_to_tensor(alcove_idx)  # TODO decide on tensor or numpy strategy
         return alcove_idx
 
     def _tensorflow_update(

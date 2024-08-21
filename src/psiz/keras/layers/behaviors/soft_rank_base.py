@@ -109,11 +109,7 @@ class SoftRankBase(keras.layers.Layer):
         # Convert from *relative* axis index to *absolute* axis index.
         n_axis = len(input_shape)
         self._option_axis = n_axis + option_axis
-        # self._option_axis_tensor = keras.ops.convert_to_tensor(self._option_axis)  # TODO
-        self._option_axis_tensor = self._option_axis  # TODO
         self._outcome_axis = n_axis + outcome_axis
-        # self._outcome_axis_tensor = keras.ops.convert_to_tensor(self._outcome_axis)  # TODO
-        self._outcome_axis_tensor = self._outcome_axis  # TODO
 
         self.n_option = input_shape[self._option_axis]
         if self.n_select >= self.n_option:
@@ -124,11 +120,7 @@ class SoftRankBase(keras.layers.Layer):
         # Prebuild "outcome indices" that indicate all the possible
         # n-rank-m behavioral outcomes.
         outcome_idx, n_outcome = self._possible_outcomes()
-        # self._outcome_idx = keras.ops.convert_to_tensor(outcome_idx)  # TODO
-        self._outcome_idx = outcome_idx  # TODO
-        # self._n_outcome = keras.ops.convert_to_tensor(
-        #     n_outcome, dtype=keras.backend.floatx()
-        # )  # TODO
+        self._outcome_idx = outcome_idx
         self._n_outcome = float(n_outcome)
 
         # Prebuild a "selection mask" which will be used to mask probabilities
@@ -142,9 +134,6 @@ class SoftRankBase(keras.layers.Layer):
                 selection_mask = np.expand_dims(selection_mask, 0)
         # Add outcome axis.
         selection_mask = np.expand_dims(selection_mask, self._outcome_axis)
-        # selection_mask = keras.ops.convert_to_tensor(
-        #     selection_mask, dtype=keras.backend.floatx()
-        # )
         self._selection_mask = selection_mask
 
     def _possible_outcomes(self):
@@ -194,9 +183,7 @@ class SoftRankBase(keras.layers.Layer):
 
         # Create and populate "outcome" axis to `strength` that reflects all
         # possible outcomes.
-        strength = keras.ops.take(
-            strength, self._outcome_idx, axis=self._option_axis_tensor
-        )
+        strength = keras.ops.take(strength, self._outcome_idx, axis=self._option_axis)
         # Add singleton outcome axis to `is_option_present` to keep tensor shapes
         # consistent.
         is_option_present = keras.ops.expand_dims(is_option_present, self._outcome_axis)
@@ -206,8 +193,8 @@ class SoftRankBase(keras.layers.Layer):
         # placeholders. Analogous to: `is_outcome = is_option_present[:, 0]`
         is_outcome = keras.ops.take(
             is_option_present,
-            indices=keras.ops.convert_to_tensor(0),
-            axis=self._option_axis_tensor,
+            indices=0,
+            axis=self._option_axis,
         )
 
         # Compute denominator based on formulation of Luce's choice rule by

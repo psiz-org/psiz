@@ -58,10 +58,6 @@ class Proximity(keras.layers.Layer):
         """Build."""
         # Since activation is applied to the output of the proximity layer, only need input shape
         # of one of the inputs, less the last axis which will have been consumed by the proximity layer.
-
-        # TODO: We may need to wrap the build call with a built check because sometimes the layer is
-        # already built on deserialization of the wrapping object. Not sure why `activation` is already built.
-        # if not self.activation.built:
         self.activation.build(input_shape[0][:-1])
 
     def get_config(self):

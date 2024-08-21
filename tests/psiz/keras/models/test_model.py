@@ -397,12 +397,7 @@ class RankModelF(keras.Model):
 
 
 class MultiRankModelA(keras.Model):
-    """A `SoftRank` model.
-
-    Gates:
-        BranchGate
-
-    """
+    """A `SoftRank` model with multiple outputs."""
 
     def __init__(
         self, percept=None, proximity=None, soft_2rank1=None, soft_8rank2=None, **kwargs
@@ -768,12 +763,7 @@ class ALCOVEModelA(keras.Model):
 
 
 class RankRateModelA(keras.Model):
-    """A joint `SoftRank` and `Logistic` model.
-
-    Gates:
-        Behavior layer (BranchGate:2)
-
-    """
+    """A joint `SoftRank` and `Logistic` model."""
 
     def __init__(
         self, percept=None, proximity=None, soft_4rank2=None, rate=None, **kwargs

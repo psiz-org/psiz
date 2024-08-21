@@ -119,12 +119,6 @@ class Gate(keras.layers.Layer):
         if isinstance(input_shape, dict):
             are_inputs_dict = True
         self.are_inputs_dict = are_inputs_dict
-        # TODO use or remove
-        # self.add_weight(
-        #     initializer=keras.initializers.Constant(are_inputs_dict),
-        #     shape=(1,),
-        #     trainable=False,
-        # )
 
         # Check if appropriate argument has been provided.
         if are_inputs_dict:
@@ -153,13 +147,8 @@ class Gate(keras.layers.Layer):
         if len(gate_weights_shape) == 3:
             has_timestep_axis = True
         self._has_timestep_axis = has_timestep_axis
-        # TODO use or remove
-        # self.add_weight(
-        #     initializer=keras.initializers.Constant(has_timestep_axis),
-        #     shape=(1,),
-        #     trainable=False,
-        # )
 
+        # Process subnets.
         processed_subnets = []
         for idx, subnet in enumerate(self._subnets):
             processed_subnets.append(

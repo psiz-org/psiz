@@ -38,7 +38,6 @@ from psiz.keras.layers.embeddings.embedding_variational import EmbeddingVariatio
 from psiz.keras.layers.behaviors.experimental.soft_rank_cell import SoftRankCell
 from psiz.keras.layers.gates.gate import Gate
 from psiz.keras.layers.gates.braid_gate import BraidGate
-from psiz.keras.layers.gates.branch_gate import BranchGate
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
 from psiz.keras.layers.proximities.distance_based import DistanceBased
 from psiz.keras.layers.proximities.experimental.cosine_similarity import (
@@ -74,7 +73,6 @@ __all__ = [
     "SoftRankCell",
     "Gate",
     "BraidGate",
-    "BranchGate",
     "GateAdapter",
     "Combiner",
     "Drop",

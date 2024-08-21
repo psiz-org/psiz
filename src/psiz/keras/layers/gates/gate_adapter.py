@@ -57,9 +57,7 @@ class GateAdapter(keras.layers.Layer):
         self.gating_keys = gating_keys
         if format_inputs_as_tuple is None:
             format_inputs_as_tuple = True
-        self.format_inputs_as_tuple = (
-            format_inputs_as_tuple  # TODO does this need to be a keras tensor?
-        )
+        self.format_inputs_as_tuple = format_inputs_as_tuple
 
         self._strip_inputs = None
 
@@ -98,9 +96,9 @@ class GateAdapter(keras.layers.Layer):
             self._all_keys.append(key)
 
         if len(self._all_keys) == 1:
-            self._strip_inputs = True  # TODO does this need to be a keras tensor?
+            self._strip_inputs = True
         else:
-            self._strip_inputs = False  # TODO does this need to be a keras tensor?
+            self._strip_inputs = False
 
     def call(self, inputs, training=None, mask=None):
         """Call.

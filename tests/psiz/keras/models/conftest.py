@@ -480,10 +480,6 @@ def ds_4rank2_rate2_v0():
         outcome_idx, depth=content_rank.n_outcome, name="rank_branch"
     )
 
-    # TODO `gate_weights` may be unused since BranchGate may be deprecated in
-    # favor of user specifying multiple output models explicitly via model's
-    # call method. Really this should be captured by `sample_weight` of the
-    # output.
     gate_weights = psiz.data.Group(
         np.array(([1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]), dtype=np.float32),
         name="gate_weights_behavior",

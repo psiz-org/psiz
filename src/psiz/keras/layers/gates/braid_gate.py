@@ -32,8 +32,7 @@ from psiz.keras.layers.gates.gate import Gate
 class BraidGate(Gate):
     """A layer that routes inputs to subnetworks.
 
-    In a `BraidGate` the subnetworks are re-combined at the end (in
-    contrast to a `BranchGate`).
+    In a `BraidGate` the subnetwork outputs are re-combined at the end.
 
     The subnetworks can take a list of inputs, but each subnetwork must
     output a single tensor. The final output shape must be the same for

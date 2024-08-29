@@ -27,7 +27,7 @@ if keras.backend.backend() == "tensorflow":
     import tensorflow as tf
 elif keras.backend.backend() == "jax":
     pass
-    # import jax  # TODO support jax backend.
+    # import jax  # TODO(roads) support jax backend.
 elif keras.backend.backend() == "torch":
     import torch
 else:

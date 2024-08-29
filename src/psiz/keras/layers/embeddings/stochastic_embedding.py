@@ -54,9 +54,6 @@ class StochasticEmbedding(keras.layers.Layer):
             kwargs: Additional key-word arguments.
 
         """
-        # TODO(roads) is this necessary anymore? I'm getting a warning
-        # if "input_shape" not in kwargs:
-        #     kwargs["input_shape"] = (input_length,)
         dtype = kwargs.pop("dtype", keras.backend.floatx())
         # We set autocast to False, as we do not want to cast floating-
         # point inputs to self.dtype. In call(), we cast to int32, and

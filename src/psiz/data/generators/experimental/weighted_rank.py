@@ -125,7 +125,7 @@ class WeightedRank(RankGenerator):
             n_sample_per_query_list = rng.multinomial(n_sample, w_diag)
 
         if self.n_worker > 1:
-            # TODO
+            # TODO(roads)
             raise NotImplementedError(
                 "Multi-worker functionality is not yet implemented."
             )

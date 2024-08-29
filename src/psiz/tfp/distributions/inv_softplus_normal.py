@@ -99,14 +99,14 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
 
     def _mean(self, **kwargs):
         raise NotImplementedError
-        # TODO work out math
+        # TODO(roads) work out math
         # return tf.exp(
         #     self.distribution.mean() + 0.5 * self.distribution.variance()
         # )
 
     def _variance(self, **kwargs):
         raise NotImplementedError
-        # TODO work out math
+        # TODO(roads) work out math
         # variance = self.distribution.variance()
         # return (
         #     tf.math.expm1(variance) *
@@ -118,14 +118,14 @@ class InvSoftplusNormal(transformed_distribution.TransformedDistribution):
 
     def _mode(self, **kwargs):
         raise NotImplementedError
-        # TODO work out math
+        # TODO(roads) work out math
         # return tf.exp(
         #     self.distribution.mean() - self.distribution.variance()
         # )
 
     def _entropy(self, **kwargs):
         raise NotImplementedError
-        # TODO work out math
+        # TODO(roads) work out math
         # return (
         #     self.distribution.mean() + 0.5 +
         #     tf.math.log(self.distribution.stddev()) + 0.5 * np.log(2 * np.pi)

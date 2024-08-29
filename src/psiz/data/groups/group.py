@@ -56,7 +56,7 @@ class Group(DatasetComponent):
                 "requirement.".format(group_key)
             )
 
-        # If `value` looks like sparse coding format, check data type. TODO
+        # If `value` looks like sparse coding format, check data type. TODO(roads)
         # if value.shape[-1] == 1:
         #     if not isinstance(
         #         value[0, 0, 0], (float, np.float32, np.float64, np.float128)

@@ -90,5 +90,5 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
         dist_batch = tfp.distributions.Normal(loc=inputs_loc, scale=inputs_scale)
         # Reify output using samples.
         outputs = dist_batch.sample(self.sample_shape)
-        # TODO MAYBE keras.ops.cast(outputs, dtype=self.compute_dtype)
+        # TODO(roads) MAYBE keras.ops.cast(outputs, dtype=self.compute_dtype)
         return outputs

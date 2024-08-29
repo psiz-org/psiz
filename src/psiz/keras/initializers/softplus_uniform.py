@@ -62,7 +62,7 @@ class SoftplusUniform(keras.initializers.Initializer):
         def generalized_softplus_inverse(x, c):
             return c * tfp.math.softplus_inverse(x / c)
 
-        # TODO critical handle zeros
+        # TODO(roads) critical handle zeros
         return generalized_softplus_inverse(w, self.hinge_softness)
 
     def get_config(self):

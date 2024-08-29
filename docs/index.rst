@@ -1,7 +1,7 @@
 PsiZ: Psychological Embeddings
 ==============================
 
-Welcome to PsiZ! If this is your first visit, we suggest reading the Introduction first.
+Welcome to PsiZ! If this is your first visit, we suggest reading Getting Started first.
 
 .. toctree::
    :maxdepth: 2

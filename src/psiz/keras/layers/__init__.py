@@ -39,7 +39,6 @@ from psiz.keras.layers.behaviors.experimental.soft_rank_cell import SoftRankCell
 from psiz.keras.layers.gates.gate import Gate
 from psiz.keras.layers.gates.braid_gate import BraidGate
 from psiz.keras.layers.gates.gate_adapter import GateAdapter
-from psiz.keras.layers.proximities.distance_based import DistanceBased
 from psiz.keras.layers.proximities.experimental.cosine_similarity import (
     CosineSimilarity,
 )
@@ -76,7 +75,6 @@ __all__ = [
     "GateAdapter",
     "Combiner",
     "Drop",
-    "DistanceBased",
     "CosineSimilarity",
     "InnerProduct",
     "GeneralizedInnerProduct",

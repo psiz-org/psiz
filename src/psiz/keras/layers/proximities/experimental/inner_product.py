@@ -23,6 +23,7 @@ Classes:
 
 
 import keras
+import numpy as np
 
 from psiz.keras.layers.proximities.proximity import Proximity
 
@@ -97,10 +98,16 @@ class InnerProduct(Proximity):
                 else:
                     tril_mask_row.append(0.0)
             tril_mask.append(tril_mask_row)
-        tril_mask = keras.ops.stack(tril_mask)
-        self._tril_mask = tril_mask
+        tril_mask = np.stack(tril_mask)
 
         with keras.name_scope(self.name):
+            self._tril_mask = self.add_weight(
+                shape=[n_dim, n_dim],
+                initializer=keras.initializers.Constant(value=tril_mask),
+                trainable=False,
+                name="tril_mask",
+                dtype=self.compute_dtype,
+            )
             self._untransformed_w_tril = self.add_weight(
                 shape=[n_dim, n_dim],
                 initializer=self.w_tril_initializer,

@@ -359,7 +359,6 @@ class ALCOVECell(keras.layers.Layer):
 
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)
-        d_qr = keras.ops.squeeze(d_qr, [-1])
         return d_qr
 
     def humble_teacher_loss(self, y, y_pred):

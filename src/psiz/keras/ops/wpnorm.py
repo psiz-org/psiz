@@ -24,9 +24,7 @@ Functions:
 import keras
 
 
-# TODO Remove custom_gradient decorator and gradient function.
-# @keras.custom_gradient
-def wpnorm(x, w, p):
+def wpnorm(x, w, p, keepdims=False):
     """Weighted p-norm.
 
     ||x||_{w,p} = [sum_i w_i abs(x_i)^p]^(1/p)
@@ -39,11 +37,17 @@ def wpnorm(x, w, p):
             shape=(batch_size, [n, m, ...] n_dim)
         p: A parameter controlling the weighted minkowski metric.
             shape=(batch_size, [n, m, ...])
+        keepdims (optional): A boolean indicating whether to keep the
+            singleton axis at the end of the output tensor.
 
     Returns:
         shape=(batch_size, [n, m, ...] 1)
 
     """
+    # NOTE: Add epsilon to avoid the issue that norm is not differentiable
+    # at 0.
+    x = x + keras.backend.epsilon()
+
     abs_x = keras.ops.abs(x)
     # Add singleton axis to end of p for `n_dim`.
     p_exp = keras.ops.expand_dims(p, axis=-1)
@@ -52,7 +56,11 @@ def wpnorm(x, w, p):
     # Sum over last axis (i.e., `n_dim`).
     sum_x = keras.ops.sum(w_abs_x_p, axis=-1, keepdims=True)
     y = keras.ops.power(sum_x, 1.0 / p_exp)
+    if not keepdims:
+        y = keras.ops.squeeze(y, [-1])
 
+    # NOTE: Gradients are included here for record keeping and debugging. These
+    # gradient calculations assume keepdims=True.
     # def grad(dy):
     #     # Gradients of coordinates `x` with fudge factor to avoid problematic
     #     # gradients.

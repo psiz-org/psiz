@@ -216,7 +216,6 @@ class MinkowskiStochastic(Proximity):
 
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)
-        d_qr = keras.ops.squeeze(d_qr, [-1])
         return self.activation(d_qr)
 
     def get_config(self):

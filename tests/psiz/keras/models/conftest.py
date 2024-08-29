@@ -404,6 +404,31 @@ def ds_rate2_v1():
 
 
 @pytest.fixture(scope="module")
+def ds_rate2_v2():
+    """Dataset.
+
+    Rate similarity
+    * no timestep
+    * no groups
+
+    * Contains identity pair.
+
+    """
+    n_sample = 4
+    stimulus_set = np.array(((1, 1), (10, 13), (4, 5), (4, 18)), dtype=np.int32)
+    rating = np.array([[1.0], [0.4], [0.8], [0.9]])
+    content = psiz.data.Rate(stimulus_set)
+
+    outcome = psiz.data.Continuous(rating)
+
+    tfds = psiz.data.Dataset([content, outcome]).export(
+        with_timestep_axis=False, export_format="tfds"
+    )
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
+
+
+@pytest.fixture(scope="module")
 def ds_time_categorize_v0():
     """Dataset.
 

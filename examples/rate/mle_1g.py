@@ -33,21 +33,24 @@ experiment with noisy simulations and validation-based early stopping.
 import os
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
+
 from pathlib import Path
 import shutil
 
+import keras
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow as tf
+import tensorflow_probability as tfp
 
 import psiz
 
-# Uncomment the following line to force eager execution.
-tf.config.run_functions_eagerly(True)
+# NOTE: Uncomment the following lines to force eager execution.
+# import tensorflow as tf
+# tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.
+# NOTE: Uncomment and edit the following to control GPU visibility.
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -70,9 +73,41 @@ class RateModel(keras.Model):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0, z_1 = tf.split(z, [1, 1], self.stimuli_axis)
+        z_0, z_1 = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_0, z_1])
         return self.rate(s)
+
+
+class NoisyRateModel(keras.Model):
+    """A noisy rate model.
+
+    No Gates.
+
+    """
+
+    def __init__(self, percept=None, proximity=None, rate=None, **kwargs):
+        """Initialize."""
+        super(NoisyRateModel, self).__init__(**kwargs)
+        self.percept = percept
+        self.proximity = proximity
+        self.rate = rate
+        self.stimuli_axis = 1
+
+    def call(self, inputs):
+        """Call."""
+        z = self.percept(inputs["rate2_stimulus_set"])
+        z_0, z_1 = keras.ops.split(z, [1], self.stimuli_axis)
+        s = self.proximity([z_0, z_1])
+        r = self.rate(s)
+        # Add some uniform noise.
+        low = keras.ops.ones_like(r) * -0.025
+        high = keras.ops.ones_like(r) * 0.025
+        r_noisy = keras.ops.clip(
+            r + tfp.distributions.Uniform(low=low, high=high).sample([]),
+            0.0,
+            1.0,
+        )
+        return r_noisy
 
 
 class SimilarityModel(keras.Model):
@@ -88,8 +123,8 @@ class SimilarityModel(keras.Model):
         """Call."""
         stimuli_axis = 1
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=stimuli_axis)
         return self.proximity([z_0, z_1])
 
 
@@ -100,9 +135,10 @@ def main():
     fp_board = fp_project / Path("logs", "fit")
     n_stimuli = 25
     n_dim = 2
-    epochs = 1000
+    epochs = 3000
     lr = 0.001
     batch_size = 64
+    patience = 10
 
     # Plot settings.
     small_size = 6
@@ -138,13 +174,13 @@ def main():
         psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements="upper")
     )
     dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
-    tfds_pairs = (
+    ds_pairs = (
         psiz.data.Dataset([content_pairs, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
     )
 
-    simmat_true = model_similarity_true.predict(tfds_pairs)
+    simmat_true = model_similarity_true.predict(ds_pairs)
 
     print(
         "Ground Truth Pairwise Similarity\n"
@@ -157,22 +193,31 @@ def main():
 
     # Assemble an exhaustive dataset of all possible pairwise combinations.
     eligible_indices = np.arange(n_stimuli) + 1
-    content = psiz.data.Rate(
-        psiz.utils.pairwise_indices(eligible_indices, elements="all")
-    )
+    pairwise_indices = psiz.utils.pairwise_indices(eligible_indices, elements="all")
+    n_repeat = 3
+    pairwise_indices = np.repeat(pairwise_indices, n_repeat, axis=0)
+    rng = np.random.default_rng(seed=252)
+    n_pair = pairwise_indices.shape[0]
+    permuted_indices = rng.permutation(n_pair)
+    pairwise_indices = pairwise_indices[permuted_indices]
+    content = psiz.data.Rate(pairwise_indices)
     pds = psiz.data.Dataset([content])
-    tfds_content = pds.export(export_format="tfds")
+    ds_content = pds.export(export_format="tfds")
 
-    # Simulate noise-free similarity judgments and append outcomes to dataset.
-    tfds_content = tfds_content.batch(batch_size=batch_size, drop_remainder=False)
-    tfds_all = tfds_content.map(lambda x: (x, model_true(x)))
-    tfds_all = tfds_all.unbatch()
+    # Simulate noisy similarity judgments and append outcomes to dataset.
+    ds_content = ds_content.batch(batch_size=batch_size, drop_remainder=False)
+    ds_all = ds_content.map(lambda x: (x, model_true(x)))
+    ds_all = ds_all.unbatch()
 
-    n_trial_train = pds.n_sample
-    tfds_train = (
-        tfds_all.cache()
-        .shuffle(buffer_size=n_trial_train, reshuffle_each_iteration=True)
+    n_train = int(np.floor(0.90 * pds.n_sample))
+    ds_train = (
+        ds_all.take(n_train)
+        .cache()
+        .shuffle(buffer_size=n_train, reshuffle_each_iteration=True)
         .batch(batch_size=batch_size, drop_remainder=False)
+    )
+    ds_val = (
+        ds_all.skip(n_train).cache().batch(batch_size=batch_size, drop_remainder=False)
     )
 
     # Use Tensorboard callback.
@@ -188,16 +233,21 @@ def main():
         embeddings_metadata=None,
     )
     early_stop = keras.callbacks.EarlyStopping(
-        "mse", patience=15, mode="min", restore_best_weights=True
+        "val_loss", patience=patience, mode="min", restore_best_weights=True
     )
     callbacks = [cb_board, early_stop]
 
     # Infer embedding.
     model_inferred = build_model(n_stimuli, n_dim, lr)
-    model_inferred.fit(tfds_train, epochs=epochs, callbacks=callbacks, verbose=0)
+    model_inferred.fit(
+        x=ds_train,
+        validation_data=ds_val,
+        epochs=epochs,
+        callbacks=callbacks,
+        verbose=1,
+    )
 
-    # train_mse = history.history['mse'][0]
-    train_metrics = model_inferred.evaluate(tfds_train, verbose=0, return_dict=True)
+    train_metrics = model_inferred.evaluate(ds_train, return_dict=True, verbose=0)
     train_mse = train_metrics["mse"]
 
     # Create model that outputs similarity based on inferred model.
@@ -207,13 +257,13 @@ def main():
     )
     # Compare the inferred model with ground truth by comparing the
     # similarity matrices implied by each model.
-    simmat_infer = model_inferred_similarity.predict(tfds_pairs)
+    simmat_infer = model_inferred_similarity.predict(ds_pairs)
 
     rho, _ = pearsonr(simmat_true, simmat_infer)
     r2 = rho**2
     print(
         "    n_obs: {0:4d} | train_mse: {1:.6f} | "
-        "Correlation (R^2): {2:.2f}".format(n_trial_train, train_mse, r2)
+        "Correlation (R^2): {2:.2f}".format(n_train, train_mse, r2)
     )
     print(
         "Ground Truth parameters\n"
@@ -306,7 +356,7 @@ def build_ground_truth_grid():
         midpoint_initializer=keras.initializers.Constant(0.5),
         rate_initializer=keras.initializers.Constant(15.0),
     )
-    model = RateModel(percept=percept, proximity=proximity, rate=rate)
+    model = NoisyRateModel(percept=percept, proximity=proximity, rate=rate)
 
     return model
 
@@ -341,7 +391,7 @@ def plot_frame(fig, model_true, model_inferred, r2):
     n_stimuli = model_true.percept.input_dim
     if model_true.percept.mask_zero:
         n_stimuli = n_stimuli - 1
-    cmap = matplotlib.cm.get_cmap("jet")
+    cmap = matplotlib.colormaps.get_cmap("jet")
     norm = matplotlib.colors.Normalize(vmin=0.0, vmax=n_stimuli)
     color_array = cmap(norm(range(n_stimuli)))
 
@@ -380,7 +430,7 @@ def plot_frame(fig, model_true, model_inferred, r2):
         z_inferred[:, 0],
         z_inferred[:, 1],
         s=60,
-        marker="o",
+        marker="v",
         facecolors="none",
         edgecolors=color_array,
     )

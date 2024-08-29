@@ -44,13 +44,14 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 
 import numpy as np
+import keras
 from scipy.stats import pearsonr
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
 
-# Uncomment the following line to force eager execution.
+# NOTE: Uncomment the following lines to force eager execution.
+# import tensorflow as tf
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
@@ -78,7 +79,7 @@ class RankModel(keras.Model):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given8rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.braided_proximity([z_q, z_r, inputs["expertise"]])
         return self.soft_8rank2(s)
 
@@ -97,21 +98,23 @@ class SimilarityModel(keras.Model):
         stimuli_axis = 1
         expertise_group = inputs["expertise"]
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=stimuli_axis)
         return self.braided_proximity([z_0, z_1, expertise_group])
 
 
 def main():
     """Run the simulation that infers an embedding for three groups."""
     # Settings.
-    n_stimuli = 30
+    n_stimuli = 100
     n_dim = 4
     n_group = 3
-    epochs = 30
-    batch_size = 128
-    n_trial = 30 * batch_size
-    n_trial_train = 24 * batch_size
+    epochs = 100
+    batch_size = 512
+    n_trial = 20 * batch_size
+    n_trial_train = 16 * batch_size
+    n_trial_val = 2 * batch_size
+    patience = 10
 
     # Define ground truth models.
     model_true = build_ground_truth_model(n_stimuli, n_dim)
@@ -138,17 +141,17 @@ def main():
         name="expertise",
     )
     dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
-    tfds_pairs_group0 = (
+    ds_pairs_group0 = (
         psiz.data.Dataset([content_pairs, group_0, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
     )
-    tfds_pairs_group1 = (
+    ds_pairs_group1 = (
         psiz.data.Dataset([content_pairs, group_1, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
     )
-    tfds_pairs_group2 = (
+    ds_pairs_group2 = (
         psiz.data.Dataset([content_pairs, group_2, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
@@ -156,9 +159,9 @@ def main():
 
     # Compute similarity matrix.
     simmat_truth = (
-        model_similarity_true.predict(tfds_pairs_group0),
-        model_similarity_true.predict(tfds_pairs_group1),
-        model_similarity_true.predict(tfds_pairs_group2),
+        model_similarity_true.predict(ds_pairs_group0, verbose=0),
+        model_similarity_true.predict(ds_pairs_group1, verbose=0),
+        model_similarity_true.predict(ds_pairs_group2, verbose=0),
     )
 
     # Generate a random set of trials. Replicate for each group.
@@ -180,48 +183,59 @@ def main():
         name="expertise",
     )
     pds = psiz.data.Dataset([content, expertise])
-    tfds_content = pds.export(export_format="tfds")
+    ds_content = pds.export(export_format="tfds")
 
     # Simulate ranked similarity judgments and append outcomes to dataset.
-    tfds_content = tfds_content.batch(batch_size, drop_remainder=False)
+    ds_content = ds_content.batch(batch_size, drop_remainder=False)
     depth = content.n_outcome
 
     def simulate_agent(x):
         outcome_probs = model_true(x)
         outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
         outcome_idx = outcome_distribution.sample()
-        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
+    ds_all = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
     # Partition data into 80% train and 20% validation.
-    tfds_train = (
-        tfds_all.take(n_trial_train * 3)
+    ds_train = (
+        ds_all.take(n_trial_train * n_group)
         .cache()
-        .shuffle(buffer_size=n_trial_train * 3, reshuffle_each_iteration=True)
+        .shuffle(buffer_size=n_trial_train * n_group, reshuffle_each_iteration=True)
         .batch(batch_size, drop_remainder=False)
     )
-    tfds_val = (
-        tfds_all.skip(n_trial_train * 3).cache().batch(batch_size, drop_remainder=False)
+    ds_valtest = ds_all.skip(n_trial_train * n_group)
+    ds_val = (
+        ds_valtest.take(n_trial_val * n_group)
+        .cache()
+        .batch(batch_size, drop_remainder=False)
+    )
+    ds_test = (
+        ds_valtest.skip(n_trial_val * n_group)
+        .cache()
+        .batch(batch_size, drop_remainder=False)
     )
 
     # Use early stopping.
-    early_stop = keras.callbacks.EarlyStopping(
-        "val_cce", patience=15, mode="min", restore_best_weights=True
+    cb_early_stop = keras.callbacks.EarlyStopping(
+        "val_cce", patience=patience, mode="min", restore_best_weights=True
     )
-    callbacks = [early_stop]
+    callbacks = [cb_early_stop]
 
     model_inferred = build_model(n_stimuli, n_dim)
 
     # Infer embedding.
     model_inferred.fit(
-        x=tfds_train,
-        validation_data=tfds_val,
+        x=ds_train,
+        validation_data=ds_val,
         epochs=epochs,
         callbacks=callbacks,
         verbose=0,
     )
+    train_metrics = model_inferred.evaluate(ds_train, verbose=0, return_dict=True)
+    val_metrics = model_inferred.evaluate(ds_val, verbose=0, return_dict=True)
+    test_metrics = model_inferred.evaluate(ds_test, verbose=0, return_dict=True)
 
     # Create a model that computes similarity based on inferred model.
     model_similarity_inferred = SimilarityModel(
@@ -230,9 +244,9 @@ def main():
     )
     # Compute inferred similarity matrix.
     simmat_inferred = (
-        model_similarity_inferred.predict(tfds_pairs_group0),
-        model_similarity_inferred.predict(tfds_pairs_group1),
-        model_similarity_inferred.predict(tfds_pairs_group2),
+        model_similarity_inferred.predict(ds_pairs_group0, verbose=0),
+        model_similarity_inferred.predict(ds_pairs_group1, verbose=0),
+        model_similarity_inferred.predict(ds_pairs_group2, verbose=0),
     )
 
     # Compare the inferred model with ground truth by comparing the
@@ -243,16 +257,24 @@ def main():
             rho, _ = pearsonr(simmat_truth[i_truth], simmat_inferred[j_infer])
             r_squared[i_truth, j_infer] = rho**2
 
+    # Print loss metrics.
+    print(
+        "\nLoss Metrics:\n"
+        f"  Train: {train_metrics['cce']:.4f}\n"
+        f"  Validation: {val_metrics['cce']:.4f}\n"
+        f"  Test: {test_metrics['cce']:.4f}\n"
+    )
+
     # Display attention weights.
     # Permute inferred dimensions to best match ground truth.
-    attention_weight = tf.stack(
+    attention_weight = np.stack(
         [
-            model_inferred.braided_proximity.subnets[0].w,
-            model_inferred.braided_proximity.subnets[1].w,
-            model_inferred.braided_proximity.subnets[2].w,
+            model_inferred.braided_proximity.subnets[0].w.numpy(),
+            model_inferred.braided_proximity.subnets[1].w.numpy(),
+            model_inferred.braided_proximity.subnets[2].w.numpy(),
         ],
         axis=0,
-    ).numpy()
+    )
     idx_sorted = np.argsort(-attention_weight[0, :])
     attention_weight = attention_weight[:, idx_sorted]
     group_labels = ["Novice", "Intermediate", "Expert"]
@@ -268,9 +290,10 @@ def main():
             )
         )
 
-    # Display comparison results. A good inferred model will have a high
-    # R^2 value on the diagonal elements (max is 1) and relatively low R^2
-    # values on the off-diagonal elements.
+    # Display comparison results.
+    # NOTE: A good inferred model will have high R^2 values on the diagonal
+    # elements (max is 1.0) and relatively low R^2 values on the off-diagonal
+    # elements.
     print("\n    Model Comparison (R^2)")
     print("    ================================")
     print("      True  |        Inferred")
@@ -333,7 +356,7 @@ def build_ground_truth_model(n_stimuli, n_dim):
     braided_proximity = psiz.keras.layers.BraidGate(
         subnets=[proximity_0, proximity_1, proximity_2], gating_index=-1
     )
-    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
     model = RankModel(
         percept=percept, braided_proximity=braided_proximity, soft_8rank2=soft_8rank2
     )
@@ -371,7 +394,7 @@ def build_model(n_stimuli, n_dim):
     braided_proximity = psiz.keras.layers.BraidGate(
         subnets=[proximity_0, proximity_1, proximity_2], gating_index=-1
     )
-    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
     model = RankModel(
         percept=percept, braided_proximity=braided_proximity, soft_8rank2=soft_8rank2
     )

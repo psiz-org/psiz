@@ -27,26 +27,28 @@ default, a `psiz_examples` directory is created in your home directory.
 
 import copy
 import os
+import time
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 import shutil
 
 import imageio
+import keras
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
 from psiz.tfp import unpack_mvn
 
-# Uncomment the following line to force eager execution.
+# NOTE: Uncomment the following lines to force eager execution.
+# import tensorflow as tf
 # tf.config.run_functions_eagerly(True)
 
-# Modify the following to control GPU visibility.
+# NOTE: Modify the following to control GPU visibility.
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -69,7 +71,7 @@ class RankModel(keras.Model):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given8rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_8rank2(s)
 
@@ -87,8 +89,8 @@ class SimilarityModel(keras.Model):
         """Call."""
         stimuli_axis = 1
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=stimuli_axis)
         return self.proximity([z_0, z_1])
 
 
@@ -110,7 +112,7 @@ class StochasticRankModel(psiz.keras.StochasticModel):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given8rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_8rank2(s)
 
@@ -128,8 +130,8 @@ class StochasticSimilarityModel(psiz.keras.StochasticModel):
         """Call."""
         stimuli_axis = 1
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=stimuli_axis)
         return self.proximity([z_0, z_1])
 
 
@@ -138,14 +140,20 @@ def main():
     # Settings.
     fp_project = Path.home() / Path("psiz_examples", "rank", "vi_1g")
     fp_board = fp_project / Path("logs", "fit")
-    n_stimuli = 30
+    n_stimuli = 100
     n_dim = 2
     epochs = 1000
-    batch_size = 128
+    batch_size = 512
     n_trial = 30 * batch_size
     n_trial_train = 24 * batch_size
     n_trial_val = 3 * batch_size
-    n_frame = 1  # Set to 7 to observe convergence behavior.
+    # NOTE: By increasing the number of trials (i.e., observations) you can
+    # achieve tigher posterior estimates, but the model will take longer to
+    # train. You can observe this behavior by setting `n_frame` > 1 to observe
+    # how the model posteriors change as you add more data. If you would just
+    # like to see a fit using all the data, set `n_frame = 1`.
+    n_frame = 5
+    patience = 10
 
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
@@ -166,7 +174,7 @@ def main():
     plt.rc("figure", titlesize=large_size)
 
     # Color settings.
-    cmap = matplotlib.cm.get_cmap("jet")
+    cmap = matplotlib.colormaps.get_cmap("jet")
     n_color = np.minimum(7, n_stimuli)
     norm = matplotlib.colors.Normalize(vmin=0.0, vmax=n_color)
     color_array = cmap(norm(range(n_color)))
@@ -187,14 +195,14 @@ def main():
         psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements="upper")
     )
     dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
-    tfds_pairs = (
+    ds_pairs = (
         psiz.data.Dataset([content_pairs, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
     )
 
     # Compute similarity matrix.
-    simmat_true = model_similarity_true.predict(tfds_pairs)
+    simmat_true = model_similarity_true.predict(ds_pairs, verbose=0)
 
     # Generate a random docket of trials.
     rng = np.random.default_rng()
@@ -205,30 +213,30 @@ def main():
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
     pds = psiz.data.Dataset([content])
-    tfds_content = pds.export(export_format="tfds")
+    ds_content = pds.export(export_format="tfds")
 
     # Simulate similarity judgments and append outcomes to dataset.
-    tfds_content = tfds_content.batch(batch_size=batch_size, drop_remainder=False)
+    ds_content = ds_content.batch(batch_size=batch_size, drop_remainder=False)
 
     def simulate_agent(x):
         depth = content.n_outcome
         outcome_probs = model_true(x)
         outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
         outcome_idx = outcome_distribution.sample()
-        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).cache()
-    tfds_all = tfds_all.unbatch()
+    ds_all = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
+    ds_all = ds_all.unbatch()
 
     # Partition data into 80% train, 10% validation and 10% test set.
-    tfds_train = tfds_all.take(n_trial_train)
-    tfds_valtest = tfds_all.skip(n_trial_train)
-    tfds_val = (
-        tfds_valtest.take(n_trial_val).cache().batch(batch_size, drop_remainder=False)
+    ds_train = ds_all.take(n_trial_train)
+    ds_valtest = ds_all.skip(n_trial_train)
+    ds_val = (
+        ds_valtest.take(n_trial_val).cache().batch(batch_size, drop_remainder=False)
     )
-    tfds_test = (
-        tfds_valtest.skip(n_trial_val).cache().batch(batch_size, drop_remainder=False)
+    ds_test = (
+        ds_valtest.skip(n_trial_val).cache().batch(batch_size, drop_remainder=False)
     )
 
     # Infer independent models with increasing amounts of data.
@@ -242,9 +250,10 @@ def main():
     train_loss = np.empty((n_frame)) * np.nan
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
+    epochs_used = np.empty((n_frame), dtype=int)
     for i_frame in range(n_frame):
-        tfds_train_frame = (
-            tfds_train.take(int(n_trial_train_frame[i_frame]))
+        ds_train_frame = (
+            ds_train.take(int(n_trial_train_frame[i_frame]))
             .cache()
             .shuffle(
                 buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
@@ -267,18 +276,23 @@ def main():
             embeddings_freq=0,
             embeddings_metadata=None,
         )
-        cb_early = keras.callbacks.EarlyStopping(
-            "loss", patience=15, mode="min", restore_best_weights=False, verbose=1
+        # Use early stopping callback.
+        cb_early_stop = keras.callbacks.EarlyStopping(
+            "val_loss",
+            patience=patience,
+            mode="min",
+            restore_best_weights=True,
+            verbose=0,
         )
-        callbacks = [cb_board, cb_early]
+        callbacks = [cb_board, cb_early_stop]
 
         # Define model.
         model_inferred = build_model(n_stimuli, n_dim, n_trial_train_frame[i_frame])
 
         # Infer embedding.
         history = model_inferred.fit(
-            x=tfds_train_frame,
-            validation_data=tfds_val,
+            x=ds_train_frame,
+            validation_data=ds_val,
             epochs=epochs,
             callbacks=callbacks,
             verbose=0,
@@ -291,16 +305,17 @@ def main():
             )
         )
 
-        # NOTE: The following are noisy estimates of final train/val loss.
-        # Less noisy estimates could be obatined by running `evaluate` on
-        # the train and validation set like test in the next block.
-        train_loss[i_frame] = history.history["loss"][-1]
-        val_loss[i_frame] = history.history["val_loss"][-1]
-
         keras.backend.clear_session()
         model_inferred.n_sample = 100
-        test_metrics = model_inferred.evaluate(tfds_test, verbose=0, return_dict=True)
+        train_metrics = model_inferred.evaluate(
+            ds_train_frame, verbose=0, return_dict=True
+        )
+        val_metrics = model_inferred.evaluate(ds_val, verbose=0, return_dict=True)
+        test_metrics = model_inferred.evaluate(ds_test, verbose=0, return_dict=True)
+        train_loss[i_frame] = train_metrics["loss"]
+        val_loss[i_frame] = val_metrics["loss"]
         test_loss[i_frame] = test_metrics["loss"]
+        epochs_used[i_frame] = len(history.history["cce"]) - patience
 
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
@@ -309,21 +324,18 @@ def main():
             proximity=model_inferred.proximity,
             n_sample=100,
         )
-        simmat_infer = model_similarity.predict(tfds_pairs)
+        simmat_infer = model_similarity.predict(ds_pairs, verbose=0)
 
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2
 
         print(
-            "    n_obs: {0:4d} | train_loss: {1:.2f} | "
-            "val_loss: {2:.2f} | test_loss: {3:.2f} | "
-            "Correlation (R^2): {4:.2f}".format(
-                n_trial_train_frame[i_frame],
-                train_loss[i_frame],
-                val_loss[i_frame],
-                test_loss[i_frame],
-                r2[i_frame],
-            )
+            f"    n_obs: {n_trial_train_frame[i_frame]:4d} "
+            f"| epochs: {epochs_used[i_frame]:4d} "
+            f"| train_loss: {train_loss[i_frame]:.2f} | "
+            f"val_loss: {val_loss[i_frame]:.2f} | "
+            f"test_loss: {test_loss[i_frame]:.2f} | "
+            f"correlation (R^2): {r2[i_frame]:.2f}"
         )
 
         # Create and save visual frame.
@@ -483,7 +495,7 @@ def build_ground_truth_model(n_stimuli, n_dim):
         ),
         trainable=False,
     )
-    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
     model = RankModel(percept=percept, proximity=proximity, soft_8rank2=soft_8rank2)
     model.compile(
         loss=keras.losses.CategoricalCrossentropy(),
@@ -520,6 +532,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
     embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
         (n_stimuli + 1),
         n_dim,
+        loc_initializer=keras.initializers.RandomNormal(stddev=0.0001, seed=252),
         scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(prior_scale).numpy()
         ),
@@ -556,7 +569,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
         ),
         trainable=False,
     )
-    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
     model = StochasticRankModel(
         percept=percept, proximity=proximity, soft_8rank2=soft_8rank2, n_sample=30
     )
@@ -582,4 +595,7 @@ def apply_affine(loc, cov, r=None, t=None):
 
 
 if __name__ == "__main__":
+    start_time_s = time.time()
     main()
+    total_time_s = time.time() - start_time_s
+    print("Total script time: {0:.0f} s".format(total_time_s))

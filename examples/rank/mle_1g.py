@@ -32,18 +32,19 @@ from pathlib import Path
 import shutil
 import time
 
+import keras
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
 
-# Uncomment the following line to force eager execution.
+# NOTE: Uncomment the following lines to force eager execution.
+# import tensorflow as tf
 # tf.config.run_functions_eagerly(True)
 
-# Uncomment and edit the following to control GPU visibility.
+# NOTE: Uncomment and edit the following to control GPU visibility.
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -66,7 +67,7 @@ class RankModel(keras.Model):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given8rank2_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_8rank2(s)
 
@@ -84,8 +85,8 @@ class SimilarityModel(keras.Model):
         """Call."""
         stimuli_axis = 1
         z = self.percept(inputs["rate2_stimulus_set"])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=stimuli_axis)
         return self.proximity([z_0, z_1])
 
 
@@ -94,14 +95,17 @@ def main():
     # Settings.
     fp_project = Path.home() / Path("psiz_examples", "rank", "mle_1g")
     fp_board = fp_project / Path("logs", "fit")
-    n_stimuli = 30
+    n_stimuli = 100
     n_dim = 3
-    epochs = 100
-    batch_size = 128
-    n_trial = 30 * batch_size
-    n_trial_train = 24 * batch_size
-    n_trial_val = 3 * batch_size
-    n_frame = 1  # Set to 8 to observe convergence behavior.
+    epochs = 1000
+    batch_size = 512
+    n_trial = 20 * batch_size
+    n_trial_train = 16 * batch_size
+    n_trial_val = 2 * batch_size
+    # NOTE: Set `n_frame = 1` to see fit with all data. Set to greater than
+    # 1 (e..g, `n_frame = 8`) to observe convergence behavior.
+    n_frame = 8
+    patience = 10
 
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
@@ -122,14 +126,14 @@ def main():
         psiz.utils.pairwise_indices(np.arange(n_stimuli) + 1, elements="upper")
     )
     dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
-    tfds_pairs = (
+    ds_pairs = (
         psiz.data.Dataset([content_pairs, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
     )
 
     # Compute similarity matrix.
-    simmat_true = model_similarity_true.predict(tfds_pairs)
+    simmat_true = model_similarity_true.predict(ds_pairs, verbose=0)
 
     # Generate a random set of trials.
     rng = np.random.default_rng()
@@ -140,35 +144,30 @@ def main():
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
     pds = psiz.data.Dataset([content])
-    tfds_content = pds.export(export_format="tfds")
+    ds_content = pds.export(export_format="tfds")
 
     # Simulate similarity judgments and append outcomes to dataset.
-    tfds_content = tfds_content.batch(batch_size, drop_remainder=False)
+    ds_content = ds_content.batch(batch_size, drop_remainder=False)
     depth = content.n_outcome
 
     def simulate_agent(x):
         outcome_probs = model_true(x)
         outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
         outcome_idx = outcome_distribution.sample()
-        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    tfds_all = tfds_content.map(lambda x: (x, simulate_agent(x))).cache()
-    tfds_all = tfds_all.unbatch()
+    ds_all = ds_content.map(lambda x: (x, simulate_agent(x))).cache()
+    ds_all = ds_all.unbatch()
 
     # Partition data into 80% train, 10% validation and 10% test set.
-    tfds_train = tfds_all.take(n_trial_train)
-    tfds_valtest = tfds_all.skip(n_trial_train)
-    tfds_val = (
-        tfds_valtest.take(n_trial_val).cache().batch(batch_size, drop_remainder=False)
+    ds_train = ds_all.take(n_trial_train)
+    ds_valtest = ds_all.skip(n_trial_train)
+    ds_val = (
+        ds_valtest.take(n_trial_val).cache().batch(batch_size, drop_remainder=False)
     )
-    tfds_test = (
-        tfds_valtest.skip(n_trial_val).cache().batch(batch_size, drop_remainder=False)
-    )
-
-    # Use early stopping.
-    early_stop = keras.callbacks.EarlyStopping(
-        "val_cce", patience=30, mode="min", restore_best_weights=True
+    ds_test = (
+        ds_valtest.skip(n_trial_val).cache().batch(batch_size, drop_remainder=False)
     )
 
     # Infer independent models with increasing amounts of data.
@@ -182,9 +181,10 @@ def main():
     train_cce = np.empty((n_frame))
     val_cce = np.empty((n_frame))
     test_cce = np.empty((n_frame))
+    epochs_used = np.empty((n_frame), dtype=int)
     for i_frame in range(n_frame):
-        tfds_train_frame = (
-            tfds_train.take(int(n_trial_train_frame[i_frame]))
+        ds_train_frame = (
+            ds_train.take(int(n_trial_train_frame[i_frame]))
             .cache()
             .shuffle(
                 buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
@@ -195,6 +195,14 @@ def main():
             "\n  Frame {0} ({1} samples)".format(i_frame, n_trial_train_frame[i_frame])
         )
 
+        # Use early stopping.
+        cb_early_stop = keras.callbacks.EarlyStopping(
+            "val_cce",
+            patience=patience,
+            mode="min",
+            restore_best_weights=True,
+            verbose=0,
+        )
         # Use Tensorboard callback.
         fp_board_frame = fp_board / Path("frame_{0}".format(i_frame))
         cb_board = keras.callbacks.TensorBoard(
@@ -207,21 +215,26 @@ def main():
             embeddings_freq=0,
             embeddings_metadata=None,
         )
-        callbacks = [early_stop, cb_board]
+        callbacks = [cb_early_stop, cb_board]
 
         # Infer embedding.
         model_inferred = build_model(n_stimuli, n_dim)
         history = model_inferred.fit(
-            x=tfds_train_frame,
-            validation_data=tfds_val,
+            x=ds_train_frame,
+            validation_data=ds_val,
             epochs=epochs,
             callbacks=callbacks,
             verbose=0,
         )
-        train_cce[i_frame] = history.history["cce"][-1]
-        val_cce[i_frame] = history.history["val_cce"][-1]
-        test_metrics = model_inferred.evaluate(tfds_test, verbose=0, return_dict=True)
+        train_metrics = model_inferred.evaluate(
+            ds_train_frame, verbose=0, return_dict=True
+        )
+        val_metrics = model_inferred.evaluate(ds_val, verbose=0, return_dict=True)
+        test_metrics = model_inferred.evaluate(ds_test, verbose=0, return_dict=True)
+        train_cce[i_frame] = train_metrics["cce"]
+        val_cce[i_frame] = val_metrics["cce"]
         test_cce[i_frame] = test_metrics["cce"]
+        epochs_used[i_frame] = len(history.history["cce"]) - patience
 
         # Define model that outputs similarity based on inferred model.
         model_inferred_similarity = SimilarityModel(
@@ -230,21 +243,18 @@ def main():
         )
         # Compare the inferred model with ground truth by comparing the
         # similarity matrices implied by each model.
-        simmat_infer = model_inferred_similarity.predict(tfds_pairs)
+        simmat_infer = model_inferred_similarity.predict(ds_pairs, verbose=0)
 
         rho, _ = pearsonr(simmat_true, simmat_infer)
         r2[i_frame] = rho**2
 
         print(
-            "    n_trial_train_frame: {0:4d} | train_cce: {1:.2f} | "
-            "val_cce: {2:.2f} | test_cce: {3:.2f} | "
-            "Correlation (R^2): {4:.2f}".format(
-                n_trial_train_frame[i_frame],
-                train_cce[i_frame],
-                val_cce[i_frame],
-                test_cce[i_frame],
-                r2[i_frame],
-            )
+            f"    n_obs: {n_trial_train_frame[i_frame]:4d} "
+            f"| epochs: {epochs_used[i_frame]:4d} "
+            f"| train_cce: {train_cce[i_frame]:.2f} | "
+            f"val_cce: {val_cce[i_frame]:.2f} | "
+            f"test_cce: {test_cce[i_frame]:.2f} | "
+            f"correlation (R^2): {r2[i_frame]:.2f}"
         )
 
     # Plot comparison results.
@@ -254,13 +264,13 @@ def main():
     axes[0].plot(n_trial_train_frame, val_cce, "go-", label="Val. CCE")
     axes[0].plot(n_trial_train_frame, test_cce, "ro-", label="Test CCE")
     axes[0].set_title("Model Loss")
-    axes[0].set_xlabel("Number of Judged Trials")
+    axes[0].set_xlabel("Number of Samples")
     axes[0].set_ylabel("Loss")
     axes[0].legend()
 
     axes[1].plot(n_trial_train_frame, r2, "ro-")
     axes[1].set_title("Model Convergence to Ground Truth")
-    axes[1].set_xlabel("Number of Judged Trials")
+    axes[1].set_xlabel("Number of Samples")
     axes[1].set_ylabel(r"Squared Pearson Correlation ($R^2$)")
     axes[1].set_ylim(-0.05, 1.05)
 
@@ -288,7 +298,7 @@ def build_ground_truth_model(n_stimuli, n_dim):
         ),
         trainable=False,
     )
-    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
     model = RankModel(percept=percept, proximity=proximity, soft_8rank2=soft_8rank2)
     model.compile(
         loss=keras.losses.CategoricalCrossentropy(),
@@ -312,7 +322,12 @@ def build_model(n_stimuli, n_dim):
 
     """
     # Create a group-agnostic percept layer.
-    percept = keras.layers.Embedding(n_stimuli + 1, n_dim, mask_zero=True)
+    percept = keras.layers.Embedding(
+        n_stimuli + 1,
+        n_dim,
+        embeddings_initializer=keras.initializers.RandomNormal(stddev=0.0001),
+        mask_zero=True,
+    )
     # Create a group-agnostic proximity layer.
     proximity = psiz.keras.layers.Minkowski(
         rho_initializer=keras.initializers.Constant(2.0),
@@ -325,7 +340,7 @@ def build_model(n_stimuli, n_dim):
         ),
         trainable=False,
     )
-    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
     model = RankModel(percept=percept, proximity=proximity, soft_8rank2=soft_8rank2)
     compile_kwargs = {
         "loss": keras.losses.CategoricalCrossentropy(),

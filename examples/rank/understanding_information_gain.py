@@ -26,17 +26,18 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 from pathlib import Path
 
+import keras
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
 from psiz.keras.ops import ig_model_categorical
 from psiz.tfp import unpack_mvn
 
-# Uncomment the following line to force eager execution.
+# NOTE: Uncomment the following lines to force eager execution.
+# import tensorflow as tf
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
@@ -62,7 +63,7 @@ class RankModel(psiz.keras.StochasticModel):
     def call(self, inputs):
         """Call."""
         z = self.percept(inputs["given2rank1_stimulus_set"])
-        z_q, z_r = tf.split(z, [1, 2], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.softrank(s)
 
@@ -117,7 +118,7 @@ def main():
         expected_ig = []
         for data in tfds_all:
             expected_ig.append(ig_model_categorical([model], data, n_sample))
-        expected_ig = tf.concat(expected_ig, 0).numpy()
+        expected_ig = keras.ops.concatenate(expected_ig, axis=0).numpy()
 
         # Select data to represent case in visualization.
         case_data = package_case_data(model, stimulus_set, expected_ig)
@@ -160,7 +161,7 @@ def draw_scenario(fig, gs, row, case_data):
 
     # Define one color per class for plots.
     n_stimuli = model.percept.input_dim
-    cmap = matplotlib.cm.get_cmap("jet")
+    cmap = matplotlib.colormaps.get_cmap("jet")
     norm = matplotlib.colors.Normalize(vmin=0.0, vmax=n_stimuli)
     color_arr = cmap(norm(range(n_stimuli)))
 
@@ -291,7 +292,7 @@ def build_model(n_reference, n_select, case):
         ),
         trainable=False,
     )
-    softrank = psiz.keras.layers.SoftRank(n_select=n_select)
+    softrank = psiz.keras.layers.SoftRank(n_select=n_select, trainable=False)
     model = RankModel(
         percept=percept, proximity=proximity, softrank=softrank, n_sample=n_sample
     )

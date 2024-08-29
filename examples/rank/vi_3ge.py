@@ -43,17 +43,18 @@ from pathlib import Path
 import shutil
 
 import imageio
+import keras
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
 from psiz.tfp import unpack_mvn
 
-# Uncomment the following line to force eager execution.
+# NOTE: Uncomment the following lines to force eager execution. TODO
+# import tensorflow as tf
 # tf.config.run_functions_eagerly(True)
 
 # Uncomment and edit the following to control GPU visibility.
@@ -62,11 +63,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 class RankModel(keras.Model):
-    """A soft rank model.
-
-    No Gates.
-
-    """
+    """A soft rank model with braided percept."""
 
     def __init__(
         self, braided_percept=None, proximity=None, soft_8rank2=None, **kwargs
@@ -83,7 +80,7 @@ class RankModel(keras.Model):
         z = self.braided_percept(
             [inputs["given8rank2_stimulus_set"], inputs["expertise"]]
         )
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_8rank2(s)
 
@@ -101,8 +98,8 @@ class SimilarityModel(keras.Model):
     def call(self, inputs):
         """Call."""
         z = self.braided_percept([inputs["rate2_stimulus_set"], inputs["expertise"]])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=self.stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=self.stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=self.stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=self.stimuli_axis)
         return self.proximity([z_0, z_1])
 
 
@@ -128,7 +125,7 @@ class StochasticRankModel(psiz.keras.StochasticModel):
         z = self.braided_percept(
             [inputs["given8rank2_stimulus_set"], inputs["expertise"]]
         )
-        z_q, z_r = tf.split(z, [1, 8], self.stimuli_axis)
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
         s = self.proximity([z_q, z_r])
         return self.soft_8rank2(s)
 
@@ -146,25 +143,27 @@ class StochasticSimilarityModel(psiz.keras.StochasticModel):
     def call(self, inputs):
         """Call."""
         z = self.braided_percept([inputs["rate2_stimulus_set"], inputs["expertise"]])
-        z_0 = tf.gather(z, indices=tf.constant(0), axis=self.stimuli_axis)
-        z_1 = tf.gather(z, indices=tf.constant(1), axis=self.stimuli_axis)
+        z_0 = keras.ops.take(z, indices=0, axis=self.stimuli_axis)
+        z_1 = keras.ops.take(z, indices=1, axis=self.stimuli_axis)
         return self.proximity([z_0, z_1])
 
 
 def main():
     """Run script."""
     # Settings.
-    fp_project = Path.home() / Path("psiz_examples", "rank", "vi_3ge")
+    fp_project = Path.home() / Path("psiz_examples", "rank", "vi_3g")
     fp_board = fp_project / Path("logs", "fit")
     n_stimuli = 30
     n_dim_inferred = 2
     n_group = 3
     epochs = 3000
-    batch_size = 128
+    batch_size = 512
     n_trial = 30 * batch_size
     n_trial_train = 24 * batch_size
     n_trial_val = 3 * batch_size
-    n_frame = 1  # Set n_frame > 1 to observe convergence behavior.
+    # NOTE: Set n_frame > 1 to observe convergence behavior.
+    n_frame = 1
+    patience = 10
 
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
@@ -185,7 +184,7 @@ def main():
     plt.rc("figure", titlesize=large_size)
 
     # Color settings.
-    cmap = matplotlib.cm.get_cmap("jet")
+    cmap = matplotlib.colormaps.get_cmap("jet")
     norm = matplotlib.colors.Normalize(vmin=0.0, vmax=n_stimuli)
     color_array = cmap(norm(range(n_stimuli)))
 
@@ -214,17 +213,17 @@ def main():
         name="expertise",
     )
     dummy_outcome = psiz.data.Continuous(np.ones([content_pairs.n_sample, 1]))
-    tfds_pairs_group0 = (
+    ds_pairs_group0 = (
         psiz.data.Dataset([content_pairs, group_0, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
     )
-    tfds_pairs_group1 = (
+    ds_pairs_group1 = (
         psiz.data.Dataset([content_pairs, group_1, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
     )
-    tfds_pairs_group2 = (
+    ds_pairs_group2 = (
         psiz.data.Dataset([content_pairs, group_2, dummy_outcome])
         .export()
         .batch(batch_size, drop_remainder=False)
@@ -232,9 +231,9 @@ def main():
 
     # Compute similarity matrix.
     simmat_truth = (
-        model_similarity_true.predict(tfds_pairs_group0),
-        model_similarity_true.predict(tfds_pairs_group1),
-        model_similarity_true.predict(tfds_pairs_group2),
+        model_similarity_true.predict(ds_pairs_group0, verbose=0),
+        model_similarity_true.predict(ds_pairs_group1, verbose=0),
+        model_similarity_true.predict(ds_pairs_group2, verbose=0),
     )
 
     # Generate a random set of trials. Replicate for each group.
@@ -266,19 +265,19 @@ def main():
         outcome_probs = model_true(x)
         outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
         outcome_idx = outcome_distribution.sample()
-        outcome_one_hot = tf.one_hot(outcome_idx, depth)
+        outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
-    tfds_all = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
+    ds_all = ds_content.map(lambda x: (x, simulate_agent(x))).unbatch()
 
     # Partition data into 80% train, 10% validation and 10% test set.
-    tfds_train = tfds_all.take(n_trial_train)
-    tfds_valtest = tfds_all.skip(n_trial_train)
-    tfds_val = (
-        tfds_valtest.take(n_trial_val).cache().batch(batch_size, drop_remainder=False)
+    ds_train = ds_all.take(n_trial_train)
+    ds_valtest = ds_all.skip(n_trial_train)
+    ds_val = (
+        ds_valtest.take(n_trial_val).cache().batch(batch_size, drop_remainder=False)
     )
-    tfds_test = (
-        tfds_valtest.skip(n_trial_val).cache().batch(batch_size, drop_remainder=False)
+    ds_test = (
+        ds_valtest.skip(n_trial_val).cache().batch(batch_size, drop_remainder=False)
     )
 
     # Infer independent models with increasing amounts of data.
@@ -293,8 +292,8 @@ def main():
     val_loss = np.empty((n_frame)) * np.nan
     test_loss = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
-        tfds_train_frame = (
-            tfds_train.take(int(n_trial_train_frame[i_frame]))
+        ds_train_frame = (
+            ds_train.take(int(n_trial_train_frame[i_frame]))
             .cache()
             .shuffle(
                 buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
@@ -321,29 +320,33 @@ def main():
             embeddings_freq=0,
             embeddings_metadata=None,
         )
-        cb_early = keras.callbacks.EarlyStopping(
-            "loss", patience=15, mode="min", restore_best_weights=False, verbose=1
+        cb_early_stop = keras.callbacks.EarlyStopping(
+            "val_loss",
+            patience=patience,
+            mode="min",
+            restore_best_weights=False,
+            verbose=1,
         )
-        callbacks = [cb_board, cb_early]
+        callbacks = [cb_board, cb_early_stop]
 
         # Infer model.
         history = model_inferred.fit(
-            tfds_train_frame,
-            validation_data=tfds_val,
+            ds_train_frame,
+            validation_data=ds_val,
             epochs=epochs,
             callbacks=callbacks,
-            verbose=0,
+            verbose=1,  # TODO Set to 0
         )
 
         subnet_0 = model_inferred.braided_percept.subnets[0]
         print(
             "avg scale posterior: {0:.4f}".format(
-                tf.reduce_mean(subnet_0.posterior.embeddings.distribution.scale).numpy()
+                keras.ops.mean(subnet_0.posterior.embeddings.distribution.scale).numpy()
             )
         )
         print(
             "avg scale intermediate: {0:.4f}".format(
-                tf.reduce_mean(subnet_0.prior.embeddings.distribution.scale).numpy()
+                keras.ops.mean(subnet_0.prior.embeddings.distribution.scale).numpy()
             )
         )
         print(
@@ -359,7 +362,7 @@ def main():
 
         keras.backend.clear_session()
         model_inferred.n_sample = 100
-        test_metrics = model_inferred.evaluate(tfds_test, verbose=0, return_dict=True)
+        test_metrics = model_inferred.evaluate(ds_test, verbose=0, return_dict=True)
         test_loss[i_frame] = test_metrics["loss"]
 
         # Compare the inferred model with ground truth by comparing the
@@ -370,9 +373,9 @@ def main():
             n_sample=100,
         )
         simmat_inferred = (
-            model_similarity_inferred.predict(tfds_pairs_group0),
-            model_similarity_inferred.predict(tfds_pairs_group1),
-            model_similarity_inferred.predict(tfds_pairs_group2),
+            model_similarity_inferred.predict(ds_pairs_group0, verbose=0),
+            model_similarity_inferred.predict(ds_pairs_group1, verbose=0),
+            model_similarity_inferred.predict(ds_pairs_group2, verbose=0),
         )
 
         for i_truth in range(n_group):
@@ -543,15 +546,9 @@ def build_model(n_stimuli, n_dim, kl_weight):
 
     # Define group-specific stimuli embeddings using the population-level
     # embedding as a shared prior.
-    percept_0 = build_vi_percept(
-        n_stimuli, n_dim, shared_prior, kl_weight, "vi_percept_group_0"
-    )
-    percept_1 = build_vi_percept(
-        n_stimuli, n_dim, shared_prior, kl_weight, "vi_percept_group_1"
-    )
-    percept_2 = build_vi_percept(
-        n_stimuli, n_dim, shared_prior, kl_weight, "vi_percept_group_2"
-    )
+    percept_0 = build_vi_percept(n_stimuli, n_dim, shared_prior, kl_weight, "group0")
+    percept_1 = build_vi_percept(n_stimuli, n_dim, shared_prior, kl_weight, "group1")
+    percept_2 = build_vi_percept(n_stimuli, n_dim, shared_prior, kl_weight, "group2")
     braided_percept = psiz.keras.layers.BraidGate(
         subnets=[percept_0, percept_1, percept_2],
         gating_index=-1,
@@ -569,7 +566,7 @@ def build_model(n_stimuli, n_dim, kl_weight):
         ),
         trainable=False,
     )
-    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2)
+    soft_8rank2 = psiz.keras.layers.SoftRank(n_select=2, trainable=False)
     model = StochasticRankModel(
         braided_percept=braided_percept,
         proximity=proximity,
@@ -596,6 +593,7 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
             tfp.math.softplus_inverse(posterior_scale).numpy()
         ),
         mask_zero=True,
+        name="population_posterior",
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
         n_stimuli + 1,
@@ -608,16 +606,20 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
                 tfp.math.softplus_inverse(prior_scale).numpy()
             ),
             loc_trainable=False,
+            name="population_prior_single",
         ),
         mask_zero=True,
+        name="population_prior_shared",
     )
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior,
         prior=embedding_prior,
         kl_weight=kl_weight,
         kl_n_sample=30,
-        name="vi_percept_shared",
+        name="population_variational",
     )
+    # Need to build here so we can use posterior locs at next level.
+    embedding_variational.build(None)
     return embedding_variational
 
 
@@ -634,13 +636,14 @@ def build_vi_percept(n_stimuli, n_dim, shared_prior, kl_weight, name):
             tfp.math.softplus_inverse(prior_scale).numpy()
         ),
         mask_zero=True,
+        name=f"{name}_posterior",
     )
     embedding_variational = psiz.keras.layers.EmbeddingVariational(
         posterior=embedding_posterior,
         prior=shared_prior,
         kl_weight=kl_weight,
         kl_n_sample=30,
-        name=name,
+        name=f"{name}_vartiational",
     )
     return embedding_variational
 
@@ -699,7 +702,7 @@ def plot_loss(ax, n_obs, train_loss, val_loss, test_loss):
 def plot_convergence(fig, ax, n_obs, r2):
     """Plot convergence."""
     # Settings.
-    cmap = matplotlib.cm.get_cmap("Greys")
+    cmap = matplotlib.colormaps.get_cmap("Greys")
     labels = ["Nov", "Int", "Exp"]
 
     im = ax.imshow(r2, cmap=cmap, vmin=0.0, vmax=1.0)

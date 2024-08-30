@@ -34,6 +34,10 @@ Please send in fixes and feature additions through Pull Requests.
 * `pytest --cov-report term-missing --cov=psiz tests`
     * Output a coverage report to the terminal that includes which statements were not covered by the tests.
 
+### Linting
+* Useful commands:
+    * `flake8 src --ignore=F401,E501,W503 --count --show-source --statistics`
+    * `pylint --disable=R,C,W --ignored-modules=tensorflow src`
 
 ## Versioning
 * Versions are released following [Semantic Versioning 2.0.0](https://semver.org/) which follows the MAJOR.MINOR.PATCH format.

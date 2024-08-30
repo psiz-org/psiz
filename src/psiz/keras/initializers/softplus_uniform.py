@@ -44,9 +44,7 @@ class SoftplusUniform(keras.initializers.Initializer):
         self.maxval = maxval
         self.hinge_softness = hinge_softness
         self._init_seed = seed
-        self.seed = (
-            seed if seed is not None else keras.backend.random.make_default_seed()
-        )
+        self.seed = seed if seed is not None else keras.random.SeedGenerator(seed=252)
         super().__init__()
 
     def __call__(self, shape, dtype=None):

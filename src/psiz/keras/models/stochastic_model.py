@@ -133,6 +133,7 @@ class StochasticModel(keras.Model):
                 sample_weight, self._n_sample
             )
 
+        # pylint: disable-next=used-before-assignment, possibly-used-before-assignment
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)  # Forward pass
             # Compute the loss value.
@@ -189,6 +190,7 @@ class StochasticModel(keras.Model):
         gradients = [v.value.grad for v in trainable_weights]
 
         # Update weights
+        # pylint: disable-next=used-before-assignment, possibly-used-before-assignment
         with torch.no_grad():
             self.optimizer.apply(gradients, trainable_weights)
 

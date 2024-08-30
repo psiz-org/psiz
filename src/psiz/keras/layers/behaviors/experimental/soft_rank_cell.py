@@ -92,9 +92,7 @@ class SoftRankCell(SoftRankBase):
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
         """Get initial state."""
         # initial_state = self._compute_outcome_probability(inputs)  # TODO(roads) ideally instead of ones
-        initial_state = [
-            keras.ops.ones([batch_size, self.n_outcome], name="rank_cell_initial_state")
-        ]
+        initial_state = [keras.ops.ones([batch_size, self.n_outcome])]
         return initial_state
 
     def call(self, inputs, states, training=None):

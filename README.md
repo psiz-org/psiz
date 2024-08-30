@@ -25,7 +25,9 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 
 ## Installation
 
-There are two different ways to install: PyPI or git. Installing via git has the advantage of including examples and tests in the cloned repository. After installing PsiZ you will also need to install a backend framework – either TensorFlow (>= 2.16) + TensorFlow Probability or PyTorch (>=2.4.0).
+There are two different ways to install: PyPI or git. Installing via git has the advantage of including examples and tests in the cloned repository.
+
+At the moment, PsiZ installs both TensorFlow and Pytorch as dependencies. A majority of Psiz will work with both backend frameworks, but not all features (such as stochastic layers) are supported for pytorch.
 
 ### Using PyPI
 ```
@@ -45,7 +47,7 @@ $ pip install /local/path/to/psiz
 ```
 
 **Notes:**
-* PsiZ originally required TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow. As of PsiZ v0.12, Keras 3 is used for the majority of layers (stochastic layers still depend on TensorFlow probability) which allows users to use TensorFlow or Pytorch.
+* PsiZ originally required TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow. As of PsiZ v0.12, Keras 3 is used for the majority of layers, which allows users to use either TensorFlow or Pytorch.
 * PsiZ versions <=0.5.0 must be installed using git clone and editable mode (e.g., `pip install -e /local/path/to/psiz`).
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`

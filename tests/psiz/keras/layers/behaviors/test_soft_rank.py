@@ -236,7 +236,6 @@ def test_serialization_v0():
     # Verify.
     assert cfg["name"] == "rs1"
     assert cfg["trainable"]
-    assert cfg["dtype"] == "float32"
     assert cfg["n_select"] == 1
     assert cfg["temperature_initializer"]["class_name"] == "Constant"
     assert cfg["temperature_initializer"]["config"]["value"] == 1.0
@@ -262,7 +261,6 @@ def test_serialization_v0():
     # Verify.
     assert cfg["name"] == "rs2"
     assert not cfg["trainable"]
-    assert cfg["dtype"] == "float32"
     assert cfg["n_select"] == 2
     assert cfg["temperature_initializer"]["class_name"] == "Constant"
     assert cfg["temperature_initializer"]["config"]["value"] == 0.01

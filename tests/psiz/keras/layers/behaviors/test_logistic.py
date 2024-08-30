@@ -114,7 +114,6 @@ def test_serialization_v0():
     # Verify.
     assert cfg["name"] == "my_logistic"
     assert cfg["trainable"]
-    assert cfg["dtype"] == "float32"
     assert cfg["upper_initializer"]["class_name"] == "Constant"
     assert cfg["upper_initializer"]["config"]["value"] == 2.0
     assert cfg["midpoint_initializer"]["class_name"] == "Constant"

@@ -53,7 +53,7 @@ import tensorflow_probability as tfp
 import psiz
 from psiz.tfp import unpack_mvn
 
-# NOTE: Uncomment the following lines to force eager execution. TODO
+# NOTE: Uncomment the following lines to force eager execution.
 # import tensorflow as tf
 # tf.config.run_functions_eagerly(True)
 
@@ -335,7 +335,7 @@ def main():
             validation_data=ds_val,
             epochs=epochs,
             callbacks=callbacks,
-            verbose=1,  # TODO Set to 0
+            verbose=0,
         )
 
         subnet_0 = model_inferred.braided_percept.subnets[0]

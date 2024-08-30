@@ -119,8 +119,8 @@ class SoftRankBase(keras.layers.Layer):
             )
         # Prebuild "outcome indices" that indicate all the possible
         # n-rank-m behavioral outcomes.
-        outcome_idx, n_outcome = self._possible_outcomes()
-        self._outcome_idx = outcome_idx
+        outcome_indices, n_outcome = self._possible_outcomes()
+        self._outcome_indices = outcome_indices
         self._n_outcome = float(n_outcome)
 
         # Prebuild a "selection mask" which will be used to mask probabilities
@@ -152,12 +152,12 @@ class SoftRankBase(keras.layers.Layer):
         """
         n_option = self.n_option
         n_select = self.n_select
-        outcome_idx = m_prefer_n(n_option, n_select)
-        n_outcome = outcome_idx.shape[0]
-        # Transpose `outcome_idx` to make more efficient when used inside
+        outcome_indices = m_prefer_n(n_option, n_select)
+        n_outcome = outcome_indices.shape[0]
+        # Transpose `outcome_indices` to make more efficient when used inside
         # `call` method.
-        outcome_idx = np.transpose(outcome_idx)
-        return outcome_idx, n_outcome
+        outcome_indices = np.transpose(outcome_indices)
+        return outcome_indices, n_outcome
 
     def _compute_outcome_probability(self, strength):
         """Compute outcome probability.
@@ -183,7 +183,9 @@ class SoftRankBase(keras.layers.Layer):
 
         # Create and populate "outcome" axis to `strength` that reflects all
         # possible outcomes.
-        strength = keras.ops.take(strength, self._outcome_idx, axis=self._option_axis)
+        strength = keras.ops.take(
+            strength, self._outcome_indices, axis=self._option_axis
+        )
         # Add singleton outcome axis to `is_option_present` to keep tensor shapes
         # consistent.
         is_option_present = keras.ops.expand_dims(is_option_present, self._outcome_axis)

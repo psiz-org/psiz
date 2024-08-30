@@ -31,8 +31,8 @@ author = "Brett D. Roads"
 
 # TODO remove release/version stuff?
 # The full version, including alpha/beta/rc tags
-release = "0.11.0"
-version = "0.11"
+release = "0.12.0"
+version = "0.12"
 # release = get_version("psiz")
 # version = '.'.join(release.split('.')[:3])
 

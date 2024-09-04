@@ -17,85 +17,95 @@
 
 
 import keras
-import tensorflow as tf
+import numpy as np
 
 from psiz.keras.layers import HeavyTailedSimilarity
 
 
-def test_init_default():
-    """Test default initialization."""
-    similarity = HeavyTailedSimilarity()
+class TestHeavyTailed:
 
-    assert similarity.fit_tau
-    assert similarity.fit_kappa
-    assert similarity.fit_alpha
+    def test_init_default(self):
+        """Test default initialization."""
+        similarity = HeavyTailedSimilarity()
 
+        assert similarity.fit_tau
+        assert similarity.fit_kappa
+        assert similarity.fit_alpha
 
-def test_init_options_0():
-    """Test initialization with optional arguments."""
-    similarity = HeavyTailedSimilarity(
-        fit_tau=False,
-        fit_kappa=False,
-        fit_alpha=False,
-        tau_initializer=keras.initializers.Constant(1.0),
-        kappa_initializer=keras.initializers.Constant(0.01),
-        alpha_initializer=keras.initializers.Constant(10.0),
-    )
+    def test_init_options_0(self):
+        """Test initialization with optional arguments."""
+        similarity = HeavyTailedSimilarity(
+            fit_tau=False,
+            fit_kappa=False,
+            fit_alpha=False,
+            tau_initializer=keras.initializers.Constant(1.0),
+            kappa_initializer=keras.initializers.Constant(0.01),
+            alpha_initializer=keras.initializers.Constant(10.0),
+        )
 
-    assert not similarity.fit_tau
-    assert not similarity.fit_kappa
-    assert not similarity.fit_alpha
+        assert not similarity.fit_tau
+        assert not similarity.fit_kappa
+        assert not similarity.fit_alpha
 
+    def test_call(self):
+        """Test call."""
+        similarity = HeavyTailedSimilarity(
+            tau_initializer=keras.initializers.Constant(1.0),
+            kappa_initializer=keras.initializers.Constant(2.1),
+            alpha_initializer=keras.initializers.Constant(2.0),
+        )
 
-def test_call():
-    """Test call."""
-    similarity = HeavyTailedSimilarity(
-        tau_initializer=keras.initializers.Constant(1.0),
-        kappa_initializer=keras.initializers.Constant(2.1),
-        alpha_initializer=keras.initializers.Constant(2.0),
-    )
+        d = np.array(
+            [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype="float32"
+        )
+        s_actual = similarity(d)
+        s_actual = keras.ops.convert_to_numpy(s_actual)
 
-    dist = tf.constant(
-        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
-    )
-    s_actual = similarity(dist)
+        s_desired = np.array(
+            [[0.12923835, 0.08191148], [0.11734734, 0.08859494]], dtype="float32"
+        )
+        np.testing.assert_allclose(s_actual, s_desired, rtol=1e-5)
 
-    s_desired = tf.constant(
-        [[0.12923837, 0.08191148], [0.11734734, 0.08859494]], dtype=tf.float32
-    )
-    tf.debugging.assert_near(s_actual, s_desired)
+    def test_get_config(self):
+        similarity = HeavyTailedSimilarity()
+        config = similarity.get_config()
 
+        assert config["fit_tau"]
+        assert config["fit_kappa"]
+        assert config["fit_alpha"]
 
-def test_get_config():
-    similarity = HeavyTailedSimilarity()
-    config = similarity.get_config()
+    def test_serialization(self):
+        """Test serialization with weights."""
+        similarity = HeavyTailedSimilarity()
 
-    assert config["fit_tau"]
-    assert config["fit_kappa"]
-    assert config["fit_alpha"]
+        # Call to ensure built.
+        d = np.array(
+            [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype="float32"
+        )
+        s0 = similarity(d)
+        s0 = keras.ops.convert_to_numpy(s0)
 
+        config = similarity.get_config()
+        # OR config = keras.layers.serialize(similarity)
+        weights = similarity.get_weights()
 
-def test_serialization():
-    """Test serialization with weights."""
-    similarity = HeavyTailedSimilarity()
+        recon_layer = HeavyTailedSimilarity.from_config(config)
+        # OR recon_layer = keras.layers.deserialize(config)
+        recon_layer.build([[None, 2], [None, 2]])
+        recon_layer.set_weights(weights)
+        s1 = recon_layer(d)
+        s1 = keras.ops.convert_to_numpy(s1)
 
-    # Call to ensure built.
-    dist = tf.constant(
-        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
-    )
-    s0 = similarity(dist)
-
-    config = similarity.get_config()
-    # OR config = keras.layers.serialize(similarity)
-    weights = similarity.get_weights()
-
-    recon_layer = HeavyTailedSimilarity.from_config(config)
-    # OR recon_layer = keras.layers.deserialize(config)
-    recon_layer.build([[None, 2], [None, 2]])
-    recon_layer.set_weights(weights)
-    s1 = recon_layer(dist)
-
-    tf.debugging.assert_equal(similarity.tau, recon_layer.tau)
-    tf.debugging.assert_equal(similarity.kappa, recon_layer.kappa)
-    tf.debugging.assert_equal(similarity.alpha, recon_layer.alpha)
-    tf.debugging.assert_equal(s0, s1)
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(similarity.tau),
+            keras.ops.convert_to_numpy(recon_layer.tau),
+        )
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(similarity.kappa),
+            keras.ops.convert_to_numpy(recon_layer.kappa),
+        )
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(similarity.alpha),
+            keras.ops.convert_to_numpy(recon_layer.alpha),
+        )
+        np.testing.assert_allclose(s0, s1)

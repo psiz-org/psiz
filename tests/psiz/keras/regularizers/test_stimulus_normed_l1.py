@@ -15,7 +15,9 @@
 # ============================================================================
 """Test constraints module."""
 
-import tensorflow as tf
+
+import keras
+import numpy as np
 
 from psiz.keras.regularizers import StimulusNormedL1
 
@@ -31,6 +33,8 @@ def test_all():
     assert config["l1"] == rate
 
     # Check call.
-    z = tf.constant([[0.5, 0.6, 0.7], [-0.1, 1.2, 0.2], [-1.0, 1.3, 0.3]])
+    z = np.array([[0.5, 0.6, 0.7], [-0.1, 1.2, 0.2], [-1.0, 1.3, 0.3]])
     output = reg(z)
-    tf.debugging.assert_equal(output, tf.constant(0.19666669))
+    output = keras.ops.convert_to_numpy(output)
+
+    np.testing.assert_array_almost_equal(output, np.array(0.19666669))

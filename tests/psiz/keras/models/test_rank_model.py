@@ -19,8 +19,8 @@
 from pathlib import Path
 
 import keras
+import numpy as np
 import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
@@ -468,39 +468,6 @@ class MultiRankModelA(keras.Model):
         config["soft_8rank2"] = keras.layers.deserialize(config["soft_8rank2"])
         return cls(**config)
 
-    # TODO remove when done debugging.
-    # def train_step(self, data):
-    #     # Unpack the data. Its structure depends on your model and
-    #     # on what you pass to `fit()`.
-    #     if len(data) == 3:
-    #         x, y, sample_weight = data
-    #     else:
-    #         sample_weight = None
-    #         x, y = data
-
-    #     with tf.GradientTape() as tape:
-    #         y_pred = self(x, training=True)  # Forward pass
-    #         # Compute the loss value
-    #         # (the loss function is configured in `compile()`)
-    #         loss = self.compute_loss(y=y, y_pred=y_pred, sample_weight=sample_weight)
-
-    #     # Compute gradients
-    #     trainable_vars = self.trainable_variables
-    #     gradients = tape.gradient(loss, trainable_vars)
-
-    #     # Update weights
-    #     self.optimizer.apply(gradients, trainable_vars)
-
-    #     # Update metrics (includes the metric that tracks the loss)
-    #     for metric in self.metrics:
-    #         if metric.name == "loss":
-    #             metric.update_state(loss)
-    #         else:
-    #             metric.update_state(y, y_pred)
-
-    #     # Return a dict mapping metric names to current value
-    #     return {m.name: m.result() for m in self.metrics}
-
 
 # TODO finish or move out
 # class RankCellModelA(keras.Model):
@@ -566,7 +533,7 @@ def call_fit_evaluate_predict(model, tfds):
     # assert not np.isnan(eval0)  TODO make work for returned nan or array of values
 
 
-def build_ranksim_subclass_a():
+def build_ranksim_subclass_a(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, one group, MLE.
@@ -577,12 +544,13 @@ def build_ranksim_subclass_a():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_functional_v0():
+def build_ranksim_functional_v0(is_eager):
     """Build model useing functional API.
 
     SoftRank, one group, MLE.
@@ -621,12 +589,13 @@ def build_ranksim_functional_v0():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_subclass_b():
+def build_ranksim_subclass_b(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, two kernels, MLE.
@@ -637,12 +606,13 @@ def build_ranksim_subclass_b():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_subclass_c():
+def build_ranksim_subclass_c(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, two kernels, MLE.
@@ -653,12 +623,13 @@ def build_ranksim_subclass_c():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_subclass_d():
+def build_ranksim_subclass_d(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, two kernels, MLE.
@@ -669,12 +640,13 @@ def build_ranksim_subclass_d():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_subclass_e():
+def build_ranksim_subclass_e(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, one group, MLE.
@@ -685,12 +657,13 @@ def build_ranksim_subclass_e():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_subclass_f():
+def build_ranksim_subclass_f(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, one group, MLE.
@@ -701,12 +674,13 @@ def build_ranksim_subclass_f():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_multirank_subclass_a():
+def build_multirank_subclass_a(is_eager):
     model = MultiRankModelA()
     compile_kwargs = {
         "optimizer": keras.optimizers.Adam(learning_rate=0.00001),
@@ -719,6 +693,7 @@ def build_multirank_subclass_a():
             ),
         },
         "loss_weights": {"given2rank1": 1.0, "given8rank2": 1.0},
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
@@ -736,6 +711,7 @@ def build_multirank_subclass_a():
 #         "loss": keras.losses.CategoricalCrossentropy(),
 #         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
 #         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+#         "run_eagerly": is_eager,
 #     }
 #     model.compile(**compile_kwargs)
 #     return model
@@ -774,6 +750,7 @@ def build_multirank_subclass_a():
 #         "loss": keras.losses.CategoricalCrossentropy(),
 #         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
 #         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+#         "run_eagerly": is_eager,
 #     }
 #     model.compile(**compile_kwargs)
 #     return model
@@ -785,20 +762,16 @@ class TestSoftRank:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_a()
+        model = build_ranksim_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_a()
+        model = build_ranksim_subclass_a(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds)
 
@@ -820,20 +793,16 @@ class TestSoftRank:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_functional_v0(self, ds_4rank1_v0, is_eager):
         """Test model using functional API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v0
-        model = build_ranksim_functional_v0()
+        model = build_ranksim_functional_v0(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v0
-        model = build_ranksim_functional_v0()
+        model = build_ranksim_functional_v0(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds)
 
@@ -854,60 +823,49 @@ class TestSoftRank:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_b(self, ds_4rank1_v1, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v1
-        model = build_ranksim_subclass_b()
+        model = build_ranksim_subclass_b(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v2
-        model = build_ranksim_subclass_c()
+        model = build_ranksim_subclass_c(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_d(self, ds_4rank1_v3, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v3
-        model = build_ranksim_subclass_d()
+        model = build_ranksim_subclass_d(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_e(self, ds_2rank1_v0, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_2rank1_v0
-        model = build_ranksim_subclass_e()
+        model = build_ranksim_subclass_e(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_f(self, ds_8rank2_v0, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_8rank2_v0
-        model = build_ranksim_subclass_f()
+        model = build_ranksim_subclass_f(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test usage in 'agent mode'."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_a()
+        model = build_ranksim_subclass_a(is_eager)
 
         def simulate_agent(x):
             n_class = 4
@@ -930,21 +888,16 @@ class TestMultiRankSimilarity:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_2rank1_8rank2_v0, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_2rank1_8rank2_v0
-        model = build_multirank_subclass_a()
+        model = build_multirank_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
-    # TODO here
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_2rank1_8rank2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_2rank1_8rank2_v0
-        model = build_multirank_subclass_a()
+        model = build_multirank_subclass_a(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds)
         predict0 = model.predict(tfds)
@@ -963,7 +916,12 @@ class TestMultiRankSimilarity:
 
         # Test for model equality.
         assert eval0 == eval1
-        tf.test.TestCase().assertAllClose(predict0, predict1, atol=1e-6)
+        np.testing.assert_allclose(
+            predict0["given2rank1"], predict1["given2rank1"], atol=1e-6
+        )
+        np.testing.assert_allclose(
+            predict0["given8rank2"], predict1["given8rank2"], atol=1e-6
+        )
 
 
 # TODO finish or move out
@@ -974,10 +932,8 @@ class TestMultiRankSimilarity:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_usage_subclass_a(self, ds_time_8rank2_v0, is_eager):
 #         """Test model using subclass API."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_subclass_a()
+#         model = build_ranksimcell_subclass_a(is_eager)
 #         call_fit_evaluate_predict(model, tfds)
 #         keras.backend.clear_session()
 
@@ -987,10 +943,8 @@ class TestMultiRankSimilarity:
 #         self, ds_time_8rank2_v0, is_eager, tmpdir
 #     ):
 #         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_subclass_a()
+#         model = build_ranksimcell_subclass_a(is_eager)
 #         model.fit(tfds, epochs=1)
 #         eval0 = model.evaluate(tfds)
 
@@ -1012,10 +966,8 @@ class TestMultiRankSimilarity:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_usage_functional_v0(self, ds_time_8rank2_v0, is_eager):
 #         """Test model using functional API."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_functional_v0()
+#         model = build_ranksimcell_functional_v0(is_eager)
 #         call_fit_evaluate_predict(model, tfds)
 #         keras.backend.clear_session()
 
@@ -1023,10 +975,8 @@ class TestMultiRankSimilarity:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_save_load_functional_v0(self, ds_time_8rank2_v0, is_eager, tmpdir):
 #         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_functional_v0()
+#         model = build_ranksimcell_functional_v0(is_eager)
 #         model.fit(tfds, epochs=1)
 #         eval0 = model.evaluate(tfds)
 

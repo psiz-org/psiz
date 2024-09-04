@@ -15,7 +15,9 @@
 # ============================================================================
 """Test constraints module."""
 
-import tensorflow as tf
+
+import keras
+import numpy as np
 
 from psiz.keras.constraints import NonNegNorm
 
@@ -45,12 +47,12 @@ def test_call_l1():
     con = NonNegNorm(scale=1.0, p=1.0, axis=1)
 
     # Check call.
-    w0 = tf.constant([[1.3, -0.35, 1.3], [1.40, 0.41, 1.6]], dtype=tf.float32)
+    w0 = np.array([[1.3, -0.35, 1.3], [1.40, 0.41, 1.6]], dtype="float32")
     w1 = con(w0)
-    w_desired = tf.constant(
-        [[0.5, 0.0, 0.5], [0.4105572, 0.12023461, 0.46920824]], dtype=tf.float32
+    w_desired = np.array(
+        [[0.5, 0.0, 0.5], [0.4105572, 0.12023461, 0.46920824]], dtype="float32"
     )
-    tf.debugging.assert_near(w_desired, w1)
+    np.testing.assert_array_almost_equal(keras.ops.convert_to_numpy(w1), w_desired)
 
 
 def test_call_l2():
@@ -63,10 +65,10 @@ def test_call_l2():
     con = NonNegNorm(scale=1.0, p=2.0, axis=1)
 
     # Check call.
-    w0 = tf.constant([[1.3, -0.35, 1.3], [1.40, 0.41, 1.6]], dtype=tf.float32)
+    w0 = np.array([[1.3, -0.35, 1.3], [1.40, 0.41, 1.6]], dtype="float32")
     w1 = con(w0)
-    w_desired = tf.constant(
+    w_desired = np.array(
         [[0.70710677, 0.0, 0.70710677], [0.6465909, 0.18935876, 0.73896104]],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(w_desired, w1)
+    np.testing.assert_array_almost_equal(keras.ops.convert_to_numpy(w1), w_desired)

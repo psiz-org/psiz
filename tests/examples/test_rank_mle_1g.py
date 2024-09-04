@@ -20,7 +20,6 @@ import keras
 import numpy as np
 import pytest
 from scipy.stats import pearsonr
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
@@ -128,6 +127,7 @@ def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": True,
     }
     model.compile(**compile_kwargs)
     return model
@@ -184,13 +184,12 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 # "learnable" by the other similarity functions.
 # TODO Would ideally use `keras.utils.split_dataset`, but it is brittle.
 @pytest.mark.slow
+@pytest.mark.tfp
 @pytest.mark.parametrize("similarity_func", ["Exponential"])
 @pytest.mark.parametrize("mask_zero", [True])
 @pytest.mark.parametrize("is_eager", [True, False])
 def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     """A crude MLE functional test that asserts more data helps."""
-    tf.config.run_functions_eagerly(is_eager)
-
     # Settings.
     n_stimuli = 100
     n_dim = 3

@@ -19,6 +19,7 @@
 from pathlib import Path
 
 import keras
+import numpy as np
 import pytest
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -963,7 +964,7 @@ class RateModelA(StochasticModel):
 #         return super(ALCOVEModelB, self).get_config()
 
 
-def build_ranksim_subclass_a():
+def build_ranksim_subclass_a(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, one group, stochastic (non VI).
@@ -974,12 +975,13 @@ def build_ranksim_subclass_a():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_subclass_b():
+def build_ranksim_subclass_b(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, one group, stochastic (non VI).
@@ -995,7 +997,7 @@ def build_ranksim_subclass_b():
     return model
 
 
-def build_ranksim_subclass_c():
+def build_ranksim_subclass_c(is_eager):
     """Build subclassed `Model`.
 
     SoftRank, gated VI percept.
@@ -1012,7 +1014,7 @@ def build_ranksim_subclass_c():
 
 
 # TODO finish or move out
-# def build_ranksimcell_subclass_a():
+# def build_ranksimcell_subclass_a(is_eager):
 #     """Build subclassed `Model`.
 
 #     RankSimilarityCell, one group, stochastic (non VI).
@@ -1028,7 +1030,7 @@ def build_ranksim_subclass_c():
 #     return model
 
 
-def build_ratesim_subclass_a():
+def build_ratesim_subclass_a(is_eager):
     """Build subclassed `Model`."""
     model = RateModelA(n_sample=11)
     compile_kwargs = {
@@ -1040,7 +1042,7 @@ def build_ratesim_subclass_a():
     return model
 
 
-# def build_alcove_subclass_a():
+# def build_alcove_subclass_a(is_eager):
 #     """Build subclassed `Model`.
 
 #     ALCOVECell, one group, stochastic (non VI).
@@ -1056,7 +1058,7 @@ def build_ratesim_subclass_a():
 #     return model
 
 
-# def build_alcove_subclass_b():
+# def build_alcove_subclass_b(is_eager):
 #     """Build subclassed `Model`.
 
 #     ALCOVECell, one group, VI percept layer.
@@ -1080,7 +1082,7 @@ def ds_x2():
 
     """
     n_example = 6
-    x_a = tf.constant(
+    x_a = np.array(
         [
             [0.1, 1.1, 2.1],
             [0.2, 1.2, 2.2],
@@ -1089,10 +1091,10 @@ def ds_x2():
             [0.5, 1.5, 2.5],
             [0.6, 1.6, 2.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     x = {"x_a": x_a}
-    y = tf.constant(
+    y = np.array(
         [
             [10.1, 11.1, 12.1],
             [10.2, 11.2, 12.2],
@@ -1101,14 +1103,14 @@ def ds_x2():
             [10.5, 11.5, 12.5],
             [10.6, 11.6, 12.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
 
-    w = tf.constant([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype=tf.float32)
+    w = np.array([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype="float32")
     tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
     tfds = tfds.batch(n_example, drop_remainder=False)
 
-    input_shape = {"x_a": tf.TensorShape(x_a.shape)}
+    input_shape = {"x_a": (x_a.shape)}
 
     return {"tfds": tfds, "input_shape": input_shape}
 
@@ -1121,7 +1123,7 @@ def ds_x2_as_tensor():
 
     """
     n_example = 6
-    x = tf.constant(
+    x = np.array(
         [
             [0.1, 1.1, 2.1],
             [0.2, 1.2, 2.2],
@@ -1130,9 +1132,9 @@ def ds_x2_as_tensor():
             [0.5, 1.5, 2.5],
             [0.6, 1.6, 2.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    y = tf.constant(
+    y = np.array(
         [
             [10.1, 11.1, 12.1],
             [10.2, 11.2, 12.2],
@@ -1141,14 +1143,14 @@ def ds_x2_as_tensor():
             [10.5, 11.5, 12.5],
             [10.6, 11.6, 12.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
 
-    w = tf.constant([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype=tf.float32)
+    w = np.array([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype="float32")
     tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
     tfds = tfds.batch(n_example, drop_remainder=False)
 
-    input_shape = tf.TensorShape(x.shape)
+    input_shape = x.shape
 
     return {"tfds": tfds, "input_shape": input_shape}
 
@@ -1161,7 +1163,7 @@ def ds_x2_x2_x2():
 
     """
     n_example = 6
-    x_a = tf.constant(
+    x_a = np.array(
         [
             [0.1, 1.1, 2.1],
             [0.2, 1.2, 2.2],
@@ -1170,9 +1172,9 @@ def ds_x2_x2_x2():
             [0.5, 1.5, 2.5],
             [0.6, 1.6, 2.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    x_b = tf.constant(
+    x_b = np.array(
         [
             [10.1, 11.1, 12.1],
             [10.2, 11.2, 12.2],
@@ -1181,9 +1183,9 @@ def ds_x2_x2_x2():
             [10.5, 11.5, 12.5],
             [10.6, 11.6, 12.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    x_c = tf.constant(
+    x_c = np.array(
         [
             [20.1, 21.1, 22.1],
             [20.2, 21.2, 22.2],
@@ -1192,7 +1194,7 @@ def ds_x2_x2_x2():
             [20.5, 21.5, 22.5],
             [20.6, 21.6, 22.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
 
     x = {
@@ -1200,7 +1202,7 @@ def ds_x2_x2_x2():
         "x_b": x_b,
         "x_c": x_c,
     }
-    y = tf.constant(
+    y = np.array(
         [
             [10.1, 11.1, 12.1],
             [10.2, 11.2, 12.2],
@@ -1209,17 +1211,17 @@ def ds_x2_x2_x2():
             [10.5, 11.5, 12.5],
             [10.6, 11.6, 12.6],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
 
-    w = tf.constant([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype=tf.float32)
+    w = np.array([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype="float32")
     tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
     tfds = tfds.batch(n_example, drop_remainder=False)
 
     input_shape = {
-        "x_a": tf.TensorShape(x_a.shape),
-        "x_b": tf.TensorShape(x_b.shape),
-        "x_c": tf.TensorShape(x_c.shape),
+        "x_a": x_a.shape,
+        "x_b": x_b.shape,
+        "x_c": x_c.shape,
     }
 
     return {"tfds": tfds, "input_shape": input_shape}
@@ -1233,7 +1235,7 @@ def ds_x3_x3():
 
     """
     n_example = 6
-    x_a = tf.constant(
+    x_a = np.array(
         [
             [[0.1, 1.1, 2.1], [3.1, 4.1, 5.1]],
             [[0.2, 1.2, 2.2], [3.2, 4.2, 5.2]],
@@ -1242,9 +1244,9 @@ def ds_x3_x3():
             [[0.5, 1.5, 2.5], [3.5, 4.5, 5.5]],
             [[0.6, 1.6, 2.6], [3.6, 4.6, 5.6]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    x_b = tf.constant(
+    x_b = np.array(
         [
             [[10.1, 11.1, 12.1], [13.1, 14.1, 15.1]],
             [[10.2, 11.2, 12.2], [13.2, 14.2, 15.2]],
@@ -1253,14 +1255,14 @@ def ds_x3_x3():
             [[10.5, 11.5, 12.5], [13.5, 14.5, 15.5]],
             [[10.6, 11.6, 12.6], [13.6, 14.6, 15.6]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
 
     x = {
         "x_a": x_a,
         "x_b": x_b,
     }
-    y = tf.constant(
+    y = np.array(
         [
             [[10.1, 11.1, 12.1], [10.1, 11.1, 12.1]],
             [[10.2, 11.2, 12.2], [10.2, 11.2, 12.2]],
@@ -1269,19 +1271,19 @@ def ds_x3_x3():
             [[10.5, 11.5, 12.5], [10.5, 11.5, 12.5]],
             [[10.6, 11.6, 12.6], [10.6, 11.6, 12.6]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
 
-    w = tf.constant(
+    w = np.array(
         [[1.0, 1.0], [1.0, 1.0], [0.2, 0.2], [1.0, 1.0], [1.0, 1.0], [0.8, 0.8]],
-        dtype=tf.float32,
+        dtype="float32",
     )
     tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
     tfds = tfds.batch(n_example, drop_remainder=False)
 
     input_shape = {
-        "x_a": tf.TensorShape(x_a.shape),
-        "x_b": tf.TensorShape(x_b.shape),
+        "x_a": x_a.shape,
+        "x_b": x_b.shape,
     }
 
     return {"tfds": tfds, "input_shape": input_shape}
@@ -1310,13 +1312,13 @@ class TestControl:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
-        tf.config.run_functions_eagerly(is_eager)
         tfds = ds_x2["tfds"]
 
         model = ModelControl()
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
             "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+            "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1337,8 +1339,8 @@ class TestControl:
 
         # Test for model equality.
         assert result0 == result1
-        tf.debugging.assert_equal(kernel0, kernel1)
-        tf.debugging.assert_equal(bias0, bias1)
+        np.testing.assert_allclose(kernel0, kernel1)
+        np.testing.assert_allclose(bias0, bias1)
 
 
 class TestModelA:
@@ -1347,13 +1349,13 @@ class TestModelA:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
-        tf.config.run_functions_eagerly(is_eager)
         tfds = ds_x2["tfds"]
 
         model = ModelA(n_sample=2)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
             "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+            "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1373,8 +1375,8 @@ class TestModelA:
         # Test for model equality.
         assert loaded.n_sample == 2
         assert results_0["loss"] == results_1["loss"]
-        tf.debugging.assert_equal(kernel0, kernel1)
-        tf.debugging.assert_equal(bias0, bias1)
+        np.testing.assert_allclose(kernel0, kernel1)
+        np.testing.assert_allclose(bias0, bias1)
 
 
 class TestModelB:
@@ -1383,13 +1385,13 @@ class TestModelB:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_b1(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
-        tf.config.run_functions_eagerly(is_eager)
         tfds = ds_x2["tfds"]
 
         model = ModelB(n_sample=2)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
             "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+            "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1407,18 +1409,19 @@ class TestModelB:
         # Test for model equality.
         assert loaded.n_sample == 2
         assert results_0["loss"] == results_1["loss"]
-        tf.debugging.assert_equal(kernel0, kernel1)
+        np.testing.assert_allclose(kernel0, kernel1)
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_b2(self, ds_x2_as_tensor, is_eager, tmpdir):
         """Test model serialization."""
-        tf.config.run_functions_eagerly(is_eager)
+
         tfds = ds_x2_as_tensor["tfds"]
 
         model = ModelB2(n_sample=2)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
             "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+            "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
         model.fit(tfds, epochs=2)
@@ -1439,7 +1442,7 @@ class TestModelB:
         # Test for model equality.
         assert loaded.n_sample == 2
         assert results_0["loss"] == results_1["loss"]
-        tf.debugging.assert_equal(kernel0, kernel1)
+        np.testing.assert_allclose(kernel0, kernel1)
 
 
 class TestModelC:
@@ -1448,16 +1451,22 @@ class TestModelC:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage(self, ds_x2_x2_x2, is_eager):
         """Test usage."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_x2_x2_x2["tfds"]
         input_shape = ds_x2_x2_x2["input_shape"]
         model = ModelC(n_sample=2)
         model.build(input_shape)
+        # TODO why don't we compile?
+        # compile_kwargs = {
+        #     "loss": keras.losses.MeanSquaredError(),
+        #     "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+        #     "run_eagerly": is_eager,
+        # }
+        # model.compile(**compile_kwargs)
 
         assert model.n_sample == 2
 
-        x0_desired = tf.constant(
+        x0_desired = np.array(
             [
                 [0.1, 1.1, 2.1],
                 [0.1, 1.1, 2.1],
@@ -1472,9 +1481,9 @@ class TestModelC:
                 [0.6, 1.6, 2.6],
                 [0.6, 1.6, 2.6],
             ],
-            dtype=tf.float32,
+            dtype="float32",
         )
-        x1_desired = tf.constant(
+        x1_desired = np.array(
             [
                 [10.1, 11.1, 12.1],
                 [10.1, 11.1, 12.1],
@@ -1489,9 +1498,9 @@ class TestModelC:
                 [10.6, 11.6, 12.6],
                 [10.6, 11.6, 12.6],
             ],
-            dtype=tf.float32,
+            dtype="float32",
         )
-        x2_desired = tf.constant(
+        x2_desired = np.array(
             [
                 [20.1, 21.1, 22.1],
                 [20.1, 21.1, 22.1],
@@ -1506,10 +1515,10 @@ class TestModelC:
                 [20.6, 21.6, 22.6],
                 [20.6, 21.6, 22.6],
             ],
-            dtype=tf.float32,
+            dtype="float32",
         )
 
-        y_desired = tf.constant(
+        y_desired = np.array(
             [
                 [10.1, 11.1, 12.1],
                 [10.1, 11.1, 12.1],
@@ -1524,15 +1533,15 @@ class TestModelC:
                 [10.6, 11.6, 12.6],
                 [10.6, 11.6, 12.6],
             ],
-            dtype=tf.float32,
+            dtype="float32",
         )
 
-        sample_weight_desired = tf.constant(
+        sample_weight_desired = np.array(
             [1.0, 1.0, 1.0, 1.0, 0.2, 0.2, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8],
-            dtype=tf.float32,
+            dtype="float32",
         )
 
-        y_pred_desired = tf.constant(
+        y_pred_desired = np.array(
             [
                 [10.2, 12.2, 14.2],
                 [10.2, 12.2, 14.2],
@@ -1547,7 +1556,7 @@ class TestModelC:
                 [11.2, 13.2, 15.2],
                 [11.2, 13.2, 15.2],
             ],
-            dtype=tf.float32,
+            dtype="float32",
         )
 
         # Perform a `test_step`.
@@ -1562,26 +1571,26 @@ class TestModelC:
             )
 
             # Assert `x`, `y` and `sample_weight` handled correctly.
-            tf.debugging.assert_equal(x["x_a"], x0_desired)
-            tf.debugging.assert_equal(x["x_b"], x1_desired)
-            tf.debugging.assert_equal(x["x_c"], x2_desired)
-            tf.debugging.assert_equal(y, y_desired)
-            tf.debugging.assert_equal(sample_weight, sample_weight_desired)
+            np.testing.assert_allclose(x["x_a"], x0_desired)
+            np.testing.assert_allclose(x["x_b"], x1_desired)
+            np.testing.assert_allclose(x["x_c"], x2_desired)
+            np.testing.assert_allclose(y, y_desired)
+            np.testing.assert_allclose(sample_weight, sample_weight_desired)
 
             y_pred = model(x, training=False)
             # Assert `y_pred` handled correctly.
-            tf.debugging.assert_near(y_pred, y_pred_desired)
+            np.testing.assert_allclose(y_pred, y_pred_desired, atol=1e-6)
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_nsample_change(self, ds_x2_x2_x2, is_eager):
         """Test model where number of samples changes between use."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_x2_x2_x2["tfds"]
         model = ModelC(n_sample=2)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
             "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+            "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
         model.fit(tfds)
@@ -1590,7 +1599,7 @@ class TestModelC:
         model.n_sample = 5
 
         # When running model, we now expect the following:
-        y_desired = tf.constant(
+        y_desired = np.array(
             [
                 [10.1, 11.1, 12.1],
                 [10.1, 11.1, 12.1],
@@ -1623,9 +1632,9 @@ class TestModelC:
                 [10.6, 11.6, 12.6],
                 [10.6, 11.6, 12.6],
             ],
-            dtype=tf.float32,
+            dtype="float32",
         )
-        sample_weight_desired = tf.constant(
+        sample_weight_desired = np.array(
             [
                 1.0,
                 1.0,
@@ -1658,9 +1667,9 @@ class TestModelC:
                 0.8,
                 0.8,
             ],
-            dtype=tf.float32,
+            dtype="float32",
         )
-        y_pred_shape_desired = tf.TensorShape([30, 3])
+        y_pred_shape_desired = [30, 3]
 
         # Perform a `test_step` to verify `n_sample` took effect.
         for data in tfds:
@@ -1674,23 +1683,23 @@ class TestModelC:
             )
             # Assert `y` and `sample_weight` handled correctly.
             # Assert `y` and `sample_weight` handled correctly.
-            tf.debugging.assert_equal(y, y_desired)
-            tf.debugging.assert_equal(sample_weight, sample_weight_desired)
+            np.testing.assert_allclose(y, y_desired)
+            np.testing.assert_allclose(sample_weight, sample_weight_desired)
 
             y_pred = model(x, training=False)
             # Assert `y_pred` handled correctly.
-            tf.debugging.assert_equal(tf.shape(y_pred), y_pred_shape_desired)
+            np.testing.assert_allclose(np.shape(y_pred), y_pred_shape_desired)
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load(self, ds_x2_x2_x2, is_eager, tmpdir):
         """Test model serialization."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_x2_x2_x2["tfds"]
         model = ModelC(n_sample=7)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
             "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+            "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
 
@@ -1714,8 +1723,8 @@ class TestModelC:
         # Test for model equality.
         assert loaded.n_sample == 7
         assert results_0["loss"] == results_1["loss"]
-        tf.debugging.assert_equal(branch_0_w0_0, branch_0_w0_1)
-        tf.debugging.assert_equal(branch_1_w0_0, branch_1_w0_1)
+        np.testing.assert_allclose(branch_0_w0_0, branch_0_w0_1)
+        np.testing.assert_allclose(branch_1_w0_0, branch_1_w0_1)
 
 
 class TestModelD:
@@ -1724,21 +1733,21 @@ class TestModelD:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage(self, ds_x3_x3, is_eager):
         """Test with RNN layer."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_x3_x3["tfds"]
         input_shape = ds_x3_x3["input_shape"]
         model = ModelD(n_sample=10)
         model.build(input_shape)
+        # TODO why don't we compile?
 
         assert model.n_sample == 10
 
         # Do a quick test of the Tensor shapes.
-        x0_shape_desired = tf.TensorShape([60, 2, 3])
-        x1_shape_desired = tf.TensorShape([60, 2, 3])
-        y_shape_desired = tf.TensorShape([60, 2, 3])
-        w_shape_desired = tf.TensorShape([60, 2])
-        y_pred_shape_desired = tf.TensorShape([60, 2, 3])
+        x0_shape_desired = [60, 2, 3]
+        x1_shape_desired = [60, 2, 3]
+        y_shape_desired = [60, 2, 3]
+        w_shape_desired = [60, 2]
+        y_pred_shape_desired = [60, 2, 3]
 
         # Perform a `test_step`.
         for data in tfds:
@@ -1751,25 +1760,25 @@ class TestModelD:
                 sample_weight, model.n_sample
             )
             # Assert `x`, `y` and `sample_weight` handled correctly.
-            tf.debugging.assert_equal(x["x_a"].shape, x0_shape_desired)
-            tf.debugging.assert_equal(x["x_b"].shape, x1_shape_desired)
-            tf.debugging.assert_equal(y.shape, y_shape_desired)
-            tf.debugging.assert_equal(sample_weight.shape, w_shape_desired)
+            np.testing.assert_allclose(x["x_a"].shape, x0_shape_desired)
+            np.testing.assert_allclose(x["x_b"].shape, x1_shape_desired)
+            np.testing.assert_allclose(y.shape, y_shape_desired)
+            np.testing.assert_allclose(sample_weight.shape, w_shape_desired)
 
             y_pred = model(x, training=False)
             # Assert `y_pred` handled correctly.
-            tf.debugging.assert_equal(y_pred.shape, y_pred_shape_desired)
+            np.testing.assert_allclose(y_pred.shape, y_pred_shape_desired)
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load(self, ds_x3_x3, is_eager, tmpdir):
         """Test model serialization."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_x3_x3["tfds"]
         model = ModelD(n_sample=11)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
             "optimizer": keras.optimizers.Adam(learning_rate=0.001),
+            "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
 
@@ -1791,22 +1800,23 @@ class TestModelD:
         # Test for model equality.
         assert loaded.n_sample == 11
         assert results_0["loss"] == results_1["loss"]
-        tf.debugging.assert_equal(kernel_0, kernel_1)
+        np.testing.assert_allclose(kernel_0, kernel_1)
 
 
 class TestRankSimilarity:
     """Test using `SoftRank` layer."""
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_a()
+        model = build_ranksim_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load.
@@ -1814,10 +1824,9 @@ class TestRankSimilarity:
         We change default `n_sample` for a more comprehensive test.
 
         """
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_a()
+        model = build_ranksim_subclass_a(is_eager)
         # TODO remove?
         # input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
         # model.build(input_shape)
@@ -1850,30 +1859,30 @@ class TestRankSimilarity:
 
         # Test for model equality.
         assert loaded.n_sample == 21
-        tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
-        tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
+        np.testing.assert_allclose(percept_mean, loaded_percept_mean)
+        np.testing.assert_allclose(percept_variance, loaded_percept_variance)
         # NOTE: Don't check loss for equivalence because of
         # stochasticity.
 
         keras.backend.clear_session()
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_b(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_b()
+        model = build_ranksim_subclass_b(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_b(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_b()
+        model = build_ranksim_subclass_b(is_eager)
         # TODO remove?
         # input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
         # model.build(input_shape)
@@ -1906,30 +1915,31 @@ class TestRankSimilarity:
 
         # Test for model equality.
         assert loaded.n_sample == 21
-        tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
-        tf.debugging.assert_equal(percept_variance, loaded_percept_variance)
+        np.testing.assert_allclose(percept_mean, loaded_percept_mean)
+        np.testing.assert_allclose(percept_variance, loaded_percept_variance)
         # NOTE: Don't check loss for equivalence because of
         # stochasticity.
 
         keras.backend.clear_session()
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
         """Test subclassed `StochasticModel`."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank1_v2
-        model = build_ranksim_subclass_c()
+        model = build_ranksim_subclass_c(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
+    @pytest.mark.tfp
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test usage in 'agent mode'."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_4rank1_v0
-        model = build_ranksim_subclass_a()
+        model = build_ranksim_subclass_a(is_eager)
 
         def simulate_agent(x):
             depth = 4
@@ -1939,7 +1949,7 @@ class TestRankSimilarity:
             outcome_probs = model.average_repeated_samples(outcome_probs, n_sample)
             outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
             outcome_idx = outcome_distribution.sample()
-            outcome_one_hot = tf.one_hot(outcome_idx, depth)
+            outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
             return outcome_one_hot
 
         _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
@@ -1965,7 +1975,7 @@ class TestRankSimilarity:
 #     )
 #     def test_usage_subclass_a(self, ds_time_8rank2_v0, is_eager):
 #         """Test subclassed `StochasticModel`."""
-#         tf.config.run_functions_eagerly(is_eager)
+#
 
 #         tfds = ds_time_8rank2_v0
 #         model = build_ranksimcell_subclass_a()
@@ -1979,10 +1989,10 @@ class TestRankSimilarity:
 #         self, ds_time_8rank2_v0, is_eager, tmpdir
 #     ):
 #         """Test save/load."""
-#         tf.config.run_functions_eagerly(is_eager)
+#
 
 #         tfds = ds_time_8rank2_v0
-#         model = build_ranksimcell_subclass_a()
+#         model = build_ranksimcell_subclass_a(is_eager)
 #         input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
 #         model.build(input_shape)
 
@@ -2013,7 +2023,7 @@ class TestRankSimilarity:
 #         assert loaded.n_sample == 21
 
 #         # Check `percept` posterior mean the same.
-#         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
+#         np.testing.assert_allclose(percept_mean, loaded_percept_mean)
 
 #         keras.backend.clear_session()
 
@@ -2021,23 +2031,23 @@ class TestRankSimilarity:
 class TestRateSimilarity:
     """Test using `Logistic` layer."""
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_rate2_v0, is_eager):
         """Test subclassed `StochasticModel`."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_rate2_v0
-        model = build_ratesim_subclass_a()
+        model = build_ratesim_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
+    @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_rate2_v0, is_eager, tmpdir):
         """Test save/load."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_rate2_v0
-        model = build_ratesim_subclass_a()
+        model = build_ratesim_subclass_a(is_eager)
         model.fit(tfds, epochs=1)
 
         # Test stochastic attributes.
@@ -2062,7 +2072,7 @@ class TestRateSimilarity:
         assert loaded.n_sample == 11
 
         # Check `percept` posterior mean the same.
-        tf.debugging.assert_equal(percept_mean, loaded.percept.embeddings.mean())
+        np.testing.assert_allclose(percept_mean, loaded.percept.embeddings.mean())
 
         keras.backend.clear_session()
 
@@ -2074,20 +2084,20 @@ class TestRateSimilarity:
 #     @pytest.mark.parametrize("is_eager", [True, False])
 #     def test_usage_subclass_a(self, ds_time_categorize_v0, is_eager):
 #         """Test subclassed model, one group."""
-#         tf.config.run_functions_eagerly(is_eager)
+#
 
 #         tfds = ds_time_categorize_v0
-#         model = build_alcove_subclass_a()
+#         model = build_alcove_subclass_a(is_eager)
 #         call_fit_evaluate_predict(model, tfds)
 #         keras.backend.clear_session()
 
 #     @pytest.mark.parametrize("is_eager", [True, False])
 #     def test_save_load_subclass_a(self, ds_time_categorize_v0, is_eager, tmpdir):
 #         """Test save/load."""
-#         tf.config.run_functions_eagerly(is_eager)
+#
 
 #         tfds = ds_time_categorize_v0
-#         model = build_alcove_subclass_a()
+#         model = build_alcove_subclass_a(is_eager)
 #         model.fit(tfds, epochs=1)
 
 #         # Test initialization settings.
@@ -2114,7 +2124,7 @@ class TestRateSimilarity:
 #         assert loaded.n_sample == 11
 
 #         # Check `percept` posterior mean the same.
-#         tf.debugging.assert_equal(percept_mean, loaded_percept_mean)
+#         np.testing.assert_allclose(percept_mean, loaded_percept_mean)
 
 #         keras.backend.clear_session()
 
@@ -2132,10 +2142,10 @@ class TestRateSimilarity:
 #     )
 #     def test_usage_subclass_b(self, ds_time_categorize_v0, is_eager):
 #         """Test subclassed model, one group."""
-#         tf.config.run_functions_eagerly(is_eager)
+#
 
 #         tfds = ds_time_categorize_v0
-#         model = build_alcove_subclass_b()
+#         model = build_alcove_subclass_b(is_eager)
 #         call_fit_evaluate_predict(model, tfds)
 #         keras.backend.clear_session()
 
@@ -2143,10 +2153,10 @@ class TestRateSimilarity:
 #     @pytest.mark.parametrize("is_eager", [True, False])
 #     def test_save_load_subclass_b(self, ds_time_categorize_v0, is_eager, tmpdir):
 #         """Test save/load."""
-#         tf.config.run_functions_eagerly(is_eager)
+#
 
 #         tfds = ds_time_categorize_v0
-#         model = build_alcove_subclass_b()
+#         model = build_alcove_subclass_b(is_eager)
 #         model.fit(tfds, epochs=1)
 
 #         # Test initialization settings.
@@ -2172,7 +2182,7 @@ class TestRateSimilarity:
 #         assert loaded.n_sample == 11
 
 #         # Check `percept` posterior mean the same.
-#         tf.debugging.assert_equal(
+#         np.testing.assert_allclose(
 #             percept_mean, loaded.behavior.cell.percept.embeddings.mean()
 #         )
 

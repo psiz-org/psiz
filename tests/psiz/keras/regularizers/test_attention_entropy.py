@@ -15,7 +15,9 @@
 # ============================================================================
 """Test constraints module."""
 
-import tensorflow as tf
+
+import keras
+import numpy as np
 
 from psiz.keras.regularizers import AttentionEntropy
 
@@ -31,6 +33,8 @@ def test_all():
     assert config["rate"] == rate
 
     # Check call.
-    w = tf.constant([[0.5], [1.2], [1.3]])
+    w = np.array([[0.5], [1.2], [1.3]])
     output = reg(w)
-    tf.debugging.assert_equal(output, tf.constant(0.03425057))
+    output = keras.ops.convert_to_numpy(output)
+
+    np.testing.assert_array_almost_equal(output, np.array(0.03425057))

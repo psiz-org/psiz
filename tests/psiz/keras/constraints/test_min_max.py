@@ -15,7 +15,9 @@
 # ============================================================================
 """Test constraints module."""
 
-import tensorflow as tf
+
+import keras
+import numpy as np
 
 from psiz.keras.constraints import MinMax
 
@@ -33,7 +35,7 @@ def test_all():
     assert config["max_value"] == 0.1
 
     # Check call.
-    w0 = tf.constant([[1.36, -0.35], [1.40, -0.41]], dtype=tf.float32)
+    w0 = np.array([[1.36, -0.35], [1.40, -0.41]], dtype="float32")
     w1 = con(w0)
-    w_desired = tf.constant([[0.1, -0.1], [0.1, -0.1]], dtype=tf.float32)
-    tf.debugging.assert_near(w_desired, w1)
+    w_desired = np.array([[0.1, -0.1], [0.1, -0.1]], dtype="float32")
+    np.testing.assert_array_almost_equal(keras.ops.convert_to_numpy(w1), w_desired)

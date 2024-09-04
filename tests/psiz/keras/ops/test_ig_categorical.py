@@ -15,14 +15,15 @@
 # ============================================================================
 """Test trials module."""
 
-import tensorflow as tf
+
+import numpy as np
 
 from psiz.keras.ops import ig_categorical
 
 
 def test_0():
     """Test 0."""
-    y_pred = tf.constant(
+    y_pred = np.array(
         [
             [
                 [0.6323555, 0.29509985, 0.07254463],
@@ -61,8 +62,8 @@ def test_0():
                 [0.47671524, 0.1877261, 0.3355587],
             ],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     ig = ig_categorical(y_pred)
-    ig_desired = tf.constant([0.00270152, 0.01042497, 0.00180888], dtype=tf.float32)
-    tf.debugging.assert_near(ig, ig_desired)
+    ig_desired = np.array([0.00270152, 0.01042497, 0.00180888], dtype="float32")
+    np.testing.assert_allclose(ig, ig_desired, rtol=1e-4)

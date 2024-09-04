@@ -18,7 +18,6 @@
 
 import keras
 import numpy as np
-import tensorflow as tf
 
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 from psiz.keras.layers.proximities.minkowski_stochastic import MinkowskiStochastic
@@ -77,22 +76,50 @@ def test_serialization():
             trainable=False,
         ),
     )
-    mink_layer.build(
-        [[None, 3], [None, 3]]
-    )  # TODO I suspect I'm not calling build correctly
-    tf.debugging.assert_equal(mink_layer.w.event_shape, tf.TensorShape([3]))
-    tf.debugging.assert_equal(mink_layer.rho.mode(), tf.constant([2.1]))
-    tf.debugging.assert_equal(mink_layer.w.mode(), tf.constant([1.1, 1.1, 1.1]))
-    tf.debugging.assert_equal(mink_layer.activation.beta, tf.constant(0.1))
-    tf.debugging.assert_equal(mink_layer.activation.tau, tf.constant(1.0))
-    tf.debugging.assert_equal(mink_layer.activation.gamma, tf.constant(0.001))
+    mink_layer.build([[None, 3], [None, 3]])
+    np.testing.assert_array_equal(mink_layer.w.event_shape, [3])
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.rho.mode()),
+        np.array(2.1, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.w.mode()),
+        np.array([1.1, 1.1, 1.1], dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.beta),
+        np.array(0.1, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.tau),
+        np.array(1.0, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.gamma),
+        np.array(0.001, dtype="float32"),
+    )
     config = mink_layer.get_config()
 
     recon_layer = MinkowskiStochastic.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(recon_layer.w.event_shape, tf.TensorShape([3]))
-    tf.debugging.assert_equal(recon_layer.rho.mode(), tf.constant([2.1]))
-    tf.debugging.assert_equal(recon_layer.w.mode(), tf.constant([1.1, 1.1, 1.1]))
-    tf.debugging.assert_equal(mink_layer.activation.beta, recon_layer.activation.beta)
-    tf.debugging.assert_equal(mink_layer.activation.tau, recon_layer.activation.tau)
-    tf.debugging.assert_equal(mink_layer.activation.gamma, recon_layer.activation.gamma)
+    np.testing.assert_array_equal(recon_layer.w.event_shape, [3])
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(recon_layer.rho.mode()),
+        np.array(2.1, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.w.mode()),
+        keras.ops.convert_to_numpy(recon_layer.w.mode()),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.beta),
+        keras.ops.convert_to_numpy(recon_layer.activation.beta),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.tau),
+        keras.ops.convert_to_numpy(recon_layer.activation.tau),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.gamma),
+        keras.ops.convert_to_numpy(recon_layer.activation.gamma),
+    )

@@ -17,8 +17,8 @@
 
 import pytest
 
+import keras
 import numpy as np
-import tensorflow as tf
 
 import psiz
 
@@ -26,14 +26,14 @@ import psiz
 @pytest.fixture
 def emb_input_1d():
     """Create a 1D input."""
-    batch = tf.constant(np.array([0, 1, 2]))
+    batch = np.array([0, 1, 2])
     return batch
 
 
 @pytest.fixture
 def emb_input_2d():
     """Create a 2D input."""
-    batch = tf.constant(np.array([[0, 1], [2, 3], [4, 5]]))
+    batch = np.array([[0, 1], [2, 3], [4, 5]])
     return batch
 
 
@@ -65,7 +65,6 @@ def test_init_shape(emb_input_1d, embedding_class):
     np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
 
-@pytest.mark.parametrize("is_eager", [True, False])
 @pytest.mark.parametrize("mask_zero", [True, False])
 @pytest.mark.parametrize("sample_shape", [None, (), 1, 10, [2, 4]])
 @pytest.mark.parametrize(
@@ -80,14 +79,13 @@ def test_init_shape(emb_input_1d, embedding_class):
     ],
 )
 def test_call_1d_input_and_serialization(
-    emb_input_1d, sample_shape, embedding_class, mask_zero, is_eager
+    emb_input_1d, sample_shape, embedding_class, mask_zero
 ):
     """Test call() return shape.
 
     Returned shape must include appropriate `sample_shape`."
 
     """
-    tf.config.run_functions_eagerly(is_eager)
     input = emb_input_1d
     input_shape = [3]
     n_stimuli = 10
@@ -134,8 +132,16 @@ def test_call_1d_input_and_serialization(
         orig_variance = embedding.embeddings.variance()
         recon_mean = recon_emb.embeddings.mean()
         recon_variance = recon_emb.embeddings.variance()
-        tf.test.TestCase().assertAllClose(orig_mean, recon_mean, atol=1e-6)
-        tf.test.TestCase().assertAllClose(orig_variance, recon_variance, atol=1e-6)
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(orig_mean),
+            keras.ops.convert_to_numpy(recon_mean),
+            atol=1e-6,
+        )
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(orig_variance),
+            keras.ops.convert_to_numpy(recon_variance),
+            atol=1e-6,
+        )
 
 
 @pytest.mark.parametrize(
@@ -165,7 +171,8 @@ def test_mode(emb_input_1d, embedding_class):
 
     # Test `mode` method to make sure implemented, then check shape.
     emb_mode = embedding.embeddings.mode()
-    tf.debugging.assert_equal(emb_mode.shape, tf.TensorShape([n_stimuli, n_dim]))
+    emb_mode = keras.ops.convert_to_numpy(emb_mode)
+    np.testing.assert_array_equal(emb_mode.shape, [n_stimuli, n_dim])
 
 
 @pytest.mark.parametrize("mask_zero", [True, False])

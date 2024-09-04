@@ -15,7 +15,9 @@
 # ============================================================================
 """Test constraints module."""
 
-import tensorflow as tf
+
+import keras
+import numpy as np
 
 from psiz.keras.constraints import Center
 
@@ -31,9 +33,7 @@ def test_all():
     assert config["axis"] == 0
 
     # Check call.
-    w0 = tf.constant([[1.36, -0.35], [1.40, -0.41]], dtype=tf.float32)
+    w0 = np.array([[1.36, -0.35], [1.40, -0.41]], dtype="float32")
     w1 = con(w0)
-    w_desired = tf.constant(
-        [[-0.01999998, 0.03], [0.01999998, -0.03]], dtype=tf.float32
-    )
-    tf.debugging.assert_near(w_desired, w1)
+    w_desired = np.array([[-0.01999998, 0.03], [0.01999998, -0.03]], dtype="float32")
+    np.testing.assert_array_almost_equal(keras.ops.convert_to_numpy(w1), w_desired)

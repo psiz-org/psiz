@@ -24,8 +24,8 @@ satisfies it's role as an adapter.
 
 
 import keras
+import numpy as np
 import pytest
-import tensorflow as tf
 
 from psiz.keras.layers import GateAdapter, BraidGate
 
@@ -74,7 +74,13 @@ class InnerNeedsDict(keras.layers.Layer):
     def __init__(self, factor=None, **kwargs):
         """Initialize."""
         super(InnerNeedsDict, self).__init__(**kwargs)
-        self.factor = tf.constant(factor)
+        self.factor = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(factor),
+            trainable=False,
+            name="factor",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -87,7 +93,13 @@ class InnerNeedsTuple(keras.layers.Layer):
     def __init__(self, factor=None, **kwargs):
         """Initialize."""
         super(InnerNeedsTuple, self).__init__(**kwargs)
-        self.factor = tf.constant(factor)
+        self.factor = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(factor),
+            trainable=False,
+            name="factor",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -98,7 +110,7 @@ class InnerNeedsTuple(keras.layers.Layer):
 def inputs_x0():
     """A minibatch inputs."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
+    inputs = np.array(
         [
             [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]],
             [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]],
@@ -106,7 +118,7 @@ def inputs_x0():
             [[6.0, 7.0, 8.0], [9.0, 10.0, 11.0]],
             [[6.0, 7.0, 8.0], [9.0, 10.0, 11.0]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return inputs
 
@@ -115,7 +127,7 @@ def inputs_x0():
 def inputs_x1():
     """A minibatch inputs."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
+    inputs = np.array(
         [
             [[0.1, 1.1, 2.1], [3.1, 4.1, 5.1]],
             [[0.1, 1.1, 2.1], [3.1, 4.1, 5.1]],
@@ -123,7 +135,7 @@ def inputs_x1():
             [[6.1, 7.1, 8.1], [9.1, 10.1, 11.1]],
             [[6.1, 7.1, 8.1], [9.1, 10.1, 11.1]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return inputs
 
@@ -132,8 +144,8 @@ def inputs_x1():
 def inputs_groups0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups0 = tf.constant(
-        [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]], dtype=tf.float32
+    groups0 = np.array(
+        [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]], dtype="float32"
     )
     return groups0
 
@@ -142,8 +154,8 @@ def inputs_groups0():
 def inputs_groups1():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups1 = tf.constant(
-        [[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 0.0], [1.0, 0.0]], dtype=tf.float32
+    groups1 = np.array(
+        [[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 0.0], [1.0, 0.0]], dtype="float32"
     )
     return groups1
 
@@ -151,7 +163,7 @@ def inputs_groups1():
 @pytest.fixture
 def outputs_desired_v0():
     """Desired outputs."""
-    outputs_desired = tf.constant(
+    outputs_desired = np.array(
         [
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
@@ -159,7 +171,7 @@ def outputs_desired_v0():
             [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
             [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return outputs_desired
 
@@ -167,17 +179,17 @@ def outputs_desired_v0():
 @pytest.fixture
 def outputs_desired_v1():
     # Just the addition yields:
-    # outputs_desired = tf.constant(
+    # outputs_desired = np.array(
     #     [
     #         [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
     #         [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
     #         [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
     #         [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
     #         [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]]
-    #     ], dtype=tf.float32
+    #     ], dtype="float32"
     # )
     # Addition followed by weighting: [0 0 1 0 1] -> [1. 1. 2. 1. 2.]:
-    outputs_desired = tf.constant(
+    outputs_desired = np.array(
         [
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
@@ -185,7 +197,7 @@ def outputs_desired_v1():
             [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
             [[24.2, 28.2, 32.2], [36.2, 40.2, 44.2]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return outputs_desired
 
@@ -195,19 +207,19 @@ def outputs_desired_v2():
     # Addition followed by weighting: [0 0 1 0 1] -> [1. 1. 2. 1. 2.]:
     # assuming everything goes to branch_a_b
     # groups0 = [0], [0],[1],[0],[1]
-    # outputs_desired = tf.constant(
+    # outputs_desired = np.array(
     #     [
     #         [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
     #         [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
     #         [[0.2, 4.2, 8.2], [12.2, 16.2, 20.2]],
     #         [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
     #         [[24.2, 28.2, 32.2], [36.2, 40.2, 44.2]]
-    #     ], dtype=tf.float32
+    #     ], dtype="float32"
     # )
 
     # c branch on impacts second example, with a x3 factor.
     # groups1 [0] [1], [0], [0], [0]
-    outputs_desired = tf.constant(
+    outputs_desired = np.array(
         [
             [[0.1, 2.1, 4.1], [6.1, 8.1, 10.1]],
             [[0.3, 6.3, 12.3], [18.3, 24.3, 30.3]],
@@ -215,7 +227,7 @@ def outputs_desired_v2():
             [[12.1, 14.1, 16.1], [18.1, 20.1, 22.1]],
             [[24.2, 28.2, 32.2], [36.2, 40.2, 44.2]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return outputs_desired
 
@@ -232,9 +244,10 @@ class TestInnerNeedsTuple:
         inner = InnerNeedsTuple(factor=1.0, name="inner_a")
         outer = OuterPassesTuple(inner=inner, name="outer")
         outputs = outer(inputs)
+        outputs = keras.ops.convert_to_numpy(outputs)
 
         # Verify outputs.
-        tf.debugging.assert_near(outputs, outputs_desired)
+        np.testing.assert_allclose(outputs, outputs_desired)
 
     def test_with_braid_gate(
         self, inputs_x0, inputs_x1, inputs_groups0, outputs_desired_v1
@@ -255,8 +268,9 @@ class TestInnerNeedsTuple:
             inner=branch_a_b, inner_gating_keys=["groups0"], name="outer"
         )
         outputs = outer(inputs)
+        outputs = keras.ops.convert_to_numpy(outputs)
 
-        tf.debugging.assert_near(outputs, outputs_desired)
+        np.testing.assert_allclose(outputs, outputs_desired)
 
     def test_with_nested_braid_gate(
         self, inputs_x0, inputs_x1, inputs_groups0, inputs_groups1, outputs_desired_v2
@@ -280,7 +294,9 @@ class TestInnerNeedsTuple:
             inner=branch_ab_c, inner_gating_keys=["groups0", "groups1"], name="outer"
         )
         outputs = outer(inputs)
-        tf.debugging.assert_near(outputs, outputs_desired)
+        outputs = keras.ops.convert_to_numpy(outputs)
+
+        np.testing.assert_allclose(outputs, outputs_desired)
 
 
 class TestInnerNeedsDict:
@@ -294,8 +310,9 @@ class TestInnerNeedsDict:
         inner = InnerNeedsDict(factor=1.0, name="inner_a")
         outer = OuterPassesDict(inner=inner, name="outer")
         outputs = outer(inputs)
+        outputs = keras.ops.convert_to_numpy(outputs)
 
-        tf.debugging.assert_near(outputs, outputs_desired)
+        np.testing.assert_allclose(outputs, outputs_desired)
 
     def test_with_braid_gate(
         self, inputs_x0, inputs_x1, inputs_groups0, outputs_desired_v1
@@ -315,8 +332,9 @@ class TestInnerNeedsDict:
             inner=inner, inner_gating_keys=["groups0"], name="outer"
         )
         outputs = outer(inputs)
+        outputs = keras.ops.convert_to_numpy(outputs)
 
-        tf.debugging.assert_near(outputs, outputs_desired)
+        np.testing.assert_allclose(outputs, outputs_desired)
 
     def test_with_nested_braid_gate(
         self, inputs_x0, inputs_x1, inputs_groups0, inputs_groups1, outputs_desired_v2
@@ -340,4 +358,6 @@ class TestInnerNeedsDict:
             inner=branch_ab_c, inner_gating_keys=["groups0", "groups1"], name="outer"
         )
         outputs = outer(inputs)
-        tf.debugging.assert_near(outputs, outputs_desired)
+        outputs = keras.ops.convert_to_numpy(outputs)
+
+        np.testing.assert_allclose(outputs, outputs_desired)

@@ -17,24 +17,21 @@
 
 import numpy as np
 import pytest
-import tensorflow as tf
 
 
 @pytest.fixture
 def gates_v0():
     """A minibatch of gates."""
     # Create a simple batch (batch_size=5).
-    gates = tf.constant(
-        np.array(
-            [
-                [1.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0],
-                [0.0, 0.0, 1.0],
-                [0.0, 0.3, 0.7],
-                [0.5, 0.0, 0.0],
-            ],
-            dtype=np.float32,
-        )
+    gates = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.3, 0.7],
+            [0.5, 0.0, 0.0],
+        ],
+        dtype="float32",
     )
     return gates
 
@@ -43,7 +40,7 @@ def gates_v0():
 def groups_v0_0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [1.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -51,7 +48,7 @@ def groups_v0_0():
             [1.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return groups
 
@@ -60,7 +57,7 @@ def groups_v0_0():
 def groups_v0_1():
     """A minibatch of group weights without timestep axis.."""
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [1.0, 0.0, 0.0],
             [0.0, 1.0, 0.0],
@@ -68,7 +65,7 @@ def groups_v0_1():
             [0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return groups
 
@@ -77,7 +74,7 @@ def groups_v0_1():
 def groups_v0_2():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [1.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -85,7 +82,7 @@ def groups_v0_2():
             [0.0, 1.0, 0.0],
             [0.0, 1.0, 0.0],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return groups
 
@@ -98,8 +95,8 @@ def groups_v1_12():
 
     """
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
-        [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]], dtype=tf.float32
+    groups = np.array(
+        [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]], dtype="float32"
     )
     return groups
 
@@ -112,8 +109,8 @@ def groups_v2_12():
 
     """
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
-        [[1.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.0, 1.0]], dtype=tf.float32
+    groups = np.array(
+        [[1.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.0, 1.0]], dtype="float32"
     )
     return groups
 
@@ -122,8 +119,8 @@ def groups_v2_12():
 def groups_v3_12():
     """A minibatch of gate weights."""
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
-        [[1.0, 0.0], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.0, 1.0]], dtype=tf.float32
+    groups = np.array(
+        [[1.0, 0.0], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.0, 1.0]], dtype="float32"
     )
     return groups
 
@@ -132,7 +129,7 @@ def groups_v3_12():
 def group_3g_empty_v0_0():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [1.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
@@ -140,7 +137,7 @@ def group_3g_empty_v0_0():
             [1.0, 0.0, 0.0],
             [1.0, 0.0, 0.0],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return groups
 
@@ -149,7 +146,7 @@ def group_3g_empty_v0_0():
 def group_3g_empty_v0_1():
     """A minibatch of group indices."""
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [0.0, 1.0, 0.0],
             [0.0, 1.0, 0.0],
@@ -157,7 +154,7 @@ def group_3g_empty_v0_1():
             [0.0, 1.0, 0.0],
             [0.0, 0.0, 1.0],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return groups
 
@@ -172,7 +169,7 @@ def groups_5x3x3_index_v0_2():
 
     """
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [[1.0, 0.0], [1.0, 0.0], [1.0, 0.0]],
             [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
@@ -182,7 +179,7 @@ def groups_5x3x3_index_v0_2():
             [[0.0, 1.0], [0.0, 1.0], [1.0, 0.0]],
             [[0.0, 1.0], [1.0, 0.0], [0.0, 1.0]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return groups
 
@@ -191,17 +188,15 @@ def groups_5x3x3_index_v0_2():
 def inputs_single():
     """A minibatch of inputs."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
-        np.array(
-            [
-                [0.0, 0.1, 0.2],
-                [1.0, 1.1, 1.2],
-                [2.0, 2.1, 2.2],
-                [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2],
-            ],
-            dtype=np.float32,
-        )
+    inputs = np.array(
+        [
+            [0.0, 0.1, 0.2],
+            [1.0, 1.1, 1.2],
+            [2.0, 2.1, 2.2],
+            [3.0, 3.1, 3.2],
+            [4.0, 4.1, 4.2],
+        ],
+        dtype="float32",
     )
     return inputs
 
@@ -210,30 +205,26 @@ def inputs_single():
 def inputs_list():
     """A minibatch of a list of inputs."""
     # Create a simple batch (batch_size=5).
-    inputs_0 = tf.constant(
-        np.array(
-            [
-                [0.0, 0.1, 0.2],
-                [1.0, 1.1, 1.2],
-                [2.0, 2.1, 2.2],
-                [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2],
-            ],
-            dtype=np.float32,
-        )
+    inputs_0 = np.array(
+        [
+            [0.0, 0.1, 0.2],
+            [1.0, 1.1, 1.2],
+            [2.0, 2.1, 2.2],
+            [3.0, 3.1, 3.2],
+            [4.0, 4.1, 4.2],
+        ],
+        dtype="float32",
     )
 
-    inputs_1 = tf.constant(
-        np.array(
-            [
-                [10.0, 10.1, 10.2],
-                [11.0, 11.1, 11.2],
-                [12.0, 12.1, 12.2],
-                [13.0, 13.1, 13.2],
-                [14.0, 14.1, 14.2],
-            ],
-            dtype=np.float32,
-        )
+    inputs_1 = np.array(
+        [
+            [10.0, 10.1, 10.2],
+            [11.0, 11.1, 11.2],
+            [12.0, 12.1, 12.2],
+            [13.0, 13.1, 13.2],
+            [14.0, 14.1, 14.2],
+        ],
+        dtype="float32",
     )
 
     inputs = [inputs_0, inputs_1]
@@ -244,7 +235,7 @@ def inputs_list():
 def gates_v0_timestep():
     """A minibatch of gates."""
     # Create a batch with timesteps (batch_size=5, sequence_length=2).
-    gates = tf.constant(
+    gates = np.array(
         [
             [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
             [[0.0, 1.0, 0.0], [0.0, 1.0, 0.0]],
@@ -254,7 +245,7 @@ def gates_v0_timestep():
             # two timesteps.
             [[0.5, 0.0, 0.0], [0.0, 0.5, 0.0]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return gates
 
@@ -263,30 +254,26 @@ def gates_v0_timestep():
 def inputs_list_timestep():
     """A minibatch of list inputs that have a timestep axis."""
     # Create a simple batch (batch_size=5).
-    inputs_0 = tf.constant(
-        np.array(
-            [
-                [[0.0, 0.1, 0.2], [0.01, 0.11, 0.21]],
-                [[1.0, 1.1, 1.2], [1.01, 1.11, 1.21]],
-                [[2.0, 2.1, 2.2], [2.01, 2.11, 2.21]],
-                [[3.0, 3.1, 3.2], [3.01, 3.11, 3.21]],
-                [[4.0, 4.1, 4.2], [4.01, 4.11, 4.21]],
-            ],
-            dtype=np.float32,
-        )
+    inputs_0 = np.array(
+        [
+            [[0.0, 0.1, 0.2], [0.01, 0.11, 0.21]],
+            [[1.0, 1.1, 1.2], [1.01, 1.11, 1.21]],
+            [[2.0, 2.1, 2.2], [2.01, 2.11, 2.21]],
+            [[3.0, 3.1, 3.2], [3.01, 3.11, 3.21]],
+            [[4.0, 4.1, 4.2], [4.01, 4.11, 4.21]],
+        ],
+        dtype="float32",
     )
 
-    inputs_1 = tf.constant(
-        np.array(
-            [
-                [[10.0, 10.1, 10.2], [10.01, 10.11, 10.21]],
-                [[11.0, 11.1, 11.2], [11.01, 11.11, 11.21]],
-                [[12.0, 12.1, 12.2], [12.01, 12.11, 12.21]],
-                [[13.0, 13.1, 13.2], [13.01, 13.11, 13.21]],
-                [[14.0, 14.1, 14.2], [14.01, 14.11, 14.21]],
-            ],
-            dtype=np.float32,
-        )
+    inputs_1 = np.array(
+        [
+            [[10.0, 10.1, 10.2], [10.01, 10.11, 10.21]],
+            [[11.0, 11.1, 11.2], [11.01, 11.11, 11.21]],
+            [[12.0, 12.1, 12.2], [12.01, 12.11, 12.21]],
+            [[13.0, 13.1, 13.2], [13.01, 13.11, 13.21]],
+            [[14.0, 14.1, 14.2], [14.01, 14.11, 14.21]],
+        ],
+        dtype="float32",
     )
 
     inputs = [inputs_0, inputs_1]
@@ -297,30 +284,26 @@ def inputs_list_timestep():
 def inputs_dict():
     """A minibatch of inputs formated as a dictionary."""
     # Create a simple batch (batch_size=5).
-    inputs_0 = tf.constant(
-        np.array(
-            [
-                [0.0, 0.1, 0.2],
-                [1.0, 1.1, 1.2],
-                [2.0, 2.1, 2.2],
-                [3.0, 3.1, 3.2],
-                [4.0, 4.1, 4.2],
-            ],
-            dtype=np.float32,
-        )
+    inputs_0 = np.array(
+        [
+            [0.0, 0.1, 0.2],
+            [1.0, 1.1, 1.2],
+            [2.0, 2.1, 2.2],
+            [3.0, 3.1, 3.2],
+            [4.0, 4.1, 4.2],
+        ],
+        dtype="float32",
     )
 
-    inputs_1 = tf.constant(
-        np.array(
-            [
-                [10.0, 10.1, 10.2],
-                [11.0, 11.1, 11.2],
-                [12.0, 12.1, 12.2],
-                [13.0, 13.1, 13.2],
-                [14.0, 14.1, 14.2],
-            ],
-            dtype=np.float32,
-        )
+    inputs_1 = np.array(
+        [
+            [10.0, 10.1, 10.2],
+            [11.0, 11.1, 11.2],
+            [12.0, 12.1, 12.2],
+            [13.0, 13.1, 13.2],
+            [14.0, 14.1, 14.2],
+        ],
+        dtype="float32",
     )
 
     inputs = {"inputs_0": inputs_0, "inputs_1": inputs_1}
@@ -331,30 +314,26 @@ def inputs_dict():
 def inputs_dict_timestep():
     """A minibatch of dictionary inputs that have a timestep axis."""
     # Create a simple batch (batch_size=5).
-    inputs_0 = tf.constant(
-        np.array(
-            [
-                [[0.0, 0.1, 0.2], [0.01, 0.11, 0.21]],
-                [[1.0, 1.1, 1.2], [1.01, 1.11, 1.21]],
-                [[2.0, 2.1, 2.2], [2.01, 2.11, 2.21]],
-                [[3.0, 3.1, 3.2], [3.01, 3.11, 3.21]],
-                [[4.0, 4.1, 4.2], [4.01, 4.11, 4.21]],
-            ],
-            dtype=np.float32,
-        )
+    inputs_0 = np.array(
+        [
+            [[0.0, 0.1, 0.2], [0.01, 0.11, 0.21]],
+            [[1.0, 1.1, 1.2], [1.01, 1.11, 1.21]],
+            [[2.0, 2.1, 2.2], [2.01, 2.11, 2.21]],
+            [[3.0, 3.1, 3.2], [3.01, 3.11, 3.21]],
+            [[4.0, 4.1, 4.2], [4.01, 4.11, 4.21]],
+        ],
+        dtype="float32",
     )
 
-    inputs_1 = tf.constant(
-        np.array(
-            [
-                [[10.0, 10.1, 10.2], [10.01, 10.11, 10.21]],
-                [[11.0, 11.1, 11.2], [11.01, 11.11, 11.21]],
-                [[12.0, 12.1, 12.2], [12.01, 12.11, 12.21]],
-                [[13.0, 13.1, 13.2], [13.01, 13.11, 13.21]],
-                [[14.0, 14.1, 14.2], [14.01, 14.11, 14.21]],
-            ],
-            dtype=np.float32,
-        )
+    inputs_1 = np.array(
+        [
+            [[10.0, 10.1, 10.2], [10.01, 10.11, 10.21]],
+            [[11.0, 11.1, 11.2], [11.01, 11.11, 11.21]],
+            [[12.0, 12.1, 12.2], [12.01, 12.11, 12.21]],
+            [[13.0, 13.1, 13.2], [13.01, 13.11, 13.21]],
+            [[14.0, 14.1, 14.2], [14.01, 14.11, 14.21]],
+        ],
+        dtype="float32",
     )
 
     inputs = {"inputs_0": inputs_0, "inputs_1": inputs_1}

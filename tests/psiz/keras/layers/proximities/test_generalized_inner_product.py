@@ -15,8 +15,9 @@
 # ============================================================================
 """Test GeneralizedInnerProduct layer."""
 
+
+import keras
 import numpy as np
-import tensorflow as tf
 
 from psiz.keras.layers.proximities.experimental.generalized_inner_product import (
     GeneralizedInnerProduct,
@@ -27,9 +28,10 @@ def test_init_call_v0(paired_inputs_v0):
     """Test call with default (linear) activation."""
     proximity_layer = GeneralizedInnerProduct()
     outputs = proximity_layer(paired_inputs_v0)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    inputs_0 = paired_inputs_v0[0].numpy()
-    inputs_1 = paired_inputs_v0[1].numpy()
+    inputs_0 = paired_inputs_v0[0]
+    inputs_1 = paired_inputs_v0[1]
     desired_outputs = np.concatenate(
         [
             np.matmul(
@@ -51,7 +53,7 @@ def test_init_call_v0(paired_inputs_v0):
         axis=0,
     ).squeeze()
 
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(desired_outputs, outputs)
 
 
 def test_init_call_v1(paired_inputs_v0):
@@ -65,14 +67,15 @@ def test_init_call_v1(paired_inputs_v0):
         dtype=np.float32,
     )
     proximity_layer = GeneralizedInnerProduct(
-        w_initializer=tf.initializers.Constant(covariance_matrix),
+        w_initializer=keras.initializers.Constant(covariance_matrix),
     )
     outputs = proximity_layer(paired_inputs_v0)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    desired_outputs = tf.constant(
-        [1.295, 22.795, 51.295, 86.795, 129.295], dtype=tf.float32
+    desired_outputs = np.array(
+        [1.295, 22.795, 51.295, 86.795, 129.295], dtype="float32"
     )
-    tf.debugging.assert_equal(desired_outputs, outputs)
+    np.testing.assert_array_equal(desired_outputs, outputs)
 
 
 def test_init_call_v2(paired_inputs_v0):
@@ -86,26 +89,32 @@ def test_init_call_v2(paired_inputs_v0):
         dtype=np.float32,
     )
     proximity_layer = GeneralizedInnerProduct(
-        w_initializer=tf.initializers.Constant(covariance_matrix)
+        w_initializer=keras.initializers.Constant(covariance_matrix)
     )
     outputs = proximity_layer(paired_inputs_v0)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    desired_outputs = tf.constant(
-        [1.395, 24.134998, 54.275, 91.815, 136.755], dtype=tf.float32
+    desired_outputs = np.array(
+        [1.395, 24.134998, 54.275, 91.815, 136.755], dtype="float32"
     )
-    tf.debugging.assert_equal(desired_outputs, outputs)
+    np.testing.assert_array_equal(desired_outputs, outputs)
 
 
 def test_serialization():
     """Test serialization."""
     covariance_matrix = np.eye(3, dtype=np.float32)
     proximity_layer = GeneralizedInnerProduct(
-        w_initializer=tf.initializers.Constant(covariance_matrix)
+        w_initializer=keras.initializers.Constant(covariance_matrix)
     )
     proximity_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(proximity_layer.w, tf.constant(covariance_matrix))
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(proximity_layer.w), covariance_matrix
+    )
     config = proximity_layer.get_config()
 
     recon_layer = GeneralizedInnerProduct.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(proximity_layer.w, recon_layer.w)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(proximity_layer.w),
+        keras.ops.convert_to_numpy(recon_layer.w),
+    )

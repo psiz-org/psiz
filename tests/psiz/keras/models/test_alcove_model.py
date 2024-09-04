@@ -20,7 +20,6 @@ from pathlib import Path
 
 import keras
 import pytest
-import tensorflow as tf
 
 import psiz
 
@@ -103,19 +102,20 @@ def call_fit_evaluate_predict(model, tfds):
     # assert not np.isnan(eval0)  TODO make work for returned nan or array of values
 
 
-def build_alcove_subclass_a():
+def build_alcove_subclass_a(is_eager):
     """Build subclassed `Model`."""
     model = ALCOVEModelA()
     compile_kwargs = {
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_alcove_functional_v0():
+def build_alcove_functional_v0(is_eager):
     """Build model using functional API."""
     n_stimuli = 20
     n_dim = 4
@@ -159,6 +159,7 @@ def build_alcove_functional_v0():
         "loss": keras.losses.CategoricalCrossentropy(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.CategoricalAccuracy(name="accuracy")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
@@ -171,10 +172,9 @@ class TestALCOVECell:
     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
     def test_usage_subclass_a(self, ds_time_categorize_v0, is_eager):
         """Test subclassed model, one group."""
-        tf.config.run_functions_eagerly(is_eager)
 
         tfds = ds_time_categorize_v0
-        model = build_alcove_subclass_a()
+        model = build_alcove_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
@@ -182,10 +182,8 @@ class TestALCOVECell:
     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
     def test_save_load_subclass_a(self, ds_time_categorize_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_time_categorize_v0
-        model = build_alcove_subclass_a()
+        model = build_alcove_subclass_a(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds)
 
@@ -208,10 +206,8 @@ class TestALCOVECell:
     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
     def test_usage_functional_v0(self, ds_time_categorize_v0, is_eager):
         """Test model using functional API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_time_categorize_v0
-        model = build_alcove_functional_v0()
+        model = build_alcove_functional_v0(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
@@ -219,10 +215,8 @@ class TestALCOVECell:
     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
     def test_save_load_functional_v0(self, ds_time_categorize_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_time_categorize_v0
-        model = build_alcove_functional_v0()
+        model = build_alcove_functional_v0(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds)
 

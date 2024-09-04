@@ -15,8 +15,8 @@
 # ============================================================================
 """Test constraints module."""
 
+
 import numpy as np
-import tensorflow as tf
 from keras import backend
 
 from psiz.keras.initializers import Dirichlet
@@ -38,14 +38,14 @@ def test_all():
     assert config["seed"][1] == 252
 
     # Check call does not raise error.
-    tf_shape = tf.TensorShape([2, 4])
-    _ = initializer(tf_shape)
+    tensor_shape = [2, 4]
+    _ = initializer(tensor_shape)
 
-    _ = initializer(tf_shape, dtype=backend.floatx())
+    _ = initializer(tensor_shape, dtype=backend.floatx())
 
     # TODO Solve RNG seed issue so that the following test works
     # locally and on CI servers.
-    # desired_sample = tf.constant(
+    # desired_sample = np.array(
     #     [
     #         [
     #             [0.2211622, 0.45494598, 0.32389188],
@@ -59,6 +59,6 @@ def test_all():
     #             [0.048038144, 0.14123419, 0.81072766],
     #             [0.06657295, 0.33051702, 0.60291004]
     #         ]
-    #     ], dtype=tf.float32
+    #     ], dtype="float32"
     # )
-    # tf.debugging.assert_equal(sample, desired_sample)
+    # np.testing.assert_array_almost_equal(sample, desired_sample)

@@ -15,13 +15,15 @@
 # ============================================================================
 
 
+import keras
 import numpy as np
-import tensorflow as tf
+import pytest
 import tensorflow_probability as tfp
 
 from psiz.tfp.unpack_mvn import unpack_mvn
 
 
+@pytest.mark.tfp
 def test_unpack_diagonal_covariance_mvn():
     n_stimuli = 3
     n_dim = 2
@@ -45,7 +47,7 @@ def test_unpack_diagonal_covariance_mvn():
 
     # Create diagonal covariance MVNs.
     dist = tfp.distributions.Normal(loc=loc_desired, scale=scale_desired)
-    batch_ndims = tf.size(dist.batch_shape_tensor())
+    batch_ndims = keras.ops.size(dist.batch_shape_tensor())
     dist = tfp.distributions.Independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     loc, cov = unpack_mvn(dist)
@@ -62,6 +64,7 @@ def test_unpack_diagonal_covariance_mvn():
     np.testing.assert_almost_equal(cov, cov_desired)
 
 
+@pytest.mark.tfp
 def test_unpack_full_covariance_mvn():
     n_stimuli = 3
     n_dim = 2

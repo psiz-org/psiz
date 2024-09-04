@@ -17,7 +17,6 @@
 
 import numpy as np
 import pytest
-import tensorflow as tf
 
 
 @pytest.fixture
@@ -31,7 +30,7 @@ def groups_5x3x3_index_v0():
 
     """
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
             [[0, 1, 1], [0, 1, 1], [0, 1, 1]],
@@ -41,7 +40,7 @@ def groups_5x3x3_index_v0():
             [[0, 1, 1], [0, 2, 1], [0, 2, 0]],
             [[0, 2, 1], [0, 0, 0], [0, 1, 1]],
         ],
-        dtype=tf.int32,
+        dtype="int32",
     )
     return groups
 
@@ -54,8 +53,8 @@ def groups_v1():
 
     """
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
-        [[0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1], [0, 0, 1]], dtype=np.int32
+    groups = np.array(
+        [[0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1], [0, 0, 1]], dtype="int32"
     )
     return groups
 
@@ -68,8 +67,8 @@ def groups_v2():
 
     """
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
-        [[0, 1, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1], [0, 0, 1]], dtype=np.int32
+    groups = np.array(
+        [[0, 1, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1], [0, 0, 1]], dtype="int32"
     )
     return groups
 
@@ -82,7 +81,7 @@ def groups_v3():
 
     """
     # Create a simple batch (batch_size=5).
-    groups = tf.constant(
+    groups = np.array(
         [
             [0.0, 1.0, 0.0],
             [0.0, 0.8, 0.2],
@@ -90,6 +89,6 @@ def groups_v3():
             [0.0, 0.2, 0.8],
             [0.0, 0.0, 1.0],
         ],
-        dtype=np.float32,
+        dtype="float32",
     )
     return groups

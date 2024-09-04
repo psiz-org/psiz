@@ -18,7 +18,6 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz.data
@@ -29,14 +28,13 @@ import psiz.keras.layers
 def emb_inputs_v1():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
-        np.array(
-            [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 1, 2], [9, 1, 2]], dtype=np.int32
-        )
+    inputs = np.array(
+        [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 1, 2], [9, 1, 2]], dtype=np.int32
     )
     return inputs
 
 
+@pytest.mark.tfp
 def test_call_approx(emb_inputs_v1):
     """Test call."""
     n_stimuli = 10
@@ -60,12 +58,14 @@ def test_call_approx(emb_inputs_v1):
 
     embedding_prior.build([None, 3])
     outputs = embedding_prior(emb_inputs_v1)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     # Just check shape since stochastic.
-    desired_shape = tf.TensorShape([5, 3, 3])
-    tf.debugging.assert_equal(tf.shape(outputs), desired_shape)
+    desired_shape = np.array([5, 3, 3])
+    np.testing.assert_equal(np.shape(outputs), desired_shape)
 
 
+@pytest.mark.tfp
 def test_serialization():
     """Test serialization with weights."""
     n_stimuli = 10
@@ -95,14 +95,17 @@ def test_serialization():
     recon_layer.set_weights(weights)
 
     # Test prior, which should trivially be equal becuase of initialization.
-    tf.debugging.assert_equal(
-        orig_layer.embeddings.mode(), recon_layer.embeddings.mode()
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(orig_layer.embeddings.mode()),
+        keras.ops.convert_to_numpy(recon_layer.embeddings.mode()),
     )
-    tf.debugging.assert_equal(
-        orig_layer.embeddings.variance(), recon_layer.embeddings.variance()
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(orig_layer.embeddings.variance()),
+        keras.ops.convert_to_numpy(recon_layer.embeddings.variance()),
     )
 
 
+@pytest.mark.tfp
 def test_properties():
     n_stimuli = 10
     n_dim = 3

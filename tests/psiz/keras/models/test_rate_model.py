@@ -20,7 +20,7 @@ from pathlib import Path
 
 import keras
 import pytest
-import tensorflow as tf
+
 
 import psiz
 
@@ -65,45 +65,6 @@ class RateModelA(keras.Model):
     def get_config(self):
         config = super(RateModelA, self).get_config()
         return config
-
-    # TODO remove when done debugging
-    def train_step(self, data):
-        # Unpack the data. Its structure depends on your model and
-        # on what you pass to `fit()`.
-        if len(data) == 3:
-            x, y, sample_weight = data
-        else:
-            sample_weight = None
-            x, y = data
-
-        with tf.GradientTape() as tape:
-            y_pred = self(x, training=True)  # Forward pass
-            # Compute the loss value.
-            # The loss function is configured in `compile()`.
-            loss = self.compute_loss(
-                y=y,
-                y_pred=y_pred,
-                sample_weight=sample_weight,
-            )
-
-        # Compute gradients
-        trainable_vars = self.trainable_variables
-        gradients = tape.gradient(loss, trainable_vars)
-
-        # Update weights
-        self.optimizer.apply(gradients, trainable_vars)
-
-        # Update the metrics.
-        # Metrics are configured in `compile()`.
-        for metric in self.metrics:
-            if metric.name == "loss":
-                metric.update_state(loss)
-            else:
-                metric.update_state(y, y_pred, sample_weight=sample_weight)
-
-        # Return a dict mapping metric names to current value.
-        # Note that it will include the loss (tracked in self.metrics).
-        return {m.name: m.result() for m in self.metrics}
 
 
 class RateModelB(keras.Model):
@@ -219,19 +180,20 @@ class RateModelB(keras.Model):
 #         return config
 
 
-def build_ratesim_subclass_a():
+def build_ratesim_subclass_a(is_eager):
     """Build subclassed `Model`."""
     model = RateModelA()
     compile_kwargs = {
         "loss": keras.losses.MeanSquaredError(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ratesim_functional_v0():
+def build_ratesim_functional_v0(is_eager):
     """Build model using functional API."""
     n_stimuli = 30
     n_dim = 10
@@ -264,38 +226,41 @@ def build_ratesim_functional_v0():
         "loss": keras.losses.MeanSquaredError(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ratesim_subclass_b():
+def build_ratesim_subclass_b(is_eager):
     """Build subclassed `Model`."""
     model = RateModelB()
     compile_kwargs = {
         "loss": keras.losses.MeanSquaredError(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
 # TODO finish or move out
-# def build_ratesimcell_subclass_a():
+# def build_ratesimcell_subclass_a(is_eager):
 #     """Build subclassed `Model`."""
 #     model = RateCellModelA()
 #     compile_kwargs = {
 #         "loss": keras.losses.MeanSquaredError(),
 #         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
 #         "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
+#         "run_eagerly": is_eager,
 #     }
 #     model.compile(**compile_kwargs)
 #     return model
 
 
 # TODO finish or move out
-# def build_ratesimcell_functional_v0():
+# def build_ratesimcell_functional_v0(is_eager):
 #     """Build model useing functional API."""
 #     n_stimuli = 30
 #     n_dim = 10
@@ -331,6 +296,7 @@ def build_ratesim_subclass_b():
 #         "loss": keras.losses.MeanSquaredError(),
 #         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
 #         "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
+#         "run_eagerly": is_eager,
 #     }
 #     model.compile(**compile_kwargs)
 #     return model
@@ -361,20 +327,16 @@ class TestLogistic:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_rate2_v0, is_eager):
         """Test subclass model, one group."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_rate2_v0
-        model = build_ratesim_subclass_a()
+        model = build_ratesim_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_rate2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_rate2_v0
-        model = build_ratesim_subclass_a()
+        model = build_ratesim_subclass_a(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds)
 
@@ -396,20 +358,16 @@ class TestLogistic:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_functional_v0(self, ds_rate2_v0, is_eager):
         """Test model using functional API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_rate2_v0
-        model = build_ratesim_functional_v0()
+        model = build_ratesim_functional_v0(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_rate2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_rate2_v0
-        model = build_ratesim_functional_v0()
+        model = build_ratesim_functional_v0(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds)
 
@@ -430,20 +388,16 @@ class TestLogistic:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_b(self, ds_rate2_v1, is_eager):
         """Test subclass model, one group."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_rate2_v1
-        model = build_ratesim_subclass_b()
+        model = build_ratesim_subclass_b(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a_v2(self, ds_rate2_v2, is_eager):
         """Test subclass model, one group."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_rate2_v2
-        model = build_ratesim_subclass_a()
+        model = build_ratesim_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
@@ -456,10 +410,8 @@ class TestLogistic:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_usage_subclass_a(self, ds_time_rate2_v0, is_eager):
 #         """Test subclass model, one group."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_subclass_a()
+#         model = build_ratesimcell_subclass_a(is_eager)
 #         call_fit_evaluate_predict(model, tfds)
 #         keras.backend.clear_session()
 
@@ -469,10 +421,8 @@ class TestLogistic:
 #         self, ds_time_rate2_v0, is_eager, tmpdir
 #     ):
 #         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_subclass_a()
+#         model = build_ratesimcell_subclass_a(is_eager)
 #         model.fit(tfds, epochs=1)
 #         eval0 = model.evaluate(tfds)
 
@@ -494,10 +444,8 @@ class TestLogistic:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_usage_functional_v0(self, ds_time_rate2_v0, is_eager):
 #         """Test model using functional API."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_functional_v0()
+#         model = build_ratesimcell_functional_v0(is_eager)
 #         call_fit_evaluate_predict(model, tfds)
 #         keras.backend.clear_session()
 
@@ -505,10 +453,8 @@ class TestLogistic:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_save_load_functional_v0(self, ds_time_rate2_v0, is_eager, tmpdir):
 #         """Test serialization."""
-#         tf.config.run_functions_eagerly(is_eager)
-
 #         tfds = ds_time_rate2_v0
-#         model = build_ratesimcell_functional_v0()
+#         model = build_ratesimcell_functional_v0(is_eager)
 #         model.fit(tfds, epochs=1)
 #         eval0 = model.evaluate(tfds)
 

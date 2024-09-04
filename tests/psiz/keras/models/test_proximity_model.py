@@ -16,12 +16,9 @@
 """Module for testing models."""
 
 
-from pathlib import Path
-
-import numpy as np
 import keras
+import numpy as np
 import pytest
-import tensorflow as tf
 
 import psiz
 
@@ -63,13 +60,14 @@ class ProximityModelA(keras.Model):
         return config
 
 
-def build_proximity_subclass_a(proximity_layer):
+def build_proximity_subclass_a(proximity_layer, is_eager):
     """Build subclassed `Model`."""
     model = ProximityModelA(proximity=proximity_layer)
     compile_kwargs = {
         "loss": keras.losses.MeanSquaredError(),
         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
         "weighted_metrics": [keras.metrics.MeanSquaredError(name="mse")],
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
@@ -113,9 +111,7 @@ class TestProximity:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a_v2(self, ds_rate2_v2, proximity_layer, is_eager):
         """Test subclass model, one group."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_rate2_v2
-        model = build_proximity_subclass_a(proximity_layer)
+        model = build_proximity_subclass_a(proximity_layer, is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()

@@ -18,7 +18,6 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz
@@ -149,6 +148,7 @@ def ds_2rank1():
     return tfds
 
 
+@pytest.mark.tfp
 def test_1_model(model_0, ds_2rank1):
     """Test IG computation using one model."""
     n_sample = 10000
@@ -156,21 +156,22 @@ def test_1_model(model_0, ds_2rank1):
     ig = []
     for x in ds_2rank1:
         ig.append(ig_model_categorical([model_0], x, n_sample))
-    ig = tf.concat(ig, 0)
+    ig = keras.ops.concatenate(ig, 0)
 
     # Assert IG values are in the right ballpark.
-    ig_desired = tf.constant(
+    ig_desired = np.array(
         [0.03496134, 0.02489483, 0.02482754, 0.02341402, 0.003456, 0.00146809],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(ig, ig_desired, rtol=0.1)
+    np.testing.assert_allclose(ig, ig_desired, rtol=0.1)
 
     # Assert that IG of first and last in correct order.
-    tf.debugging.assert_greater(ig[0], ig[-1])
+    assert ig[0] > ig[-1]
 
 
+@pytest.mark.tfp
 def test_2_models(model_0, model_1, ds_2rank1):
-    """Test IG computation using twp models.
+    """Test IG computation using two models.
 
     The second model is merely a translation of the first, so basic IG
     tests remain unchanged.
@@ -181,14 +182,14 @@ def test_2_models(model_0, model_1, ds_2rank1):
     ig = []
     for x in ds_2rank1:
         ig.append(ig_model_categorical([model_0, model_1], x, n_sample))
-    ig = tf.concat(ig, 0)
+    ig = keras.ops.concatenate(ig, 0)
 
     # Assert IG values are in the right ballpark.
-    ig_desired = tf.constant(
+    ig_desired = np.array(
         [0.03436345, 0.02473378, 0.02513063, 0.02297509, 0.00344968, 0.00151819],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(ig, ig_desired, rtol=0.1)
+    np.testing.assert_allclose(ig, ig_desired, rtol=0.1)
 
     # Assert that IG of first and last in correct order.
-    tf.debugging.assert_greater(ig[0], ig[-1])
+    assert ig[0] > ig[-1]

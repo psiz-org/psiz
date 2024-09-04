@@ -19,7 +19,6 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
 
 from psiz.keras.layers import Drop
 
@@ -41,7 +40,7 @@ class Dummy(keras.layers.Layer):
 def inputs_v0():
     """A minibatch inputs."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
+    inputs = np.array(
         np.array(
             [
                 [[0, 1, 2], [3, 4, 5]],
@@ -50,7 +49,7 @@ def inputs_v0():
                 [[6, 7, 8], [9, 10, 11]],
                 [[6, 7, 8], [9, 10, 11]],
             ],
-            dtype=np.int32,
+            dtype="int32",
         )
     )
     return inputs
@@ -60,7 +59,7 @@ def inputs_v0():
 def inputs_v1():
     """A minibatch inputs."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
+    inputs = np.array(
         np.array(
             [
                 [[0.1, 1.1, 2.1], [3.1, 4.1, 5.1]],
@@ -69,7 +68,7 @@ def inputs_v1():
                 [[6.1, 7.1, 8.1], [9.1, 10.1, 11.1]],
                 [[6.1, 7.1, 8.1], [9.1, 10.1, 11.1]],
             ],
-            dtype=np.int32,
+            dtype="float32",
         )
     )
     return inputs
@@ -79,7 +78,7 @@ def inputs_v1():
 def inputs_v2():
     """A minibatch inputs."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
+    inputs = np.array(
         np.array(
             [
                 [0.2, 0.2, 0.2],
@@ -88,7 +87,7 @@ def inputs_v2():
                 [0.2, 1.2, 1.2],
                 [0.2, 2.2, 1.2],
             ],
-            dtype=np.int32,
+            dtype="float32",
         )
     )
     return inputs
@@ -100,10 +99,11 @@ def test_call_default(inputs_v0, inputs_v1, inputs_v2):
     layer = Drop(subnet=subnet)
 
     outputs = layer([inputs_v0, inputs_v1, inputs_v2])
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     assert len(outputs) == 2
-    tf.debugging.assert_equal(inputs_v0, outputs[0])
-    tf.debugging.assert_equal(inputs_v1, outputs[1])
+    np.testing.assert_array_equal(inputs_v0, outputs[0])
+    np.testing.assert_array_equal(inputs_v1, outputs[1])
 
 
 def test_call_idx0(inputs_v0, inputs_v1, inputs_v2):
@@ -114,8 +114,8 @@ def test_call_idx0(inputs_v0, inputs_v1, inputs_v2):
     outputs = layer([inputs_v0, inputs_v1, inputs_v2])
 
     assert len(outputs) == 2
-    tf.debugging.assert_equal(inputs_v1, outputs[0])
-    tf.debugging.assert_equal(inputs_v2, outputs[1])
+    np.testing.assert_array_equal(inputs_v1, keras.ops.convert_to_numpy(outputs[0]))
+    np.testing.assert_array_equal(inputs_v2, keras.ops.convert_to_numpy(outputs[1]))
 
 
 def test_call_idx1(inputs_v0, inputs_v1, inputs_v2):
@@ -126,8 +126,8 @@ def test_call_idx1(inputs_v0, inputs_v1, inputs_v2):
     outputs = layer([inputs_v0, inputs_v1, inputs_v2])
 
     assert len(outputs) == 2
-    tf.debugging.assert_equal(inputs_v0, outputs[0])
-    tf.debugging.assert_equal(inputs_v2, outputs[1])
+    np.testing.assert_array_equal(inputs_v0, keras.ops.convert_to_numpy(outputs[0]))
+    np.testing.assert_array_equal(inputs_v2, keras.ops.convert_to_numpy(outputs[1]))
 
 
 def test_call_idx2(inputs_v0, inputs_v1, inputs_v2):
@@ -136,10 +136,11 @@ def test_call_idx2(inputs_v0, inputs_v1, inputs_v2):
     layer = Drop(subnet=subnet, drop_index=2)
 
     outputs = layer([inputs_v0, inputs_v1, inputs_v2])
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     assert len(outputs) == 2
-    tf.debugging.assert_equal(inputs_v0, outputs[0])
-    tf.debugging.assert_equal(inputs_v1, outputs[1])
+    np.testing.assert_array_equal(inputs_v0, outputs[0])
+    np.testing.assert_array_equal(inputs_v1, outputs[1])
 
 
 # TODO use or remove
@@ -148,17 +149,17 @@ def test_call_idx2(inputs_v0, inputs_v1, inputs_v2):
 #     subnet = Dummy()
 #     layer = Drop(subnet=subnet)
 
-#     input_shape = [tf.TensorShape([16, 3]), tf.TensorShape([16, 2])]
+#     input_shape = [[16, 3], [16, 2]]
 #     output_shape = layer.compute_output_shape(input_shape)
-#     tf.debugging.assert_equal(output_shape, tf.TensorShape([16, 3]))
+#     np.testing.assert_array_equal(output_shape, [16, 3])
 #     # Call again to trigger skip branch in coverage.
 #     output_shape = layer.compute_output_shape(input_shape)
-#     tf.debugging.assert_equal(output_shape, tf.TensorShape([16, 3]))
+#     np.testing.assert_array_equal(output_shape, [16, 3])
 
 #     # While here, call `_check_strip_inputs` to trigger execution branch that
 #     # immediately returns to get code coverage since `_strip_inputs` was set
 #     # during `compute_output_shapes`.
-#     layer._check_strip_inputs(tf.TensorShape([16, 3]))
+#     layer._check_strip_inputs([16, 3])
 
 
 def test_serialization():

@@ -15,8 +15,9 @@
 # ============================================================================
 """Test InnerProduct layer."""
 
+
+import keras
 import numpy as np
-import tensorflow as tf
 
 from psiz.keras.layers.proximities.experimental.inner_product import InnerProduct
 
@@ -25,9 +26,10 @@ def test_init_call_v0(paired_inputs_v0):
     """Test call with default (linear) activation."""
     proximity_layer = InnerProduct()
     outputs = proximity_layer(paired_inputs_v0)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    inputs_0 = paired_inputs_v0[0].numpy()
-    inputs_1 = paired_inputs_v0[1].numpy()
+    inputs_0 = paired_inputs_v0[0]
+    inputs_1 = paired_inputs_v0[1]
     desired_outputs = np.concatenate(
         [
             np.matmul(
@@ -49,7 +51,7 @@ def test_init_call_v0(paired_inputs_v0):
         axis=0,
     ).squeeze()
 
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(desired_outputs, outputs)
 
 
 def test_init_call_v1(paired_inputs_v0):
@@ -63,16 +65,17 @@ def test_init_call_v1(paired_inputs_v0):
         dtype=np.float32,
     )
     proximity_layer = InnerProduct(
-        w_tril_initializer=tf.initializers.Constant(
-            tf.linalg.cholesky(covariance_matrix).numpy()
+        w_tril_initializer=keras.initializers.Constant(
+            keras.ops.cholesky(covariance_matrix)
         ),
     )
     outputs = proximity_layer(paired_inputs_v0)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     desired_outputs = np.array(
-        [1.295, 22.794998, 51.295, 86.795, 129.29498], dtype=np.float32
+        [1.295, 22.794998, 51.295, 86.795, 129.29498], dtype="float32"
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(desired_outputs, outputs)
 
 
 def test_init_call_v2(paired_inputs_v0):
@@ -86,30 +89,36 @@ def test_init_call_v2(paired_inputs_v0):
         dtype=np.float32,
     )
     proximity_layer = InnerProduct(
-        w_tril_initializer=tf.initializers.Constant(
-            tf.linalg.cholesky(covariance_matrix).numpy()
+        w_tril_initializer=keras.initializers.Constant(
+            keras.ops.cholesky(covariance_matrix)
         )
     )
     outputs = proximity_layer(paired_inputs_v0)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     desired_outputs = np.array(
-        [1.3949997, 24.134998, 54.274998, 91.814995, 136.75497], dtype=np.float32
+        [1.3949997, 24.134998, 54.274998, 91.814995, 136.75497], dtype="float32"
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(desired_outputs, outputs)
 
 
 def test_serialization():
     """Test serialization."""
     covariance_matrix = np.eye(3, dtype=np.float32)
     proximity_layer = InnerProduct(
-        w_tril_initializer=tf.initializers.Constant(
-            tf.linalg.cholesky(covariance_matrix).numpy()
+        w_tril_initializer=keras.initializers.Constant(
+            keras.ops.cholesky(covariance_matrix)
         )
     )
     proximity_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(proximity_layer.w, tf.constant(covariance_matrix))
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(proximity_layer.w), covariance_matrix
+    )
     config = proximity_layer.get_config()
 
     recon_layer = InnerProduct.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(proximity_layer.w, recon_layer.w)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(proximity_layer.w),
+        keras.ops.convert_to_numpy(recon_layer.w),
+    )

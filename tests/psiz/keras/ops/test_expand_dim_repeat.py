@@ -17,15 +17,12 @@
 
 import numpy as np
 import pytest
-import tensorflow as tf
 
 from psiz.keras.ops import expand_dim_repeat
 
 
 def test_expand_dim_repeat_empty():
-    x = tf.constant(
-        np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
-    )
+    x = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
 
     n_sample = ()
     with pytest.raises(Exception) as e_info:
@@ -34,9 +31,7 @@ def test_expand_dim_repeat_empty():
 
 
 def test_expand_dim_repeat_1():
-    x = tf.constant(
-        np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
-    )
+    x = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
 
     n_sample = 1
     output = expand_dim_repeat(x, n_sample, axis=1)
@@ -48,9 +43,7 @@ def test_expand_dim_repeat_1():
 
 
 def test_expand_dim_repeat_2():
-    x = tf.constant(
-        np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
-    )
+    x = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
 
     n_sample = 2
     output = expand_dim_repeat(x, n_sample, axis=1)

@@ -17,8 +17,8 @@
 
 
 import keras
+import numpy as np
 import pytest
-import tensorflow as tf
 
 from psiz.keras.layers import ALCOVECell, ExponentialSimilarity
 
@@ -53,7 +53,7 @@ def test_call(category_learning_inputs_v0):
     )
     state_t0 = cell.get_initial_state(batch_size=4)
     output_t1, state_t1 = cell(category_learning_inputs_v0, state_t0)
-    tf.debugging.assert_equal(tf.shape(output_t1), tf.TensorShape([4, 3]))
+    np.testing.assert_allclose(np.shape(output_t1), [4, 3])
 
 
 @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
@@ -124,8 +124,8 @@ def test_serialization(category_learning_inputs_v1):
 
     recon_layer = ALCOVECell.from_config(cfg)
     # recon_layer.build(TODO)
-    tf.debugging.assert_equal(recon_layer.similarity.beta, 3.2)
-    tf.debugging.assert_equal(recon_layer.similarity.tau, 1.0)
+    np.testing.assert_allclose(recon_layer.similarity.beta, 3.2)
+    np.testing.assert_allclose(recon_layer.similarity.tau, 1.0)
     assert recon_layer.units == units
     assert recon_layer.data_scope == "categorize"
 
@@ -143,7 +143,7 @@ def test_serialization(category_learning_inputs_v1):
     assert cfg["data_scope"] == "abc"
 
     recon_layer = ALCOVECell.from_config(cfg)
-    tf.debugging.assert_equal(recon_layer.similarity.beta, 3.2)
-    tf.debugging.assert_equal(recon_layer.similarity.tau, 1.0)
+    np.testing.assert_allclose(recon_layer.similarity.beta, 3.2)
+    np.testing.assert_allclose(recon_layer.similarity.tau, 1.0)
     assert recon_layer.units == units
     assert recon_layer.data_scope == "abc"

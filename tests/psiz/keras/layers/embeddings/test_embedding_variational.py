@@ -15,12 +15,9 @@
 # ============================================================================
 """Test EmbeddingVariational layer."""
 
-import copy
-
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 import psiz.data
@@ -31,10 +28,8 @@ import psiz.keras.layers
 def emb_inputs_v1():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
-        np.array(
-            [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 1, 2], [9, 1, 2]], dtype=np.int32
-        )
+    inputs = np.array(
+        [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 1, 2], [9, 1, 2]], dtype=np.int32
     )
     return inputs
 
@@ -91,95 +86,96 @@ def ds_3rank1_4x2():
     return tfds
 
 
-class TempNoRNN(psiz.keras.models.StochasticModel):
-    """A basic model for testing.
+# class TempNoRNN(psiz.keras.models.StochasticModel):
+#     """A basic model for testing.
 
-    Attributes:
-        net: The network.
-        n_sample: Integer indicating the number of samples to draw for
-            stochastic layers. Only useful if using stochastic layers
-            (e.g., variational models).
+#     Attributes:
+#         net: The network.
+#         n_sample: Integer indicating the number of samples to draw for
+#             stochastic layers. Only useful if using stochastic layers
+#             (e.g., variational models).
 
-    """
+#     """
 
-    def __init__(self, net=None, n_sample=1, **kwargs):
-        """Initialize.
+#     def __init__(self, net=None, n_sample=1, **kwargs):
+#         """Initialize.
 
-        Args:
-            net: A Keras layer.
-            n_sample (optional): See psiz.keras.models.StochasticModel.
-            kwargs:  Additional key-word arguments.
+#         Args:
+#             net: A Keras layer.
+#             n_sample (optional): See psiz.keras.models.StochasticModel.
+#             kwargs:  Additional key-word arguments.
 
-        Raises:
-            ValueError: If arguments are invalid.
+#         Raises:
+#             ValueError: If arguments are invalid.
 
-        """
-        super(TempNoRNN, self).__init__(n_sample=n_sample, **kwargs)
+#         """
+#         super(TempNoRNN, self).__init__(n_sample=n_sample, **kwargs)
 
-        # Assign layers.
-        self.net = net
+#         # Assign layers.
+#         self.net = net
 
-    def call(self, inputs, training=None):
-        """Call.
+#     def call(self, inputs, training=None):
+#         """Call.
 
-        Args:
-            inputs: A dictionary of inputs.
-            training (optional): Boolean indicating if training mode.
+#         Args:
+#             inputs: A dictionary of inputs.
+#             training (optional): Boolean indicating if training mode.
 
-        """
-        inputs = copy.copy(inputs)
-        # Initialize states placeholder since not using RNN functionality
-        states = tf.constant([0.0])
+#         """
+#         inputs = copy.copy(inputs)
+#         # Initialize states placeholder since not using RNN functionality
+#         states = [0.0]
 
-        #  Drop sequence axis.
-        inputs["given3rank1_stimulus_set"] = inputs["given3rank1_stimulus_set"][:, 0]
+#         #  Drop sequence axis.
+#         inputs["given3rank1_stimulus_set"] = inputs["given3rank1_stimulus_set"][:, 0]
 
-        output, states = self.net(inputs, states, training=training)
+#         output, states = self.net(inputs, states, training=training)
 
-        #  Add back sequence axis.
-        output = tf.expand_dims(output, axis=1)
-        return output
-
-
-class TempRNN(psiz.keras.models.StochasticModel):
-    """A basic model for testing.
-
-    Attributes:
-        net: The network.
-        n_sample: Integer indicating the number of samples to draw for
-            stochastic layers. Only useful if using stochastic layers
-            (e.g., variational models).
-
-    """
-
-    def __init__(self, net=None, n_sample=1, **kwargs):
-        """Initialize.
-
-        Args:
-            net: A Keras layer.
-            n_sample (optional): See psiz.keras.models.StochasticModel.
-            kwargs:  Additional key-word arguments.
-
-        Raises:
-            ValueError: If arguments are invalid.
-
-        """
-        super(TempRNN, self).__init__(n_sample=n_sample, **kwargs)
-
-        # Assign layers.
-        self.net = keras.layers.RNN(net, return_sequences=True)
-
-    def call(self, inputs, training=None):
-        """Call.
-
-        Args:
-            inputs: A dictionary of inputs.
-            training (optional): Boolean indicating if training mode.
-
-        """
-        return self.net(inputs, training=training)
+#         #  Add back sequence axis.
+#         output = keras.ops.expand_dims(output, axis=1)
+#         return output
 
 
+# class TempRNN(psiz.keras.models.StochasticModel):
+#     """A basic model for testing.
+
+#     Attributes:
+#         net: The network.
+#         n_sample: Integer indicating the number of samples to draw for
+#             stochastic layers. Only useful if using stochastic layers
+#             (e.g., variational models).
+
+#     """
+
+#     def __init__(self, net=None, n_sample=1, **kwargs):
+#         """Initialize.
+
+#         Args:
+#             net: A Keras layer.
+#             n_sample (optional): See psiz.keras.models.StochasticModel.
+#             kwargs:  Additional key-word arguments.
+
+#         Raises:
+#             ValueError: If arguments are invalid.
+
+#         """
+#         super(TempRNN, self).__init__(n_sample=n_sample, **kwargs)
+
+#         # Assign layers.
+#         self.net = keras.layers.RNN(net, return_sequences=True)
+
+#     def call(self, inputs, training=None):
+#         """Call.
+
+#         Args:
+#             inputs: A dictionary of inputs.
+#             training (optional): Boolean indicating if training mode.
+
+#         """
+#         return self.net(inputs, training=training)
+
+
+@pytest.mark.tfp
 def test_call_approx(emb_inputs_v1):
     """Test call."""
     kl_weight = 0.1
@@ -219,12 +215,14 @@ def test_call_approx(emb_inputs_v1):
 
     embedding_variational.build([None, 3])
     outputs = embedding_variational(emb_inputs_v1)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     # Just check shape since stochastic.
-    desired_shape = tf.TensorShape([5, 3, 3])
-    tf.debugging.assert_equal(tf.shape(outputs), desired_shape)
+    desired_shape = np.array([5, 3, 3])
+    np.testing.assert_equal(np.shape(outputs), desired_shape)
 
 
+@pytest.mark.tfp
 def test_serialization():
     """Test serialization with weights."""
     kl_weight = 0.1
@@ -269,27 +267,33 @@ def test_serialization():
     recon_layer.set_weights(weights)
 
     # Test prior, which should trivially be equal becuase of initialization.
-    tf.debugging.assert_equal(
-        orig_layer.prior.embeddings.mode(), recon_layer.prior.embeddings.mode()
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(orig_layer.prior.embeddings.mode()),
+        keras.ops.convert_to_numpy(recon_layer.prior.embeddings.mode()),
     )
-    tf.debugging.assert_equal(
-        orig_layer.prior.embeddings.variance(), recon_layer.prior.embeddings.variance()
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(orig_layer.prior.embeddings.variance()),
+        keras.ops.convert_to_numpy(recon_layer.prior.embeddings.variance()),
     )
+
     # Test posterior.
-    tf.debugging.assert_equal(
-        orig_layer.posterior.embeddings.mode(), recon_layer.posterior.embeddings.mode()
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(orig_layer.posterior.embeddings.mode()),
+        keras.ops.convert_to_numpy(recon_layer.posterior.embeddings.mode()),
     )
-    tf.debugging.assert_equal(
-        orig_layer.posterior.embeddings.variance(),
-        recon_layer.posterior.embeddings.variance(),
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(orig_layer.posterior.embeddings.variance()),
+        keras.ops.convert_to_numpy(recon_layer.posterior.embeddings.variance()),
     )
+
     # Test short-cut alias.
-    tf.debugging.assert_equal(
-        orig_layer.embeddings.mode(),
-        recon_layer.embeddings.mode(),
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(orig_layer.embeddings.mode()),
+        keras.ops.convert_to_numpy(recon_layer.embeddings.mode()),
     )
 
 
+@pytest.mark.tfp
 def test_properties():
     kl_weight = 0.1
     n_stimuli = 10
@@ -345,8 +349,6 @@ def test_properties():
 # @pytest.mark.xfail(reason="RNN call requires single input tensor.")
 # def test_fit_no_rnn(ds_3rank1_4x1, is_eager):
 #     """Test fit method (triggering backprop)."""
-#     tf.config.run_functions_eagerly(is_eager)
-
 #     tfds = ds_3rank1_4x1
 
 #     kl_weight = 0.1
@@ -406,6 +408,7 @@ def test_properties():
 #         "loss": keras.losses.CategoricalCrossentropy(),
 #         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
 #         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+#         "run_eagerly": is_eager,
 #     }
 #     model.compile(**compile_kwargs)
 
@@ -432,8 +435,6 @@ def test_properties():
 # )
 # def test_fit_with_rnn(ds_3rank1_4x2, is_eager):
 #     """Test fit method (triggering backprop)."""
-#     tf.config.run_functions_eagerly(is_eager)
-
 #     tfds = ds_3rank1_4x2
 
 #     kl_weight = 0.1
@@ -492,6 +493,7 @@ def test_properties():
 #         "loss": keras.losses.CategoricalCrossentropy(),
 #         "optimizer": keras.optimizers.Adam(learning_rate=0.001),
 #         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
+#         "run_eagerly": is_eager,
 #     }
 #     model.compile(**compile_kwargs)
 

@@ -74,6 +74,7 @@ def emb_0(mask_zero, is_dist):
     return emb
 
 
+@pytest.mark.tfp
 @pytest.mark.parametrize("mask_zero", [False, True])
 @pytest.mark.parametrize("ax_present", [False, True])
 def test_deterministic_emb_output(mask_zero, ax_present):
@@ -107,6 +108,7 @@ def test_deterministic_emb_output(mask_zero, ax_present):
     plt.close(fig)
 
 
+@pytest.mark.tfp
 @pytest.mark.parametrize("mask_zero", [False, True])
 @pytest.mark.parametrize("ax_present", [False, True])
 def test_stochastic_emb_output(mask_zero, ax_present):

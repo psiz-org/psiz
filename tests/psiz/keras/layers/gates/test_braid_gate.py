@@ -19,7 +19,6 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingNormalDiag
@@ -63,7 +62,13 @@ class Increment(keras.layers.Layer):
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(Increment, self).__init__(**kwargs)
-        self.v = tf.constant(v)
+        self.v = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(v),
+            trainable=False,
+            name="v",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -77,7 +82,13 @@ class AddPairs(keras.layers.Layer):
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(AddPairs, self).__init__(**kwargs)
-        self.v = tf.constant(v)
+        self.v = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(v),
+            trainable=False,
+            name="v",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -91,7 +102,13 @@ class AddPairsDict(keras.layers.Layer):
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(AddPairsDict, self).__init__(**kwargs)
-        self.v = tf.constant(v)
+        self.v = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(v),
+            trainable=False,
+            name="v",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -102,10 +119,8 @@ class AddPairsDict(keras.layers.Layer):
 def inputs_emb_v0():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
-        np.array(
-            [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [9, 10, 11]], dtype=np.int32
-        )
+    inputs = np.array(
+        [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [9, 10, 11]], dtype="int32"
     )
     return inputs
 
@@ -114,17 +129,15 @@ def inputs_emb_v0():
 def inputs_emb_v1():
     """A minibatch of non-gate inupts."""
     # Create a simple batch (batch_size=5).
-    inputs = tf.constant(
-        np.array(
-            [
-                [[0, 1, 2], [3, 4, 5]],
-                [[0, 1, 2], [3, 4, 5]],
-                [[0, 1, 2], [3, 4, 5]],
-                [[6, 7, 8], [9, 10, 11]],
-                [[6, 7, 8], [9, 10, 11]],
-            ],
-            dtype=np.int32,
-        )
+    inputs = np.array(
+        [
+            [[0, 1, 2], [3, 4, 5]],
+            [[0, 1, 2], [3, 4, 5]],
+            [[0, 1, 2], [3, 4, 5]],
+            [[6, 7, 8], [9, 10, 11]],
+            [[6, 7, 8], [9, 10, 11]],
+        ],
+        dtype="int32",
     )
     return inputs
 
@@ -357,7 +370,7 @@ def nested_subnet_gate_v0():
 
 @pytest.fixture
 def inputs_5x3_v1():
-    inputs = tf.constant(
+    inputs = np.array(
         [
             [0.0, 0.1, 0.2],
             [1.0, 1.1, 1.2],
@@ -365,22 +378,31 @@ def inputs_5x3_v1():
             [3.0, 3.1, 3.2],
             [4.0, 4.1, 4.2],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     return inputs
 
 
 def test_build_subnet_1input(emb_subnets_determ):
     braid_layer = BraidGate(subnets=emb_subnets_determ, gating_index=-1)
-    braid_layer.build([tf.TensorShape([None, None]), tf.TensorShape([None, None])])
+    braid_layer.build([[None, None], [None, None]])
 
     subnet_0 = braid_layer.subnets[0]
     subnet_1 = braid_layer.subnets[1]
     subnet_2 = braid_layer.subnets[2]
 
-    tf.debugging.assert_equal(subnet_0.embeddings, emb_subnets_determ[0].embeddings)
-    tf.debugging.assert_equal(subnet_1.embeddings, emb_subnets_determ[1].embeddings)
-    tf.debugging.assert_equal(subnet_2.embeddings, emb_subnets_determ[2].embeddings)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_0.embeddings),
+        keras.ops.convert_to_numpy(emb_subnets_determ[0].embeddings),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_1.embeddings),
+        keras.ops.convert_to_numpy(emb_subnets_determ[1].embeddings),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_2.embeddings),
+        keras.ops.convert_to_numpy(emb_subnets_determ[2].embeddings),
+    )
 
 
 def test_call_1input_emb_determ_2d_input(
@@ -395,8 +417,9 @@ def test_call_1input_emb_determ_2d_input(
     braid_layer = BraidGate(subnets=emb_subnets_determ, gating_index=-1)
 
     outputs = braid_layer([inputs_emb_v0, groups])
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    desired_outputs = tf.constant(
+    desired_outputs = np.array(
         [
             [[0.0, 0.1, 0.2], [1.0, 1.1, 1.2], [2.0, 2.1, 2.2]],
             [[103.0, 103.1, 103.2], [104.0, 104.1, 104.2], [105.0, 105.1, 105.2]],
@@ -404,9 +427,10 @@ def test_call_1input_emb_determ_2d_input(
             [[109.0, 109.1, 109.2], [110.0, 110.1, 110.2], [111.0, 111.1, 111.2]],
             [[209.0, 209.1, 209.2], [210.0, 210.1, 210.2], [211.0, 211.1, 211.2]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_equal(outputs, desired_outputs)
+
+    np.testing.assert_array_almost_equal(outputs, desired_outputs)
 
 
 def test_call_1input_emb_determ_3d_input(
@@ -447,6 +471,7 @@ def test_call_1input_emb_determ_3d_input(
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs)
 
 
+@pytest.mark.tfp
 def test_call_1input_emb_stoch_2d_input_rank0(
     emb_subnets_stoch_rank0, inputs_emb_v0, groups_v0_1
 ):
@@ -470,6 +495,7 @@ def test_call_1input_emb_stoch_2d_input_rank0(
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs, decimal=1)
 
 
+@pytest.mark.tfp
 def test_call_1input_emb_stoch_2d_input_rank1(
     emb_subnets_stoch_rank1, inputs_emb_v0, groups_v0_1
 ):
@@ -506,8 +532,9 @@ def test_call_listinput_timestep(gates_v0_timestep, inputs_list_timestep):
     braid_layer = BraidGate(subnets=subnets, gating_index=-1)
 
     outputs = braid_layer([inputs_list_timestep[0], inputs_list_timestep[1], groups])
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    outputs_desired = tf.constant(
+    outputs_desired = np.array(
         [
             [[10.00, 10.20, 10.40], [10.02, 10.22, 10.42]],
             [[12.01, 12.21, 12.41], [12.03, 12.23, 12.43]],
@@ -519,9 +546,10 @@ def test_call_listinput_timestep(gates_v0_timestep, inputs_list_timestep):
             [[9.00, 9.10, 9.20], [9.015, 9.115, 9.215]],
         ]
     )
-    tf.debugging.assert_near(outputs, outputs_desired)
+    np.testing.assert_array_almost_equal(outputs, outputs_desired)
 
 
+@pytest.mark.tfp
 def test_call_1input_emb_empty_branch(
     emb_subnets_stoch_rank0, inputs_emb_v0, group_3g_empty_v0_1
 ):
@@ -543,6 +571,7 @@ def test_call_1input_emb_empty_branch(
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs, decimal=1)
 
 
+@pytest.mark.tfp
 def test_serialization_1input_emb(emb_subnets_stoch_rank1, inputs_emb_v0, groups_v0_0):
     groups = groups_v0_0
 
@@ -574,9 +603,9 @@ def test_subnet_listinput(kernel_subnets):
     braid_layer = BraidGate(subnets=kernel_subnets, gating_index=-1)
     braid_layer.build(
         [
-            tf.TensorShape([None, 3]),
-            tf.TensorShape([None, 3]),
-            tf.TensorShape([None, 3]),
+            [None, 3],
+            [None, 3],
+            [None, 3],
         ]
     )
 
@@ -584,14 +613,32 @@ def test_subnet_listinput(kernel_subnets):
     subnet_1 = braid_layer.subnets[1]
     subnet_2 = braid_layer.subnets[2]
 
-    tf.debugging.assert_equal(subnet_0.rho, kernel_subnets[0].rho)
-    tf.debugging.assert_equal(subnet_0.w, kernel_subnets[0].w)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_0.rho),
+        keras.ops.convert_to_numpy(kernel_subnets[0].rho),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_0.w),
+        keras.ops.convert_to_numpy(kernel_subnets[0].w),
+    )
 
-    tf.debugging.assert_equal(subnet_1.rho, kernel_subnets[1].rho)
-    tf.debugging.assert_equal(subnet_1.w, kernel_subnets[1].w)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_1.rho),
+        keras.ops.convert_to_numpy(kernel_subnets[1].rho),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_1.w),
+        keras.ops.convert_to_numpy(kernel_subnets[1].w),
+    )
 
-    tf.debugging.assert_equal(subnet_2.rho, kernel_subnets[2].rho)
-    tf.debugging.assert_equal(subnet_2.w, kernel_subnets[2].w)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_2.rho),
+        keras.ops.convert_to_numpy(kernel_subnets[2].rho),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(subnet_2.w),
+        keras.ops.convert_to_numpy(kernel_subnets[2].w),
+    )
 
 
 def test_bad_instantiation_listinput(kernel_subnets, paired_inputs_v0, groups_v0_0):
@@ -657,13 +704,15 @@ def test_serialization_listinput(kernel_subnets, paired_inputs_v0, groups_v0_0):
 
     group_layer_0 = BraidGate(subnets=kernel_subnets, gating_index=-1)
     outputs_0 = group_layer_0([paired_inputs_v0[0], paired_inputs_v0[1], groups])
+    outputs_0 = keras.ops.convert_to_numpy(outputs_0)
     config = group_layer_0.get_config()
     assert config["gating_index"] == -1
 
     group_layer_1 = BraidGate.from_config(config)
     outputs_1 = group_layer_1([paired_inputs_v0[0], paired_inputs_v0[1], groups])
+    outputs_1 = keras.ops.convert_to_numpy(outputs_1)
 
-    tf.debugging.assert_equal(outputs_0, outputs_1)
+    np.testing.assert_array_equal(outputs_0, outputs_1)
 
 
 def test_bad_instantiation_dictinput(gates_v0_timestep, inputs_dict_timestep):
@@ -694,8 +743,9 @@ def test_call_dictinput_timestep(gates_v0_timestep, inputs_dict_timestep):
 
     braid_layer = BraidGate(subnets=subnets, gating_key="groups")
     outputs = braid_layer(inputs)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    outputs_desired = tf.constant(
+    outputs_desired = np.array(
         [
             [[10.00, 10.20, 10.40], [10.02, 10.22, 10.42]],
             [[12.01, 12.21, 12.41], [12.03, 12.23, 12.43]],
@@ -707,7 +757,7 @@ def test_call_dictinput_timestep(gates_v0_timestep, inputs_dict_timestep):
             [[9.00, 9.10, 9.20], [9.015, 9.115, 9.215]],
         ]
     )
-    tf.debugging.assert_near(outputs, outputs_desired)
+    np.testing.assert_array_almost_equal(outputs, outputs_desired)
 
 
 def test_call_nested(
@@ -721,7 +771,7 @@ def test_call_nested(
     braid_layer = nested_subnet_gate_v0
 
     # Desired values.
-    inputs_1 = tf.constant(
+    inputs_1 = np.array(
         [
             [5.0, 5.1, 5.2],
             [6.0, 6.1, 6.2],
@@ -729,16 +779,19 @@ def test_call_nested(
             [8.0, 8.1, 8.2],
             [9.0, 9.1, 9.2],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    gate_increment = tf.expand_dims(tf.constant([0.0, 0.01, 0.02, 0.01, 0.03]), axis=1)
+    gate_increment = keras.ops.expand_dims(
+        np.array([0.0, 0.01, 0.02, 0.01, 0.03]), axis=1
+    )
     desired_outputs = inputs_0 + inputs_1 + gate_increment
 
     outputs = braid_layer(
         [paired_inputs_v0[0], paired_inputs_v0[1], groups_1, groups_2]
     )
+    outputs = keras.ops.convert_to_numpy(outputs)
 
-    tf.debugging.assert_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(desired_outputs, outputs)
 
 
 def test_call_mixture(inputs_5x3_v1, groups_v3_12):
@@ -748,7 +801,7 @@ def test_call_mixture(inputs_5x3_v1, groups_v3_12):
 
     braid_layer = BraidGate(subnets=[Increment(1.0), Increment(3.0)], gating_index=-1)
 
-    desired_increment = tf.constant(
+    desired_increment = np.array(
         [
             [1.0, 1.0, 1.0],
             [1.4, 1.4, 1.4],
@@ -756,7 +809,7 @@ def test_call_mixture(inputs_5x3_v1, groups_v3_12):
             [2.6, 2.6, 2.6],
             [3.0, 3.0, 3.0],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
     desired_outputs = inputs_0 + desired_increment
 

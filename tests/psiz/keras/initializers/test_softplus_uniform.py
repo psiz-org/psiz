@@ -15,7 +15,7 @@
 # ============================================================================
 """Test constraints module."""
 
-import tensorflow as tf
+
 from keras import backend
 
 from psiz.keras.initializers import SoftplusUniform
@@ -44,7 +44,7 @@ def test_all():
     assert config["seed"] == 252
 
     # Check call does not raise error.
-    tf_shape = tf.TensorShape([2, 4])
+    tf_shape = [2, 4]
     _ = initializer(tf_shape)
 
     _ = initializer(tf_shape, dtype=backend.floatx())

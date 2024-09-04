@@ -18,7 +18,6 @@
 
 import keras
 import numpy as np
-import tensorflow as tf
 
 from psiz.keras.layers.activations.exponential import ExponentialSimilarity
 from psiz.keras.layers.proximities.minkowski import Minkowski
@@ -86,21 +85,46 @@ def test_serialization_0():
         trainable=False,
     )
     mink_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))
-    tf.debugging.assert_equal(mink_layer.activation.beta, tf.constant(0.1))
-    tf.debugging.assert_equal(mink_layer.activation.tau, tf.constant(1.0))
-    tf.debugging.assert_equal(mink_layer.activation.gamma, tf.constant(0.001))
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.w),
+        np.array([1.0, 1.0, 1.0], dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.beta),
+        np.array(0.1, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.tau),
+        np.array(1.0, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.gamma),
+        np.array(0.001, dtype="float32"),
+    )
     config = mink_layer.get_config()
 
     recon_layer = Minkowski.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
-    tf.debugging.assert_equal(mink_layer.activation.beta, recon_layer.activation.beta)
-    tf.debugging.assert_equal(mink_layer.activation.tau, recon_layer.activation.tau)
-    tf.debugging.assert_equal(mink_layer.activation.gamma, recon_layer.activation.gamma)
-
-    tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
-    tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(recon_layer.w),
+        keras.ops.convert_to_numpy(mink_layer.w),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(recon_layer.activation.beta),
+        keras.ops.convert_to_numpy(mink_layer.activation.beta),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(recon_layer.activation.tau),
+        keras.ops.convert_to_numpy(mink_layer.activation.tau),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(recon_layer.activation.gamma),
+        keras.ops.convert_to_numpy(mink_layer.activation.gamma),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(recon_layer.rho),
+        keras.ops.convert_to_numpy(mink_layer.rho),
+    )
 
 
 def test_serialization_1(paired_inputs_v0):
@@ -117,10 +141,19 @@ def test_serialization_1(paired_inputs_v0):
         trainable=False,
     )
     mink_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))
-    tf.debugging.assert_equal(mink_layer.activation.beta, tf.constant(0.1))
-    tf.debugging.assert_equal(mink_layer.activation.tau, tf.constant(1.0))
-    tf.debugging.assert_equal(mink_layer.activation.gamma, tf.constant(0.001))
+    np.testing.assert_array_equal(keras.ops.convert_to_numpy(mink_layer.w).shape[0], 3)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.beta),
+        np.array(0.1, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.tau),
+        np.array(1.0, dtype="float32"),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.gamma),
+        np.array(0.001, dtype="float32"),
+    )
     config = mink_layer.get_config()
     weights = mink_layer.get_weights()
 
@@ -128,13 +161,26 @@ def test_serialization_1(paired_inputs_v0):
     # NOTE: Calling build is necessary for the weights to be set, otherwise an error is thrown.
     recon_layer.build([[None, 3], [None, 3]])
     recon_layer.set_weights(weights)
-    tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
-    tf.debugging.assert_equal(mink_layer.activation.beta, recon_layer.activation.beta)
-    tf.debugging.assert_equal(mink_layer.activation.tau, recon_layer.activation.tau)
-    tf.debugging.assert_equal(mink_layer.activation.gamma, recon_layer.activation.gamma)
-
-    tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
-    tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.w),
+        keras.ops.convert_to_numpy(recon_layer.w),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.beta),
+        keras.ops.convert_to_numpy(recon_layer.activation.beta),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.tau),
+        keras.ops.convert_to_numpy(recon_layer.activation.tau),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.activation.gamma),
+        keras.ops.convert_to_numpy(recon_layer.activation.gamma),
+    )
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.rho),
+        keras.ops.convert_to_numpy(recon_layer.rho),
+    )
 
 
 def test_serialization_2():
@@ -145,14 +191,23 @@ def test_serialization_2():
         trainable=False,
     )
     mink_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(tf.shape(mink_layer.w)[0], tf.constant(3))
-    tf.debugging.assert_equal(mink_layer.activation.weights, [])
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.w),
+        np.array([1.0, 1.0, 1.0], dtype="float32"),
+    )
+
+    assert mink_layer.activation.weights == []
     config = mink_layer.get_config()
 
     recon_layer = Minkowski.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    tf.debugging.assert_equal(tf.shape(recon_layer.w)[0], tf.constant(3))
-    tf.debugging.assert_equal(recon_layer.activation.weights, [])
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.w),
+        keras.ops.convert_to_numpy(recon_layer.w),
+    )
+    assert recon_layer.activation.weights == []
 
-    tf.debugging.assert_equal(mink_layer.w, recon_layer.w)
-    tf.debugging.assert_equal(mink_layer.rho, recon_layer.rho)
+    np.testing.assert_array_equal(
+        keras.ops.convert_to_numpy(mink_layer.rho),
+        keras.ops.convert_to_numpy(recon_layer.rho),
+    )

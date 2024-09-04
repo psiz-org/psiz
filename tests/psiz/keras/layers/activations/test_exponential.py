@@ -17,93 +17,103 @@
 
 
 import keras
-import tensorflow as tf
+import numpy as np
+
 from psiz.keras.layers import ExponentialSimilarity
 
 
-def test_init_default():
-    """Test default initialization."""
-    similarity = ExponentialSimilarity()
+class TestExponential:
 
-    assert similarity.fit_tau
-    assert similarity.fit_gamma
-    assert similarity.fit_beta
+    def test_init_default(self):
+        """Test default initialization."""
+        similarity = ExponentialSimilarity()
 
+        assert similarity.fit_tau
+        assert similarity.fit_gamma
+        assert similarity.fit_beta
 
-def test_init_options_0():
-    """Test initialization with optional arguments."""
-    similarity = ExponentialSimilarity(
-        fit_tau=False,
-        fit_gamma=False,
-        fit_beta=False,
-        tau_initializer=keras.initializers.Constant(1.0),
-        gamma_initializer=keras.initializers.Constant(0.01),
-        beta_initializer=keras.initializers.Constant(10.0),
-    )
+    def test_init_options_0(self):
+        """Test initialization with optional arguments."""
+        similarity = ExponentialSimilarity(
+            fit_tau=False,
+            fit_gamma=False,
+            fit_beta=False,
+            tau_initializer=keras.initializers.Constant(1.0),
+            gamma_initializer=keras.initializers.Constant(0.01),
+            beta_initializer=keras.initializers.Constant(10.0),
+        )
 
-    assert not similarity.fit_tau
-    assert not similarity.fit_gamma
-    assert not similarity.fit_beta
+        assert not similarity.fit_tau
+        assert not similarity.fit_gamma
+        assert not similarity.fit_beta
 
+    def test_init_options_1(self):
+        """Test initialization with optional arguments."""
+        similarity = ExponentialSimilarity(fit_beta=False)
 
-def test_init_options_1():
-    """Test initialization with optional arguments."""
-    similarity = ExponentialSimilarity(fit_beta=False)
+        assert similarity.fit_tau
+        assert similarity.fit_gamma
+        assert not similarity.fit_beta
 
-    assert similarity.fit_tau
-    assert similarity.fit_gamma
-    assert not similarity.fit_beta
+    def test_call(self):
+        """Test call."""
+        similarity = ExponentialSimilarity(
+            tau_initializer=keras.initializers.Constant(2.1),
+            gamma_initializer=keras.initializers.Constant(0.001),
+            beta_initializer=keras.initializers.Constant(1.11),
+        )
 
+        d = np.array(
+            [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype="float32"
+        )
+        s_actual = similarity(d)
+        s_actual = keras.ops.convert_to_numpy(s_actual)
 
-def test_call():
-    """Test call."""
-    similarity = ExponentialSimilarity(
-        tau_initializer=keras.initializers.Constant(2.1),
-        gamma_initializer=keras.initializers.Constant(0.001),
-        beta_initializer=keras.initializers.Constant(1.11),
-    )
+        s_desired = np.array(
+            [[0.6097281, 0.10853132], [0.4828154, 0.16589916]], dtype="float32"
+        )
+        np.testing.assert_allclose(s_actual, s_desired)
 
-    dist = tf.constant(
-        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
-    )
-    s_actual = similarity(dist)
+    def test_get_config(self):
+        similarity = ExponentialSimilarity()
+        config = similarity.get_config()
 
-    s_desired = tf.constant(
-        [[0.6097281, 0.10853133], [0.48281538, 0.16589916]], dtype=tf.float32
-    )
-    tf.debugging.assert_near(s_actual, s_desired)
+        assert config["fit_tau"]
+        assert config["fit_gamma"]
+        assert config["fit_beta"]
 
+    def test_serialization(self):
+        """Test serialization with weights."""
+        similarity = ExponentialSimilarity()
 
-def test_get_config():
-    similarity = ExponentialSimilarity()
-    config = similarity.get_config()
+        # Call to ensure built.
+        d = np.array(
+            [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype="float32"
+        )
+        s0 = similarity(d)
+        s0 = keras.ops.convert_to_numpy(s0)
 
-    assert config["fit_tau"]
-    assert config["fit_gamma"]
-    assert config["fit_beta"]
+        config = similarity.get_config()
+        # OR config = keras.layers.serialize(similarity)
+        weights = similarity.get_weights()
 
+        recon_layer = ExponentialSimilarity.from_config(config)
+        # OR recon_layer = keras.layers.deserialize(config)
+        recon_layer.build([[None, 2], [None, 2]])
+        recon_layer.set_weights(weights)
+        s1 = recon_layer(d)
+        s1 = keras.ops.convert_to_numpy(s1)
 
-def test_serialization():
-    """Test serialization with weights."""
-    similarity = ExponentialSimilarity()
-
-    # Call to ensure built.
-    dist = tf.constant(
-        [[0.68166146, 1.394038], [0.81919687, 1.25966185]], dtype=tf.float32
-    )
-    s0 = similarity(dist)
-
-    config = similarity.get_config()
-    # OR config = keras.layers.serialize(similarity)
-    weights = similarity.get_weights()
-
-    recon_layer = ExponentialSimilarity.from_config(config)
-    # OR recon_layer = keras.layers.deserialize(config)
-    recon_layer.build([[None, 2], [None, 2]])
-    recon_layer.set_weights(weights)
-    s1 = recon_layer(dist)
-
-    tf.debugging.assert_equal(similarity.beta, recon_layer.beta)
-    tf.debugging.assert_equal(similarity.tau, recon_layer.tau)
-    tf.debugging.assert_equal(similarity.gamma, recon_layer.gamma)
-    tf.debugging.assert_equal(s0, s1)
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(similarity.beta),
+            keras.ops.convert_to_numpy(recon_layer.beta),
+        )
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(similarity.tau),
+            keras.ops.convert_to_numpy(recon_layer.tau),
+        )
+        np.testing.assert_allclose(
+            keras.ops.convert_to_numpy(similarity.gamma),
+            keras.ops.convert_to_numpy(recon_layer.gamma),
+        )
+        np.testing.assert_allclose(s0, s1)

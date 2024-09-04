@@ -20,7 +20,6 @@ from pathlib import Path
 
 import keras
 import pytest
-import tensorflow as tf
 
 import psiz
 
@@ -184,7 +183,7 @@ def call_fit_evaluate_predict(model, tfds):
     pred0 = model.predict(tfds)
 
 
-def build_ranksim_ratesim_subclass_a():
+def build_ranksim_ratesim_subclass_a(is_eager):
     """Build subclassed `Model`."""
     model = RankRateModelA()
     compile_kwargs = {
@@ -198,12 +197,13 @@ def build_ranksim_ratesim_subclass_a():
             "rank_branch": keras.metrics.CategoricalCrossentropy(name="cce"),
             "rate_branch": keras.metrics.MeanSquaredError(name="mse"),
         },
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def build_ranksim_ratesim_functional_v0():
+def build_ranksim_ratesim_functional_v0(is_eager):
     """Build model using functional API."""
     n_stimuli = 20
     n_dim = 3
@@ -275,12 +275,13 @@ def build_ranksim_ratesim_functional_v0():
             "rank_branch": keras.metrics.CategoricalCrossentropy(name="rank_cce"),
             "rate_branch": keras.metrics.MeanSquaredError(name="rate_mse"),
         },
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
 
 
-def buld_ranksim_rt_subclass_a():
+def build_ranksim_rt_subclass_a(is_eager):
     """Build subclassed `Model`."""
     model = RankRTModelA()
     compile_kwargs = {
@@ -292,6 +293,7 @@ def buld_ranksim_rt_subclass_a():
             "rank_rt_branch": keras.losses.MeanSquaredError(name="rt_loss"),
         },
         "loss_weights": {"rank_choice_branch": 1.0, "rank_rt_branch": 1.0},
+        "run_eagerly": is_eager,
     }
     model.compile(**compile_kwargs)
     return model
@@ -303,20 +305,16 @@ class TestJointSoftRankRate:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank2_rate2_v0, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank2_rate2_v0
-        model = build_ranksim_ratesim_subclass_a()
+        model = build_ranksim_ratesim_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_4rank2_rate2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank2_rate2_v0
-        model = build_ranksim_ratesim_subclass_a()
+        model = build_ranksim_ratesim_subclass_a(is_eager)
         model.fit(tfds, epochs=1)
         eval0 = model.evaluate(tfds, return_dict=True)
 
@@ -341,8 +339,6 @@ class TestJointSoftRankRate:
     )
     def test_usage_functional_v0(self, ds_4rank2_rate2_v0, is_eager):
         """Test model using functional API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_functional_v0()
         call_fit_evaluate_predict(model, tfds)
@@ -352,8 +348,6 @@ class TestJointSoftRankRate:
     @pytest.mark.xfail(reason="Not sure why failing.")
     def test_save_load_functional_v0(self, ds_4rank2_rate2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_functional_v0()
         model.fit(tfds, epochs=1)
@@ -380,9 +374,7 @@ class TestRankRT:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_rt_v0, is_eager):
         """Test model using subclass API."""
-        tf.config.run_functions_eagerly(is_eager)
-
         tfds = ds_4rank1_rt_v0
-        model = buld_ranksim_rt_subclass_a()
+        model = build_ranksim_rt_subclass_a(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()

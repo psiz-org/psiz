@@ -75,6 +75,7 @@ def emb_0(mask_zero, is_dist):
     return emb
 
 
+@pytest.mark.tfp
 @pytest.mark.parametrize("mask_zero", [False, True])
 @pytest.mark.parametrize("is_dist", [False, True])
 @pytest.mark.parametrize("cmap", [False, True])

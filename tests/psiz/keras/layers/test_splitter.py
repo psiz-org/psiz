@@ -17,7 +17,7 @@
 
 
 import keras
-import tensorflow as tf
+import numpy as np
 
 from psiz.keras.layers.splitter import Splitter
 from psiz.keras.layers import Combiner
@@ -29,7 +29,13 @@ class Increment(keras.layers.Layer):
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(Increment, self).__init__(**kwargs)
-        self.v = tf.constant(v)
+        self.v = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(v),
+            trainable=False,
+            name="v",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -42,7 +48,13 @@ class AddPairs(keras.layers.Layer):
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(AddPairs, self).__init__(**kwargs)
-        self.v = tf.constant(v)
+        self.v = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(v),
+            trainable=False,
+            name="v",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -55,7 +67,13 @@ class AddPairsDict(keras.layers.Layer):
     def __init__(self, v, **kwargs):
         """Initialize."""
         super(AddPairsDict, self).__init__(**kwargs)
-        self.v = tf.constant(v)
+        self.v = self.add_weight(
+            shape=[],
+            initializer=keras.initializers.Constant(v),
+            trainable=False,
+            name="v",
+            dtype=self.dtype,
+        )
 
     def call(self, inputs):
         """Call."""
@@ -87,7 +105,8 @@ def test_single_dispatch(gates_v0, inputs_single):
     # Combine (i.e., mix) expert outputs.
     combiner = Combiner()
     outputs = combiner([gates_v0] + expert_outputs)
-    desired_outputs = tf.constant(
+    outputs = keras.ops.convert_to_numpy(outputs)
+    desired_outputs = np.array(
         [
             [0.0, 0.1, 0.2],
             [1.01, 1.11, 1.21],
@@ -95,9 +114,9 @@ def test_single_dispatch(gates_v0, inputs_single):
             [3.017, 3.117, 3.217],
             [2.0, 2.05, 2.1],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(outputs, desired_outputs)
+    np.testing.assert_allclose(outputs, desired_outputs)
 
 
 def test_list_dispatch(gates_v0, inputs_list):
@@ -133,11 +152,12 @@ def test_list_dispatch(gates_v0, inputs_list):
     # Combine (i.e., mix) expert outputs.
     combiner = Combiner()
     outputs = combiner([gates_v0] + expert_outputs)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     # NOTE: To parse these outputs, note that the hundreds place indicates
     # the expert subnet (i.e., +0.00, +0.01, +0.02) for cases where weight
     # is 1 and there is only one non-zero weight.
-    desired_outputs = tf.constant(
+    desired_outputs = np.array(
         [
             [10.0, 10.200001, 10.4],
             [12.01, 12.210001, 12.41],
@@ -145,9 +165,9 @@ def test_list_dispatch(gates_v0, inputs_list):
             [16.017, 16.217001, 16.417],
             [9.0, 9.1, 9.2],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(outputs, desired_outputs)
+    np.testing.assert_allclose(outputs, desired_outputs)
 
 
 def test_list_dispatch_timestep(gates_v0_timestep, inputs_list_timestep):
@@ -187,7 +207,8 @@ def test_list_dispatch_timestep(gates_v0_timestep, inputs_list_timestep):
     # Combine (i.e., mix) expert outputs.
     combiner = Combiner(has_timestep_axis=True)
     outputs = combiner([gates_v0_timestep] + expert_outputs)
-    desired_outputs = tf.constant(
+    outputs = keras.ops.convert_to_numpy(outputs)
+    desired_outputs = np.array(
         [
             [[10.0, 10.200001, 10.4], [10.02, 10.219999, 10.42]],
             [[12.01, 12.210001, 12.41], [12.030001, 12.23, 12.43]],
@@ -195,9 +216,9 @@ def test_list_dispatch_timestep(gates_v0_timestep, inputs_list_timestep):
             [[16.017, 16.217001, 16.417], [16.037, 16.237, 16.437]],
             [[9.0, 9.1, 9.2], [9.015, 9.115, 9.215]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(outputs, desired_outputs)
+    np.testing.assert_allclose(outputs, desired_outputs)
 
 
 def test_dict_dispatch(gates_v0, inputs_dict):
@@ -232,7 +253,7 @@ def test_dict_dispatch(gates_v0, inputs_dict):
     # NOTE: To parse these outputs, note that the hundreds place indicates
     # the expert subnet (i.e., +0.00, +0.01, +0.02) for cases where weight
     # is 1 and there is only one non-zero weight.
-    desired_outputs = tf.constant(
+    desired_outputs = np.array(
         [
             [10.0, 10.200001, 10.4],
             [12.01, 12.210001, 12.41],
@@ -240,9 +261,9 @@ def test_dict_dispatch(gates_v0, inputs_dict):
             [16.017, 16.217001, 16.417],
             [9.0, 9.1, 9.2],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(outputs, desired_outputs)
+    np.testing.assert_allclose(outputs, desired_outputs)
 
 
 def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
@@ -281,7 +302,7 @@ def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
     # Combine (i.e., mix) expert outputs.
     combiner = Combiner(has_timestep_axis=True)
     outputs = combiner([gates_v0_timestep] + expert_outputs)
-    desired_outputs = tf.constant(
+    desired_outputs = np.array(
         [
             [[10.0, 10.200001, 10.4], [10.02, 10.219999, 10.42]],
             [[12.01, 12.210001, 12.41], [12.030001, 12.23, 12.43]],
@@ -289,6 +310,6 @@ def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
             [[16.017, 16.217001, 16.417], [16.037, 16.237, 16.437]],
             [[9.0, 9.1, 9.2], [9.015, 9.115, 9.215]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_near(outputs, desired_outputs)
+    np.testing.assert_allclose(outputs, desired_outputs)

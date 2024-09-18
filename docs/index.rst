@@ -1,7 +1,7 @@
 PsiZ: Psychological Embeddings
 ==============================
 
-Welcome to PsiZ! If this is your first visit, we suggest reading Getting Started first.
+Welcome to PsiZ! If this is your first visit, we suggest reading Getting Started.
 
 .. toctree::
    :maxdepth: 2
@@ -39,7 +39,7 @@ Welcome to PsiZ! If this is your first visit, we suggest reading Getting Started
    src/api_reference/psiz_data
    src/api_reference/psiz_keras
    src/api_reference/psiz_mplot
-   src/api_reference/psiz_tf
+   src/api_reference/psiz_tfp
    src/api_reference/psiz_utils
 
 .. toctree::

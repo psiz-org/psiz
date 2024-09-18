@@ -55,3 +55,9 @@ Please send in fixes and feature additions through Pull Requests.
 ### Tags and Releases
 * All releases are tagged using the format `v<MAJOR>.<MINOR>.<PATCH>`, thus a given release branch can have multiple tags that differ by patch number.
 * Only tagged releases on a major-minor branch are merged with `main`.
+
+## Docs
+
+* To test generating the docs, you will need to make sure you have the appropriate dependencies installed: `python -m pip install --upgrade --no-cache-dir -r docs/requirements.txt`.
+* You can then build the docs by executing the following command inside the `docs` directory: `make html`.
+* The built html files can be found in `docs/_build/html`

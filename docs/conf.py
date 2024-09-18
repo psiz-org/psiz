@@ -29,12 +29,11 @@ project = "psiz"
 copyright = "2021, The PsiZ Authors"
 author = "Brett D. Roads"
 
-# TODO remove release/version stuff?
 # The full version, including alpha/beta/rc tags
-release = "0.12.0"
+release = "0.12.4"
 version = "0.12"
 # release = get_version("psiz")
-# version = '.'.join(release.split('.')[:3])
+# version = ".".join(release.split(".")[:3])
 
 # -- General configuration ---------------------------------------------------
 

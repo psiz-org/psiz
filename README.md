@@ -47,7 +47,7 @@ $ pip install /local/path/to/psiz
 ```
 
 **Notes:**
-* PsiZ originally required TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow. As of PsiZ v0.12, Keras 3 is used for the majority of layers, which allows users to use either TensorFlow or Pytorch.
+* PsiZ originally required TensorFlow. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow. As of PsiZ v0.12, Keras 3 is used for the majority of layers, which allows users to use either TensorFlow or Pytorch. Your preferred backend can be set by modifying the configuration file automatically created by Keras: `~/.keras/keras.json`. Pytorch support is still experimental.
 * PsiZ versions <=0.5.0 must be installed using git clone and editable mode (e.g., `pip install -e /local/path/to/psiz`).
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`

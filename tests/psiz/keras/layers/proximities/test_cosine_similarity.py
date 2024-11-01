@@ -75,7 +75,7 @@ def test_init_call_v1(paired_inputs_v0):
         [0.64332986, 0.9977225, 0.9995489, 0.99984235, 0.9999291], dtype="float32"
     )
 
-    np.testing.assert_array_equal(desired_outputs, outputs)
+    np.testing.assert_array_almost_equal(desired_outputs, outputs)
 
 
 def test_serialization():

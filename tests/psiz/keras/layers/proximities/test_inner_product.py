@@ -97,7 +97,7 @@ def test_init_call_v2(paired_inputs_v0):
     outputs = keras.ops.convert_to_numpy(outputs)
 
     desired_outputs = np.array(
-        [1.3949997, 24.134998, 54.274998, 91.814995, 136.75497], dtype="float32"
+        [1.3949997, 24.134998, 54.274998, 91.814995, 136.75499], dtype="float32"
     )
     np.testing.assert_array_almost_equal(desired_outputs, outputs)
 

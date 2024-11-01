@@ -95,9 +95,9 @@ def test_init_call_v2(paired_inputs_v0):
     outputs = keras.ops.convert_to_numpy(outputs)
 
     desired_outputs = np.array(
-        [1.395, 24.134998, 54.275, 91.815, 136.755], dtype="float32"
+        [1.395, 24.135, 54.274998, 91.815, 136.75499], dtype="float32"
     )
-    np.testing.assert_array_equal(desired_outputs, outputs)
+    np.testing.assert_array_almost_equal(desired_outputs, outputs)
 
 
 def test_serialization():

@@ -60,8 +60,14 @@ class EmbeddingShared(keras.layers.Layer):
         # embedding coordinate.
         inputs = keras.ops.zeros_like(inputs)
 
-        outputs = self._embedding(inputs)
-        outputs = keras.ops.repeat(outputs, self.output_dim, axis=-1)
+        # Expand inputs to match desired output dimensionality.
+        inputs_expanded = keras.ops.expand_dims(inputs, axis=-1)
+        inputs_expanded = keras.ops.repeat(inputs_expanded, self.output_dim, axis=-1)
+
+        # NOTE: Squeeze is applied to the last dimension since the underlying
+        # embedding is 1-dimensional and thus adds an extra singleton dimension.
+        outputs = keras.ops.squeeze(self._embedding(inputs_expanded), axis=-1)
+
         return outputs
 
     def get_config(self):

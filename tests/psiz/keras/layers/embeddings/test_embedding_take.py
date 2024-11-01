@@ -20,7 +20,7 @@ import numpy as np
 import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingLaplaceDiag, EmbeddingNormalDiag
-from psiz.keras.layers import EmbeddingTake, EmbeddingShared, EmbeddingVariational
+from psiz.keras.layers import EmbeddingTake
 
 
 def test_deterministic_0():
@@ -426,69 +426,3 @@ def test_stochastic_2b():
 
     output_dim_desired = n_dim
     assert output_dim_desired == embedding_take.output_dim
-
-
-# TODO
-# def test_stochastic_4():
-#     """Test stochastic, SharedEmbedding."""
-#     input_map = np.array([0, 0, 0, 0, 0, 0])
-#     n_stimuli = len(input_map)
-#     n_dim = 2
-
-#     # Create core embedding composed of cloned 1D to 2D point.
-#     prior_scale = 0.2
-#     embedding_core = EmbeddingShared(
-#         1,
-#         n_dim,
-#         embedding=EmbeddingNormalDiag(
-#             1,
-#             1,
-#             loc_initializer=keras.initializers.Constant(0.0),
-#             scale_initializer=keras.initializers.Constant(
-#                 tfp.math.softplus_inverse(prior_scale).numpy()
-#             ),
-#             loc_trainable=False,
-#         ),
-#         mask_zero=False,
-#     )
-#     # Map points.
-#     embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
-
-#     # Test call with 1D input.
-#     x = np.array([0, 1, 2, 3, 4, 5], dtype="int32")
-#     z = embedding_take(x).numpy()
-#     assert z.shape[0] == n_stimuli
-#     assert z.shape[1] == n_dim
-
-#     # Test embedding properties.
-#     embeddings_loc_desired = np.array(
-#         [[0.1, 0.2], [0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.3, 0.4], [0.5, 0.6]],
-#         dtype="float32",
-#     )
-#     embeddings_scale_desired = np.array(
-#         [
-#             [0.0100001, 0.0200001],
-#             [0.0100001, 0.0200001],
-#             [0.0300001, 0.0400001],
-#             [0.05000011, 0.0600001],
-#             [0.0300001, 0.0400001],
-#             [0.05000011, 0.0600001],
-#         ],
-#         dtype="float32",
-#     )
-#     embeddings = embedding_take.embeddings
-#     np.testing.assert_array_equal(
-#         embeddings_loc_desired, embeddings.distribution.loc.numpy()
-#     )
-#     np.testing.assert_array_almost_equal(
-#         embeddings_scale_desired, embeddings.distribution.scale.numpy()
-#     )
-
-#     mask_zero_desired = False
-#     assert mask_zero_desired == embedding_take.mask_zero
-
-#     input_dim_desired = n_stimuli
-#     assert input_dim_desired == embedding_take.input_dim
-
-#     output_dim_desired = n_dim
-#     assert output_dim_desired == embedding_take.output_dim

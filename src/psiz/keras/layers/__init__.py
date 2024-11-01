@@ -26,7 +26,7 @@ from psiz.keras.layers.behaviors.experimental.alcove_cell import ALCOVECell
 from psiz.keras.layers.behaviors.logistic import Logistic
 from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
 from psiz.keras.layers.behaviors.soft_rank import SoftRank
-from psiz.keras.layers.embeddings.gather import EmbeddingGather
+from psiz.keras.layers.embeddings.take import EmbeddingTake
 from psiz.keras.layers.embeddings.gamma_diag import EmbeddingGammaDiag
 from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
@@ -61,7 +61,7 @@ __all__ = [
     "SoftRank",
     "ALCOVECell",
     "Logistic",
-    "EmbeddingGather",
+    "EmbeddingTake",
     "EmbeddingGammaDiag",
     "EmbeddingLaplaceDiag",
     "EmbeddingLogNormalDiag",

@@ -16,7 +16,7 @@
 """Module of TensorFlow embedding layers.
 
 Classes:
-    EmbeddingGather: An embedding layer that remaps a source embedding.
+    EmbeddingTake: An embedding layer that remaps a source embedding.
 
 """
 
@@ -26,12 +26,12 @@ import tensorflow_probability as tfp
 
 
 @tf.keras.utils.register_keras_serializable(
-    package='psiz.keras.layers', name='EmbeddingGather'
+    package="psiz.keras.layers", name="EmbeddingTake"
 )
-class EmbeddingGather(tf.keras.layers.Layer):
+class EmbeddingTake(tf.keras.layers.Layer):
     """A class for mapping Embedding inputs."""
-    def __init__(
-            self, embedding=None, input_map=None, **kwargs):
+
+    def __init__(self, embedding=None, input_map=None, **kwargs):
         """Initialize.
 
         Arguments:
@@ -40,18 +40,16 @@ class EmbeddingGather(tf.keras.layers.Layer):
             kwargs: Additional key-word arguments.
 
         """
-        super(EmbeddingGather, self).__init__(**kwargs)
+        super(EmbeddingTake, self).__init__(**kwargs)
         self.embedding = embedding
 
         # Make sure provided `input_map` works with provided embedding.
         if np.min(input_map) < 0:
-            raise ValueError(
-                'Indices in `input_map` must be non-negative.'
-            )
+            raise ValueError("Indices in `input_map` must be non-negative.")
         if np.max(input_map) > (self.embedding.input_dim - 1):
             raise ValueError(
-                'Indices in `input_map` must not be greater than the '
-                '`input_dim` of the provided embedding.'
+                "Indices in `input_map` must not be greater than the "
+                "`input_dim` of the provided embedding."
             )
         self.input_dim = len(input_map)
         input_map = tf.constant(input_map, dtype=tf.int32)
@@ -81,9 +79,7 @@ class EmbeddingGather(tf.keras.layers.Layer):
         # Intercept inputs.
         # Flatten inputs for mapping.
         inputs_shape = tf.shape(inputs)
-        inputs = tf.reshape(
-            inputs, [tf.reduce_prod(inputs_shape)]
-        )
+        inputs = tf.reshape(inputs, [tf.reduce_prod(inputs_shape)])
         # Map inputs.
         inputs = tf.gather(self.input_map, inputs)
         # Unflatten
@@ -94,13 +90,13 @@ class EmbeddingGather(tf.keras.layers.Layer):
 
     def get_config(self):
         """Return configuration."""
-        config = super(EmbeddingGather, self).get_config()
-        config.update({
-            'embedding': tf.keras.utils.serialize_keras_object(
-                self.embedding
-            ),
-            'input_map': self.input_map.numpy().tolist()
-        })
+        config = super(EmbeddingTake, self).get_config()
+        config.update(
+            {
+                "embedding": tf.keras.utils.serialize_keras_object(self.embedding),
+                "input_map": self.input_map.numpy().tolist(),
+            }
+        )
         return config
 
     @classmethod
@@ -118,9 +114,7 @@ class EmbeddingGather(tf.keras.layers.Layer):
             layer: A layer instance.
 
         """
-        config['embedding'] = tf.keras.layers.deserialize(
-            config['embedding']
-        )
+        config["embedding"] = tf.keras.layers.deserialize(config["embedding"])
         return cls(**config)
 
     @property

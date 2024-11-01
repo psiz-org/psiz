@@ -21,14 +21,14 @@ Classes:
 """
 
 import numpy as np
-import tensorflow as tf
+import keras
 import tensorflow_probability as tfp
 
 
-@tf.keras.utils.register_keras_serializable(
+@keras.saving.register_keras_serializable(
     package="psiz.keras.layers", name="EmbeddingTake"
 )
-class EmbeddingTake(tf.keras.layers.Layer):
+class EmbeddingTake(keras.layers.Layer):
     """A class for mapping Embedding inputs."""
 
     def __init__(self, embedding=None, input_map=None, **kwargs):
@@ -41,51 +41,51 @@ class EmbeddingTake(tf.keras.layers.Layer):
 
         """
         super(EmbeddingTake, self).__init__(**kwargs)
-        self.embedding = embedding
+        self._embedding = embedding
 
         # Make sure provided `input_map` works with provided embedding.
         if np.min(input_map) < 0:
             raise ValueError("Indices in `input_map` must be non-negative.")
-        if np.max(input_map) > (self.embedding.input_dim - 1):
+        if np.max(input_map) > (self._embedding.input_dim - 1):
             raise ValueError(
                 "Indices in `input_map` must not be greater than the "
                 "`input_dim` of the provided embedding."
             )
         self.input_dim = len(input_map)
-        input_map = tf.constant(input_map, dtype=tf.int32)
-        self.input_map = input_map
+        # input_map = tf.constant(input_map, dtype=tf.int32)  # TODO: Check this.
+        self.input_map = input_map.astype("int32")
         self._is_distribution = None
 
     @property
     def mask_zero(self):
         """Get `mask_zero`."""
-        return self.embedding.mask_zero
+        return self._embedding.mask_zero
 
     @property
     def output_dim(self):
         """Get `output_dim`."""
-        return self.embedding.output_dim
+        return self._embedding.output_dim
 
     def build(self, input_shape):
         """Build."""
         super().build(input_shape)
-        self.embedding.build(input_shape)
+        self._embedding.build(input_shape)
         self._is_distribution = isinstance(
-            self.embedding.embeddings, tfp.distributions.Distribution
+            self._embedding.embeddings, tfp.distributions.Distribution
         )
 
     def call(self, inputs):
         """Call."""
         # Intercept inputs.
         # Flatten inputs for mapping.
-        inputs_shape = tf.shape(inputs)
-        inputs = tf.reshape(inputs, [tf.reduce_prod(inputs_shape)])
+        inputs_shape = keras.ops.shape(inputs)
+        inputs = keras.ops.reshape(inputs, [keras.ops.prod(inputs_shape)])
         # Map inputs.
-        inputs = tf.gather(self.input_map, inputs)
+        inputs = keras.ops.take(self.input_map, inputs)
         # Unflatten
-        inputs = tf.reshape(inputs, inputs_shape)
+        inputs = keras.ops.reshape(inputs, inputs_shape)
 
-        outputs = self.embedding(inputs)
+        outputs = self._embedding(inputs)
         return outputs
 
     def get_config(self):
@@ -93,7 +93,7 @@ class EmbeddingTake(tf.keras.layers.Layer):
         config = super(EmbeddingTake, self).get_config()
         config.update(
             {
-                "embedding": tf.keras.utils.serialize_keras_object(self.embedding),
+                "embedding": keras.saving.serialize_keras_object(self._embedding),
                 "input_map": self.input_map.numpy().tolist(),
             }
         )
@@ -114,16 +114,16 @@ class EmbeddingTake(tf.keras.layers.Layer):
             layer: A layer instance.
 
         """
-        config["embedding"] = tf.keras.layers.deserialize(config["embedding"])
+        config["embedding"] = keras.saving.deserialize_keras_object(config["embedding"])
         return cls(**config)
 
     @property
     def embeddings(self):
         """Getter method for `embeddings`."""
         if self._is_distribution:
-            z_mapped = self.embedding[self.input_map]
+            z_mapped = self._embedding.take(self.input_map)
         else:
-            z = self.embedding.embeddings
-            z_mapped = tf.gather(z, self.input_map)
+            z = self._embedding.embeddings
+            z_mapped = keras.ops.take(z, self.input_map, axis=0)
 
         return z_mapped

@@ -91,3 +91,12 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
         dist_batch = tfp.distributions.Laplace(loc=inputs_loc, scale=inputs_scale)
         # Reify output using samples.
         return dist_batch.sample(self.sample_shape)
+
+    def take(self, indices):
+        """Take."""
+        [inputs_loc, inputs_scale] = super().call(indices)
+        dist = tfp.distributions.Laplace(loc=inputs_loc, scale=inputs_scale)
+        batch_ndims = keras.ops.size(dist.batch_shape_tensor())
+        return tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )

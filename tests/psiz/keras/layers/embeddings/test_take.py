@@ -15,169 +15,167 @@
 # ============================================================================
 """Test EmbeddingTake layer."""
 
+import keras
 import numpy as np
-import pytest
-import tensorflow as tf
 import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingLaplaceDiag, EmbeddingNormalDiag
-from psiz.keras.layers import EmbeddingTake
+from psiz.keras.layers import EmbeddingTake, EmbeddingShared, EmbeddingVariational
 
 
 def test_deterministic_0():
-    """Test using (deterministic) native TF Embedding layer.
+    """Test using (deterministic) Keras Embedding layer.
 
     Globally shared, n_dim=1.
+
     """
     n_stimuli = 4
+    input_map = np.zeros([n_stimuli])
     n_dim = 1
-    prior_scale = 0.12
 
     # Create core embedding composed of one 1D point.
-    embedding_core = tf.keras.layers.Embedding(
+    embedding_core = keras.layers.Embedding(
         1,
-        1,
-        embeddings_initializer=tf.keras.initializers.Constant(0.1),
+        n_dim,
+        embeddings_initializer=keras.initializers.Constant(0.1),
     )
     # Map one point to four points.
-    embedding_gather = EmbeddingTake(
-        embedding=embedding_core, input_map=np.zeros([n_stimuli])
-    )
+    embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
 
     # Test call with 1D input.
-    x = tf.constant(np.array([0, 1, 2, 3]), dtype=tf.int32)
-    z = embedding_gather(x)
-    z_desired = tf.constant([[0.1], [0.1], [0.1], [0.1]], dtype=tf.float32)
-    tf.debugging.assert_equal(z_desired, z)
+    x = np.array([0, 1, 2, 3], dtype="int32")
+    z = embedding_take(x)
+    z_desired = np.array([[0.1], [0.1], [0.1], [0.1]], dtype="float32")
+    np.testing.assert_array_equal(z_desired, z.numpy())
 
     # Test call with 2D input.
-    x = tf.constant(np.array([[0, 1], [2, 3], [0, 1], [2, 3]]), dtype=tf.int32)
-    z = embedding_gather(x)
-    z_desired = tf.constant(
-        np.array([[[0.1], [0.1]], [[0.1], [0.1]], [[0.1], [0.1]], [[0.1], [0.1]]]),
-        dtype=tf.float32,
+    x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
+    z = embedding_take(x)
+    z_desired = np.array(
+        [[[0.1], [0.1]], [[0.1], [0.1]], [[0.1], [0.1]], [[0.1], [0.1]]],
+        dtype="float32",
     )
-    tf.debugging.assert_equal(z_desired, z)
+    np.testing.assert_array_equal(z_desired, z.numpy())
 
     # Test embedding properties.
-    embeddings_desired = tf.constant([[0.1], [0.1], [0.1], [0.1]], dtype=tf.float32)
-    embeddings = embedding_gather.embeddings
-    tf.debugging.assert_equal(embeddings_desired, embeddings)
+    embeddings_desired = np.array([[0.1], [0.1], [0.1], [0.1]], dtype="float32")
+    embeddings = embedding_take.embeddings
+    np.testing.assert_array_equal(embeddings_desired, embeddings.numpy())
 
     mask_zero_desired = False
-    assert mask_zero_desired == embedding_gather.mask_zero
+    assert mask_zero_desired == embedding_take.mask_zero
 
-    input_dim_desired = 4
-    assert input_dim_desired == embedding_gather.input_dim
+    input_dim_desired = n_stimuli
+    assert input_dim_desired == embedding_take.input_dim
 
-    output_dim_desired = 1
-    assert output_dim_desired == embedding_gather.output_dim
+    output_dim_desired = n_dim
+    assert output_dim_desired == embedding_take.output_dim
 
 
 def test_deterministic_1():
-    """Test using (deterministic) native TF Embedding layer.
+    """Test using (deterministic) Keras Embedding layer.
 
     Globally shared, n_dim=2.
+
     """
     n_stimuli = 4
+    input_map = np.zeros([n_stimuli])
     n_dim = 2
-    prior_scale = 0.12
 
     # Create core embedding composed of one 2D point.
-    embedding_core = tf.keras.layers.Embedding(
+    embedding_core = keras.layers.Embedding(
         1,
-        2,
-        embeddings_initializer=tf.keras.initializers.Constant([0.1, 0.2]),
+        n_dim,
+        embeddings_initializer=keras.initializers.Constant([0.1, 0.2]),
     )
-    # Map one point to four points.
-    embedding_gather = EmbeddingTake(
-        embedding=embedding_core, input_map=np.zeros([n_stimuli])
-    )
+    # Map points.
+    embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
 
     # Test call with 1D input.
-    x = tf.constant(np.array([0, 1, 2, 3]), dtype=tf.int32)
-    z = embedding_gather(x)
-    z_desired = tf.constant(
-        [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype=tf.float32
+    x = np.array([0, 1, 2, 3], dtype="int32")
+    z = embedding_take(x)
+    z_desired = np.array(
+        [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype="float32"
     )
-    tf.debugging.assert_equal(z_desired, z)
+    np.testing.assert_array_equal(z_desired, z.numpy())
 
     # Test call with 2d input.
-    x = tf.constant(np.array([[0, 1], [2, 3], [0, 1], [2, 3]]), dtype=tf.int32)
-    z = embedding_gather(x)
-    z_desired = tf.constant(
+    x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
+    z = embedding_take(x)
+    z_desired = np.array(
         [
             [[0.1, 0.2], [0.1, 0.2]],
             [[0.1, 0.2], [0.1, 0.2]],
             [[0.1, 0.2], [0.1, 0.2]],
             [[0.1, 0.2], [0.1, 0.2]],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_equal(z_desired, z)
+    np.testing.assert_array_equal(z_desired, z.numpy())
 
     # Test embedding properties.
-    embeddings_desired = tf.constant(
-        [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype=tf.float32
+    embeddings_desired = np.array(
+        [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype="float32"
     )
-    embeddings = embedding_gather.embeddings
-    tf.debugging.assert_equal(embeddings_desired, embeddings)
+    embeddings = embedding_take.embeddings
+    np.testing.assert_array_equal(embeddings_desired, embeddings.numpy())
 
     mask_zero_desired = False
-    assert mask_zero_desired == embedding_gather.mask_zero
+    assert mask_zero_desired == embedding_take.mask_zero
 
-    input_dim_desired = 4
-    assert input_dim_desired == embedding_gather.input_dim
+    input_dim_desired = n_stimuli
+    assert input_dim_desired == embedding_take.input_dim
 
-    output_dim_desired = 2
-    assert output_dim_desired == embedding_gather.output_dim
+    output_dim_desired = n_dim
+    assert output_dim_desired == embedding_take.output_dim
 
 
 def test_deterministic_2():
-    """Test using (deterministic) native TF Embedding layer.
+    """Test using (deterministic) Keras Embedding layer.
 
-    hierarchically shared."""
-    n_stimuli = 6
+    Hierarchically shared, n_dim=2.
+
+    """
+    input_map = np.array([0, 0, 1, 1, 2, 2])
+    n_stimuli = len(input_map)
     n_dim = 2
-    prior_scale = 0.12
 
     # Create core embedding composed of one 1D point.
-    embedding_core = tf.keras.layers.Embedding(
+    embedding_core = keras.layers.Embedding(
         3,
-        2,
-        embeddings_initializer=tf.keras.initializers.Constant(
+        n_dim,
+        embeddings_initializer=keras.initializers.Constant(
             np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
         ),
     )
-    # Map one point to four points.
-    input_map = [0, 0, 1, 1, 2, 2]
-    embedding_gather = EmbeddingTake(embedding=embedding_core, input_map=input_map)
+    # Map points.
+    embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
 
     # Test call with 1D input.
-    x = tf.constant(np.array([0, 1, 2, 3, 4, 5]), dtype=tf.int32)
-    z = embedding_gather(x)
-    z_desired = tf.constant(
+    x = np.array([0, 1, 2, 3, 4, 5], dtype="int32")
+    z = embedding_take(x)
+    z_desired = np.array(
         [[0.1, 0.2], [0.1, 0.2], [0.3, 0.4], [0.3, 0.4], [0.5, 0.6], [0.5, 0.6]],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    tf.debugging.assert_equal(z_desired, z)
+    np.testing.assert_array_equal(z_desired, z.numpy())
 
     # Test embedding properties.
-    embeddings_desired = tf.constant(
+    embeddings_desired = np.array(
         [[0.1, 0.2], [0.1, 0.2], [0.3, 0.4], [0.3, 0.4], [0.5, 0.6], [0.5, 0.6]],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    embeddings = embedding_gather.embeddings
-    tf.debugging.assert_equal(embeddings_desired, embeddings)
+    embeddings = embedding_take.embeddings
+    np.testing.assert_array_equal(embeddings_desired, embeddings.numpy())
 
     mask_zero_desired = False
-    assert mask_zero_desired == embedding_gather.mask_zero
+    assert mask_zero_desired == embedding_take.mask_zero
 
-    input_dim_desired = 6
-    assert input_dim_desired == embedding_gather.input_dim
+    input_dim_desired = n_stimuli
+    assert input_dim_desired == embedding_take.input_dim
 
-    output_dim_desired = 2
-    assert output_dim_desired == embedding_gather.output_dim
+    output_dim_desired = n_dim
+    assert output_dim_desired == embedding_take.output_dim
 
 
 def test_stochastic_0():
@@ -186,55 +184,56 @@ def test_stochastic_0():
     Globally shared, n_dim=1.
     """
     n_stimuli = 4
+    input_map = np.zeros([n_stimuli])
     n_dim = 1
 
     # Create core embedding composed of one 1D point.
     embedding_core = EmbeddingNormalDiag(
         1,
         1,
-        loc_initializer=tf.keras.initializers.Constant(0.1),
-        scale_initializer=tf.keras.initializers.Constant(
+        loc_initializer=keras.initializers.Constant(0.1),
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(0.01).numpy()
         ),
         loc_trainable=False,
     )
-    # Map one point to four points.
-    embedding_gather = EmbeddingTake(
-        embedding=embedding_core, input_map=np.zeros([n_stimuli])
-    )
+    # Map points.
+    embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
 
     # Test call with 1D input.
-    x = tf.constant(np.array([0, 1, 2, 3]), dtype=tf.int32)
-    z = embedding_gather(x).numpy()
+    x = np.array([0, 1, 2, 3], dtype="int32")
+    z = embedding_take(x).numpy()
     assert z.shape[0] == 4
     assert z.shape[1] == n_dim
 
     # Test call with 2D input.
-    x = tf.constant(np.array([[0, 1], [2, 3], [0, 1], [2, 3]]), dtype=tf.int32)
-    z = embedding_gather(x).numpy()
+    x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
+    z = embedding_take(x).numpy()
     assert z.shape[0] == 4
     assert z.shape[1] == 2
     assert z.shape[2] == n_dim
 
     # Test embedding properties.
-    embeddings_loc_desired = tf.constant([[0.1], [0.1], [0.1], [0.1]], dtype=tf.float32)
-    embeddings_scale_desired = tf.constant(
-        [[0.0100001], [0.0100001], [0.0100001], [0.0100001]], dtype=tf.float32
+    embeddings_loc_desired = np.array([[0.1], [0.1], [0.1], [0.1]], dtype="float32")
+    embeddings_scale_desired = np.array(
+        [[0.0100001], [0.0100001], [0.0100001], [0.0100001]], dtype="float32"
     )
-    embeddings = embedding_gather.embeddings
-    tf.debugging.assert_equal(embeddings_loc_desired, embeddings.distribution.loc)
+    embeddings = embedding_take.embeddings
+    np.testing.assert_array_equal(
+        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+    )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired.numpy(), embeddings.distribution.scale.numpy()
+        embeddings_scale_desired, embeddings.distribution.scale.numpy()
     )
 
     mask_zero_desired = False
-    assert mask_zero_desired == embedding_gather.mask_zero
+    assert mask_zero_desired == embedding_take.mask_zero
 
     input_dim_desired = 4
-    assert input_dim_desired == embedding_gather.input_dim
+    assert input_dim_desired == embedding_take.input_dim
 
     output_dim_desired = 1
-    assert output_dim_desired == embedding_gather.output_dim
+    assert output_dim_desired == embedding_take.output_dim
 
 
 def test_stochastic_1():
@@ -243,102 +242,101 @@ def test_stochastic_1():
     Globally shared, n_dim=2.
     """
     n_stimuli = 4
+    input_map = np.zeros([n_stimuli])
     n_dim = 2
-    prior_scale = 0.12
 
     # Create core embedding composed of one 1D point.
     embedding_core = EmbeddingNormalDiag(
         1,
         2,
-        loc_initializer=tf.keras.initializers.Constant(np.array([0.1, 0.2])),
-        scale_initializer=tf.keras.initializers.Constant(
+        loc_initializer=keras.initializers.Constant(np.array([0.1, 0.2])),
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(np.array([0.01, 0.02])).numpy()
         ),
         loc_trainable=False,
     )
-    # Map one point to four points.
-    embedding_gather = EmbeddingTake(
-        embedding=embedding_core, input_map=np.zeros([n_stimuli])
-    )
+    # Map points.
+    embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
 
     # Test call with 1D input.
-    x = tf.constant(np.array([0, 1, 2, 3]), dtype=tf.int32)
-    z = embedding_gather(x).numpy()
+    x = np.array([0, 1, 2, 3], dtype="int32")
+    z = embedding_take(x).numpy()
     assert z.shape[0] == 4
     assert z.shape[1] == n_dim
 
     # Test call with 2D input.
-    x = tf.constant(np.array([[0, 1], [2, 3], [0, 1], [2, 3]]), dtype=tf.int32)
-    z = embedding_gather(x).numpy()
+    x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
+    z = embedding_take(x).numpy()
     assert z.shape[0] == 4
     assert z.shape[1] == 2
     assert z.shape[2] == n_dim
 
     # Test embedding properties.
-    embeddings_loc_desired = tf.constant(
-        [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype=tf.float32
+    embeddings_loc_desired = np.array(
+        [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype="float32"
     )
-    embeddings_scale_desired = tf.constant(
+    embeddings_scale_desired = np.array(
         [
             [0.0100001, 0.0200001],
             [0.0100001, 0.0200001],
             [0.0100001, 0.0200001],
             [0.0100001, 0.0200001],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    embeddings = embedding_gather.embeddings
-    tf.debugging.assert_equal(embeddings_loc_desired, embeddings.distribution.loc)
+    embeddings = embedding_take.embeddings
+    np.testing.assert_array_equal(
+        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+    )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired.numpy(), embeddings.distribution.scale.numpy()
+        embeddings_scale_desired, embeddings.distribution.scale.numpy()
     )
 
     mask_zero_desired = False
-    assert mask_zero_desired == embedding_gather.mask_zero
+    assert mask_zero_desired == embedding_take.mask_zero
 
-    input_dim_desired = 4
-    assert input_dim_desired == embedding_gather.input_dim
+    input_dim_desired = n_stimuli
+    assert input_dim_desired == embedding_take.input_dim
 
-    output_dim_desired = 2
-    assert output_dim_desired == embedding_gather.output_dim
+    output_dim_desired = n_dim
+    assert output_dim_desired == embedding_take.output_dim
 
 
 def test_stochastic_2a():
     """Test stochastic, hierarchically shared."""
-    n_stimuli = 6
+    input_map = np.array([0, 0, 1, 2, 1, 2])
+    n_stimuli = len(input_map)
     n_dim = 2
-    prior_scale = 0.12
 
     # Create core embedding composed of one 1D point.
     embedding_core = EmbeddingNormalDiag(
         3,
-        2,
-        loc_initializer=tf.keras.initializers.Constant(
+        n_dim,
+        loc_initializer=keras.initializers.Constant(
             np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
         ),
-        scale_initializer=tf.keras.initializers.Constant(
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(
                 np.array([[0.01, 0.02], [0.03, 0.04], [0.05, 0.06]])
             ).numpy()
         ),
         loc_trainable=False,
     )
-    # Map one point to four points.
-    input_map = [0, 0, 1, 2, 1, 2]
-    embedding_gather = EmbeddingTake(embedding=embedding_core, input_map=input_map)
+    # Map points.
+    embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
 
     # Test call with 1D input.
-    x = tf.constant(np.array([0, 1, 2, 3, 4, 5]), dtype=tf.int32)
-    z = embedding_gather(x).numpy()
+    x = np.array([0, 1, 2, 3, 4, 5], dtype="int32")
+    z = embedding_take(x).numpy()
     assert z.shape[0] == 6
     assert z.shape[1] == n_dim
 
     # Test embedding properties.
-    embeddings_loc_desired = tf.constant(
+    embeddings_loc_desired = np.array(
         [[0.1, 0.2], [0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.3, 0.4], [0.5, 0.6]],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    embeddings_scale_desired = tf.constant(
+    embeddings_scale_desired = np.array(
         [
             [0.0100001, 0.0200001],
             [0.0100001, 0.0200001],
@@ -347,60 +345,61 @@ def test_stochastic_2a():
             [0.0300001, 0.0400001],
             [0.05000011, 0.0600001],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    embeddings = embedding_gather.embeddings
-    tf.debugging.assert_equal(embeddings_loc_desired, embeddings.distribution.loc)
+    embeddings = embedding_take.embeddings
+    np.testing.assert_array_equal(
+        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+    )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired.numpy(), embeddings.distribution.scale.numpy()
+        embeddings_scale_desired, embeddings.distribution.scale.numpy()
     )
 
     mask_zero_desired = False
-    assert mask_zero_desired == embedding_gather.mask_zero
+    assert mask_zero_desired == embedding_take.mask_zero
 
-    input_dim_desired = 6
-    assert input_dim_desired == embedding_gather.input_dim
+    input_dim_desired = n_stimuli
+    assert input_dim_desired == embedding_take.input_dim
 
-    output_dim_desired = 2
-    assert output_dim_desired == embedding_gather.output_dim
+    output_dim_desired = n_dim
+    assert output_dim_desired == embedding_take.output_dim
 
 
 def test_stochastic_2b():
     """Test stochastic, hierarchically shared."""
-    n_stimuli = 6
+    input_map = np.array([0, 0, 1, 2, 1, 2])
+    n_stimuli = len(input_map)
     n_dim = 2
-    prior_scale = 0.12
 
     # Create core embedding composed of one 1D point.
     embedding_core = EmbeddingLaplaceDiag(
         3,
-        2,
-        loc_initializer=tf.keras.initializers.Constant(
+        n_dim,
+        loc_initializer=keras.initializers.Constant(
             np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
         ),
-        scale_initializer=tf.keras.initializers.Constant(
+        scale_initializer=keras.initializers.Constant(
             tfp.math.softplus_inverse(
                 np.array([[0.01, 0.02], [0.03, 0.04], [0.05, 0.06]])
             ).numpy()
         ),
         loc_trainable=False,
     )
-    # Map one point to four points.
-    input_map = [0, 0, 1, 2, 1, 2]
-    embedding_gather = EmbeddingTake(embedding=embedding_core, input_map=input_map)
+    # Map points.
+    embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
 
     # Test call with 1D input.
-    x = tf.constant(np.array([0, 1, 2, 3, 4, 5]), dtype=tf.int32)
-    z = embedding_gather(x).numpy()
-    assert z.shape[0] == 6
+    x = np.array([0, 1, 2, 3, 4, 5], dtype="int32")
+    z = embedding_take(x).numpy()
+    assert z.shape[0] == n_stimuli
     assert z.shape[1] == n_dim
 
     # Test embedding properties.
-    embeddings_loc_desired = tf.constant(
+    embeddings_loc_desired = np.array(
         [[0.1, 0.2], [0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.3, 0.4], [0.5, 0.6]],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    embeddings_scale_desired = tf.constant(
+    embeddings_scale_desired = np.array(
         [
             [0.0100001, 0.0200001],
             [0.0100001, 0.0200001],
@@ -409,19 +408,87 @@ def test_stochastic_2b():
             [0.0300001, 0.0400001],
             [0.05000011, 0.0600001],
         ],
-        dtype=tf.float32,
+        dtype="float32",
     )
-    embeddings = embedding_gather.embeddings
-    tf.debugging.assert_equal(embeddings_loc_desired, embeddings.distribution.loc)
+    embeddings = embedding_take.embeddings
+    np.testing.assert_array_equal(
+        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+    )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired.numpy(), embeddings.distribution.scale.numpy()
+        embeddings_scale_desired, embeddings.distribution.scale.numpy()
     )
 
     mask_zero_desired = False
-    assert mask_zero_desired == embedding_gather.mask_zero
+    assert mask_zero_desired == embedding_take.mask_zero
 
-    input_dim_desired = 6
-    assert input_dim_desired == embedding_gather.input_dim
+    input_dim_desired = n_stimuli
+    assert input_dim_desired == embedding_take.input_dim
 
-    output_dim_desired = 2
-    assert output_dim_desired == embedding_gather.output_dim
+    output_dim_desired = n_dim
+    assert output_dim_desired == embedding_take.output_dim
+
+
+# TODO
+# def test_stochastic_4():
+#     """Test stochastic, SharedEmbedding."""
+#     input_map = np.array([0, 0, 0, 0, 0, 0])
+#     n_stimuli = len(input_map)
+#     n_dim = 2
+
+#     # Create core embedding composed of cloned 1D to 2D point.
+#     prior_scale = 0.2
+#     embedding_core = EmbeddingShared(
+#         1,
+#         n_dim,
+#         embedding=EmbeddingNormalDiag(
+#             1,
+#             1,
+#             loc_initializer=keras.initializers.Constant(0.0),
+#             scale_initializer=keras.initializers.Constant(
+#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#             ),
+#             loc_trainable=False,
+#         ),
+#         mask_zero=False,
+#     )
+#     # Map points.
+#     embedding_take = EmbeddingTake(embedding=embedding_core, input_map=input_map)
+
+#     # Test call with 1D input.
+#     x = np.array([0, 1, 2, 3, 4, 5], dtype="int32")
+#     z = embedding_take(x).numpy()
+#     assert z.shape[0] == n_stimuli
+#     assert z.shape[1] == n_dim
+
+#     # Test embedding properties.
+#     embeddings_loc_desired = np.array(
+#         [[0.1, 0.2], [0.1, 0.2], [0.3, 0.4], [0.5, 0.6], [0.3, 0.4], [0.5, 0.6]],
+#         dtype="float32",
+#     )
+#     embeddings_scale_desired = np.array(
+#         [
+#             [0.0100001, 0.0200001],
+#             [0.0100001, 0.0200001],
+#             [0.0300001, 0.0400001],
+#             [0.05000011, 0.0600001],
+#             [0.0300001, 0.0400001],
+#             [0.05000011, 0.0600001],
+#         ],
+#         dtype="float32",
+#     )
+#     embeddings = embedding_take.embeddings
+#     np.testing.assert_array_equal(
+#         embeddings_loc_desired, embeddings.distribution.loc.numpy()
+#     )
+#     np.testing.assert_array_almost_equal(
+#         embeddings_scale_desired, embeddings.distribution.scale.numpy()
+#     )
+
+#     mask_zero_desired = False
+#     assert mask_zero_desired == embedding_take.mask_zero
+
+#     input_dim_desired = n_stimuli
+#     assert input_dim_desired == embedding_take.input_dim
+
+#     output_dim_desired = n_dim
+#     assert output_dim_desired == embedding_take.output_dim

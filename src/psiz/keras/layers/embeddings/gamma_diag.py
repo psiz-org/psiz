@@ -165,11 +165,24 @@ class EmbeddingGammaDiag(StochasticEmbedding):
         )
         inputs_rate = keras.ops.take(self.embeddings.distribution.rate, inputs, axis=0)
 
-        # [inputs_concetration, inputs_rate] = super().call(inputs)
         # Use reparameterization trick.
         dist_batch = tfp.distributions.Gamma(inputs_concentration, inputs_rate)
         # Reify output using samples.
         return dist_batch.sample(self.sample_shape)
+
+    def take(self, inputs):
+        """Take."""
+        inputs = super().call(inputs)
+        inputs_concentration = keras.ops.take(
+            self.embeddings.distribution.concentration, inputs, axis=0
+        )
+        inputs_rate = keras.ops.take(self.embeddings.distribution.rate, inputs, axis=0)
+
+        dist = tfp.distributions.Gamma(inputs_concentration, inputs_rate)
+        batch_ndims = keras.ops.size(dist.batch_shape_tensor())
+        return tfp.distributions.Independent(
+            dist, reinterpreted_batch_ndims=batch_ndims
+        )
 
     def get_config(self):
         """Return layer configuration."""

@@ -52,7 +52,6 @@ class EmbeddingTake(keras.layers.Layer):
                 "`input_dim` of the provided embedding."
             )
         self.input_dim = len(input_map)
-        # input_map = tf.constant(input_map, dtype=tf.int32)  # TODO: Check this.
         self.input_map = input_map.astype("int32")
         self._is_distribution = None
 
@@ -94,7 +93,7 @@ class EmbeddingTake(keras.layers.Layer):
         config.update(
             {
                 "embedding": keras.saving.serialize_keras_object(self._embedding),
-                "input_map": self.input_map.numpy().tolist(),
+                "input_map": self.input_map.tolist(),
             }
         )
         return config
@@ -115,6 +114,7 @@ class EmbeddingTake(keras.layers.Layer):
 
         """
         config["embedding"] = keras.saving.deserialize_keras_object(config["embedding"])
+        config["input_map"] = np.array(config["input_map"])
         return cls(**config)
 
     @property

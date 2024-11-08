@@ -181,6 +181,52 @@ def ds_4rank1_v3():
 
 
 @pytest.fixture(scope="module")
+def ds_2rank1_4rank1_v0():
+    """Dataset.
+
+    2-Rank-1 and 4-rank-1 similarity
+    * no timestep
+    * groups
+
+    """
+    n_sample = 4
+
+    # The 2-rank-1 data.
+    stimulus_set = np.array(
+        ((1, 2, 3), (10, 13, 8), (4, 5, 6), (14, 15, 16)),
+        dtype=np.int32,
+    )
+    n_select = 1
+    content_2rank1 = psiz.data.Rank(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content_2rank1.n_sample, content_2rank1.sequence_length], dtype=np.int32
+    )
+    outcome_2rank1 = psiz.data.SparseCategorical(
+        outcome_idx, depth=content_2rank1.n_outcome, name="given2rank1_outcome"
+    )
+
+    # The 4-rank-1 data.
+    stimulus_set = np.array(
+        ((1, 2, 3, 4, 5), (10, 13, 8, 9, 12), (4, 5, 6, 7, 8), (14, 15, 16, 17, 18)),
+        dtype=np.int32,
+    )
+    n_select = 1
+    content_4rank1 = psiz.data.Rank(stimulus_set, n_select=n_select)
+    outcome_idx = np.zeros(
+        [content_4rank1.n_sample, content_4rank1.sequence_length], dtype=np.int32
+    )
+    outcome_4rank1 = psiz.data.SparseCategorical(
+        outcome_idx, depth=content_4rank1.n_outcome, name="given4rank1_outcome"
+    )
+
+    tfds = psiz.data.Dataset(
+        [content_2rank1, outcome_2rank1, content_4rank1, outcome_4rank1]
+    ).export(export_format="tfds", with_timestep_axis=False)
+    tfds = tfds.batch(n_sample, drop_remainder=False)
+    return tfds
+
+
+@pytest.fixture(scope="module")
 def ds_8rank2_v0():
     """Dataset.
 

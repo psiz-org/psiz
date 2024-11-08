@@ -665,6 +665,135 @@ class RankModelC(StochasticModel):
         return cls(**config)
 
 
+class RankModelD(StochasticModel):
+    """A `SoftRank` model.
+
+    A variational percept layer.
+
+    Gates:
+        None
+
+    """
+
+    def __init__(
+        self, percept=None, proximity=None, soft_2rank1=None, soft_4rank1=None, **kwargs
+    ):
+        """Initialize."""
+        super(RankModelD, self).__init__(**kwargs)
+
+        self.stimuli_axis = 1
+
+        if percept is None:
+            n_stimuli = 20
+            n_dim = 3
+            kl_weight = 0.1
+            prior_scale = 0.2
+            embedding_posterior = psiz.keras.layers.EmbeddingNormalDiag(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                scale_initializer=keras.initializers.Constant(
+                    tfp.math.softplus_inverse(prior_scale).numpy()
+                ),
+            )
+            embedding_prior = psiz.keras.layers.EmbeddingShared(
+                n_stimuli + 1,
+                n_dim,
+                mask_zero=True,
+                embedding=psiz.keras.layers.EmbeddingNormalDiag(
+                    1,
+                    1,
+                    loc_initializer=keras.initializers.Constant(0.0),
+                    scale_initializer=keras.initializers.Constant(
+                        tfp.math.softplus_inverse(prior_scale).numpy()
+                    ),
+                    loc_trainable=False,
+                ),
+            )
+            percept = psiz.keras.layers.EmbeddingVariational(
+                posterior=embedding_posterior,
+                prior=embedding_prior,
+                kl_weight=kl_weight,
+                kl_n_sample=30,
+            )
+        self.percept = percept
+
+        if proximity is None:
+            proximity = psiz.keras.layers.Minkowski(
+                rho_initializer=keras.initializers.Constant(2.0),
+                w_initializer=keras.initializers.Constant(1.0),
+                activation=psiz.keras.layers.ExponentialSimilarity(
+                    trainable=False,
+                    beta_initializer=keras.initializers.Constant(10.0),
+                    tau_initializer=keras.initializers.Constant(1.0),
+                    gamma_initializer=keras.initializers.Constant(0.0),
+                ),
+                trainable=False,
+            )
+        self.proximity = proximity
+
+        if soft_2rank1 is None:
+            soft_2rank1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_2rank1 = soft_2rank1
+
+        if soft_4rank1 is None:
+            soft_4rank1 = psiz.keras.layers.SoftRank(n_select=1)
+        self.soft_4rank1 = soft_4rank1
+
+    def call(self, inputs):
+        """Call."""
+        # The 2-rank-1 branch.
+        z = self.percept(inputs["given2rank1_stimulus_set"])
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
+        s = self.proximity([z_q, z_r])
+        prob_2rank1 = self.soft_2rank1(s)
+
+        # The 4-rank-1 branch.
+        z = self.percept(inputs["given4rank1_stimulus_set"])
+        z_q, z_r = keras.ops.split(z, [1], self.stimuli_axis)
+        s = self.proximity([z_q, z_r])
+        prob_4rank1 = self.soft_4rank1(s)
+
+        outputs = {
+            "given2rank1_outcome": prob_2rank1,
+            "given4rank1_outcome": prob_4rank1,
+        }
+        return outputs
+
+    def get_config(self):
+        config = super(RankModelD, self).get_config()
+        config.update(
+            {
+                "percept": keras.saving.serialize_keras_object(self.percept),
+                "proximity": keras.saving.serialize_keras_object(self.proximity),
+                "soft_2rank1": keras.saving.serialize_keras_object(self.soft_2rank1),
+                "soft_4rank1": keras.saving.serialize_keras_object(self.soft_4rank1),
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config["percept"] = keras.layers.deserialize(config["percept"])
+        config["proximity"] = keras.layers.deserialize(config["proximity"])
+        config["soft_2rank1"] = keras.layers.deserialize(config["soft_2rank1"])
+        config["soft_4rank1"] = keras.layers.deserialize(config["soft_4rank1"])
+        return cls(**config)
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        self._input_shape = input_shape
+
+    def get_build_config(self):
+        build_config = {
+            "input_shape": self._input_shape,
+        }
+        return build_config
+
+    def build_from_config(self, config):
+        self.build(config["input_shape"])
+
+
 # finish or move out
 # class RankCellModelA(StochasticModel):
 #     """A VI RankSimilarityCell model.
@@ -1010,6 +1139,35 @@ def build_ranksim_subclass_c(is_eager):
         "weighted_metrics": [keras.metrics.CategoricalCrossentropy(name="cce")],
     }
     model.compile(**compile_kwargs)
+    return model
+
+
+def build_ranksim_subclass_d(is_eager):
+    """Build subclassed `Model`.
+
+    SoftRank, one group, two outputs, stochastic (VI).
+
+    """
+    model = RankModelD(n_sample=3)
+    model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        loss={
+            "given2rank1_outcome": keras.losses.CategoricalCrossentropy(
+                name="given2rank1_loss"
+            ),
+            "given4rank1_outcome": keras.losses.CategoricalCrossentropy(
+                name="given4rank1_loss"
+            ),
+        },
+        weighted_metrics={
+            "given2rank1_outcome": keras.metrics.CategoricalCrossentropy(
+                name="given2rank1_cce"
+            ),
+            "given4rank1_outcome": keras.metrics.CategoricalCrossentropy(
+                name="given4rank1_cce"
+            ),
+        },
+    )
     return model
 
 
@@ -1929,6 +2087,16 @@ class TestRankSimilarity:
 
         tfds = ds_4rank1_v2
         model = build_ranksim_subclass_c(is_eager)
+        call_fit_evaluate_predict(model, tfds)
+        keras.backend.clear_session()
+
+    @pytest.mark.tfp
+    @pytest.mark.parametrize("is_eager", [True, False])
+    def test_usage_subclass_d(self, ds_2rank1_4rank1_v0, is_eager):
+        """Test subclassed `StochasticModel`."""
+
+        tfds = ds_2rank1_4rank1_v0
+        model = build_ranksim_subclass_d(is_eager)
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 

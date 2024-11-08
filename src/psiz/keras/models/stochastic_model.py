@@ -23,16 +23,6 @@ Classes:
 
 import keras
 
-if keras.backend.backend() == "tensorflow":
-    import tensorflow as tf
-elif keras.backend.backend() == "jax":
-    pass
-    # import jax  # TODO(roads) support jax backend.
-elif keras.backend.backend() == "torch":
-    import torch
-else:
-    raise RuntimeError(f"Unrecognized Keras Backend '{keras.backend.backend()}'.")
-
 
 @keras.saving.register_keras_serializable(
     package="psiz.keras.models", name="StochasticModel"
@@ -120,92 +110,18 @@ class StochasticModel(keras.Model):
             return self._torch_train_step(*args, **kwargs)
 
     def _jax_train_step(self, state, data):
-        raise NotImplementedError("JAX backend not yet supported.")
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).train_step(state, data)
 
     def _tensorflow_train_step(self, data):
-        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
-        # Adjust `x`, `y` and `sample_weight` batch axis to reflect multiple
-        # samples.
-        x = self.repeat_samples_in_batch_axis(x, self._n_sample)
-        y = self.repeat_samples_in_batch_axis(y, self._n_sample)
-        if sample_weight is not None:
-            sample_weight = self.repeat_samples_in_batch_axis(
-                sample_weight, self._n_sample
-            )
-
-        # pylint: disable-next=used-before-assignment, possibly-used-before-assignment
-        with tf.GradientTape() as tape:
-            y_pred = self(x, training=True)  # Forward pass
-            # Compute the loss value.
-            # The loss function is configured in `compile()`.
-            loss = self.compute_loss(
-                y=y,
-                y_pred=y_pred,
-                sample_weight=sample_weight,
-            )
-
-        # Compute gradients
-        trainable_vars = self.trainable_variables
-        gradients = tape.gradient(loss, trainable_vars)
-
-        # Update weights
-        self.optimizer.apply(gradients, trainable_vars)
-
-        # Update the metrics.
-        for metric in self.metrics:
-            if metric.name == "loss":
-                metric.update_state(loss)
-            else:
-                metric.update_state(y, y_pred, sample_weight=sample_weight)
-
-        return {m.name: m.result() for m in self.metrics}
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).train_step(data)
 
     def _torch_train_step(self, data):
-        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
-        # Adjust `x`, `y` and `sample_weight` batch axis to reflect multiple
-        # samples.
-        x = self.repeat_samples_in_batch_axis(x, self._n_sample)
-        y = self.repeat_samples_in_batch_axis(y, self._n_sample)
-        if sample_weight is not None:
-            sample_weight = self.repeat_samples_in_batch_axis(
-                sample_weight, self._n_sample
-            )
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).train_step(data)
 
-        # Clear the leftover gradients.
-        self.zero_grad()
-
-        # Compute loss
-        y_pred = self(x, training=True)
-        loss = self.compute_loss(
-            y=y,
-            y_pred=y_pred,
-            sample_weight=sample_weight,
-        )
-
-        # Call torch.Tensor.backward() on the loss to compute gradients
-        # for the weights.
-        loss.backward()
-
-        trainable_weights = [v for v in self.trainable_weights]
-        gradients = [v.value.grad for v in trainable_weights]
-
-        # Update weights
-        # pylint: disable-next=used-before-assignment, possibly-used-before-assignment
-        with torch.no_grad():
-            self.optimizer.apply(gradients, trainable_weights)
-
-        # Update metrics (includes the metric that tracks the loss)
-        for metric in self.metrics:
-            if metric.name == "loss":
-                metric.update_state(loss)
-            else:
-                metric.update_state(y, y_pred, sample_weight=sample_weight)
-
-        # Return a dict mapping metric names to current value
-        # Note that it will include the loss (tracked in self.metrics).
-        return {m.name: m.result() for m in self.metrics}
-
-    def test_step(self, data):
+    def test_step(self, *args, **kwargs):
         """The logic for one evaluation step.
 
         Standard prediction is performmed with one sample. To
@@ -225,34 +141,26 @@ class StochasticModel(keras.Model):
             returned.
 
         """
-        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
-        # Adjust `x`, `y` and `sample_weight` batch axis to reflect multiple
-        # samples.
-        x = self.repeat_samples_in_batch_axis(x, self._n_sample)
-        y = self.repeat_samples_in_batch_axis(y, self._n_sample)
-        if sample_weight is not None:
-            sample_weight = self.repeat_samples_in_batch_axis(
-                sample_weight, self._n_sample
-            )
+        if keras.backend.backend() == "jax":
+            return self._jax_test_step(*args, **kwargs)
+        elif keras.backend.backend() == "tensorflow":
+            return self._tensorflow_test_step(*args, **kwargs)
+        elif keras.backend.backend() == "torch":
+            return self._torch_test_step(*args, **kwargs)
 
-        y_pred = self(x, training=False)
+    def _jax_test_step(self, state, data):
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).test_step(state, data)
 
-        loss = self.compute_loss(
-            y=y,
-            y_pred=y_pred,
-            sample_weight=sample_weight,
-        )
+    def _tensorflow_test_step(self, data):
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).test_step(data)
 
-        # Update the metrics.
-        for metric in self.metrics:
-            if metric.name == "loss":
-                metric.update_state(loss)
-            else:
-                metric.update_state(y, y_pred)
+    def _torch_test_step(self, data):
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).test_step(data)
 
-        return {m.name: m.result() for m in self.metrics}
-
-    def predict_step(self, data):
+    def predict_step(self, *args, **kwargs):
         """The logic for one inference step.
 
         Standard prediction is performmed with one sample. To
@@ -267,15 +175,30 @@ class StochasticModel(keras.Model):
             calling the `Model` on data.
 
         """
-        x, _, _ = keras.utils.unpack_x_y_sample_weight(data)
-        x = self.repeat_samples_in_batch_axis(x, self._n_sample)
-        y_pred = self(x, training=False)
+        if keras.backend.backend() == "jax":
+            y_pred = self._jax_predict_step(*args, **kwargs)
+        elif keras.backend.backend() == "tensorflow":
+            y_pred = self._tensorflow_predict_step(*args, **kwargs)
+        elif keras.backend.backend() == "torch":
+            y_pred = self._torch_predict_step(*args, **kwargs)
 
         # For prediction, we average over the samples. The batch and
         # "repeated sample" axis are disentangled first to make averaging
         # simple.
         y_pred = self.average_repeated_samples(y_pred, self._n_sample)
         return y_pred
+
+    def _jax_predict_step(self, state, data):
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).predict_step(state, data)
+
+    def _tensorflow_predict_step(self, data):
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).predict_step(data)
+
+    def _torch_predict_step(self, data):
+        data = self.repeat_samples_in_data(data)
+        return super(StochasticModel, self).predict_step(data)
 
     def get_config(self):
         """Return model configuration."""
@@ -290,6 +213,25 @@ class StochasticModel(keras.Model):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
+    def repeat_samples_in_data(self, data):
+        """Repeat samples in batch axis of each data component.
+
+        Args:
+            data: A nested structure of `Tensor`s.
+
+        Returns:
+            A an appropriately modified tuple of `Tensor`s.
+
+        """
+        x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
+        x = self.repeat_samples_in_batch_axis(x, self._n_sample)
+        y = self.repeat_samples_in_batch_axis(y, self._n_sample)
+        if sample_weight is not None:
+            sample_weight = self.repeat_samples_in_batch_axis(
+                sample_weight, self._n_sample
+            )
+        return (x, y, sample_weight)
 
     def repeat_samples_in_batch_axis(self, data, n_sample):
         """Create repeated samples in batch axis.

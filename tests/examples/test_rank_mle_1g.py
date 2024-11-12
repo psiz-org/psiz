@@ -84,32 +84,32 @@ def build_ground_truth_model(n_stimuli, n_dim, similarity_func, mask_zero):
     # Set similarity function.
     if similarity_func == "Exponential":
         similarity = psiz.keras.layers.ExponentialSimilarity(
-            fit_tau=False,
-            fit_gamma=False,
-            fit_beta=False,
+            tau_trainable=False,
+            gamma_trainable=False,
+            beta_trainable=False,
             tau_initializer=keras.initializers.Constant(1.0),
             gamma_initializer=keras.initializers.Constant(0.001),
         )
     elif similarity_func == "StudentsT":
         similarity = psiz.keras.layers.StudentsTSimilarity(
-            fit_tau=False,
-            fit_alpha=False,
+            tau_trainable=False,
+            alpha_trainable=False,
             tau_initializer=keras.initializers.Constant(2.0),
             alpha_initializer=keras.initializers.Constant(1.0),
         )
     elif similarity_func == "HeavyTailed":
         similarity = psiz.keras.layers.HeavyTailedSimilarity(
-            fit_tau=False,
-            fit_kappa=False,
-            fit_alpha=False,
+            tau_trainable=False,
+            kappa_trainable=False,
+            alpha_trainable=False,
             tau_initializer=keras.initializers.Constant(2.0),
             kappa_initializer=keras.initializers.Constant(2.0),
             alpha_initializer=keras.initializers.Constant(10.0),
         )
     elif similarity_func == "Inverse":
         similarity = psiz.keras.layers.InverseSimilarity(
-            fit_tau=False,
-            fit_mu=False,
+            tau_trainable=False,
+            mu_trainable=False,
             tau_initializer=keras.initializers.Constant(2.0),
             mu_initializer=keras.initializers.Constant(0.000001),
         )
@@ -158,8 +158,8 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
             beta_initializer=keras.initializers.Constant(10.0),
             tau_initializer=keras.initializers.Constant(1.0),
             gamma_initializer=keras.initializers.Constant(0.001),
-            fit_beta=False,
-            fit_tau=False,
+            beta_trainable=False,
+            tau_trainable=False,
         )
     elif similarity_func == "StudentsT":
         similarity = psiz.keras.layers.StudentsTSimilarity()

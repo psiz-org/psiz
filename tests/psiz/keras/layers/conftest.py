@@ -99,9 +99,9 @@ def kernel_v0():
         rho_initializer=keras.initializers.Constant(2.0),
         w_initializer=keras.initializers.Constant(1.0),
         activation=ExponentialSimilarity(
-            fit_tau=False,
-            fit_gamma=False,
-            fit_beta=False,
+            tau_trainable=False,
+            gamma_trainable=False,
+            beta_trainable=False,
             tau_initializer=keras.initializers.Constant(1.0),
             gamma_initializer=keras.initializers.Constant(0.0),
             beta_initializer=keras.initializers.Constant(0.1),

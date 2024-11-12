@@ -28,20 +28,20 @@ class TestInverse:
         """Test default initialization."""
         similarity = InverseSimilarity()
 
-        assert similarity.fit_tau
-        assert similarity.fit_mu
+        assert similarity.tau_trainable
+        assert similarity.mu_trainable
 
     def test_init_options_0(self):
         """Test initialization with optional arguments."""
         similarity = InverseSimilarity(
-            fit_tau=False,
-            fit_mu=False,
+            tau_trainable=False,
+            mu_trainable=False,
             tau_initializer=keras.initializers.Constant(1.0),
             mu_initializer=keras.initializers.Constant(1.2),
         )
 
-        assert not similarity.fit_tau
-        assert not similarity.fit_mu
+        assert not similarity.tau_trainable
+        assert not similarity.mu_trainable
 
     def test_call(self):
         """Test call."""
@@ -65,8 +65,8 @@ class TestInverse:
         similarity = InverseSimilarity()
         config = similarity.get_config()
 
-        assert config["fit_tau"]
-        assert config["fit_mu"]
+        assert config["tau_trainable"]
+        assert config["mu_trainable"]
 
     def test_serialization(self):
         """Test serialization with weights."""

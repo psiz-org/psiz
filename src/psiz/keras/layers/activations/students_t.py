@@ -51,31 +51,45 @@ class StudentsTSimilarity(keras.layers.Layer):
 
     def __init__(
         self,
-        fit_tau=True,
-        fit_alpha=True,
         tau_initializer=None,
         alpha_initializer=None,
+        tau_trainable=None,
+        alpha_trainable=None,
+        fit_tau=True,
+        fit_alpha=True,
         **kwargs
     ):
         """Initialize.
 
         Args:
-            fit_tau (optional): Boolean indicating if variable is
-                trainable.
-            fit_alpha (optional): Boolean indicating if variable is
-                trainable.
             tau_initializer (optional): Initializer for tau.
             alpha_initializer (optional): Initializer for alpha.
+            tau_trainable (optional): Boolean indicating if variable is
+                trainable.
+            alpha_trainable (optional): Boolean indicating if variable is
+                trainable.
+            fit_tau (deprecated, optional): alias for tau_trainable.
+            fit_alpha (deprecated, optional): alias for alpha_trainable.
 
         """
         super(StudentsTSimilarity, self).__init__(**kwargs)
 
-        self.fit_tau = fit_tau
+        if tau_trainable is not None:
+            self.fit_tau = tau_trainable
+            self.tau_trainable = tau_trainable
+        else:
+            self.fit_tau = fit_tau
+            self.tau_trainable = fit_tau
         if tau_initializer is None:
             tau_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
         self.tau_initializer = keras.initializers.get(tau_initializer)
 
-        self.fit_alpha = fit_alpha
+        if alpha_trainable is not None:
+            self.fit_alpha = alpha_trainable
+            self.alpha_trainable = alpha_trainable
+        else:
+            self.fit_alpha = fit_alpha
+            self.alpha_trainable = fit_alpha
         if alpha_initializer is None:
             alpha_initializer = keras.initializers.RandomUniform(
                 minval=1.0, maxval=10.0
@@ -86,8 +100,8 @@ class StudentsTSimilarity(keras.layers.Layer):
         """Build."""
         if self.built:
             return
-        tau_trainable = self.trainable and self.fit_tau
-        alpha_trainable = self.trainable and self.fit_alpha
+        tau_trainable = self.trainable and self.tau_trainable
+        alpha_trainable = self.trainable and self.alpha_trainable
         with keras.name_scope(self.name):
             self.tau = self.add_weight(
                 shape=[],
@@ -126,8 +140,8 @@ class StudentsTSimilarity(keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
-                "fit_tau": self.fit_tau,
-                "fit_alpha": self.fit_alpha,
+                "tau_trainable": self.tau_trainable,
+                "alpha_trainable": self.alpha_trainable,
                 "tau_initializer": keras.initializers.serialize(self.tau_initializer),
                 "alpha_initializer": keras.initializers.serialize(
                     self.alpha_initializer

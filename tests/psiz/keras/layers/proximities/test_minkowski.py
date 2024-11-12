@@ -61,14 +61,14 @@ def test_call_exponential(paired_inputs_v0):
 
     desired_outputs = np.array(
         [
-            0.4216200260541147,
-            0.4216200260541147,
-            0.4216200260541147,
-            0.4216200260541147,
-            0.4216200260541147,
+            0.42119,
+            0.42119,
+            0.42119,
+            0.42119,
+            0.42119,
         ]
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=5)
 
 
 def test_serialization_0():

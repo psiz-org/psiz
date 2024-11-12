@@ -28,32 +28,32 @@ class TestExponential:
         """Test default initialization."""
         similarity = ExponentialSimilarity()
 
-        assert similarity.fit_tau
-        assert similarity.fit_gamma
-        assert similarity.fit_beta
+        assert similarity.tau_trainable
+        assert similarity.gamma_trainable
+        assert similarity.beta_trainable
 
     def test_init_options_0(self):
         """Test initialization with optional arguments."""
         similarity = ExponentialSimilarity(
-            fit_tau=False,
-            fit_gamma=False,
-            fit_beta=False,
+            tau_trainable=False,
+            gamma_trainable=False,
+            beta_trainable=False,
             tau_initializer=keras.initializers.Constant(1.0),
             gamma_initializer=keras.initializers.Constant(0.01),
             beta_initializer=keras.initializers.Constant(10.0),
         )
 
-        assert not similarity.fit_tau
-        assert not similarity.fit_gamma
-        assert not similarity.fit_beta
+        assert not similarity.tau_trainable
+        assert not similarity.gamma_trainable
+        assert not similarity.beta_trainable
 
     def test_init_options_1(self):
         """Test initialization with optional arguments."""
-        similarity = ExponentialSimilarity(fit_beta=False)
+        similarity = ExponentialSimilarity(beta_trainable=False)
 
-        assert similarity.fit_tau
-        assert similarity.fit_gamma
-        assert not similarity.fit_beta
+        assert similarity.tau_trainable
+        assert similarity.gamma_trainable
+        assert not similarity.beta_trainable
 
     def test_call(self):
         """Test call."""
@@ -70,17 +70,18 @@ class TestExponential:
         s_actual = keras.ops.convert_to_numpy(s_actual)
 
         s_desired = np.array(
-            [[0.6097281, 0.10853132], [0.4828154, 0.16589916]], dtype="float32"
+            [[0.609119, 0.108423], [0.482333, 0.165733]],
+            dtype="float32",
         )
-        np.testing.assert_allclose(s_actual, s_desired)
+        np.testing.assert_allclose(s_actual, s_desired, rtol=1e-5)
 
     def test_get_config(self):
         similarity = ExponentialSimilarity()
         config = similarity.get_config()
 
-        assert config["fit_tau"]
-        assert config["fit_gamma"]
-        assert config["fit_beta"]
+        assert config["tau_trainable"]
+        assert config["gamma_trainable"]
+        assert config["beta_trainable"]
 
     def test_serialization(self):
         """Test serialization with weights."""

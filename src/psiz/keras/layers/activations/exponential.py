@@ -64,43 +64,61 @@ class ExponentialSimilarity(keras.layers.Layer):
 
     def __init__(
         self,
-        fit_tau=True,
-        fit_gamma=True,
-        fit_beta=True,
         tau_initializer=None,
         gamma_initializer=None,
         beta_initializer=None,
+        tau_trainable=None,
+        gamma_trainable=None,
+        beta_trainable=None,
+        fit_tau=True,
+        fit_gamma=True,
+        fit_beta=True,
         **kwargs
     ):
         """Initialize.
 
         Args:
-            fit_tau (optional): Boolean indicating if variable is
-                trainable.
-            fit_gamma (optional): Boolean indicating if variable is
-                trainable.
-            fit_beta (optional): Boolean indicating if variable is
-                trainable.
             tau_initializer (optional): Initializer for tau.
             gamma_initializer (optional): Initializer for gamma.
             beta_initializer (optional): Initializer for beta.
+            tau_trainable (optional): Boolean indicating if tau is trainable.
+            gamma_trainable (optional): Boolean indicating if gamma is trainable.
+            beta_trainable (optional): Boolean indicating if beta is trainable.
+            fit_tau (deprecated, optional): alias for tau_trainable.
+            fit_gamma (deprecataed, optional): alias for gamma_trainable.
+            fit_beta (deprecated, optional): alias for beta_trainable.
 
         """
         super(ExponentialSimilarity, self).__init__(**kwargs)
 
-        self.fit_tau = fit_tau
+        if tau_trainable is not None:
+            self.fit_tau = tau_trainable
+            self.tau_trainable = tau_trainable
+        else:
+            self.fit_tau = fit_tau
+            self.tau_trainable = fit_tau
         if tau_initializer is None:
             tau_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
         self.tau_initializer = keras.initializers.get(tau_initializer)
 
-        self.fit_gamma = fit_gamma
+        if gamma_trainable is not None:
+            self.fit_gamma = gamma_trainable
+            self.gamma_trainable = gamma_trainable
+        else:
+            self.fit_gamma = fit_gamma
+            self.gamma_trainable = fit_gamma
         if gamma_initializer is None:
             gamma_initializer = keras.initializers.RandomUniform(
                 minval=0.0, maxval=0.001
             )
         self.gamma_initializer = keras.initializers.get(gamma_initializer)
 
-        self.fit_beta = fit_beta
+        if beta_trainable is not None:
+            self.fit_beta = beta_trainable
+            self.beta_trainable = beta_trainable
+        else:
+            self.fit_beta = fit_beta
+            self.beta_trainable = fit_beta
         if beta_initializer is None:
             if fit_beta:
                 beta_initializer = keras.initializers.RandomUniform(
@@ -114,9 +132,9 @@ class ExponentialSimilarity(keras.layers.Layer):
         """Build."""
         if self.built:
             return
-        tau_trainable = self.trainable and self.fit_tau
-        gamma_trainable = self.trainable and self.fit_gamma
-        beta_trainable = self.trainable and self.fit_beta
+        tau_trainable = self.trainable and self.tau_trainable
+        gamma_trainable = self.trainable and self.gamma_trainable
+        beta_trainable = self.trainable and self.beta_trainable
         with keras.name_scope(self.name):
             self.tau = self.add_weight(
                 shape=[],
@@ -153,21 +171,22 @@ class ExponentialSimilarity(keras.layers.Layer):
             A tensor of similarities.
 
         """
-        return (
+        s = (
             keras.ops.exp(
                 keras.ops.negative(self.beta) * keras.ops.power(inputs, self.tau)
             )
             + self.gamma
         )
+        return keras.ops.divide(s, 1 + self.gamma)
 
     def get_config(self):
         """Return layer configuration."""
         config = super().get_config()
         config.update(
             {
-                "fit_tau": self.fit_tau,
-                "fit_gamma": self.fit_gamma,
-                "fit_beta": self.fit_beta,
+                "tau_trainable": self.tau_trainable,
+                "gamma_trainable": self.gamma_trainable,
+                "beta_trainable": self.beta_trainable,
                 "tau_initializer": keras.initializers.serialize(self.tau_initializer),
                 "gamma_initializer": keras.initializers.serialize(
                     self.gamma_initializer

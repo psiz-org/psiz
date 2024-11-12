@@ -28,20 +28,20 @@ class TestStudentsT:
         """Test default initialization."""
         similarity = StudentsTSimilarity()
 
-        assert similarity.fit_tau
-        assert similarity.fit_alpha
+        assert similarity.tau_trainable
+        assert similarity.alpha_trainable
 
     def test_init_options_0(self):
         """Test initialization with optional arguments."""
         similarity = StudentsTSimilarity(
-            fit_tau=False,
-            fit_alpha=False,
+            tau_trainable=False,
+            alpha_trainable=False,
             tau_initializer=keras.initializers.Constant(1.0),
             alpha_initializer=keras.initializers.Constant(1.2),
         )
 
-        assert not similarity.fit_tau
-        assert not similarity.fit_alpha
+        assert not similarity.tau_trainable
+        assert not similarity.alpha_trainable
 
     def test_call(self):
         """Test call."""
@@ -65,8 +65,8 @@ class TestStudentsT:
         similarity = StudentsTSimilarity()
         config = similarity.get_config()
 
-        assert config["fit_tau"]
-        assert config["fit_alpha"]
+        assert config["tau_trainable"]
+        assert config["alpha_trainable"]
 
     def test_serialization(self):
         """Test serialization with weights."""

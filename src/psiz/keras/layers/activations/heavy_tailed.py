@@ -44,43 +44,64 @@ class HeavyTailedSimilarity(keras.layers.Layer):
 
     def __init__(
         self,
-        fit_tau=True,
-        fit_kappa=True,
-        fit_alpha=True,
         tau_initializer=None,
         kappa_initializer=None,
         alpha_initializer=None,
+        tau_trainable=None,
+        kappa_trainable=None,
+        alpha_trainable=None,
+        fit_tau=True,
+        fit_kappa=True,
+        fit_alpha=True,
         **kwargs
     ):
         """Initialize.
 
         Args:
-            fit_tau (optional): Boolean indicating if variable is
-                trainable.
-            fit_kappa (optional): Boolean indicating if variable is
-                trainable.
-            fit_alpha (optional): Boolean indicating if variable is
-                trainable.
             tau_initializer (optional): Initializer for tau.
             kappa_initializer (optional): Initializer for kappa.
             alpha_initializer (optional): Initializer for alpha.
+            tau_trainable (optional): Boolean indicating if variable is
+                trainable.
+            kappa_trainable (optional): Boolean indicating if variable is
+                trainable.
+            alpha_trainable (optional): Boolean indicating if variable is
+                trainable.
+            fit_tau (deprecated, optional): alias for tau_trainable.
+            fit_kappa (deprecated, optional): alias for kappa_trainable.
+            fit_alpha (deprecated, optional): alias for alpha_trainable.
 
         """
         super(HeavyTailedSimilarity, self).__init__(**kwargs)
 
-        self.fit_tau = fit_tau
+        if tau_trainable is not None:
+            self.fit_tau = tau_trainable
+            self.tau_trainable = tau_trainable
+        else:
+            self.fit_tau = fit_tau
+            self.tau_trainable = fit_tau
         if tau_initializer is None:
             tau_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
         self.tau_initializer = keras.initializers.get(tau_initializer)
 
-        self.fit_kappa = fit_kappa
+        if kappa_trainable is not None:
+            self.fit_kappa = kappa_trainable
+            self.kappa_trainable = kappa_trainable
+        else:
+            self.fit_kappa = fit_kappa
+            self.kappa_trainable = fit_kappa
         if kappa_initializer is None:
             kappa_initializer = keras.initializers.RandomUniform(
                 minval=1.0, maxval=11.0
             )
         self.kappa_initializer = keras.initializers.get(kappa_initializer)
 
-        self.fit_alpha = fit_alpha
+        if alpha_trainable is not None:
+            self.fit_alpha = alpha_trainable
+            self.alpha_trainable = alpha_trainable
+        else:
+            self.fit_alpha = fit_alpha
+            self.alpha_trainable = fit_alpha
         if alpha_initializer is None:
             alpha_initializer = keras.initializers.RandomUniform(
                 minval=1.0, maxval=10.0
@@ -91,9 +112,9 @@ class HeavyTailedSimilarity(keras.layers.Layer):
         """Build."""
         if self.built:
             return
-        tau_trainable = self.trainable and self.fit_tau
-        kappa_trainable = self.trainable and self.fit_kappa
-        alpha_trainable = self.trainable and self.fit_alpha
+        tau_trainable = self.trainable and self.tau_trainable
+        kappa_trainable = self.trainable and self.kappa_trainable
+        alpha_trainable = self.trainable and self.alpha_trainable
         with keras.name_scope(self.name):
             self.tau = self.add_weight(
                 shape=[],
@@ -140,9 +161,6 @@ class HeavyTailedSimilarity(keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
-                "fit_tau": self.fit_tau,
-                "fit_kappa": self.fit_kappa,
-                "fit_alpha": self.fit_alpha,
                 "tau_initializer": keras.initializers.serialize(self.tau_initializer),
                 "kappa_initializer": keras.initializers.serialize(
                     self.kappa_initializer
@@ -150,6 +168,9 @@ class HeavyTailedSimilarity(keras.layers.Layer):
                 "alpha_initializer": keras.initializers.serialize(
                     self.alpha_initializer
                 ),
+                "tau_trainable": self.tau_trainable,
+                "kappa_trainable": self.kappa_trainable,
+                "alpha_trainable": self.alpha_trainable,
             }
         )
         return config

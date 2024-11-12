@@ -28,24 +28,24 @@ class TestHeavyTailed:
         """Test default initialization."""
         similarity = HeavyTailedSimilarity()
 
-        assert similarity.fit_tau
-        assert similarity.fit_kappa
-        assert similarity.fit_alpha
+        assert similarity.tau_trainable
+        assert similarity.kappa_trainable
+        assert similarity.alpha_trainable
 
     def test_init_options_0(self):
         """Test initialization with optional arguments."""
         similarity = HeavyTailedSimilarity(
-            fit_tau=False,
-            fit_kappa=False,
-            fit_alpha=False,
+            tau_trainable=False,
+            kappa_trainable=False,
+            alpha_trainable=False,
             tau_initializer=keras.initializers.Constant(1.0),
             kappa_initializer=keras.initializers.Constant(0.01),
             alpha_initializer=keras.initializers.Constant(10.0),
         )
 
-        assert not similarity.fit_tau
-        assert not similarity.fit_kappa
-        assert not similarity.fit_alpha
+        assert not similarity.tau_trainable
+        assert not similarity.kappa_trainable
+        assert not similarity.alpha_trainable
 
     def test_call(self):
         """Test call."""
@@ -70,9 +70,9 @@ class TestHeavyTailed:
         similarity = HeavyTailedSimilarity()
         config = similarity.get_config()
 
-        assert config["fit_tau"]
-        assert config["fit_kappa"]
-        assert config["fit_alpha"]
+        assert config["tau_trainable"]
+        assert config["kappa_trainable"]
+        assert config["alpha_trainable"]
 
     def test_serialization(self):
         """Test serialization with weights."""

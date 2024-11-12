@@ -39,31 +39,45 @@ class InverseSimilarity(keras.layers.Layer):
 
     def __init__(
         self,
-        fit_tau=True,
-        fit_mu=True,
         tau_initializer=None,
         mu_initializer=None,
+        tau_trainable=None,
+        mu_trainable=None,
+        fit_tau=True,
+        fit_mu=True,
         **kwargs
     ):
         """Initialize.
 
         Args:
-            fit_tau (optional): Boolean indicating if variable is
-                trainable.
-            fit_mu (optional): Boolean indicating if variable is
-                trainable.
             tau_initializer (optional): Initializer for tau.
             mu_initializer (optional): Initializer for mu.
+            tau_trainable (optional): Boolean indicating if variable is
+                trainable.
+            mu_trainable (optional): Boolean indicating if variable is
+                trainable.
+            fit_tau (deprecated, optional): alias for tau_trainable.
+            fit_mu (deprecated, optional): alias for mu_trainable.
 
         """
         super(InverseSimilarity, self).__init__(**kwargs)
 
-        self.fit_tau = fit_tau
+        if tau_trainable is not None:
+            self.fit_tau = tau_trainable
+            self.tau_trainable = tau_trainable
+        else:
+            self.fit_tau = fit_tau
+            self.tau_trainable = fit_tau
         if tau_initializer is None:
             tau_initializer = keras.initializers.RandomUniform(minval=1.0, maxval=2.0)
         self.tau_initializer = keras.initializers.get(tau_initializer)
 
-        self.fit_mu = fit_mu
+        if mu_trainable is not None:
+            self.fit_mu = mu_trainable
+            self.mu_trainable = mu_trainable
+        else:
+            self.fit_mu = fit_mu
+            self.mu_trainable = fit_mu
         if mu_initializer is None:
             mu_initializer = keras.initializers.RandomUniform(
                 minval=0.0000000001, maxval=0.001
@@ -74,8 +88,8 @@ class InverseSimilarity(keras.layers.Layer):
         """Build."""
         if self.built:
             return
-        tau_trainable = self.trainable and self.fit_tau
-        mu_trainable = self.trainable and self.fit_mu
+        tau_trainable = self.trainable and self.tau_trainable
+        mu_trainable = self.trainable and self.mu_trainable
         with keras.name_scope(self.name):
             self.tau = self.add_weight(
                 shape=[],
@@ -111,10 +125,10 @@ class InverseSimilarity(keras.layers.Layer):
         config = super().get_config()
         config.update(
             {
-                "fit_tau": self.fit_tau,
-                "fit_mu": self.fit_mu,
                 "tau_initializer": keras.initializers.serialize(self.tau_initializer),
                 "mu_initializer": keras.initializers.serialize(self.mu_initializer),
+                "tau_trainable": self.tau_trainable,
+                "mu_trainable": self.mu_trainable,
             }
         )
         return config

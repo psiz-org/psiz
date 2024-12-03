@@ -111,6 +111,7 @@ class StochasticModel(keras.Model):
 
     def _jax_train_step(self, state, data):
         data = self.repeat_samples_in_data(data)
+        # pylint: disable-next=too-many-function-args
         return super(StochasticModel, self).train_step(state, data)
 
     def _tensorflow_train_step(self, data):
@@ -150,6 +151,7 @@ class StochasticModel(keras.Model):
 
     def _jax_test_step(self, state, data):
         data = self.repeat_samples_in_data(data)
+        # pylint: disable-next=too-many-function-args
         return super(StochasticModel, self).test_step(state, data)
 
     def _tensorflow_test_step(self, data):
@@ -175,6 +177,7 @@ class StochasticModel(keras.Model):
             calling the `Model` on data.
 
         """
+        y_pred = None
         if keras.backend.backend() == "jax":
             y_pred = self._jax_predict_step(*args, **kwargs)
         elif keras.backend.backend() == "tensorflow":
@@ -190,6 +193,7 @@ class StochasticModel(keras.Model):
 
     def _jax_predict_step(self, state, data):
         data = self.repeat_samples_in_data(data)
+        # pylint: disable-next=too-many-function-args
         return super(StochasticModel, self).predict_step(state, data)
 
     def _tensorflow_predict_step(self, data):

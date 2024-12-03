@@ -36,6 +36,8 @@ class LayerA(keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
+        if self.built:
+            return
         last_dim = input_shape[-1]
         self.kernel = self.add_weight(
             shape=[last_dim, self.units],
@@ -69,6 +71,8 @@ class LayerB(keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
+        if self.built:
+            return
         self.w0 = self.add_weight(
             shape=[],
             initializer=self.w0_initializer,
@@ -103,6 +107,9 @@ class CellA(keras.layers.Layer):
 
     def build(self, input_shape):
         """Build."""
+        if self.built:
+            return
+        self.layer_0.build(input_shape)
         super().build(input_shape)
 
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
@@ -297,6 +304,12 @@ class ModelC(StochasticModel):
         self.branch_1 = branch_1
         self.add_layer = keras.layers.Add()
 
+    def build(self, input_shape):
+        self._input_shape = input_shape
+        self.branch_0.build(input_shape["x_a"])
+        self.branch_1.build(input_shape["x_b"])
+        super().build(input_shape)
+
     def call(self, inputs):
         """Call.
 
@@ -327,6 +340,15 @@ class ModelC(StochasticModel):
         config["branch_1"] = keras.layers.deserialize(config["branch_1"])
         return cls(**config)
 
+    def get_build_config(self):
+        build_config = {
+            "input_shape": self._input_shape,
+        }
+        return build_config
+
+    def build_from_config(self, config):
+        self.build(config["input_shape"])
+
 
 class ModelD(StochasticModel):
     """A stochastic model with an RNN layer.
@@ -353,6 +375,10 @@ class ModelD(StochasticModel):
             rnn_layer = keras.layers.RNN(CellA(), return_sequences=True)
         self.rnn_layer = rnn_layer
         self.add_layer = keras.layers.Add()
+
+    def build(self, input_shape):
+        self.rnn_layer.build(input_shape["x_a"])
+        super().build(input_shape)
 
     def call(self, inputs):
         """Call.

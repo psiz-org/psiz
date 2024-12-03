@@ -169,7 +169,7 @@ class TestALCOVECell:
     """Test using `ALCOVECell` layer."""
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
+    @pytest.mark.skip(reason="Keras v3 RNN requires single input tensor.")
     def test_usage_subclass_a(self, ds_time_categorize_v0, is_eager):
         """Test subclassed model, one group."""
 
@@ -179,7 +179,7 @@ class TestALCOVECell:
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
+    @pytest.mark.skip(reason="Keras v3 RNN requires single input tensor.")
     def test_save_load_subclass_a(self, ds_time_categorize_v0, is_eager, tmpdir):
         """Test serialization."""
         tfds = ds_time_categorize_v0
@@ -203,7 +203,7 @@ class TestALCOVECell:
         assert eval0[1] == eval1[1]
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
+    @pytest.mark.skip(reason="Keras v3 RNN requires single input tensor.")
     def test_usage_functional_v0(self, ds_time_categorize_v0, is_eager):
         """Test model using functional API."""
         tfds = ds_time_categorize_v0
@@ -212,7 +212,7 @@ class TestALCOVECell:
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
-    @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
+    @pytest.mark.skip(reason="Keras v3 RNN requires single input tensor.")
     def test_save_load_functional_v0(self, ds_time_categorize_v0, is_eager, tmpdir):
         """Test serialization."""
         tfds = ds_time_categorize_v0

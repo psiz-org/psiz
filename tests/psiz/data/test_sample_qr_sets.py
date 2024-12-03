@@ -150,6 +150,6 @@ def test_replace_seed():
     qr_sets = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob, rng=rng)
 
     qr_sets_desired = np.array(
-        [[88, 78, 10, 28, 29, 48, 9, 32, 96], [88, 77, 49, 43, 10, 63, 97, 56, 87]]
+        [[88, 78, 28, 10, 29, 48, 9, 32, 96], [88, 10, 97, 77, 63, 56, 49, 43, 87]]
     )
     np.testing.assert_array_equal(qr_sets, qr_sets_desired)

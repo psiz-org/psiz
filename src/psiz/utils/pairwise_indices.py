@@ -46,8 +46,8 @@ def pairwise_indices(indices, elements="upper", subsample=None, rng=None):
 
     """
 
-    # Check if scalar or array-lie.
-    indices = np.array(indices, copy=False)
+    # Check if scalar or array-like.
+    indices = np.array(indices)
     if indices.ndim == 0:
         indices = np.arange(indices)
     elif indices.ndim != 1:

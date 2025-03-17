@@ -36,7 +36,8 @@ class EmbeddingTake(keras.layers.Layer):
 
         Arguments:
             embedding: An embedding layer.
-            input_map (optional):
+            input_map: Mapping from internal embedding to externally
+                exposed embedding.
             kwargs: Additional key-word arguments.
 
         """

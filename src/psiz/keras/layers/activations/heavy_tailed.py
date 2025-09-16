@@ -121,7 +121,6 @@ class HeavyTailedSimilarity(keras.layers.Layer):
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
             self.kappa = self.add_weight(
@@ -129,7 +128,6 @@ class HeavyTailedSimilarity(keras.layers.Layer):
                 initializer=self.kappa_initializer,
                 trainable=kappa_trainable,
                 name="kappa",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
             self.alpha = self.add_weight(
@@ -137,7 +135,6 @@ class HeavyTailedSimilarity(keras.layers.Layer):
                 initializer=self.alpha_initializer,
                 trainable=alpha_trainable,
                 name="alpha",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
 

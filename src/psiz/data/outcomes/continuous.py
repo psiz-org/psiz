@@ -92,7 +92,7 @@ class Continuous(Outcome):
             value = unravel_timestep(value)
 
         if export_format == "tfds":
-            y = tf.constant(value, dtype=backend.floatx())
+            y = tf.constant(value, dtype="float32")
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)

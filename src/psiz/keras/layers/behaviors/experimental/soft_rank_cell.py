@@ -84,7 +84,6 @@ class SoftRankCell(SoftRankBase):
             initializer=self.inertia_initializer,
             trainable=self.trainable,
             name="inertia",
-            dtype=keras.backend.floatx(),
             constraint=self.inertia_constraint,
         )
         super(SoftRankCell, self).build(input_shape)

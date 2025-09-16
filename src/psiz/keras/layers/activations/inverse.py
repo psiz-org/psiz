@@ -96,7 +96,6 @@ class InverseSimilarity(keras.layers.Layer):
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
             self.mu = self.add_weight(
@@ -104,7 +103,6 @@ class InverseSimilarity(keras.layers.Layer):
                 initializer=self.tau_initializer,
                 trainable=mu_trainable,
                 name="mu",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=2.2204e-16),
             )
 

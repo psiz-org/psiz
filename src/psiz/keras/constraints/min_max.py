@@ -41,12 +41,14 @@ class MinMax(keras.constraints.Constraint):
 
     def __call__(self, w):
         """Call."""
+        policy = keras.mixed_precision.global_policy()
+
         w = w - self.min_value
-        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), keras.backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), policy.variable_dtype)
         w = w + self.min_value
 
         w = w - self.max_value
-        w = w * keras.ops.cast(keras.ops.greater_equal(0.0, w), keras.backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater_equal(0.0, w), policy.variable_dtype)
         w = w + self.max_value
 
         return w

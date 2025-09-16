@@ -49,8 +49,10 @@ class Dirichlet(keras.initializers.Initializer):
 
     def __call__(self, shape, dtype=None, **kwargs):
         """Call."""
+        policy = keras.mixed_precision.global_policy()
+
         if dtype is None:
-            dtype = keras.backend.floatx()
+            dtype = policy.compute_dtype
         dist = tfp.distributions.Dirichlet(keras.ops.cast(self.concentration, dtype))
         sample = keras.ops.cast(self.scale, dtype) * dist.sample(shape, seed=self.seed)
         return sample

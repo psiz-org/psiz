@@ -39,8 +39,10 @@ class LessThan(keras.constraints.Constraint):
 
     def __call__(self, w):
         """Call."""
+        policy = keras.mixed_precision.global_policy()
+
         w = w - self.max_value
-        w = w * keras.ops.cast(keras.ops.greater(0.0, w), keras.backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater(0.0, w), policy.variable_dtype)
         w = w + self.max_value
         return w
 

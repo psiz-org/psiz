@@ -166,7 +166,7 @@ class Categorize(Content):
                 + "_objective_query_label": tf.constant(
                     objective_query_label,
                     name=(self.name + "_objective_query_label"),
-                    dtype=backend.floatx(),
+                    dtype="float32",
                 ),
             }
         else:

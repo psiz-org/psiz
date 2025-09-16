@@ -39,8 +39,10 @@ class GreaterEqualThan(keras.constraints.Constraint):
 
     def __call__(self, w):
         """Call."""
+        policy = keras.mixed_precision.global_policy()
+
         w = w - self.min_value
-        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), keras.backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), policy.variable_dtype)
         w = w + self.min_value
         return w
 

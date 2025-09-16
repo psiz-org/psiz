@@ -97,7 +97,6 @@ class Logistic(keras.layers.Layer):
             initializer=self.upper_initializer,
             trainable=self.trainable,
             name="upper",
-            dtype=keras.backend.floatx(),
             constraint=self.upper_constraint,
         )
         self.midpoint = self.add_weight(
@@ -105,7 +104,6 @@ class Logistic(keras.layers.Layer):
             initializer=self.midpoint_initializer,
             trainable=self.trainable,
             name="midpoint",
-            dtype=keras.backend.floatx(),
             constraint=self.midpoint_constraint,
         )
         self.rate = self.add_weight(
@@ -113,7 +111,6 @@ class Logistic(keras.layers.Layer):
             initializer=self.rate_initializer,
             trainable=self.trainable,
             name="rate",
-            dtype=keras.backend.floatx(),
             constraint=self.rate_constraint,
         )
 

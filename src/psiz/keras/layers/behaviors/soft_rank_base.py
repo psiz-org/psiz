@@ -90,7 +90,6 @@ class SoftRankBase(keras.layers.Layer):
                 initializer=self.temperature_initializer,
                 trainable=self.trainable,
                 name="temperature",
-                dtype=keras.backend.floatx(),
                 constraint=self.temperature_constraint,
                 regularizer=self.temperature_regularizer,
             )
@@ -121,7 +120,7 @@ class SoftRankBase(keras.layers.Layer):
         # n-rank-m behavioral outcomes.
         outcome_indices, n_outcome = self._possible_outcomes()
         self._outcome_indices = outcome_indices
-        self._n_outcome = float(n_outcome)
+        self._n_outcome = n_outcome
 
         # Prebuild a "selection mask" which will be used to mask probabilities
         # associated with non-selection events.
@@ -171,10 +170,12 @@ class SoftRankBase(keras.layers.Layer):
             vectorization cleaner.
 
         """
+        policy = keras.mixed_precision.global_policy()
+
         # NOTE: Keeping `is_option_present` explicit for now in case refactor
         # is necessary later. If keeping, remove commented casting line.
         is_option_present = keras.ops.ones_like(strength)
-        # is_option_present = keras.ops.cast(is_option_present,keras.backend.floatx())
+        # is_option_present = keras.ops.cast(is_option_present, policy.compute_dtype)
 
         # Zero out "non-present" strengths.
         # NOTE: `is_option_present` only relevant for placeholder trials
@@ -234,10 +235,13 @@ class SoftRankBase(keras.layers.Layer):
         total_outcome_prob = keras.ops.sum(
             outcome_prob, axis=(self._outcome_axis - 1), keepdims=True
         )
+        # NOTE: We cast the boolean to the compute dtype in order to achieve
+        # mixed precision compatibility.
         prob_placeholder = keras.ops.cast(
-            keras.ops.equal(total_outcome_prob, 0.0), keras.backend.floatx()
+            keras.ops.equal(total_outcome_prob, 0.0), policy.compute_dtype
         )
-        outcome_prob = outcome_prob + (prob_placeholder / self._n_outcome)
+        n_outcome = keras.ops.cast(self._n_outcome, policy.compute_dtype)
+        outcome_prob = outcome_prob + (prob_placeholder / n_outcome)
 
         # Compute softmax using (optional) temperature parameter.
         outcome_prob = keras.ops.softmax(

@@ -41,7 +41,7 @@ def test_all():
     tensor_shape = [2, 4]
     _ = initializer(tensor_shape)
 
-    _ = initializer(tensor_shape, dtype=backend.floatx())
+    _ = initializer(tensor_shape, dtype="float32")
 
     # TODO Solve RNG seed issue so that the following test works
     # locally and on CI servers.

@@ -39,7 +39,9 @@ class AttentionEntropy(keras.regularizers.Regularizer):
 
     def __call__(self, w):
         """Call."""
-        n_dim = keras.ops.cast(keras.ops.shape(w)[0], keras.backend.floatx())
+        policy = keras.mixed_precision.global_policy()
+
+        n_dim = keras.ops.cast(keras.ops.shape(w)[0], policy.compute_dtype)
         # Scale weights to sum to one and add fudge factor. Here we assume
         # that weights sum to n_dim.
         w = w / n_dim + keras.backend.epsilon()

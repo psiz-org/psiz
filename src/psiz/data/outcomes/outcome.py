@@ -121,7 +121,7 @@ class Outcome(DatasetComponent):
             sample_weight = unravel_timestep(sample_weight)
 
         if export_format == "tfds":
-            sample_weight = tf.constant(sample_weight, dtype=backend.floatx())
+            sample_weight = tf.constant(sample_weight, dtype="float32")
         else:
             raise ValueError(
                 "Unrecognized `export_format` '{0}'.".format(export_format)

@@ -131,7 +131,7 @@ class SparseCategorical(Outcome):
             # pylint: disable=unexpected-keyword-arg
             # NOTE: A float for loss computation.
             y = tf.one_hot(
-                index, self.depth, on_value=1.0, off_value=0.0, dtype=backend.floatx()
+                index, self.depth, on_value=1.0, off_value=0.0, dtype="float32"
             )
         else:
             raise ValueError(

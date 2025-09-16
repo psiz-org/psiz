@@ -141,7 +141,6 @@ class ExponentialSimilarity(keras.layers.Layer):
                 initializer=self.tau_initializer,
                 trainable=tau_trainable,
                 name="tau",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=1.0),
             )
             self.gamma = self.add_weight(
@@ -149,7 +148,6 @@ class ExponentialSimilarity(keras.layers.Layer):
                 initializer=self.gamma_initializer,
                 trainable=gamma_trainable,
                 name="gamma",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterEqualThan(min_value=0.0),
             )
             self.beta = self.add_weight(
@@ -157,7 +155,6 @@ class ExponentialSimilarity(keras.layers.Layer):
                 initializer=self.beta_initializer,
                 trainable=beta_trainable,
                 name="beta",
-                dtype=keras.backend.floatx(),
                 constraint=pk_constraints.GreaterThan(min_value=0.0),
             )
 

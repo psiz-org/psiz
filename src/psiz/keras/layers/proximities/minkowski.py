@@ -83,7 +83,6 @@ class Minkowski(Proximity):
                 regularizer=self.rho_regularizer,
                 trainable=self.rho_trainable,
                 name="rho",
-                dtype=keras.backend.floatx(),
                 constraint=self.rho_constraint,
             )
 

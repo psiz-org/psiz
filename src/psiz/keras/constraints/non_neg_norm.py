@@ -49,8 +49,10 @@ class NonNegNorm(keras.constraints.Constraint):
 
     def __call__(self, w):
         """Call."""
+        policy = keras.mixed_precision.global_policy()
+
         # Enforce nonnegative.
-        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), keras.backend.floatx())
+        w = w * keras.ops.cast(keras.ops.greater_equal(w, 0.0), policy.variable_dtype)
 
         # Enforce norm.
         return self.scale * (

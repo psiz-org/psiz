@@ -218,7 +218,6 @@ class ALCOVECell(keras.layers.Layer):
                 regularizer=self.rho_regularizer,
                 trainable=self.rho_trainable,
                 name="rho",
-                dtype=keras.backend.floatx(),
                 constraint=self.rho_constraint,
             )
             self.temperature = self.add_weight(
@@ -227,7 +226,6 @@ class ALCOVECell(keras.layers.Layer):
                 regularizer=self.temperature_regularizer,
                 trainable=self.temperature_trainable,
                 name="temperature",
-                dtype=keras.backend.floatx(),
                 constraint=self.temperature_constraint,
             )
             self.lr_attention = self.add_weight(
@@ -236,7 +234,6 @@ class ALCOVECell(keras.layers.Layer):
                 regularizer=self.lr_attention_regularizer,
                 trainable=self.lr_attention_trainable,
                 name="lr_attention",
-                dtype=keras.backend.floatx(),
                 constraint=self.lr_attention_constraint,
             )
             self.lr_association = self.add_weight(
@@ -245,7 +242,6 @@ class ALCOVECell(keras.layers.Layer):
                 regularizer=self.lr_association_regularizer,
                 trainable=self.lr_association_trainable,
                 name="lr_association",
-                dtype=keras.backend.floatx(),
                 constraint=self.lr_association_constraint,
             )
 
@@ -374,9 +370,11 @@ class ALCOVECell(keras.layers.Layer):
             Humble teacher loss.
 
         """
+        policy = keras.mixed_precision.global_policy()
+
         # Settings
-        min_val = keras.ops.cast(-1.0, keras.backend.floatx())
-        max_val = keras.ops.cast(1.0, keras.backend.floatx())
+        min_val = keras.ops.cast(-1.0, policy.compute_dtype)
+        max_val = keras.ops.cast(1.0, policy.compute_dtype)
 
         y_teach_min = keras.ops.minimum(min_val, y_pred)
         y_teach_max = keras.ops.maximum(max_val, y_pred)

@@ -47,6 +47,6 @@ def test_all():
     tf_shape = [2, 4]
     _ = initializer(tf_shape)
 
-    _ = initializer(tf_shape, dtype=backend.floatx())
+    _ = initializer(tf_shape, dtype="float32")
 
     # TODO add serialization test

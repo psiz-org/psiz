@@ -2002,6 +2002,39 @@ class TestRankSimilarity:
 
     @pytest.mark.tfp
     @pytest.mark.parametrize("is_eager", [True, False])
+    def test_usage_subclass_a_mixed_precision(self, ds_4rank1_v0, is_eager, tmpdir):
+        """Test subclassed `StochasticModel`."""
+        fp_model = Path(tmpdir) / Path("checkpoint.model.keras")
+
+        tfds = ds_4rank1_v0
+        keras.mixed_precision.set_global_policy("mixed_float16")
+        model = build_ranksim_subclass_a(is_eager)
+        call_fit_evaluate_predict(model, tfds)
+
+        callbacks = [
+            keras.callbacks.ModelCheckpoint(
+                filepath=fp_model,
+                monitor="loss",
+                save_best_only=True,
+                save_weights_only=False,
+                mode="min",
+            ),
+        ]
+        history = model.fit(
+            tfds,
+            epochs=3,
+            callbacks=callbacks,
+            verbose=0,
+        )
+
+        # Check that model checkpoint was created.
+        assert fp_model.exists()
+
+        keras.mixed_precision.set_global_policy("float32")
+        keras.backend.clear_session()
+
+    @pytest.mark.tfp
+    @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load.
 

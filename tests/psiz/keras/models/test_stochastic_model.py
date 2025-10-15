@@ -28,6 +28,7 @@ import psiz.keras.layers
 from psiz.keras.models.stochastic_model import StochasticModel
 
 
+@keras.saving.register_keras_serializable()
 class LayerA(keras.layers.Layer):
     def __init__(self, units, **kwargs):
         super(LayerA, self).__init__(**kwargs)
@@ -61,6 +62,7 @@ class LayerA(keras.layers.Layer):
         return cls(**config)
 
 
+@keras.saving.register_keras_serializable()
 class LayerB(keras.layers.Layer):
     """A simple repeat layer."""
 
@@ -93,6 +95,7 @@ class LayerB(keras.layers.Layer):
         return cls(**config)
 
 
+@keras.saving.register_keras_serializable()
 class CellA(keras.layers.Layer):
     """A simple RNN cell."""
 

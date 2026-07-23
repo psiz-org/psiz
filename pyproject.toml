@@ -1,10 +1,75 @@
 [build-system]
 requires = [
-    "setuptools >= 48",
-    "setuptools_scm[toml] >= 4, <6",
-    "wheel >= 0.29.0"
+    "setuptools >= 68",
+    "setuptools_scm[toml] >= 8",
+    "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "psiz"
+description = "Toolbox for inferring psychological embeddings."
+readme = {file = "README.md", content-type = "text/markdown; charset=UTF-8"}
+keywords = ["psychology", "cognitive science"]
+authors = [
+    { name = "Brett D. Roads", email = "brett.roads@gmail.com" }
+]
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only"
+]
+requires-python = ">=3.9, <3.12"
+dependencies = [
+    "keras >= 3.5, <4.0",
+    "tensorflow >= 2.18.0, <2.19.0",
+    "tensorflow-probability",
+    "tf-keras",
+    "h5py >= 3.0",
+    "pandas",
+    "scikit-learn",
+    "matplotlib",
+    "pillow",
+    "imageio"
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/psiz-org/psiz"
+Documentation = "https://psiz.readthedocs.io/en/latest/"
+Source = "https://github.com/psiz-org/psiz"
+Tracker = "https://github.com/psiz-org/psiz/issues"
+
+[project.optional-dependencies]
+test = [
+    "pytest >= 6.2.4",
+    "pytest-cov",
+    "flake8",
+    "pylint"
+]
+doc = [
+    "sphinx-rtd-theme == 1.0.0",
+    "sphinx-last-updated-by-git",
+    "myst-nb",
+    "sphinxcontrib-bibtex"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools_scm]
 write_to = "src/psiz/version.py"

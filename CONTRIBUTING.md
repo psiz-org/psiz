@@ -24,7 +24,7 @@ Please send in fixes and feature additions through Pull Requests.
     * `pytest` for testing
     * `pytest-cov` for coverage analytics
     * `tox` for locally testing multiple python versions (`tox` is not used for remote GitHub Actions testing).
-* These packages should be installed separately by the tester, but most of these packages can be installed at the same time as the core dependencies of psiz using the option `pip install "psiz[test]"`.
+* These packages should be installed separately by the tester, but most can be installed with project extras (e.g., `pip install -e ".[test]"` or `uv sync --extra test`).
 * See `pytest.ini` for a list and description of all pytest markers (e.g., `slow`).
     * NOTE: All pytest markers must be registered in `pytest.ini`, unregistered markers will generate an error.
 

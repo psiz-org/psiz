@@ -30,20 +30,29 @@ There are two different ways to install: PyPI or git. Installing via git has the
 At the moment, PsiZ installs both TensorFlow and Pytorch as dependencies. A majority of Psiz will work with both backend frameworks, but not all features (such as stochastic layers) are supported for pytorch.
 
 ### Using PyPI
+```bash
+pip install psiz
 ```
-$ pip install psiz
+You can optionally install the Python packages necessary for running package tests (e.g., `pytest`):
+```bash
+pip install "psiz[test]"
 ```
-You can optionally install the python packages necessary for running package tests (e.g., `pytest`):
+
+### Using uv
+```bash
+uv sync
 ```
-$ pip install "psiz[test]"
+Install with test dependencies:
+```bash
+uv sync --extra test
 ```
 
 ### Using git
-```
+```bash
 # Clone the PsiZ repository from GitHub to your local machine.
-$ git clone https://github.com/psiz-org/psiz.git
-# Use `pip` to install the cloned repository.
-$ pip install /local/path/to/psiz
+git clone https://github.com/psiz-org/psiz.git
+# Use pip to install the cloned repository.
+pip install /local/path/to/psiz
 ```
 
 **Notes:**

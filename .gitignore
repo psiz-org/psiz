@@ -4,6 +4,8 @@ NOTES.md
 # Compiled python modules.
 *.pyc
 
+.mypy_cache/
+
 # Setuptools distribution folder.
 /dist/
 /build/
@@ -41,3 +43,5 @@ cover/
 
 # Visual Studio Code
 /.vscode/
+
+.venv

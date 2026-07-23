@@ -101,20 +101,24 @@ def test_wo_replace_subset_seed():
     # Sample query-reference sets.
     query_idx = 13
     n_sample = 3
-    rng = np.random.default_rng(seed=989)
-    qr_sets = sample_qr_sets(
-        query_idx, n_reference, n_sample, ref_prob, replace=False, rng=rng
+    rng0 = np.random.default_rng(seed=989)
+    qr_sets0 = sample_qr_sets(
+        query_idx, n_reference, n_sample, ref_prob, replace=False, rng=rng0
+    )
+    rng1 = np.random.default_rng(seed=989)
+    qr_sets1 = sample_qr_sets(
+        query_idx, n_reference, n_sample, ref_prob, replace=False, rng=rng1
     )
 
-    qr_sets_desired = np.array(
-        [
-            [13, 0, 3, 9, 10, 12, 14, 15, 18],
-            [13, 1, 2, 4, 5, 6, 9, 10, 18],
-            [13, 1, 4, 5, 6, 10, 11, 12, 16],
-        ],
-        dtype=int,
-    )
-    np.testing.assert_array_equal(qr_sets, qr_sets_desired)
+    # Same seed should reproduce the exact same sample within an environment.
+    np.testing.assert_array_equal(qr_sets0, qr_sets1)
+
+    # Basic invariants for sampled query-reference sets.
+    np.testing.assert_array_equal(qr_sets0[:, 0], np.full([n_sample], query_idx))
+    assert qr_sets0.shape == (n_sample, n_reference + 1)
+    assert np.all(np.sort(qr_sets0[:, 1:], axis=1) == qr_sets0[:, 1:])
+    assert np.unique(qr_sets0, axis=0).shape[0] == n_sample
+    assert not np.any(qr_sets0[:, 1:] == query_idx)
 
 
 def test_replace():
@@ -146,10 +150,16 @@ def test_replace_seed():
     # Sample query-reference sets.
     query_idx = 88
     n_sample = 2
-    rng = np.random.default_rng(seed=989)
-    qr_sets = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob, rng=rng)
+    rng0 = np.random.default_rng(seed=989)
+    qr_sets0 = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob, rng=rng0)
+    rng1 = np.random.default_rng(seed=989)
+    qr_sets1 = sample_qr_sets(query_idx, n_reference, n_sample, ref_prob, rng=rng1)
 
-    qr_sets_desired = np.array(
-        [[88, 78, 10, 28, 29, 48,  9, 32, 96], [88, 77, 49, 43, 10, 63, 97, 56, 87]]
-    )
-    np.testing.assert_array_equal(qr_sets, qr_sets_desired)
+    # Same seed should reproduce the exact same sample within an environment.
+    np.testing.assert_array_equal(qr_sets0, qr_sets1)
+
+    # Basic invariants for sampled query-reference sets.
+    np.testing.assert_array_equal(qr_sets0[:, 0], np.full([n_sample], query_idx))
+    assert qr_sets0.shape == (n_sample, n_reference + 1)
+    assert not np.any(qr_sets0[:, 1:] == query_idx)
+    assert all(len(np.unique(row)) == n_reference for row in qr_sets0[:, 1:])

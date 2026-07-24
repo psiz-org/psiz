@@ -23,7 +23,7 @@ PsiZ is hosted on PyPI and is easily installed using :code:`pip`. Alternatively,
 
 System Requirements
 -------------------
-* Python 3.10-3.14
+* Python 3.10-3.13
 * cuDNN & CUDA: If using a conda virtual environment, you probably want to install cuDNN and CUDA libraries using :code:`conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0`. Replace the specified versions with those appropriate for your setup based on the `TF compatibility matrix <https://www.tensorflow.org/install/source#gpu>`_.   See the `TF Install Guide <https://www.tensorflow.org/install/pip>`_ for the latest recommendation.
 
 Install using PyPI

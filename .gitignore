@@ -45,3 +45,6 @@ cover/
 /.vscode/
 
 .venv
+
+# Local planning workspace artifacts
+/plans/

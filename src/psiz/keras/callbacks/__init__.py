@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2024 The PsiZ Authors. All Rights Reserved.
+# Copyright 2026 The PsiZ Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,20 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of Keras classes."""
 
-import psiz.keras.callbacks
-import psiz.keras.constraints
-import psiz.keras.initializers
-import psiz.keras.layers
-import psiz.keras.models
-import psiz.keras.ops
-import psiz.keras.regularizers
+from .variational_early_stopping import VariationalEarlyStopping
 
-# Promote `StochasticModel` to `psiz.keras` namespace for convenience and to
-# mirror TensorFlow organization.
-from psiz.keras.models.stochastic_model import StochasticModel
-
-__all__ = [
-    "StochasticModel",
-]
+__all__ = ["VariationalEarlyStopping"]

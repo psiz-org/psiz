@@ -214,3 +214,38 @@ def test_call_2d_input(emb_input_2d, sample_shape, embedding_class, mask_zero):
     np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
 
     assert embedding.mask_zero == mask_zero
+
+
+def test_normal_diag_serialization_preserves_gradient_scales():
+    """Test EmbeddingNormalDiag preserves gradient-scale configuration."""
+    embedding = psiz.keras.layers.EmbeddingNormalDiag(
+        10,
+        2,
+        mask_zero=False,
+        loc_gradient_scale=0.25,
+        scale_gradient_scale=0.5,
+    )
+
+    config = embedding.get_config()
+
+    assert config["loc_gradient_scale"] == 0.25
+    assert config["scale_gradient_scale"] == 0.5
+
+    recon_emb = psiz.keras.layers.EmbeddingNormalDiag.from_config(config)
+
+    assert recon_emb.loc_gradient_scale == 0.25
+    assert recon_emb.scale_gradient_scale == 0.5
+
+
+def test_normal_diag_from_legacy_config_defaults_gradient_scales():
+    """Test EmbeddingNormalDiag defaults gradient scales for legacy configs."""
+    embedding = psiz.keras.layers.EmbeddingNormalDiag(10, 2, mask_zero=False)
+    config = embedding.get_config()
+
+    config.pop("loc_gradient_scale")
+    config.pop("scale_gradient_scale")
+
+    recon_emb = psiz.keras.layers.EmbeddingNormalDiag.from_config(config)
+
+    assert recon_emb.loc_gradient_scale == 1.0
+    assert recon_emb.scale_gradient_scale == 1.0

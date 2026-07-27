@@ -19,11 +19,13 @@
 from psiz.keras.ops.expand_dim_repeat import expand_dim_repeat
 from psiz.keras.ops.ig_categorical import ig_categorical
 from psiz.keras.ops.ig_model_categorical import ig_model_categorical
+from psiz.keras.ops.scale_gradient import scale_gradient
 from psiz.keras.ops.wpnorm import wpnorm
 
 __all__ = [
     "expand_dim_repeat",
     "ig_categorical",
     "ig_model_categorical",
+    "scale_gradient",
     "wpnorm",
 ]

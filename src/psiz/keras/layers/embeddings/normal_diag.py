@@ -24,6 +24,7 @@ import keras
 import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
+from psiz.keras.ops.scale_gradient import scale_gradient
 
 
 @keras.saving.register_keras_serializable(
@@ -37,10 +38,19 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
 
     """
 
-    def __init__(self, input_dim, output_dim, **kwargs):
+    def __init__(
+        self,
+        input_dim,
+        output_dim,
+        loc_gradient_scale=1.0,
+        scale_gradient_scale=1.0,
+        **kwargs
+    ):
         """Initialize."""
         self.loc = None
         self.untransformed_scale = None
+        self.loc_gradient_scale = loc_gradient_scale
+        self.scale_gradient_scale = scale_gradient_scale
         super(EmbeddingNormalDiag, self).__init__(input_dim, output_dim, **kwargs)
 
     def build(self, input_shape=None):
@@ -86,6 +96,10 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
     def call(self, inputs):
         """Call."""
         [inputs_loc, inputs_scale] = super().call(inputs)
+
+        inputs_loc = scale_gradient(inputs_loc, self.loc_gradient_scale)
+        inputs_scale = scale_gradient(inputs_scale, self.scale_gradient_scale)
+
         # Use reparameterization trick.
         dist_batch = tfp.distributions.Normal(loc=inputs_loc, scale=inputs_scale)
         # Reify output using samples.
@@ -101,3 +115,14 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
         return tfp.distributions.Independent(
             dist, reinterpreted_batch_ndims=batch_ndims
         )
+
+    def get_config(self):
+        """Return layer configuration."""
+        config = super().get_config()
+        config.update(
+            {
+                "loc_gradient_scale": self.loc_gradient_scale,
+                "scale_gradient_scale": self.scale_gradient_scale,
+            }
+        )
+        return config

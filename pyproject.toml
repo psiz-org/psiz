@@ -51,12 +51,16 @@ Documentation = "https://psiz.readthedocs.io/en/latest/"
 Source = "https://github.com/psiz-org/psiz"
 Tracker = "https://github.com/psiz-org/psiz/issues"
 
-[project.optional-dependencies]
+[dependency-groups]
 test = [
     "pytest >= 6.2.4",
     "pytest-cov",
     "flake8",
     "pylint"
+]
+tutorial = [
+    "ipykernel>=6.30",
+    "pip>=25",
 ]
 doc = [
     "sphinx-rtd-theme == 1.0.0",

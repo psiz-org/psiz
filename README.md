@@ -33,9 +33,9 @@ At the moment, PsiZ installs both TensorFlow and Pytorch as dependencies. A majo
 ```bash
 pip install psiz
 ```
-You can optionally install the Python packages necessary for running package tests (e.g., `pytest`):
+If you are in a local PsiZ checkout, you can optionally install the Python packages necessary for running package tests (e.g., `pytest`):
 ```bash
-pip install "psiz[test]"
+pip install --group test .
 ```
 
 ### Using uv
@@ -44,7 +44,11 @@ uv sync
 ```
 Install with test dependencies:
 ```bash
-uv sync --extra test
+uv sync --group test
+```
+Install all dependencies:
+```bash
+uv sync --all-groups
 ```
 
 ### Using git

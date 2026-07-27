@@ -33,6 +33,7 @@ Welcome to PsiZ! If this is your first visit, we suggest reading Getting Started
    src/features/data
    src/design/mask_zero
    src/design/model_restarts
+   src/design/psiz_artifact_spec
 
 .. toctree::
    :maxdepth: 2

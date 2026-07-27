@@ -15,9 +15,15 @@
 # ============================================================================
 """Tests for hierarchical VI builder APIs."""
 
+import keras
 import numpy as np
 import pytest
+import tensorflow_probability as tfp
 
+from psiz.keras.layers.embeddings.embedding_shared import EmbeddingShared
+from psiz.keras.layers.embeddings.embedding_take import EmbeddingTake
+from psiz.keras.layers.embeddings.embedding_variational import EmbeddingVariational
+from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
 from psiz.keras.layers.hierarchical_specs import HierarchyLevelSpec
 from psiz.keras.layers.hierarchical_specs import HierarchySpec
 from psiz.keras.layers.hierarchical_specs import KLWeightingPolicy
@@ -35,6 +41,35 @@ from psiz.keras.layers.hierarchical_pretrained_hooks import (
     PretrainedNonCenteredFactoryHooks,
 )
 from psiz.keras.layers.posterior_factory import NonCenteredPosteriorFactory
+
+
+@keras.saving.register_keras_serializable(
+    package="psiz.keras.tests", name="HierarchyAccessContractModel"
+)
+class HierarchyAccessContractModel(keras.Model):
+    """Small serializable wrapper used to freeze access-path continuity."""
+
+    def __init__(self, percept=None, **kwargs):
+        super().__init__(**kwargs)
+        self.percept = percept
+
+    def call(self, inputs):
+        return self.percept(inputs)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update(
+            {
+                "percept": keras.saving.serialize_keras_object(self.percept),
+            }
+        )
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        config = dict(config)
+        config["percept"] = keras.saving.deserialize_keras_object(config["percept"])
+        return cls(**config)
 
 
 def _build_hierarchy_spec():
@@ -263,3 +298,177 @@ def test_advanced_builder_pretrained_hook_builds_and_calls():
         )
         outputs = model_layer(np.array([1, 2, 3], dtype=np.int32))
         assert outputs.shape == (3, 2)
+
+
+@pytest.mark.tfp
+def test_hierarchical_contract_preserves_nested_prior_chain():
+    """Freeze the nested layer access chain used by downstream code."""
+    memberships = np.array(
+        [
+            [0, 10],
+            [0, 10],
+            [0, 11],
+            [0, 12],
+        ],
+        dtype="int32",
+    )
+
+    model_layer = build_hierarchical_vi_embedding(
+        n_stimuli=4,
+        n_dim=2,
+        hierarchy=_build_hierarchy_spec(),
+        membership=MembershipInput(memberships=memberships),
+        posterior_factory=NonCenteredPosteriorFactory(),
+        n_sample_train=100,
+    )
+
+    assert isinstance(model_layer.prior, EmbeddingTake)
+
+    loc = keras.ops.convert_to_numpy(model_layer.prior.embeddings.distribution.loc)
+    scale = keras.ops.convert_to_numpy(
+        model_layer.prior.embeddings.distribution.scale
+    )
+
+    np.testing.assert_equal(loc.shape, (5, 2))
+    np.testing.assert_allclose(loc, np.zeros((5, 2), dtype="float32"))
+    np.testing.assert_equal(scale.shape, (5, 2))
+    np.testing.assert_array_less(np.zeros_like(scale), scale)
+
+    outputs = keras.ops.convert_to_numpy(
+        model_layer(np.array([1, 2, 3], dtype=np.int32))
+    )
+    np.testing.assert_equal(outputs.shape, (3, 2))
+
+
+@pytest.mark.tfp
+def test_variational_contract_preserves_distribution_chain():
+    """Freeze the public distribution access pattern used in examples."""
+    n_stimuli = 10
+    n_dim = 3
+    prior_scale = 0.2
+
+    posterior = EmbeddingNormalDiag(
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
+        scale_initializer=keras.initializers.Constant(
+            tfp.math.softplus_inverse(prior_scale).numpy()
+        ),
+    )
+    prior = EmbeddingShared(
+        n_stimuli,
+        n_dim,
+        mask_zero=False,
+        embedding=EmbeddingNormalDiag(
+            1,
+            1,
+            loc_initializer=keras.initializers.Constant(0.0),
+            scale_initializer=keras.initializers.Constant(
+                tfp.math.softplus_inverse(prior_scale).numpy()
+            ),
+            loc_trainable=False,
+        ),
+    )
+    layer = EmbeddingVariational(
+        posterior=posterior,
+        prior=prior,
+        kl_weight=0.1,
+        kl_n_sample=30,
+    )
+
+    layer.build([None, n_dim])
+
+    dist = layer.prior.embeddings.distribution
+    scale = keras.ops.convert_to_numpy(dist.distribution.distribution.scale)
+
+    np.testing.assert_equal(scale.shape, (1, 1))
+    np.testing.assert_array_less(np.zeros_like(scale), scale)
+
+    outputs = keras.ops.convert_to_numpy(
+        layer(np.array([0, 1, 2], dtype=np.int32))
+    )
+    np.testing.assert_equal(outputs.shape, (3, n_dim))
+
+
+@pytest.mark.tfp
+def test_contract_keras_save_load_access_continuity(tmp_path):
+    """Freeze save/load continuity for the hierarchical access chain."""
+    memberships = np.array(
+        [
+            [0, 10],
+            [0, 10],
+            [0, 11],
+            [0, 12],
+        ],
+        dtype="int32",
+    )
+    percept = build_hierarchical_vi_embedding(
+        n_stimuli=4,
+        n_dim=2,
+        hierarchy=_build_hierarchy_spec(),
+        membership=MembershipInput(memberships=memberships),
+        posterior_factory=NonCenteredPosteriorFactory(),
+        n_sample_train=100,
+    )
+    model = HierarchyAccessContractModel(percept=percept)
+
+    inputs = np.array([1, 2, 3], dtype=np.int32)
+    original_outputs = keras.ops.convert_to_numpy(model(inputs))
+    original_loc = keras.ops.convert_to_numpy(model.percept.prior.embeddings.distribution.loc)
+
+    fp_model = tmp_path / "hierarchy_access_contract.keras"
+    model.save(fp_model)
+
+    loaded = keras.models.load_model(
+        fp_model,
+        custom_objects={"HierarchyAccessContractModel": HierarchyAccessContractModel},
+    )
+
+    loaded_outputs = keras.ops.convert_to_numpy(loaded(inputs))
+    loaded_loc = keras.ops.convert_to_numpy(
+        loaded.percept.prior.embeddings.distribution.loc
+    )
+
+    np.testing.assert_equal(original_outputs.shape, loaded_outputs.shape)
+    np.testing.assert_allclose(original_loc, loaded_loc)
+
+
+@pytest.mark.tfp
+def test_contract_stochastic_sample_shape():
+    """Freeze stochastic sample shape semantics for distribution embeddings."""
+    embedding = EmbeddingNormalDiag(
+        10,
+        2,
+        mask_zero=False,
+        sample_shape=(2, 4),
+    )
+
+    outputs = keras.ops.convert_to_numpy(embedding(np.array([0, 1, 2], dtype=np.int32)))
+
+    np.testing.assert_equal(outputs.shape, (2, 4, 3, 2))
+
+
+@pytest.mark.tfp
+def test_contract_invalid_path_errors_are_clear():
+    """Freeze the failure mode for unsupported hierarchical hops."""
+    memberships = np.array(
+        [
+            [0, 10],
+            [0, 10],
+            [0, 11],
+            [0, 12],
+        ],
+        dtype="int32",
+    )
+
+    model_layer = build_hierarchical_vi_embedding(
+        n_stimuli=4,
+        n_dim=2,
+        hierarchy=_build_hierarchy_spec(),
+        membership=MembershipInput(memberships=memberships),
+        posterior_factory=NonCenteredPosteriorFactory(),
+        n_sample_train=100,
+    )
+
+    with pytest.raises(AttributeError, match="prior"):
+        _ = model_layer.prior.prior

@@ -32,6 +32,32 @@ from psiz.keras.layers.embeddings.laplace_diag import EmbeddingLaplaceDiag
 from psiz.keras.layers.embeddings.log_normal_diag import EmbeddingLogNormalDiag
 from psiz.keras.layers.embeddings.logit_normal_diag import EmbeddingLogitNormalDiag
 from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
+from psiz.keras.layers.embeddings.non_centered_normal_diag import (
+    EmbeddingNonCenteredNormalDiag,
+)
+from psiz.keras.layers.embeddings.non_centered_variational import (
+    EmbeddingNonCenteredVariational,
+)
+from psiz.keras.layers.posterior_factory import (
+    NonCenteredPosteriorFactory,
+    PosteriorFactory,
+)
+from psiz.keras.layers.hierarchical_specs import HierarchyLevelSpec
+from psiz.keras.layers.hierarchical_specs import HierarchySpec
+from psiz.keras.layers.hierarchical_specs import KLWeightingPolicy
+from psiz.keras.layers.hierarchical_specs import LevelInitializationMode
+from psiz.keras.layers.hierarchical_specs import MembershipInput
+from psiz.keras.layers.hierarchical_specs import MembershipSourcePolicy
+from psiz.keras.layers.hierarchical_specs import ParentMapPolicy
+from psiz.keras.layers.hierarchical_specs import ScaleInitializationPolicy
+from psiz.keras.layers.hierarchical_vi_builder import (
+    AdvancedHierarchicalVIEmbeddingBuilder,
+)
+from psiz.keras.layers.hierarchical_vi_builder import build_hierarchical_vi_embedding
+from psiz.keras.layers.hierarchical_vi_builder import HierarchicalVIEmbeddingBuilder
+from psiz.keras.layers.hierarchical_pretrained_hooks import (
+    PretrainedNonCenteredFactoryHooks,
+)
 from psiz.keras.layers.embeddings.embedding_shared import EmbeddingShared
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 from psiz.keras.layers.embeddings.trunc_normal_diag import EmbeddingTruncatedNormalDiag
@@ -67,6 +93,22 @@ __all__ = [
     "EmbeddingLogNormalDiag",
     "EmbeddingLogitNormalDiag",
     "EmbeddingNormalDiag",
+    "EmbeddingNonCenteredNormalDiag",
+    "EmbeddingNonCenteredVariational",
+    "NonCenteredPosteriorFactory",
+    "PosteriorFactory",
+    "HierarchyLevelSpec",
+    "HierarchySpec",
+    "KLWeightingPolicy",
+    "LevelInitializationMode",
+    "MembershipInput",
+    "MembershipSourcePolicy",
+    "ParentMapPolicy",
+    "ScaleInitializationPolicy",
+    "build_hierarchical_vi_embedding",
+    "HierarchicalVIEmbeddingBuilder",
+    "AdvancedHierarchicalVIEmbeddingBuilder",
+    "PretrainedNonCenteredFactoryHooks",
     "EmbeddingShared",
     "StochasticEmbedding",
     "EmbeddingTruncatedNormalDiag",

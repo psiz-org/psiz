@@ -17,6 +17,8 @@
 
 from psiz.utils.affine_mvn import affine_mvn
 from psiz.utils.choice_wo_replace import choice_wo_replace
+from psiz.utils.drill_down import drill_down
+from psiz.utils.generate_take_map import generate_take_map
 from psiz.utils.m_prefer_n import m_prefer_n
 from psiz.utils.pairwise_indices import pairwise_indices
 from psiz.utils.procrustes_rotation import procrustes_rotation
@@ -29,6 +31,8 @@ from psiz.utils.stratified_group_kfold import StratifiedGroupKFold
 __all__ = [
     "affine_mvn",
     "choice_wo_replace",
+    "drill_down",
+    "generate_take_map",
     "m_prefer_n",
     "pairwise_indices",
     "procrustes_rotation",

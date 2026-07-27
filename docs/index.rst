@@ -15,6 +15,7 @@ Welcome to PsiZ! If this is your first visit, we suggest reading Getting Started
    src/tutorials/beginner_tutorial_part1
    src/tutorials/beginner_tutorial_part2
    src/tutorials/vi
+   src/tutorials/hierarchical_vi
    src/tutorials/tuning
    src/tutorials/active_learning
 

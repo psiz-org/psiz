@@ -175,3 +175,6 @@ external checkpoint formats.
 
 For advanced workflows, use AdvancedHierarchicalVIEmbeddingBuilder with
 PretrainedNonCenteredFactoryHooks (or a custom hooks implementation).
+
+For a complete end-to-end training example on birds-16 using the hierarchical
+builder stack, see :doc:`Introduction to Hierarchical Variational Inference <birds16_hierarchical_vi>`.

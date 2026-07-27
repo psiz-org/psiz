@@ -25,6 +25,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from psiz.backend import PSIZ_DEFAULT_BACKEND
+from psiz.backend import resolve_backend
+from psiz.backend import validate_backend_name
+
 
 class ArtifactSpecError(ValueError):
     """Raised when an artifact directory violates the PsiZ v1.0.0 spec."""
@@ -40,7 +44,11 @@ REQUIRED_ARTIFACT_FILES = [
 SUPPORTED_FORMAT_MAJOR_VERSION = 1
 
 
-def validate_artifact_directory(path: str | Path) -> dict[str, Any]:
+def validate_artifact_directory(
+    path: str | Path,
+    backend_override: str | None = None,
+    default_backend: str = PSIZ_DEFAULT_BACKEND,
+) -> dict[str, Any]:
     """Validate a PsiZ artifact directory against the v1.0.0 contract.
 
     Parameters
@@ -73,6 +81,13 @@ def validate_artifact_directory(path: str | Path) -> dict[str, Any]:
         _validate_metadata(metadata)
     if model_index is not None:
         _validate_model_index(model_index)
+    try:
+        resolved_backend = resolve_backend(
+            backend_override=backend_override,
+            default_backend=default_backend,
+        )
+    except ValueError as exc:
+        raise ArtifactSpecError(str(exc)) from exc
 
     return {
         "artifact_dir": str(artifact_dir),
@@ -80,6 +95,7 @@ def validate_artifact_directory(path: str | Path) -> dict[str, Any]:
         "config": config,
         "metadata": metadata,
         "model_index": model_index,
+        "resolved_backend": resolved_backend,
     }
 
 
@@ -105,6 +121,10 @@ def _validate_metadata(metadata: dict[str, Any]) -> None:
 
     if not isinstance(metadata.get("backend"), str) or not metadata["backend"].strip():
         raise ArtifactSpecError("metadata.backend must be a non-empty string.")
+    try:
+        validate_backend_name(metadata["backend"], argument_name="metadata.backend")
+    except ValueError as exc:
+        raise ArtifactSpecError(str(exc)) from exc
 
     architecture = metadata.get("architecture")
     if not isinstance(architecture, dict):
@@ -141,6 +161,10 @@ def _validate_config(config: dict[str, Any]) -> None:
         )
     if not isinstance(config.get("backend"), str) or not config["backend"].strip():
         raise ArtifactSpecError("config.backend must be a non-empty string.")
+    try:
+        validate_backend_name(config["backend"], argument_name="config.backend")
+    except ValueError as exc:
+        raise ArtifactSpecError(str(exc)) from exc
     architecture = config.get("architecture")
     if not isinstance(architecture, dict):
         raise ArtifactSpecError("config.architecture must be an object.")

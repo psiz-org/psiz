@@ -50,9 +50,10 @@ def test_validate_minimal_artifact_directory(tmp_path):
     artifact_dir = tmp_path / "minimal-model.psiz"
     _write_minimal_artifact(artifact_dir)
 
-    manifest = validate_artifact_directory(artifact_dir)
+    manifest = validate_artifact_directory(artifact_dir, backend_override="jax")
 
     assert manifest["config"]["format_version"] == "1.0.0"
+    assert manifest["resolved_backend"] == "jax"
     assert manifest["required_files"] == [
         "README.md",
         "config.json",

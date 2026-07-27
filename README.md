@@ -59,6 +59,39 @@ git clone https://github.com/psiz-org/psiz.git
 pip install /local/path/to/psiz
 ```
 
+## Backend Selection (Keras 3)
+
+PsiZ uses the active Keras backend. Set your backend before importing `keras` or `psiz`.
+If no explicit override is provided and no active Keras backend is available,
+PsiZ defaults to the `torch` backend.
+
+### Option 1: Environment variable (recommended)
+```bash
+export KERAS_BACKEND=tensorflow
+```
+```bash
+export KERAS_BACKEND=torch
+```
+```bash
+export KERAS_BACKEND=jax
+```
+
+### Option 2: Keras config file
+Edit `~/.keras/keras.json` and set the `backend` field.
+
+Example:
+```json
+{
+    "backend": "torch"
+}
+```
+
+You can verify the selected backend in Python:
+```python
+import keras
+print(keras.backend.backend())
+```
+
 **Notes:**
 * PsiZ originally required TensorFlow. By default, PsiZ installs the CPU version of TensorFlow. If you want GPU acceleration, you must manually install a CUDA-enabled TensorFlow build that matches your Python/CUDA environment. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow. As of PsiZ v0.12, Keras 3 is used for the majority of layers, which allows users to use either TensorFlow or Pytorch. Your preferred backend can be set by modifying the configuration file automatically created by Keras: `~/.keras/keras.json`. Pytorch support is still experimental.
 * PsiZ versions <=0.5.0 must be installed using git clone and editable mode (e.g., `pip install -e /local/path/to/psiz`).

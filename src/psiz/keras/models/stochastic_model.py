@@ -23,6 +23,8 @@ Classes:
 
 import keras
 
+from psiz.backend import resolve_backend
+
 
 @keras.saving.register_keras_serializable(
     package="psiz.keras.models", name="StochasticModel"
@@ -102,12 +104,14 @@ class StochasticModel(keras.Model):
             returned. Example: `{'loss': 0.2, 'accuracy': 0.7}`.
 
         """
-        if keras.backend.backend() == "jax":
+        backend = resolve_backend()
+        if backend == "jax":
             return self._jax_train_step(*args, **kwargs)
-        elif keras.backend.backend() == "tensorflow":
+        elif backend == "tensorflow":
             return self._tensorflow_train_step(*args, **kwargs)
-        elif keras.backend.backend() == "torch":
+        elif backend == "torch":
             return self._torch_train_step(*args, **kwargs)
+        raise ValueError(f"Unsupported backend '{backend}'.")
 
     def _jax_train_step(self, state, data):
         data = self.repeat_samples_in_data(data)
@@ -142,12 +146,14 @@ class StochasticModel(keras.Model):
             returned.
 
         """
-        if keras.backend.backend() == "jax":
+        backend = resolve_backend()
+        if backend == "jax":
             return self._jax_test_step(*args, **kwargs)
-        elif keras.backend.backend() == "tensorflow":
+        elif backend == "tensorflow":
             return self._tensorflow_test_step(*args, **kwargs)
-        elif keras.backend.backend() == "torch":
+        elif backend == "torch":
             return self._torch_test_step(*args, **kwargs)
+        raise ValueError(f"Unsupported backend '{backend}'.")
 
     def _jax_test_step(self, state, data):
         data = self.repeat_samples_in_data(data)
@@ -178,12 +184,15 @@ class StochasticModel(keras.Model):
 
         """
         y_pred = None
-        if keras.backend.backend() == "jax":
+        backend = resolve_backend()
+        if backend == "jax":
             y_pred = self._jax_predict_step(*args, **kwargs)
-        elif keras.backend.backend() == "tensorflow":
+        elif backend == "tensorflow":
             y_pred = self._tensorflow_predict_step(*args, **kwargs)
-        elif keras.backend.backend() == "torch":
+        elif backend == "torch":
             y_pred = self._torch_predict_step(*args, **kwargs)
+        else:
+            raise ValueError(f"Unsupported backend '{backend}'.")
 
         # For prediction, we average over the samples. The batch and
         # "repeated sample" axis are disentangled first to make averaging

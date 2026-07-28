@@ -22,10 +22,10 @@ Classes:
 
 
 import keras
-import tensorflow_probability as tfp
 
 import psiz.keras.constraints
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
+from psiz.stochastic import get_stochastic_adapter
 
 
 @keras.saving.register_keras_serializable(
@@ -148,11 +148,10 @@ class EmbeddingGammaDiag(StochasticEmbedding):
     @property
     def embeddings(self):
         """Return embeddings."""
-        dist = tfp.distributions.Gamma(self.concentration, self.rate)
+        adapter = get_stochastic_adapter()
+        dist = adapter.gamma(self.concentration, self.rate)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def call(self, inputs):
         """Call."""
@@ -166,7 +165,8 @@ class EmbeddingGammaDiag(StochasticEmbedding):
         inputs_rate = keras.ops.take(self.embeddings.distribution.rate, inputs, axis=0)
 
         # Use reparameterization trick.
-        dist_batch = tfp.distributions.Gamma(inputs_concentration, inputs_rate)
+        adapter = get_stochastic_adapter()
+        dist_batch = adapter.gamma(inputs_concentration, inputs_rate)
         # Reify output using samples.
         return dist_batch.sample(self.sample_shape)
 
@@ -178,11 +178,10 @@ class EmbeddingGammaDiag(StochasticEmbedding):
         )
         inputs_rate = keras.ops.take(self.embeddings.distribution.rate, inputs, axis=0)
 
-        dist = tfp.distributions.Gamma(inputs_concentration, inputs_rate)
+        adapter = get_stochastic_adapter()
+        dist = adapter.gamma(inputs_concentration, inputs_rate)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def get_config(self):
         """Return layer configuration."""

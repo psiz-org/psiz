@@ -23,10 +23,7 @@ Classes:
 
 
 import keras
-from tensorflow_probability.python.distributions import kullback_leibler as kl_lib
-
-from psiz.backend import resolve_backend
-from psiz.backend import validate_backend_support
+from psiz.stochastic import kl_divergence
 
 
 @keras.saving.register_keras_serializable(
@@ -105,15 +102,13 @@ class Variational(keras.layers.Layer):
     def add_kl_loss(self, posterior_dist, prior_dist):
         """Add KL divergence loss."""
         if self.kl_use_exact:
-            backend = resolve_backend()
-            validate_backend_support(
-                backend,
-                feature_name="exact_kl_divergence",
-                supported_backends=("tensorflow",),
-                capability_enabled=self.kl_use_exact,
-            )
             self.add_loss(
-                kl_lib.kl_divergence(posterior_dist, prior_dist)
+                kl_divergence(
+                    posterior_dist,
+                    prior_dist,
+                    fallback="monte_carlo",
+                    n_sample=self.kl_n_sample,
+                )
                 * self.kl_weight
                 * self.kl_anneal
             )

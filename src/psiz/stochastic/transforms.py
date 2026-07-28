@@ -13,20 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Compatibility shim for artifact spec APIs.
+"""Backend-agnostic stochastic transform helpers."""
 
-This module now re-exports canonical storage schema utilities from
-`psiz.storage.schema`.
-"""
+from __future__ import annotations
 
-from psiz.storage.schema import ArtifactSpecError
-from psiz.storage.schema import REQUIRED_ARTIFACT_FILES
-from psiz.storage.schema import SUPPORTED_FORMAT_MAJOR_VERSION
-from psiz.storage.schema import validate_artifact_directory
+import keras
 
-__all__ = [
-    "ArtifactSpecError",
-    "REQUIRED_ARTIFACT_FILES",
-    "SUPPORTED_FORMAT_MAJOR_VERSION",
-    "validate_artifact_directory",
-]
+from psiz.backend import resolve_backend
+
+
+def softplus_inverse(x, hinge_softness=1.0, backend_override=None):
+    """Generalized inverse softplus used by stochastic initializers."""
+    backend = resolve_backend(backend_override)
+    if backend == "tensorflow":
+        import tensorflow_probability as tfp
+
+        return hinge_softness * tfp.math.softplus_inverse(x / hinge_softness)
+
+    y = x / hinge_softness
+    return hinge_softness * (y + keras.ops.log(-keras.ops.expm1(-y)))

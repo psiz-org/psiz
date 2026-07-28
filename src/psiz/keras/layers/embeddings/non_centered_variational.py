@@ -17,7 +17,6 @@
 
 import keras
 import numpy as np
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.embedding_take import EmbeddingTake
 from psiz.keras.layers.embeddings.non_centered_normal_diag import (
@@ -26,6 +25,7 @@ from psiz.keras.layers.embeddings.non_centered_normal_diag import (
 from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
 from psiz.keras.layers.posterior_factory import NonCenteredPosteriorFactory
 from psiz.keras.layers.variational import Variational
+from psiz.stochastic import get_stochastic_adapter
 from psiz.utils.drill_down import drill_down
 from psiz.utils.generate_take_map import generate_take_map
 
@@ -102,13 +102,15 @@ class EmbeddingNonCenteredVariational(Variational):
         self.prior.build([None])
         self.posterior.build([None])
 
-        epsilon_prior = tfp.distributions.Normal(
+        adapter = get_stochastic_adapter()
+        epsilon_prior = adapter.normal(
             keras.ops.zeros_like(self.posterior._embedding.epsilon_embeddings.mean()),
             keras.ops.ones_like(self.posterior._embedding.epsilon_embeddings.mean()),
         )
         batch_ndims = keras.ops.size(epsilon_prior.batch_shape_tensor())
-        self.epsilon_prior = tfp.distributions.Independent(
-            epsilon_prior, reinterpreted_batch_ndims=batch_ndims
+        self.epsilon_prior = adapter.independent(
+            epsilon_prior,
+            reinterpreted_batch_ndims=batch_ndims,
         )
 
     def call(self, inputs, training=None):

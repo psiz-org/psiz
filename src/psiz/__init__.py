@@ -17,6 +17,9 @@
 
 import psiz.data
 import psiz.keras
+import psiz.migration
 import psiz.mplot
+import psiz.storage
+import psiz.stochastic
 import psiz.tfp
 import psiz.utils

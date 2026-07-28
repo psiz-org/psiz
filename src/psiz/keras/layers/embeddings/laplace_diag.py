@@ -22,9 +22,9 @@ Classes:
 
 
 import keras
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
+from psiz.stochastic import get_stochastic_adapter
 
 
 @keras.saving.register_keras_serializable(
@@ -78,25 +78,24 @@ class EmbeddingLaplaceDiag(_EmbeddingLocScale):
     @property
     def embeddings(self):
         """Return embeddings."""
-        dist = tfp.distributions.Laplace(loc=self.loc, scale=self.scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.laplace(loc=self.loc, scale=self.scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def call(self, inputs):
         """Call."""
         [inputs_loc, inputs_scale] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = tfp.distributions.Laplace(loc=inputs_loc, scale=inputs_scale)
+        adapter = get_stochastic_adapter()
+        dist_batch = adapter.laplace(loc=inputs_loc, scale=inputs_scale)
         # Reify output using samples.
         return dist_batch.sample(self.sample_shape)
 
     def take(self, indices):
         """Take."""
         [inputs_loc, inputs_scale] = super().call(indices)
-        dist = tfp.distributions.Laplace(loc=inputs_loc, scale=inputs_scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.laplace(loc=inputs_loc, scale=inputs_scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)

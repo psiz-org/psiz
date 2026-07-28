@@ -24,6 +24,9 @@ Classes:
 import keras
 
 from psiz.backend import resolve_backend
+from psiz.migration import migrate_model_from_keras
+from psiz.storage import load_psiz_model
+from psiz.storage import save_psiz_model
 
 
 @keras.saving.register_keras_serializable(
@@ -226,6 +229,26 @@ class StochasticModel(keras.Model):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
+    def save_psiz(self, path, **kwargs):
+        """Save model to a PsiZ-managed `.psiz` artifact directory."""
+        return save_psiz_model(self, path=path, **kwargs)
+
+    @classmethod
+    def load_psiz(cls, path, **kwargs):
+        """Load model from a PsiZ-managed `.psiz` artifact directory."""
+        model = load_psiz_model(path=path, **kwargs)
+        if not isinstance(model, cls):
+            raise TypeError(
+                f"Loaded artifact contains model type '{type(model).__name__}', "
+                f"which is not a subclass of '{cls.__name__}'."
+            )
+        return model
+
+    @classmethod
+    def migrate_keras_asset(cls, source_path, destination_path, **kwargs):
+        """Migrate a legacy `.keras` model file to a `.psiz` artifact."""
+        return migrate_model_from_keras(source_path, destination_path, **kwargs)
 
     def repeat_samples_in_data(self, data):
         """Repeat samples in batch axis of each data component.

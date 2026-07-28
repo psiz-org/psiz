@@ -23,7 +23,8 @@ Functions:
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow_probability as tfp
+
+from psiz.stochastic import is_distribution
 
 
 def heatmap_embeddings(embedding, ax=None, cmap=None):
@@ -43,7 +44,7 @@ def heatmap_embeddings(embedding, ax=None, cmap=None):
     if cmap is None:
         cmap = matplotlib.colormaps["Greys"]
 
-    if isinstance(embedding.embeddings, tfp.distributions.Distribution):
+    if is_distribution(embedding.embeddings):
         # Handle distribution.
         z_mode = embedding.embeddings.mode().numpy()
     else:

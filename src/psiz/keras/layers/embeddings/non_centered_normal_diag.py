@@ -22,10 +22,11 @@ Classes:
 """
 
 import keras
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
 from psiz.keras.ops.scale_gradient import scale_gradient
+from psiz.stochastic import get_stochastic_adapter
+from psiz.stochastic import softplus_inverse
 
 
 @keras.saving.register_keras_serializable(
@@ -96,7 +97,7 @@ class EmbeddingNonCenteredNormalDiag(StochasticEmbedding):
         self.epsilon_loc_initializer = keras.initializers.get(epsilon_loc_initializer)
         if epsilon_scale_initializer is None:
             epsilon_scale_initializer = keras.initializers.RandomNormal(
-                mean=tfp.math.softplus_inverse(1.0).numpy(), stddev=0.001
+                mean=keras.ops.convert_to_numpy(softplus_inverse(1.0)), stddev=0.001
             )
         self.epsilon_scale_initializer = keras.initializers.get(
             epsilon_scale_initializer
@@ -171,20 +172,18 @@ class EmbeddingNonCenteredNormalDiag(StochasticEmbedding):
     @property
     def embeddings(self):
         """Return posterior embeddings distribution."""
-        dist = tfp.distributions.Normal(loc=self.loc, scale=self.scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.normal(loc=self.loc, scale=self.scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     @property
     def epsilon_embeddings(self):
         """Return epsilon embeddings distribution."""
-        dist = tfp.distributions.Normal(loc=self.epsilon_loc, scale=self.epsilon_scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.normal(loc=self.epsilon_loc, scale=self.epsilon_scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def call(self, inputs):
         """Call."""
@@ -204,9 +203,8 @@ class EmbeddingNonCenteredNormalDiag(StochasticEmbedding):
             inputs_epsilon_scale, self.epsilon_scale_gradient_scale
         )
 
-        dist_batch = tfp.distributions.Normal(
-            loc=inputs_epsilon_loc, scale=inputs_epsilon_scale
-        )
+        adapter = get_stochastic_adapter()
+        dist_batch = adapter.normal(loc=inputs_epsilon_loc, scale=inputs_epsilon_scale)
         epsilon_samples = dist_batch.sample(self.sample_shape)
 
         return inputs_prior_loc + inputs_prior_scale * epsilon_samples
@@ -218,11 +216,10 @@ class EmbeddingNonCenteredNormalDiag(StochasticEmbedding):
         inputs_loc = keras.ops.take(self.loc, inputs, axis=0)
         inputs_scale = keras.ops.take(self.scale, inputs, axis=0)
 
-        dist = tfp.distributions.Normal(loc=inputs_loc, scale=inputs_scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.normal(loc=inputs_loc, scale=inputs_scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def get_config(self):
         """Return layer configuration."""

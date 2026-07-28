@@ -1512,11 +1512,11 @@ class TestControl:
         result0 = model.evaluate(tfds)
         kernel0 = model.dense_layer.kernel
         bias0 = model.dense_layer.bias
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
-        loaded = keras.models.load_model(
+        loaded = psiz.keras.load_psiz_model(
             fp_model,
             custom_objects={"ModelControl": ModelControl},
         )
@@ -1550,11 +1550,13 @@ class TestModelA:
         results_0 = model.evaluate(tfds, return_dict=True)
         kernel0 = model.dense_layer.kernel
         bias0 = model.dense_layer.bias
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
-        loaded = keras.models.load_model(fp_model, custom_objects={"ModelA": ModelA})
+        loaded = psiz.keras.load_psiz_model(
+            fp_model, custom_objects={"ModelA": ModelA}
+        )
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.dense_layer.kernel
         bias1 = loaded.dense_layer.bias
@@ -1585,11 +1587,13 @@ class TestModelB:
         assert model.n_sample == 2
         results_0 = model.evaluate(tfds, return_dict=True)
         kernel0 = model.custom_layer.kernel
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
-        loaded = keras.models.load_model(fp_model, custom_objects={"ModelB": ModelB})
+        loaded = psiz.keras.load_psiz_model(
+            fp_model, custom_objects={"ModelB": ModelB}
+        )
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel1 = loaded.custom_layer.kernel
 
@@ -1615,11 +1619,11 @@ class TestModelB:
         assert model.n_sample == 2
         results_0 = model.evaluate(tfds, return_dict=True)
         kernel0 = model.custom_layer.kernel
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
-        loaded = keras.models.load_model(
+        loaded = psiz.keras.load_psiz_model(
             fp_model,
             custom_objects={"ModelB2": ModelB2},
         )
@@ -1897,12 +1901,14 @@ class TestModelC:
         branch_1_w0_0 = model.branch_1.w0
 
         # Save the model.
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
         # Load the saved model.
-        loaded = keras.models.load_model(fp_model, custom_objects={"ModelC": ModelC})
+        loaded = psiz.keras.load_psiz_model(
+            fp_model, custom_objects={"ModelC": ModelC}
+        )
         results_1 = loaded.evaluate(tfds, return_dict=True)
         branch_0_w0_1 = loaded.branch_0.w0
         branch_1_w0_1 = loaded.branch_1.w0
@@ -1975,12 +1981,14 @@ class TestModelD:
         kernel_0 = model.rnn_layer.cell.layer_0.kernel
 
         # Save the model.
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
         # Load the saved model.
-        loaded = keras.models.load_model(fp_model, custom_objects={"ModelD": ModelD})
+        loaded = psiz.keras.load_psiz_model(
+            fp_model, custom_objects={"ModelD": ModelD}
+        )
         results_1 = loaded.evaluate(tfds, return_dict=True)
         kernel_1 = loaded.rnn_layer.cell.layer_0.kernel
 
@@ -2064,12 +2072,12 @@ class TestRankSimilarity:
         percept_variance = model.percept.embeddings.variance()
 
         # Test storage serialization.
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
         # Load the saved model.
-        loaded = keras.models.load_model(
+        loaded = psiz.keras.load_psiz_model(
             fp_model,
             custom_objects={"RankModelA": RankModelA},
         )
@@ -2120,12 +2128,12 @@ class TestRankSimilarity:
         percept_variance = model.percept.embeddings.variance()
 
         # Test storage serialization.
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
         # Load the saved model.
-        loaded = keras.models.load_model(
+        loaded = psiz.keras.load_psiz_model(
             fp_model,
             custom_objects={"RankModelB": RankModelB},
         )
@@ -2238,12 +2246,12 @@ class TestRankSimilarity:
 #         _ = model.evaluate(tfds)
 
 #         # Test storage serialization.
-#         fp_model = Path(tmpdir) / "test_model.keras"
-#         model.save(fp_model)
+#         fp_model = Path(tmpdir) / "test_model.psiz"
+#         psiz.keras.save_psiz_model(model, fp_model)
 #         del model
 
 #         # Load the saved model.
-#         loaded = keras.models.load_model(
+#         loaded = psiz.keras.load_psiz_model(
 #             fp_model, custom_objects={"RankModelB": RankModelB}
 #         )
 #         loaded_percept_mean = loaded.cell.percept.embeddings.mean()
@@ -2287,12 +2295,12 @@ class TestRateSimilarity:
         percept_mean = model.percept.embeddings.mean()
 
         # Test storage serialization.
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
 
         # Load the saved model.
-        loaded = keras.models.load_model(
+        loaded = psiz.keras.load_psiz_model(
             fp_model,
             custom_objects={"RateModelA": RateModelA},
         )
@@ -2339,11 +2347,11 @@ class TestRateSimilarity:
 #         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
 #         # Test storage.
-#         fp_model = Path(tmpdir) / "test_model.keras"
-#         model.save(fp_model)
+#         fp_model = Path(tmpdir) / "test_model.psiz"
+#         psiz.keras.save_psiz_model(model, fp_model)
 #         del model
 #         # Load the saved model.
-#         loaded = keras.models.load_model(
+#         loaded = psiz.keras.load_psiz_model(
 #             fp_model,
 #             custom_objects={"ALCOVEModelA": ALCOVEModelA},
 #         )
@@ -2398,11 +2406,11 @@ class TestRateSimilarity:
 #         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
 #         # Test storage.
-#         fp_model = Path(tmpdir) / "test_model.keras"
-#         model.save(fp_model)
+#         fp_model = Path(tmpdir) / "test_model.psiz"
+#         psiz.keras.save_psiz_model(model, fp_model)
 #         del model
 #         # Load the saved model.
-#         loaded = keras.models.load_model(
+#         loaded = psiz.keras.load_psiz_model(
 #             fp_model,
 #             custom_objects={"ALCOVEModelA": ALCOVEModelA},
 #         )

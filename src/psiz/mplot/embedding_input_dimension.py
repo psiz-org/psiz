@@ -23,7 +23,8 @@ Functions:
 
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow_probability as tfp
+
+from psiz.stochastic import is_distribution
 
 
 def embedding_input_dimension(embedding, idx, ax=None, c="b"):
@@ -49,12 +50,12 @@ def embedding_input_dimension(embedding, idx, ax=None, c="b"):
     if ax is None:
         ax = plt.gca()
 
-    if isinstance(embedding.embeddings, tfp.distributions.Distribution):
+    if is_distribution(embedding.embeddings):
         z_mode = embedding.embeddings.mode().numpy()
-        is_distribution = True
+        is_dist = True
     else:
         z_mode = embedding.embeddings.numpy()
-        is_distribution = False
+        is_dist = False
 
     # Handle masking.
     if embedding.mask_zero:
@@ -75,7 +76,7 @@ def embedding_input_dimension(embedding, idx, ax=None, c="b"):
     ax.scatter(xg, z_mode, c=c, marker="_", linewidth=1)
 
     # Add posterior quantiles if available.
-    if is_distribution:
+    if is_dist:
         dist = embedding.embeddings.distribution
 
         # Middle density interval: 99% probability mass.

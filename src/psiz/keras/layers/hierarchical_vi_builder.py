@@ -19,7 +19,6 @@ from typing import Callable
 
 import keras
 import numpy as np
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.embedding_take import EmbeddingTake
 from psiz.keras.layers.embeddings.non_centered_variational import (
@@ -35,6 +34,7 @@ from psiz.keras.layers.hierarchical_specs import ParentMapPolicy
 from psiz.keras.layers.hierarchical_specs import ScaleInitializationPolicy
 from psiz.keras.layers.posterior_factory import NonCenteredPosteriorFactory
 from psiz.keras.layers.posterior_factory import PosteriorFactory
+from psiz.stochastic import softplus_inverse
 
 
 class HierarchicalBuilderHooks:
@@ -303,7 +303,7 @@ class HierarchicalVIEmbeddingBuilder:
         n_root = int(np.max(row_map) + 1)
 
         target_std = self._initialize_level_scale(n_dim, 0, self.hierarchy.levels[0].role)
-        untransformed_scale = tfp.math.softplus_inverse(target_std).numpy()
+        untransformed_scale = keras.ops.convert_to_numpy(softplus_inverse(target_std))
 
         root_core = EmbeddingNormalDiag(
             input_dim=n_root + int(self.hierarchy.mask_zero),
@@ -361,7 +361,7 @@ class HierarchicalVIEmbeddingBuilder:
             epsilon_scale_gradient_scale=epsilon_scale_grad_scale,
             epsilon_loc_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=0.01),
             epsilon_scale_initializer=keras.initializers.RandomNormal(
-                mean=tfp.math.softplus_inverse(target_std).numpy(), stddev=0.001
+                mean=keras.ops.convert_to_numpy(softplus_inverse(target_std)), stddev=0.001
             ),
             epsilon_loc_trainable=level_spec.loc_trainable,
             epsilon_scale_trainable=level_spec.scale_trainable,

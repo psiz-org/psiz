@@ -21,10 +21,10 @@ Classes:
 """
 
 import keras
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
 from psiz.keras.ops.scale_gradient import scale_gradient
+from psiz.stochastic import get_stochastic_adapter
 
 
 @keras.saving.register_keras_serializable(
@@ -87,11 +87,10 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
     @property
     def embeddings(self):
         """Return embeddings."""
-        dist = tfp.distributions.Normal(loc=self.loc, scale=self.scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.normal(loc=self.loc, scale=self.scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def call(self, inputs):
         """Call."""
@@ -101,7 +100,8 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
         inputs_scale = scale_gradient(inputs_scale, self.scale_gradient_scale)
 
         # Use reparameterization trick.
-        dist_batch = tfp.distributions.Normal(loc=inputs_loc, scale=inputs_scale)
+        adapter = get_stochastic_adapter()
+        dist_batch = adapter.normal(loc=inputs_loc, scale=inputs_scale)
         # Reify output using samples.
         outputs = dist_batch.sample(self.sample_shape)
         # TODO(roads) MAYBE keras.ops.cast(outputs, dtype=self.compute_dtype)
@@ -110,11 +110,10 @@ class EmbeddingNormalDiag(_EmbeddingLocScale):
     def take(self, inputs):
         """Take."""
         [inputs_loc, inputs_scale] = super().call(inputs)
-        dist = tfp.distributions.Normal(loc=inputs_loc, scale=inputs_scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.normal(loc=inputs_loc, scale=inputs_scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def get_config(self):
         """Return layer configuration."""

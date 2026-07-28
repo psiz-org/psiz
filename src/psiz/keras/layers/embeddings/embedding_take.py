@@ -22,7 +22,8 @@ Classes:
 
 import numpy as np
 import keras
-import tensorflow_probability as tfp
+
+from psiz.stochastic import is_distribution
 
 
 @keras.saving.register_keras_serializable(
@@ -70,9 +71,7 @@ class EmbeddingTake(keras.layers.Layer):
         """Build."""
         super().build(input_shape)
         self._embedding.build(input_shape)
-        self._is_distribution = isinstance(
-            self._embedding.embeddings, tfp.distributions.Distribution
-        )
+        self._is_distribution = is_distribution(self._embedding.embeddings)
 
     def call(self, inputs):
         """Call."""

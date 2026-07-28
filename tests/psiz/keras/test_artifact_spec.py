@@ -30,6 +30,8 @@ def _write_json(path: Path, payload):
 
 def _write_minimal_artifact(path: Path):
     path.mkdir(parents=True, exist_ok=True)
+    architecture = {"class_name": "ExampleModel", "module": "example"}
+    license_info = {"name": "Apache-2.0", "policy": "include"}
     _write_json(
         path / "config.json",
         {
@@ -37,13 +39,43 @@ def _write_minimal_artifact(path: Path):
             "format_name": "psiz",
             "format_version": "1.0.0",
             "backend": "torch",
-            "architecture": {"class_name": "ExampleModel", "module": "example"},
-            "license": {"name": "Apache-2.0", "policy": "include"},
+            "architecture": architecture,
+            "license": license_info,
+            "model_config": {
+                "module": "keras.src.models.functional",
+                "class_name": "Functional",
+                "config": {},
+                "registered_name": "Functional",
+            },
+        },
+    )
+    _write_json(
+        path / "metadata.json",
+        {
+            "artifact_type": "psiz_model",
+            "format_name": "psiz",
+            "format_version": "1.0.0",
+            "backend": "torch",
+            "architecture": architecture,
+            "license": license_info,
+            "storage": {
+                "weight_format": "safetensors",
+                "weight_file": "model.safetensors",
+                "weight_count": 1,
+            },
+        },
+    )
+    _write_json(
+        path / "model_index.json",
+        {
+            "weight_format": "safetensors",
+            "weight_file": "model.safetensors",
+            "weights": [{"name": "model/dense/kernel", "key": "weight_00000", "shape": [2, 2], "dtype": "float32"}],
         },
     )
     (path / "README.md").write_text("# Example\n", encoding="utf-8")
     (path / "LICENSE").write_text("Apache-2.0\n", encoding="utf-8")
-    (path / "model.safetensors").write_bytes(b"placeholder")
+    (path / "model.safetensors").write_bytes(b"FAKE")
 
 
 def test_validate_minimal_artifact_directory(tmp_path):
@@ -58,6 +90,8 @@ def test_validate_minimal_artifact_directory(tmp_path):
         "README.md",
         "config.json",
         "model.safetensors",
+        "model_index.json",
+        "metadata.json",
         "LICENSE",
     ]
 
@@ -74,25 +108,48 @@ def test_validate_hierarchical_artifact_directory(tmp_path):
             "backend": "torch",
             "architecture": {"class_name": "HierarchicalVIModel", "module": "example"},
             "license": {"name": "Apache-2.0", "policy": "include"},
+            "model_config": {
+                "module": "keras.src.models.functional",
+                "class_name": "Functional",
+                "config": {},
+                "registered_name": "Functional",
+            },
+        },
+    )
+    _write_json(
+        artifact_dir / "metadata.json",
+        {
+            "artifact_type": "psiz_model",
+            "format_name": "psiz",
+            "format_version": "1.0.0",
+            "backend": "torch",
+            "architecture": {"class_name": "HierarchicalVIModel", "module": "example"},
+            "license": {"name": "Apache-2.0", "policy": "include"},
+            "storage": {
+                "weight_format": "safetensors",
+                "weight_file": "model.safetensors",
+                "weight_count": 6,
+            },
         },
     )
     _write_json(
         artifact_dir / "model_index.json",
         {
             "model_type": "hierarchical_vi",
+            "weight_file": "model.safetensors",
             "weights": [
-                {"name": "global/loc", "shape": [2]},
-                {"name": "global/scale", "shape": [2]},
-                {"name": "intermediate/loc", "shape": [4, 2]},
-                {"name": "intermediate/scale", "shape": [4, 2]},
-                {"name": "leaf/loc", "shape": [8, 2]},
-                {"name": "leaf/scale", "shape": [8, 2]},
+                {"name": "global/loc", "key": "weight_00000", "shape": [2], "dtype": "float32"},
+                {"name": "global/scale", "key": "weight_00001", "shape": [2], "dtype": "float32"},
+                {"name": "intermediate/loc", "key": "weight_00002", "shape": [4, 2], "dtype": "float32"},
+                {"name": "intermediate/scale", "key": "weight_00003", "shape": [4, 2], "dtype": "float32"},
+                {"name": "leaf/loc", "key": "weight_00004", "shape": [8, 2], "dtype": "float32"},
+                {"name": "leaf/scale", "key": "weight_00005", "shape": [8, 2], "dtype": "float32"},
             ],
         },
     )
     (artifact_dir / "README.md").write_text("# Example\n", encoding="utf-8")
     (artifact_dir / "LICENSE").write_text("Apache-2.0\n", encoding="utf-8")
-    (artifact_dir / "model.safetensors").write_bytes(b"placeholder")
+    (artifact_dir / "model.safetensors").write_bytes(b"FAKE")
 
     manifest = validate_artifact_directory(artifact_dir)
 

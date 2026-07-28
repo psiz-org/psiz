@@ -25,6 +25,9 @@ import psiz.keras.regularizers
 
 from psiz.keras.artifact_spec import ArtifactSpecError
 from psiz.keras.artifact_spec import validate_artifact_directory
+from psiz.migration import migrate_model_from_keras
+from psiz.storage import load_psiz_model
+from psiz.storage import save_psiz_model
 
 # Promote `StochasticModel` to `psiz.keras` namespace for convenience and to
 # mirror TensorFlow organization.
@@ -33,5 +36,8 @@ from psiz.keras.models.stochastic_model import StochasticModel
 __all__ = [
     "ArtifactSpecError",
     "StochasticModel",
+    "load_psiz_model",
+    "migrate_model_from_keras",
+    "save_psiz_model",
     "validate_artifact_directory",
 ]

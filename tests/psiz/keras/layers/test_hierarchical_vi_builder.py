@@ -20,6 +20,8 @@ import numpy as np
 import pytest
 import tensorflow_probability as tfp
 
+import psiz
+
 from psiz.keras.layers.embeddings.embedding_shared import EmbeddingShared
 from psiz.keras.layers.embeddings.embedding_take import EmbeddingTake
 from psiz.keras.layers.embeddings.embedding_variational import EmbeddingVariational
@@ -392,6 +394,51 @@ def test_variational_contract_preserves_distribution_chain():
 
 @pytest.mark.tfp
 def test_contract_keras_save_load_access_continuity(tmp_path):
+    """Freeze Keras save/load continuity for the hierarchical access chain."""
+    memberships = np.array(
+        [
+            [0, 10],
+            [0, 10],
+            [0, 11],
+            [0, 12],
+        ],
+        dtype="int32",
+    )
+    percept = build_hierarchical_vi_embedding(
+        n_stimuli=4,
+        n_dim=2,
+        hierarchy=_build_hierarchy_spec(),
+        membership=MembershipInput(memberships=memberships),
+        posterior_factory=NonCenteredPosteriorFactory(),
+        n_sample_train=100,
+    )
+    model = HierarchyAccessContractModel(percept=percept)
+
+    inputs = np.array([1, 2, 3], dtype=np.int32)
+    original_outputs = keras.ops.convert_to_numpy(model(inputs))
+    original_loc = keras.ops.convert_to_numpy(
+        model.percept.prior.embeddings.distribution.loc
+    )
+
+    fp_model = tmp_path / "hierarchy_access_contract.keras"
+    model.save(fp_model)
+
+    loaded = keras.models.load_model(
+        fp_model,
+        custom_objects={"HierarchyAccessContractModel": HierarchyAccessContractModel},
+    )
+
+    loaded_outputs = keras.ops.convert_to_numpy(loaded(inputs))
+    loaded_loc = keras.ops.convert_to_numpy(
+        loaded.percept.prior.embeddings.distribution.loc
+    )
+
+    np.testing.assert_equal(original_outputs.shape, loaded_outputs.shape)
+    np.testing.assert_allclose(original_loc, loaded_loc)
+
+
+@pytest.mark.tfp
+def test_contract_psiz_save_load_access_continuity(tmp_path):
     """Freeze save/load continuity for the hierarchical access chain."""
     memberships = np.array(
         [
@@ -416,10 +463,10 @@ def test_contract_keras_save_load_access_continuity(tmp_path):
     original_outputs = keras.ops.convert_to_numpy(model(inputs))
     original_loc = keras.ops.convert_to_numpy(model.percept.prior.embeddings.distribution.loc)
 
-    fp_model = tmp_path / "hierarchy_access_contract.keras"
-    model.save(fp_model)
+    fp_model = tmp_path / "hierarchy_access_contract.psiz"
+    psiz.keras.save_psiz_model(model, fp_model)
 
-    loaded = keras.models.load_model(
+    loaded = psiz.keras.load_psiz_model(
         fp_model,
         custom_objects={"HierarchyAccessContractModel": HierarchyAccessContractModel},
     )

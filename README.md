@@ -92,6 +92,77 @@ import keras
 print(keras.backend.backend())
 ```
 
+## Save and Load .psiz Artifacts
+
+PsiZ now provides a PsiZ-managed storage format for model artifacts.
+This helps keep shared research assets stable over time by reducing dependency on backend-specific serialization details that can drift across versions.
+The layout is also designed to align closely with hosting workflows on platforms like Hugging Face, making asset publishing and reuse easier.
+
+Canonical API: use the function-based save/load helpers from `psiz.keras`.
+
+Recommended API from `psiz.keras`:
+```python
+import psiz
+
+# Save to a PsiZ artifact directory.
+psiz.keras.save_psiz_model(model, "my_model.psiz")
+
+# Load from a PsiZ artifact directory.
+loaded_model = psiz.keras.load_psiz_model("my_model.psiz")
+```
+
+If your model subclasses `psiz.keras.StochasticModel`, you can also use the
+method-based form as an optional convenience:
+```python
+model.save_psiz("my_model.psiz")
+loaded_model = MyModel.load_psiz("my_model.psiz")
+```
+
+## Migrate Legacy .keras Assets to .psiz
+
+PsiZ v0.14 includes a Python API for migrating legacy `.keras` assets into
+PsiZ-managed `.psiz` artifacts.
+
+```python
+import numpy as np
+import psiz
+
+report = psiz.migration.migrate_model_from_keras(
+    "legacy_model.keras",
+    "migrated_model.psiz",
+    backend_override="torch",
+    validate_parity=True,
+    parity_inputs=np.array([[0.1, 0.2, 0.3]], dtype="float32"),
+)
+
+print(report["status"])           # success
+print(report["resolved_backend"]) # torch
+```
+
+Notes:
+* v0.14 migration supports `.keras` legacy assets.
+* `.h5`/`.hdf5` migration is intentionally out of scope for v0.14.
+* Optional parity validation compares migrated predictions against the legacy model on fixed inputs and tolerance settings.
+
+### Storage Lifecycle Policy
+
+PsiZ uses a two-tier storage strategy with different lifecycle intent:
+
+* Training checkpoints: use Keras checkpointing (for example, `keras.callbacks.ModelCheckpoint`) to support fault tolerance and exact training resume workflows.
+* Durable artifacts: use PsiZ-managed `.psiz` directories for long-term portability, sharing, and publication.
+
+Recommended workflow:
+
+1. During training, write checkpoints using Keras-native checkpoint formats.
+2. After selecting a final or best model, export once to a `.psiz` artifact directory.
+
+This separation is intentional: checkpoints optimize training continuity, while `.psiz` artifacts optimize stability and reuse.
+
+Notes:
+* Artifacts use `model.safetensors` for weights and include strict schema/version checks.
+* You can override backend resolution during save/load using `backend_override="tensorflow"`, `"torch"`, or `"jax"`.
+* If the target output directory already exists and is non-empty, save raises an error.
+
 **Notes:**
 * PsiZ originally required TensorFlow. By default, PsiZ installs the CPU version of TensorFlow. If you want GPU acceleration, you must manually install a CUDA-enabled TensorFlow build that matches your Python/CUDA environment. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow. As of PsiZ v0.12, Keras 3 is used for the majority of layers, which allows users to use either TensorFlow or Pytorch. Your preferred backend can be set by modifying the configuration file automatically created by Keras: `~/.keras/keras.json`. Pytorch support is still experimental.
 * PsiZ versions <=0.5.0 must be installed using git clone and editable mode (e.g., `pip install -e /local/path/to/psiz`).

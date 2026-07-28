@@ -22,11 +22,11 @@ Classes:
 
 
 import keras
-import tensorflow_probability as tfp
 
 import psiz.keras.constraints as pk_constraints
 from psiz.keras.ops.wpnorm import wpnorm
 from psiz.keras.layers.proximities.proximity import Proximity
+from psiz.stochastic import get_stochastic_adapter
 
 
 @keras.saving.register_keras_serializable(
@@ -132,18 +132,16 @@ class MinkowskiStochastic(Proximity):
                 trainable=self.rho_scale_trainable,
                 constraint=self.rho_scale_constraint,
             )
-        rho_scale = tfp.util.DeferredTensor(
-            self.rho_untransformed_scale,
-            lambda x: (keras.backend.epsilon() + keras.activations.softplus(x)),
+        rho_scale = keras.backend.epsilon() + keras.activations.softplus(
+            self.rho_untransformed_scale
         )
 
-        rho_dist = tfp.distributions.TruncatedNormal(
+        adapter = get_stochastic_adapter()
+        rho_dist = adapter.truncated_normal(
             self.rho_loc, rho_scale, self.rho_low, self.rho_high
         )
         batch_ndims = keras.ops.size(rho_dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            rho_dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(rho_dist, reinterpreted_batch_ndims=batch_ndims)
 
     def _build_w(self, input_shape):
         with keras.name_scope(self.name):
@@ -165,18 +163,16 @@ class MinkowskiStochastic(Proximity):
                 trainable=self.w_scale_trainable,
                 constraint=self.w_scale_constraint,
             )
-        w_scale = tfp.util.DeferredTensor(
-            self.w_untransformed_scale,
-            lambda x: (keras.backend.epsilon() + keras.activations.softplus(x)),
+        w_scale = keras.backend.epsilon() + keras.activations.softplus(
+            self.w_untransformed_scale
         )
 
-        w_dist = tfp.distributions.TruncatedNormal(
+        adapter = get_stochastic_adapter()
+        w_dist = adapter.truncated_normal(
             self.w_loc, w_scale, self.w_low, self.w_high
         )
         batch_ndims = keras.ops.size(w_dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            w_dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(w_dist, reinterpreted_batch_ndims=batch_ndims)
 
     def call(self, inputs):
         """Call.

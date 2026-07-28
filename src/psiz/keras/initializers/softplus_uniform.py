@@ -22,7 +22,8 @@ Classes:
 
 
 import keras
-import tensorflow_probability as tfp
+
+from psiz.stochastic import softplus_inverse
 
 
 @keras.saving.register_keras_serializable(package="psiz.keras.initializers")
@@ -58,7 +59,7 @@ class SoftplusUniform(keras.initializers.Initializer):
         )
 
         def generalized_softplus_inverse(x, c):
-            return c * tfp.math.softplus_inverse(x / c)
+            return softplus_inverse(x, hinge_softness=c)
 
         # TODO(roads) critical handle zeros
         return generalized_softplus_inverse(w, self.hinge_softness)

@@ -13,20 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Compatibility shim for artifact spec APIs.
+"""Stochastic adapter layer for backend-agnostic PsiZ stochastic code."""
 
-This module now re-exports canonical storage schema utilities from
-`psiz.storage.schema`.
-"""
-
-from psiz.storage.schema import ArtifactSpecError
-from psiz.storage.schema import REQUIRED_ARTIFACT_FILES
-from psiz.storage.schema import SUPPORTED_FORMAT_MAJOR_VERSION
-from psiz.storage.schema import validate_artifact_directory
+from psiz.stochastic.adapters import canonicalize_parameters
+from psiz.stochastic.adapters import get_stochastic_adapter
+from psiz.stochastic.adapters import is_distribution
+from psiz.stochastic.kl import kl_divergence
+from psiz.stochastic.transforms import softplus_inverse
 
 __all__ = [
-    "ArtifactSpecError",
-    "REQUIRED_ARTIFACT_FILES",
-    "SUPPORTED_FORMAT_MAJOR_VERSION",
-    "validate_artifact_directory",
+    "canonicalize_parameters",
+    "get_stochastic_adapter",
+    "is_distribution",
+    "kl_divergence",
+    "softplus_inverse",
 ]

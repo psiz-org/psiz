@@ -23,9 +23,9 @@ Classes:
 
 
 import keras
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.stochastic_embedding import StochasticEmbedding
+from psiz.stochastic import softplus_inverse
 
 
 class _EmbeddingLocScale(StochasticEmbedding):
@@ -92,7 +92,7 @@ class _EmbeddingLocScale(StochasticEmbedding):
         self.loc_initializer = keras.initializers.get(loc_initializer)
         if scale_initializer is None:
             scale_initializer = keras.initializers.RandomNormal(
-                mean=tfp.math.softplus_inverse(1.0).numpy(), stddev=0.001
+                mean=keras.ops.convert_to_numpy(softplus_inverse(1.0)), stddev=0.001
             )
         self.scale_initializer = keras.initializers.get(scale_initializer)
 

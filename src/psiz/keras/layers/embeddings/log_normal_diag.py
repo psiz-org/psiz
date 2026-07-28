@@ -22,9 +22,10 @@ Classes:
 
 
 import keras
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.embeddings.loc_scale import _EmbeddingLocScale
+from psiz.stochastic import get_stochastic_adapter
+from psiz.stochastic import softplus_inverse
 
 
 @keras.saving.register_keras_serializable(
@@ -44,7 +45,7 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
         scale_initializer = kwargs.pop("scale_initializer", None)
         if scale_initializer is None:
             scale_initializer = keras.initializers.RandomNormal(
-                mean=tfp.math.softplus_inverse(2.0).numpy(), stddev=0.01
+                mean=keras.ops.convert_to_numpy(softplus_inverse(2.0)), stddev=0.01
             )
 
         self.loc = None
@@ -87,25 +88,24 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
     @property
     def embeddings(self):
         """Return embeddings."""
-        dist = tfp.distributions.LogNormal(loc=self.loc, scale=self.scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.log_normal(loc=self.loc, scale=self.scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)
 
     def call(self, inputs):
         """Call."""
         [inputs_loc, inputs_scale] = super().call(inputs)
         # Use reparameterization trick.
-        dist_batch = tfp.distributions.LogNormal(loc=inputs_loc, scale=inputs_scale)
+        adapter = get_stochastic_adapter()
+        dist_batch = adapter.log_normal(loc=inputs_loc, scale=inputs_scale)
         # Reify output using samples.
         return dist_batch.sample(self.sample_shape)
 
     def take(self, inputs):
         """Take."""
         [inputs_loc, inputs_scale] = super().call(inputs)
-        dist = tfp.distributions.LogNormal(loc=inputs_loc, scale=inputs_scale)
+        adapter = get_stochastic_adapter()
+        dist = adapter.log_normal(loc=inputs_loc, scale=inputs_scale)
         batch_ndims = keras.ops.size(dist.batch_shape_tensor())
-        return tfp.distributions.Independent(
-            dist, reinterpreted_batch_ndims=batch_ndims
-        )
+        return adapter.independent(dist, reinterpreted_batch_ndims=batch_ndims)

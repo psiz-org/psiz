@@ -23,7 +23,8 @@ Classes:
 
 import keras
 import numpy as np
-import tensorflow_probability as tfp
+
+from psiz.stochastic import get_stochastic_adapter
 
 
 @keras.saving.register_keras_serializable(package="psiz.keras.initializers")
@@ -53,7 +54,8 @@ class Dirichlet(keras.initializers.Initializer):
 
         if dtype is None:
             dtype = policy.compute_dtype
-        dist = tfp.distributions.Dirichlet(keras.ops.cast(self.concentration, dtype))
+        adapter = get_stochastic_adapter()
+        dist = adapter.dirichlet(keras.ops.cast(self.concentration, dtype))
         sample = keras.ops.cast(self.scale, dtype) * dist.sample(shape, seed=self.seed)
         return sample
 

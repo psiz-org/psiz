@@ -23,7 +23,8 @@ Classes:
 
 
 import keras
-import tensorflow_probability as tfp
+
+from psiz.stochastic import get_stochastic_adapter
 
 
 @keras.saving.register_keras_serializable(
@@ -115,16 +116,9 @@ class EmbeddingShared(keras.layers.Layer):
         event_shape=[self.input_dim, self.output_dim].
 
         """
-        # First, reshape event_shape from [1, 1] to [].
-        b = tfp.bijectors.Reshape(event_shape_out=[], event_shape_in=[1, 1])
-
-        # Second, use Sample to expand event_shape to,
-        # [self.input_dim, self.output.dim].
-        dist = tfp.distributions.TransformedDistribution(
-            distribution=tfp.distributions.Sample(
-                self._embedding.embeddings,
-                sample_shape=[self.input_dim, self.output_dim],
-            ),
-            bijector=b,
+        adapter = get_stochastic_adapter()
+        dist = adapter.shared_sample_distribution(
+            self._embedding.embeddings,
+            sample_shape=[self.input_dim, self.output_dim],
         )
         return dist

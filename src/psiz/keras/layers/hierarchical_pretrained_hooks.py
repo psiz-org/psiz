@@ -23,10 +23,10 @@ default builder behavior.
 
 import keras
 import numpy as np
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.hierarchical_specs import LevelInitializationMode
 from psiz.keras.layers.posterior_factory import NonCenteredPosteriorFactory
+from psiz.stochastic import softplus_inverse
 
 
 class PretrainedNonCenteredFactoryHooks:
@@ -133,7 +133,9 @@ class PretrainedNonCenteredFactoryHooks:
                 raise ValueError("Pretrained epsilon arrays must have width `n_dim`.")
 
             epsilon_scale = np.maximum(epsilon_scale, variance_floor)
-            epsilon_scale_untransformed = tfp.math.softplus_inverse(epsilon_scale).numpy()
+            epsilon_scale_untransformed = keras.ops.convert_to_numpy(
+                softplus_inverse(epsilon_scale)
+            )
 
             return NonCenteredPosteriorFactory(
                 epsilon_loc_gradient_scale=loc_gradient_scale,
@@ -164,7 +166,9 @@ class PretrainedNonCenteredFactoryHooks:
 
             point_std = max(variance_floor, warmstart_strength * target_std)
             point_scale = np.full_like(epsilon_loc, point_std, dtype="float32")
-            point_scale_untransformed = tfp.math.softplus_inverse(point_scale).numpy()
+            point_scale_untransformed = keras.ops.convert_to_numpy(
+                softplus_inverse(point_scale)
+            )
 
             return NonCenteredPosteriorFactory(
                 epsilon_loc_gradient_scale=loc_gradient_scale,

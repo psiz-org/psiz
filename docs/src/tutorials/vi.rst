@@ -40,6 +40,38 @@ Most VI workflows in PsiZ follow this pattern:
 3. Train while monitoring data-fit metrics and KL-informed objectives.
 4. Evaluate predictive metrics and inspect uncertainty-sensitive behavior.
 
+Checkpoint and export workflow
+==============================
+
+Use Keras-native checkpoints during training, then export a finalized PsiZ
+artifact once training is complete.
+
+.. code-block:: python
+
+	from pathlib import Path
+
+	import keras
+	import psiz
+
+	checkpoint_path = Path("checkpoints") / "best.model.keras"
+	callbacks = [
+		keras.callbacks.ModelCheckpoint(
+			filepath=checkpoint_path,
+			monitor="val_loss",
+			save_best_only=True,
+			save_weights_only=False,
+			mode="min",
+		)
+	]
+
+	model.fit(train_ds, validation_data=val_ds, callbacks=callbacks)
+
+	# Export durable/shareable artifact after training.
+	psiz.keras.save_psiz_model(model, "release_model.psiz")
+
+This preserves robust resume behavior during training while producing a
+portable artifact for long-term storage and sharing.
+
 Related pages
 =============
 

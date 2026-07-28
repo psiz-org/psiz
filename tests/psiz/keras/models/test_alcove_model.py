@@ -188,11 +188,11 @@ class TestALCOVECell:
         eval0 = model.evaluate(tfds)
 
         # Test storage.
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
         # Load the saved model.
-        loaded = keras.models.load_model(
+        loaded = psiz.keras.load_psiz_model(
             fp_model,
             custom_objects={"ALCOVEModelA": ALCOVEModelA},
         )
@@ -221,11 +221,11 @@ class TestALCOVECell:
         eval0 = model.evaluate(tfds)
 
         # Test storage.
-        fp_model = Path(tmpdir) / "test_model.keras"
-        model.save(fp_model)
+        fp_model = Path(tmpdir) / "test_model.psiz"
+        psiz.keras.save_psiz_model(model, fp_model)
         del model
         # Load the saved model.
-        loaded = keras.models.load_model(
+        loaded = psiz.keras.load_psiz_model(
             fp_model,
         )
         eval1 = loaded.evaluate(tfds)

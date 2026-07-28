@@ -22,7 +22,7 @@ import pytest
 import psiz
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_call_shape_and_take_distribution():
     """Test non-centered call shape and take distribution shape."""
     base_embedding = psiz.keras.layers.EmbeddingNormalDiag(
@@ -46,7 +46,7 @@ def test_call_shape_and_take_distribution():
     np.testing.assert_array_equal(np.shape(dist_mean), [2, 3])
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_serialization_preserves_non_centered_config():
     """Test serialization round-trip preserves key non-centered fields."""
     base_embedding = psiz.keras.layers.EmbeddingNormalDiag(

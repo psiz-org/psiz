@@ -186,7 +186,7 @@ def test_psiz_save_load_roundtrip_jax(tmp_path):
     _save_load_roundtrip(tmp_path, "jax")
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_psiz_save_load_simple_vi_structure(tmp_path):
     memberships = np.array([[0, 10], [0, 10], [0, 11], [0, 12]], dtype="int32")
     hierarchy = HierarchySpec(
@@ -223,7 +223,7 @@ def test_psiz_save_load_simple_vi_structure(tmp_path):
     np.testing.assert_allclose(original_loc, loaded_loc)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_psiz_save_load_hierarchical_vi_structure(tmp_path):
     memberships = np.array(
         [

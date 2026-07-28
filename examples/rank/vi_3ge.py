@@ -48,10 +48,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow_probability as tfp
 
 import psiz
-from psiz.tfp import unpack_mvn
+from psiz.stochastic import unpack_mvn
+from psiz.stochastic.transforms import softplus_inverse
 
 # NOTE: Uncomment the following lines to force eager execution.
 # import tensorflow as tf
@@ -263,8 +263,10 @@ def main():
 
     def simulate_agent(x):
         outcome_probs = model_true(x)
-        outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
-        outcome_idx = outcome_distribution.sample()
+        outcome_idx = keras.random.categorical(
+            keras.ops.log(outcome_probs), num_samples=1
+        )
+        outcome_idx = keras.ops.squeeze(outcome_idx, axis=-1)
         outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
@@ -590,7 +592,7 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
         n_stimuli + 1,
         n_dim,
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(posterior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(posterior_scale))
         ),
         mask_zero=True,
         name="population_posterior",
@@ -603,7 +605,7 @@ def build_vi_shared_prior(n_stimuli, n_dim, kl_weight):
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
             name="population_prior_single",
@@ -633,7 +635,7 @@ def build_vi_percept(n_stimuli, n_dim, shared_prior, kl_weight, name):
         n_dim,
         loc_initializer=keras.initializers.Constant(shared_prior.posterior.loc),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
         mask_zero=True,
         name=f"{name}_posterior",

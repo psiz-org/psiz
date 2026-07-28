@@ -2,6 +2,12 @@
 
 If you are looking for a place to start, we recomend `rank/mle_1g.py`. This example demonstrates the simplest use case.
 
+Before running examples, set a Keras backend and ensure matching backend dependencies are installed.
+For example:
+* `export KERAS_BACKEND=tensorflow`
+* `export KERAS_BACKEND=torch`
+* `export KERAS_BACKEND=jax`
+
 The examples are organized into separate directories based on the type of behavioural data collected (i.e., trial type).
 * `rank`
 * `rate`

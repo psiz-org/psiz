@@ -18,9 +18,9 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 import psiz
+from psiz.stochastic.transforms import softplus_inverse
 
 from psiz.keras.layers.embeddings.embedding_shared import EmbeddingShared
 from psiz.keras.layers.embeddings.embedding_take import EmbeddingTake
@@ -108,7 +108,7 @@ def test_locked_enum_values():
     assert ParentMapPolicy.CUSTOM.value == "custom"
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_function_builder_builds_and_calls():
     """Test simple function wrapper creates callable layer stack."""
     memberships = np.array(
@@ -135,7 +135,7 @@ def test_function_builder_builds_and_calls():
     assert len(model_layer.losses) >= 1
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_class_builder_serialization_roundtrip():
     """Test builder config round-trip."""
     builder = HierarchicalVIEmbeddingBuilder(
@@ -183,7 +183,7 @@ def test_custom_policy_requires_callback():
         )
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_default_builder_pretrained_mode_requires_hook():
     """Ensure default builder still protects pretrained modes."""
     hierarchy = HierarchySpec(
@@ -226,7 +226,7 @@ def test_default_builder_pretrained_mode_requires_hook():
         )
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_advanced_builder_pretrained_hook_builds_and_calls():
     """Ensure pretrained and point-estimate modes are enabled by hooks."""
     memberships = np.array(
@@ -302,7 +302,7 @@ def test_advanced_builder_pretrained_hook_builds_and_calls():
         assert outputs.shape == (3, 2)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_hierarchical_contract_preserves_nested_prior_chain():
     """Freeze the nested layer access chain used by downstream code."""
     memberships = np.array(
@@ -342,7 +342,7 @@ def test_hierarchical_contract_preserves_nested_prior_chain():
     np.testing.assert_equal(outputs.shape, (3, 2))
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_variational_contract_preserves_distribution_chain():
     """Freeze the public distribution access pattern used in examples."""
     n_stimuli = 10
@@ -354,7 +354,7 @@ def test_variational_contract_preserves_distribution_chain():
         n_dim,
         mask_zero=False,
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
     prior = EmbeddingShared(
@@ -366,7 +366,7 @@ def test_variational_contract_preserves_distribution_chain():
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),
@@ -392,7 +392,7 @@ def test_variational_contract_preserves_distribution_chain():
     np.testing.assert_equal(outputs.shape, (3, n_dim))
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_contract_keras_save_load_access_continuity(tmp_path):
     """Freeze Keras save/load continuity for the hierarchical access chain."""
     memberships = np.array(
@@ -437,7 +437,7 @@ def test_contract_keras_save_load_access_continuity(tmp_path):
     np.testing.assert_allclose(original_loc, loaded_loc)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_contract_psiz_save_load_access_continuity(tmp_path):
     """Freeze save/load continuity for the hierarchical access chain."""
     memberships = np.array(
@@ -480,7 +480,7 @@ def test_contract_psiz_save_load_access_continuity(tmp_path):
     np.testing.assert_allclose(original_loc, loaded_loc)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_contract_stochastic_sample_shape():
     """Freeze stochastic sample shape semantics for distribution embeddings."""
     embedding = EmbeddingNormalDiag(
@@ -495,7 +495,7 @@ def test_contract_stochastic_sample_shape():
     np.testing.assert_equal(outputs.shape, (2, 4, 3, 2))
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_contract_invalid_path_errors_are_clear():
     """Freeze the failure mode for unsupported hierarchical hops."""
     memberships = np.array(

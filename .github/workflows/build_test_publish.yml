@@ -11,9 +11,16 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   build_dist_py3:
-    name: Build Python 3.X distribution
+    name: Build and check Python 3.X distribution
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
@@ -26,9 +33,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools
-        pip install build
+        pip install build twine
     - name: Build package
       run: python -m build
+    - name: Check distribution metadata
+      run: twine check dist/*
     - uses: actions/upload-artifact@v5
       with:
         name: dist-py3
@@ -36,92 +45,181 @@ jobs:
         if-no-files-found: error
         retention-days: 3
 
-  check_dist:
-    name: Check Python 3.X distribution
+  lint_dist:
+    name: Lint distribution (py311)
     needs: [build_dist_py3]
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Python 3.10
+    - uses: actions/checkout@v5
+    - name: Set up Python 3.11
       uses: actions/setup-python@v6
       with:
-        python-version: '3.10'
+        python-version: '3.11'
     - name: Install dependencies
-      run: pip install twine
-    - uses: actions/download-artifact@v5
-      with:
-        name: dist-py3
-        path: dist/
-    - run: twine check dist/*
+      run: |
+        python -m pip install --upgrade pip setuptools
+        pip install flake8 pylint
+        pip install .
+    - name: Analyse code with flake8
+      run: |
+        flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Analyse code with pylint
+      run: |
+        pylint --disable=R,C,W --ignored-modules=tensorflow src
 
-  lint_dist:
-    name: Lint and test Python distribution
-    needs: [build_dist_py3, check_dist]
+  test_adapter_surface:
+    name: Adapter-surface tier (py${{ matrix.python-version }})
+    needs: [build_dist_py3]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/download-artifact@v5
-      with:
-        name: dist-py3
-        path: dist/
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+    - name: Install test dependencies only
+      run: uv sync --group test
+    - name: Run adapter-surface tests
       run: |
-        python -m pip install --upgrade pip setuptools
-        pip install flake8 pylint pytest pytest-cov tensorboard
-        # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install .
-    - name: Analyse code with flake8
+        KERAS_BACKEND=torch uv run pytest tests/psiz/stochastic/test_adapter_surface_contracts.py -m "adapter_surface" -q
+
+  test_backend_runtime_matrix:
+    name: Runtime tier (py${{ matrix.python-version }}, ${{ matrix.backend }})
+    needs: [build_dist_py3]
+    runs-on: ubuntu-latest
+    env:
+      KERAS_BACKEND: ${{ matrix.backend }}
+      PSIZ_EXPECTED_BACKEND: ${{ matrix.backend }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+        backend: [tensorflow, torch, jax]
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+    - name: Install backend dependencies
+      run: uv sync --group test --group backend-${{ matrix.backend }}
+    - name: Verify active backend identity
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Analyse code with pylint
+        uv run python -c "import keras, os; expected=os.environ['PSIZ_EXPECTED_BACKEND']; active=keras.backend.backend(); print(f'expected={expected} active={active}'); assert expected == active"
+    - name: Run core runtime smoke tests
       run: |
-        pylint --disable=R,C,W --ignored-modules=tensorflow src
-    - name: Run pytest with code coverage
-      if: ${{ matrix.python-version == '3.10'}}
+        uv run pytest \
+          tests/psiz/backend/test_backend_matrix_smoke.py::test_runtime_backend_identity_assertion \
+          tests/psiz/backend/test_backend_matrix_smoke.py::test_backend_matrix_core_smoke \
+          -q
+    - name: Run backend-specific runtime stochastic and example smoke tests
       run: |
-        pytest --cov-report=xml --cov=psiz tests/ 
-    - name: Run pytest without code coverage
-      if: ${{ matrix.python-version != '3.10'}}
+        uv run pytest \
+          tests/psiz/backend/test_backend_matrix_smoke.py \
+          -m "backend_runtime and backend_${{ matrix.backend }}" \
+          -q
+    - name: Run docs and storage round-trip smoke tests
       run: |
-        pytest
+        uv run pytest \
+          tests/psiz/backend/test_backend_matrix_smoke.py::test_docs_example_storage_roundtrip \
+          -m "docs_example" \
+          -q
+
+  test_backend_slow_subset:
+    name: Slow subset tier (py311, ${{ matrix.backend }})
+    needs: [build_dist_py3]
+    runs-on: ubuntu-latest
+    env:
+      KERAS_BACKEND: ${{ matrix.backend }}
+      PSIZ_EXPECTED_BACKEND: ${{ matrix.backend }}
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [tensorflow, torch, jax]
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+    - name: Install backend dependencies
+      run: uv sync --group test --group backend-${{ matrix.backend }}
+    - name: Run reduced slow backend subset
+      run: |
+        uv run pytest \
+          tests/psiz/backend/test_backend_matrix_smoke.py::test_backend_matrix_slow_subset \
+          -m "backend_slow" \
+          -q
+
+  test_coverage:
+    name: Coverage tier (py310, torch)
+    needs: [build_dist_py3]
+    runs-on: ubuntu-latest
+    env:
+      KERAS_BACKEND: torch
+      PSIZ_EXPECTED_BACKEND: torch
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.10'
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+    - name: Install coverage dependencies
+      run: uv sync --group test --group backend-torch
+    - name: Run pytest with coverage
+      run: |
+        uv run pytest --cov-report=xml --cov=psiz tests/
     - name: Upload coverage to Codecov
-      if: ${{ matrix.python-version == '3.10'}}
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
 
   publish_dist:
     name: Publish Python distribution
-    needs: [build_dist_py3, check_dist, lint_dist]
+    if: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'release' && startsWith(github.ref, 'refs/tags/v')) }}
+    needs:
+    - build_dist_py3
+    - lint_dist
+    - test_adapter_surface
+    - test_backend_runtime_matrix
+    - test_backend_slow_subset
+    - test_coverage
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
     - uses: actions/download-artifact@v5
       with:
         name: dist-py3
         path: dist/
-    - name: echo state
-      run: |
-        echo "github.event_name = $GITHUB_EVENT_NAME"
-        echo "github.ref = $GITHUB_REF"
     - name: Publish distribution to Test PyPI
-      if: ${{ github.ref != 'refs/heads/main' && github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')}}
+      if: ${{ github.event_name == 'push' }}
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
         repository-url: https://test.pypi.org/legacy/
     - name: Publish distribution to PyPI
-      if: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name == 'release'}}
+      if: ${{ github.event_name == 'release' }}
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         user: __token__

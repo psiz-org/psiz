@@ -39,10 +39,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow_probability as tfp
 
 import psiz
-from psiz.tfp import unpack_mvn
+from psiz.stochastic import unpack_mvn
+from psiz.stochastic.transforms import softplus_inverse
 
 # NOTE: Uncomment the following lines to force eager execution.
 # import tensorflow as tf
@@ -155,6 +155,8 @@ def main():
     n_frame = 5
     patience = 10
 
+    print(f"Using Keras backend: {keras.backend.backend()}")
+
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
     # Remove existing TensorBoard logs.
@@ -221,8 +223,10 @@ def main():
     def simulate_agent(x):
         depth = content.n_outcome
         outcome_probs = model_true(x)
-        outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
-        outcome_idx = outcome_distribution.sample()
+        outcome_idx = keras.random.categorical(
+            keras.ops.log(outcome_probs), num_samples=1
+        )
+        outcome_idx = keras.ops.squeeze(outcome_idx, axis=-1)
         outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
@@ -361,6 +365,12 @@ def main():
             fname = fp_project / Path("frame_{0}.tiff".format(i_frame))
             frames.append(imageio.imread(fname))
         imageio.mimwrite(fp_project / Path("evolution.gif"), frames, fps=1)
+
+    # Export final model state as a durable .psiz artifact.
+    artifact_dir = fp_project / Path("artifacts", "vi_1g_final.psiz")
+    artifact_dir.parent.mkdir(parents=True, exist_ok=True)
+    psiz.keras.save_psiz_model(model_inferred, artifact_dir)
+    print(f"Saved PsiZ artifact to: {artifact_dir}")
 
 
 def plot_frame(
@@ -534,7 +544,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
         n_dim,
         loc_initializer=keras.initializers.RandomNormal(stddev=0.0001, seed=252),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
         mask_zero=True,
     )
@@ -546,7 +556,7 @@ def build_model(n_stimuli, n_dim, n_obs_train):
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),

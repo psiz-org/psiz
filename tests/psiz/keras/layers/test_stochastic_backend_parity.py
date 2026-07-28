@@ -23,6 +23,9 @@ import psiz
 from psiz.keras.layers.variational import Variational
 
 
+pytestmark = pytest.mark.adapter_surface
+
+
 @pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
 def test_variational_layer_backend_parity(monkeypatch, backend):
     """Variational KL path works across stochastic adapters."""

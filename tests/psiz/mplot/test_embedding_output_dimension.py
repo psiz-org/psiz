@@ -19,10 +19,10 @@ import keras
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingNormalDiag
 from psiz.mplot import embedding_output_dimension
+from psiz.stochastic.transforms import softplus_inverse
 
 
 def emb_0(mask_zero, is_dist):
@@ -59,7 +59,7 @@ def emb_0(mask_zero, is_dist):
             mask_zero=mask_zero,
             loc_initializer=keras.initializers.Constant(locs),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(0.2).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(0.2))
             ),
         )
     else:
@@ -74,7 +74,7 @@ def emb_0(mask_zero, is_dist):
     return emb
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 @pytest.mark.parametrize("mask_zero", [False, True])
 @pytest.mark.parametrize("ax_present", [False, True])
 def test_deterministic_emb_output(mask_zero, ax_present):
@@ -108,7 +108,7 @@ def test_deterministic_emb_output(mask_zero, ax_present):
     plt.close(fig)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 @pytest.mark.parametrize("mask_zero", [False, True])
 @pytest.mark.parametrize("ax_present", [False, True])
 def test_stochastic_emb_output(mask_zero, ax_present):

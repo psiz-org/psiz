@@ -19,9 +19,6 @@ from __future__ import annotations
 
 from psiz.backend import resolve_backend
 from psiz.stochastic.adapters.base import DistributionProtocol
-from psiz.stochastic.adapters.jax import JaxStochasticAdapter
-from psiz.stochastic.adapters.tensorflow import TensorFlowStochasticAdapter
-from psiz.stochastic.adapters.torch import TorchStochasticAdapter
 
 
 _CANONICAL_PARAMETER_ALIASES = {
@@ -38,10 +35,16 @@ def get_stochastic_adapter(backend_override=None):
     """Return stochastic adapter for resolved backend."""
     backend = resolve_backend(backend_override)
     if backend == "tensorflow":
+        from psiz.stochastic.adapters.tensorflow import TensorFlowStochasticAdapter
+
         return TensorFlowStochasticAdapter()
     if backend == "torch":
+        from psiz.stochastic.adapters.torch import TorchStochasticAdapter
+
         return TorchStochasticAdapter()
     if backend == "jax":
+        from psiz.stochastic.adapters.jax import JaxStochasticAdapter
+
         return JaxStochasticAdapter()
     raise ValueError(f"Unsupported backend '{backend}'.")
 

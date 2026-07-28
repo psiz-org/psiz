@@ -21,7 +21,6 @@ from pathlib import Path
 import keras
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 import psiz
 
@@ -860,7 +859,7 @@ class TestSoftRank:
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test usage in 'agent mode'."""
@@ -870,8 +869,10 @@ class TestSoftRank:
         def simulate_agent(x):
             n_class = 4
             outcome_probs = model(x)
-            outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
-            outcome_idx = outcome_distribution.sample()
+            outcome_idx = keras.random.categorical(
+                keras.ops.log(outcome_probs), num_samples=1
+            )
+            outcome_idx = keras.ops.squeeze(outcome_idx, axis=-1)
             outcome_one_hot = keras.ops.one_hot(
                 outcome_idx, n_class
             )  # TODO verify this is correct

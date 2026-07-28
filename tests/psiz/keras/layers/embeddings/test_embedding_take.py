@@ -17,10 +17,10 @@
 
 import keras
 import numpy as np
-import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingLaplaceDiag, EmbeddingNormalDiag
 from psiz.keras.layers import EmbeddingTake
+from psiz.stochastic.transforms import softplus_inverse
 
 
 def test_deterministic_0():
@@ -193,7 +193,7 @@ def test_stochastic_0():
         1,
         loc_initializer=keras.initializers.Constant(0.1),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(0.01).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(0.01))
         ),
         loc_trainable=False,
     )
@@ -251,7 +251,7 @@ def test_stochastic_1():
         2,
         loc_initializer=keras.initializers.Constant(np.array([0.1, 0.2])),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(np.array([0.01, 0.02])).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(np.array([0.01, 0.02])))
         ),
         loc_trainable=False,
     )
@@ -316,9 +316,9 @@ def test_stochastic_2a():
             np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
         ),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(
+            keras.ops.convert_to_numpy(softplus_inverse(
                 np.array([[0.01, 0.02], [0.03, 0.04], [0.05, 0.06]])
-            ).numpy()
+            ))
         ),
         loc_trainable=False,
     )
@@ -379,9 +379,9 @@ def test_stochastic_2b():
             np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
         ),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(
+            keras.ops.convert_to_numpy(softplus_inverse(
                 np.array([[0.01, 0.02], [0.03, 0.04], [0.05, 0.06]])
-            ).numpy()
+            ))
         ),
         loc_trainable=False,
     )

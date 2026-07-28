@@ -19,9 +19,9 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 from psiz.keras.layers import EmbeddingNormalDiag
+from psiz.stochastic.transforms import softplus_inverse
 from psiz.keras.layers import ExponentialSimilarity
 from psiz.keras.layers import BraidGate
 from psiz.keras.layers import Minkowski
@@ -214,7 +214,7 @@ def emb_subnets_stoch_rank0():
         mask_zero=True,
         loc_initializer=keras.initializers.Constant(base_array),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
 
@@ -224,7 +224,7 @@ def emb_subnets_stoch_rank0():
         mask_zero=True,
         loc_initializer=keras.initializers.Constant(base_array + 100),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
 
@@ -234,7 +234,7 @@ def emb_subnets_stoch_rank0():
         mask_zero=True,
         loc_initializer=keras.initializers.Constant(base_array + 200),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
 
@@ -274,7 +274,7 @@ def emb_subnets_stoch_rank1():
         mask_zero=True,
         loc_initializer=keras.initializers.Constant(base_array),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
 
@@ -284,7 +284,7 @@ def emb_subnets_stoch_rank1():
         mask_zero=True,
         loc_initializer=keras.initializers.Constant(base_array + 100),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
 
@@ -294,7 +294,7 @@ def emb_subnets_stoch_rank1():
         mask_zero=True,
         loc_initializer=keras.initializers.Constant(base_array + 200),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
 
@@ -471,7 +471,7 @@ def test_call_1input_emb_determ_3d_input(
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_call_1input_emb_stoch_2d_input_rank0(
     emb_subnets_stoch_rank0, inputs_emb_v0, groups_v0_1
 ):
@@ -495,7 +495,7 @@ def test_call_1input_emb_stoch_2d_input_rank0(
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs, decimal=1)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_call_1input_emb_stoch_2d_input_rank1(
     emb_subnets_stoch_rank1, inputs_emb_v0, groups_v0_1
 ):
@@ -549,7 +549,7 @@ def test_call_listinput_timestep(gates_v0_timestep, inputs_list_timestep):
     np.testing.assert_array_almost_equal(outputs, outputs_desired)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_call_1input_emb_empty_branch(
     emb_subnets_stoch_rank0, inputs_emb_v0, group_3g_empty_v0_1
 ):
@@ -571,7 +571,7 @@ def test_call_1input_emb_empty_branch(
     np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs, decimal=1)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_serialization_1input_emb(emb_subnets_stoch_rank1, inputs_emb_v0, groups_v0_0):
     groups = groups_v0_0
 

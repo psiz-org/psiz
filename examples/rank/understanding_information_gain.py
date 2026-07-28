@@ -30,11 +30,11 @@ import keras
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow_probability as tfp
 
 import psiz
 from psiz.keras.ops import ig_model_categorical
-from psiz.tfp import unpack_mvn
+from psiz.stochastic import unpack_mvn
+from psiz.stochastic.transforms import softplus_inverse
 
 # NOTE: Uncomment the following lines to force eager execution.
 # import tensorflow as tf
@@ -278,7 +278,7 @@ def build_model(n_reference, n_select, case):
         n_dim,
         mask_zero=True,
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
     proximity = psiz.keras.layers.Minkowski(
@@ -325,7 +325,9 @@ def build_model(n_reference, n_select, case):
 
     # Assign scenario variables.
     model.percept.loc.assign(loc)
-    model.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
+    model.percept.untransformed_scale.assign(
+        keras.ops.convert_to_numpy(softplus_inverse(scale))
+    )
     return model
 
 

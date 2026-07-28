@@ -18,9 +18,9 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 import psiz
+from psiz.stochastic.transforms import softplus_inverse
 from psiz.keras.ops import ig_model_categorical
 
 
@@ -91,7 +91,7 @@ def base_circular_model():
         mask_zero=True,
         loc_initializer=keras.initializers.Constant(loc),
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
 
@@ -112,7 +112,7 @@ def model_0():
 
     # Update `scale` of model.
     model.percept.build()
-    model.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
+    model.percept.untransformed_scale.assign(keras.ops.convert_to_numpy(softplus_inverse(scale)))
     return model
 
 
@@ -129,7 +129,7 @@ def model_1():
     # Update `loc` and `scale` in model.
     model.percept.build()
     model.percept.loc.assign(loc)
-    model.percept.untransformed_scale.assign(tfp.math.softplus_inverse(scale))
+    model.percept.untransformed_scale.assign(keras.ops.convert_to_numpy(softplus_inverse(scale)))
     return model
 
 
@@ -148,7 +148,7 @@ def ds_2rank1():
     return tfds
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_1_model(model_0, ds_2rank1):
     """Test IG computation using one model."""
     n_sample = 10000
@@ -169,7 +169,7 @@ def test_1_model(model_0, ds_2rank1):
     assert ig[0] > ig[-1]
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_2_models(model_0, model_1, ds_2rank1):
     """Test IG computation using two models.
 

@@ -22,7 +22,6 @@ from psiz.keras.layers.activations.students_t import StudentsTSimilarity
 from psiz.keras.layers.combiner import Combiner
 from psiz.keras.layers.drop import Drop
 from psiz.keras.layers.variational import Variational
-from psiz.keras.layers.behaviors.experimental.alcove_cell import ALCOVECell
 from psiz.keras.layers.behaviors.logistic import Logistic
 from psiz.keras.layers.behaviors.soft_rank_base import SoftRankBase
 from psiz.keras.layers.behaviors.soft_rank import SoftRank
@@ -78,6 +77,14 @@ from psiz.keras.layers.proximities.minkowski_stochastic import MinkowskiStochast
 from psiz.keras.layers.proximities.minkowski_variational import MinkowskiVariational
 from psiz.keras.layers.proximities.proximity import Proximity
 
+# ALCOVECell currently depends on TensorFlow-only APIs.
+try:
+    from psiz.keras.layers.behaviors.experimental.alcove_cell import ALCOVECell
+except ModuleNotFoundError as exc:
+    if exc.name != "tensorflow":
+        raise
+    ALCOVECell = None
+
 __all__ = [
     "ExponentialSimilarity",
     "HeavyTailedSimilarity",
@@ -85,7 +92,6 @@ __all__ = [
     "StudentsTSimilarity",
     "SoftRankBase",
     "SoftRank",
-    "ALCOVECell",
     "Logistic",
     "EmbeddingTake",
     "EmbeddingGammaDiag",
@@ -128,3 +134,6 @@ __all__ = [
     "MinkowskiVariational",
     "Proximity",
 ]
+
+if ALCOVECell is not None:
+    __all__.append("ALCOVECell")

@@ -18,10 +18,10 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 from psiz.keras.layers.proximities.minkowski_variational import MinkowskiVariational
 from psiz.keras.layers.proximities.minkowski_stochastic import MinkowskiStochastic
+from psiz.stochastic import is_distribution
 
 
 def test_call(paired_inputs_v0):
@@ -82,7 +82,7 @@ def test_serialization():
     )
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_properties():
     """Test properties."""
     kl_weight = 0.1
@@ -97,10 +97,10 @@ def test_properties():
 
     # Test weight property.
     w = mink_layer.w
-    assert isinstance(w, tfp.distributions.Distribution)
+    assert is_distribution(w)
     assert w.event_shape == [3]
 
     # Test rho property.
     rho = mink_layer.rho
-    assert isinstance(rho, tfp.distributions.Distribution)
+    assert is_distribution(rho)
     assert rho.event_shape == []

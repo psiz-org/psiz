@@ -218,7 +218,10 @@ class SoftRankBase(keras.layers.Layer):
 
         # Mask non-existent selection events (i.e, non-existent option
         # selections).
-        event_logit = self._selection_mask * event_logit
+        selection_mask = keras.ops.convert_to_tensor(
+            self._selection_mask, dtype=event_logit.dtype
+        )
+        event_logit = selection_mask * event_logit
 
         # Compute log-probability of outcome (i.e., a sequence of events).
         outcome_logit = keras.ops.sum(event_logit, axis=self._option_axis)

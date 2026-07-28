@@ -13,14 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Module of TensorFlow Probability (tfp) objects.
+"""Compatibility namespace for legacy TensorFlow Probability helpers."""
 
-Modules:
-    distributions
-
-"""
-
-from psiz.tfp import distributions
 from psiz.tfp.unpack_mvn import unpack_mvn
 
 __all__ = [

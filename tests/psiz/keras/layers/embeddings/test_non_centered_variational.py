@@ -26,7 +26,7 @@ from psiz.keras.layers.embeddings.normal_diag import EmbeddingNormalDiag
 from psiz.keras.layers.posterior_factory import NonCenteredPosteriorFactory
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_roundtrip_preserves_factory_configuration():
     """Ensure config round-trip reconstructs posterior factory."""
     prior_core = EmbeddingNormalDiag(
@@ -81,7 +81,7 @@ def test_roundtrip_preserves_factory_configuration():
     assert reconstructed_factory.epsilon_scale_trainable is False
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_posterior_full_map_recovers_destination_ids_all_levels():
     """Ensure remap recovers destination IDs for non-monotonic levels."""
     base_memberships = np.array(
@@ -117,7 +117,7 @@ def test_posterior_full_map_recovers_destination_ids_all_levels():
         assert mismatch == 0
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_call_registers_kl_loss():
     """Ensure call adds non-centered KL loss term."""
     prior_core = EmbeddingNormalDiag(

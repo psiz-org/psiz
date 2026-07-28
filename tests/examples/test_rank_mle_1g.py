@@ -20,7 +20,6 @@ import keras
 import numpy as np
 import pytest
 from scipy.stats import pearsonr
-import tensorflow_probability as tfp
 
 import psiz
 from psiz.utils import choice_wo_replace
@@ -184,7 +183,7 @@ def build_model(n_stimuli, n_dim, similarity_func, mask_zero):
 # "learnable" by the other similarity functions.
 # TODO Would ideally use `keras.utils.split_dataset`, but it is brittle.
 @pytest.mark.slow
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 @pytest.mark.parametrize("similarity_func", ["Exponential"])
 @pytest.mark.parametrize("mask_zero", [True])
 @pytest.mark.parametrize("is_eager", [True, False])
@@ -246,8 +245,10 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     def simulate_agent(x):
         outcome_probs = model_true(x)
-        outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
-        outcome_idx = outcome_distribution.sample()
+        outcome_idx = keras.random.categorical(
+            keras.ops.log(outcome_probs), num_samples=1
+        )
+        outcome_idx = keras.ops.squeeze(outcome_idx, axis=-1)
         outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 

@@ -25,6 +25,9 @@ from psiz.stochastic import kl_divergence
 from psiz.stochastic import softplus_inverse
 
 
+pytestmark = pytest.mark.adapter_surface
+
+
 @pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
 def test_stochastic_adapter_distribution_surface_parity(backend):
     """Each backend adapter exposes the same core distribution surface."""

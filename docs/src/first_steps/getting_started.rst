@@ -24,7 +24,8 @@ PsiZ is hosted on PyPI and is easily installed using :code:`pip`. Alternatively,
 System Requirements
 -------------------
 * Python 3.10-3.13
-* cuDNN & CUDA: If using a conda virtual environment, you probably want to install cuDNN and CUDA libraries using :code:`conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0`. Replace the specified versions with those appropriate for your setup based on the `TF compatibility matrix <https://www.tensorflow.org/install/source#gpu>`_.   See the `TF Install Guide <https://www.tensorflow.org/install/pip>`_ for the latest recommendation.
+* Backend runtime (choose one or more): TensorFlow, PyTorch, or JAX.
+* cuDNN & CUDA are only required when using GPU-enabled backend builds. For TensorFlow GPU installs, consult the `TF compatibility matrix <https://www.tensorflow.org/install/source#gpu>`_.
 
 Install using PyPI
 ------------------
@@ -32,6 +33,26 @@ Install using PyPI
 .. code:: bash
 
     pip install psiz
+
+Install backend runtime dependencies (choose one):
+
+.. code:: bash
+
+    pip install "psiz[backend-tensorflow]"
+
+.. code:: bash
+
+    pip install "psiz[backend-torch]"
+
+.. code:: bash
+
+    pip install "psiz[backend-jax]"
+
+Set your backend before importing :code:`keras` or :code:`psiz`:
+
+.. code:: bash
+
+    export KERAS_BACKEND=torch
 
 Install using git
 -----------------
@@ -46,7 +67,7 @@ You can also install PsiZ via `git`. You first clone the PsiZ repository from Gi
 Design Philosophy
 =================
 
-PsiZ is built using the TensorFlow ecosystem and strives to closely follow  TensorFlow and Keras idioms, therefore inheriting all of the powerful functionality of TensorFlow and Keras. PsiZ focuses on providing mid-level objects that subclass :py:class:`keras.layers.Layer`. PsiZ aims to follow the principle of *progressive disclosure of complexity* to enable low-friction startup and opt-in flexibility.
+PsiZ is built around Keras and supports TensorFlow, PyTorch, and JAX backends. PsiZ focuses on providing mid-level objects that subclass :py:class:`keras.layers.Layer`. PsiZ aims to follow the principle of *progressive disclosure of complexity* to enable low-friction startup and opt-in flexibility.
 
 
 What next?

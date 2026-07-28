@@ -18,9 +18,10 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 import psiz.data
+from psiz.stochastic import is_distribution
+from psiz.stochastic.transforms import softplus_inverse
 import psiz.keras.layers
 
 
@@ -175,7 +176,7 @@ def ds_3rank1_4x2():
 #         return self.net(inputs, training=training)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_call_approx(emb_inputs_v1):
     """Test call."""
     kl_weight = 0.1
@@ -188,7 +189,7 @@ def test_call_approx(emb_inputs_v1):
         n_dim,
         mask_zero=False,
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -200,7 +201,7 @@ def test_call_approx(emb_inputs_v1):
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),
@@ -222,7 +223,7 @@ def test_call_approx(emb_inputs_v1):
     np.testing.assert_equal(np.shape(outputs), desired_shape)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_serialization():
     """Test serialization with weights."""
     kl_weight = 0.1
@@ -235,7 +236,7 @@ def test_serialization():
         n_dim,
         mask_zero=False,
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -247,7 +248,7 @@ def test_serialization():
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),
@@ -293,7 +294,7 @@ def test_serialization():
     )
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_properties():
     kl_weight = 0.1
     n_stimuli = 10
@@ -305,7 +306,7 @@ def test_properties():
         n_dim,
         mask_zero=False,
         scale_initializer=keras.initializers.Constant(
-            tfp.math.softplus_inverse(prior_scale).numpy()
+            keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
         ),
     )
     embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -317,7 +318,7 @@ def test_properties():
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),
@@ -341,7 +342,7 @@ def test_properties():
     assert not mask_zero
 
     embeddings = orig_layer.embeddings
-    assert isinstance(embeddings, tfp.distributions.Distribution)
+    assert is_distribution(embeddings)
 
 
 # TODO
@@ -361,7 +362,7 @@ def test_properties():
 #         n_dim,
 #         mask_zero=True,
 #         scale_initializer=keras.initializers.Constant(
-#             tfp.math.softplus_inverse(prior_scale).numpy()
+#             keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #         ),
 #     )
 #     embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -373,7 +374,7 @@ def test_properties():
 #             1,
 #             loc_initializer=keras.initializers.Constant(0.0),
 #             scale_initializer=keras.initializers.Constant(
-#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#                 keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #             ),
 #             loc_trainable=False,
 #         ),
@@ -447,7 +448,7 @@ def test_properties():
 #         n_dim,
 #         mask_zero=True,
 #         scale_initializer=keras.initializers.Constant(
-#             tfp.math.softplus_inverse(prior_scale).numpy()
+#             keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #         ),
 #     )
 #     embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -459,7 +460,7 @@ def test_properties():
 #             1,
 #             loc_initializer=keras.initializers.Constant(0.0),
 #             scale_initializer=keras.initializers.Constant(
-#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#                 keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #             ),
 #             loc_trainable=False,
 #         ),

@@ -22,9 +22,9 @@ import keras
 import numpy as np
 import pytest
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 import psiz.keras.layers
+from psiz.stochastic.transforms import softplus_inverse
 from psiz.keras.models.stochastic_model import StochasticModel
 
 
@@ -436,7 +436,7 @@ class RankModelA(StochasticModel):
                 n_dim,
                 mask_zero=True,
                 scale_initializer=keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
+                    keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                 ),
             )
         self.percept = percept
@@ -511,7 +511,7 @@ class RankModelB(StochasticModel):
                 n_dim,
                 mask_zero=True,
                 scale_initializer=keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
+                    keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                 ),
             )
             embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -523,7 +523,7 @@ class RankModelB(StochasticModel):
                     1,
                     loc_initializer=keras.initializers.Constant(0.0),
                     scale_initializer=keras.initializers.Constant(
-                        tfp.math.softplus_inverse(prior_scale).numpy()
+                        keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                     ),
                     loc_trainable=False,
                 ),
@@ -606,7 +606,7 @@ class RankModelC(StochasticModel):
                 n_dim,
                 mask_zero=True,
                 scale_initializer=keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
+                    keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                 ),
             )
             embedding_posterior_1 = psiz.keras.layers.EmbeddingNormalDiag(
@@ -614,7 +614,7 @@ class RankModelC(StochasticModel):
                 n_dim,
                 mask_zero=True,
                 scale_initializer=keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
+                    keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                 ),
             )
             embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -626,7 +626,7 @@ class RankModelC(StochasticModel):
                     1,
                     loc_initializer=keras.initializers.Constant(0.0),
                     scale_initializer=keras.initializers.Constant(
-                        tfp.math.softplus_inverse(prior_scale).numpy()
+                        keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                     ),
                     loc_trainable=False,
                 ),
@@ -722,7 +722,7 @@ class RankModelD(StochasticModel):
                 n_dim,
                 mask_zero=True,
                 scale_initializer=keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
+                    keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                 ),
             )
             embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -734,7 +734,7 @@ class RankModelD(StochasticModel):
                     1,
                     loc_initializer=keras.initializers.Constant(0.0),
                     scale_initializer=keras.initializers.Constant(
-                        tfp.math.softplus_inverse(prior_scale).numpy()
+                        keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                     ),
                     loc_trainable=False,
                 ),
@@ -848,7 +848,7 @@ class RankModelD(StochasticModel):
 #             n_dim,
 #             mask_zero=True,
 #             scale_initializer=keras.initializers.Constant(
-#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#                 keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #             ),
 #         )
 #         embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -860,7 +860,7 @@ class RankModelD(StochasticModel):
 #                 1,
 #                 loc_initializer=keras.initializers.Constant(0.0),
 #                 scale_initializer=keras.initializers.Constant(
-#                     tfp.math.softplus_inverse(prior_scale).numpy()
+#                     keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #                 ),
 #                 loc_trainable=False,
 #             ),
@@ -922,7 +922,7 @@ class RateModelA(StochasticModel):
                 n_dim,
                 mask_zero=True,
                 scale_initializer=keras.initializers.Constant(
-                    tfp.math.softplus_inverse(prior_scale).numpy()
+                    keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                 ),
             )
             embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -934,7 +934,7 @@ class RateModelA(StochasticModel):
                     1,
                     loc_initializer=keras.initializers.Constant(0.0),
                     scale_initializer=keras.initializers.Constant(
-                        tfp.math.softplus_inverse(prior_scale).numpy()
+                        keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
                     ),
                     loc_trainable=False,
                 ),
@@ -1014,7 +1014,7 @@ class RateModelA(StochasticModel):
 #             n_dim,
 #             mask_zero=True,
 #             scale_initializer=keras.initializers.Constant(
-#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#                 keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #             ),
 #             trainable=False,
 #         )
@@ -1072,7 +1072,7 @@ class RateModelA(StochasticModel):
 #             n_dim,
 #             mask_zero=True,
 #             scale_initializer=keras.initializers.Constant(
-#                 tfp.math.softplus_inverse(prior_scale).numpy()
+#                 keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #             ),
 #         )
 #         embedding_prior = psiz.keras.layers.EmbeddingShared(
@@ -1084,7 +1084,7 @@ class RateModelA(StochasticModel):
 #                 1,
 #                 loc_initializer=keras.initializers.Constant(0.0),
 #                 scale_initializer=keras.initializers.Constant(
-#                     tfp.math.softplus_inverse(prior_scale).numpy()
+#                     keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
 #                 ),
 #                 loc_trainable=False,
 #             ),
@@ -2001,7 +2001,7 @@ class TestModelD:
 class TestRankSimilarity:
     """Test using `SoftRank` layer."""
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
@@ -2011,7 +2011,7 @@ class TestRankSimilarity:
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a_mixed_precision(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test subclassed `StochasticModel`."""
@@ -2044,7 +2044,7 @@ class TestRankSimilarity:
         keras.mixed_precision.set_global_policy("float32")
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load.
@@ -2094,7 +2094,7 @@ class TestRankSimilarity:
 
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_b(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
@@ -2104,7 +2104,7 @@ class TestRankSimilarity:
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_b(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load."""
@@ -2150,7 +2150,7 @@ class TestRankSimilarity:
 
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
         """Test subclassed `StochasticModel`."""
@@ -2160,7 +2160,7 @@ class TestRankSimilarity:
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_d(self, ds_2rank1_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
@@ -2170,8 +2170,7 @@ class TestRankSimilarity:
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test usage in 'agent mode'."""
@@ -2185,8 +2184,10 @@ class TestRankSimilarity:
             x = model.repeat_samples_in_batch_axis(x, n_sample)
             outcome_probs = model(x)
             outcome_probs = model.average_repeated_samples(outcome_probs, n_sample)
-            outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
-            outcome_idx = outcome_distribution.sample()
+            outcome_idx = keras.random.categorical(
+                keras.ops.log(outcome_probs), num_samples=1
+            )
+            outcome_idx = keras.ops.squeeze(outcome_idx, axis=-1)
             outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
             return outcome_one_hot
 
@@ -2269,7 +2270,7 @@ class TestRankSimilarity:
 class TestRateSimilarity:
     """Test using `Logistic` layer."""
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_rate2_v0, is_eager):
         """Test subclassed `StochasticModel`."""
@@ -2279,7 +2280,7 @@ class TestRateSimilarity:
         call_fit_evaluate_predict(model, tfds)
         keras.backend.clear_session()
 
-    @pytest.mark.tfp
+    @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_rate2_v0, is_eager, tmpdir):
         """Test save/load."""

@@ -42,7 +42,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow_probability as tfp
 
 import psiz
 
@@ -100,13 +99,10 @@ class NoisyRateModel(keras.Model):
         s = self.proximity([z_0, z_1])
         r = self.rate(s)
         # Add some uniform noise.
-        low = keras.ops.ones_like(r) * -0.025
-        high = keras.ops.ones_like(r) * 0.025
-        r_noisy = keras.ops.clip(
-            r + tfp.distributions.Uniform(low=low, high=high).sample([]),
-            0.0,
-            1.0,
+        noise = keras.random.uniform(
+            shape=keras.ops.shape(r), minval=-0.025, maxval=0.025, dtype=r.dtype
         )
+        r_noisy = keras.ops.clip(r + noise, 0.0, 1.0)
         return r_noisy
 
 

@@ -46,7 +46,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # noqa
 import numpy as np
 import keras
 from scipy.stats import pearsonr
-import tensorflow_probability as tfp
 
 import psiz
 
@@ -191,8 +190,10 @@ def main():
 
     def simulate_agent(x):
         outcome_probs = model_true(x)
-        outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
-        outcome_idx = outcome_distribution.sample()
+        outcome_idx = keras.random.categorical(
+            keras.ops.log(outcome_probs), num_samples=1
+        )
+        outcome_idx = keras.ops.squeeze(outcome_idx, axis=-1)
         outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 

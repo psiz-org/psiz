@@ -34,9 +34,6 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "keras >= 3.5, <4.0",
     "safetensors >= 0.4",
-    "tensorflow >= 2.18.0, <2.22.0",
-    "tensorflow-probability",
-    "tf-keras",
     "h5py >= 3.0",
     "pandas",
     "scikit-learn",
@@ -45,6 +42,27 @@ dependencies = [
     "imageio"
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest >= 6.2.4",
+    "pytest-cov",
+    "flake8",
+    "pylint",
+    "tox >= 4.20",
+]
+backend-tensorflow = [
+    "tensorflow >= 2.18.0, <2.22.0",
+    "tensorflow-probability",
+    "tf-keras",
+]
+backend-torch = [
+    "torch >= 2.4, <3.0",
+]
+backend-jax = [
+    "jax >= 0.4.30",
+    "jaxlib >= 0.4.30",
+]
 
 [project.urls]
 Homepage = "https://github.com/psiz-org/psiz"
@@ -57,7 +75,20 @@ test = [
     "pytest >= 6.2.4",
     "pytest-cov",
     "flake8",
-    "pylint"
+    "pylint",
+    "tox >= 4.20"
+]
+backend-tensorflow = [
+    "tensorflow >= 2.18.0, <2.22.0",
+    "tensorflow-probability",
+    "tf-keras",
+]
+backend-torch = [
+    "torch >= 2.4, <3.0",
+]
+backend-jax = [
+    "jax >= 0.4.30",
+    "jaxlib >= 0.4.30",
 ]
 tutorial = [
     "ipykernel>=6.30",

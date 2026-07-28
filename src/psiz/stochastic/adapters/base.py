@@ -49,7 +49,8 @@ def _as_int(value):
 def _concat_sample_and_batch_shape(sample_shape, batch_shape):
     sample_shape = _to_shape_tensor(sample_shape)
     batch_shape = _to_shape_tensor(batch_shape)
-    return keras.ops.concatenate([sample_shape, batch_shape], axis=0)
+    shape = keras.ops.concatenate([sample_shape, batch_shape], axis=0)
+    return tuple(keras.ops.convert_to_numpy(shape).tolist())
 
 
 @dataclass(frozen=True)
@@ -486,6 +487,13 @@ class KerasOpsStochasticAdapter:
         return SharedSampleDistribution(distribution=distribution, sample_shape=sample_shape)
 
     def kl_divergence(self, posterior, prior):
+        if isinstance(posterior, NormalDistribution) and isinstance(prior, NormalDistribution):
+            posterior_scale = posterior.scale
+            prior_scale = prior.scale
+            mean_delta = posterior.loc - prior.loc
+            variance_ratio = (keras.ops.square(posterior_scale) + keras.ops.square(mean_delta)) / keras.ops.square(prior_scale)
+            log_scale_ratio = keras.ops.log(prior_scale) - keras.ops.log(posterior_scale)
+            return 0.5 * (variance_ratio - 1.0 + 2.0 * log_scale_ratio)
         raise NotImplementedError(
             "Exact KL is not implemented for keras-ops adapter distributions."
         )

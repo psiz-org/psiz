@@ -2,6 +2,9 @@
 
 [![PyPI version](https://badge.fury.io/py/psiz.svg)](https://badge.fury.io/py/psiz)
 [![Python](https://img.shields.io/pypi/pyversions/psiz.svg?style=plastic)](https://badge.fury.io/py/psiz)
+[![TensorFlow backend](https://img.shields.io/badge/backend-tensorflow-orange.svg)](https://www.tensorflow.org/)
+[![PyTorch backend](https://img.shields.io/badge/backend-pytorch-red.svg)](https://pytorch.org/)
+[![JAX backend](https://img.shields.io/badge/backend-jax-blue.svg)](https://jax.readthedocs.io/)
 [![Documentation Status](https://readthedocs.org/projects/psiz/badge/?version=latest)](https://psiz.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/psiz-org/psiz/branch/main/graph/badge.svg?token=UIK748KI5I)](https://codecov.io/gh/psiz-org/psiz)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -27,15 +30,27 @@ The name PsiZ (pronounced like the word *size*, /sʌɪz/) is meant to serve as s
 
 There are two different ways to install: PyPI or git. Installing via git has the advantage of including examples and tests in the cloned repository.
 
-At the moment, PsiZ installs both TensorFlow and Pytorch as dependencies. A majority of Psiz will work with both backend frameworks, but not all features (such as stochastic layers) are supported for pytorch.
-
 ### Using PyPI
 ```bash
 pip install psiz
 ```
+Install a backend runtime (choose one):
+```bash
+pip install "psiz[backend-tensorflow]"
+```
+```bash
+pip install "psiz[backend-torch]"
+```
+```bash
+pip install "psiz[backend-jax]"
+```
 If you are in a local PsiZ checkout, you can optionally install the Python packages necessary for running package tests (e.g., `pytest`):
 ```bash
 pip install --group test .
+```
+For backend runtime tests from source checkout, install both test and one backend group:
+```bash
+pip install --group test --group backend-torch .
 ```
 
 ### Using uv
@@ -46,7 +61,17 @@ Install with test dependencies:
 ```bash
 uv sync --group test
 ```
-Install all dependencies:
+Install with backend runtime dependencies:
+```bash
+uv sync --group backend-tensorflow
+```
+```bash
+uv sync --group backend-torch
+```
+```bash
+uv sync --group backend-jax
+```
+Install all groups:
 ```bash
 uv sync --all-groups
 ```
@@ -164,7 +189,8 @@ Notes:
 * If the target output directory already exists and is non-empty, save raises an error.
 
 **Notes:**
-* PsiZ originally required TensorFlow. By default, PsiZ installs the CPU version of TensorFlow. If you want GPU acceleration, you must manually install a CUDA-enabled TensorFlow build that matches your Python/CUDA environment. Please see the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu) for supported Python and CUDA versions for each version of TensorFlow. As of PsiZ v0.12, Keras 3 is used for the majority of layers, which allows users to use either TensorFlow or Pytorch. Your preferred backend can be set by modifying the configuration file automatically created by Keras: `~/.keras/keras.json`. Pytorch support is still experimental.
+* PsiZ backend dependencies are intentionally modular in v0.14+: install one or more backend groups depending on your workflow.
+* TensorFlow GPU workflows still require a CUDA-compatible TensorFlow build that matches your Python/CUDA environment. See the [TF compatibility matrix](https://www.tensorflow.org/install/source#gpu).
 * PsiZ versions <=0.5.0 must be installed using git clone and editable mode (e.g., `pip install -e /local/path/to/psiz`).
 * You can install specific releases:
     * using PyPI: `pip install 'psiz==0.5.1'`

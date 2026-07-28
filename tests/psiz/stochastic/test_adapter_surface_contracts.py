@@ -13,20 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-"""Stochastic adapter layer for backend-agnostic PsiZ stochastic code."""
+"""Fast adapter-surface tests that do not require native backend installs."""
+
+import pytest
 
 from psiz.stochastic.adapters import canonicalize_parameters
-from psiz.stochastic.adapters import get_stochastic_adapter
-from psiz.stochastic.adapters import is_distribution
-from psiz.stochastic.kl import kl_divergence
-from psiz.stochastic.distributions import unpack_mvn
-from psiz.stochastic.transforms import softplus_inverse
 
-__all__ = [
-    "canonicalize_parameters",
-    "get_stochastic_adapter",
-    "is_distribution",
-    "kl_divergence",
-    "unpack_mvn",
-    "softplus_inverse",
-]
+
+pytestmark = pytest.mark.adapter_surface
+
+
+def test_adapter_surface_parameter_aliases():
+    canonical = canonicalize_parameters(
+        {
+            "mean": 0.25,
+            "sigma": 0.5,
+            "alpha": 3.0,
+            "unused": "passthrough",
+        }
+    )
+
+    assert canonical["loc"] == 0.25
+    assert canonical["scale"] == 0.5
+    assert canonical["concentration"] == 3.0
+    assert canonical["unused"] == "passthrough"
+
+
+def test_adapter_surface_rejects_duplicate_aliases():
+    with pytest.raises(ValueError, match="Multiple aliases provided"):
+        _ = canonicalize_parameters({"loc": 1.0, "mean": 1.0})

@@ -18,9 +18,10 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow_probability as tfp
 
 import psiz.data
+from psiz.stochastic import is_distribution
+from psiz.stochastic.transforms import softplus_inverse
 import psiz.keras.layers
 
 
@@ -34,7 +35,7 @@ def emb_inputs_v1():
     return inputs
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_call_approx(emb_inputs_v1):
     """Test call."""
     n_stimuli = 10
@@ -50,7 +51,7 @@ def test_call_approx(emb_inputs_v1):
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),
@@ -65,7 +66,7 @@ def test_call_approx(emb_inputs_v1):
     np.testing.assert_equal(np.shape(outputs), desired_shape)
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_serialization():
     """Test serialization with weights."""
     n_stimuli = 10
@@ -81,7 +82,7 @@ def test_serialization():
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),
@@ -105,7 +106,7 @@ def test_serialization():
     )
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_properties():
     n_stimuli = 10
     n_dim = 3
@@ -120,7 +121,7 @@ def test_properties():
             1,
             loc_initializer=keras.initializers.Constant(0.0),
             scale_initializer=keras.initializers.Constant(
-                tfp.math.softplus_inverse(prior_scale).numpy()
+                keras.ops.convert_to_numpy(softplus_inverse(prior_scale))
             ),
             loc_trainable=False,
         ),
@@ -137,4 +138,4 @@ def test_properties():
     assert not mask_zero
 
     embeddings = embedding_prior.embeddings
-    assert isinstance(embeddings, tfp.distributions.Distribution)
+    assert is_distribution(embeddings)

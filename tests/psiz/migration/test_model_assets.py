@@ -149,7 +149,7 @@ def test_migrate_model_from_keras_jax(tmp_path):
     assert report["resolved_backend"] == "jax"
 
 
-@pytest.mark.tfp
+@pytest.mark.backend_tensorflow
 def test_migrate_hierarchical_vi_model(tmp_path):
     legacy_path = tmp_path / "legacy_hierarchical.keras"
     destination_path = tmp_path / "migrated_hierarchical.psiz"

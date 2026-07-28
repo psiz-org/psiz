@@ -14,60 +14,8 @@
 # limitations under the License.
 # ============================================================================
 
-"""Module of TensorFlow Probability objects.
+"""Compatibility wrapper for the historic TensorFlow Probability namespace."""
 
-Functions:
-    unpack_mvn
+from psiz.stochastic.distributions import unpack_mvn
 
-"""
-
-
-import numpy as np
-
-
-def unpack_mvn(dist):
-    """Unpack multivariate normal distribution.
-
-    Gracefully handles case where set of multi-variate normal
-    distributions are encapsulated by an `Independent` distribution by
-    inferring full covariance from the diagonal variance elements.
-
-    Args:
-        dist: A set of multi-variate normal distributions.
-
-    Returns:
-        A tuple (loc, cov) where loc is a 2D array of locations and
-            cov is a 3D array of covariance matrices.
-
-    """
-    # The location parameters are always accessed the same way.
-    loc = dist.mean().numpy()
-
-    # However, accessing the covariance parameters depends on the nature of
-    # the incoming distribution.
-    try:
-        cov = dist.covariance().numpy()
-    except NotImplementedError:
-        # Assume `Independent` distribution with diagonal covariance.
-        v = dist.variance().numpy()
-        cov = _diag_to_full_cov(v)
-
-    return loc, cov
-
-
-def _diag_to_full_cov(v):
-    """Convert diagonal variance to full covariance matrix.
-
-    Args:
-        v: An array represention diagonal variance elements only.
-
-    Returns:
-        cov: A array of fully-specified covariance matrices.
-
-    """
-    n_stimuli = v.shape[0]
-    n_dim = v.shape[1]
-    cov = np.zeros([n_stimuli, n_dim, n_dim])
-    for i_stimulus in range(n_stimuli):
-        cov[i_stimulus] = np.eye(n_dim) * v[i_stimulus]
-    return cov
+__all__ = ["unpack_mvn"]

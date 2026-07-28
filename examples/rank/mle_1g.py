@@ -36,7 +36,6 @@ import keras
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import pearsonr
-import tensorflow_probability as tfp
 
 import psiz
 
@@ -107,6 +106,8 @@ def main():
     n_frame = 8
     patience = 10
 
+    print(f"Using Keras backend: {keras.backend.backend()}")
+
     # Directory preparation.
     fp_project.mkdir(parents=True, exist_ok=True)
     # Remove existing TensorBoard logs.
@@ -152,8 +153,10 @@ def main():
 
     def simulate_agent(x):
         outcome_probs = model_true(x)
-        outcome_distribution = tfp.distributions.Categorical(probs=outcome_probs)
-        outcome_idx = outcome_distribution.sample()
+        outcome_idx = keras.random.categorical(
+            keras.ops.log(outcome_probs), num_samples=1
+        )
+        outcome_idx = keras.ops.squeeze(outcome_idx, axis=-1)
         outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
         return outcome_one_hot
 
@@ -277,6 +280,12 @@ def main():
     plt.tight_layout()
     fname = fp_project / Path("evolution.tiff")
     plt.savefig(os.fspath(fname), format="tiff", bbox_inches="tight", dpi=300)
+
+    # Export final model state as a durable .psiz artifact.
+    artifact_dir = fp_project / Path("artifacts", "mle_1g_final.psiz")
+    artifact_dir.parent.mkdir(parents=True, exist_ok=True)
+    psiz.keras.save_psiz_model(model_inferred, artifact_dir)
+    print(f"Saved PsiZ artifact to: {artifact_dir}")
 
 
 def build_ground_truth_model(n_stimuli, n_dim):

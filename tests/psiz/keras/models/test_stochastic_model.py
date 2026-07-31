@@ -37,6 +37,47 @@ def _map_leaves(fn, obj):
     return fn(obj)
 
 
+def _infer_n_sample(value):
+    """Infer sample count from an array-like or dict of arrays."""
+    if isinstance(value, dict):
+        key = next(iter(value.keys()))
+        return int(np.asarray(value[key]).shape[0])
+    return int(np.asarray(value).shape[0])
+
+
+class _NumpyPyDataset(keras.utils.PyDataset):
+    """Simple NumPy-backed `PyDataset` used by JAX runtime tests."""
+
+    def __init__(self, x, y, w, *, batch_size, shuffle=False, seed=None):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.batch_size = int(batch_size)
+        self.shuffle = bool(shuffle)
+        self.seed = seed
+        self._n_sample = _infer_n_sample(x)
+        self._indices = np.arange(self._n_sample)
+        super().__init__()
+
+    def __len__(self):
+        return int(np.ceil(self._n_sample / self.batch_size))
+
+    def on_epoch_end(self):
+        if self.shuffle:
+            rng = np.random.default_rng(self.seed)
+            rng.shuffle(self._indices)
+
+    def __getitem__(self, index):
+        start = index * self.batch_size
+        end = min((index + 1) * self.batch_size, self._n_sample)
+        idx = self._indices[start:end]
+        return (
+            _map_leaves(lambda v: np.asarray(v)[idx], self.x),
+            np.asarray(self.y)[idx],
+            np.asarray(self.w)[idx],
+        )
+
+
 def _build_tf_dataset(case):
     """Build a `tf.data.Dataset` from a canonical raw case."""
     tf = pytest.importorskip("tensorflow")
@@ -71,9 +112,18 @@ def _build_torch_dataloader(case):
     )
 
 
+def _build_numpy_pydataset(case):
+    """Build a NumPy-backed `PyDataset` from a canonical raw case."""
+    x = _map_leaves(np.asarray, case["x"])
+    y = np.asarray(case["y"])
+    w = np.asarray(case["w"])
+    return _NumpyPyDataset(x, y, w, batch_size=case["batch_size"])
+
+
 _DATASET_ADAPTERS = {
     "tf": _build_tf_dataset,
     "torch": _build_torch_dataloader,
+    "numpy": _build_numpy_pydataset,
 }
 
 
@@ -83,10 +133,18 @@ def _materialize_dataset(case, backend):
 
 
 @pytest.fixture(
-    scope="module", params=["tf", "torch"], ids=["tf_dataset", "torch_dataloader"]
+    scope="module",
+    params=["tf", "torch", "numpy"],
+    ids=["tf_dataset", "torch_dataloader", "numpy_pydataset"],
 )
 def data_backend(request):
     """Backend used for dataset materialization in local fixtures."""
+    runtime_backend = keras.backend.backend()
+    if runtime_backend == "jax":
+        if request.param != "numpy":
+            pytest.skip("JAX runtime tests use NumPy-backed dataset materialization.")
+    elif request.param == "numpy":
+        pytest.skip("NumPy-backed dataset materialization is reserved for JAX runtime tests.")
     return request.param
 
 

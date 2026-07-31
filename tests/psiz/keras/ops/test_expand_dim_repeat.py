@@ -26,13 +26,10 @@ def test_expand_dim_repeat_empty():
     x = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]])
 
     n_sample = ()
-    with pytest.raises(Exception) as e_info:
+    with pytest.raises(ValueError) as e_info:
         expand_dim_repeat(x, n_sample, axis=1)
     message = str(e_info.value)
-    assert (
-        "Dimensions 1 and 0 are not compatible" in message
-        or "repeats must have the same size as input along dim" in message
-    )
+    assert "`n_repeat` must be an integer scalar." in message
 
 
 def test_expand_dim_repeat_1():

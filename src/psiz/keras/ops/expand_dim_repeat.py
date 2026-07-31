@@ -21,10 +21,16 @@ Functions:
 """
 
 
+from numbers import Integral
+
 import keras
 
 
 def expand_dim_repeat(x, n_repeat, axis=1):
     """Repeat Tensor along a newly inserted axis."""
+    if not isinstance(n_repeat, Integral):
+        raise ValueError("`n_repeat` must be an integer scalar.")
+    if n_repeat < 1:
+        raise ValueError("`n_repeat` must be greater than or equal to 1.")
     x = keras.ops.expand_dims(x, axis=axis)
     return keras.ops.repeat(x, n_repeat, axis=axis)

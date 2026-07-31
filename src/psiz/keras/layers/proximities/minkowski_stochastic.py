@@ -196,19 +196,10 @@ class MinkowskiStochastic(Proximity):
         # Sample free parameters based on input shape.
         # Note that `wpnorm` expects `rho` to have one less rank than
         # `x` and `w`, i.e., it does not have a trailing `n_dim`.
-        # We wrap the sample call in a conditional to protect against
-        # batch_size=0.
-        batch_size = x_shape[0]
-        rho = keras.ops.cond(
-            batch_size == 0,
-            lambda: keras.ops.zeros(x_shape[0:-1]),
-            lambda: self.rho.sample(x_shape[0:-1]),
-        )
-        w = keras.ops.cond(
-            batch_size == 0,
-            lambda: keras.ops.zeros(x_shape),
-            lambda: self.w.sample(x_shape[0:-1]),
-        )
+        # Zero-sized sample shapes are handled by the stochastic adapters,
+        # which avoids backend-specific control-flow issues under JAX.
+        rho = self.rho.sample(x_shape[0:-1])
+        w = self.w.sample(x_shape[0:-1])
 
         # Weighted Minkowski distance.
         d_qr = wpnorm(x, w, rho)

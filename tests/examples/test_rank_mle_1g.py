@@ -237,10 +237,9 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     stimulus_set = choice_wo_replace(eligibile_indices, (n_trial, 9), p, rng=rng)
     content = psiz.data.Rank(stimulus_set, n_select=2)
     pds = psiz.data.Dataset([content])
-    tfds_content = pds.export(export_format="tfds")
+    tfds_content = pds.tensorflow().batch(batch_size, drop_remainder=False)
 
     # Simulate similarity judgments and append outcomes to dataset.
-    tfds_content = tfds_content.batch(batch_size, drop_remainder=False)
     depth = content.n_outcome
 
     def simulate_agent(x):
@@ -260,6 +259,7 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
     tfds_val = (
         tfds_all.skip(n_trial_train).cache().batch(batch_size, drop_remainder=False)
     )
+    validation_steps = int(np.ceil((n_trial - n_trial_train) / batch_size))
 
     # Use early stopping.
     early_stop = keras.callbacks.EarlyStopping(
@@ -286,13 +286,16 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
 
     r2 = np.empty((n_frame)) * np.nan
     for i_frame in range(n_frame):
+        frame_samples = int(n_trial_train_frame[i_frame])
+        steps_per_epoch = int(np.ceil(frame_samples / batch_size))
         tfds_train_frame = (
-            tfds_train.take(int(n_trial_train_frame[i_frame]))
+            tfds_train.take(frame_samples)
             .cache()
             .shuffle(
-                buffer_size=n_trial_train_frame[i_frame], reshuffle_each_iteration=True
+                buffer_size=frame_samples, reshuffle_each_iteration=True
             )
             .batch(batch_size, drop_remainder=False)
+            .repeat()
         )
 
         # Use Tensorboard callback.
@@ -304,7 +307,9 @@ def test_rank_1g_mle_execution(similarity_func, mask_zero, tmpdir, is_eager):
         # MAYBE keras-tuner 3 restarts, monitor='val_loss'
         model_inferred.fit(
             x=tfds_train_frame,
-            validation_data=tfds_val,
+            steps_per_epoch=steps_per_epoch,
+            validation_data=tfds_val.repeat(),
+            validation_steps=validation_steps,
             epochs=epochs,
             callbacks=callbacks,
             verbose=0,

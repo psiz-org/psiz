@@ -21,6 +21,7 @@ Classes:
 """
 
 from abc import ABCMeta, abstractmethod
+import warnings
 
 import numpy as np
 
@@ -61,6 +62,18 @@ class DatasetComponent(metaclass=ABCMeta):
         return x
 
     @abstractmethod
+    def numpy(self, with_timestep_axis=None):
+        """Return appropriately formatted NumPy data.
+
+        Args:
+            with_timestep_axis (optional): Boolean indicating if data
+                should be returned with a timestep axis. By default,
+                data is exported in the same format as it was
+                provided at initialization. Callers can override
+                default behavior by setting this argument.
+
+        """
+
     def export(self, export_format="tfds", with_timestep_axis=None):
         """Return appropriately formatted data.
 
@@ -75,3 +88,32 @@ class DatasetComponent(metaclass=ABCMeta):
                 default behavior by setting this argument.
 
         """
+        if export_format != "tfds":
+            raise ValueError(
+                "Unrecognized `export_format` '{0}'.".format(export_format)
+            )
+
+        warnings.warn(
+            "`{0}.export(export_format='tfds')` is deprecated and will be "
+            "removed in a future release. Use `{0}.numpy(...)` instead.".format(
+                self.__class__.__name__
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        payload = self.numpy(with_timestep_axis=with_timestep_axis)
+        return self._numpy_to_tf(payload)
+
+    @staticmethod
+    def _numpy_to_tf(payload):
+        """Convert nested NumPy payloads to TensorFlow tensors."""
+        import tensorflow as tf
+
+        if isinstance(payload, dict):
+            return {k: DatasetComponent._numpy_to_tf(v) for k, v in payload.items()}
+        if isinstance(payload, tuple):
+            return tuple(DatasetComponent._numpy_to_tf(v) for v in payload)
+        if isinstance(payload, list):
+            return [DatasetComponent._numpy_to_tf(v) for v in payload]
+        return tf.constant(payload)

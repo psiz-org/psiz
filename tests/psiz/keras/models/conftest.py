@@ -23,8 +23,56 @@ import pytest
 import psiz
 
 
+def _build_tf_dataset(case):
+    """Build a batched `tf.data.Dataset` from a canonical case."""
+    pytest.importorskip("tensorflow")
+    ds = case["dataset"].tensorflow(with_timestep_axis=case["with_timestep_axis"])
+    return ds.batch(case["n_sample"], drop_remainder=case["drop_remainder"])
+
+
+def _build_torch_dataloader(case):
+    """Build a Torch `DataLoader` from a canonical case."""
+    torch_utils_data = pytest.importorskip("torch.utils.data")
+
+    torch_dataset = case["dataset"].torch(
+        with_timestep_axis=case["with_timestep_axis"]
+    )
+    return torch_utils_data.DataLoader(
+        torch_dataset,
+        batch_size=case["n_sample"],
+        shuffle=False,
+        drop_last=case["drop_remainder"],
+    )
+
+
+_DATASET_ADAPTERS = {
+    "tf": _build_tf_dataset,
+    "torch": _build_torch_dataloader,
+}
+
+
+def _materialize_dataset(case, backend):
+    """Materialize a backend-specific iterable from a canonical case."""
+    try:
+        adapter = _DATASET_ADAPTERS[backend]
+    except KeyError as e:
+        supported = ", ".join(sorted(_DATASET_ADAPTERS))
+        raise ValueError(
+            f"Unknown dataset backend '{backend}'. Supported backends: {supported}."
+        ) from e
+    return adapter(case)
+
+
+@pytest.fixture(
+    scope="module", params=["tf", "torch"], ids=["tf_dataset", "torch_dataloader"]
+)
+def data_backend(request):
+    """Backend used for dataset materialization in local fixtures."""
+    return request.param
+
+
 @pytest.fixture(scope="module")
-def ds_2rank1_v0():
+def ds_2rank1_v0(data_backend):
     """Dataset.
 
     Rank similarity
@@ -42,15 +90,17 @@ def ds_2rank1_v0():
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
     outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset([content, outcome]).export(
-        export_format="tfds", with_timestep_axis=False
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_4rank1_v0():
+def ds_4rank1_v0(data_backend):
     """Dataset.
 
     Rank similarity
@@ -69,15 +119,17 @@ def ds_4rank1_v0():
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
     outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset([content, outcome]).export(
-        export_format="tfds", with_timestep_axis=False
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_4rank1_v1():
+def ds_4rank1_v1(data_backend):
     """Dataset.
 
     Rank similarity
@@ -101,15 +153,17 @@ def ds_4rank1_v1():
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
     outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset([content, groups, outcome]).export(
-        export_format="tfds", with_timestep_axis=False
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, groups, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_4rank1_v2():
+def ds_4rank1_v2(data_backend):
     """Dataset.
 
     Rank similarity
@@ -137,15 +191,17 @@ def ds_4rank1_v2():
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
     outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset([content, kernel_groups, percept_groups, outcome]).export(
-        export_format="tfds", with_timestep_axis=False
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, kernel_groups, percept_groups, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_4rank1_v3():
+def ds_4rank1_v3(data_backend):
     """Dataset.
 
     Rank similarity
@@ -173,15 +229,19 @@ def ds_4rank1_v3():
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
     outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset(
-        [content, percept_groups_0, percept_groups_1, outcome]
-    ).export(export_format="tfds", with_timestep_axis=False)
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset(
+            [content, percept_groups_0, percept_groups_1, outcome]
+        ),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_2rank1_4rank1_v0():
+def ds_2rank1_4rank1_v0(data_backend):
     """Dataset.
 
     2-Rank-1 and 4-rank-1 similarity
@@ -219,15 +279,19 @@ def ds_2rank1_4rank1_v0():
         outcome_idx, depth=content_4rank1.n_outcome, name="given4rank1_outcome"
     )
 
-    tfds = psiz.data.Dataset(
-        [content_2rank1, outcome_2rank1, content_4rank1, outcome_4rank1]
-    ).export(export_format="tfds", with_timestep_axis=False)
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset(
+            [content_2rank1, outcome_2rank1, content_4rank1, outcome_4rank1]
+        ),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_8rank2_v0():
+def ds_8rank2_v0(data_backend):
     """Dataset.
 
     Rank similarity
@@ -251,15 +315,17 @@ def ds_8rank2_v0():
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
     outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset([content, outcome]).export(
-        export_format="tfds", with_timestep_axis=False
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_2rank1_8rank2_v0():
+def ds_2rank1_8rank2_v0(data_backend):
     """Dataset.
 
     Rank similarity
@@ -336,15 +402,19 @@ def ds_2rank1_8rank2_v0():
         dtype=np.float32,
     )
     rank_config = psiz.data.Group(rank_config_val, name="rank_config")
-    tfds = psiz.data.Dataset(
-        [content_2rank1, outcome_2rank1, content_8rank2, outcome_8rank2, rank_config]
-    ).export(export_format="tfds", with_timestep_axis=False)
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset(
+            [content_2rank1, outcome_2rank1, content_8rank2, outcome_8rank2, rank_config]
+        ),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_time_8rank2_v0():
+def ds_time_8rank2_v0(data_backend):
     """Dataset.
 
     Rank similarity
@@ -368,15 +438,17 @@ def ds_time_8rank2_v0():
     outcome_idx = np.zeros([content.n_sample, content.sequence_length], dtype=np.int32)
     outcome = psiz.data.SparseCategorical(outcome_idx, depth=content.n_outcome)
 
-    tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=True, export_format="tfds"
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": True,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_rate2_v0():
+def ds_rate2_v0(data_backend):
     """Dataset.
 
     Rate similarity
@@ -391,15 +463,17 @@ def ds_rate2_v0():
 
     outcome = psiz.data.Continuous(rating)
 
-    tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=False, export_format="tfds"
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_time_rate2_v0():
+def ds_time_rate2_v0(data_backend):
     """Dataset.
 
     Rate similarity
@@ -414,15 +488,17 @@ def ds_time_rate2_v0():
     rating = np.array([[0.1], [0.4], [0.8], [0.9]])
     outcome = psiz.data.Continuous(rating)
 
-    tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=True, export_format="tfds"
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": True,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_rate2_v1():
+def ds_rate2_v1(data_backend):
     """Dataset.
 
     Rate similarity
@@ -442,15 +518,17 @@ def ds_rate2_v1():
     rating = np.array([[0.1], [0.4], [0.8], [0.9]])
     outcome = psiz.data.Continuous(rating)
 
-    tfds = psiz.data.Dataset([content, outcome, groups]).export(
-        with_timestep_axis=False, export_format="tfds"
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome, groups]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_rate2_v2():
+def ds_rate2_v2(data_backend):
     """Dataset.
 
     Rate similarity
@@ -467,15 +545,17 @@ def ds_rate2_v2():
 
     outcome = psiz.data.Continuous(rating)
 
-    tfds = psiz.data.Dataset([content, outcome]).export(
-        with_timestep_axis=False, export_format="tfds"
-    )
-    tfds = tfds.batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_time_categorize_v0():
+def ds_time_categorize_v0(data_backend):
     """Dataset.
 
     Categorize, with timestep
@@ -522,13 +602,17 @@ def ds_time_categorize_v0():
     content = psiz.data.Categorize(
         stimulus_set=stimulus_set, objective_query_label=objective_query_label
     )
-    pds = psiz.data.Dataset([content, outcome])
-    tfds = pds.export(export_format="tfds").batch(n_sample, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content, outcome]),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_4rank2_rate2_v0():
+def ds_4rank2_rate2_v0(data_backend):
     """Dataset.
 
     Rank and Rate, no timestep, with behavior gate
@@ -570,18 +654,19 @@ def ds_4rank2_rate2_v0():
         np.array([[0.1], [0.4], [0.8], [0.9]]), name="rate_branch"
     )
 
-    pds = psiz.data.Dataset(
-        [content_rank, outcome_rank, content_rate, outcome_rate, gate_weights]
-    )
-
-    tfds = pds.export(export_format="tfds", with_timestep_axis=False).batch(
-        n_sample, drop_remainder=False
-    )
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset(
+            [content_rank, outcome_rank, content_rate, outcome_rate, gate_weights]
+        ),
+        "with_timestep_axis": False,
+        "n_sample": n_sample,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")
-def ds_4rank1_rt_v0():
+def ds_4rank1_rt_v0(data_backend):
     """Dataset.
 
     Rank and response time output.
@@ -606,9 +691,13 @@ def ds_4rank1_rt_v0():
     outcome_rt = psiz.data.Continuous(
         np.array([[4.0], [6.0], [7.0], [11.0]]), name="rank_rt_branch"
     )
-    pds = psiz.data.Dataset([content_rank, outcome_rank, outcome_rt])
-    tfds = pds.export(with_timestep_axis=False).batch(n_trial, drop_remainder=False)
-    return tfds
+    case = {
+        "dataset": psiz.data.Dataset([content_rank, outcome_rank, outcome_rt]),
+        "with_timestep_axis": False,
+        "n_sample": n_trial,
+        "drop_remainder": False,
+    }
+    return _materialize_dataset(case, backend=data_backend)
 
 
 @pytest.fixture(scope="module")

@@ -249,6 +249,7 @@ def test_dict_dispatch(gates_v0, inputs_dict):
     # Combine (i.e., mix) expert outputs.
     combiner = Combiner()
     outputs = combiner([gates_v0] + expert_outputs)
+    outputs = keras.ops.convert_to_numpy(outputs)
 
     # NOTE: To parse these outputs, note that the hundreds place indicates
     # the expert subnet (i.e., +0.00, +0.01, +0.02) for cases where weight
@@ -302,6 +303,7 @@ def test_dict_dispatch_timestep(gates_v0_timestep, inputs_dict_timestep):
     # Combine (i.e., mix) expert outputs.
     combiner = Combiner(has_timestep_axis=True)
     outputs = combiner([gates_v0_timestep] + expert_outputs)
+    outputs = keras.ops.convert_to_numpy(outputs)
     desired_outputs = np.array(
         [
             [[10.0, 10.200001, 10.4], [10.02, 10.219999, 10.42]],

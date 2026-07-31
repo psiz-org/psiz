@@ -20,8 +20,7 @@ Classes:
 
 """
 
-import tensorflow as tf
-from keras import backend
+import numpy as np
 
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.unravel_timestep import unravel_timestep
@@ -66,13 +65,10 @@ class Continuous(Outcome):
 
         return value
 
-    def export(self, export_format="tfds", with_timestep_axis=None):
-        """Return appropriately formatted data.
+    def numpy(self, with_timestep_axis=None):
+        """Return appropriately formatted NumPy data.
 
         Args:
-            export_format (optional): The output format of the dataset.
-                By default the dataset is formatted as a
-                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -83,18 +79,11 @@ class Continuous(Outcome):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        w = super(Continuous, self).export(
-            export_format=export_format, with_timestep_axis=with_timestep_axis
-        )
+        w = super(Continuous, self).numpy(with_timestep_axis=with_timestep_axis)
 
         value = self.value
         if with_timestep_axis is False:
             value = unravel_timestep(value)
 
-        if export_format == "tfds":
-            y = tf.constant(value, dtype="float32")
-        else:
-            raise ValueError(
-                "Unrecognized `export_format` '{0}'.".format(export_format)
-            )
+        y = value.astype(np.float32)
         return {self.name: y}, w

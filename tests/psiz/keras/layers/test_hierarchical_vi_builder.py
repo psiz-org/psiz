@@ -54,9 +54,20 @@ class HierarchyAccessContractModel(keras.Model):
     def __init__(self, percept=None, **kwargs):
         super().__init__(**kwargs)
         self.percept = percept
+        self._build_input_shape = None
 
     def call(self, inputs):
         return self.percept(inputs)
+
+    def build(self, input_shape):
+        self._build_input_shape = input_shape
+        if (
+            self.percept is not None
+            and hasattr(self.percept, "build")
+            and not self.percept.built
+        ):
+            self.percept.build(input_shape)
+        super().build(input_shape)
 
     def get_config(self):
         config = super().get_config()
@@ -66,6 +77,14 @@ class HierarchyAccessContractModel(keras.Model):
             }
         )
         return config
+
+    def get_build_config(self):
+        return {"input_shape": self._build_input_shape}
+
+    def build_from_config(self, config):
+        input_shape = config.get("input_shape", None)
+        if input_shape is not None:
+            self.build(input_shape)
 
     @classmethod
     def from_config(cls, config):

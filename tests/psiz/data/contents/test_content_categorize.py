@@ -19,7 +19,20 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
+
+
+class _TensorFlowProxy:
+    """Lazy TensorFlow import that skips tests when TF is unavailable."""
+
+    _module = None
+
+    def __getattr__(self, name):
+        if self._module is None:
+            self._module = pytest.importorskip("tensorflow")
+        return getattr(self._module, name)
+
+
+tf = _TensorFlowProxy()
 
 
 def test_init_0(c_categorize_a_4x10):
@@ -69,6 +82,7 @@ def test_init_0(c_categorize_a_4x10):
     np.testing.assert_array_equal(desired_is_actual, c_categorize_a_4x10.is_actual)
 
 
+@pytest.mark.backend_tensorflow
 def test_export_0(c_categorize_b_4x3):
     """Test export."""
     x = c_categorize_b_4x3.export()
@@ -99,6 +113,37 @@ def test_export_0(c_categorize_b_4x3):
     )
 
 
+def test_numpy_0(c_categorize_b_4x3):
+    """Test numpy."""
+    x = c_categorize_b_4x3.numpy()
+    desired_stimulus_set = np.array(
+        [
+            [[1], [2], [3]],
+            [[11], [12], [13]],
+            [[1], [3], [5]],
+            [[2], [4], [6]],
+        ],
+        dtype=np.int32,
+    )
+    desired_objective_query_label = np.array(
+        [
+            [0, 0, 0],
+            [1, 1, 2],
+            [0, 1, 2],
+            [2, 2, 0],
+        ],
+        dtype=np.int32,
+    )
+    desired_objective_query_label = keras.utils.to_categorical(
+        desired_objective_query_label, num_classes=3
+    ).astype(np.float32)
+    np.testing.assert_array_equal(desired_stimulus_set, x["categorize_stimulus_set"])
+    np.testing.assert_array_equal(
+        desired_objective_query_label, x["categorize_objective_query_label"]
+    )
+
+
+@pytest.mark.backend_tensorflow
 def test_export_1(c_categorize_b_4x3):
     """Test export.
 
@@ -121,6 +166,30 @@ def test_export_1(c_categorize_b_4x3):
     )
 
 
+def test_numpy_1(c_categorize_b_4x3):
+    """Test numpy.
+
+    Use override `with_timestep_axis=False`.
+
+    """
+    x = c_categorize_b_4x3.numpy(with_timestep_axis=False)
+    desired_stimulus_set = np.array(
+        [[1], [2], [3], [11], [12], [13], [1], [3], [5], [2], [4], [6]],
+        dtype=np.int32,
+    )
+    desired_objective_query_label = np.array(
+        [0, 0, 0, 1, 1, 2, 0, 1, 2, 2, 2, 0], dtype=np.int32
+    )
+    desired_objective_query_label = keras.utils.to_categorical(
+        desired_objective_query_label, num_classes=3
+    ).astype(np.float32)
+    np.testing.assert_array_equal(desired_stimulus_set, x["categorize_stimulus_set"])
+    np.testing.assert_array_equal(
+        desired_objective_query_label, x["categorize_objective_query_label"]
+    )
+
+
+@pytest.mark.backend_tensorflow
 def test_export_wrong(c_categorize_b_4x3):
     """Test export.
 

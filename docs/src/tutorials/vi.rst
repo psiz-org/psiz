@@ -40,6 +40,19 @@ Most VI workflows in PsiZ follow this pattern:
 3. Train while monitoring data-fit metrics and KL-informed objectives.
 4. Evaluate predictive metrics and inspect uncertainty-sensitive behavior.
 
+Dataset strategy note (v0.14)
+=============================
+
+For new training pipelines, prefer PsiZ dataset artifacts and runtime ingestion:
+
+* :code:`psiz.data.Dataset.save(...)`
+* :code:`psiz.data.load(...)`
+* Optional Tier A adapters such as :code:`dataset.tensorflow()`
+
+Some existing tutorials still rely on :code:`psiz-datasets` TensorFlow assets.
+Those notebook paths remain temporarily legacy and will be migrated after
+upstream dataset assets adopt the v0.14 artifact format.
+
 Checkpoint and export workflow
 ==============================
 

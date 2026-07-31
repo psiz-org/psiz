@@ -23,3 +23,11 @@ Storage note:
 	for `psiz.keras.StochasticModel` subclasses.
 * For in-training resume checkpoints, prefer Keras-native checkpointing; use
 	`.psiz` for finalized assets intended for durable sharing and reuse.
+
+Dataset note (v0.14):
+* New dataset workflows should prefer PsiZ-managed Parquet + manifest artifacts,
+	loaded through `psiz.data.load(...)` and adapted with
+	`dataset.tensorflow()`, `dataset.torch()`, `dataset.numpy()`, or
+	`dataset.arrow()`.
+* Existing TensorFlow dataset workflows can be migrated using
+	`psiz.migration.migrate_dataset_from_tfds(...)`.

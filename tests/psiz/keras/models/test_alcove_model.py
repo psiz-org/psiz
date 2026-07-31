@@ -83,22 +83,22 @@ class ALCOVEModelA(keras.Model):
         return cls(**config)
 
 
-def call_fit_evaluate_predict(model, tfds):
+def call_fit_evaluate_predict(model, ds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
-    for data in tfds:
+    for data in ds:
         x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         y_pred = model(x, training=False)
 
     # Test fit.
-    model.fit(tfds, epochs=3)
+    model.fit(ds, epochs=3)
 
     # Test evaluate.
-    eval0 = model.evaluate(tfds)
+    eval0 = model.evaluate(ds)
     # assert not np.isnan(eval0)  TODO make work for returned nan or array of values
 
     # Test predict.
-    pred0 = model.predict(tfds)
+    pred0 = model.predict(ds)
     # assert not np.isnan(eval0)  TODO make work for returned nan or array of values
 
 
@@ -173,19 +173,19 @@ class TestALCOVECell:
     def test_usage_subclass_a(self, ds_time_categorize_v0, is_eager):
         """Test subclassed model, one group."""
 
-        tfds = ds_time_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.skip(reason="Keras v3 RNN requires single input tensor.")
     def test_save_load_subclass_a(self, ds_time_categorize_v0, is_eager, tmpdir):
         """Test serialization."""
-        tfds = ds_time_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_subclass_a(is_eager)
-        model.fit(tfds, epochs=1)
-        eval0 = model.evaluate(tfds)
+        model.fit(ds, epochs=1)
+        eval0 = model.evaluate(ds)
 
         # Test storage.
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -196,7 +196,7 @@ class TestALCOVECell:
             fp_model,
             custom_objects={"ALCOVEModelA": ALCOVEModelA},
         )
-        eval1 = loaded.evaluate(tfds)
+        eval1 = loaded.evaluate(ds)
 
         # Test for model equality.
         assert eval0[0] == eval1[0]
@@ -206,19 +206,19 @@ class TestALCOVECell:
     @pytest.mark.skip(reason="Keras v3 RNN requires single input tensor.")
     def test_usage_functional_v0(self, ds_time_categorize_v0, is_eager):
         """Test model using functional API."""
-        tfds = ds_time_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_functional_v0(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.skip(reason="Keras v3 RNN requires single input tensor.")
     def test_save_load_functional_v0(self, ds_time_categorize_v0, is_eager, tmpdir):
         """Test serialization."""
-        tfds = ds_time_categorize_v0
+        ds = ds_time_categorize_v0
         model = build_alcove_functional_v0(is_eager)
-        model.fit(tfds, epochs=1)
-        eval0 = model.evaluate(tfds)
+        model.fit(ds, epochs=1)
+        eval0 = model.evaluate(ds)
 
         # Test storage.
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -228,7 +228,7 @@ class TestALCOVECell:
         loaded = psiz.keras.load_psiz_model(
             fp_model,
         )
-        eval1 = loaded.evaluate(tfds)
+        eval1 = loaded.evaluate(ds)
 
         # Test for model equality.
         assert eval0[0] == eval1[0]

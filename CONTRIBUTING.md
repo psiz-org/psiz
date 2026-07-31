@@ -29,6 +29,115 @@ Please send in fixes and feature additions through Pull Requests.
 * See `pytest.ini` for a list and description of all pytest markers (e.g., `adapter_surface`, `backend_runtime`, `backend_slow`).
     * NOTE: All pytest markers must be registered in `pytest.ini`, unregistered markers will generate an error.
 
+### Warning Filter Policy
+
+PsiZ test warnings should prioritize signals that are under PsiZ control.
+
+* We keep deprecation and runtime warnings visible when they indicate issues in PsiZ source or tests.
+* We may add narrowly scoped filters for known third-party warnings (for example, upstream framework/runtime warnings) when:
+    * the warning does not indicate a PsiZ defect, and
+    * it materially obscures actionable warnings from PsiZ code.
+
+Filter scope requirements:
+
+* Prefer filters constrained by both warning message signature and emitting third-party module path.
+* Avoid broad filters that could hide new warnings from PsiZ modules.
+
+Maintenance expectations:
+
+* Third-party warning filters require periodic audit/review as dependency versions evolve.
+* During periodic updates, re-check whether each filter is still necessary and remove obsolete filters promptly.
+
+### Understanding tox.ini
+
+`tox` is the canonical way to run PsiZ tests in a controlled Python+backend matrix.
+
+#### Matrix and environment selection
+* `[tox] minversion = 4.20`
+    * Ensures developers are on a tox version that supports the syntax used in this repo.
+* `envlist = py{310,311,312,313}-{tensorflow,torch,jax}`
+    * Defines the default runtime matrix: each Python version combined with each backend.
+* `envlist` also includes `py311-{tensorflow,torch,jax}-slow`
+    * Defines explicit slow-test environments to keep normal local runs fast.
+
+#### Shared testenv behavior
+* `[testenv] package = wheel`
+    * Builds and installs PsiZ as a wheel in each env before tests run. This validates packaging and catches import/install issues.
+* `install_command = python -m pip install {opts} {packages}`
+    * Default package install path for all backends.
+* `extras = test` and `extras = backend-{env:PSIZ_BACKEND}`
+    * Installs core test dependencies and backend-specific extras based on the selected backend.
+
+#### Environment variables set by tox
+* `PYTHONHASHSEED = 0`
+    * Improves reproducibility across runs.
+* `PSIZ_EXPECTED_BACKEND = {env:KERAS_BACKEND:}`
+    * Captures expected backend from ambient environment when provided.
+* Backend-scoped blocks set:
+    * `KERAS_BACKEND` (forces Keras backend in that tox env)
+    * `PSIZ_BACKEND` (selects matching extras)
+    * `PSIZ_BACKEND_FILTER` (pytest marker filter that excludes other backend-specific tests)
+* Torch-only block also sets:
+    * `CUDA_VISIBLE_DEVICES = {env:PSIZ_TORCH_CUDA_VISIBLE_DEVICES:0}`
+    * Default behavior runs torch tests on GPU 0 when available; override with `PSIZ_TORCH_CUDA_VISIBLE_DEVICES`.
+
+#### Torch install behavior
+* `torch: install_command = python -m pip install --extra-index-url {env:PSIZ_TORCH_EXTRA_INDEX_URL:https://pypi.ngc.nvidia.com} {opts} {packages}`
+    * Keeps torch environments aligned with NVIDIA-recommended wheel source by default.
+    * Override via `PSIZ_TORCH_EXTRA_INDEX_URL` if you need a different index mirror.
+
+#### passenv and debug support
+* `passenv` forwards selected host env vars into tox envs:
+    * `KERAS_BACKEND`, `PSIZ_EXPECTED_BACKEND`
+    * `CUDA_VISIBLE_DEVICES`
+    * `CUDA_LAUNCH_BLOCKING`, `TORCH_USE_CUDA_DSA`
+* What each forwarded variable does:
+    * `KERAS_BACKEND`
+        * Declares the backend you expect Keras to use (`tensorflow`, `torch`, or `jax`).
+        * In tox, backend-specific `setenv` still controls the active backend for each env; this variable is mainly useful for explicit intent and sanity checking.
+    * `PSIZ_EXPECTED_BACKEND`
+        * Used by `commands_pre` for fail-fast validation.
+        * If the runtime backend does not match this value, tox fails before running tests.
+    * `CUDA_VISIBLE_DEVICES`
+        * Controls which GPU IDs are visible to the test process.
+        * Useful for pinning to a specific GPU or forcing CPU fallback (for example, set to `-1` where supported).
+    * `CUDA_LAUNCH_BLOCKING`
+        * When set to `1`, CUDA kernels execute synchronously.
+        * Slower, but stack traces point closer to the actual failing operation, which is helpful for debugging device-side asserts.
+    * `TORCH_USE_CUDA_DSA`
+        * Enables PyTorch CUDA device-side assertions.
+        * Helpful for diagnosing invalid index and bounds issues in GPU kernels; may add overhead and should generally be used for debugging runs.
+* Why this exists:
+    * Lets you enable CUDA debugging and device-selection controls without editing `tox.ini`.
+
+#### Safety check before tests
+* `commands_pre` verifies active Keras backend equals expected backend.
+    * Fails fast if a tox env is misconfigured, preventing misleading test results.
+
+#### Test command routing
+* Default command:
+    * `python -m pytest -m "not slow and not backend_slow and {env:PSIZ_BACKEND_FILTER}" {posargs}`
+    * Runs non-slow tests while excluding tests for other backends.
+* `slow` factor command:
+    * `python -m pytest -m "backend_slow and {env:PSIZ_BACKEND_FILTER}" {posargs}`
+    * Runs only backend slow tests for envs ending in `-slow`.
+* `{posargs}`
+    * Allows appending file paths, test IDs, or flags after `--` on the tox command line.
+
+#### Common usage patterns
+* Run one backend env:
+    * `uv run tox -e py311-torch`
+* Run one test file in that env:
+    * `uv run tox -e py311-torch -- tests/psiz/keras/models/test_rank_model.py -q`
+* Run one test node:
+    * `uv run tox -e py311-torch -- tests/psiz/keras/models/test_rank_model.py::TestSoftRank::test_usage_subclass_a -q`
+* Run with CUDA debug flags:
+    * `CUDA_LAUNCH_BLOCKING=1 TORCH_USE_CUDA_DSA=1 uv run tox -e py311-torch -- -q`
+* Select a different GPU for torch tox env:
+    * `PSIZ_TORCH_CUDA_VISIBLE_DEVICES=1 uv run tox -e py311-torch`
+* Override torch package index source:
+    * `PSIZ_TORCH_EXTRA_INDEX_URL=https://pypi.org/simple uv run tox -e py311-torch`
+
 ### Useful Commands for Local Checks
 * `KERAS_BACKEND=torch uv run pytest -m "not slow and not backend_slow"`
     * Only run tests that are not marked as `slow`.

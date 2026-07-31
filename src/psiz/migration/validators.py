@@ -167,3 +167,90 @@ def validate_migration_report_schema(report: dict[str, Any]) -> None:
             "Migration report diagnostics payload must define warnings and errors.",
             code="invalid_report_diagnostics",
         )
+
+
+def validate_dataset_migration_report_schema(report: dict[str, Any]) -> None:
+    """Validate report schema emitted by dataset migration APIs."""
+    if not isinstance(report, dict):
+        raise MigrationReportValidationError(
+            "Dataset migration report must be a dictionary payload.",
+            code="invalid_dataset_report_type",
+        )
+
+    required_top_level = {
+        "status",
+        "source",
+        "destination",
+        "split",
+        "tables",
+        "parity",
+        "diagnostics",
+    }
+    missing_top_level = sorted(required_top_level - set(report.keys()))
+    if missing_top_level:
+        raise MigrationReportValidationError(
+            "Dataset migration report is missing required keys: "
+            + ", ".join(missing_top_level),
+            code="missing_dataset_report_keys",
+        )
+
+    if report.get("status") != "success":
+        raise MigrationReportValidationError(
+            "Dataset migration report status must be 'success'.",
+            code="invalid_dataset_report_status",
+        )
+
+    if not isinstance(report["source"], dict):
+        raise MigrationReportValidationError(
+            "Dataset migration report source payload is invalid.",
+            code="invalid_dataset_report_source",
+        )
+    if not isinstance(report["destination"], dict):
+        raise MigrationReportValidationError(
+            "Dataset migration report destination payload is invalid.",
+            code="invalid_dataset_report_destination",
+        )
+
+    tables = report["tables"]
+    if not isinstance(tables, list) or len(tables) == 0:
+        raise MigrationReportValidationError(
+            "Dataset migration report tables payload must be a non-empty list.",
+            code="invalid_dataset_report_tables",
+        )
+    for table in tables:
+        if not isinstance(table, dict):
+            raise MigrationReportValidationError(
+                "Dataset migration report table entries must be objects.",
+                code="invalid_dataset_report_tables",
+            )
+        for key in ["name", "row_count", "sha256"]:
+            if key not in table:
+                raise MigrationReportValidationError(
+                    f"Dataset migration report table entry missing '{key}'.",
+                    code="invalid_dataset_report_tables",
+                )
+
+    parity = report["parity"]
+    if not isinstance(parity, dict):
+        raise MigrationReportValidationError(
+            "Dataset migration report parity payload must be a dictionary.",
+            code="invalid_dataset_report_parity",
+        )
+    for key in ["enabled", "validated", "passed", "max_abs_error"]:
+        if key not in parity:
+            raise MigrationReportValidationError(
+                f"Dataset migration report parity payload missing '{key}'.",
+                code="invalid_dataset_report_parity",
+            )
+
+    diagnostics = report["diagnostics"]
+    if not isinstance(diagnostics, dict):
+        raise MigrationReportValidationError(
+            "Dataset migration report diagnostics payload must be a dictionary.",
+            code="invalid_dataset_report_diagnostics",
+        )
+    if "warnings" not in diagnostics or "errors" not in diagnostics:
+        raise MigrationReportValidationError(
+            "Dataset migration report diagnostics payload must define warnings and errors.",
+            code="invalid_dataset_report_diagnostics",
+        )

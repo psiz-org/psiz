@@ -44,8 +44,9 @@ class EmbeddingLogNormalDiag(_EmbeddingLocScale):
         # Pass in an alternative "default" scale initializer.
         scale_initializer = kwargs.pop("scale_initializer", None)
         if scale_initializer is None:
+            default_scale_mean = float(keras.ops.convert_to_numpy(softplus_inverse(2.0)))
             scale_initializer = keras.initializers.RandomNormal(
-                mean=keras.ops.convert_to_numpy(softplus_inverse(2.0)), stddev=0.01
+                mean=default_scale_mean, stddev=0.01
             )
 
         self.loc = None

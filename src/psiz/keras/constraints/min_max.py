@@ -41,6 +41,7 @@ class MinMax(keras.constraints.Constraint):
 
     def __call__(self, w):
         """Call."""
+        w = keras.ops.convert_to_tensor(w)
         policy = keras.mixed_precision.global_policy()
 
         w = w - self.min_value

@@ -18,7 +18,20 @@
 import pytest
 
 import numpy as np
-import tensorflow as tf
+
+
+class _TensorFlowProxy:
+    """Lazy TensorFlow import that skips tests when TF is unavailable."""
+
+    _module = None
+
+    def __getattr__(self, name):
+        if self._module is None:
+            self._module = pytest.importorskip("tensorflow")
+        return getattr(self._module, name)
+
+
+tf = _TensorFlowProxy()
 
 
 def test_init_0(g_condition_idx_4x1):
@@ -86,6 +99,7 @@ def test_init_3(g_condition_label_4x1):
     np.testing.assert_array_equal(g_condition_label_4x1.value, desired_value)
 
 
+@pytest.mark.backend_tensorflow
 def test_export_0a(g_mix2_4x3):
     desired_group_weight = tf.constant(
         [
@@ -102,6 +116,23 @@ def test_export_0a(g_mix2_4x3):
     tf.debugging.assert_equal(desired_group_weight, x[desired_name])
 
 
+def test_numpy_0a(g_mix2_4x3):
+    desired_group_weight = np.array(
+        [
+            [[0.5, 0.5], [0.6, 0.4], [0.7, 0.3]],
+            [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
+            [[0.8, 0.2], [0.8, 0.2], [0.8, 0.2]],
+            [[0.2, 0.8], [0.2, 0.8], [0.2, 0.8]],
+        ],
+        dtype=np.float32,
+    )
+    desired_name = "mix2"
+
+    x = g_mix2_4x3.numpy()
+    np.testing.assert_array_equal(desired_group_weight, x[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_0b(g_mix2_4x3):
     """Test export.
 
@@ -131,6 +162,36 @@ def test_export_0b(g_mix2_4x3):
     tf.debugging.assert_equal(desired_group_weight, x[desired_name])
 
 
+def test_numpy_0b(g_mix2_4x3):
+    """Test numpy.
+
+    Use override `with_timestep_axis=False`.
+
+    """
+    desired_group_weight = np.array(
+        [
+            [0.5, 0.5],
+            [0.6, 0.4],
+            [0.7, 0.3],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.0, 1.0],
+            [0.8, 0.2],
+            [0.8, 0.2],
+            [0.8, 0.2],
+            [0.2, 0.8],
+            [0.2, 0.8],
+            [0.2, 0.8],
+        ],
+        dtype=np.float32,
+    )
+    desired_name = "mix2"
+
+    x = g_mix2_4x3.numpy(with_timestep_axis=False)
+    np.testing.assert_array_equal(desired_group_weight, x[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_3a(g_condition_label_4x1):
     """Test export."""
     desired_value = tf.constant(
@@ -147,6 +208,23 @@ def test_export_3a(g_condition_label_4x1):
     tf.debugging.assert_equal(desired_value, x[desired_name])
 
 
+def test_numpy_3a(g_condition_label_4x1):
+    """Test numpy."""
+    desired_value = np.array(
+        [
+            [["block"]],
+            [["interleave"]],
+            [["block"]],
+            [["block"]],
+        ]
+    )
+    desired_name = "condition_label"
+
+    x = g_condition_label_4x1.numpy()
+    np.testing.assert_array_equal(desired_value, x[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_wrong(g_mix2_4x3):
     """Test export.
 

@@ -17,7 +17,20 @@
 
 import numpy as np
 import pytest
-import tensorflow as tf
+
+
+class _TensorFlowProxy:
+    """Lazy TensorFlow import that skips tests when TF is unavailable."""
+
+    _module = None
+
+    def __getattr__(self, name):
+        if self._module is None:
+            self._module = pytest.importorskip("tensorflow")
+        return getattr(self._module, name)
+
+
+tf = _TensorFlowProxy()
 
 from psiz.data.contents.rank import Rank
 
@@ -523,6 +536,7 @@ def test_is_select_compress_1(c_2rank1_d_3x2):
     np.testing.assert_array_equal(desired_is_select, is_select)
 
 
+@pytest.mark.backend_tensorflow
 def test_export_0(c_2rank1_d_3x2):
     """Test export."""
     x = c_2rank1_d_3x2.export()
@@ -546,6 +560,30 @@ def test_export_0(c_2rank1_d_3x2):
     tf.debugging.assert_equal(desired_stimulus_set, x["given2rank1_stimulus_set"])
 
 
+def test_numpy_0(c_2rank1_d_3x2):
+    """Test numpy."""
+    x = c_2rank1_d_3x2.numpy()
+    desired_stimulus_set = np.array(
+        [
+            [
+                [1, 2, 3],
+                [4, 5, 6],
+            ],
+            [
+                [7, 8, 9],
+                [0, 0, 0],
+            ],
+            [
+                [10, 11, 12],
+                [14, 15, 16],
+            ],
+        ],
+        dtype=np.int32,
+    )
+    np.testing.assert_array_equal(desired_stimulus_set, x["given2rank1_stimulus_set"])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_1(c_2rank1_d_3x2):
     """Test export.
 
@@ -567,6 +605,28 @@ def test_export_1(c_2rank1_d_3x2):
     tf.debugging.assert_equal(desired_stimulus_set, x["given2rank1_stimulus_set"])
 
 
+def test_numpy_1(c_2rank1_d_3x2):
+    """Test numpy.
+
+    Use override `with_timestep_axis=False`.
+
+    """
+    x = c_2rank1_d_3x2.numpy(with_timestep_axis=False)
+    desired_stimulus_set = np.array(
+        [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+            [0, 0, 0],
+            [10, 11, 12],
+            [14, 15, 16],
+        ],
+        dtype=np.int32,
+    )
+    np.testing.assert_array_equal(desired_stimulus_set, x["given2rank1_stimulus_set"])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_wrong(c_2rank1_d_3x2):
     """Test export.
 

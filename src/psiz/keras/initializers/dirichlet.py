@@ -56,7 +56,17 @@ class Dirichlet(keras.initializers.Initializer):
             dtype = policy.compute_dtype
         adapter = get_stochastic_adapter()
         dist = adapter.dirichlet(keras.ops.cast(self.concentration, dtype))
-        sample = keras.ops.cast(self.scale, dtype) * dist.sample(shape, seed=self.seed)
+        seed = self.seed
+        if isinstance(seed, (list, tuple, np.ndarray)):
+            # Preserve deterministic behavior for legacy [seed0, seed1] payloads.
+            values = [int(v) for v in seed]
+            if len(values) == 0:
+                seed = None
+            elif len(values) == 1:
+                seed = values[0]
+            else:
+                seed = (values[0] * 1000003 + values[1]) % (2**31 - 1)
+        sample = keras.ops.cast(self.scale, dtype) * dist.sample(shape, seed=seed)
         return sample
 
     def get_config(self):

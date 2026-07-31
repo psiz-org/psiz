@@ -27,6 +27,14 @@ SQRT_TWO = math.sqrt(2.0)
 HALF_LOG_TWO_PI = 0.5 * math.log(2.0 * math.pi)
 
 
+def _to_tensor(value, dtype=None):
+    """Convert values to backend tensors with optional dtype casting."""
+    tensor = keras.ops.convert_to_tensor(value)
+    if dtype is not None:
+        tensor = keras.ops.cast(tensor, dtype)
+    return tensor
+
+
 def _to_shape_tensor(value):
     """Return a rank-1 int32 tensor representing a shape."""
     if value is None or value == ():
@@ -83,7 +91,7 @@ class KerasDistribution(DistributionProtocol):
         raise NotImplementedError("Quantile is not implemented for this distribution.")
 
     def batch_shape_tensor(self):
-        return keras.ops.shape(self.mean())
+        return _to_shape_tensor(keras.ops.shape(self.mean()))
 
     @property
     def batch_shape(self):
@@ -96,8 +104,8 @@ class KerasDistribution(DistributionProtocol):
 
 class NormalDistribution(KerasDistribution):
     def __init__(self, loc, scale):
-        self.loc = loc
-        self.scale = scale
+        self.loc = _to_tensor(loc)
+        self.scale = _to_tensor(scale, dtype=self.loc.dtype)
 
     def sample(self, sample_shape=(), seed=None):
         batch_shape = keras.ops.shape(self.loc)
@@ -122,8 +130,8 @@ class NormalDistribution(KerasDistribution):
 
 class LaplaceDistribution(KerasDistribution):
     def __init__(self, loc, scale):
-        self.loc = loc
-        self.scale = scale
+        self.loc = _to_tensor(loc)
+        self.scale = _to_tensor(scale, dtype=self.loc.dtype)
 
     def sample(self, sample_shape=(), seed=None):
         batch_shape = keras.ops.shape(self.loc)
@@ -161,9 +169,9 @@ class LaplaceDistribution(KerasDistribution):
 
 class LogNormalDistribution(KerasDistribution):
     def __init__(self, loc, scale):
-        self.loc = loc
-        self.scale = scale
-        self._normal = NormalDistribution(loc, scale)
+        self.loc = _to_tensor(loc)
+        self.scale = _to_tensor(scale, dtype=self.loc.dtype)
+        self._normal = NormalDistribution(self.loc, self.scale)
 
     def sample(self, sample_shape=(), seed=None):
         return keras.ops.exp(self._normal.sample(sample_shape=sample_shape, seed=seed))
@@ -188,9 +196,9 @@ class LogNormalDistribution(KerasDistribution):
 
 class LogitNormalDistribution(KerasDistribution):
     def __init__(self, loc, scale):
-        self.loc = loc
-        self.scale = scale
-        self._normal = NormalDistribution(loc, scale)
+        self.loc = _to_tensor(loc)
+        self.scale = _to_tensor(scale, dtype=self.loc.dtype)
+        self._normal = NormalDistribution(self.loc, self.scale)
 
     def sample(self, sample_shape=(), seed=None):
         return keras.ops.sigmoid(self._normal.sample(sample_shape=sample_shape, seed=seed))
@@ -218,8 +226,8 @@ class LogitNormalDistribution(KerasDistribution):
 
 class GammaDistribution(KerasDistribution):
     def __init__(self, concentration, rate):
-        self.concentration = concentration
-        self.rate = rate
+        self.concentration = _to_tensor(concentration)
+        self.rate = _to_tensor(rate, dtype=self.concentration.dtype)
 
     def sample(self, sample_shape=(), seed=None):
         batch_shape = keras.ops.shape(self.concentration)
@@ -251,11 +259,11 @@ class GammaDistribution(KerasDistribution):
 
 class TruncatedNormalDistribution(KerasDistribution):
     def __init__(self, loc, scale, low, high):
-        self.loc = loc
-        self.scale = scale
-        self.low = low
-        self.high = high
-        self._normal = NormalDistribution(loc, scale)
+        self.loc = _to_tensor(loc)
+        self.scale = _to_tensor(scale, dtype=self.loc.dtype)
+        self.low = _to_tensor(low, dtype=self.loc.dtype)
+        self.high = _to_tensor(high, dtype=self.loc.dtype)
+        self._normal = NormalDistribution(self.loc, self.scale)
 
     def _z_low(self):
         return (self.low - self.loc) / self.scale
@@ -318,7 +326,7 @@ class TruncatedNormalDistribution(KerasDistribution):
 
 class DirichletDistribution(KerasDistribution):
     def __init__(self, concentration):
-        self.concentration = concentration
+        self.concentration = _to_tensor(concentration)
 
     def sample(self, sample_shape=(), seed=None):
         batch_shape = keras.ops.shape(self.concentration)

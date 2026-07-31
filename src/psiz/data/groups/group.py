@@ -16,9 +16,6 @@
 
 # import warnings
 
-# import numpy as np
-import tensorflow as tf
-
 from psiz.data.dataset_component import DatasetComponent
 from psiz.data.unravel_timestep import unravel_timestep
 
@@ -72,13 +69,10 @@ class Group(DatasetComponent):
 
         return value
 
-    def export(self, export_format="tfds", with_timestep_axis=None):
-        """Export.
+    def numpy(self, with_timestep_axis=None):
+        """Return group payload as NumPy arrays.
 
         Args:
-            export_format (optional): The output format of the dataset.
-                By default the dataset is formatted as a
-                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -93,10 +87,4 @@ class Group(DatasetComponent):
         if with_timestep_axis is False:
             value = unravel_timestep(value)
 
-        if export_format == "tfds":
-            value = tf.constant(value, name=("group_" + self.name))
-        else:
-            raise ValueError(
-                "Unrecognized `export_format` '{0}'.".format(export_format)
-            )
         return {self.name: value}

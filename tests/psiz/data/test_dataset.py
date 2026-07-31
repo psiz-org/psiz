@@ -19,7 +19,21 @@
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
+import psiz
+
+
+class _TensorFlowProxy:
+    """Lazy TensorFlow import that skips tests when TF is unavailable."""
+
+    _module = None
+
+    def __getattr__(self, name):
+        if self._module is None:
+            self._module = pytest.importorskip("tensorflow")
+        return getattr(self._module, name)
+
+
+tf = _TensorFlowProxy()
 
 from psiz.data.groups.group import Group
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
@@ -44,8 +58,9 @@ class BadTrialComponent(DatasetComponent):
         self.n_sample = 4
         self.sequence_length = 1
 
-    def export(self):
-        return tf.constant(self.x)
+    def numpy(self, with_timestep_axis=None):
+        del with_timestep_axis
+        return self.x
 
 
 def test_init_0a(c_2rank1_a_4x1):
@@ -234,6 +249,7 @@ def test_invalid_init_0(c_2rank1_aa_4x1, o_2rank1_d_3x2, o_4rank2_c_4x3):
     )
 
 
+@pytest.mark.backend_tensorflow
 def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
     """Test export.
 
@@ -272,6 +288,7 @@ def test_export_0(c_2rank1_d_3x2, g_condition_idx_3x2):
     tf.debugging.assert_equal(desired_condition_id, x["condition_idx"])
 
 
+@pytest.mark.backend_tensorflow
 def test_export_1(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     """Test export.
 
@@ -318,6 +335,7 @@ def test_export_1(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     tf.debugging.assert_equal(desired_w, w)
 
 
+@pytest.mark.backend_tensorflow
 def test_export_2a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2):
     """Test export.
 
@@ -404,6 +422,7 @@ def test_export_2a(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3
     tf.debugging.assert_equal(desired_w_rt, w["rt"])
 
 
+@pytest.mark.backend_tensorflow
 def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     """Test export with `StringLookup`."""
     pds = Dataset([c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1])
@@ -436,6 +455,7 @@ def test_export_3(c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1):
     tf.debugging.assert_equal(ds2_list[0][0]["condition_idx"], desired_condition_idx)
 
 
+@pytest.mark.backend_tensorflow
 def test_export_4(c_2rank1_a_4x1):
     """Test export."""
     pds = Dataset([c_2rank1_a_4x1])
@@ -452,6 +472,7 @@ def test_export_4(c_2rank1_a_4x1):
     tf.debugging.assert_equal(desired_x_stimulus_set, x["given2rank1_stimulus_set"])
 
 
+@pytest.mark.backend_tensorflow
 def test_export_5(c_2rank1_aa_4x1):
     """Test export."""
     pds = Dataset([c_2rank1_aa_4x1])
@@ -468,6 +489,7 @@ def test_export_5(c_2rank1_aa_4x1):
     tf.debugging.assert_equal(desired_x_stimulus_set, x["given2rank1_stimulus_set"])
 
 
+@pytest.mark.backend_tensorflow
 def test_invalid_export_0(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     """Test export.
 
@@ -482,6 +504,7 @@ def test_invalid_export_0(c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2):
     assert str(e_info.value) == "Unrecognized `export_format` 'garbage'."
 
 
+@pytest.mark.backend_tensorflow
 def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
     """Test export.
 
@@ -499,6 +522,7 @@ def test_invalid_export_1(c_2rank1_d_3x2, o_2rank1_d_3x2, o_rt_a_3x2_noname):
     )
 
 
+@pytest.mark.backend_tensorflow
 def test_tf_ds_concatenate(c_2rank1_d_3x2, c_2rank1_e_3x2):
     """Test concatenating two datasets"""
     td_0 = Dataset([c_2rank1_d_3x2])
@@ -510,3 +534,137 @@ def test_tf_ds_concatenate(c_2rank1_d_3x2, c_2rank1_e_3x2):
     tfds = ds_0.concatenate(ds_1).batch(6)
     ds_list = list(tfds)
     _ = ds_list[0]
+
+
+@pytest.mark.backend_tensorflow
+def test_export_tfds_deprecation_warning(c_2rank1_a_4x1):
+    """Legacy tfds export should emit a deprecation warning."""
+    pds = Dataset([c_2rank1_a_4x1])
+    with pytest.warns(DeprecationWarning, match="Dataset.export"):
+        _ = pds.export(export_format="tfds")
+
+
+def test_tier_a_numpy_content_only(c_2rank1_a_4x1):
+    """Dataset.numpy should materialize content-only arrays."""
+    pds = Dataset([c_2rank1_a_4x1])
+    x = pds.numpy()
+    assert x["given2rank1_stimulus_set"].shape == (4, 3)
+
+
+def test_tier_a_tensorflow_with_outcome(c_2rank1_aa_4x1, o_2rank1_aa_4x1):
+    """Dataset.tensorflow should produce unbatched (x, y, w) tuples."""
+    pds = Dataset([c_2rank1_aa_4x1, o_2rank1_aa_4x1])
+    tfds = pds.tensorflow()
+    first = next(iter(tfds))
+    assert len(first) == 3
+
+
+def _assert_mapping_allclose(actual, expected):
+    assert set(actual.keys()) == set(expected.keys())
+    for key in actual.keys():
+        actual_value = _normalize_text_array(actual[key])
+        expected_value = _normalize_text_array(expected[key])
+        if np.issubdtype(actual_value.dtype, np.number) and np.issubdtype(
+            expected_value.dtype, np.number
+        ):
+            np.testing.assert_allclose(actual_value, expected_value)
+        else:
+            np.testing.assert_array_equal(actual_value, expected_value)
+
+
+def _normalize_text_array(value):
+    """Normalize bytes payloads to unicode for deterministic comparisons."""
+    arr = np.asarray(value)
+    if arr.dtype.kind == "S":
+        return arr.astype("U")
+    if arr.dtype == object:
+        decode = np.vectorize(
+            lambda x: x.decode("utf-8") if isinstance(x, (bytes, np.bytes_)) else x,
+            otypes=[object],
+        )
+        return decode(arr)
+    return arr
+
+
+def _assert_roundtrip_matches_materialized(
+    pds,
+    artifact_dir,
+    *,
+    with_timestep_axis=None,
+):
+    expected = pds.numpy(with_timestep_axis=with_timestep_axis)
+
+    pds.save(
+        artifact_dir,
+        dataset_id="dataset_roundtrip_test",
+        with_timestep_axis=with_timestep_axis,
+    )
+    actual = psiz.data.load(artifact_dir).numpy()
+
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        _assert_mapping_allclose(actual, expected)
+        return
+
+    assert isinstance(actual, tuple)
+    assert isinstance(expected, tuple)
+    assert len(actual) == len(expected)
+
+    _assert_mapping_allclose(actual[0], expected[0])
+    if isinstance(expected[1], dict):
+        _assert_mapping_allclose(actual[1], expected[1])
+    else:
+        np.testing.assert_allclose(actual[1], expected[1])
+
+    if isinstance(expected[2], dict):
+        _assert_mapping_allclose(actual[2], expected[2])
+    else:
+        np.testing.assert_allclose(actual[2], expected[2])
+
+
+def test_roundtrip_save_load_0(c_2rank1_d_3x2, g_condition_idx_3x2, tmp_path):
+    """Round-trip save/load for export_0-style dataset."""
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2])
+    artifact_dir = tmp_path / "dataset_export_0.psiz"
+    _assert_roundtrip_matches_materialized(pds, artifact_dir)
+
+
+def test_roundtrip_save_load_1(
+    c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, tmp_path
+):
+    """Round-trip save/load for export_1-style dataset with flattened timesteps."""
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2])
+    artifact_dir = tmp_path / "dataset_export_1.psiz"
+    _assert_roundtrip_matches_materialized(pds, artifact_dir, with_timestep_axis=False)
+
+
+def test_roundtrip_save_load_2a(
+    c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2, tmp_path
+):
+    """Round-trip save/load for export_2a-style multi-output dataset."""
+    pds = Dataset([c_2rank1_d_3x2, g_condition_idx_3x2, o_2rank1_d_3x2, o_rt_a_3x2])
+    artifact_dir = tmp_path / "dataset_export_2a.psiz"
+    _assert_roundtrip_matches_materialized(pds, artifact_dir)
+
+
+def test_roundtrip_save_load_3(
+    c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1, tmp_path
+):
+    """Round-trip save/load for export_3-style dataset."""
+    pds = Dataset([c_rate2_a_4x1, g_condition_label_4x1, o_continuous_a_4x1])
+    artifact_dir = tmp_path / "dataset_export_3.psiz"
+    _assert_roundtrip_matches_materialized(pds, artifact_dir)
+
+
+def test_roundtrip_save_load_4(c_2rank1_a_4x1, tmp_path):
+    """Round-trip save/load for export_4-style content-only dataset."""
+    pds = Dataset([c_2rank1_a_4x1])
+    artifact_dir = tmp_path / "dataset_export_4.psiz"
+    _assert_roundtrip_matches_materialized(pds, artifact_dir)
+
+
+def test_roundtrip_save_load_5(c_2rank1_aa_4x1, tmp_path):
+    """Round-trip save/load for export_5-style content-only dataset."""
+    pds = Dataset([c_2rank1_aa_4x1])
+    artifact_dir = tmp_path / "dataset_export_5.psiz"
+    _assert_roundtrip_matches_materialized(pds, artifact_dir)

@@ -25,8 +25,14 @@ from psiz.keras.layers.variational import Variational
 
 pytestmark = pytest.mark.adapter_surface
 
+BACKEND_CASES = [
+    pytest.param("tensorflow", marks=pytest.mark.backend_tensorflow, id="tensorflow"),
+    pytest.param("torch", marks=pytest.mark.backend_torch, id="torch"),
+    pytest.param("jax", marks=pytest.mark.backend_jax, id="jax"),
+]
 
-@pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
+
+@pytest.mark.parametrize("backend", BACKEND_CASES)
 def test_variational_layer_backend_parity(monkeypatch, backend):
     """Variational KL path works across stochastic adapters."""
     monkeypatch.setattr("psiz.stochastic.adapters.resolve_backend", lambda _: backend)
@@ -62,7 +68,7 @@ def test_variational_layer_backend_parity(monkeypatch, backend):
     assert np.isfinite(loss_value)
 
 
-@pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
+@pytest.mark.parametrize("backend", BACKEND_CASES)
 def test_embedding_variational_backend_parity(monkeypatch, backend):
     """EmbeddingVariational executes with parity-level behavior across adapters."""
     monkeypatch.setattr("psiz.stochastic.adapters.resolve_backend", lambda _: backend)
@@ -87,7 +93,7 @@ def test_embedding_variational_backend_parity(monkeypatch, backend):
     assert len(layer.losses) == 1
 
 
-@pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
+@pytest.mark.parametrize("backend", BACKEND_CASES)
 def test_minkowski_stochastic_backend_parity(monkeypatch, backend):
     """MinkowskiStochastic produces finite outputs across adapters."""
     monkeypatch.setattr("psiz.stochastic.adapters.resolve_backend", lambda _: backend)

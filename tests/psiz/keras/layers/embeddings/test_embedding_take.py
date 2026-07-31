@@ -46,7 +46,7 @@ def test_deterministic_0():
     x = np.array([0, 1, 2, 3], dtype="int32")
     z = embedding_take(x)
     z_desired = np.array([[0.1], [0.1], [0.1], [0.1]], dtype="float32")
-    np.testing.assert_array_equal(z_desired, z.numpy())
+    np.testing.assert_array_equal(z_desired, keras.ops.convert_to_numpy(z))
 
     # Test call with 2D input.
     x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
@@ -55,12 +55,14 @@ def test_deterministic_0():
         [[[0.1], [0.1]], [[0.1], [0.1]], [[0.1], [0.1]], [[0.1], [0.1]]],
         dtype="float32",
     )
-    np.testing.assert_array_equal(z_desired, z.numpy())
+    np.testing.assert_array_equal(z_desired, keras.ops.convert_to_numpy(z))
 
     # Test embedding properties.
     embeddings_desired = np.array([[0.1], [0.1], [0.1], [0.1]], dtype="float32")
     embeddings = embedding_take.embeddings
-    np.testing.assert_array_equal(embeddings_desired, embeddings.numpy())
+    np.testing.assert_array_equal(
+        embeddings_desired, keras.ops.convert_to_numpy(embeddings)
+    )
 
     mask_zero_desired = False
     assert mask_zero_desired == embedding_take.mask_zero
@@ -97,7 +99,7 @@ def test_deterministic_1():
     z_desired = np.array(
         [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype="float32"
     )
-    np.testing.assert_array_equal(z_desired, z.numpy())
+    np.testing.assert_array_equal(z_desired, keras.ops.convert_to_numpy(z))
 
     # Test call with 2d input.
     x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
@@ -111,14 +113,16 @@ def test_deterministic_1():
         ],
         dtype="float32",
     )
-    np.testing.assert_array_equal(z_desired, z.numpy())
+    np.testing.assert_array_equal(z_desired, keras.ops.convert_to_numpy(z))
 
     # Test embedding properties.
     embeddings_desired = np.array(
         [[0.1, 0.2], [0.1, 0.2], [0.1, 0.2], [0.1, 0.2]], dtype="float32"
     )
     embeddings = embedding_take.embeddings
-    np.testing.assert_array_equal(embeddings_desired, embeddings.numpy())
+    np.testing.assert_array_equal(
+        embeddings_desired, keras.ops.convert_to_numpy(embeddings)
+    )
 
     mask_zero_desired = False
     assert mask_zero_desired == embedding_take.mask_zero
@@ -158,7 +162,7 @@ def test_deterministic_2():
         [[0.1, 0.2], [0.1, 0.2], [0.3, 0.4], [0.3, 0.4], [0.5, 0.6], [0.5, 0.6]],
         dtype="float32",
     )
-    np.testing.assert_array_equal(z_desired, z.numpy())
+    np.testing.assert_array_equal(z_desired, keras.ops.convert_to_numpy(z))
 
     # Test embedding properties.
     embeddings_desired = np.array(
@@ -166,7 +170,9 @@ def test_deterministic_2():
         dtype="float32",
     )
     embeddings = embedding_take.embeddings
-    np.testing.assert_array_equal(embeddings_desired, embeddings.numpy())
+    np.testing.assert_array_equal(
+        embeddings_desired, keras.ops.convert_to_numpy(embeddings)
+    )
 
     mask_zero_desired = False
     assert mask_zero_desired == embedding_take.mask_zero
@@ -202,13 +208,13 @@ def test_stochastic_0():
 
     # Test call with 1D input.
     x = np.array([0, 1, 2, 3], dtype="int32")
-    z = embedding_take(x).numpy()
+    z = keras.ops.convert_to_numpy(embedding_take(x))
     assert z.shape[0] == 4
     assert z.shape[1] == n_dim
 
     # Test call with 2D input.
     x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
-    z = embedding_take(x).numpy()
+    z = keras.ops.convert_to_numpy(embedding_take(x))
     assert z.shape[0] == 4
     assert z.shape[1] == 2
     assert z.shape[2] == n_dim
@@ -220,10 +226,11 @@ def test_stochastic_0():
     )
     embeddings = embedding_take.embeddings
     np.testing.assert_array_equal(
-        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+        embeddings_loc_desired, keras.ops.convert_to_numpy(embeddings.distribution.loc)
     )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired, embeddings.distribution.scale.numpy()
+        embeddings_scale_desired,
+        keras.ops.convert_to_numpy(embeddings.distribution.scale),
     )
 
     mask_zero_desired = False
@@ -260,13 +267,13 @@ def test_stochastic_1():
 
     # Test call with 1D input.
     x = np.array([0, 1, 2, 3], dtype="int32")
-    z = embedding_take(x).numpy()
+    z = keras.ops.convert_to_numpy(embedding_take(x))
     assert z.shape[0] == 4
     assert z.shape[1] == n_dim
 
     # Test call with 2D input.
     x = np.array([[0, 1], [2, 3], [0, 1], [2, 3]], dtype="int32")
-    z = embedding_take(x).numpy()
+    z = keras.ops.convert_to_numpy(embedding_take(x))
     assert z.shape[0] == 4
     assert z.shape[1] == 2
     assert z.shape[2] == n_dim
@@ -286,10 +293,11 @@ def test_stochastic_1():
     )
     embeddings = embedding_take.embeddings
     np.testing.assert_array_equal(
-        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+        embeddings_loc_desired, keras.ops.convert_to_numpy(embeddings.distribution.loc)
     )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired, embeddings.distribution.scale.numpy()
+        embeddings_scale_desired,
+        keras.ops.convert_to_numpy(embeddings.distribution.scale),
     )
 
     mask_zero_desired = False
@@ -327,7 +335,7 @@ def test_stochastic_2a():
 
     # Test call with 1D input.
     x = np.array([0, 1, 2, 3, 4, 5], dtype="int32")
-    z = embedding_take(x).numpy()
+    z = keras.ops.convert_to_numpy(embedding_take(x))
     assert z.shape[0] == 6
     assert z.shape[1] == n_dim
 
@@ -349,10 +357,11 @@ def test_stochastic_2a():
     )
     embeddings = embedding_take.embeddings
     np.testing.assert_array_equal(
-        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+        embeddings_loc_desired, keras.ops.convert_to_numpy(embeddings.distribution.loc)
     )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired, embeddings.distribution.scale.numpy()
+        embeddings_scale_desired,
+        keras.ops.convert_to_numpy(embeddings.distribution.scale),
     )
 
     mask_zero_desired = False
@@ -390,7 +399,7 @@ def test_stochastic_2b():
 
     # Test call with 1D input.
     x = np.array([0, 1, 2, 3, 4, 5], dtype="int32")
-    z = embedding_take(x).numpy()
+    z = keras.ops.convert_to_numpy(embedding_take(x))
     assert z.shape[0] == n_stimuli
     assert z.shape[1] == n_dim
 
@@ -412,10 +421,11 @@ def test_stochastic_2b():
     )
     embeddings = embedding_take.embeddings
     np.testing.assert_array_equal(
-        embeddings_loc_desired, embeddings.distribution.loc.numpy()
+        embeddings_loc_desired, keras.ops.convert_to_numpy(embeddings.distribution.loc)
     )
     np.testing.assert_array_almost_equal(
-        embeddings_scale_desired, embeddings.distribution.scale.numpy()
+        embeddings_scale_desired,
+        keras.ops.convert_to_numpy(embeddings.distribution.scale),
     )
 
     mask_zero_desired = False

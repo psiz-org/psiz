@@ -15,6 +15,7 @@
 # ============================================================================
 """Module for testing utils.py."""
 
+import keras
 import numpy as np
 import pytest
 
@@ -27,7 +28,11 @@ def test_expand_dim_repeat_empty():
     n_sample = ()
     with pytest.raises(Exception) as e_info:
         expand_dim_repeat(x, n_sample, axis=1)
-    assert str(e_info.value) == ("Dimensions 1 and 0 are not compatible")
+    message = str(e_info.value)
+    assert (
+        "Dimensions 1 and 0 are not compatible" in message
+        or "repeats must have the same size as input along dim" in message
+    )
 
 
 def test_expand_dim_repeat_1():
@@ -35,6 +40,7 @@ def test_expand_dim_repeat_1():
 
     n_sample = 1
     output = expand_dim_repeat(x, n_sample, axis=1)
+    output = keras.ops.convert_to_numpy(output)
 
     desired_output = np.array(
         [[[0, 1, 2]], [[3, 4, 5]], [[6, 7, 8]], [[9, 10, 11]], [[12, 13, 14]]]
@@ -47,6 +53,7 @@ def test_expand_dim_repeat_2():
 
     n_sample = 2
     output = expand_dim_repeat(x, n_sample, axis=1)
+    output = keras.ops.convert_to_numpy(output)
 
     desired_output = np.array(
         [

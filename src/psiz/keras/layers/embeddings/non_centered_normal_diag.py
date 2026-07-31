@@ -96,8 +96,11 @@ class EmbeddingNonCenteredNormalDiag(StochasticEmbedding):
             )
         self.epsilon_loc_initializer = keras.initializers.get(epsilon_loc_initializer)
         if epsilon_scale_initializer is None:
+            default_epsilon_scale_mean = float(
+                keras.ops.convert_to_numpy(softplus_inverse(1.0))
+            )
             epsilon_scale_initializer = keras.initializers.RandomNormal(
-                mean=keras.ops.convert_to_numpy(softplus_inverse(1.0)), stddev=0.001
+                mean=default_epsilon_scale_mean, stddev=0.001
             )
         self.epsilon_scale_initializer = keras.initializers.get(
             epsilon_scale_initializer

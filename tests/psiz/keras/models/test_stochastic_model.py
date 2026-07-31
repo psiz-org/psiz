@@ -21,11 +21,73 @@ from pathlib import Path
 import keras
 import numpy as np
 import pytest
-import tensorflow as tf
 
 import psiz.keras.layers
 from psiz.stochastic.transforms import softplus_inverse
 from psiz.keras.models.stochastic_model import StochasticModel
+
+
+def _map_leaves(fn, obj):
+    """Apply `fn` to all non-container leaves in a nested structure."""
+    if isinstance(obj, dict):
+        return {k: _map_leaves(fn, v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        mapped = [_map_leaves(fn, v) for v in obj]
+        return type(obj)(mapped)
+    return fn(obj)
+
+
+def _build_tf_dataset(case):
+    """Build a `tf.data.Dataset` from a canonical raw case."""
+    tf = pytest.importorskip("tensorflow")
+    ds = tf.data.Dataset.from_tensor_slices((case["x"], case["y"], case["w"]))
+    return ds.batch(case["batch_size"], drop_remainder=False)
+
+
+def _build_torch_dataloader(case):
+    """Build a Torch `DataLoader` from a canonical raw case."""
+    torch = pytest.importorskip("torch")
+    torch_utils_data = pytest.importorskip("torch.utils.data")
+
+    n_example = case["batch_size"]
+
+    def as_torch(value):
+        return torch.as_tensor(value)
+
+    x = _map_leaves(as_torch, case["x"])
+    y = as_torch(case["y"])
+    w = as_torch(case["w"])
+
+    class CaseDataset(torch_utils_data.Dataset):
+        def __len__(self):
+            return n_example
+
+        def __getitem__(self, idx):
+            x_i = _map_leaves(lambda v: v[idx], x)
+            return x_i, y[idx], w[idx]
+
+    return torch_utils_data.DataLoader(
+        CaseDataset(), batch_size=n_example, shuffle=False, drop_last=False
+    )
+
+
+_DATASET_ADAPTERS = {
+    "tf": _build_tf_dataset,
+    "torch": _build_torch_dataloader,
+}
+
+
+def _materialize_dataset(case, backend):
+    """Materialize a backend-specific iterable from a canonical raw case."""
+    return _DATASET_ADAPTERS[backend](case)
+
+
+@pytest.fixture(
+    scope="module", params=["tf", "torch"], ids=["tf_dataset", "torch_dataloader"]
+)
+def data_backend(request):
+    """Backend used for dataset materialization in local fixtures."""
+    return request.param
 
 
 @keras.saving.register_keras_serializable()
@@ -1262,7 +1324,7 @@ def build_ratesim_subclass_a(is_eager):
 
 
 @pytest.fixture(scope="module")
-def ds_x2():
+def ds_x2(data_backend):
     """Dataset.
 
     x = [rank-2]
@@ -1294,16 +1356,24 @@ def ds_x2():
     )
 
     w = np.array([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype="float32")
-    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    tfds = tfds.batch(n_example, drop_remainder=False)
-
     input_shape = {"x_a": (x_a.shape)}
+    case = {
+        "x": x,
+        "y": y,
+        "w": w,
+        "batch_size": n_example,
+    }
+    dataset = _materialize_dataset(case, data_backend)
 
-    return {"tfds": tfds, "input_shape": input_shape}
+    return {
+        "dataset": dataset,
+        "input_shape": input_shape,
+        "data_backend": data_backend,
+    }
 
 
 @pytest.fixture(scope="module")
-def ds_x2_as_tensor():
+def ds_x2_as_tensor(data_backend):
     """Dataset.
 
     x = [rank-2]
@@ -1334,16 +1404,24 @@ def ds_x2_as_tensor():
     )
 
     w = np.array([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype="float32")
-    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    tfds = tfds.batch(n_example, drop_remainder=False)
-
     input_shape = x.shape
+    case = {
+        "x": x,
+        "y": y,
+        "w": w,
+        "batch_size": n_example,
+    }
+    dataset = _materialize_dataset(case, data_backend)
 
-    return {"tfds": tfds, "input_shape": input_shape}
+    return {
+        "dataset": dataset,
+        "input_shape": input_shape,
+        "data_backend": data_backend,
+    }
 
 
 @pytest.fixture(scope="module")
-def ds_x2_x2_x2():
+def ds_x2_x2_x2(data_backend):
     """Dataset.
 
     x = [rank-2,  rank-2, rank-2]
@@ -1402,20 +1480,28 @@ def ds_x2_x2_x2():
     )
 
     w = np.array([1.0, 1.0, 0.2, 1.0, 1.0, 0.8], dtype="float32")
-    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    tfds = tfds.batch(n_example, drop_remainder=False)
-
     input_shape = {
         "x_a": x_a.shape,
         "x_b": x_b.shape,
         "x_c": x_c.shape,
     }
+    case = {
+        "x": x,
+        "y": y,
+        "w": w,
+        "batch_size": n_example,
+    }
+    dataset = _materialize_dataset(case, data_backend)
 
-    return {"tfds": tfds, "input_shape": input_shape}
+    return {
+        "dataset": dataset,
+        "input_shape": input_shape,
+        "data_backend": data_backend,
+    }
 
 
 @pytest.fixture(scope="module")
-def ds_x3_x3():
+def ds_x3_x3(data_backend):
     """Dataset.
 
     x = [rank-3, rank-3]
@@ -1465,32 +1551,40 @@ def ds_x3_x3():
         [[1.0, 1.0], [1.0, 1.0], [0.2, 0.2], [1.0, 1.0], [1.0, 1.0], [0.8, 0.8]],
         dtype="float32",
     )
-    tfds = tf.data.Dataset.from_tensor_slices((x, y, w))
-    tfds = tfds.batch(n_example, drop_remainder=False)
-
     input_shape = {
         "x_a": x_a.shape,
         "x_b": x_b.shape,
     }
+    case = {
+        "x": x,
+        "y": y,
+        "w": w,
+        "batch_size": n_example,
+    }
+    dataset = _materialize_dataset(case, data_backend)
 
-    return {"tfds": tfds, "input_shape": input_shape}
+    return {
+        "dataset": dataset,
+        "input_shape": input_shape,
+        "data_backend": data_backend,
+    }
 
 
-def call_fit_evaluate_predict(model, tfds):
+def call_fit_evaluate_predict(model, dataset):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
-    for data in tfds:
+    for data in dataset:
         x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         y_pred = model(x, training=False)
 
     # Test fit.
-    model.fit(tfds, epochs=3)
+    model.fit(dataset, epochs=3)
 
     # Test evaluate.
-    eval0 = model.evaluate(tfds)
+    eval0 = model.evaluate(dataset)
 
     # Test predict.
-    pred0 = model.predict(tfds)
+    pred0 = model.predict(dataset)
 
 
 class TestControl:
@@ -1499,7 +1593,7 @@ class TestControl:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
-        tfds = ds_x2["tfds"]
+        dataset = ds_x2["dataset"]
 
         model = ModelControl()
         compile_kwargs = {
@@ -1508,8 +1602,8 @@ class TestControl:
             "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
-        model.fit(tfds, epochs=2)
-        result0 = model.evaluate(tfds)
+        model.fit(dataset, epochs=2)
+        result0 = model.evaluate(dataset)
         kernel0 = model.dense_layer.kernel
         bias0 = model.dense_layer.bias
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -1520,7 +1614,7 @@ class TestControl:
             fp_model,
             custom_objects={"ModelControl": ModelControl},
         )
-        result1 = loaded.evaluate(tfds)
+        result1 = loaded.evaluate(dataset)
         kernel1 = loaded.dense_layer.kernel
         bias1 = loaded.dense_layer.bias
 
@@ -1536,7 +1630,7 @@ class TestModelA:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
-        tfds = ds_x2["tfds"]
+        dataset = ds_x2["dataset"]
 
         model = ModelA(n_sample=2)
         compile_kwargs = {
@@ -1545,9 +1639,9 @@ class TestModelA:
             "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
-        model.fit(tfds, epochs=2)
+        model.fit(dataset, epochs=2)
         assert model.n_sample == 2
-        results_0 = model.evaluate(tfds, return_dict=True)
+        results_0 = model.evaluate(dataset, return_dict=True)
         kernel0 = model.dense_layer.kernel
         bias0 = model.dense_layer.bias
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -1557,7 +1651,7 @@ class TestModelA:
         loaded = psiz.keras.load_psiz_model(
             fp_model, custom_objects={"ModelA": ModelA}
         )
-        results_1 = loaded.evaluate(tfds, return_dict=True)
+        results_1 = loaded.evaluate(dataset, return_dict=True)
         kernel1 = loaded.dense_layer.kernel
         bias1 = loaded.dense_layer.bias
 
@@ -1574,7 +1668,7 @@ class TestModelB:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_b1(self, ds_x2, is_eager, tmpdir):
         """Test model serialization."""
-        tfds = ds_x2["tfds"]
+        dataset = ds_x2["dataset"]
 
         model = ModelB(n_sample=2)
         compile_kwargs = {
@@ -1583,9 +1677,9 @@ class TestModelB:
             "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
-        model.fit(tfds, epochs=2)
+        model.fit(dataset, epochs=2)
         assert model.n_sample == 2
-        results_0 = model.evaluate(tfds, return_dict=True)
+        results_0 = model.evaluate(dataset, return_dict=True)
         kernel0 = model.custom_layer.kernel
         fp_model = Path(tmpdir) / "test_model.psiz"
         psiz.keras.save_psiz_model(model, fp_model)
@@ -1594,7 +1688,7 @@ class TestModelB:
         loaded = psiz.keras.load_psiz_model(
             fp_model, custom_objects={"ModelB": ModelB}
         )
-        results_1 = loaded.evaluate(tfds, return_dict=True)
+        results_1 = loaded.evaluate(dataset, return_dict=True)
         kernel1 = loaded.custom_layer.kernel
 
         # Test for model equality.
@@ -1606,7 +1700,7 @@ class TestModelB:
     def test_save_load_b2(self, ds_x2_as_tensor, is_eager, tmpdir):
         """Test model serialization."""
 
-        tfds = ds_x2_as_tensor["tfds"]
+        dataset = ds_x2_as_tensor["dataset"]
 
         model = ModelB2(n_sample=2)
         compile_kwargs = {
@@ -1615,9 +1709,9 @@ class TestModelB:
             "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
-        model.fit(tfds, epochs=2)
+        model.fit(dataset, epochs=2)
         assert model.n_sample == 2
-        results_0 = model.evaluate(tfds, return_dict=True)
+        results_0 = model.evaluate(dataset, return_dict=True)
         kernel0 = model.custom_layer.kernel
         fp_model = Path(tmpdir) / "test_model.psiz"
         psiz.keras.save_psiz_model(model, fp_model)
@@ -1627,7 +1721,7 @@ class TestModelB:
             fp_model,
             custom_objects={"ModelB2": ModelB2},
         )
-        results_1 = loaded.evaluate(tfds, return_dict=True)
+        results_1 = loaded.evaluate(dataset, return_dict=True)
         kernel1 = loaded.custom_layer.kernel
 
         # Test for model equality.
@@ -1643,7 +1737,7 @@ class TestModelC:
     def test_usage(self, ds_x2_x2_x2, is_eager):
         """Test usage."""
 
-        tfds = ds_x2_x2_x2["tfds"]
+        dataset = ds_x2_x2_x2["dataset"]
         input_shape = ds_x2_x2_x2["input_shape"]
         model = ModelC(n_sample=2)
         model.build(input_shape)
@@ -1751,7 +1845,7 @@ class TestModelC:
         )
 
         # Perform a `test_step`.
-        for data in tfds:
+        for data in dataset:
             x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
@@ -1761,6 +1855,10 @@ class TestModelC:
                 sample_weight, model.n_sample
             )
 
+            x = {k: keras.ops.convert_to_numpy(v) for k, v in x.items()}
+            y = keras.ops.convert_to_numpy(y)
+            sample_weight = keras.ops.convert_to_numpy(sample_weight)
+
             # Assert `x`, `y` and `sample_weight` handled correctly.
             np.testing.assert_allclose(x["x_a"], x0_desired)
             np.testing.assert_allclose(x["x_b"], x1_desired)
@@ -1769,6 +1867,7 @@ class TestModelC:
             np.testing.assert_allclose(sample_weight, sample_weight_desired)
 
             y_pred = model(x, training=False)
+            y_pred = keras.ops.convert_to_numpy(y_pred)
             # Assert `y_pred` handled correctly.
             np.testing.assert_allclose(y_pred, y_pred_desired, atol=1e-6)
 
@@ -1776,7 +1875,7 @@ class TestModelC:
     def test_nsample_change(self, ds_x2_x2_x2, is_eager):
         """Test model where number of samples changes between use."""
 
-        tfds = ds_x2_x2_x2["tfds"]
+        dataset = ds_x2_x2_x2["dataset"]
         model = ModelC(n_sample=2)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
@@ -1784,7 +1883,7 @@ class TestModelC:
             "run_eagerly": is_eager,
         }
         model.compile(**compile_kwargs)
-        model.fit(tfds)
+        model.fit(dataset)
 
         # Change model's `n_sample` attribute.
         model.n_sample = 5
@@ -1863,7 +1962,7 @@ class TestModelC:
         y_pred_shape_desired = [30, 3]
 
         # Perform a `test_step` to verify `n_sample` took effect.
-        for data in tfds:
+        for data in dataset:
             x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
@@ -1872,6 +1971,8 @@ class TestModelC:
             sample_weight = model.repeat_samples_in_batch_axis(
                 sample_weight, model.n_sample
             )
+            y = keras.ops.convert_to_numpy(y)
+            sample_weight = keras.ops.convert_to_numpy(sample_weight)
             # Assert `y` and `sample_weight` handled correctly.
             # Assert `y` and `sample_weight` handled correctly.
             np.testing.assert_allclose(y, y_desired)
@@ -1885,7 +1986,7 @@ class TestModelC:
     def test_save_load(self, ds_x2_x2_x2, is_eager, tmpdir):
         """Test model serialization."""
 
-        tfds = ds_x2_x2_x2["tfds"]
+        dataset = ds_x2_x2_x2["dataset"]
         model = ModelC(n_sample=7)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
@@ -1894,9 +1995,9 @@ class TestModelC:
         }
         model.compile(**compile_kwargs)
 
-        model.fit(tfds, epochs=2)
+        model.fit(dataset, epochs=2)
         assert model.n_sample == 7
-        results_0 = model.evaluate(tfds, return_dict=True)
+        results_0 = model.evaluate(dataset, return_dict=True)
         branch_0_w0_0 = model.branch_0.w0
         branch_1_w0_0 = model.branch_1.w0
 
@@ -1909,7 +2010,7 @@ class TestModelC:
         loaded = psiz.keras.load_psiz_model(
             fp_model, custom_objects={"ModelC": ModelC}
         )
-        results_1 = loaded.evaluate(tfds, return_dict=True)
+        results_1 = loaded.evaluate(dataset, return_dict=True)
         branch_0_w0_1 = loaded.branch_0.w0
         branch_1_w0_1 = loaded.branch_1.w0
 
@@ -1927,7 +2028,7 @@ class TestModelD:
     def test_usage(self, ds_x3_x3, is_eager):
         """Test with RNN layer."""
 
-        tfds = ds_x3_x3["tfds"]
+        dataset = ds_x3_x3["dataset"]
         input_shape = ds_x3_x3["input_shape"]
         model = ModelD(n_sample=10)
         model.build(input_shape)
@@ -1943,7 +2044,7 @@ class TestModelD:
         y_pred_shape_desired = [60, 2, 3]
 
         # Perform a `test_step`.
-        for data in tfds:
+        for data in dataset:
             x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
             # Adjust `x`, `y` and `sample_weight` batch axis to reflect
             # multiple samples.
@@ -1966,7 +2067,7 @@ class TestModelD:
     def test_save_load(self, ds_x3_x3, is_eager, tmpdir):
         """Test model serialization."""
 
-        tfds = ds_x3_x3["tfds"]
+        dataset = ds_x3_x3["dataset"]
         model = ModelD(n_sample=11)
         compile_kwargs = {
             "loss": keras.losses.MeanSquaredError(),
@@ -1975,9 +2076,9 @@ class TestModelD:
         }
         model.compile(**compile_kwargs)
 
-        model.fit(tfds, epochs=2)
+        model.fit(dataset, epochs=2)
         assert model.n_sample == 11
-        results_0 = model.evaluate(tfds, return_dict=True)
+        results_0 = model.evaluate(dataset, return_dict=True)
         kernel_0 = model.rnn_layer.cell.layer_0.kernel
 
         # Save the model.
@@ -1989,7 +2090,7 @@ class TestModelD:
         loaded = psiz.keras.load_psiz_model(
             fp_model, custom_objects={"ModelD": ModelD}
         )
-        results_1 = loaded.evaluate(tfds, return_dict=True)
+        results_1 = loaded.evaluate(dataset, return_dict=True)
         kernel_1 = loaded.rnn_layer.cell.layer_0.kernel
 
         # Test for model equality.
@@ -2006,9 +2107,9 @@ class TestRankSimilarity:
     def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
 
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.backend_tensorflow
@@ -2017,10 +2118,10 @@ class TestRankSimilarity:
         """Test subclassed `StochasticModel`."""
         fp_model = Path(tmpdir) / Path("checkpoint.model.keras")
 
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         keras.mixed_precision.set_global_policy("mixed_float16")
         model = build_ranksim_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
 
         callbacks = [
             keras.callbacks.ModelCheckpoint(
@@ -2032,7 +2133,7 @@ class TestRankSimilarity:
             ),
         ]
         history = model.fit(
-            tfds,
+            ds,
             epochs=3,
             callbacks=callbacks,
             verbose=0,
@@ -2053,10 +2154,10 @@ class TestRankSimilarity:
 
         """
 
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a(is_eager)
         # TODO remove?
-        # input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
+        # input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
         # model.build(input_shape)
 
         # Test initialization settings.
@@ -2066,8 +2167,8 @@ class TestRankSimilarity:
         model.n_sample = 21
         assert model.n_sample == 21
 
-        model.fit(tfds, epochs=1)
-        _ = model.evaluate(tfds)
+        model.fit(ds, epochs=1)
+        _ = model.evaluate(ds)
         percept_mean = model.percept.embeddings.mean()
         percept_variance = model.percept.embeddings.variance()
 
@@ -2081,7 +2182,7 @@ class TestRankSimilarity:
             fp_model,
             custom_objects={"RankModelA": RankModelA},
         )
-        _ = loaded.evaluate(tfds)
+        _ = loaded.evaluate(ds)
         loaded_percept_mean = loaded.percept.embeddings.mean()
         loaded_percept_variance = loaded.percept.embeddings.variance()
 
@@ -2099,9 +2200,9 @@ class TestRankSimilarity:
     def test_usage_subclass_b(self, ds_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
 
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_b(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.backend_tensorflow
@@ -2109,10 +2210,10 @@ class TestRankSimilarity:
     def test_save_load_subclass_b(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test save/load."""
 
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_b(is_eager)
         # TODO remove?
-        # input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
+        # input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
         # model.build(input_shape)
 
         # Test initialization settings.
@@ -2122,8 +2223,8 @@ class TestRankSimilarity:
         model.n_sample = 21
         assert model.n_sample == 21
 
-        model.fit(tfds, epochs=1)
-        _ = model.evaluate(tfds)
+        model.fit(ds, epochs=1)
+        _ = model.evaluate(ds)
         percept_mean = model.percept.embeddings.mean()
         percept_variance = model.percept.embeddings.variance()
 
@@ -2137,7 +2238,7 @@ class TestRankSimilarity:
             fp_model,
             custom_objects={"RankModelB": RankModelB},
         )
-        _ = loaded.evaluate(tfds)
+        _ = loaded.evaluate(ds)
         loaded_percept_mean = loaded.percept.embeddings.mean()
         loaded_percept_variance = loaded.percept.embeddings.variance()
 
@@ -2155,9 +2256,9 @@ class TestRankSimilarity:
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
         """Test subclassed `StochasticModel`."""
 
-        tfds = ds_4rank1_v2
+        ds = ds_4rank1_v2
         model = build_ranksim_subclass_c(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.backend_tensorflow
@@ -2165,9 +2266,9 @@ class TestRankSimilarity:
     def test_usage_subclass_d(self, ds_2rank1_4rank1_v0, is_eager):
         """Test subclassed `StochasticModel`."""
 
-        tfds = ds_2rank1_4rank1_v0
+        ds = ds_2rank1_4rank1_v0
         model = build_ranksim_subclass_d(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.backend_tensorflow
@@ -2175,7 +2276,7 @@ class TestRankSimilarity:
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test usage in 'agent mode'."""
 
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a(is_eager)
 
         def simulate_agent(x):
@@ -2191,7 +2292,7 @@ class TestRankSimilarity:
             outcome_one_hot = keras.ops.one_hot(outcome_idx, depth)
             return outcome_one_hot
 
-        _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
+        _ = ds.map(lambda x, y, w: (x, simulate_agent(x), w))
 
         keras.backend.clear_session()
 
@@ -2216,9 +2317,9 @@ class TestRankSimilarity:
 #         """Test subclassed `StochasticModel`."""
 #
 
-#         tfds = ds_time_8rank2_v0
+#         ds = ds_time_8rank2_v0
 #         model = build_ranksimcell_subclass_a()
-#         call_fit_evaluate_predict(model, tfds)
+#         call_fit_evaluate_predict(model, ds)
 #         keras.backend.clear_session()
 
 #     @pytest.mark.xfail(reason="'add_loss' does not work inside RNN cell.")
@@ -2230,9 +2331,9 @@ class TestRankSimilarity:
 #         """Test save/load."""
 #
 
-#         tfds = ds_time_8rank2_v0
+#         ds = ds_time_8rank2_v0
 #         model = build_ranksimcell_subclass_a(is_eager)
-#         input_shape = {k: v.shape for k, v in tfds.element_spec[0].items()}
+#         input_shape = {k: v.shape for k, v in ds.element_spec[0].items()}
 #         model.build(input_shape)
 
 #         # Test initialization settings.
@@ -2242,9 +2343,9 @@ class TestRankSimilarity:
 #         model.n_sample = 21
 #         assert model.n_sample == 21
 
-#         model.fit(tfds, epochs=1)
+#         model.fit(ds, epochs=1)
 #         percept_mean = model.cell.percept.embeddings.mean()
-#         _ = model.evaluate(tfds)
+#         _ = model.evaluate(ds)
 
 #         # Test storage serialization.
 #         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -2256,7 +2357,7 @@ class TestRankSimilarity:
 #             fp_model, custom_objects={"RankModelB": RankModelB}
 #         )
 #         loaded_percept_mean = loaded.cell.percept.embeddings.mean()
-#         _ = loaded.evaluate(tfds)
+#         _ = loaded.evaluate(ds)
 
 #         # Test for model equality.
 #         assert loaded.n_sample == 21
@@ -2275,9 +2376,9 @@ class TestRateSimilarity:
     def test_usage_subclass_a(self, ds_rate2_v0, is_eager):
         """Test subclassed `StochasticModel`."""
 
-        tfds = ds_rate2_v0
+        ds = ds_rate2_v0
         model = build_ratesim_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.backend_tensorflow
@@ -2285,14 +2386,14 @@ class TestRateSimilarity:
     def test_save_load_subclass_a(self, ds_rate2_v0, is_eager, tmpdir):
         """Test save/load."""
 
-        tfds = ds_rate2_v0
+        ds = ds_rate2_v0
         model = build_ratesim_subclass_a(is_eager)
-        model.fit(tfds, epochs=1)
+        model.fit(ds, epochs=1)
 
         # Test stochastic attributes.
         assert model.n_sample == 11
 
-        _ = model.evaluate(tfds)
+        _ = model.evaluate(ds)
         percept_mean = model.percept.embeddings.mean()
 
         # Test storage serialization.
@@ -2305,7 +2406,7 @@ class TestRateSimilarity:
             fp_model,
             custom_objects={"RateModelA": RateModelA},
         )
-        _ = loaded.evaluate(tfds)
+        _ = loaded.evaluate(ds)
 
         # Test for model equality.
         assert loaded.n_sample == 11
@@ -2325,9 +2426,9 @@ class TestRateSimilarity:
 #         """Test subclassed model, one group."""
 #
 
-#         tfds = ds_time_categorize_v0
+#         ds = ds_time_categorize_v0
 #         model = build_alcove_subclass_a(is_eager)
-#         call_fit_evaluate_predict(model, tfds)
+#         call_fit_evaluate_predict(model, ds)
 #         keras.backend.clear_session()
 
 #     @pytest.mark.parametrize("is_eager", [True, False])
@@ -2335,16 +2436,16 @@ class TestRateSimilarity:
 #         """Test save/load."""
 #
 
-#         tfds = ds_time_categorize_v0
+#         ds = ds_time_categorize_v0
 #         model = build_alcove_subclass_a(is_eager)
-#         model.fit(tfds, epochs=1)
+#         model.fit(ds, epochs=1)
 
 #         # Test initialization settings.
 #         assert model.n_sample == 2
 
 #         # Update `n_sample`.
 #         model.n_sample = 11
-#         _ = model.evaluate(tfds)
+#         _ = model.evaluate(ds)
 #         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
 #         # Test storage.
@@ -2356,7 +2457,7 @@ class TestRateSimilarity:
 #             fp_model,
 #             custom_objects={"ALCOVEModelA": ALCOVEModelA},
 #         )
-#         _ = loaded.evaluate(tfds)
+#         _ = loaded.evaluate(ds)
 
 #         # Test for model equality.
 #         loaded_percept_mean = loaded.behavior.cell.percept.embeddings.mean()
@@ -2383,9 +2484,9 @@ class TestRateSimilarity:
 #         """Test subclassed model, one group."""
 #
 
-#         tfds = ds_time_categorize_v0
+#         ds = ds_time_categorize_v0
 #         model = build_alcove_subclass_b(is_eager)
-#         call_fit_evaluate_predict(model, tfds)
+#         call_fit_evaluate_predict(model, ds)
 #         keras.backend.clear_session()
 
 #     @pytest.mark.xfail(reason="'add_loss' does not work inside RNN cell.")
@@ -2394,16 +2495,16 @@ class TestRateSimilarity:
 #         """Test save/load."""
 #
 
-#         tfds = ds_time_categorize_v0
+#         ds = ds_time_categorize_v0
 #         model = build_alcove_subclass_b(is_eager)
-#         model.fit(tfds, epochs=1)
+#         model.fit(ds, epochs=1)
 
 #         # Test initialization settings.
 #         assert model.n_sample == 2
 
 #         # Increase `n_sample` to get more consistent evaluations
 #         model.n_sample = 11
-#         _ = model.evaluate(tfds)
+#         _ = model.evaluate(ds)
 #         percept_mean = model.behavior.cell.percept.embeddings.mean()
 
 #         # Test storage.
@@ -2415,7 +2516,7 @@ class TestRateSimilarity:
 #             fp_model,
 #             custom_objects={"ALCOVEModelA": ALCOVEModelA},
 #         )
-#         _ = loaded.evaluate(tfds)
+#         _ = loaded.evaluate(ds)
 
 #         # Test for model equality.
 #         assert loaded.n_sample == 11

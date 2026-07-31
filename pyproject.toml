@@ -36,6 +36,7 @@ dependencies = [
     "safetensors >= 0.4",
     "h5py >= 3.0",
     "pandas",
+    "pyarrow >= 16.0",
     "scikit-learn",
     "matplotlib",
     "pillow",

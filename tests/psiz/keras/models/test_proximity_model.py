@@ -73,23 +73,23 @@ def build_proximity_subclass_a(proximity_layer, is_eager):
     return model
 
 
-def call_fit_evaluate_predict(model, tfds):
+def call_fit_evaluate_predict(model, ds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
-    for data in tfds:
+    for data in ds:
         x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         y_pred = model(x, training=False)
 
     # Test fit.
-    history = model.fit(tfds, epochs=3)
+    history = model.fit(ds, epochs=3)
     assert not np.any(np.isnan(history.history["loss"]))
 
     # Test evaluate.
-    eval0 = model.evaluate(tfds)
+    eval0 = model.evaluate(ds)
     assert not np.any(np.isnan(eval0))
 
     # Test predict.
-    pred0 = model.predict(tfds)
+    pred0 = model.predict(ds)
     assert not np.any(np.isnan(pred0))
 
 
@@ -111,7 +111,7 @@ class TestProximity:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a_v2(self, ds_rate2_v2, proximity_layer, is_eager):
         """Test subclass model, one group."""
-        tfds = ds_rate2_v2
+        ds = ds_rate2_v2
         model = build_proximity_subclass_a(proximity_layer, is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()

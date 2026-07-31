@@ -16,6 +16,7 @@
 """Test trials module."""
 
 
+import keras
 import numpy as np
 
 from psiz.keras.ops import ig_categorical
@@ -65,5 +66,6 @@ def test_0():
         dtype="float32",
     )
     ig = ig_categorical(y_pred)
+    ig = keras.ops.convert_to_numpy(ig)
     ig_desired = np.array([0.00270152, 0.01042497, 0.00180888], dtype="float32")
     np.testing.assert_allclose(ig, ig_desired, rtol=1e-4)

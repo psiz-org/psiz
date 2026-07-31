@@ -25,6 +25,7 @@ from psiz.backend import resolve_backend
 def softplus_inverse(x, hinge_softness=1.0, backend_override=None):
     """Generalized inverse softplus used by stochastic initializers."""
     backend = resolve_backend(backend_override)
+    x = keras.ops.convert_to_tensor(x)
     if backend == "tensorflow":
         import tensorflow_probability as tfp
 

@@ -46,7 +46,9 @@ def test_call(paired_inputs_v0):
             8.660254037844387,
         ]
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=4)
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs), decimal=4
+    )
 
 
 def test_serialization():

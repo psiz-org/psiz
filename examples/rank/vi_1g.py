@@ -215,10 +215,9 @@ def main():
     )
     content = psiz.data.Rank(stimulus_set, n_select=2)
     pds = psiz.data.Dataset([content])
-    ds_content = pds.export(export_format="tfds")
+    ds_content = pds.tensorflow().batch(batch_size=batch_size, drop_remainder=False)
 
     # Simulate similarity judgments and append outcomes to dataset.
-    ds_content = ds_content.batch(batch_size=batch_size, drop_remainder=False)
 
     def simulate_agent(x):
         depth = content.n_outcome

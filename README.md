@@ -143,6 +143,51 @@ model.save_psiz("my_model.psiz")
 loaded_model = MyModel.load_psiz("my_model.psiz")
 ```
 
+## Save and Load Dataset Artifacts
+
+For PsiZ datasets built from components, the canonical public API is
+`psiz.data.Dataset.save(...)` and `psiz.data.load(...)`.
+
+```python
+import numpy as np
+import psiz
+
+content = psiz.data.Rank(
+    np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32),
+    n_select=1,
+    name="stimulus_set",
+)
+outcome = psiz.data.SparseCategorical(
+    np.array([0, 1], dtype=np.int32),
+    depth=2,
+    sample_weight=np.array([[1.0], [0.5]], dtype=np.float32),
+    name="outcome",
+)
+
+dataset = psiz.data.Dataset([content, outcome])
+dataset.save(
+    "example_dataset.psiz",
+    dataset_id="example_dataset",
+    split_set_id="split_set_v1",
+)
+
+ds = psiz.data.load(
+    "example_dataset.psiz",
+    split_set_id="split_set_v1",
+    split_labels=["train"],
+)
+
+# Optional Tier A adapters.
+tf_dataset = ds.tensorflow()
+torch_dataset = ds.torch()
+numpy_payload = ds.numpy()
+arrow_table = ds.arrow()
+```
+
+Compatibility note:
+`psiz.data.write_dataset_artifact_from_samples(...)` and
+`psiz.data.load_dataset(...)` remain available for lower-level workflows.
+
 ## Migrate Legacy .keras Assets to .psiz
 
 PsiZ v0.14 includes a Python API for migrating legacy `.keras` assets into

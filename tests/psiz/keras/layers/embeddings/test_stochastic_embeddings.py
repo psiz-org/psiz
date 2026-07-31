@@ -62,7 +62,9 @@ def test_init_shape(emb_input_1d, embedding_class):
     output = embedding(input)
 
     desired_output_shape = np.hstack([sample_shape, input_shape, n_dim]).astype(int)
-    np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
+    np.testing.assert_array_equal(
+        desired_output_shape, np.shape(keras.ops.convert_to_numpy(output))
+    )
 
 
 @pytest.mark.parametrize("mask_zero", [True, False])
@@ -105,7 +107,9 @@ def test_call_1d_input_and_serialization(
 
     # Test call
     output = embedding(input)  # Call to build.
-    np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
+    np.testing.assert_array_equal(
+        desired_output_shape, np.shape(keras.ops.convert_to_numpy(output))
+    )
 
     assert embedding.mask_zero == mask_zero
 
@@ -126,7 +130,9 @@ def test_call_1d_input_and_serialization(
 
     recon_output = recon_emb(input)
 
-    np.testing.assert_array_equal(desired_output_shape, np.shape(recon_output.numpy()))
+    np.testing.assert_array_equal(
+        desired_output_shape, np.shape(keras.ops.convert_to_numpy(recon_output))
+    )
     if embedding_class == psiz.keras.layers.EmbeddingNormalDiag:
         orig_mean = embedding.embeddings.mean()
         orig_variance = embedding.embeddings.variance()
@@ -211,7 +217,9 @@ def test_call_2d_input(emb_input_2d, sample_shape, embedding_class, mask_zero):
     desired_output_shape = np.hstack([sample_shape, input_shape, n_dim]).astype(int)
 
     output = embedding(input)
-    np.testing.assert_array_equal(desired_output_shape, np.shape(output.numpy()))
+    np.testing.assert_array_equal(
+        desired_output_shape, np.shape(keras.ops.convert_to_numpy(output))
+    )
 
     assert embedding.mask_zero == mask_zero
 

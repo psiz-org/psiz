@@ -37,7 +37,9 @@ def test_call_default(paired_inputs_v0):
             8.660254037844387,
         ]
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=4)
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs), decimal=4
+    )
 
 
 def test_call_exponential(paired_inputs_v0):
@@ -61,7 +63,9 @@ def test_call_exponential(paired_inputs_v0):
             0.4212,
         ]
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=5)
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs), decimal=5
+    )
 
 
 def test_serialization():
@@ -77,7 +81,10 @@ def test_serialization():
         ),
     )
     mink_layer.build([[None, 3], [None, 3]])
-    np.testing.assert_array_equal(mink_layer.w.event_shape, [3])
+    np.testing.assert_array_equal(
+        np.shape(keras.ops.convert_to_numpy(mink_layer.w.mode())),
+        [3],
+    )
     np.testing.assert_array_equal(
         keras.ops.convert_to_numpy(mink_layer.rho.mode()),
         np.array(2.1, dtype="float32"),
@@ -102,7 +109,10 @@ def test_serialization():
 
     recon_layer = MinkowskiStochastic.from_config(config)
     recon_layer.build([[None, 3], [None, 3]])
-    np.testing.assert_array_equal(recon_layer.w.event_shape, [3])
+    np.testing.assert_array_equal(
+        np.shape(keras.ops.convert_to_numpy(recon_layer.w.mode())),
+        [3],
+    )
     np.testing.assert_array_equal(
         keras.ops.convert_to_numpy(recon_layer.rho.mode()),
         np.array(2.1, dtype="float32"),

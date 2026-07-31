@@ -198,14 +198,13 @@ def main():
     pairwise_indices = pairwise_indices[permuted_indices]
     content = psiz.data.Rate(pairwise_indices)
     pds = psiz.data.Dataset([content])
-    ds_content = pds.export(export_format="tfds")
+    ds_content = pds.tensorflow().batch(batch_size=batch_size, drop_remainder=False)
 
     # Simulate noisy similarity judgments and append outcomes to dataset.
-    ds_content = ds_content.batch(batch_size=batch_size, drop_remainder=False)
     ds_all = ds_content.map(lambda x: (x, model_true(x)))
     ds_all = ds_all.unbatch()
 
-    n_train = int(np.floor(0.90 * pds.n_sample))
+    n_train = int(np.floor(0.90 * pairwise_indices.shape[0]))
     ds_train = (
         ds_all.take(n_train)
         .cache()

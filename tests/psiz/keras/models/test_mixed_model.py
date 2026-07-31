@@ -166,21 +166,21 @@ class RankRTModelA(keras.Model):
         return config
 
 
-def call_fit_evaluate_predict(model, tfds):
+def call_fit_evaluate_predict(model, ds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
-    for data in tfds:
+    for data in ds:
         x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         y_pred = model(x, training=False)
 
     # Test fit.
-    model.fit(tfds, epochs=3)
+    model.fit(ds, epochs=3)
 
     # Test evaluate.
-    eval0 = model.evaluate(tfds)
+    eval0 = model.evaluate(ds)
 
     # Test predict.
-    pred0 = model.predict(tfds)
+    pred0 = model.predict(ds)
 
 
 def build_ranksim_ratesim_subclass_a(is_eager):
@@ -305,18 +305,23 @@ class TestJointSoftRankRate:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank2_rate2_v0, is_eager):
         """Test model using subclass API."""
-        tfds = ds_4rank2_rate2_v0
+        ds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_4rank2_rate2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tfds = ds_4rank2_rate2_v0
+        ds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_subclass_a(is_eager)
-        model.fit(tfds, epochs=1)
-        eval0 = model.evaluate(tfds, return_dict=True)
+        # Ensure model is built from real inputs before fit; this avoids
+        # symbolic tracing issues with torch+CUDA embedding indices.
+        first_batch = next(iter(ds))
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(first_batch)
+        _ = model(x, training=False)
+        model.fit(ds, epochs=1)
+        eval0 = model.evaluate(ds, return_dict=True)
 
         # Test storage.
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -327,7 +332,7 @@ class TestJointSoftRankRate:
             fp_model,
             custom_objects={"RankRateModelA": RankRateModelA},
         )
-        eval1 = loaded.evaluate(tfds, return_dict=True)
+        eval1 = loaded.evaluate(ds, return_dict=True)
 
         # Test for model equality.
         assert eval0["rank_branch_cce"] == eval1["rank_branch_cce"]
@@ -339,19 +344,19 @@ class TestJointSoftRankRate:
     )
     def test_usage_functional_v0(self, ds_4rank2_rate2_v0, is_eager):
         """Test model using functional API."""
-        tfds = ds_4rank2_rate2_v0
+        ds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_functional_v0()
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     @pytest.mark.xfail(reason="Not sure why failing.")
     def test_save_load_functional_v0(self, ds_4rank2_rate2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tfds = ds_4rank2_rate2_v0
+        ds = ds_4rank2_rate2_v0
         model = build_ranksim_ratesim_functional_v0()
-        model.fit(tfds, epochs=1)
-        eval0 = model.evaluate(tfds, return_dict=True)
+        model.fit(ds, epochs=1)
+        eval0 = model.evaluate(ds, return_dict=True)
 
         # Test storage.
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -361,7 +366,7 @@ class TestJointSoftRankRate:
         loaded = psiz.keras.load_psiz_model(
             fp_model,
         )
-        eval1 = loaded.evaluate(tfds, return_dict=True)
+        eval1 = loaded.evaluate(ds, return_dict=True)
 
         # Test for model equality.
         assert eval0["rank_branch_cce"] == eval1["rank_branch_cce"]
@@ -374,7 +379,7 @@ class TestRankRT:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_rt_v0, is_eager):
         """Test model using subclass API."""
-        tfds = ds_4rank1_rt_v0
+        ds = ds_4rank1_rt_v0
         model = build_ranksim_rt_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()

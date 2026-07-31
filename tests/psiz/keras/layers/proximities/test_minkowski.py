@@ -41,7 +41,9 @@ def test_call_default(paired_inputs_v0):
             8.660254037844387,
         ]
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs)
+    )
 
 
 def test_call_exponential(paired_inputs_v0):
@@ -68,7 +70,9 @@ def test_call_exponential(paired_inputs_v0):
             0.42119,
         ]
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy(), decimal=5)
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs), decimal=5
+    )
 
 
 def test_serialization_0():

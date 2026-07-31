@@ -23,6 +23,7 @@ Functions:
 
 import matplotlib.pyplot as plt
 import numpy as np
+import keras
 
 from psiz.stochastic import is_distribution
 
@@ -51,10 +52,10 @@ def embedding_input_dimension(embedding, idx, ax=None, c="b"):
         ax = plt.gca()
 
     if is_distribution(embedding.embeddings):
-        z_mode = embedding.embeddings.mode().numpy()
+        z_mode = keras.ops.convert_to_numpy(embedding.embeddings.mode())
         is_dist = True
     else:
-        z_mode = embedding.embeddings.numpy()
+        z_mode = keras.ops.convert_to_numpy(embedding.embeddings)
         is_dist = False
 
     # Handle masking.
@@ -82,8 +83,8 @@ def embedding_input_dimension(embedding, idx, ax=None, c="b"):
         # Middle density interval: 99% probability mass.
         p = 0.99
         v = (1 - p) / 2
-        mdi99_lower = dist.quantile(v).numpy()[idx, :]
-        mdi99_upper = dist.quantile(1 - v).numpy()[idx, :]
+        mdi99_lower = keras.ops.convert_to_numpy(dist.quantile(v))[idx, :]
+        mdi99_upper = keras.ops.convert_to_numpy(dist.quantile(1 - v))[idx, :]
         # Override ymin and ymax based on 99quant.
         y_min = np.min(mdi99_lower)
         y_max = np.max(mdi99_upper)
@@ -91,8 +92,8 @@ def embedding_input_dimension(embedding, idx, ax=None, c="b"):
         # Middle density interval: 50% probability mass.
         p = 0.5
         v = (1 - p) / 2
-        mdi50_lower = dist.quantile(v).numpy()[idx, :]
-        mdi50_upper = dist.quantile(1 - v).numpy()[idx, :]
+        mdi50_lower = keras.ops.convert_to_numpy(dist.quantile(v))[idx, :]
+        mdi50_upper = keras.ops.convert_to_numpy(dist.quantile(1 - v))[idx, :]
 
         for i_dim in range(n_output_dim):
             xg = np.array([i_dim, i_dim])

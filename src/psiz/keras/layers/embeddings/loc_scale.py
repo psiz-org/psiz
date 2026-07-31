@@ -91,8 +91,9 @@ class _EmbeddingLocScale(StochasticEmbedding):
             loc_initializer = keras.initializers.RandomUniform()
         self.loc_initializer = keras.initializers.get(loc_initializer)
         if scale_initializer is None:
+            default_scale_mean = float(keras.ops.convert_to_numpy(softplus_inverse(1.0)))
             scale_initializer = keras.initializers.RandomNormal(
-                mean=keras.ops.convert_to_numpy(softplus_inverse(1.0)), stddev=0.001
+                mean=default_scale_mean, stddev=0.001
             )
         self.scale_initializer = keras.initializers.get(scale_initializer)
 

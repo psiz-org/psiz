@@ -20,7 +20,7 @@ Classes:
 
 """
 
-import tensorflow as tf
+import warnings
 
 from psiz.data.dataset_component import DatasetComponent
 from psiz.data.contents.content import Content
@@ -134,51 +134,165 @@ class Dataset(object):
             ds: A dataset that can be consumed by a model.
 
         """
+        if export_format != "tfds":
+            raise ValueError(
+                "Unrecognized `export_format` '{0}'.".format(export_format)
+            )
+
+        warnings.warn(
+            "`Dataset.export(export_format='tfds')` is deprecated and will be "
+            "removed in a future release. Use Tier A adapters such as "
+            "`Dataset.tensorflow()`, `Dataset.torch()`, `Dataset.numpy()`, "
+            "or `Dataset.arrow()` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._export_tf_dataset(with_timestep_axis=with_timestep_axis)
+
+    def _to_runtime_dataset(self, *, with_timestep_axis=None):
+        """Materialize trial components as a backend-neutral runtime dataset."""
+        from psiz.data.runtime.pydataset import PsizPyDataset
+
+        x, y, w = self._materialize_xyw(with_timestep_axis=with_timestep_axis)
+        return PsizPyDataset(x, y=y, w=w)
+
+    def tensorflow(self, *, with_timestep_axis=None):
+        """Return minimally processed, unbatched tf.data.Dataset rows."""
+        return self._to_runtime_dataset(
+            with_timestep_axis=with_timestep_axis
+        ).tensorflow()
+
+    def torch(self, *, with_timestep_axis=None):
+        """Return minimally processed torch.utils.data.Dataset rows."""
+        return self._to_runtime_dataset(with_timestep_axis=with_timestep_axis).torch()
+
+    def numpy(self, *, with_timestep_axis=None):
+        """Return minimally processed NumPy x/y/w payloads."""
+        return self._to_runtime_dataset(with_timestep_axis=with_timestep_axis).numpy()
+
+    def arrow(self, *, with_timestep_axis=None):
+        """Return minimally processed pyarrow.Table rows."""
+        return self._to_runtime_dataset(with_timestep_axis=with_timestep_axis).arrow()
+
+    def save(
+        self,
+        output_dir,
+        *,
+        dataset_id,
+        split_set_id="split_set_v1",
+        split_label="train",
+        split_version=1,
+        license_name="Apache-2.0",
+        with_timestep_axis=None,
+    ):
+        """Persist dataset as a PsiZ artifact directory.
+
+        Args:
+            output_dir: Target artifact directory path.
+            dataset_id: Dataset identifier written to manifest.
+            split_set_id (optional): Split set identifier.
+            split_label (optional): Split label assigned to all rows.
+            split_version (optional): Split assignment version.
+            license_name (optional): License recorded in manifest.
+            with_timestep_axis (optional): Override timestep-axis materialization.
+
+        Returns:
+            dict: Validated artifact manifest.
+
+        """
+        from psiz.data.io import write_dataset_artifact_from_samples
+
+        x, y, w = self._materialize_xyw(with_timestep_axis=with_timestep_axis)
+        samples = self._xyw_to_samples(x, y, w)
+        return write_dataset_artifact_from_samples(
+            samples,
+            output_dir,
+            dataset_id=dataset_id,
+            split_set_id=split_set_id,
+            split_label=split_label,
+            split_version=split_version,
+            license_name=license_name,
+        )
+
+    @staticmethod
+    def load(
+        dataset_root,
+        *,
+        split_set_id=None,
+        split_labels=None,
+    ):
+        """Load a PsiZ artifact as a backend-neutral runtime dataset."""
+        from psiz.data.runtime import load_dataset
+
+        return load_dataset(
+            dataset_root,
+            split_set_id=split_set_id,
+            split_labels=split_labels,
+        )
+
+    def _resolve_with_timestep_axis(self, with_timestep_axis):
         if with_timestep_axis is None:
             with_timestep_axis = False
             for component in self.components:
                 with_timestep_axis = (
                     with_timestep_axis or component._export_with_timestep_axis
                 )
+        return with_timestep_axis
 
-        # Assemble model input.
+    def _materialize_xyw(self, with_timestep_axis=None):
+        """Materialize dataset components to x/y/w mappings."""
+        with_timestep_axis = self._resolve_with_timestep_axis(with_timestep_axis)
+
         x = {}
         for content in self.content_list:
-            x_i = content.export(
-                export_format=export_format, with_timestep_axis=with_timestep_axis
-            )
+            x_i = content.numpy(with_timestep_axis=with_timestep_axis)
             x.update(x_i)
-        # Add groups (if present).
-        if len(self.group_list) > 0:
-            for group in self.group_list:
-                x_i = group.export(
-                    export_format=export_format, with_timestep_axis=with_timestep_axis
-                )
-                x.update(x_i)
 
-        # Assemble outcomes (if present and not suppressed).
-        if len(self.outcome_list) > 0:
-            y = {}
-            w = {}
-            for outcome in self.outcome_list:
-                y_i, w_i = outcome.export(
-                    export_format=export_format, with_timestep_axis=with_timestep_axis
-                )
-                y.update(y_i)
-                w.update(w_i)
+        for group in self.group_list:
+            x_i = group.numpy(with_timestep_axis=with_timestep_axis)
+            x.update(x_i)
 
-        if export_format == "tfds":
-            try:
-                y = self._prepare_for_tf_dataset(y)
-                w = self._prepare_for_tf_dataset(w)
-                ds = tf.data.Dataset.from_tensor_slices((x, y, w))
-            except NameError:
-                ds = tf.data.Dataset.from_tensor_slices((x))
-        else:
-            raise ValueError(
-                "Unrecognized `export_format` '{0}'.".format(export_format)
-            )
-        return ds
+        y = {}
+        w = {}
+        for outcome in self.outcome_list:
+            y_i, w_i = outcome.numpy(with_timestep_axis=with_timestep_axis)
+            y.update(y_i)
+            w.update(w_i)
+
+        self._validate_output_keys(y)
+        self._validate_output_keys(w)
+        return x, y, w
+
+    def _export_tf_dataset(self, with_timestep_axis=None):
+        """Internal helper for creating TensorFlow datasets."""
+        try:
+            import tensorflow as tf
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "TensorFlow is required to materialize a tf.data.Dataset. "
+                "Install TensorFlow or use `Dataset.torch()`, "
+                "`Dataset.numpy()`, or `Dataset.arrow()` instead."
+            ) from e
+
+        x, y, w = self._materialize_xyw(with_timestep_axis=with_timestep_axis)
+        if len(y) == 0:
+            return tf.data.Dataset.from_tensor_slices((x))
+
+        y = self._prepare_for_tf_dataset(y)
+        w = self._prepare_for_tf_dataset(w)
+        return tf.data.Dataset.from_tensor_slices((x, y, w))
+
+    def _validate_output_keys(self, d):
+        """Validate named output keys when multiple outputs are present."""
+        if len(d) <= 1:
+            return
+
+        for k in d.keys():
+            if k is None:
+                raise ValueError(
+                    "When a `Dataset` has multiple outputs, all "
+                    "outputs must be created with the `name` argument."
+                )
 
     def _prepare_for_tf_dataset(self, d):
         """Prepare `y` and `w` for TensorFlow Dataset.
@@ -197,11 +311,29 @@ class Dataset(object):
             key, tensor = d.popitem()
             return tensor
         else:
-            # Make sure all keys are defined.
-            for k in d.keys():
-                if k is None:
-                    raise ValueError(
-                        "When a `Dataset` has multiple outputs, all "
-                        "outputs must be created with the `name` argument."
-                    )
+            self._validate_output_keys(d)
             return d
+
+    def _xyw_to_samples(self, x, y, w):
+        """Convert batched x/y/w mappings into per-sample payloads."""
+        n_sample = self._infer_n_sample_from_blocks(x, y, w)
+        samples = []
+        for i_sample in range(n_sample):
+            x_i = {k: v[i_sample] for k, v in x.items()}
+            if len(y) == 0:
+                samples.append(x_i)
+                continue
+
+            y_i = {k: v[i_sample] for k, v in y.items()}
+            w_i = {k: v[i_sample] for k, v in w.items()}
+            samples.append((x_i, y_i, w_i))
+        return samples
+
+    def _infer_n_sample_from_blocks(self, *blocks):
+        for block in blocks:
+            if len(block) == 0:
+                continue
+            key = next(iter(block.keys()))
+            value = block[key]
+            return int(value.shape[0])
+        return 0

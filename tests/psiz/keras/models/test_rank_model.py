@@ -513,22 +513,22 @@ class MultiRankModelA(keras.Model):
 #         return config
 
 
-def call_fit_evaluate_predict(model, tfds):
+def call_fit_evaluate_predict(model, ds):
     """Simple test of call, fit, evaluate, and predict."""
     # Test isolated call.
-    for data in tfds:
+    for data in ds:
         x, y, sample_weight = keras.utils.unpack_x_y_sample_weight(data)
         y_pred = model(x, training=False)
 
     # Test fit.
-    model.fit(tfds, epochs=3)
+    model.fit(ds, epochs=3)
 
     # Test evaluate.
-    eval0 = model.evaluate(tfds)
+    eval0 = model.evaluate(ds)
     # assert not np.isnan(eval0)  TODO make work for returned nan or array of values
 
     # Test predict.
-    pred0 = model.predict(tfds)
+    pred0 = model.predict(ds)
     # assert not np.isnan(eval0)  TODO make work for returned nan or array of values
 
 
@@ -761,18 +761,21 @@ class TestSoftRank:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test model using subclass API."""
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test serialization."""
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a(is_eager)
-        model.fit(tfds, epochs=1)
-        eval0 = model.evaluate(tfds)
+        first_batch = next(iter(ds))
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(first_batch)
+        _ = model(x, training=False)
+        model.fit(ds, epochs=1)
+        eval0 = model.evaluate(ds)
 
         # Test storage.
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -783,7 +786,7 @@ class TestSoftRank:
             fp_model,
             custom_objects={"RankModelA": RankModelA},
         )
-        eval1 = loaded.evaluate(tfds)
+        eval1 = loaded.evaluate(ds)
 
         # Test for model equality.
         assert eval0[0] == eval1[0]
@@ -792,18 +795,21 @@ class TestSoftRank:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_functional_v0(self, ds_4rank1_v0, is_eager):
         """Test model using functional API."""
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_functional_v0(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_functional_v0(self, ds_4rank1_v0, is_eager, tmpdir):
         """Test serialization."""
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_functional_v0(is_eager)
-        model.fit(tfds, epochs=1)
-        eval0 = model.evaluate(tfds)
+        first_batch = next(iter(ds))
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(first_batch)
+        _ = model(x, training=False)
+        model.fit(ds, epochs=1)
+        eval0 = model.evaluate(ds)
 
         # Test storage.
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -813,7 +819,7 @@ class TestSoftRank:
         loaded = psiz.keras.load_psiz_model(
             fp_model,
         )
-        eval1 = loaded.evaluate(tfds)
+        eval1 = loaded.evaluate(ds)
 
         # Test for model equality.
         assert eval0[0] == eval1[0]
@@ -822,48 +828,48 @@ class TestSoftRank:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_b(self, ds_4rank1_v1, is_eager):
         """Test model using subclass API."""
-        tfds = ds_4rank1_v1
+        ds = ds_4rank1_v1
         model = build_ranksim_subclass_b(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_c(self, ds_4rank1_v2, is_eager):
         """Test model using subclass API."""
-        tfds = ds_4rank1_v2
+        ds = ds_4rank1_v2
         model = build_ranksim_subclass_c(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_d(self, ds_4rank1_v3, is_eager):
         """Test model using subclass API."""
-        tfds = ds_4rank1_v3
+        ds = ds_4rank1_v3
         model = build_ranksim_subclass_d(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_e(self, ds_2rank1_v0, is_eager):
         """Test model using subclass API."""
-        tfds = ds_2rank1_v0
+        ds = ds_2rank1_v0
         model = build_ranksim_subclass_e(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_f(self, ds_8rank2_v0, is_eager):
         """Test model using subclass API."""
-        tfds = ds_8rank2_v0
+        ds = ds_8rank2_v0
         model = build_ranksim_subclass_f(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.backend_tensorflow
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_agent_subclass_a(self, ds_4rank1_v0, is_eager):
         """Test usage in 'agent mode'."""
-        tfds = ds_4rank1_v0
+        ds = ds_4rank1_v0
         model = build_ranksim_subclass_a(is_eager)
 
         def simulate_agent(x):
@@ -878,7 +884,7 @@ class TestSoftRank:
             )  # TODO verify this is correct
             return outcome_one_hot
 
-        _ = tfds.map(lambda x, y, w: (x, simulate_agent(x), w))
+        _ = ds.map(lambda x, y, w: (x, simulate_agent(x), w))
 
         keras.backend.clear_session()
 
@@ -889,19 +895,22 @@ class TestMultiRankSimilarity:
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_usage_subclass_a(self, ds_2rank1_8rank2_v0, is_eager):
         """Test model using subclass API."""
-        tfds = ds_2rank1_8rank2_v0
+        ds = ds_2rank1_8rank2_v0
         model = build_multirank_subclass_a(is_eager)
-        call_fit_evaluate_predict(model, tfds)
+        call_fit_evaluate_predict(model, ds)
         keras.backend.clear_session()
 
     @pytest.mark.parametrize("is_eager", [True, False])
     def test_save_load_subclass_a(self, ds_2rank1_8rank2_v0, is_eager, tmpdir):
         """Test serialization."""
-        tfds = ds_2rank1_8rank2_v0
+        ds = ds_2rank1_8rank2_v0
         model = build_multirank_subclass_a(is_eager)
-        model.fit(tfds, epochs=1)
-        eval0 = model.evaluate(tfds)
-        predict0 = model.predict(tfds)
+        first_batch = next(iter(ds))
+        x, _, _ = keras.utils.unpack_x_y_sample_weight(first_batch)
+        _ = model(x, training=False)
+        model.fit(ds, epochs=1)
+        eval0 = model.evaluate(ds)
+        predict0 = model.predict(ds)
 
         # Test storage.
         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -912,8 +921,8 @@ class TestMultiRankSimilarity:
             fp_model,
             custom_objects={"MultiRankModelA": MultiRankModelA},
         )
-        eval1 = loaded.evaluate(tfds)
-        predict1 = loaded.predict(tfds)
+        eval1 = loaded.evaluate(ds)
+        predict1 = loaded.predict(ds)
 
         # Test for model equality.
         assert eval0 == eval1
@@ -933,9 +942,9 @@ class TestMultiRankSimilarity:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_usage_subclass_a(self, ds_time_8rank2_v0, is_eager):
 #         """Test model using subclass API."""
-#         tfds = ds_time_8rank2_v0
+#         ds = ds_time_8rank2_v0
 #         model = build_ranksimcell_subclass_a(is_eager)
-#         call_fit_evaluate_predict(model, tfds)
+#         call_fit_evaluate_predict(model, ds)
 #         keras.backend.clear_session()
 
 #     @pytest.mark.parametrize("is_eager", [True, False])
@@ -944,10 +953,10 @@ class TestMultiRankSimilarity:
 #         self, ds_time_8rank2_v0, is_eager, tmpdir
 #     ):
 #         """Test serialization."""
-#         tfds = ds_time_8rank2_v0
+#         ds = ds_time_8rank2_v0
 #         model = build_ranksimcell_subclass_a(is_eager)
-#         model.fit(tfds, epochs=1)
-#         eval0 = model.evaluate(tfds)
+#         model.fit(ds, epochs=1)
+#         eval0 = model.evaluate(ds)
 
 #         # Test storage.
 #         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -957,7 +966,7 @@ class TestMultiRankSimilarity:
 #         loaded = psiz.keras.load_psiz_model(
 #             fp_model, custom_objects={"RankCellModelA": RankCellModelA},
 #         )
-#         eval1 = loaded.evaluate(tfds)
+#         eval1 = loaded.evaluate(ds)
 
 #         # Test for model equality.
 #         assert eval0[0] == eval1[0]
@@ -967,19 +976,19 @@ class TestMultiRankSimilarity:
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_usage_functional_v0(self, ds_time_8rank2_v0, is_eager):
 #         """Test model using functional API."""
-#         tfds = ds_time_8rank2_v0
+#         ds = ds_time_8rank2_v0
 #         model = build_ranksimcell_functional_v0(is_eager)
-#         call_fit_evaluate_predict(model, tfds)
+#         call_fit_evaluate_predict(model, ds)
 #         keras.backend.clear_session()
 
 #     @pytest.mark.parametrize("is_eager", [True, False])
 #     @pytest.mark.xfail(reason="Keras v3 RNN requires single input tensor.")
 #     def test_save_load_functional_v0(self, ds_time_8rank2_v0, is_eager, tmpdir):
 #         """Test serialization."""
-#         tfds = ds_time_8rank2_v0
+#         ds = ds_time_8rank2_v0
 #         model = build_ranksimcell_functional_v0(is_eager)
-#         model.fit(tfds, epochs=1)
-#         eval0 = model.evaluate(tfds)
+#         model.fit(ds, epochs=1)
+#         eval0 = model.evaluate(ds)
 
 #         # Test storage.
 #         fp_model = Path(tmpdir) / "test_model.psiz"
@@ -987,7 +996,7 @@ class TestMultiRankSimilarity:
 #         del model
 #         # Load the saved model.
 #         loaded = psiz.keras.load_psiz_model(fp_model, )
-#         eval1 = loaded.evaluate(tfds)
+#         eval1 = loaded.evaluate(ds)
 
 #         # Test for model equality.
 #         assert eval0[0] == eval1[0]

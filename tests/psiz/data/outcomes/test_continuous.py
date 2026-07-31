@@ -17,7 +17,20 @@
 
 import numpy as np
 import pytest
-import tensorflow as tf
+
+
+class _TensorFlowProxy:
+    """Lazy TensorFlow import that skips tests when TF is unavailable."""
+
+    _module = None
+
+    def __getattr__(self, name):
+        if self._module is None:
+            self._module = pytest.importorskip("tensorflow")
+        return getattr(self._module, name)
+
+
+tf = _TensorFlowProxy()
 
 from psiz.data.outcomes.continuous import Continuous
 
@@ -181,6 +194,7 @@ def test_invalid_init_0():
     )
 
 
+@pytest.mark.backend_tensorflow
 def test_export_0(o_continuous_a_4x1):
     desired_y = tf.constant([[0.0], [2.0], [-0.1], [1.3]], dtype=tf.float32)
     desired_w = tf.constant([1.0, 1.0, 1.0, 1.0])
@@ -191,6 +205,17 @@ def test_export_0(o_continuous_a_4x1):
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
+def test_numpy_0(o_continuous_a_4x1):
+    desired_y = np.array([[0.0], [2.0], [-0.1], [1.3]], dtype=np.float32)
+    desired_w = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32)
+    desired_name = "continuous_a"
+
+    y, w = o_continuous_a_4x1.numpy()
+    np.testing.assert_array_equal(desired_y, y[desired_name])
+    np.testing.assert_array_equal(desired_w, w[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_1(o_continuous_aa_4x1):
     desired_y = tf.constant([[[0.0]], [[2.0]], [[-0.1]], [[1.3]]], dtype=tf.float32)
     desired_w = tf.constant([[1.0], [1.0], [1.0], [1.0]])
@@ -201,6 +226,17 @@ def test_export_1(o_continuous_aa_4x1):
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
+def test_numpy_1(o_continuous_aa_4x1):
+    desired_y = np.array([[[0.0]], [[2.0]], [[-0.1]], [[1.3]]], dtype=np.float32)
+    desired_w = np.array([[1.0], [1.0], [1.0], [1.0]], dtype=np.float32)
+    desired_name = "continuous_aa"
+
+    y, w = o_continuous_aa_4x1.numpy()
+    np.testing.assert_array_equal(desired_y, y[desired_name])
+    np.testing.assert_array_equal(desired_w, w[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_2a(o_continuous_b_4x3):
     desired_y = tf.constant(
         [
@@ -227,6 +263,33 @@ def test_export_2a(o_continuous_b_4x3):
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
+def test_numpy_2a(o_continuous_b_4x3):
+    desired_y = np.array(
+        [
+            [[0.0], [0.0], [0.0]],
+            [[2.0], [0.0], [0.0]],
+            [[-0.1], [-1.0], [0.3]],
+            [[1.0], [1.0], [1.0]],
+        ],
+        dtype=np.float32,
+    )
+    desired_w = np.array(
+        [
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+        ],
+        dtype=np.float32,
+    )
+    desired_name = "continuous_b"
+
+    y, w = o_continuous_b_4x3.numpy()
+    np.testing.assert_array_equal(desired_y, y[desired_name])
+    np.testing.assert_array_equal(desired_w, w[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_2b(o_continuous_b_4x3):
     """Test for_dataset
 
@@ -258,6 +321,38 @@ def test_export_2b(o_continuous_b_4x3):
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
+def test_numpy_2b(o_continuous_b_4x3):
+    """Test numpy.
+
+    Use override `with_timestep_axis=False`
+
+    """
+    desired_y = np.array(
+        [
+            [0.0],
+            [0.0],
+            [0.0],
+            [2.0],
+            [0.0],
+            [0.0],
+            [-0.1],
+            [-1.0],
+            [0.3],
+            [1.0],
+            [1.0],
+            [1.0],
+        ],
+        dtype=np.float32,
+    )
+    desired_w = np.ones([12], dtype=np.float32)
+    desired_name = "continuous_b"
+
+    y, w = o_continuous_b_4x3.numpy(with_timestep_axis=False)
+    np.testing.assert_array_equal(desired_y, y[desired_name])
+    np.testing.assert_array_equal(desired_w, w[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_3a(o_continuous_c_4x3):
     desired_y = tf.constant(
         [
@@ -276,6 +371,25 @@ def test_export_3a(o_continuous_c_4x3):
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
+def test_numpy_3a(o_continuous_c_4x3):
+    desired_y = np.array(
+        [
+            [[0.0, 0.1], [0.0, 0.2], [0.0, 0.3]],
+            [[2.0, 0.4], [0.0, 0.5], [0.0, 0.6]],
+            [[-0.1, 0.7], [-1.0, 0.8], [0.3, 0.9]],
+            [[1.0, 1.1], [1.0, 1.2], [1.0, 1.3]],
+        ],
+        dtype=np.float32,
+    )
+    desired_w = np.ones([4, 3], dtype=np.float32)
+    desired_name = "continuous_c"
+
+    y, w = o_continuous_c_4x3.numpy()
+    np.testing.assert_array_equal(desired_y, y[desired_name])
+    np.testing.assert_array_equal(desired_w, w[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_3b(o_continuous_c_4x3):
     """Test for_dataset
 
@@ -307,6 +421,38 @@ def test_export_3b(o_continuous_c_4x3):
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
+def test_numpy_3b(o_continuous_c_4x3):
+    """Test numpy.
+
+    Use override `with_timestep_axis=False`
+
+    """
+    desired_y = np.array(
+        [
+            [0.0, 0.1],
+            [0.0, 0.2],
+            [0.0, 0.3],
+            [2.0, 0.4],
+            [0.0, 0.5],
+            [0.0, 0.6],
+            [-0.1, 0.7],
+            [-1.0, 0.8],
+            [0.3, 0.9],
+            [1.0, 1.1],
+            [1.0, 1.2],
+            [1.0, 1.3],
+        ],
+        dtype=np.float32,
+    )
+    desired_w = np.ones([12], dtype=np.float32)
+    desired_name = "continuous_c"
+
+    y, w = o_continuous_c_4x3.numpy(with_timestep_axis=False)
+    np.testing.assert_array_equal(desired_y, y[desired_name])
+    np.testing.assert_array_equal(desired_w, w[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_4a(o_continuous_e_4x3):
     desired_y = tf.constant(
         [
@@ -333,6 +479,33 @@ def test_export_4a(o_continuous_e_4x3):
     tf.debugging.assert_equal(desired_w, w[desired_name])
 
 
+def test_numpy_4a(o_continuous_e_4x3):
+    desired_y = np.array(
+        [
+            [[0.0], [0.0], [0.0]],
+            [[2.0], [0.0], [0.0]],
+            [[-0.1], [-1.0], [0.3]],
+            [[1.0], [1.0], [1.0]],
+        ],
+        dtype=np.float32,
+    )
+    desired_w = np.array(
+        [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.5, 0.6],
+            [0.7, 0.8, 0.9],
+            [1.0, 1.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
+    desired_name = "continuous_e"
+
+    y, w = o_continuous_e_4x3.numpy()
+    np.testing.assert_array_equal(desired_y, y[desired_name])
+    np.testing.assert_array_equal(desired_w, w[desired_name])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_wrong(o_continuous_c_4x3):
     """Test export.
 

@@ -27,8 +27,14 @@ from psiz.stochastic import softplus_inverse
 
 pytestmark = pytest.mark.adapter_surface
 
+BACKEND_CASES = [
+    pytest.param("tensorflow", marks=pytest.mark.backend_tensorflow, id="tensorflow"),
+    pytest.param("torch", marks=pytest.mark.backend_torch, id="torch"),
+    pytest.param("jax", marks=pytest.mark.backend_jax, id="jax"),
+]
 
-@pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
+
+@pytest.mark.parametrize("backend", BACKEND_CASES)
 def test_stochastic_adapter_distribution_surface_parity(backend):
     """Each backend adapter exposes the same core distribution surface."""
     adapter = get_stochastic_adapter(backend_override=backend)
@@ -66,7 +72,7 @@ def test_stochastic_adapter_parameter_alias_parity():
         _ = canonicalize_parameters({"loc": 0.0, "mean": 1.0})
 
 
-@pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
+@pytest.mark.parametrize("backend", BACKEND_CASES)
 def test_stochastic_adapter_sample_shape_parity(backend):
     """Sampling contracts preserve leading sample dimensions for all adapters."""
     adapter = get_stochastic_adapter(backend_override=backend)
@@ -78,7 +84,7 @@ def test_stochastic_adapter_sample_shape_parity(backend):
     np.testing.assert_array_equal(np.shape(keras.ops.convert_to_numpy(sample)), [3, 5, 4, 2])
 
 
-@pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
+@pytest.mark.parametrize("backend", BACKEND_CASES)
 def test_stochastic_adapter_kl_parity(backend):
     """KL API yields parity-level scalar KL values across backends."""
     adapter = get_stochastic_adapter(backend_override=backend)
@@ -102,7 +108,7 @@ def test_stochastic_adapter_kl_parity(backend):
     assert abs(kl_value - 0.5) < 0.08
 
 
-@pytest.mark.parametrize("backend", ["tensorflow", "torch", "jax"])
+@pytest.mark.parametrize("backend", BACKEND_CASES)
 def test_stochastic_adapter_transform_parity(backend):
     """Inverse-softplus transform round-trips across adapters."""
     x = keras.ops.convert_to_tensor(np.array([0.3, 1.0, 2.5], dtype="float32"))

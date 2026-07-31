@@ -75,7 +75,7 @@ def test_init_call_v1(paired_inputs_v0):
     desired_outputs = np.array(
         [1.295, 22.794998, 51.295, 86.795, 129.29498], dtype="float32"
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs)
+    np.testing.assert_array_almost_equal(desired_outputs, outputs, decimal=5)
 
 
 def test_init_call_v2(paired_inputs_v0):

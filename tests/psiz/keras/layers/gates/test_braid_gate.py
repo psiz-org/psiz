@@ -468,7 +468,9 @@ def test_call_1input_emb_determ_3d_input(
         ],
         dtype=np.float32,
     )
-    np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs)
+    np.testing.assert_array_almost_equal(
+        keras.ops.convert_to_numpy(outputs), desired_outputs
+    )
 
 
 @pytest.mark.backend_tensorflow
@@ -492,7 +494,9 @@ def test_call_1input_emb_stoch_2d_input_rank0(
         ],
         dtype=np.float32,
     )
-    np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs, decimal=1)
+    np.testing.assert_array_almost_equal(
+        keras.ops.convert_to_numpy(outputs), desired_outputs, decimal=1
+    )
 
 
 @pytest.mark.backend_tensorflow
@@ -516,7 +520,9 @@ def test_call_1input_emb_stoch_2d_input_rank1(
         ],
         dtype=np.float32,
     )
-    np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs, decimal=1)
+    np.testing.assert_array_almost_equal(
+        keras.ops.convert_to_numpy(outputs), desired_outputs, decimal=1
+    )
 
 
 def test_call_listinput_timestep(gates_v0_timestep, inputs_list_timestep):
@@ -568,7 +574,9 @@ def test_call_1input_emb_empty_branch(
         ],
         dtype=np.float32,
     )
-    np.testing.assert_array_almost_equal(outputs.numpy(), desired_outputs, decimal=1)
+    np.testing.assert_array_almost_equal(
+        keras.ops.convert_to_numpy(outputs), desired_outputs, decimal=1
+    )
 
 
 @pytest.mark.backend_tensorflow
@@ -595,7 +603,9 @@ def test_serialization_1input_emb(emb_subnets_stoch_rank1, inputs_emb_v0, groups
 
     # Assert calls are roughly equal (given constant initializer).
     np.testing.assert_array_almost_equal(
-        outputs.numpy(), outputs_recon.numpy(), decimal=1
+        keras.ops.convert_to_numpy(outputs),
+        keras.ops.convert_to_numpy(outputs_recon),
+        decimal=1,
     )
 
 
@@ -669,7 +679,9 @@ def test_call_listinput_kernel(kernel_subnets, paired_inputs_v0, groups_v0_0):
         ]
     )
 
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs)
+    )
 
 
 def test_call_listinput_kernel_empty_branch(paired_inputs_v0, group_3g_empty_v0_0):
@@ -784,6 +796,7 @@ def test_call_nested(
     gate_increment = keras.ops.expand_dims(
         np.array([0.0, 0.01, 0.02, 0.01, 0.03]), axis=1
     )
+    gate_increment = keras.ops.convert_to_numpy(gate_increment)
     desired_outputs = inputs_0 + inputs_1 + gate_increment
 
     outputs = braid_layer(
@@ -815,7 +828,9 @@ def test_call_mixture(inputs_5x3_v1, groups_v3_12):
 
     outputs = braid_layer([inputs_0, groups])
 
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs)
+    )
 
 
 def test_call_mixture_w_emb(groups_v3_12):
@@ -911,7 +926,9 @@ def test_call_mixture_w_emb(groups_v3_12):
         ],
         dtype=np.float32,
     )
-    np.testing.assert_array_almost_equal(desired_outputs, outputs.numpy())
+    np.testing.assert_array_almost_equal(
+        desired_outputs, keras.ops.convert_to_numpy(outputs)
+    )
 
 
 # TODO add fit test

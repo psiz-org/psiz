@@ -104,6 +104,7 @@ def _save_legacy_keras_model(model, path):
     model.save(path)
 
 
+@pytest.mark.backend_tensorflow
 def test_migrate_model_from_keras_tensorflow(tmp_path):
     legacy_path = tmp_path / "legacy_tf.keras"
     destination_path = tmp_path / "migrated_tf.psiz"
@@ -119,6 +120,7 @@ def test_migrate_model_from_keras_tensorflow(tmp_path):
     assert report["resolved_backend"] == "tensorflow"
 
 
+@pytest.mark.backend_torch
 def test_migrate_model_from_keras_pytorch(tmp_path):
     legacy_path = tmp_path / "legacy_torch.keras"
     destination_path = tmp_path / "migrated_torch.psiz"
@@ -134,6 +136,7 @@ def test_migrate_model_from_keras_pytorch(tmp_path):
     assert report["resolved_backend"] == "torch"
 
 
+@pytest.mark.backend_jax
 def test_migrate_model_from_keras_jax(tmp_path):
     legacy_path = tmp_path / "legacy_jax.keras"
     destination_path = tmp_path / "migrated_jax.psiz"
@@ -177,6 +180,7 @@ def test_migrate_hierarchical_vi_model(tmp_path):
     assert np.all(np.isfinite(reference_loc))
 
 
+@pytest.mark.backend_tensorflow
 def test_migrate_shared_weight_graph(tmp_path):
     legacy_path = tmp_path / "legacy_shared.keras"
     destination_path = tmp_path / "migrated_shared.psiz"
@@ -208,6 +212,7 @@ def test_migrate_invalid_input_format_errors(tmp_path):
         migrate_model_from_keras(unsupported_path, tmp_path / "bad_output.psiz")
 
 
+@pytest.mark.backend_tensorflow
 def test_migrate_validation_report_schema(tmp_path):
     legacy_path = tmp_path / "legacy_report.keras"
     destination_path = tmp_path / "migrated_report.psiz"
@@ -223,6 +228,7 @@ def test_migrate_validation_report_schema(tmp_path):
     assert sorted(report["diagnostics"].keys()) == ["errors", "warnings"]
 
 
+@pytest.mark.backend_tensorflow
 def test_migrate_parity_with_fixed_seed(tmp_path):
     keras.utils.set_random_seed(411)
     legacy_path = tmp_path / "legacy_parity.keras"

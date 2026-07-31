@@ -45,6 +45,7 @@ class Center(keras.constraints.Constraint):
 
     def __call__(self, w):
         """Call."""
+        w = keras.ops.convert_to_tensor(w)
         return w - keras.ops.mean(w, axis=self.axis, keepdims=True)
 
     def get_config(self):

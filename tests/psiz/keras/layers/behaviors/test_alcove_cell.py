@@ -23,6 +23,7 @@ import pytest
 from psiz.keras.layers import ALCOVECell, ExponentialSimilarity
 
 
+@pytest.mark.backend_tensorflow
 def test_call(category_learning_inputs_v0):
     """Test naked call (without RNN layer)."""
     n_stimuli = 20

@@ -178,3 +178,11 @@ PretrainedNonCenteredFactoryHooks (or a custom hooks implementation).
 
 For a complete end-to-end training example on birds-16 using the hierarchical
 builder stack, see :doc:`Introduction to Hierarchical Variational Inference <birds16_hierarchical_vi>`.
+
+Dataset strategy note (v0.14)
+=============================
+
+Where possible, tutorial code should use PsiZ dataset artifacts plus runtime
+ingestion adapters. The birds16 notebook currently depends on
+:code:`psiz-datasets` TensorFlow assets and is intentionally left on the legacy
+loading path until upstream assets are migrated.

@@ -29,6 +29,13 @@ from psiz.data.outcomes.continuous import Continuous
 from psiz.data.outcomes.sparse_categorical import SparseCategorical
 from psiz.data.sample_qr_sets import sample_qr_sets
 from psiz.data.unravel_timestep import unravel_timestep
+from psiz.data.runtime import PsizPyDataset
+from psiz.data.runtime import load_dataset
+from psiz.data.io import write_dataset_artifact_from_samples
+from psiz.data.io import read_dataset_artifact
+from psiz.data.io import validate_dataset_artifact_directory
+
+load = load_dataset
 
 __all__ = [
     "DatasetComponent",
@@ -43,4 +50,10 @@ __all__ = [
     "SparseCategorical",
     "sample_qr_sets",
     "unravel_timestep",
+    "PsizPyDataset",
+    "load",
+    "load_dataset",
+    "write_dataset_artifact_from_samples",
+    "read_dataset_artifact",
+    "validate_dataset_artifact_directory",
 ]

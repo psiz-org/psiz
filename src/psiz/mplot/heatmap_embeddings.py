@@ -22,6 +22,7 @@ Functions:
 
 import matplotlib
 import matplotlib.pyplot as plt
+import keras
 import numpy as np
 
 from psiz.stochastic import is_distribution
@@ -46,10 +47,10 @@ def heatmap_embeddings(embedding, ax=None, cmap=None):
 
     if is_distribution(embedding.embeddings):
         # Handle distribution.
-        z_mode = embedding.embeddings.mode().numpy()
+        z_mode = keras.ops.convert_to_numpy(embedding.embeddings.mode())
     else:
         # Handle point estimate.
-        z_mode = embedding.embeddings.numpy()
+        z_mode = keras.ops.convert_to_numpy(embedding.embeddings)
 
     if embedding.mask_zero:
         z_mode = z_mode[1:]

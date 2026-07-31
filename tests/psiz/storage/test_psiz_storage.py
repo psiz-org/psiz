@@ -98,9 +98,20 @@ class SimpleVIAccessContractModelPsiz(keras.Model):
     def __init__(self, percept=None, **kwargs):
         super().__init__(**kwargs)
         self.percept = percept
+        self._build_input_shape = None
 
     def call(self, inputs):
         return self.percept(inputs)
+
+    def build(self, input_shape):
+        self._build_input_shape = input_shape
+        if (
+            self.percept is not None
+            and hasattr(self.percept, "build")
+            and not self.percept.built
+        ):
+            self.percept.build(input_shape)
+        super().build(input_shape)
 
     def get_config(self):
         config = super().get_config()
@@ -110,6 +121,14 @@ class SimpleVIAccessContractModelPsiz(keras.Model):
             }
         )
         return config
+
+    def get_build_config(self):
+        return {"input_shape": self._build_input_shape}
+
+    def build_from_config(self, config):
+        input_shape = config.get("input_shape", None)
+        if input_shape is not None:
+            self.build(input_shape)
 
     @classmethod
     def from_config(cls, config):
@@ -127,9 +146,20 @@ class HierarchicalVIAccessContractModelPsiz(keras.Model):
     def __init__(self, percept=None, **kwargs):
         super().__init__(**kwargs)
         self.percept = percept
+        self._build_input_shape = None
 
     def call(self, inputs):
         return self.percept(inputs)
+
+    def build(self, input_shape):
+        self._build_input_shape = input_shape
+        if (
+            self.percept is not None
+            and hasattr(self.percept, "build")
+            and not self.percept.built
+        ):
+            self.percept.build(input_shape)
+        super().build(input_shape)
 
     def get_config(self):
         config = super().get_config()
@@ -139,6 +169,14 @@ class HierarchicalVIAccessContractModelPsiz(keras.Model):
             }
         )
         return config
+
+    def get_build_config(self):
+        return {"input_shape": self._build_input_shape}
+
+    def build_from_config(self, config):
+        input_shape = config.get("input_shape", None)
+        if input_shape is not None:
+            self.build(input_shape)
 
     @classmethod
     def from_config(cls, config):
@@ -174,14 +212,17 @@ def _save_load_roundtrip(tmp_path, backend_name):
     np.testing.assert_allclose(y_loaded, y_expected, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.backend_tensorflow
 def test_psiz_save_load_roundtrip_tensorflow(tmp_path):
     _save_load_roundtrip(tmp_path, "tensorflow")
 
 
+@pytest.mark.backend_torch
 def test_psiz_save_load_roundtrip_pytorch(tmp_path):
     _save_load_roundtrip(tmp_path, "torch")
 
 
+@pytest.mark.backend_jax
 def test_psiz_save_load_roundtrip_jax(tmp_path):
     _save_load_roundtrip(tmp_path, "jax")
 
@@ -274,6 +315,7 @@ def test_psiz_save_load_hierarchical_vi_structure(tmp_path):
     np.testing.assert_allclose(original_loc, loaded_loc)
 
 
+@pytest.mark.backend_tensorflow
 def test_psiz_save_load_shared_weight_identity(tmp_path):
     model = SharedWeightIdentityModel()
     x0 = np.array([[0.1, 0.2, 0.3]], dtype=np.float32)

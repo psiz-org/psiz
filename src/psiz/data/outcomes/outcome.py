@@ -21,8 +21,6 @@ Classes:
 """
 
 import numpy as np
-import tensorflow as tf
-from keras import backend
 
 from psiz.data.dataset_component import DatasetComponent
 from psiz.data.unravel_timestep import unravel_timestep
@@ -96,16 +94,13 @@ class Outcome(DatasetComponent):
         """Return sample weight."""
         return self._sample_weight
 
-    def export(self, export_format="tfds", with_timestep_axis=None):
-        """Export sample_weight.
+    def numpy(self, with_timestep_axis=None):
+        """Export sample weight as NumPy arrays.
 
-        Subclasses of Outcome must call super().export(...) in order
+        Subclasses of Outcome must call super().numpy(...) in order
         to obtain sample weights.
 
         Args:
-            export_format (optional): The output format of the dataset.
-                By default the dataset is formatted as a
-                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -119,13 +114,7 @@ class Outcome(DatasetComponent):
         sample_weight = self.sample_weight
         if with_timestep_axis is False:
             sample_weight = unravel_timestep(sample_weight)
-
-        if export_format == "tfds":
-            sample_weight = tf.constant(sample_weight, dtype="float32")
-        else:
-            raise ValueError(
-                "Unrecognized `export_format` '{0}'.".format(export_format)
-            )
+        sample_weight = sample_weight.astype(np.float32)
         return {self.name: sample_weight}
 
     def _subset_sample_weight(self, idx):

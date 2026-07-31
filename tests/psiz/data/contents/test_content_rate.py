@@ -17,7 +17,20 @@
 
 import numpy as np
 import pytest
-import tensorflow as tf
+
+
+class _TensorFlowProxy:
+    """Lazy TensorFlow import that skips tests when TF is unavailable."""
+
+    _module = None
+
+    def __getattr__(self, name):
+        if self._module is None:
+            self._module = pytest.importorskip("tensorflow")
+        return getattr(self._module, name)
+
+
+tf = _TensorFlowProxy()
 
 from psiz.data.contents.rate import Rate
 
@@ -166,6 +179,7 @@ def test_unique_configurations(c_rate2_b_4x2):
     assert df_config is None
 
 
+@pytest.mark.backend_tensorflow
 def test_export_0(c_rate2_c_4x3):
     """Test export."""
     x = c_rate2_c_4x3.export()
@@ -181,6 +195,22 @@ def test_export_0(c_rate2_c_4x3):
     tf.debugging.assert_equal(desired_stimulus_set, x["rate2_stimulus_set"])
 
 
+def test_numpy_0(c_rate2_c_4x3):
+    """Test numpy."""
+    x = c_rate2_c_4x3.numpy()
+    desired_stimulus_set = np.array(
+        [
+            [[3, 1], [3, 1], [0, 0]],
+            [[9, 12], [0, 0], [0, 0]],
+            [[3, 4], [3, 4], [0, 0]],
+            [[3, 4], [3, 4], [0, 0]],
+        ],
+        dtype=np.int32,
+    )
+    np.testing.assert_array_equal(desired_stimulus_set, x["rate2_stimulus_set"])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_1(c_rate2_c_4x3):
     """Test export.
 
@@ -208,6 +238,34 @@ def test_export_1(c_rate2_c_4x3):
     tf.debugging.assert_equal(desired_stimulus_set, x["rate2_stimulus_set"])
 
 
+def test_numpy_1(c_rate2_c_4x3):
+    """Test numpy.
+
+    Use override `with_timestep_axis=False`.
+
+    """
+    x = c_rate2_c_4x3.numpy(with_timestep_axis=False)
+    desired_stimulus_set = np.array(
+        [
+            [3, 1],
+            [3, 1],
+            [0, 0],
+            [9, 12],
+            [0, 0],
+            [0, 0],
+            [3, 4],
+            [3, 4],
+            [0, 0],
+            [3, 4],
+            [3, 4],
+            [0, 0],
+        ],
+        dtype=np.int32,
+    )
+    np.testing.assert_array_equal(desired_stimulus_set, x["rate2_stimulus_set"])
+
+
+@pytest.mark.backend_tensorflow
 def test_export_wrong(c_rate2_c_4x3):
     """Test export.
 

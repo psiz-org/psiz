@@ -64,6 +64,7 @@ class TestSoftRank:
         z_q, z_r = keras.ops.split(z, [1], stimuli_axis)
         s = proximity([z_q, z_r])
         outcome_prob = softrank_2_1(s)
+        outcome_prob = keras.ops.convert_to_numpy(outcome_prob)
 
         # Desired outcome.
         coords_x = 0.1 * keras.ops.cast(stimulus_set, dtype="float32")
@@ -123,6 +124,7 @@ class TestSoftRank:
         z_q, z_r = keras.ops.split(z, [1], stimuli_axis)
         s = proximity([z_q, z_r])
         outcome_prob = softrank_2_1(s)
+        outcome_prob = keras.ops.convert_to_numpy(outcome_prob)
 
         # Desired outcome.
         outcome_prob_desired = np.array(
@@ -181,6 +183,7 @@ class TestSoftRank:
         z_q, z_r = keras.ops.split(z, [1], stimuli_axis)
         s = proximity([z_q, z_r])
         outcome_prob = softrank_2_1(s)
+        outcome_prob = keras.ops.convert_to_numpy(outcome_prob)
 
         # Desired outcome.
         coords_x = 0.1 * keras.ops.cast(stimulus_set, dtype="float32")

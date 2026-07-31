@@ -15,6 +15,7 @@
 # ============================================================================
 """Migration utilities for PsiZ model assets."""
 
+from psiz.migration.dataset_assets import migrate_dataset_from_tfds
 from psiz.migration.model_assets import migrate_model_from_keras
 from psiz.migration.validators import LegacyAssetValidationError
 from psiz.migration.validators import LegacyModelLoadError
@@ -22,6 +23,7 @@ from psiz.migration.validators import MigrationError
 from psiz.migration.validators import MigrationReportValidationError
 from psiz.migration.validators import ParityValidationError
 from psiz.migration.validators import UnsupportedLegacyFormatError
+from psiz.migration.validators import validate_dataset_migration_report_schema
 from psiz.migration.validators import detect_legacy_asset_format
 from psiz.migration.validators import validate_migration_report_schema
 
@@ -33,6 +35,8 @@ __all__ = [
     "ParityValidationError",
     "UnsupportedLegacyFormatError",
     "detect_legacy_asset_format",
+    "migrate_dataset_from_tfds",
     "migrate_model_from_keras",
+    "validate_dataset_migration_report_schema",
     "validate_migration_report_schema",
 ]

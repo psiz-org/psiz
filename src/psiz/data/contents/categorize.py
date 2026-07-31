@@ -21,8 +21,6 @@ Classes:
 """
 
 import numpy as np
-import tensorflow as tf
-from keras import backend
 
 from psiz.data.contents.content import Content
 from psiz.data.unravel_timestep import unravel_timestep
@@ -132,13 +130,10 @@ class Categorize(Content):
             )
         return objective_query_label
 
-    def export(self, export_format="tfds", with_timestep_axis=None):
-        """Prepare trial content data for dataset.
+    def numpy(self, with_timestep_axis=None):
+        """Prepare trial content data as NumPy arrays.
 
         Args:
-            export_format (optional): The output format of the dataset.
-                By default the dataset is formatted as a
-                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -149,28 +144,16 @@ class Categorize(Content):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        if export_format == "tfds":
-            stimulus_set = self.stimulus_set
-            objective_query_label = self.objective_query_label
+        stimulus_set = self.stimulus_set
+        objective_query_label = self.objective_query_label
 
-            if with_timestep_axis is False:
-                stimulus_set = unravel_timestep(stimulus_set)
-                objective_query_label = unravel_timestep(objective_query_label)
+        if with_timestep_axis is False:
+            stimulus_set = unravel_timestep(stimulus_set)
+            objective_query_label = unravel_timestep(objective_query_label)
 
-            x = {
-                self.name
-                + "_stimulus_set": tf.constant(
-                    stimulus_set, name=(self.name + "_stimulus_set")
-                ),
-                self.name
-                + "_objective_query_label": tf.constant(
-                    objective_query_label,
-                    name=(self.name + "_objective_query_label"),
-                    dtype="float32",
-                ),
-            }
-        else:
-            raise ValueError(
-                "Unrecognized `export_format` '{0}'.".format(export_format)
-            )
+        x = {
+            self.name + "_stimulus_set": stimulus_set,
+            self.name
+            + "_objective_query_label": objective_query_label.astype(np.float32),
+        }
         return x

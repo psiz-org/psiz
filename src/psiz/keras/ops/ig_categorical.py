@@ -50,6 +50,8 @@ def ig_categorical(y_pred):
             shape=(n_event,)
 
     """
+    y_pred = keras.ops.convert_to_tensor(y_pred)
+
     # First term of mutual information.
     # H(Y | obs, c) = - sum P(y_i | obs, c) log P(y_i | obs, c),
     # where `c` indicates a candidate event that we want to compute the

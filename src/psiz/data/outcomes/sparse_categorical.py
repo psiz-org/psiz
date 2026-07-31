@@ -21,8 +21,6 @@ Classes:
 """
 
 import numpy as np
-import tensorflow as tf
-from keras import backend
 
 from psiz.data.outcomes.outcome import Outcome
 from psiz.data.unravel_timestep import unravel_timestep
@@ -100,13 +98,10 @@ class SparseCategorical(Outcome):
 
         return index
 
-    def export(self, export_format="tfds", with_timestep_axis=None):
-        """Return appropriately formatted data.
+    def numpy(self, with_timestep_axis=None):
+        """Return appropriately formatted NumPy data.
 
         Args:
-            export_format (optional): The output format of the dataset.
-                By default the dataset is formatted as a
-                `tf.data.Dataset` object.
             with_timestep_axis (optional): Boolean indicating if data
                 should be returned with a timestep axis. By default,
                 data is exported in the same format as it was
@@ -117,24 +112,16 @@ class SparseCategorical(Outcome):
         if with_timestep_axis is None:
             with_timestep_axis = self._export_with_timestep_axis
 
-        w_dict = super(SparseCategorical, self).export(
-            export_format=export_format, with_timestep_axis=with_timestep_axis
+        w_dict = super(SparseCategorical, self).numpy(
+            with_timestep_axis=with_timestep_axis
         )
 
         index = self.index
         if with_timestep_axis is False:
             index = unravel_timestep(index)
 
-        if export_format == "tfds":
-            # Convert from sparse to one-hot-encoding, creating new trailing
-            # axis.
-            # pylint: disable=unexpected-keyword-arg
-            # NOTE: A float for loss computation.
-            y = tf.one_hot(
-                index, self.depth, on_value=1.0, off_value=0.0, dtype="float32"
-            )
-        else:
-            raise ValueError(
-                "Unrecognized `export_format` '{0}'.".format(export_format)
-            )
+        # Build one-hot outputs without materializing an identity matrix.
+        # This avoids O(depth^2) memory overhead from np.eye(...).
+        y = np.zeros(index.shape + (self.depth,), dtype=np.float32)
+        np.put_along_axis(y, np.expand_dims(index, axis=-1), 1.0, axis=-1)
         return {self.name: y}, w_dict

@@ -162,9 +162,37 @@ def validate_migration_report_schema(report: dict[str, Any]) -> None:
             "Migration report diagnostics payload must be a dictionary.",
             code="invalid_report_diagnostics",
         )
-    if "warnings" not in diagnostics or "errors" not in diagnostics:
+    if (
+        "warnings" not in diagnostics
+        or "errors" not in diagnostics
+        or "storage_compaction" not in diagnostics
+    ):
         raise MigrationReportValidationError(
-            "Migration report diagnostics payload must define warnings and errors.",
+            "Migration report diagnostics payload must define warnings, errors, and storage_compaction.",
+            code="invalid_report_diagnostics",
+        )
+
+    storage_compaction = diagnostics["storage_compaction"]
+    if not isinstance(storage_compaction, dict):
+        raise MigrationReportValidationError(
+            "Migration report diagnostics.storage_compaction must be a dictionary.",
+            code="invalid_report_diagnostics",
+        )
+
+    required_compaction_keys = {
+        "enabled",
+        "blob_count",
+        "bytes_moved_estimate",
+        "blob_bytes",
+        "config_json_bytes",
+    }
+    missing_compaction_keys = sorted(
+        required_compaction_keys - set(storage_compaction.keys())
+    )
+    if missing_compaction_keys:
+        raise MigrationReportValidationError(
+            "Migration report diagnostics.storage_compaction is missing keys: "
+            + ", ".join(missing_compaction_keys),
             code="invalid_report_diagnostics",
         )
 

@@ -170,6 +170,9 @@ def test_migrate_hierarchical_vi_model(tmp_path):
 
     assert report["status"] == "success"
     assert report["model"]["class_name"] == "Functional"
+    assert report["diagnostics"]["storage_compaction"]["enabled"] is True
+    assert report["diagnostics"]["storage_compaction"]["blob_count"] > 0
+    assert report["diagnostics"]["storage_compaction"]["bytes_moved_estimate"] > 0
     migrated = load_psiz_model(destination_path, backend_override="tensorflow")
     migrated_outputs = keras.ops.convert_to_numpy(migrated(x))
     migrated_loc = keras.ops.convert_to_numpy(
@@ -225,7 +228,11 @@ def test_migrate_validation_report_schema(tmp_path):
     )
     validate_migration_report_schema(report)
 
-    assert sorted(report["diagnostics"].keys()) == ["errors", "warnings"]
+    assert sorted(report["diagnostics"].keys()) == [
+        "errors",
+        "storage_compaction",
+        "warnings",
+    ]
 
 
 @pytest.mark.backend_tensorflow

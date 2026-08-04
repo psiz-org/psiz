@@ -54,6 +54,18 @@ def write_safetensors_weights(
     return set(tensors.keys())
 
 
+def write_safetensors_tensors(
+    tensors: dict[str, np.ndarray], path: str | Path
+) -> set[str]:
+    """Write a tensor mapping to safetensors."""
+    normalized: dict[str, np.ndarray] = {}
+    for key, value in tensors.items():
+        normalized[key] = np.asarray(value)
+
+    save_file(normalized, str(path))
+    return set(normalized.keys())
+
+
 def read_safetensors_weights(path: str | Path) -> dict[str, np.ndarray]:
     """Load safetensors weights into memory."""
     return load_file(str(path))

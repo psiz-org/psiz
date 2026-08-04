@@ -68,6 +68,14 @@ def validate_artifact_directory(
     _validate_metadata(metadata)
     _validate_model_index(model_index)
 
+    model_config_compaction = config.get("model_config_compaction")
+    if isinstance(model_config_compaction, dict):
+        blob_file = model_config_compaction["blob_file"]
+        if not (artifact_dir / blob_file).exists():
+            raise ArtifactSpecError(
+                "Missing required model_config compaction blob file: " f"{blob_file}"
+            )
+
     try:
         resolved_backend = resolve_backend(
             backend_override=backend_override,
@@ -156,6 +164,54 @@ def _validate_config(config: dict[str, Any]) -> None:
     model_config = config.get("model_config")
     if not isinstance(model_config, dict):
         raise ArtifactSpecError("config.model_config must be an object.")
+
+    model_config_compaction = config.get("model_config_compaction")
+    if model_config_compaction is not None:
+        _validate_model_config_compaction(model_config_compaction)
+
+
+def _validate_model_config_compaction(compaction: Any) -> None:
+    if not isinstance(compaction, dict):
+        raise ArtifactSpecError("config.model_config_compaction must be an object.")
+
+    blob_file = compaction.get("blob_file")
+    if not isinstance(blob_file, str) or not blob_file.strip():
+        raise ArtifactSpecError(
+            "config.model_config_compaction.blob_file must be a non-empty string."
+        )
+
+    blob_count = compaction.get("blob_count")
+    if not isinstance(blob_count, int) or blob_count <= 0:
+        raise ArtifactSpecError(
+            "config.model_config_compaction.blob_count must be a positive integer."
+        )
+
+    marker_schema_version = compaction.get("marker_schema_version")
+    if marker_schema_version != 1:
+        raise ArtifactSpecError(
+            "config.model_config_compaction.marker_schema_version must be 1."
+        )
+
+    min_externalized_bytes = compaction.get("min_externalized_bytes")
+    if not isinstance(min_externalized_bytes, int) or min_externalized_bytes <= 0:
+        raise ArtifactSpecError(
+            "config.model_config_compaction.min_externalized_bytes must be a positive integer."
+        )
+
+    externalized_tensor_bytes = compaction.get("externalized_tensor_bytes")
+    if not isinstance(externalized_tensor_bytes, int) or externalized_tensor_bytes <= 0:
+        raise ArtifactSpecError(
+            "config.model_config_compaction.externalized_tensor_bytes must be a positive integer."
+        )
+
+    externalized_json_estimate_bytes = compaction.get("externalized_json_estimate_bytes")
+    if (
+        not isinstance(externalized_json_estimate_bytes, int)
+        or externalized_json_estimate_bytes <= 0
+    ):
+        raise ArtifactSpecError(
+            "config.model_config_compaction.externalized_json_estimate_bytes must be a positive integer."
+        )
 
 
 def _validate_model_index(model_index: dict[str, Any]) -> None:

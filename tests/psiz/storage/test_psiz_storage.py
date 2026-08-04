@@ -22,6 +22,8 @@ import json
 import keras
 import numpy as np
 import pytest
+from safetensors.numpy import load_file
+from safetensors.numpy import save_file
 
 from psiz.keras.layers.hierarchical_specs import HierarchyLevelSpec
 from psiz.keras.layers.hierarchical_specs import HierarchySpec
@@ -373,3 +375,174 @@ def test_psiz_index_weight_key_integrity(tmp_path):
 
     with pytest.raises(ArtifactSpecError, match="integrity"):
         _ = load_psiz_model(artifact_dir)
+
+
+@pytest.mark.backend_tensorflow
+def test_psiz_externalizes_hierarchical_membership_payloads(tmp_path):
+    memberships = np.array(
+        [
+            [0, 10, 100],
+            [0, 10, 101],
+            [0, 11, 110],
+            [0, 11, 111],
+            [0, 12, 120],
+            [0, 12, 121],
+        ],
+        dtype="int32",
+    )
+    hierarchy = HierarchySpec(
+        levels=[
+            HierarchyLevelSpec(role="global", membership_key=None),
+            HierarchyLevelSpec(role="intermediate", membership_key="branch_id"),
+            HierarchyLevelSpec(role="leaf", membership_key="leaf_id"),
+        ],
+        mask_zero=True,
+    )
+    percept = build_hierarchical_vi_embedding(
+        n_stimuli=6,
+        n_dim=2,
+        hierarchy=hierarchy,
+        membership=MembershipInput(memberships=memberships),
+        posterior_factory=NonCenteredPosteriorFactory(),
+        n_sample_train=100,
+    )
+    model = HierarchicalVIAccessContractModelPsiz(percept=percept)
+
+    artifact_dir = tmp_path / "compaction-hierarchical.psiz"
+    save_psiz_model(model, artifact_dir, backend_override="tensorflow")
+
+    config_path = artifact_dir / "config.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+
+    compaction = config.get("model_config_compaction")
+    assert isinstance(compaction, dict)
+    assert compaction["blob_count"] > 0
+
+    blob_path = artifact_dir / compaction["blob_file"]
+    assert blob_path.exists()
+
+    config_text = config_path.read_text(encoding="utf-8")
+    assert "__psiz_external_blob__" in config_text
+
+
+@pytest.mark.backend_tensorflow
+def test_psiz_missing_compaction_blob_fails_validation(tmp_path):
+    memberships = np.array(
+        [
+            [0, 10],
+            [0, 11],
+            [0, 12],
+            [0, 13],
+        ],
+        dtype="int32",
+    )
+    hierarchy = HierarchySpec(
+        levels=[
+            HierarchyLevelSpec(role="global", membership_key=None),
+            HierarchyLevelSpec(role="leaf", membership_key="leaf_id"),
+        ],
+        mask_zero=True,
+    )
+    percept = build_hierarchical_vi_embedding(
+        n_stimuli=4,
+        n_dim=2,
+        hierarchy=hierarchy,
+        membership=MembershipInput(memberships=memberships),
+        posterior_factory=NonCenteredPosteriorFactory(),
+        n_sample_train=100,
+    )
+    model = SimpleVIAccessContractModelPsiz(percept=percept)
+
+    artifact_dir = tmp_path / "missing-compaction-blob.psiz"
+    save_psiz_model(model, artifact_dir, backend_override="tensorflow")
+
+    config = json.loads((artifact_dir / "config.json").read_text(encoding="utf-8"))
+    blob_file = config["model_config_compaction"]["blob_file"]
+    (artifact_dir / blob_file).unlink()
+
+    with pytest.raises(ArtifactSpecError, match="compaction blob file"):
+        _ = validate_artifact_directory(artifact_dir)
+
+
+@pytest.mark.backend_tensorflow
+def test_psiz_externalizes_large_constant_initializer_payloads(tmp_path):
+    constant_value = np.full((128, 128), 0.125, dtype=np.float32)
+    model = keras.Sequential(
+        [
+            keras.layers.Input(shape=(128,), name="x"),
+            keras.layers.Dense(
+                128,
+                kernel_initializer=keras.initializers.Constant(constant_value),
+                bias_initializer="zeros",
+                name="dense_constant",
+            ),
+        ],
+        name="constant_initializer_model",
+    )
+    _ = model(np.zeros((2, 128), dtype=np.float32))
+
+    artifact_dir = tmp_path / "constant-init-compaction.psiz"
+    save_psiz_model(model, artifact_dir, backend_override="tensorflow")
+
+    config_path = artifact_dir / "config.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    compaction = config.get("model_config_compaction")
+    assert isinstance(compaction, dict)
+    assert compaction["blob_count"] > 0
+    assert compaction["externalized_json_estimate_bytes"] > 0
+
+    blob_path = artifact_dir / compaction["blob_file"]
+    assert blob_path.exists()
+
+    loaded = load_psiz_model(artifact_dir, backend_override="tensorflow")
+    x = np.ones((1, 128), dtype=np.float32)
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(model(x)),
+        keras.ops.convert_to_numpy(loaded(x)),
+        rtol=1e-6,
+        atol=1e-6,
+    )
+
+
+@pytest.mark.backend_tensorflow
+def test_psiz_externalized_blob_dtype_mismatch_fails_load(tmp_path):
+    memberships = np.array(
+        [
+            [0, 10],
+            [0, 11],
+            [0, 12],
+            [0, 13],
+        ],
+        dtype="int32",
+    )
+    hierarchy = HierarchySpec(
+        levels=[
+            HierarchyLevelSpec(role="global", membership_key=None),
+            HierarchyLevelSpec(role="leaf", membership_key="leaf_id"),
+        ],
+        mask_zero=True,
+    )
+    percept = build_hierarchical_vi_embedding(
+        n_stimuli=4,
+        n_dim=2,
+        hierarchy=hierarchy,
+        membership=MembershipInput(memberships=memberships),
+        posterior_factory=NonCenteredPosteriorFactory(),
+        n_sample_train=100,
+    )
+    model = SimpleVIAccessContractModelPsiz(percept=percept)
+
+    artifact_dir = tmp_path / "dtype-mismatch.psiz"
+    save_psiz_model(model, artifact_dir, backend_override="tensorflow")
+
+    config = json.loads((artifact_dir / "config.json").read_text(encoding="utf-8"))
+    blob_file = config["model_config_compaction"]["blob_file"]
+    blob_path = artifact_dir / blob_file
+
+    tensors = load_file(str(blob_path))
+    first_key = sorted(tensors.keys())[0]
+    tensors[first_key] = tensors[first_key].astype(np.float32)
+    save_file(tensors, str(blob_path))
+
+    with pytest.raises(ArtifactSpecError, match="dtype mismatch"):
+        _ = load_psiz_model(artifact_dir, backend_override="tensorflow")

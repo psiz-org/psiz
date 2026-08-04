@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -120,10 +121,42 @@ def migrate_model_from_keras(
         "diagnostics": {
             "warnings": [],
             "errors": [],
+            "storage_compaction": _build_storage_compaction_payload(destination_path),
         },
     }
     validate_migration_report_schema(report)
     return report
+
+
+def _build_storage_compaction_payload(artifact_path: Path) -> dict[str, Any]:
+    """Summarize config compaction diagnostics for migration reporting."""
+    config_path = artifact_path / "config.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+
+    payload: dict[str, Any] = {
+        "enabled": False,
+        "blob_count": 0,
+        "bytes_moved_estimate": 0,
+        "blob_bytes": 0,
+        "config_json_bytes": int(config_path.stat().st_size),
+    }
+
+    compaction = config.get("model_config_compaction")
+    if not isinstance(compaction, dict):
+        return payload
+
+    blob_file = compaction["blob_file"]
+    blob_path = artifact_path / blob_file
+    payload.update(
+        {
+            "enabled": True,
+            "blob_file": blob_file,
+            "blob_count": int(compaction["blob_count"]),
+            "bytes_moved_estimate": int(compaction["externalized_json_estimate_bytes"]),
+            "blob_bytes": int(blob_path.stat().st_size),
+        }
+    )
+    return payload
 
 
 def _load_legacy_keras_model(

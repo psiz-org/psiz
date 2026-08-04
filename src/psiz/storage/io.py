@@ -27,6 +27,8 @@ import keras
 from psiz.backend import resolve_backend
 from psiz.storage.index import build_model_index
 from psiz.storage.index import variable_identifier
+from psiz.storage.model_config_compaction import compact_model_config
+from psiz.storage.model_config_compaction import restore_externalized_model_config
 from psiz.storage.schema import ARTIFACT_TYPE
 from psiz.storage.schema import ArtifactSpecError
 from psiz.storage.schema import FORMAT_NAME
@@ -35,6 +37,7 @@ from psiz.storage.schema import validate_artifact_directory
 from psiz.storage.schema import validate_model_index_weight_integrity
 from psiz.storage.weights import canonical_weight_key_map
 from psiz.storage.weights import read_safetensors_weights
+from psiz.storage.weights import write_safetensors_tensors
 from psiz.storage.weights import write_safetensors_weights
 
 
@@ -47,6 +50,7 @@ def save_psiz_model(
     license_text: str = "Apache-2.0\n",
     license_name: str = "Apache-2.0",
     license_policy: str = "include",
+    min_externalized_config_bytes: int = 64 * 1024,
 ) -> dict[str, Any]:
     """Save a Keras model to a PsiZ .psiz artifact directory."""
     artifact_dir = Path(path)
@@ -68,6 +72,15 @@ def save_psiz_model(
     }
 
     model_config = keras.saving.serialize_keras_object(model)
+    model_config, config_blob_tensors, model_config_compaction = compact_model_config(
+        model_config,
+        min_externalized_bytes=min_externalized_config_bytes,
+    )
+
+    if model_config_compaction is not None:
+        blob_file = model_config_compaction["blob_file"]
+        write_safetensors_tensors(config_blob_tensors, artifact_dir / blob_file)
+
     config = {
         "artifact_type": ARTIFACT_TYPE,
         "format_name": FORMAT_NAME,
@@ -77,6 +90,8 @@ def save_psiz_model(
         "license": {"name": license_name, "policy": license_policy},
         "model_config": model_config,
     }
+    if model_config_compaction is not None:
+        config["model_config_compaction"] = model_config_compaction
 
     metadata = {
         "artifact_type": ARTIFACT_TYPE,
@@ -123,6 +138,15 @@ def load_psiz_model(
     model_config = config.get("model_config")
     if not isinstance(model_config, dict):
         raise ArtifactSpecError("config.model_config must be present for loading.")
+
+    model_config_compaction = config.get("model_config_compaction")
+    if isinstance(model_config_compaction, dict):
+        blob_file = model_config_compaction["blob_file"]
+        blob_tensors = read_safetensors_weights(artifact_dir / blob_file)
+        try:
+            model_config = restore_externalized_model_config(model_config, blob_tensors)
+        except ValueError as exc:
+            raise ArtifactSpecError(str(exc)) from exc
 
     model = keras.saving.deserialize_keras_object(
         model_config,

@@ -41,7 +41,8 @@ dependencies = [
     "scikit-learn",
     "matplotlib",
     "pillow",
-    "imageio"
+    "imageio",
+    "tensorboard",
 ]
 dynamic = ["version"]
 

@@ -48,32 +48,30 @@ class EmbeddingNonCenteredVariational(Variational):
         **kwargs,
     ):
         """Initialize."""
-        self.prior_full = prior_full
-        self.membership_parent = np.asarray(membership_parent, dtype="int32")
-        self.membership_current = np.asarray(membership_current, dtype="int32")
-        self.posterior_factory = posterior_factory
+        membership_parent = np.asarray(membership_parent, dtype="int32")
+        membership_current = np.asarray(membership_current, dtype="int32")
 
-        if not self.prior_full.built:
-            self.prior_full.build([None])
+        if not prior_full.built:
+            prior_full.build([None])
 
-        mask_zero = self.prior_full.mask_zero
+        mask_zero = prior_full.mask_zero
 
         membership_parent_for_take = self._build_parent_source_map(
-            self.prior_full, self.membership_parent
+            prior_full, membership_parent
         )
 
         prior_map_minimal = generate_take_map(
             membership_parent_for_take,
-            membership_destination=self.membership_current,
+            membership_destination=membership_current,
             mode="minimal",
         )
-        posterior_map_full = self._build_posterior_full_map(self.membership_current)
+        posterior_map_full = self._build_posterior_full_map(membership_current)
 
         prior_map_minimal = self._account_for_mask_zero(prior_map_minimal, mask_zero)
         posterior_map_full = self._account_for_mask_zero(posterior_map_full, mask_zero)
 
         prior_core = drill_down(
-            self.prior_full,
+            prior_full,
             stop_layers=[
                 EmbeddingNormalDiag,
                 EmbeddingNonCenteredNormalDiag,
@@ -84,20 +82,25 @@ class EmbeddingNonCenteredVariational(Variational):
             input_map=prior_map_minimal,
         )
 
-        posterior_minimal = self.posterior_factory.build(prior_minimal)
+        posterior_minimal = posterior_factory.build(prior_minimal)
         posterior_full = EmbeddingTake(
             embedding=posterior_minimal,
             input_map=posterior_map_full,
         )
 
         super(EmbeddingNonCenteredVariational, self).__init__(
-            prior=self.prior_full,
+            prior=prior_full,
             posterior=posterior_full,
             kl_weight=kl_weight,
             kl_use_exact=kl_use_exact,
             kl_n_sample=kl_n_sample,
             **kwargs,
         )
+
+        self.prior_full = prior_full
+        self.membership_parent = membership_parent
+        self.membership_current = membership_current
+        self.posterior_factory = posterior_factory
 
         self.prior.build([None])
         self.posterior.build([None])

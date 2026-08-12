@@ -17,6 +17,8 @@ Starting in v0.14, PsiZ supports a backend-neutral dataset artifact format based
 * Parquet table files.
 * A PsiZ-managed :code:`manifest.json` with strict schema/version checks.
 * Split management in a separate :code:`split_assignments` table.
+* Optional normalized :code:`stimuli` and :code:`participants` dimensions for
+    metadata that should not be duplicated in every observation row.
 
 The runtime ingestion path is backend-neutral using Keras :code:`PyDataset` with Tier A minimal adapters:
 
@@ -82,6 +84,30 @@ For component-built datasets, use :code:`Dataset.save(...)` and
     torch_dataset = ds.torch()
     numpy_payload = ds.numpy()
     arrow_table = ds.arrow()
+
+Normalized dimensions
+---------------------
+
+Artifacts may include a :code:`stimuli` dimension with one row per stimulus.
+Its required columns are a preserved, non-null integer :code:`stimulus_id` and
+a non-null dataset-root-relative :code:`filepath`; additional dataset metadata
+columns are retained as passthrough fields. For set-valued stimulus inputs,
+:code:`observation_stimuli` can provide one row per observation, feature, and
+position, with foreign-key references to :code:`observations` and :code:`stimuli`.
+
+Artifacts may also include a :code:`participants` dimension. The required
+:code:`participant_id` is a PsiZ-managed, non-null :code:`int64` surrogate key,
+not a raw provider identifier. :code:`n_sequence` and :code:`n_trial` record
+validated counts derived from :code:`observations`; external IDs and other
+demographic or provenance fields may be retained as optional passthrough
+columns. Sensitive participant columns can be named in the table's
+:code:`sensitive_columns` manifest metadata.
+
+These dimensions are validated when an artifact is loaded: primary keys must
+be unique, references must resolve, file integrity metadata must match, and
+participant counts must agree with the observation facts. Invalid contracts
+fail explicitly rather than silently dropping rows or falling back to a
+runtime-specific loader.
 
 Compatibility note:
 

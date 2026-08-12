@@ -57,7 +57,7 @@ Maintenance expectations:
     * Ensures developers are on a tox version that supports the syntax used in this repo.
 * `envlist = py{310,311,312,313}-{tensorflow,torch,jax}`
     * Defines the default runtime matrix: each Python version combined with each backend.
-* `envlist` also includes `py311-{tensorflow,torch,jax}-slow`
+* `envlist` also includes `py310-{tensorflow,torch,jax}-slow`
     * Defines explicit slow-test environments to keep normal local runs fast.
 
 #### Shared testenv behavior
@@ -126,17 +126,17 @@ Maintenance expectations:
 
 #### Common usage patterns
 * Run one backend env:
-    * `uv run tox -e py311-torch`
+    * `uv run tox -e py310-torch`
 * Run one test file in that env:
-    * `uv run tox -e py311-torch -- tests/psiz/keras/models/test_rank_model.py -q`
+    * `uv run tox -e py310-torch -- tests/psiz/keras/models/test_rank_model.py -q`
 * Run one test node:
-    * `uv run tox -e py311-torch -- tests/psiz/keras/models/test_rank_model.py::TestSoftRank::test_usage_subclass_a -q`
+    * `uv run tox -e py310-torch -- tests/psiz/keras/models/test_rank_model.py::TestSoftRank::test_usage_subclass_a -q`
 * Run with CUDA debug flags:
-    * `CUDA_LAUNCH_BLOCKING=1 TORCH_USE_CUDA_DSA=1 uv run tox -e py311-torch -- -q`
+    * `CUDA_LAUNCH_BLOCKING=1 TORCH_USE_CUDA_DSA=1 uv run tox -e py310-torch -- -q`
 * Select a different GPU for torch tox env:
-    * `PSIZ_TORCH_CUDA_VISIBLE_DEVICES=1 uv run tox -e py311-torch`
+    * `PSIZ_TORCH_CUDA_VISIBLE_DEVICES=1 uv run tox -e py310-torch`
 * Override torch package index source:
-    * `PSIZ_TORCH_EXTRA_INDEX_URL=https://pypi.org/simple uv run tox -e py311-torch`
+    * `PSIZ_TORCH_EXTRA_INDEX_URL=https://pypi.org/simple uv run tox -e py310-torch`
 
 ### Useful Commands for Local Checks
 * `KERAS_BACKEND=torch uv run pytest -m "not slow and not backend_slow"`
@@ -145,7 +145,7 @@ Maintenance expectations:
     * Run true-runtime backend smoke tests under TensorFlow.
 * `KERAS_BACKEND=jax uv run pytest tests/psiz/backend/test_backend_matrix_smoke.py::test_backend_matrix_slow_subset -m "backend_slow" -q`
     * Run reduced slow backend subset under JAX.
-* `uv run tox -e py311-torch`
+* `uv run tox -e py310-torch`
     * Run tox backend runtime checks for one Python/backend target.
 * `uv run pytest --cov-report term-missing --cov=psiz tests`
     * Output a coverage report to the terminal that includes which statements were not covered by the tests.

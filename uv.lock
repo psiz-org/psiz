@@ -2569,6 +2569,8 @@ dependencies = [
     { name = "safetensors" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scikit-learn", version = "1.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "tensorboard", version = "2.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "tensorboard", version = "2.20.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 
 [package.optional-dependencies]
@@ -2653,6 +2655,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "safetensors", specifier = ">=0.4" },
     { name = "scikit-learn" },
+    { name = "tensorboard" },
     { name = "tensorflow", marker = "extra == 'backend-tensorflow'", specifier = ">=2.18.0,<2.22.0" },
     { name = "tensorflow-probability", marker = "extra == 'backend-tensorflow'" },
     { name = "tf-keras", marker = "extra == 'backend-tensorflow'" },

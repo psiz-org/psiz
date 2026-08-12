@@ -51,10 +51,11 @@ def save_psiz_model(
     license_name: str = "Apache-2.0",
     license_policy: str = "include",
     min_externalized_config_bytes: int = 64 * 1024,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     """Save a Keras model to a PsiZ .psiz artifact directory."""
     artifact_dir = Path(path)
-    _prepare_artifact_directory(artifact_dir)
+    _prepare_artifact_directory(artifact_dir, overwrite=overwrite)
 
     resolved_backend = resolve_backend(backend_override=backend_override)
 
@@ -203,11 +204,15 @@ def load_psiz_model(
     return model
 
 
-def _prepare_artifact_directory(path: Path) -> None:
+def _prepare_artifact_directory(path: Path, overwrite: bool = False) -> None:
     if path.exists() and any(path.iterdir()):
-        raise ArtifactSpecError(
-            "Target artifact directory already exists and is not empty: " f"{path}"
-        )
+        if overwrite:
+            import shutil
+            shutil.rmtree(path)
+        else:
+            raise ArtifactSpecError(
+                "Target artifact directory already exists and is not empty: " f"{path}"
+            )
     path.mkdir(parents=True, exist_ok=True)
 
 

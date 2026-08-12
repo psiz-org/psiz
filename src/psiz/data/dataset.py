@@ -182,7 +182,10 @@ class Dataset(object):
         split_set_id="split_set_v1",
         split_label="train",
         split_version=1,
-        license_name="Apache-2.0",
+        license_name=None,
+        dataset_version="0.1.0",
+        description="",
+        sources=None,
         with_timestep_axis=None,
     ):
         """Persist dataset as a PsiZ artifact directory.
@@ -193,13 +196,20 @@ class Dataset(object):
             split_set_id (optional): Split set identifier.
             split_label (optional): Split label assigned to all rows.
             split_version (optional): Split assignment version.
-            license_name (optional): License recorded in manifest.
+            license_name (optional): License recorded in manifest; defaults
+                to `psiz.data.io.DATASET_DEFAULT_LICENSE`.
+            dataset_version (optional): Dataset content version recorded in manifest.
+            description (optional): Human-readable description of the dataset.
+            sources (optional): Array of provenance metadata recorded in manifest, e.g.
+                `[{"id": ..., "role": ..., "official_name": ..., "version": ...,
+                "split": ...}]`.
             with_timestep_axis (optional): Override timestep-axis materialization.
 
         Returns:
             dict: Validated artifact manifest.
 
         """
+        from psiz.data.io import DATASET_DEFAULT_LICENSE
         from psiz.data.io import write_dataset_artifact_from_samples
 
         x, y, w = self._materialize_xyw(with_timestep_axis=with_timestep_axis)
@@ -211,7 +221,10 @@ class Dataset(object):
             split_set_id=split_set_id,
             split_label=split_label,
             split_version=split_version,
-            license_name=license_name,
+            license_name=license_name or DATASET_DEFAULT_LICENSE,
+            dataset_version=dataset_version,
+            description=description,
+            sources=sources,
         )
 
     @staticmethod

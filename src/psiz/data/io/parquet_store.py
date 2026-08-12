@@ -26,10 +26,12 @@ import keras
 import numpy as np
 import pandas as pd
 
+from psiz.data.io.schema import DATASET_DEFAULT_LICENSE
 from psiz.data.io.schema import DATASET_FORMAT
 from psiz.data.io.schema import DATASET_FORMAT_VERSION
 from psiz.data.io.schema import DatasetArtifactSpecError
 from psiz.data.io.schema import compute_file_sha256
+from psiz.data.io.schema import order_manifest_keys
 from psiz.data.io.schema import validate_dataset_artifact_directory
 
 OBSERVATIONS_TABLE_NAME = "observations"
@@ -44,7 +46,10 @@ def write_dataset_artifact_from_samples(
     split_set_id: str = "split_set_v1",
     split_label: str = "train",
     split_version: int = 1,
-    license_name: str = "Apache-2.0",
+    license_name: str = DATASET_DEFAULT_LICENSE,
+    dataset_version: str = "0.1.0",
+    description: str = "",
+    sources: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Create a PsiZ dataset artifact from normalized sample payloads."""
     output_path = Path(output_dir)
@@ -81,6 +86,7 @@ def write_dataset_artifact_from_samples(
         "format": DATASET_FORMAT,
         "format_version": DATASET_FORMAT_VERSION,
         "dataset_id": dataset_id,
+        "dataset_version": dataset_version,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "license": license_name,
         "tables": [
@@ -134,6 +140,10 @@ def write_dataset_artifact_from_samples(
             },
         },
     }
+    if description and description.strip():
+        manifest["description"] = description
+    if sources is not None:
+        manifest["sources"] = sources
 
     manifest = _materialize_table_hashes(output_path, manifest)
     _write_manifest(output_path / "manifest.json", manifest)
@@ -368,4 +378,5 @@ def _materialize_table_hashes(
 
 
 def _write_manifest(path: Path, manifest: dict[str, Any]) -> None:
-    path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    ordered = order_manifest_keys(manifest)
+    path.write_text(json.dumps(ordered, indent=2) + "\n", encoding="utf-8")

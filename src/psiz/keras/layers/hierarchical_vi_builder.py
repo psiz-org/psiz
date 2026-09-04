@@ -249,7 +249,6 @@ class HierarchicalVIEmbeddingBuilder:
 
     def _initialize_level_scale(self, n_dim: int, i_level: int, role: str) -> float:
         """Return target scale for initialization."""
-        del role
         if self.scale_policy == ScaleInitializationPolicy.CONSTANT:
             return 1.0
         if self.scale_policy == ScaleInitializationPolicy.GEOMETRIC_DECAY:

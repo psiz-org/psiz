@@ -86,7 +86,7 @@ jobs:
       with:
         enable-cache: true
     - name: Install test dependencies only
-      run: uv sync --group test
+      run: uv sync --group test --group backend-torch
     - name: Run adapter-surface tests
       run: |
         KERAS_BACKEND=torch uv run pytest tests/psiz/stochastic/test_adapter_surface_contracts.py -m "adapter_surface" -q

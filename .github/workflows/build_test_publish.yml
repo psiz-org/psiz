@@ -66,7 +66,7 @@ jobs:
         flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Analyse code with pylint
       run: |
-        pylint --disable=R,C,W --ignored-modules=tensorflow src
+        pylint --disable=R,C,W --ignored-modules=tensorflow,tensorflow_probability src
 
   test_adapter_surface:
     name: Adapter-surface tier (py${{ matrix.python-version }})

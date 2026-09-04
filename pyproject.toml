@@ -58,6 +58,7 @@ backend-tensorflow = [
     "tensorflow >= 2.18.0, <2.22.0",
     "tensorflow-probability",
     "tf-keras",
+    "dm-tree >= 0.1.9",
 ]
 backend-torch = [
     "torch >= 2.4, <3.0",

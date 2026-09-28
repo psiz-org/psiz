@@ -33,6 +33,7 @@ from psiz.keras.layers.posterior_factory import NonCenteredPosteriorFactory
 from psiz.storage import load_psiz_model
 from psiz.storage import save_psiz_model
 from psiz.storage import validate_artifact_directory
+from psiz.storage.index import variable_identifier
 from psiz.storage.schema import ArtifactSpecError
 
 
@@ -185,6 +186,94 @@ class HierarchicalVIAccessContractModelPsiz(keras.Model):
         config = dict(config)
         config["percept"] = keras.saving.deserialize_keras_object(config["percept"])
         return cls(**config)
+
+
+@keras.saving.register_keras_serializable(
+    package="psiz.keras.tests", name="_DuplicateNameScalarHolder"
+)
+class _DuplicateNameScalarHolder(keras.layers.Layer):
+    """Adds a single non-trainable scalar weight named 'scalar' on build."""
+
+    def __init__(self, value=1.0, **kwargs):
+        super().__init__(**kwargs)
+        self.value = float(value)
+
+    def build(self, input_shape):
+        self.scalar = self.add_weight(
+            name="scalar",
+            shape=(),
+            initializer=keras.initializers.Constant(self.value),
+            trainable=False,
+        )
+        super().build(input_shape)
+
+    def call(self, inputs):
+        return inputs + self.scalar
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"value": self.value})
+        return config
+
+
+@keras.saving.register_keras_serializable(
+    package="psiz.keras.tests", name="DuplicateNamedScalarModel"
+)
+class DuplicateNamedScalarModel(keras.Model):
+    """Model with N sublayers sharing an explicit name.
+
+    Keras does not enforce global uniqueness of layer names within a model, so
+    giving multiple independent `_DuplicateNameScalarHolder` sublayers the SAME
+    explicit name produces weights with an identical `variable_identifier`
+    (same auto-derived `.path`) - reproducing the same failure mode as the
+    real-world bug (an auto-generated name collision caused by resetting
+    Keras's naming state mid-construction), just via an explicit name instead
+    of an accidental one. Uses >=3 holders because with exactly 2 duplicates,
+    positional elimination alone (resolve one, exactly one candidate remains
+    for the other) trivially disambiguates regardless of value; the ambiguous
+    multi-candidate tie-break path in `_choose_entry_for_variable` is only
+    exercised once >=2 candidates remain simultaneously, which requires >=3
+    members in the duplicate group.
+    """
+
+    def __init__(self, values=(1.0, 1.0, 1.0), **kwargs):
+        super().__init__(**kwargs)
+        self.values = [float(v) for v in values]
+        self.holders = [
+            _DuplicateNameScalarHolder(v, name="shared_holder") for v in self.values
+        ]
+        self.out = keras.layers.Dense(2, use_bias=False, name="out")
+
+    def call(self, inputs):
+        x = inputs
+        for holder in self.holders:
+            x = holder(x)
+        return self.out(x)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"values": self.values})
+        return config
+
+
+def _patch_duplicate_identifier_paths(model):
+    """Make all weight identifiers unique using a `_<int>` suffix convention.
+
+    Mirrors the recovery-script approach: the suffix must match the regex
+    `_\\d+$` so that `io.py`'s `_normalize_weight_name` strips it back off and
+    correctly re-groups the patched entries with the (still-colliding) fresh
+    identifier that reload will recompute from the unmodified model config.
+    """
+    groups = {}
+    for w in model.weights:
+        groups.setdefault(variable_identifier(w), []).append(w)
+    counter = 9000
+    for identifier, group in groups.items():
+        if len(group) <= 1:
+            continue
+        for w in group[1:]:
+            counter += 1
+            w._path = f"{identifier}_{counter}"
 
 
 def _build_simple_model():
@@ -375,6 +464,46 @@ def test_psiz_index_weight_key_integrity(tmp_path):
 
     with pytest.raises(ArtifactSpecError, match="integrity"):
         _ = load_psiz_model(artifact_dir)
+
+
+@pytest.mark.backend_tensorflow
+def test_psiz_reload_resolves_duplicate_identifier_with_identical_values(tmp_path):
+    """Reload should tie-break ambiguous but value-identical duplicate weights."""
+    model = DuplicateNamedScalarModel(values=(1.0, 1.0, 1.0), name="dup_identical")
+    x = np.array([[0.1, 0.2]], dtype=np.float32)
+    _ = model(x)
+
+    identifiers = [variable_identifier(w) for w in model.weights]
+    assert len(set(identifiers)) < len(identifiers), (
+        "test setup expected a genuine identifier collision before patching"
+    )
+
+    _patch_duplicate_identifier_paths(model)
+
+    artifact_dir = tmp_path / "dup-identical.psiz"
+    save_psiz_model(model, artifact_dir, backend_override="tensorflow")
+
+    loaded = load_psiz_model(artifact_dir, backend_override="tensorflow")
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(model(x)),
+        keras.ops.convert_to_numpy(loaded(x)),
+    )
+
+
+@pytest.mark.backend_tensorflow
+def test_psiz_reload_raises_for_duplicate_identifier_with_differing_values(tmp_path):
+    """Reload must still refuse to guess when duplicate weights genuinely differ."""
+    model = DuplicateNamedScalarModel(values=(1.0, 2.0, 3.0), name="dup_differing")
+    x = np.array([[0.1, 0.2]], dtype=np.float32)
+    _ = model(x)
+
+    _patch_duplicate_identifier_paths(model)
+
+    artifact_dir = tmp_path / "dup-differing.psiz"
+    save_psiz_model(model, artifact_dir, backend_override="tensorflow")
+
+    with pytest.raises(ArtifactSpecError, match="could not uniquely map"):
+        _ = load_psiz_model(artifact_dir, backend_override="tensorflow")
 
 
 @pytest.mark.backend_tensorflow

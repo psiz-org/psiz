@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import keras
+import numpy as np
 
 from psiz.backend import resolve_backend
 from psiz.storage.index import build_model_index
@@ -186,6 +187,7 @@ def load_psiz_model(
             entries_by_name=entries_by_name,
             normalized_entry_map=normalized_entry_map,
             used_keys=used_keys,
+            tensors=tensors,
         )
 
         key = candidate_entry["key"]
@@ -237,14 +239,20 @@ def _choose_entry_for_variable(
     entries_by_name: dict[str, dict[str, Any]],
     normalized_entry_map: dict[str, list[dict[str, Any]]],
     used_keys: set[str],
+    tensors: dict[str, np.ndarray],
 ) -> dict[str, Any]:
     """Pick the best model_index entry for a given variable.
 
     Preference:
         1) Exact identifier match.
-        2) Unique normalized identifier + shape match.
-        3) Unique normalized suffix + shape match.
-        4) Unique shape-only match among remaining entries.
+        2) Unique normalized identifier + shape match, or (if ambiguous) a
+           normalized-name match whose stored tensor values are all
+           byte-identical (e.g. duplicated non-trainable placeholder scalars
+           produced by a naming collision at save time); resolved
+           deterministically since the choice among them is immaterial.
+        3) Unique normalized suffix + shape match (with the same tie-break).
+        4) Unique shape-only match among remaining entries (with the same
+           tie-break as a last resort).
     """
     exact = entries_by_name.get(identifier)
     if exact is not None and exact["key"] not in used_keys:
@@ -262,6 +270,10 @@ def _choose_entry_for_variable(
     ]
     if len(candidates) == 1:
         return candidates[0]
+    if len(candidates) > 1:
+        deterministic = _resolve_value_identical_candidates(candidates, tensors)
+        if deterministic is not None:
+            return deterministic
 
     suffix_candidates = [
         entry
@@ -272,6 +284,10 @@ def _choose_entry_for_variable(
     ]
     if len(suffix_candidates) == 1:
         return suffix_candidates[0]
+    if len(suffix_candidates) > 1:
+        deterministic = _resolve_value_identical_candidates(suffix_candidates, tensors)
+        if deterministic is not None:
+            return deterministic
 
     remaining_shape_matches = [
         entry
@@ -280,6 +296,13 @@ def _choose_entry_for_variable(
     ]
     if len(remaining_shape_matches) == 1:
         return remaining_shape_matches[0]
+
+    if len(remaining_shape_matches) > 1:
+        deterministic = _resolve_value_identical_candidates(
+            remaining_shape_matches, tensors
+        )
+        if deterministic is not None:
+            return deterministic
 
     raise ArtifactSpecError(
         "Weight/index integrity check failed; could not uniquely map model "
@@ -294,3 +317,19 @@ def _matches_normalized_suffix(entry_name: str, normalized_identifier: str) -> b
     if len(identifier_parts) > len(entry_parts):
         return False
     return entry_parts[-len(identifier_parts) :] == identifier_parts
+
+
+def _resolve_value_identical_candidates(
+    candidates: list[dict[str, Any]], tensors: dict[str, np.ndarray]
+) -> dict[str, Any] | None:
+    """Return a deterministic candidate if all remaining tensors are identical.
+
+    Returns None (caller raises) if any candidate's stored values differ, since
+    then the ambiguity is not provably harmless.
+    """
+    ordered = sorted(candidates, key=lambda entry: entry["key"])
+    first_tensor = tensors[ordered[0]["key"]]
+    for entry in ordered[1:]:
+        if not np.array_equal(tensors[entry["key"]], first_tensor):
+            return None
+    return ordered[0]

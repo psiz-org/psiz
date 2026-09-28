@@ -32,8 +32,19 @@ def canonical_weight_key_map(model: Any) -> dict[str, str]:
     """Create deterministic mapping from weight names to safetensors keys."""
     identifiers = [variable_identifier(weight) for weight in model.weights]
     if len(set(identifiers)) != len(identifiers):
+        counts: dict[str, int] = {}
+        for identifier in identifiers:
+            counts[identifier] = counts.get(identifier, 0) + 1
+        duplicates = sorted(
+            f"'{identifier}' (x{count})"
+            for identifier, count in counts.items()
+            if count > 1
+        )
         raise ValueError(
-            "Model contains duplicate weight identifiers; cannot create deterministic key map."
+            "Model contains duplicate weight identifiers; cannot create deterministic "
+            "key map. This usually means two distinct layers ended up with the same "
+            "auto-generated name (e.g. Keras's global naming state was reset partway "
+            "through building the model). Duplicates found: " + ", ".join(duplicates)
         )
 
     ordered_ids = sorted(identifiers)

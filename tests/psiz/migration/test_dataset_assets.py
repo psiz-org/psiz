@@ -42,7 +42,7 @@ def test_dataset_migration_from_tfds_smoke(tmp_path):
     report = migrate_dataset_from_tfds(
         ds,
         out_dir,
-        split_set_id="split_set_v1",
+        split_set_id="original",
         validate=False,
         dataset_id="test_dataset_migration_from_tfds_smoke",
     )
@@ -58,7 +58,7 @@ def test_dataset_migration_manifest_validity(tmp_path):
     _ = migrate_dataset_from_tfds(
         ds,
         out_dir,
-        split_set_id="split_set_v1",
+        split_set_id="original",
         validate=False,
         dataset_id="test_dataset_migration_manifest_validity",
     )
@@ -74,7 +74,7 @@ def test_dataset_migration_xyw_parity_fixed_fixture(tmp_path):
     report = migrate_dataset_from_tfds(
         ds,
         out_dir,
-        split_set_id="split_set_v1",
+        split_set_id="original",
         validate=True,
         dataset_id="test_dataset_migration_xyw_parity_fixed_fixture",
     )
@@ -92,10 +92,27 @@ def test_dataset_migration_report_schema(tmp_path):
     report = migrate_dataset_from_tfds(
         ds,
         out_dir,
-        split_set_id="split_set_v1",
+        split_set_id="original",
         validate=False,
         dataset_id="test_dataset_migration_report_schema",
     )
 
     validate_dataset_migration_report_schema(report)
     assert sorted(report["diagnostics"].keys()) == ["errors", "warnings"]
+
+
+@pytest.mark.parametrize("split_set_id", [None, "custom_split"])
+def test_dataset_migration_split_set(tmp_path, split_set_id):
+    out_dir = tmp_path / "migrated_dataset.psiz"
+    source = [{"stimulus_set": np.array([1, 2, 3], dtype=np.int32)}]
+    kwargs = {} if split_set_id is None else {"split_set_id": split_set_id}
+
+    report = migrate_dataset_from_tfds(source, out_dir, **kwargs)
+
+    expected_split_set_id = split_set_id or "original"
+    assert report["split"]["split_set_id"] == expected_split_set_id
+    validated = validate_dataset_artifact_directory(out_dir)
+    assert (
+        validated["manifest"]["split_config"]["active_split_set_id"]
+        == expected_split_set_id
+    )

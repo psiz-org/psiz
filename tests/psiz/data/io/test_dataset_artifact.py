@@ -154,19 +154,38 @@ def _augment_with_participants_table(
     refresh_manifest_integrity_hashes(artifact_dir)
 
 
-def test_manifest_schema_roundtrip(tmp_path):
+@pytest.mark.parametrize("use_dataset_save", [False, True])
+def test_manifest_schema_roundtrip(tmp_path, use_dataset_save):
     artifact_dir = tmp_path / "dataset.psiz"
-    write_dataset_artifact_from_samples(
-        _build_samples(),
-        artifact_dir,
-        dataset_id="test_manifest_schema_roundtrip",
-    )
+    if use_dataset_save:
+        content = psiz.data.Rank(
+            np.array([[1, 2, 3], [3, 4, 5]], dtype=np.int32), n_select=1
+        )
+        dataset = psiz.data.Dataset([content])
+        dataset.save(artifact_dir, dataset_id="test_manifest_schema_roundtrip")
+    else:
+        write_dataset_artifact_from_samples(
+            _build_samples(),
+            artifact_dir,
+            dataset_id="test_manifest_schema_roundtrip",
+        )
 
     validated = validate_dataset_artifact_directory(artifact_dir)
     manifest = validated["manifest"]
     validate_manifest_schema(manifest)
 
     assert manifest["format"] == "psiz-dataset"
+    assert manifest["split_config"]["active_split_set_id"] == "original"
+    split_assignments = pd.read_parquet(
+        artifact_dir / "tables" / "split_assignments.parquet"
+    )
+    expected_columns = ["observation_id", "split", "split_set_id"]
+    assert list(split_assignments.columns) == expected_columns
+    assert split_assignments["split_set_id"].tolist() == ["original", "original"]
+    split_table = next(
+        table for table in manifest["tables"] if table["name"] == "split_assignments"
+    )
+    assert [column["name"] for column in split_table["columns"]] == expected_columns
     assert manifest["runtime_contract"]["observation_table"] == "observations"
     timestep = manifest["runtime_contract"]["timestep"]
     assert timestep["sequence_id_column"] == "sequence_id"
@@ -237,10 +256,10 @@ def test_parquet_relational_artifact_roundtrip(tmp_path):
         _build_samples(with_targets=True),
         artifact_dir,
         dataset_id="test_parquet_relational_artifact_roundtrip",
-        split_set_id="split_set_v1",
+        split_set_id="original",
     )
 
-    payload = read_dataset_artifact(artifact_dir, split_set_id="split_set_v1")
+    payload = read_dataset_artifact(artifact_dir, split_set_id="original")
     assert len(payload["observations"]) == 2
     assert "y::outcome" in payload["observations"].columns
     assert "w::outcome" in payload["observations"].columns

@@ -179,9 +179,8 @@ class Dataset(object):
         output_dir,
         *,
         dataset_id,
-        split_set_id="split_set_v1",
+        split_set_id="original",
         split_label="train",
-        split_version=1,
         license_name=None,
         dataset_version="0.1.0",
         description="",
@@ -195,7 +194,6 @@ class Dataset(object):
             dataset_id: Dataset identifier written to manifest.
             split_set_id (optional): Split set identifier.
             split_label (optional): Split label assigned to all rows.
-            split_version (optional): Split assignment version.
             license_name (optional): License recorded in manifest; defaults
                 to `psiz.data.io.DATASET_DEFAULT_LICENSE`.
             dataset_version (optional): Dataset content version recorded in manifest.
@@ -220,7 +218,6 @@ class Dataset(object):
             dataset_id=dataset_id,
             split_set_id=split_set_id,
             split_label=split_label,
-            split_version=split_version,
             license_name=license_name or DATASET_DEFAULT_LICENSE,
             dataset_version=dataset_version,
             description=description,

@@ -37,7 +37,7 @@ def migrate_dataset_from_tfds(
             code="dataset_migration_empty_source",
         )
 
-    selected_split_set = split_set_id or "split_set_v1"
+    selected_split_set = split_set_id or "original"
     manifest = write_dataset_artifact_from_samples(
         samples,
         output_dir,

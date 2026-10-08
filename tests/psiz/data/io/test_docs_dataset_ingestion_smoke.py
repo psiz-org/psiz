@@ -27,12 +27,12 @@ def test_docs_example_dataset_ingestion_smoke(tmp_path):
     _ = dataset.save(
         artifact_dir,
         dataset_id="docs_example",
-        split_set_id="split_set_v1",
+        split_set_id="original",
     )
 
     pyds = psiz.data.load(
         artifact_dir,
-        split_set_id="split_set_v1",
+        split_set_id="original",
         split_labels=["train"],
     )
 

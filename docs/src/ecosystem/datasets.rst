@@ -70,12 +70,12 @@ For component-built datasets, use :code:`Dataset.save(...)` and
     dataset.save(
         artifact_dir,
         dataset_id="example_dataset",
-        split_set_id="split_set_v1",
+        split_set_id="original",
     )
 
     ds = psiz.data.load(
         artifact_dir,
-        split_set_id="split_set_v1",
+        split_set_id="original",
         split_labels=["train"],
     )
 
@@ -127,7 +127,7 @@ Use the migration API to convert existing TensorFlow dataset workflows into PsiZ
     report = psiz.migration.migrate_dataset_from_tfds(
         source=tf_dataset,
         output_dir="./migrated_dataset.psiz",
-        split_set_id="split_set_v1",
+        split_set_id="original",
         validate=True,
         dataset_id="my_dataset",
     )

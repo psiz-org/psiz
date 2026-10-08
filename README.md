@@ -168,12 +168,12 @@ dataset = psiz.data.Dataset([content, outcome])
 dataset.save(
     "example_dataset.psiz",
     dataset_id="example_dataset",
-    split_set_id="split_set_v1",
+    split_set_id="original",
 )
 
 ds = psiz.data.load(
     "example_dataset.psiz",
-    split_set_id="split_set_v1",
+    split_set_id="original",
     split_labels=["train"],
 )
 

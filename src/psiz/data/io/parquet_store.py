@@ -43,9 +43,8 @@ def write_dataset_artifact_from_samples(
     output_dir: str | Path,
     *,
     dataset_id: str,
-    split_set_id: str = "split_set_v1",
+    split_set_id: str = "original",
     split_label: str = "train",
-    split_version: int = 1,
     license_name: str = DATASET_DEFAULT_LICENSE,
     dataset_version: str = "0.1.0",
     description: str = "",
@@ -70,7 +69,6 @@ def write_dataset_artifact_from_samples(
             "observation_id": observations["observation_id"].astype("int64"),
             "split": split_label,
             "split_set_id": split_set_id,
-            "split_version": int(split_version),
         }
     )
 

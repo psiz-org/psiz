@@ -109,6 +109,21 @@ Backend resolution follows PsiZ precedence:
 Schema validation is strict and includes required files, semver major-version
 compatibility, and model-index to safetensors integrity checks.
 
+Weight-name compatibility
+-------------------------
+
+Loading prefers an unused exact weight-name match with a compatible shape.
+Keras-generated numeric suffixes can change when layers are reconstructed in
+a different naming state. An exact name with an incompatible shape is therefore
+not authoritative: loading continues through the existing normalized-name,
+normalized-suffix, and shape-only matching rules. Ambiguous candidates are
+accepted only when their stored tensor values are identical; otherwise loading
+raises an error. The selected tensor must still match the reconstructed variable's
+shape.
+
+This compatibility behavior does not change the artifact format or require
+rewriting older artifacts.
+
 Lifecycle policy: checkpoints vs artifacts
 ------------------------------------------
 

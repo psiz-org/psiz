@@ -34,6 +34,8 @@ from psiz.storage import load_psiz_model
 from psiz.storage import save_psiz_model
 from psiz.storage import validate_artifact_directory
 from psiz.storage.index import variable_identifier
+from psiz.storage.io import _choose_entry_for_variable
+from psiz.storage.io import _normalize_weight_name
 from psiz.storage.schema import ArtifactSpecError
 
 
@@ -55,6 +57,21 @@ class SimplePsizModel(keras.Model):
         config = super().get_config()
         config.update({"n_hidden": self.n_hidden})
         return config
+
+
+@keras.saving.register_keras_serializable(
+    package="psiz.keras.tests", name="RegeneratedNameModel"
+)
+class RegeneratedNameModel(keras.Model):
+    """Recreates unnamed layers rather than serializing their generated names."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.hidden = keras.layers.Dense(3, use_bias=False)
+        self.out = keras.layers.Dense(7, use_bias=False)
+
+    def call(self, inputs):
+        return self.out(self.hidden(inputs))
 
 
 @keras.saving.register_keras_serializable(
@@ -464,6 +481,106 @@ def test_psiz_index_weight_key_integrity(tmp_path):
 
     with pytest.raises(ArtifactSpecError, match="integrity"):
         _ = load_psiz_model(artifact_dir)
+
+
+@pytest.mark.parametrize("name_offset", [0, 1, 2])
+def test_psiz_reload_regenerated_names_with_shape_collision(tmp_path, name_offset):
+    """Load unchanged, overlapping, and disjoint generated layer names."""
+    keras.backend.clear_session()
+    model = RegeneratedNameModel(name="regenerated")
+    inputs = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float32)
+    _ = model(inputs)
+    expected_weights = [
+        np.arange(6, dtype=np.float32).reshape(2, 3),
+        np.arange(21, dtype=np.float32).reshape(3, 7),
+    ]
+    model.set_weights(expected_weights)
+    expected_outputs = keras.ops.convert_to_numpy(model(inputs))
+    artifact_dir = tmp_path / "regenerated.psiz"
+    save_psiz_model(model, artifact_dir)
+
+    keras.backend.clear_session()
+    for _ in range(name_offset):
+        keras.layers.Dense(1)
+    loaded = load_psiz_model(artifact_dir)
+
+    if name_offset == 1:
+        # The first reloaded layer reuses the second saved layer's name.
+        assert variable_identifier(loaded.hidden.kernel) == variable_identifier(
+            model.out.kernel
+        )
+        assert loaded.hidden.kernel.shape != model.out.kernel.shape
+    loaded_weights = loaded.get_weights()
+    assert len(loaded_weights) == len(expected_weights)
+    for expected, actual in zip(expected_weights, loaded_weights):
+        np.testing.assert_array_equal(actual, expected)
+    np.testing.assert_allclose(
+        keras.ops.convert_to_numpy(loaded(inputs)), expected_outputs
+    )
+
+
+@pytest.mark.parametrize(
+    "shapes,values,used_keys,expected_key",
+    [
+        ([(2,), (2,)], [1.0, 2.0], set(), "weight_00000"),
+        ([(3,), (2,)], [1.0, 2.0], set(), "weight_00001"),
+        ([(2,), (2,)], [1.0, 2.0], {"weight_00000"}, "weight_00001"),
+        ([(3,), (2,), (2,)], [1.0, 2.0, 2.0], set(), "weight_00001"),
+        ([(3,), (2,), (2,)], [1.0, 2.0, 3.0], set(), None),
+        ([(3,)], [1.0], set(), None),
+    ],
+    ids=[
+        "compatible-exact-takes-priority",
+        "incompatible-exact-falls-back",
+        "used-exact-is-not-reused",
+        "identical-fallback-tie",
+        "distinct-fallback-tie-rejected",
+        "no-compatible-shape-rejected",
+    ],
+)
+def test_psiz_weight_matching_compatibility(shapes, values, used_keys, expected_key):
+    entries = [
+        {
+            "name": f"embedding_{22 + i}/epsilon_loc",
+            "key": f"weight_{i:05d}",
+            "shape": list(shape),
+        }
+        for i, shape in enumerate(shapes)
+    ]
+    tensors = {
+        entry["key"]: np.full(shape, value, dtype=np.float32)
+        for entry, shape, value in zip(entries, shapes, values)
+    }
+    identifier = entries[0]["name"]
+    normalized_identifier = _normalize_weight_name(identifier)
+    kwargs = {
+        "identifier": identifier,
+        "normalized_identifier": normalized_identifier,
+        "variable_shape": (2,),
+        "entries_by_name": {entry["name"]: entry for entry in entries},
+        "normalized_entry_map": {normalized_identifier: entries},
+        "used_keys": used_keys,
+        "tensors": tensors,
+    }
+    if expected_key is None:
+        with pytest.raises(ArtifactSpecError, match="could not uniquely map"):
+            _choose_entry_for_variable(**kwargs)
+    else:
+        assert _choose_entry_for_variable(**kwargs)["key"] == expected_key
+
+
+def test_psiz_reload_rejects_tensor_shape_mismatch(tmp_path):
+    """Index-name fallbacks must not bypass the actual tensor shape check."""
+    artifact_dir = tmp_path / "tensor-shape-mismatch.psiz"
+    save_psiz_model(_build_simple_model(), artifact_dir)
+    index = json.loads((artifact_dir / "model_index.json").read_text(encoding="utf-8"))
+    entry = next(e for e in index["weights"] if e["name"] == "hidden/kernel")
+    tensors = load_file(artifact_dir / "model.safetensors")
+    tensors[entry["key"]] = np.zeros((1, 1), dtype=np.float32)
+    save_file(tensors, artifact_dir / "model.safetensors")
+
+    with pytest.raises(ArtifactSpecError, match="artifact tensor shape"):
+        load_psiz_model(artifact_dir)
 
 
 @pytest.mark.backend_tensorflow

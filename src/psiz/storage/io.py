@@ -244,7 +244,7 @@ def _choose_entry_for_variable(
     """Pick the best model_index entry for a given variable.
 
     Preference:
-        1) Exact identifier match.
+        1) Exact identifier + shape match.
         2) Unique normalized identifier + shape match, or (if ambiguous) a
            normalized-name match whose stored tensor values are all
            byte-identical (e.g. duplicated non-trainable placeholder scalars
@@ -255,12 +255,13 @@ def _choose_entry_for_variable(
            tie-break as a last resort).
     """
     exact = entries_by_name.get(identifier)
-    if exact is not None and exact["key"] not in used_keys:
-        if tuple(exact["shape"]) != variable_shape:
-            raise ArtifactSpecError(
-                "Weight/index integrity check failed; shape mismatch for exact-name "
-                f"match '{identifier}'."
-            )
+    # Generated suffixes can coincide across sessions for different layers.
+    # A shape-incompatible exact name must not bypass the fallback matching.
+    if (
+        exact is not None
+        and exact["key"] not in used_keys
+        and tuple(exact["shape"]) == variable_shape
+    ):
         return exact
 
     candidates = [
